@@ -1,0 +1,8 @@
+# OS / editor
+.DS_Store
+*.swp
+*~
+
+# Folio working state (drafts, snapshots)
+.folio/
+.tmp/

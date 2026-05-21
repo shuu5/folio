@@ -1,0 +1,149 @@
+/* folio — common stylesheet (v0.1.0 draft)
+ * 3-layer overlay design tokens:
+ *   - core/: universal colors (immutable)
+ *   - stacks/: stack-specific overrides via :where()
+ *   - projects/: project-specific overrides at root
+ */
+
+:root {
+  /* Layer 1 (core, immutable) ----------------------------------- */
+  --folio-color-text:        #1a1a1a;
+  --folio-color-text-muted:  #555;
+  --folio-color-bg:          #fafafa;
+  --folio-color-surface:     #ffffff;
+  --folio-color-border:      #d0d0d0;
+
+  /* semantic colors */
+  --folio-color-primary:     #2a4d6e;  /* folio anchor blue */
+  --folio-color-accent:      #8b6f47;  /* parchment brown */
+  --folio-color-normative:   #b94a48;  /* MUST/SHALL red */
+  --folio-color-informative: #468847;  /* informative green */
+  --folio-color-delta-add:   #e8f5e9;  /* delta inserted */
+  --folio-color-delta-del:   #fce4e4;  /* delta deleted */
+  --folio-color-ears:        #fff8e1;  /* EARS requirement amber */
+
+  /* typography */
+  --folio-font-body:    -apple-system, BlinkMacSystemFont, "Segoe UI",
+                        "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
+  --folio-font-mono:    "SF Mono", Monaco, Menlo, "Source Code Pro", monospace;
+  --folio-font-size:    16px;
+  --folio-line-height:  1.65;
+
+  /* layout */
+  --folio-max-width:    72ch;
+  --folio-gap:          1rem;
+}
+
+html { font-size: var(--folio-font-size); }
+body {
+  max-width: var(--folio-max-width);
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: var(--folio-font-body);
+  line-height: var(--folio-line-height);
+  color: var(--folio-color-text);
+  background: var(--folio-color-bg);
+}
+
+/* document header ------------------------------------------------ */
+header.doc-header {
+  border-bottom: 3px solid var(--folio-color-primary);
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+}
+header.doc-header h1 { margin: 0 0 0.25rem; color: var(--folio-color-primary); }
+header.doc-header .meta { color: var(--folio-color-text-muted); font-size: 0.9em; }
+
+/* normative / informative wrappers (RFC 2119) -------------------- */
+section.normative {
+  border-left: 4px solid var(--folio-color-normative);
+  padding-left: 1rem;
+  margin: 1rem 0;
+}
+section.informative {
+  border-left: 4px solid var(--folio-color-informative);
+  padding-left: 1rem;
+  margin: 1rem 0;
+}
+
+/* delta markers -------------------------------------------------- */
+ins.delta {
+  background: var(--folio-color-delta-add);
+  text-decoration: none;
+  padding: 1px 4px;
+  border-left: 3px solid #4caf50;
+}
+del.delta {
+  background: var(--folio-color-delta-del);
+  padding: 1px 4px;
+  border-left: 3px solid #c62828;
+}
+ins.delta::before {
+  content: "+" attr(data-delta-id) " ";
+  font-size: 0.8em;
+  color: #388e3c;
+  font-family: var(--folio-font-mono);
+}
+del.delta::before {
+  content: "-" attr(data-delta-id) " ";
+  font-size: 0.8em;
+  color: #c62828;
+  font-family: var(--folio-font-mono);
+}
+
+/* EARS notation -------------------------------------------------- */
+.ears {
+  background: var(--folio-color-ears);
+  border-left: 4px solid var(--folio-color-accent);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+.ears-id     { font-family: var(--folio-font-mono); font-weight: 600; color: var(--folio-color-accent); }
+.ears-when   { font-style: italic; }
+.ears-shall  { font-weight: 600; color: var(--folio-color-normative); }
+
+/* stakeholder perspective aside ---------------------------------- */
+aside.reader-persona {
+  background: var(--folio-color-surface);
+  border: 1px solid var(--folio-color-border);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+}
+aside.reader-persona::before {
+  content: "👁 Reader: " attr(data-persona);
+  display: block;
+  font-size: 0.85em;
+  color: var(--folio-color-text-muted);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* machine-readable summary aside (twill dl.mri descendant) ------- */
+aside.machine-readable {
+  background: #f5f5f5;
+  border: 1px dashed var(--folio-color-border);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  font-family: var(--folio-font-mono);
+  font-size: 0.85em;
+}
+aside.machine-readable dl { margin: 0; }
+aside.machine-readable dt { font-weight: 600; display: inline; color: var(--folio-color-primary); }
+aside.machine-readable dt::after { content: ": "; }
+aside.machine-readable dd { display: inline; margin: 0; }
+aside.machine-readable dd::after { content: " | "; color: var(--folio-color-text-muted); }
+aside.machine-readable dd:last-child::after { content: ""; }
+
+/* RFC 2119 keyword highlight ------------------------------------- */
+.rfc2119 { font-weight: 600; text-transform: uppercase; font-size: 0.95em; }
+
+/* tables --------------------------------------------------------- */
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid var(--folio-color-border); padding: 0.5rem 0.75rem; text-align: left; }
+th { background: #f0f0f0; font-weight: 600; }
+
+/* code ----------------------------------------------------------- */
+code { font-family: var(--folio-font-mono); background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
+pre  { background: #f0f0f0; padding: 0.75rem; border-radius: 4px; overflow-x: auto; }
+pre code { background: none; padding: 0; }

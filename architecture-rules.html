@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="architecture-rules">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<title>folio — architecture-rules (v0.1.0-draft)</title>
+<link rel="stylesheet" href="common.css">
+<script type="application/ld+json">
+{
+  "@type": "FolioArchitectureRules",
+  "version": "0.1.0-draft",
+  "extends": "constitution.html"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio architecture-rules</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft &middot; 3-layer overlay, directory structure, HTML markup conventions, 7-phase PR cycle</div>
+</header>
+
+<aside class="informative">
+<p>本文書は <a href="constitution.html">constitution.html</a> の不変原則 (P-1〜P-12) を <em>実装する</em> 規則集である。 constitution が「何が不変か」 を定義し、 本 rules が「どう構造化するか」 を規定する。</p>
+</aside>
+
+<section id="s0-reader-guide" class="informative">
+<h2>§0. Reader's Guide</h2>
+
+<aside class="reader-persona" data-persona="AI Agent">
+<p>spec を編集する前に <code>FOLIO_ARCHITECT_CONTEXT=folio-architect</code> を <strong>必ず</strong> set (<a href="#s9-caller-marker">§9</a>)。 編集後は <code>unset</code> で leak 防止。 新 file 追加時は <a href="#s2-directory">§2 dir tree</a> と <a href="#s3-naming">§3 命名規約</a> を確認。 markup は <a href="#s5-delta">§5 delta</a> / <a href="#s6-ears">§6 EARS</a> / <a href="#s4-format">§4 front-matter</a> 参照。</p>
+</aside>
+</section>
+
+<section id="s1-overlay" class="normative">
+<h2>§1. 3-Layer Overlay Architecture</h2>
+
+<p>folio は <strong>ESLint flat config + Heft rig package</strong> 同型の 3 層 overlay を採用する。 各 layer の境界は <strong>open-closed principle</strong> に従う: core は不変、 stack は addition のみ、 project が最終 override。</p>
+
+<table>
+  <thead>
+    <tr><th>Layer</th><th>位置</th><th>役割</th><th>変更頻度</th><th>例</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>core</strong> (universal)</td>
+      <td><code>core/</code></td>
+      <td>technology-neutral な universal rules、 spec template、 specialist agents、 CI checks。 P-1〜P-12 をコード化した layer。</td>
+      <td>稀 (constitution 改訂時のみ)</td>
+      <td><code>core/spec/spec-taxonomy.html</code>、 <code>core/agents/spec-explorer.md</code></td>
+    </tr>
+    <tr>
+      <td><strong>stack</strong> (technology)</td>
+      <td><code>stacks/&lt;name&gt;/</code></td>
+      <td>technology 別の vocabulary、 patterns、 stack-aware checks。 core を peer dependency として参照、 core rule に <em>addition のみ</em>。</td>
+      <td>技術 stack 採用・更新時</td>
+      <td><code>stacks/typescript/vocabulary.yaml</code>、 <code>stacks/twill-legacy/</code> (read-only)</td>
+    </tr>
+    <tr>
+      <td><strong>project</strong> (individual)</td>
+      <td><code>projects/&lt;name&gt;/</code></td>
+      <td>project 固有 spec、 ADR、 changes、 vocabulary override。 最終 override layer。</td>
+      <td>プロジェクトごと</td>
+      <td><code>projects/my-app/architecture/spec/</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Resolution order (後勝ち)</strong>: <code>core/</code> defaults → <code>stacks/&lt;name&gt;/</code> overrides → <code>projects/&lt;name&gt;/</code> overrides。 深い merge ではなく <em>浅い merge + explicit override</em> を採用。</p>
+
+<p><strong>Discovery mechanism</strong>: explicit register (convention-based は誤検知リスク)。 各 project の <code>folio.config.yaml</code> に <code>stack: typescript</code> 等を明示宣言する。</p>
+</section>
+
+<section id="s2-directory" class="normative">
+<h2>§2. Directory Structure</h2>
+
+<pre><code>~/projects/local-projects/folio/
+├── FOLIO.md                          # root marker (Markdown 例外、 P-2)
+├── constitution.html                 # 12 immutable principles
+├── architecture-rules.html           # 本文書
+├── common.css                        # design tokens
+├── .gitignore
+│
+├── core/                             # Layer 1: universal (P-1〜P-12 のコード化)
+│   ├── spec/                         # universal architecture spec
+│   │   ├── README.html               # spec/ entry point (R-1 相当)
+│   │   ├── overview.html             # arc42 §1 Goals
+│   │   ├── spec-taxonomy.html        # Diátaxis 4 modes mapping
+│   │   ├── stakeholders.html         # ISO 42010 perspectives
+│   │   └── glossary.html             # canonical vocabulary (core layer)
+│   ├── agents/                       # specialist agents (8 個、 §8 参照)
+│   │   ├── spec-explorer.md          # Phase B (2-3 並列)
+│   │   ├── spec-architect.md         # Phase D (optional)
+│   │   └── spec-review-{vocabulary,structure,ssot,temporal,ears,stakeholder}.md
+│   ├── skills/                       # folio-architect SKILL
+│   │   └── folio-architect/
+│   │       └── SKILL.md              # 7-phase A-G (§7 参照)
+│   ├── decisions/                    # core 層 ADR
+│   │   └── ADR-0001-html-only.html
+│   ├── checks/                       # CI gate scripts (Python)
+│   │   ├── link-integrity.py         # P-6 enforce
+│   │   ├── orphan-check.py           # P-6 enforce
+│   │   ├── declarative-check.py      # P-4 enforce
+│   │   └── what-only-check.py        # P-3 / P-11 enforce
+│   ├── hooks/
+│   │   └── pre-spec-write-boundary.sh   # caller marker enforce (§9)
+│   ├── templates/
+│   │   ├── spec.html.tmpl
+│   │   ├── ADR.html.tmpl
+│   │   └── changes/proposal.html.tmpl
+│   ├── bindings/                     # platform-specific HOW (P-11 で spec から分離)
+│   │   └── claude-code/              # Claude Code 固有 hint
+│   └── llms.html                     # AI context loading index
+│
+├── stacks/                           # Layer 2: technology overlays
+│   ├── twill-legacy/                 # ★ read-only reference (P-12)
+│   │   └── README.html               # "active: false" marker
+│   ├── typescript/
+│   │   ├── vocabulary.yaml
+│   │   ├── rules-overlay.html
+│   │   └── patterns/
+│   ├── python/
+│   └── ... (future stacks)
+│
+└── projects/                         # Layer 3: project-specific overlays
+    └── _template/                    # 新 project 作成用 template
+        ├── folio.config.yaml         # stack 宣言 + project 設定
+        ├── architecture/
+        │   ├── spec/                 # Diátaxis Reference (cwd 即判定)
+        │   ├── howto/                # Diátaxis How-to
+        │   ├── tutorial/             # Diátaxis Tutorial
+        │   ├── explanation/          # Diátaxis Explanation
+        │   ├── decisions/            # ADR (project 固有)
+        │   ├── changes/              # 進行中 proposal (proposal-only MUST、 OpenSpec 案 B)
+        │   ├── steering/             # Kiro 慣習 (product/tech/structure)
+        │   ├── research/             # spec 反映前の探索
+        │   └── archive/              # 完了 changes / 旧 spec
+        └── vocabulary.yaml           # project 固有用語 override
+</code></pre>
+
+<p><strong>cwd で context 即判定</strong>: AI Agent は cwd が <code>projects/&lt;name&gt;/architecture/spec/</code> 配下にあるか <code>tutorial/</code> 配下にあるかで Diátaxis mode を即判定できる (P-3 platform 中立 + 物理 dir 分離)。</p>
+</section>
+
+<section id="s3-naming" class="normative">
+<h2>§3. File Naming Convention</h2>
+
+<ul>
+  <li>全 file 名: <code>kebab-case.html</code> (例: <code>spec-taxonomy.html</code>、 <code>universal-architect-overlay.html</code>)。 snake_case / camelCase 禁止。</li>
+  <li>ADR: <code>ADR-NNNN-&lt;slug&gt;.html</code> (4 桁 ID、 <code>ADR-0001-html-only.html</code>)。</li>
+  <li>changes package: <code>changes/&lt;NNN&gt;-&lt;slug&gt;/proposal.html</code> (例: <code>changes/001-constitution-amendment/proposal.html</code>)。</li>
+  <li>archive: <code>archive/changes/YYYY-MM-DD-NNN-&lt;slug&gt;/</code> で merge 後 timestamped。</li>
+  <li>vocabulary: <code>stacks/&lt;name&gt;/vocabulary.yaml</code> (YAML 例外、 P-2)。</li>
+  <li>config: <code>folio.config.yaml</code> (project root、 YAML 例外、 P-2)。</li>
+  <li>entry point: 各 cluster は <code>README.html</code> を持つ MUST (orphan 例外、 P-6)。</li>
+</ul>
+</section>
+
+<section id="s4-format" class="normative">
+<h2>§4. HTML Format Conventions</h2>
+
+<p>全 spec file は以下の構造を MUST 採用する。</p>
+
+<h3>§4.1 <code>&lt;head&gt;</code> Metadata (3 層)</h3>
+
+<pre><code>&lt;head&gt;
+&lt;meta charset="UTF-8"&gt;
+&lt;meta name="folio-doc-type"     content="spec"&gt;     <!-- constitution|spec|adr|changes|research|tutorial|howto|explanation -->
+&lt;meta name="folio-layer"        content="core"&gt;     <!-- core|stack|project -->
+&lt;meta name="folio-stack"        content="typescript"&gt; <!-- stack 名 (project layer のみ) -->
+&lt;meta name="folio-version"      content="1.2.0"&gt;
+&lt;meta name="folio-status"       content="active"&gt;   <!-- draft|active|deprecated|archived -->
+&lt;meta name="folio-stakeholders" content="Developer, AI Agent"&gt;
+&lt;meta name="folio-arc42"        content="section-5"&gt; <!-- arc42 mapping (optional) -->
+&lt;meta name="folio-diataxis"     content="reference"&gt; <!-- tutorial|howto|reference|explanation -->
+&lt;title&gt;...&lt;/title&gt;
+&lt;link rel="stylesheet" href="../../common.css"&gt;
+&lt;script type="application/ld+json"&gt;
+{
+  "@type": "FolioSpec",
+  "id": "...",
+  "version": "1.2.0",
+  "stakeholderPerspective": ["Developer", "AI Agent"]
+}
+&lt;/script&gt;
+&lt;/head&gt;
+</code></pre>
+
+<h3>§4.2 Body 冒頭 <code>aside.machine-readable</code> (twill dl.mri 後継)</h3>
+
+<pre><code>&lt;aside class="machine-readable" aria-hidden="true"&gt;
+  &lt;dl&gt;
+    &lt;dt&gt;id&lt;/dt&gt;<dd>building-blocks</dd>
+    &lt;dt&gt;doc-type&lt;/dt&gt;<dd>spec</dd>
+    &lt;dt&gt;arc42-section&lt;/dt&gt;<dd>5</dd>
+    &lt;dt&gt;stakeholders&lt;/dt&gt;<dd>Developer, AI Agent</dd>
+    &lt;dt&gt;version&lt;/dt&gt;<dd>1.2.0</dd>
+    &lt;dt&gt;status&lt;/dt&gt;<dd>active</dd>
+  &lt;/dl&gt;
+&lt;/aside&gt;
+</code></pre>
+
+<p>これは <code>llms.html</code> (§7 G phase で更新) が grep して集約する SSoT。 LLM は <code>aside.machine-readable</code> を読むだけで file の context を即把握できる。</p>
+
+<h3>§4.3 RFC 2119 Boilerplate</h3>
+
+<p>全 normative section を含む file は冒頭に以下の boilerplate を持つ MUST:</p>
+
+<pre><code>&lt;aside class="informative"&gt;
+&lt;p&gt;本文書は IETF &lt;strong&gt;RFC 2119&lt;/strong&gt; および &lt;strong&gt;RFC 8174 / BCP 14&lt;/strong&gt; に定義される MUST/SHOULD/MAY/SHALL のキーワード解釈規約に従う。&lt;/p&gt;
+&lt;/aside&gt;
+</code></pre>
+
+<h3>§4.4 <code>section.normative</code> / <code>section.informative</code> Wrappers</h3>
+
+<p>MUST/SHALL を含む section は <code>&lt;section class="normative"&gt;</code> で wrap、 説明・rationale のみの section は <code>&lt;section class="informative"&gt;</code> で wrap する。 common.css が視覚的境界を表現する。</p>
+</section>
+
+<section id="s5-delta" class="normative">
+<h2>§5. Delta Marker HTML Markup</h2>
+
+<p>spec 改訂の trace を spec 本文に inline 保存する。 OpenSpec の ADDED/MODIFIED/REMOVED に相当する HTML-native 実装。</p>
+
+<pre><code>&lt;!-- 追加 delta --&gt;
+&lt;ins class="delta"
+     data-delta-id="D-2026-05-21-001"
+     data-delta-date="2026-05-21"
+     data-delta-author="user"&gt;
+  新しい要件テキスト
+&lt;/ins&gt;
+
+&lt;!-- 削除 delta (旧 text 保全) --&gt;
+&lt;del class="delta"
+     data-delta-id="D-2026-05-20-003"
+     data-delta-superseded-by="D-2026-05-21-001"&gt;
+  旧テキスト
+&lt;/del&gt;
+</code></pre>
+
+<p><strong>grep pattern</strong>: <code>grep -r 'data-delta-id' projects/</code> で全変更を file 横断で抽出可能。 <code>data-delta-id</code> は <code>D-YYYY-MM-DD-NNN</code> format で命名し、 同日内連番を保証する。</p>
+
+<p>SemVer (constitution §3) との関係: MAJOR/MINOR bump 時は <code>data-delta-type="major"</code> 属性を追加し、 ADR cross-ref (<code>data-related-adr="ADR-0042"</code>) を併記する。</p>
+</section>
+
+<section id="s6-ears" class="normative">
+<h2>§6. EARS Notation HTML Markup</h2>
+
+<p>acceptance criteria は <a href="https://alistairmavin.com/ears/">EARS (Easy Approach to Requirements Syntax)</a> の 5 pattern を採用する。</p>
+
+<table>
+  <thead><tr><th>pattern</th><th>template</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>Ubiquitous</td><td>The system SHALL ...</td><td>無条件不変条件</td></tr>
+    <tr><td>Event-driven</td><td>WHEN [trigger], the system SHALL ...</td><td>event 応答</td></tr>
+    <tr><td>State-driven</td><td>WHILE [precondition], the system SHALL ...</td><td>状態継続中</td></tr>
+    <tr><td>Optional</td><td>WHERE [feature included], the system SHALL ...</td><td>機能オプション</td></tr>
+    <tr><td>Unwanted</td><td>IF [unwanted condition], THEN the system SHALL ...</td><td>異常応答</td></tr>
+  </tbody>
+</table>
+
+<p><strong>HTML markup</strong>:</p>
+
+<pre><code>&lt;p class="ears" data-ears-pattern="event-driven"&gt;
+  &lt;span class="ears-id"&gt;REQ-002&lt;/span&gt;:
+  &lt;span class="ears-when"&gt;WHEN AI agent attempts to write to spec/&lt;/span&gt;,
+  the system &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt;
+  verify FOLIO_ARCHITECT_CONTEXT environment variable.
+&lt;/p&gt;
+</code></pre>
+
+<p>specialist agent <code>spec-review-ears</code> (§8) が pattern 完全性 (5 種網羅) と ID uniqueness を CI で検証する。</p>
+</section>
+
+<section id="s7-7phase" class="normative">
+<h2>§7. 7-Phase PR Cycle (folio-architect SKILL)</h2>
+
+<p>folio-architect は spec edit の唯一 author。 7 phase (A〜G) を順次実行する。 twill tool-architect の 7-phase pattern を universal 化したもの。</p>
+
+<table>
+  <thead><tr><th>Phase</th><th>name</th><th>agent</th><th>並列</th><th>必須</th></tr></thead>
+  <tbody>
+    <tr><td>A</td><td>Discovery</td><td>(なし、 folio-architect 直接)</td><td>—</td><td>MUST (todo list + folio.config.yaml load)</td></tr>
+    <tr><td>B</td><td>Spec Exploration</td><td><code>spec-explorer</code></td><td>2-3 並列</td><td>MUST</td></tr>
+    <tr><td>C</td><td>Clarifying Questions</td><td>(なし、 AskUserQuestion)</td><td>—</td><td>MUST NOT SKIP</td></tr>
+    <tr><td>D</td><td>Spec Design</td><td><code>spec-architect</code></td><td>2-3 並列</td><td>optional (structural change 時のみ)</td></tr>
+    <tr><td>E</td><td>Implementation</td><td>(folio-architect 直接)</td><td>—</td><td>MUST (caller marker + Edit + 機械検証 + unset)</td></tr>
+    <tr><td>F</td><td>Quality Review</td><td><code>spec-review-{vocabulary,structure,ssot,temporal,ears,stakeholder}</code></td><td>6 並列固定</td><td>MUST NOT SKIP</td></tr>
+    <tr><td>G</td><td>Summary</td><td>(folio-architect 直接)</td><td>—</td><td>MUST (delta marker check + changelog + llms.html 更新)</td></tr>
+  </tbody>
+</table>
+
+<p>並列 agent 合計: 最大 11 並列 (B 3 + D 3 + F 6 - F は除外で同時 6)、 最小 8 並列 (B 2 + F 6、 D skip 時)。</p>
+</section>
+
+<section id="s8-specialists" class="normative">
+<h2>§8. Specialist Agents (8 個)</h2>
+
+<table>
+  <thead><tr><th>agent</th><th>phase</th><th>focus</th><th>note</th></tr></thead>
+  <tbody>
+    <tr><td><code>spec-explorer</code></td><td>B</td><td>関連 spec の cross-ref / ADR / EXP listing</td><td>twill 同名から universal 化、 stack vocabulary 動的 load</td></tr>
+    <tr><td><code>spec-architect</code></td><td>D</td><td>minimal / clean / pragmatic 3 案設計 (structural change 時)</td><td>twill 同名から universal 化</td></tr>
+    <tr><td><code>spec-review-vocabulary</code></td><td>F 軸 1</td><td>P-5 canonical name 違反、 forbidden synonym detection</td><td>stack vocabulary.yaml 参照</td></tr>
+    <tr><td><code>spec-review-structure</code></td><td>F 軸 2</td><td>directory structure、 file naming、 cross-ref、 heading hierarchy</td><td>arc42 / Diátaxis 整合性</td></tr>
+    <tr><td><code>spec-review-ssot</code></td><td>F 軸 3</td><td>P-7 content domain exclusivity、 ADR / changes / research 境界</td><td>aside.machine-readable と llms.html の整合</td></tr>
+    <tr><td><code>spec-review-temporal</code></td><td>F 軸 4</td><td>P-4 declarative form、 wave-specific narrative 検出</td><td>過去/未来 narration 排除</td></tr>
+    <tr><td><strong><code>spec-review-ears</code></strong></td><td>F 軸 5 (新規)</td><td>EARS 5 pattern 網羅、 REQ-ID uniqueness、 traceability</td><td>folio 新設、 §6 enforce</td></tr>
+    <tr><td><strong><code>spec-review-stakeholder</code></strong></td><td>F 軸 6 (新規)</td><td>ISO 42010 Stakeholder Perspectives coverage、 AI Agent first-class</td><td>folio 新設、 §0 enforce</td></tr>
+  </tbody>
+</table>
+
+<p>各 specialist agent は <code>model: opus</code> を採用候補とするが、 <code>folio.config.yaml</code> の <code>review_model</code> で override 可能 (twill R-13 の universal 化、 model 固定は規約外)。</p>
+</section>
+
+<section id="s9-caller-marker" class="normative">
+<h2>§9. Caller Marker (LLM 混同回避)</h2>
+
+<p>spec edit を行う agent は以下の env var を MUST set する。</p>
+
+<pre><code># 編集前
+export FOLIO_ARCHITECT_CONTEXT=folio-architect
+
+# Edit/Write 実行 (core/spec/、 stacks/*/spec/、 projects/*/architecture/spec/ 配下)
+
+# 編集後 (MUST、 leak 防止)
+unset FOLIO_ARCHITECT_CONTEXT
+</code></pre>
+
+<p><code>core/hooks/pre-spec-write-boundary.sh</code> が PreToolUse hook で env を検査し、 未 set / 異なる値の場合は <code>permissionDecision: deny</code> を返して spec edit を block する。</p>
+
+<p>twill の <code>TWL_TOOL_CONTEXT</code> とは <strong>env var 名が異なる</strong>。 同一 host 上で twill と folio が並列存在しても hook が干渉しない (LLM 混同回避の structural guard、 P-12)。</p>
+</section>
+
+<section id="s10-llm-confusion-avoidance" class="normative">
+<h2>§10. LLM 混同回避 System (5 層防御)</h2>
+
+<table>
+  <thead><tr><th>層</th><th>機構</th><th>具体値</th></tr></thead>
+  <tbody>
+    <tr><td>L1 物理分離</td><td>独立 git repo</td><td><code>~/projects/local-projects/folio/</code> (twill と完全別 path)</td></tr>
+    <tr><td>L2 root marker</td><td>Markdown 例外 file</td><td><code>FOLIO.md</code> 1 行目 "This is NOT twill"</td></tr>
+    <tr><td>L3 meta 宣言</td><td>HTML <code>&lt;meta&gt;</code> tag</td><td><code>name="folio-doc-type"</code> (twill には存在しない attribute)</td></tr>
+    <tr><td>L4 caller marker</td><td>env var</td><td><code>FOLIO_ARCHITECT_CONTEXT</code> (twill の <code>TWL_TOOL_CONTEXT</code> と異名)</td></tr>
+    <tr><td>L5 directory naming</td><td>folio 固有 dir</td><td><code>core/</code>、 <code>stacks/twill-legacy/</code> (twill には存在しない構造)</td></tr>
+  </tbody>
+</table>
+
+<p>5 層全てを通過した時のみ AI Agent は folio repo の spec を編集できる。 単一 layer の bypass では P-12 違反扱い。</p>
+</section>
+
+<section id="s11-ci-gate" class="informative">
+<h2>§11. CI Gate Specification (將来実装)</h2>
+
+<p>CI workflow (.github/workflows/) が以下の gate を強制する MUST (実装は Phase 5 以降):</p>
+
+<ol>
+  <li><strong>link-integrity gate</strong>: <code>core/checks/link-integrity.py</code> で broken link / orphan / trace_extra / css_broken 全 0 を強制 (P-6)。</li>
+  <li><strong>declarative-form gate</strong>: <code>core/checks/declarative-check.py</code> で過去/未来 narration、 wave-specific note 検出時 fail (P-4)。</li>
+  <li><strong>what-only gate</strong>: <code>core/checks/what-only-check.py</code> で Claude Code primitives / tmux / specific path 検出時 warn or fail (P-3 / P-11)。</li>
+  <li><strong>vocabulary gate</strong>: stack vocabulary.yaml の forbidden synonym 検出 (P-5)。</li>
+  <li><strong>EARS coverage gate</strong>: spec 内 acceptance criteria に EARS 形式以外を検出時 warn (§6)。</li>
+  <li><strong>delta marker consistency gate</strong>: <code>data-delta-id</code> uniqueness、 ADR cross-ref 整合性 (§5)。</li>
+</ol>
+</section>
+
+</body>
+</html>
