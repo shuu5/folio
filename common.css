@@ -1,149 +1,454 @@
-/* folio — common stylesheet (v0.1.0 draft)
- * 3-layer overlay design tokens:
- *   - core/: universal colors (immutable)
- *   - stacks/: stack-specific overrides via :where()
- *   - projects/: project-specific overrides at root
+/* folio — common stylesheet (v0.2.0 draft)
+ *
+ * Design tokens inspired by note (https://note.com/) via
+ * https://github.com/kzhrknt/awesome-design-md-jp/blob/main/design-md/note/DESIGN.md
+ *
+ * note の特徴:
+ *   - 純粋な黒 (#000) を避け、 ほぼ黒 (#08131a) で柔らかい読書体験
+ *   - 記事本文 18px / line-height 2.0 のゆったりした行間
+ *   - 見出しのみ palt + letter-spacing 0.04em (本文には適用しない)
+ *   - 620px 記事幅 (可読性最適)
+ *   - dual shadow elevation (ambient + key light)
+ *   - ダークモード対応 (prefers-color-scheme + CSS Custom Properties)
+ *
+ * folio 拡張:
+ *   - delta markers (ins/del.delta)
+ *   - EARS notation (p.ears + .ears-* spans)
+ *   - reader-persona aside (Stakeholder Perspectives)
+ *   - machine-readable aside (dl.mri 後継)
+ *   - section.normative / section.informative (RFC 2119 ReSpec 風)
  */
 
+/* ========================================================================
+ * CSS Custom Properties (light mode default)
+ * ====================================================================== */
+
 :root {
-  /* Layer 1 (core, immutable) ----------------------------------- */
-  --folio-color-text:        #1a1a1a;
-  --folio-color-text-muted:  #555;
-  --folio-color-bg:          #fafafa;
-  --folio-color-surface:     #ffffff;
-  --folio-color-border:      #d0d0d0;
+  /* --- color: text ---------------------------------------------------- */
+  --folio-text-primary:     #08131a;             /* ほぼ黒 (note Gray 900) */
+  --folio-text-secondary:   rgba(8, 19, 26, 0.66);
+  --folio-text-tertiary:    rgba(8, 19, 26, 0.50);
+  --folio-text-disabled:    rgba(8, 19, 26, 0.50);
+  --folio-text-invert:      #ffffff;
+  --folio-text-placeholder: #888;
 
-  /* semantic colors */
-  --folio-color-primary:     #2a4d6e;  /* folio anchor blue */
-  --folio-color-accent:      #8b6f47;  /* parchment brown */
-  --folio-color-normative:   #b94a48;  /* MUST/SHALL red */
-  --folio-color-informative: #468847;  /* informative green */
-  --folio-color-delta-add:   #e8f5e9;  /* delta inserted */
-  --folio-color-delta-del:   #fce4e4;  /* delta deleted */
-  --folio-color-ears:        #fff8e1;  /* EARS requirement amber */
+  /* --- color: surface & background ----------------------------------- */
+  --folio-bg-primary:       #ffffff;
+  --folio-bg-secondary:     #f5f8fa;             /* note Gray 50 */
+  --folio-surface-normal:   #ffffff;
+  --folio-surface-invert:   #08131a;
 
-  /* typography */
-  --folio-font-body:    -apple-system, BlinkMacSystemFont, "Segoe UI",
-                        "Hiragino Sans", "Noto Sans CJK JP", sans-serif;
-  --folio-font-mono:    "SF Mono", Monaco, Menlo, "Source Code Pro", monospace;
-  --folio-font-size:    16px;
-  --folio-line-height:  1.65;
+  /* --- color: borders ------------------------------------------------- */
+  --folio-border-default:   rgba(8, 19, 26, 0.14);
+  --folio-border-strong:    rgba(8, 19, 26, 0.22);
+  --folio-border-weak:      #f5f8fa;
+  --folio-border-focus:     #292d9e;             /* note darkblue-600 */
 
-  /* layout */
-  --folio-max-width:    72ch;
-  --folio-gap:          1rem;
+  /* --- color: brand & semantic --------------------------------------- */
+  --folio-brand:            #2a4d6e;             /* folio anchor blue (note green の置換) */
+  --folio-success:          #1e7b65;             /* note success */
+  --folio-success-subdued:  #e6f6f2;
+  --folio-danger:           #b22323;             /* note danger */
+  --folio-danger-subdued:   #fdf3f3;
+  --folio-caution:          #916626;             /* note caution */
+  --folio-caution-subdued:  #fefbea;
+
+  /* --- color: folio-specific semantic -------------------------------- */
+  --folio-normative:        #b22323;             /* MUST/SHALL (danger と同色) */
+  --folio-informative:      #1e7b65;             /* informative (success と同色) */
+  --folio-delta-add-bg:     #e6f6f2;             /* success-subdued */
+  --folio-delta-add-border: #1e7b65;
+  --folio-delta-del-bg:     #fdf3f3;             /* danger-subdued */
+  --folio-delta-del-border: #b22323;
+  --folio-ears-bg:          #fefbea;             /* caution-subdued */
+  --folio-ears-border:      #916626;
+
+  /* --- typography: font-family --------------------------------------- */
+  --folio-font-sans:  "Helvetica Neue", "Hiragino Sans",
+                      "Hiragino Kaku Gothic ProN", Arial,
+                      "Noto Sans JP", Meiryo, sans-serif;
+  --folio-font-serif: "Hiragino Mincho ProN", "Hiragino Mincho Pro",
+                      HGSMinchoE, "Yu Mincho", YuMincho,
+                      "MS PMincho", serif;
+  --folio-font-mono:  SFMono-Regular, Consolas, Menlo, Courier, monospace;
+
+  /* --- typography: size & line-height -------------------------------- */
+  --folio-text-base:       16px;                 /* body (top page) */
+  --folio-text-article:    18px;                 /* article body (note 推奨) */
+  --folio-text-h1:         32px;
+  --folio-text-h2:         28px;
+  --folio-text-h3:         20px;
+  --folio-text-small:      14px;
+  --folio-text-caption:    12px;
+
+  --folio-lh-base:         1.5;                  /* body / UI */
+  --folio-lh-article:      2.0;                  /* article body (note 推奨、 ゆったり) */
+  --folio-lh-heading:      1.286;                /* h2 (28 → 36px) */
+  --folio-lh-h1:           1.5;                  /* h1 (32 → 48px) */
+
+  --folio-letter-heading:  0.04em;               /* 見出し専用 palt 相当 */
+
+  /* --- layout --------------------------------------------------------- */
+  --folio-width-article:   620px;                /* note 推奨、 記事本文最適 */
+  --folio-width-main:      940px;                /* note main content */
+  --folio-radius-card:     12px;                 /* note card */
+  --folio-radius-inline:   3px;                  /* code / badge */
+
+  /* --- elevation (dual shadow: ambient + key) ------------------------ */
+  --folio-elev-1: 0 1px 3px 1px rgba(0, 0, 0, 0.14),
+                  0 1px 2px 0   rgba(0, 0, 0, 0.22);
+  --folio-elev-4: 0 4px 8px 3px rgba(0, 0, 0, 0.14),
+                  0 1px 3px 0   rgba(0, 0, 0, 0.22);
+  --folio-elev-6: 0 6px 10px 4px rgba(0, 0, 0, 0.14),
+                  0 2px 3px 0    rgba(0, 0, 0, 0.22);
 }
 
-html { font-size: var(--folio-font-size); }
+/* ========================================================================
+ * Dark mode (prefers-color-scheme + CSS Custom Properties swap)
+ * ====================================================================== */
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --folio-text-primary:     hsla(0, 0%, 100%, 0.90);
+    --folio-text-secondary:   hsla(0, 0%, 100%, 0.66);
+    --folio-text-tertiary:    hsla(0, 0%, 100%, 0.50);
+    --folio-text-disabled:    hsla(0, 0%, 100%, 0.50);
+    --folio-text-invert:      #08131a;
+
+    --folio-bg-primary:       #08131a;
+    --folio-bg-secondary:     #202a30;
+    --folio-surface-normal:   #202a30;
+    --folio-surface-invert:   #ffffff;
+
+    --folio-border-default:   hsla(0, 0%, 100%, 0.14);
+    --folio-border-strong:    hsla(0, 0%, 100%, 0.22);
+    --folio-border-weak:      #202a30;
+
+    --folio-delta-add-bg:     rgba(30, 123, 101, 0.20);
+    --folio-delta-del-bg:     rgba(178, 35, 35, 0.20);
+    --folio-ears-bg:          rgba(145, 102, 38, 0.20);
+  }
+}
+
+/* ========================================================================
+ * Base reset + typography
+ * ====================================================================== */
+
+* { box-sizing: border-box; }
+
+html {
+  font-size: var(--folio-text-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: auto;
+}
+
 body {
-  max-width: var(--folio-max-width);
-  margin: 2rem auto;
-  padding: 0 1rem;
-  font-family: var(--folio-font-body);
-  line-height: var(--folio-line-height);
-  color: var(--folio-color-text);
-  background: var(--folio-color-bg);
+  max-width: var(--folio-width-article);
+  margin: 2.5rem auto;
+  padding: 0 1.25rem;
+  font-family: var(--folio-font-sans);
+  font-size: var(--folio-text-article);              /* 18px、 記事本文 */
+  line-height: var(--folio-lh-article);              /* 2.0、 ゆったり */
+  letter-spacing: normal;                            /* 本文は normal (palt 適用しない) */
+  color: var(--folio-text-primary);
+  background: var(--folio-bg-primary);
+  word-wrap: break-word;
+  font-feature-settings: normal;                     /* 本文には palt 適用しない */
 }
 
-/* document header ------------------------------------------------ */
+p { margin: 0 0 1.25rem; }
+
+/* ========================================================================
+ * Headings (palt + letter-spacing は見出し専用)
+ * ====================================================================== */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--folio-font-sans);
+  font-weight: 700;
+  letter-spacing: var(--folio-letter-heading);
+  font-feature-settings: "palt";
+  color: var(--folio-text-primary);
+}
+
+h1 { font-size: var(--folio-text-h1); line-height: var(--folio-lh-h1);      margin: 0 0 1rem; }
+h2 { font-size: var(--folio-text-h2); line-height: var(--folio-lh-heading); margin: 2rem 0 1rem; }
+h3 { font-size: var(--folio-text-h3); line-height: 1.5;                     margin: 1.5rem 0 0.75rem; }
+h4 { font-size: 1rem; line-height: 1.5; font-weight: 600; margin: 1rem 0 0.5rem; }
+
+/* ========================================================================
+ * Links
+ * ====================================================================== */
+
+a {
+  color: var(--folio-brand);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible {
+  outline: 2px solid var(--folio-border-focus);
+  outline-offset: 2px;
+  border-radius: var(--folio-radius-inline);
+}
+
+/* ========================================================================
+ * Document header (各 file 冒頭)
+ * ====================================================================== */
+
 header.doc-header {
-  border-bottom: 3px solid var(--folio-color-primary);
-  margin-bottom: 1.5rem;
-  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--folio-border-default);
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
 }
-header.doc-header h1 { margin: 0 0 0.25rem; color: var(--folio-color-primary); }
-header.doc-header .meta { color: var(--folio-color-text-muted); font-size: 0.9em; }
+header.doc-header h1 {
+  margin: 0 0 0.5rem;
+  color: var(--folio-text-primary);
+}
+header.doc-header .meta {
+  color: var(--folio-text-secondary);
+  font-size: var(--folio-text-small);
+  line-height: 1.5;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
 
-/* normative / informative wrappers (RFC 2119) -------------------- */
+/* ========================================================================
+ * Normative / Informative section wrappers (RFC 2119)
+ * ====================================================================== */
+
 section.normative {
-  border-left: 4px solid var(--folio-color-normative);
-  padding-left: 1rem;
-  margin: 1rem 0;
+  border-left: 3px solid var(--folio-normative);
+  background: var(--folio-surface-normal);
+  padding: 0.25rem 1.25rem;
+  margin: 1.5rem 0;
 }
 section.informative {
-  border-left: 4px solid var(--folio-color-informative);
-  padding-left: 1rem;
-  margin: 1rem 0;
+  border-left: 3px solid var(--folio-informative);
+  background: var(--folio-surface-normal);
+  padding: 0.25rem 1.25rem;
+  margin: 1.5rem 0;
 }
 
-/* delta markers -------------------------------------------------- */
-ins.delta {
-  background: var(--folio-color-delta-add);
+/* ========================================================================
+ * Delta markers (ins.delta / del.delta)
+ * ====================================================================== */
+
+ins.delta, del.delta {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--folio-radius-inline);
   text-decoration: none;
-  padding: 1px 4px;
-  border-left: 3px solid #4caf50;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+ins.delta {
+  background: var(--folio-delta-add-bg);
+  border-left: 2px solid var(--folio-delta-add-border);
 }
 del.delta {
-  background: var(--folio-color-delta-del);
-  padding: 1px 4px;
-  border-left: 3px solid #c62828;
+  background: var(--folio-delta-del-bg);
+  border-left: 2px solid var(--folio-delta-del-border);
+  text-decoration: line-through;
 }
 ins.delta::before {
   content: "+" attr(data-delta-id) " ";
-  font-size: 0.8em;
-  color: #388e3c;
   font-family: var(--folio-font-mono);
+  font-size: 0.78em;
+  color: var(--folio-success);
+  margin-right: 0.25rem;
 }
 del.delta::before {
   content: "-" attr(data-delta-id) " ";
-  font-size: 0.8em;
-  color: #c62828;
   font-family: var(--folio-font-mono);
+  font-size: 0.78em;
+  color: var(--folio-danger);
+  margin-right: 0.25rem;
 }
 
-/* EARS notation -------------------------------------------------- */
+/* ========================================================================
+ * EARS notation (p.ears + .ears-* spans)
+ * ====================================================================== */
+
 .ears {
-  background: var(--folio-color-ears);
-  border-left: 4px solid var(--folio-color-accent);
-  padding: 0.5rem 0.75rem;
-  margin: 0.5rem 0;
-}
-.ears-id     { font-family: var(--folio-font-mono); font-weight: 600; color: var(--folio-color-accent); }
-.ears-when   { font-style: italic; }
-.ears-shall  { font-weight: 600; color: var(--folio-color-normative); }
-
-/* stakeholder perspective aside ---------------------------------- */
-aside.reader-persona {
-  background: var(--folio-color-surface);
-  border: 1px solid var(--folio-color-border);
-  border-radius: 4px;
+  background: var(--folio-ears-bg);
+  border-left: 3px solid var(--folio-ears-border);
   padding: 0.75rem 1rem;
   margin: 1rem 0;
+  border-radius: var(--folio-radius-inline);
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+.ears-id {
+  font-family: var(--folio-font-mono);
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--folio-ears-border);
+  margin-right: 0.5rem;
+}
+.ears-when { font-style: italic; color: var(--folio-text-secondary); }
+.ears-shall {
+  font-weight: 600;
+  color: var(--folio-normative);
+  text-transform: uppercase;
+}
+
+/* ========================================================================
+ * Stakeholder Perspective aside (reader-persona)
+ * ====================================================================== */
+
+aside.reader-persona {
+  background: var(--folio-surface-normal);
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--folio-elev-1);
 }
 aside.reader-persona::before {
   content: "👁 Reader: " attr(data-persona);
   display: block;
-  font-size: 0.85em;
-  color: var(--folio-color-text-muted);
+  font-size: var(--folio-text-caption);
+  color: var(--folio-text-secondary);
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.04em;
+  font-feature-settings: "palt";
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
 }
+aside.reader-persona p:last-child { margin-bottom: 0; }
 
-/* machine-readable summary aside (twill dl.mri descendant) ------- */
+/* ========================================================================
+ * Machine-readable aside (twill dl.mri 後継)
+ * ====================================================================== */
+
 aside.machine-readable {
-  background: #f5f5f5;
-  border: 1px dashed var(--folio-color-border);
+  background: var(--folio-bg-secondary);
+  border: 1px dashed var(--folio-border-default);
+  border-radius: var(--folio-radius-inline);
   padding: 0.5rem 1rem;
-  margin: 1rem 0;
+  margin: 1.25rem 0;
   font-family: var(--folio-font-mono);
-  font-size: 0.85em;
+  font-size: var(--folio-text-small);
+  line-height: 1.6;
+  letter-spacing: normal;
 }
 aside.machine-readable dl { margin: 0; }
-aside.machine-readable dt { font-weight: 600; display: inline; color: var(--folio-color-primary); }
-aside.machine-readable dt::after { content: ": "; }
-aside.machine-readable dd { display: inline; margin: 0; }
-aside.machine-readable dd::after { content: " | "; color: var(--folio-color-text-muted); }
+aside.machine-readable dt {
+  font-weight: 600;
+  display: inline;
+  color: var(--folio-brand);
+}
+aside.machine-readable dt::after { content: ": "; color: var(--folio-text-secondary); }
+aside.machine-readable dd { display: inline; margin: 0; color: var(--folio-text-primary); }
+aside.machine-readable dd::after {
+  content: " | ";
+  color: var(--folio-text-tertiary);
+  margin: 0 0.25rem;
+}
 aside.machine-readable dd:last-child::after { content: ""; }
 
-/* RFC 2119 keyword highlight ------------------------------------- */
-.rfc2119 { font-weight: 600; text-transform: uppercase; font-size: 0.95em; }
+/* ========================================================================
+ * RFC 2119 keyword highlight
+ * ====================================================================== */
 
-/* tables --------------------------------------------------------- */
-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
-th, td { border: 1px solid var(--folio-color-border); padding: 0.5rem 0.75rem; text-align: left; }
-th { background: #f0f0f0; font-weight: 600; }
+.rfc2119 {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.95em;
+  color: var(--folio-normative);
+  letter-spacing: 0.04em;
+}
 
-/* code ----------------------------------------------------------- */
-code { font-family: var(--folio-font-mono); background: #f0f0f0; padding: 1px 4px; border-radius: 3px; }
-pre  { background: #f0f0f0; padding: 0.75rem; border-radius: 4px; overflow-x: auto; }
-pre code { background: none; padding: 0; }
+/* ========================================================================
+ * Tables
+ * ====================================================================== */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: var(--folio-text-base);                 /* 16px、 本文より小さく */
+  line-height: var(--folio-lh-base);                 /* 1.5、 本文より tight */
+  background: var(--folio-surface-normal);
+  border-radius: var(--folio-radius-inline);
+  overflow: hidden;
+  box-shadow: var(--folio-elev-1);
+}
+th, td {
+  border-bottom: 1px solid var(--folio-border-default);
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  vertical-align: top;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+th {
+  background: var(--folio-bg-secondary);
+  font-weight: 600;
+  color: var(--folio-text-primary);
+}
+tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(8, 19, 26, 0.03); }
+
+/* ========================================================================
+ * Code (inline + block)
+ * ====================================================================== */
+
+code {
+  font-family: var(--folio-font-mono);
+  font-size: 0.875em;
+  background: var(--folio-bg-secondary);
+  padding: 2px 6px;
+  border-radius: var(--folio-radius-inline);
+  color: var(--folio-text-primary);
+  letter-spacing: normal;
+}
+pre {
+  background: var(--folio-bg-secondary);
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: var(--folio-text-small);                /* 14px */
+  margin: 1.25rem 0;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+/* ========================================================================
+ * Lists
+ * ====================================================================== */
+
+ul, ol { margin: 0 0 1.25rem; padding-left: 1.5rem; }
+li { margin-bottom: 0.5rem; }
+li:last-child { margin-bottom: 0; }
+
+dl { margin: 0 0 1.25rem; }
+dt { font-weight: 600; margin-top: 1rem; }
+dd { margin: 0 0 0.75rem 1.5rem; }
+
+/* ========================================================================
+ * Definitions (dfn)
+ * ====================================================================== */
+
+dfn {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--folio-text-primary);
+  border-bottom: 1px dotted var(--folio-text-secondary);
+}
+
+/* ========================================================================
+ * Strong / emphasis
+ * ====================================================================== */
+
+strong { font-weight: 700; color: var(--folio-text-primary); }
+em     { font-style: italic; color: var(--folio-text-primary); }

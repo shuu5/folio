@@ -12,7 +12,7 @@ A clean-slate, AI-Agent-first architecture spec framework. HTML-only, 3-layer ov
 | [`architecture-rules.html`](./architecture-rules.html) | 3-layer overlay, directory structure, HTML markup conventions, 7-phase PR cycle, 8 specialist agents |
 | [`FOLIO.md`](./FOLIO.md) | project identity (LLM-agnostic root marker) |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions (HOW binding, P-11 root exception) |
-| [`common.css`](./common.css) | design tokens shared across all HTML files |
+| [`common.css`](./common.css) | design tokens (inspired by [note via awesome-design-md-jp](https://github.com/kzhrknt/awesome-design-md-jp/blob/main/design-md/note/DESIGN.md): 18px article body, line-height 2.0, palt heading, 620px width, dual-shadow elevation, dark mode) |
 
 ## Local preview (tailnet)
 
