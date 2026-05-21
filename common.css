@@ -88,11 +88,17 @@
 
   --folio-letter-heading:  0.04em;               /* 見出し専用 palt 相当 */
 
-  /* --- layout --------------------------------------------------------- */
-  --folio-width-article:   620px;                /* note 推奨、 記事本文最適 */
-  --folio-width-main:      940px;                /* note main content */
-  --folio-radius-card:     12px;                 /* note card */
-  --folio-radius-inline:   3px;                  /* code / badge */
+  /* --- layout --------------------------------------------------------- *
+   * note DESIGN.md には 2 種類記載:
+   *   - Main Content 940px (メインコンテンツ幅、 table + code 中心の技術文書向け)
+   *   - Article (Small) 620px (note 記事本文、 散文中心、 1 行可読性最適)
+   * folio の constitution / architecture-rules は table + code 中心の仕様書のため Main Content (940px) を採用。
+   * 純粋な散文 narrative section は内部で max-width 620px (var(--folio-width-narrative)) に制限可能。
+   */
+  --folio-width-main:        940px;              /* default body 幅 (技術文書) */
+  --folio-width-narrative:   620px;              /* 散文 inner container 用 (optional) */
+  --folio-radius-card:       12px;               /* note card */
+  --folio-radius-inline:     3px;                /* code / badge */
 
   /* --- elevation (dual shadow: ambient + key) ------------------------ */
   --folio-elev-1: 0 1px 3px 1px rgba(0, 0, 0, 0.14),
@@ -144,11 +150,11 @@ html {
 }
 
 body {
-  max-width: var(--folio-width-article);
+  max-width: var(--folio-width-main);                /* 940px、 技術文書向け (table + code 中心) */
   margin: 2.5rem auto;
-  padding: 0 1.25rem;
+  padding: 0 1.5rem;
   font-family: var(--folio-font-sans);
-  font-size: var(--folio-text-article);              /* 18px、 記事本文 */
+  font-size: var(--folio-text-article);              /* 18px、 note 推奨 */
   line-height: var(--folio-lh-article);              /* 2.0、 ゆったり */
   letter-spacing: normal;                            /* 本文は normal (palt 適用しない) */
   color: var(--folio-text-primary);
@@ -156,6 +162,10 @@ body {
   word-wrap: break-word;
   font-feature-settings: normal;                     /* 本文には palt 適用しない */
 }
+
+/* 散文 inner container (optional): 純粋な long-form narrative section は
+ * <div class="narrative"> で wrap すれば 620px に制限可能 */
+.narrative { max-width: var(--folio-width-narrative); margin: 0 auto; }
 
 p { margin: 0 0 1.25rem; }
 
