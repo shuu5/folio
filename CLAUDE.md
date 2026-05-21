@@ -1,11 +1,15 @@
-# CLAUDE.md — Claude Code project instructions for folio
+# CLAUDE.md — Claude Code project instructions for folio (Layer 0 META FRAMEWORK)
 
 Claude Code が session 開始時に自動 read する project-level instruction。 本 file の位置づけは `constitution.html` P-11 (HOW を spec に書かない) の **root 例外** として platform binding (HOW) を許容する場所。 将来 `core/bindings/claude-code/` に移管候補だが、 Claude Code 公式 convention に従い root 配置を維持する。
 
 ## 0. Identity check (MUST、 最初に確認)
 
-- cwd: `~/projects/local-projects/folio/` で始まることを確認。 異なる場合は spec edit をしてはならない。
-- このプロジェクトは **folio** であり、 **twill** (`~/projects/local-projects/twill/`) ではない。 混同した場合は immediate stop し user に確認すること。
+- cwd: `~/projects/local-projects/folio/` で始まることを確認。 異なる場合は folio の spec edit をしてはならない。
+- このプロジェクトは **folio (Layer 0 META FRAMEWORK)** である。 以下のいずれでもない:
+  - **twill** (`~/projects/local-projects/twill/`、 旧 plugin、 freeze、 historical artifact)
+  - **scribe** (将来作成予定の Layer 2 AI 自動実装 plugin、 folio の最初の consumer)
+  - 各 typescript webapp / python ML project 等 (Layer 2 consumers)
+- 混同した場合は immediate stop し user に確認すること。
 
 ## 1. 必読 file (順序)
 
@@ -31,17 +35,22 @@ unset FOLIO_ARCHITECT_CONTEXT
 
 leak 防止 MUST (sub-process env 継承で他 agent が誤動作するため)。
 
-## 3. twill との区別 (LLM 混同回避 5 層防御)
+## 3. 3 axis での区別 (LLM 混同回避 5 層防御)
 
-| 層 | folio | twill |
-|---|---|---|
-| 物理 path | `~/projects/local-projects/folio/` | `~/projects/local-projects/twill/` |
-| root marker | `FOLIO.md` | (なし、 CLAUDE.md のみ) |
-| meta tag | `<meta name="folio-*">` | (なし) |
-| caller marker | `FOLIO_ARCHITECT_CONTEXT` | `TWL_TOOL_CONTEXT` |
-| directory naming | `core/`, `stacks/`, `projects/` | `plugins/twl/`, `architecture/spec/` |
+LLM は 3 つの context boundary を混同し得る:
+- (a) folio (Layer 0) vs twill (旧 plugin、 freeze)
+- (b) folio (Layer 0、 本 repo) vs scribe 等 (Layer 2、 別 repo)
+- (c) Layer 1 spec edit (architecture/spec/) vs Layer 2 impl edit (skills/、 src/ 等)
 
-5 層全てを通過したときのみ folio repo の spec を編集できる (architecture-rules.html §10)。
+| 層 | folio (Layer 0、 本 repo) | scribe 等 (Layer 2、 別 repo) | twill (旧、 reference のみ) |
+|---|---|---|---|
+| 物理 path | `~/projects/local-projects/folio/` | `~/projects/local-projects/scribe/` 等 | `~/projects/local-projects/twill/` |
+| root marker | `FOLIO.md` "META FRAMEWORK" | `SCRIBE.md` 等 "folio consumer" | (なし) |
+| meta tag | `<meta name="folio-layer" content="core">` | `<meta name="folio-layer" content="project">` | (なし) |
+| caller marker | `FOLIO_ARCHITECT_CONTEXT=folio-architect` (core 編集時) | 同 env var (Layer 1 spec 編集時) | `TWL_TOOL_CONTEXT` (異名) |
+| dir naming | `core/` のみ | `architecture/spec/, howto/, tutorial/, explanation/` + 実装 dir | `plugins/twl/`, `architecture/spec/` (混在) |
+
+5 層全てを通過したときのみ folio repo の spec を編集できる (architecture-rules.html §10 参照)。
 
 ## 4. spec philosophy (constitution.html §1)
 

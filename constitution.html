@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="folio-doc-type" content="constitution">
 <meta name="folio-layer" content="core">
-<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-version" content="0.2.0-draft">
 <meta name="folio-status" content="draft">
-<title>folio — constitution (v0.1.0-draft)</title>
+<title>folio — constitution (v0.2.0-draft)</title>
 <link rel="stylesheet" href="common.css">
 <script type="application/ld+json">
 {
@@ -22,7 +22,7 @@
 
 <header class="doc-header">
   <h1>folio constitution</h1>
-  <div class="meta">v0.1.0-draft &middot; status: draft &middot; 12 immutable principles, 3-tier boundary declarations</div>
+  <div class="meta">v0.2.0-draft &middot; status: draft &middot; 12 immutable principles, 3-tier boundary declarations</div>
 </header>
 
 <aside class="informative">
@@ -112,8 +112,8 @@
   <dt id="p-11"><strong>P-11: spec / constitution に HOW を書かない (P-3 強化)</strong></dt>
   <dd>P-3 の WHAT-only 原則を絶対禁止 tier に escalate した版。 Claude Code 固有 primitives (Skill / Hook / cld-spawn)、 specific binary path、 tmux command、 OS-specific command を spec / constitution / architecture-rules に直接記述しない。 必要なら <code>core/bindings/claude-code/</code> 等の platform-specific overlay に隔離する。 platform 中立性は folio の universal 化の前提である。</dd>
 
-  <dt id="p-12"><strong>P-12: stacks/twill-legacy/ を active modification の対象にしない</strong></dt>
-  <dd>twill plugin (<code>~/projects/local-projects/twill/</code>) は完全 freeze 済 historical artifact である。 折り返し移植する場合は <code>stacks/twill-legacy/</code> 配下に read-only reference として格納し、 active edit の対象にしてはならない。 LLM 混同回避の structural guard。</dd>
+  <dt id="p-12"><strong>P-12: 3 Layer boundary は侵犯不可</strong></dt>
+  <dd>folio は <strong>Layer 0 (META FRAMEWORK) のみ</strong> を提供する。 Layer 1 (各 project の architecture spec) および Layer 2 (各 project の実装物) は <em>別 git repo</em> として展開され、 folio repo 内に同居してはならない。 また、 旧 twill plugin (<code>~/projects/local-projects/twill/</code>) は完全 freeze 済 historical artifact であり、 folio から concept 継承する場合も active edit せず reference のみとする (LLM 混同回避の structural guard、 architecture-rules.html §10 参照)。</dd>
 </dl>
 </section>
 
