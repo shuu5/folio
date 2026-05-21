@@ -339,7 +339,7 @@ unset FOLIO_ARCHITECT_CONTEXT
 <table>
   <thead><tr><th>層</th><th>機構</th><th>具体値</th></tr></thead>
   <tbody>
-    <tr><td>L1 物理分離</td><td>独立 git repo</td><td><code>~/projects/local-projects/folio/</code> (twill と完全別 path)</td></tr>
+    <tr><td>L1 物理分離</td><td>独立 git repo</td><td><code>~/projects/local-projects/folio/</code> (twill と完全別 path、 <strong>standard repo (bare 構造採用せず)</strong>)</td></tr>
     <tr><td>L2 root marker</td><td>Markdown 例外 file</td><td><code>FOLIO.md</code> 1 行目 "This is NOT twill"</td></tr>
     <tr><td>L3 meta 宣言</td><td>HTML <code>&lt;meta&gt;</code> tag</td><td><code>name="folio-doc-type"</code> (twill には存在しない attribute)</td></tr>
     <tr><td>L4 caller marker</td><td>env var</td><td><code>FOLIO_ARCHITECT_CONTEXT</code> (twill の <code>TWL_TOOL_CONTEXT</code> と異名)</td></tr>
@@ -348,6 +348,8 @@ unset FOLIO_ARCHITECT_CONTEXT
 </table>
 
 <p>5 層全てを通過した時のみ AI Agent は folio repo の spec を編集できる。 単一 layer の bypass では P-12 違反扱い。</p>
+
+<p><strong>worktree 戦略</strong>: folio repo は <em>standard git repo</em> として運用する。 bare repo 構造 (twill 同型の <code>.bare/</code> + <code>main/</code> + <code>worktrees/</code>) は採用しない (twill pattern との混同回避)。 並列タスクが必要な場合は Claude Code Agent tool の <code>isolation: "worktree"</code> パラメータで都度生成・破棄するか、 <code>git worktree add ~/projects/local-projects/folio-wt/&lt;branch&gt;</code> で manual に外部 dir 作成する。</p>
 </section>
 
 <section id="s11-ci-gate" class="informative">

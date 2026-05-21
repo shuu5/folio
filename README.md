@@ -16,10 +16,13 @@ A clean-slate, AI-Agent-first architecture spec framework. HTML-only, 3-layer ov
 
 ## Local preview (tailnet)
 
-`python3 -m http.server 8000` is served on `ipatho-server-2`:
+`python3 -m http.server 8000` is served on `ipatho-server-2` (port 8000, 0.0.0.0 bind). Use one of:
 
-- <http://ipatho-server-2:8000/constitution.html>
-- <http://ipatho-server-2:8000/architecture-rules.html>
+- **MagicDNS (full form, most reliable across devices)**:
+  - <http://ipatho-server-2.taild4e917.ts.net:8000/constitution.html>
+  - <http://ipatho-server-2.taild4e917.ts.net:8000/architecture-rules.html>
+- **IPv4 direct**: <http://100.127.217.108:8000/> (then click `constitution.html` / `architecture-rules.html`)
+- MagicDNS short form (`http://ipatho-server-2:8000/`) may fail to resolve on some devices depending on DNS configuration; prefer the full form above.
 
 (Reachable only from tailnet-joined devices.)
 
