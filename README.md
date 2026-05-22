@@ -1,36 +1,36 @@
 # folio
 
-A clean-slate, AI-Agent-first **architecture spec-writing framework** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy. Consumed by other repos to write their `architecture/` specifications.
+A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy. Distributed as a single package; consumed by other repos to write their `architecture/` specifications.
 
-**Status**: v0.2.0-draft (Phase 4.5 — Constitution Draft + Reconcile)
+**Status**: v0.4.0-draft (Phase X1 — Constitution + Architecture-Rules complete, plugin skeleton scaffolded)
 
-## 3-Layer Architecture (at a glance)
+## 2-Layer Architecture (at a glance)
 
 ```
-Layer 0 — folio (this repo)        : universal rules for writing architecture specs
-                ↓ provides rules
-Layer 1 — <project>/architecture/  : spec written using folio rules (lives in each project repo)
-                ↓ spec to follow
-Layer 2 — <project>/ (impl)        : implementation (lives in each project repo)
+Layer 0 — folio (this repo)            : rules + plugin harness 一体配布 (ESLint pattern)
+                ↓ provides rules + harness (via folio.config.yaml)
+Layer 1 — <consumer-project>/          : architecture/ spec + implementation in same repo
 ```
 
-**folio repo contains only Layer 0** (META FRAMEWORK). Layer 1 and Layer 2 live in separate consumer repos. See `FOLIO.md` for the full diagram.
+`Layer 0.5` 等の小数点表記は採用しない。 詳細図は [`constitution.html` §3 Layer Architecture](./constitution.html) または `FOLIO.md` を参照。
 
 ## Entry points
 
 | file | role |
 |------|------|
-| [`constitution.html`](./constitution.html) | 12 immutable principles (3-tier: Always 7 / Ask first 3 / Never 2) |
-| [`architecture-rules.html`](./architecture-rules.html) | 3-layer repo separation, directory structure, HTML markup conventions, 7-phase PR cycle, 8 specialist agents |
-| [`FOLIO.md`](./FOLIO.md) | project identity, 3-layer diagram, Layer 2 consumer roster |
+| [`constitution.html`](./constitution.html) | 12 immutable principles (3-tier: Always 7 / Ask first 3 / Never 2), 4 mermaid 図 |
+| [`architecture-rules.html`](./architecture-rules.html) | 2-Layer + directory + HTML markup + 7-phase + harness layer + plugin integration + 8 mermaid 図 |
+| [`FOLIO.md`](./FOLIO.md) | project identity, 2-Layer diagram, Layer 1 consumer roster |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions (HOW binding, P-11 root exception) |
 | [`common.css`](./common.css) | design tokens (inspired by [note via awesome-design-md-jp](https://github.com/kzhrknt/awesome-design-md-jp/blob/main/design-md/note/DESIGN.md): 18px / line-height 2.0 / palt headings / 940px main / dual-shadow elevation / dark mode) |
+| [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json) | plugin manifest (Claude Code plugin protocol、 v0.4.0-draft) |
+| `architecture/assets/mermaid.min.js` | self-hosted Mermaid (no CDN dependency) |
 
-## Planned Layer 2 consumers
+## Planned Layer 1 consumers
 
 | project | role | status |
 |---|---|---|
-| **scribe** | AI auto-implementation plugin (twill v2 successor, Claude Code plugin) | repo not yet created |
+| **scribe** | AI auto-implementation plugin (folio harness thin wrapper + impl auto-gen helper) | repo not yet created (Phase X3 にて) |
 | (future) TypeScript webapps | each consumes folio rules | — |
 | (future) Python ML projects | same | — |
 
@@ -52,4 +52,4 @@ A spec is the *ideal future anchor*, not a mirror of current implementation. dri
 
 ## Distinction from twill
 
-This is **not** the twill plugin (`~/projects/local-projects/twill/`). twill is a frozen historical artifact; folio extracts twill's universal-ready principles (declarative narrative, link integrity, caller marker, drift prevention) as a clean-slate framework and leaves twill-specific implementation behind. See constitution P-12 and architecture-rules.html §10 for the 3-axis × 5-layer LLM-confusion-avoidance system.
+This is **not** the twill plugin (`~/projects/local-projects/twill/`). twill is a frozen historical artifact; folio extracts twill's universal-ready principles (declarative narrative, link integrity, caller marker idea, drift prevention) as a clean-slate framework and leaves twill-specific implementation behind. See constitution P-12 and architecture-rules.html §7.4 for the 3-axis × 5-layer LLM-confusion-avoidance system.
