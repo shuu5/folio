@@ -462,3 +462,15 @@ dfn {
 
 strong { font-weight: 700; color: var(--folio-text-primary); }
 em     { font-style: italic; color: var(--folio-text-primary); }
+
+/* ========================================================================
+ * AI rationale aside (hidden from browser, source-readable for AI editing)
+ * - hidden attribute MUST be present (HTML standard, browser non-render)
+ * - CSS reinforces with display: none to prevent accidental show via DOM
+ * - AI agent reads via Read tool or grep "ai-rationale"
+ * ====================================================================== */
+
+aside.ai-rationale,
+aside.ai-rationale[hidden] {
+  display: none !important;
+}

@@ -2,7 +2,7 @@
 
 A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy. Distributed as a single package; consumed by other repos to write their `architecture/` specifications.
 
-**Status**: v0.4.0-draft (Phase X1 — Constitution + Architecture-Rules complete, plugin skeleton scaffolded)
+**Status**: v0.4.1-draft (Phase X1 — Constitution + Architecture-Rules complete, plugin skeleton scaffolded)
 
 ## 2-Layer Architecture (at a glance)
 
@@ -23,7 +23,7 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 | [`FOLIO.md`](./FOLIO.md) | project identity, 2-Layer diagram, Layer 1 consumer roster |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions (HOW binding, P-11 root exception) |
 | [`common.css`](./common.css) | design tokens (inspired by [note via awesome-design-md-jp](https://github.com/kzhrknt/awesome-design-md-jp/blob/main/design-md/note/DESIGN.md): 18px / line-height 2.0 / palt headings / 940px main / dual-shadow elevation / dark mode) |
-| [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json) | plugin manifest (Claude Code plugin protocol、 v0.4.0-draft) |
+| [`.claude-plugin/plugin.json`](./.claude-plugin/plugin.json) | plugin manifest (Claude Code plugin protocol、 v0.4.1-draft) |
 | `architecture/assets/mermaid.min.js` | self-hosted Mermaid (no CDN dependency) |
 
 ## Planned Layer 1 consumers
@@ -48,7 +48,7 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 
 ## Philosophy (one-paragraph)
 
-A spec is the *ideal future anchor*, not a mirror of current implementation. drift between spec and code is *expected* — the spec's job is to prevent ad-hoc divergence by making user-AI dialog converge on a shared, declarative, future-oriented document. See `constitution.html` §1 Purpose for the full statement.
+A spec is the future-ideal anchor (design intent reference), not a mirror of current implementation. drift between spec and code is expected. The spec exists to prevent ad-hoc divergence — user or AI may lose sight of the original design intent over time, and the spec serves as the shared declarative reference both consult. See `constitution.html` §1 Purpose for the full statement.
 
 ## Distinction from twill
 
