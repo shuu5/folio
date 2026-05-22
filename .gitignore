@@ -6,3 +6,7 @@
 # Folio working state (drafts, snapshots)
 .folio/
 .tmp/
+
+# Claude Code session externalization
+.supervisor/
+.mailbox/

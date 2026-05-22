@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="active">
+<title>folio — scratch/specs/ (framework spec drafts)</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>specs/ — folio framework spec drafts</h1>
+  <div class="meta">v0.4.2-draft &middot; ブラッシュアップ対象の folio framework spec を集約</div>
+</header>
+
+<aside class="informative">
+<p>本 dir は <strong>folio framework 自身の spec</strong> (constitution 以外) を draft 状態で集約する。 試作段階 (Phase X2) 中はここで自由にブラッシュアップする。 完成後 (Phase X3) に正式 location (<code>architecture/</code>) に移植予定。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>constitution が <strong>不変資産</strong> として固定された一方、 rules / folio-self-spec は試作の進行に応じて <strong>継続的にブラッシュアップ</strong>する必要がある。 両者を物理的に分離 (constitution = scratch/ 直下 / specs = scratch/specs/) することで、 「触らない」 と 「改訂可」 の境界を明示する。</p>
+</section>
+
+<section id="s2-contents" class="informative">
+<h2>§2. Contents</h2>
+
+<table>
+  <thead><tr><th>file</th><th>role</th><th>status</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><a href="rules.html"><code>rules.html</code></a></td>
+      <td>Layer 1 consumer project 向け universal rules (markup / naming / EARS / Mandatory Actions)</td>
+      <td>draft</td>
+    </tr>
+    <tr>
+      <td><a href="folio-self-spec.html"><code>folio-self-spec.html</code></a></td>
+      <td>folio Layer 0 framework 自身の architecture spec (provisional)</td>
+      <td>draft</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3-rules" class="informative">
+<h2>§3. Rules</h2>
+
+<ul>
+  <li><strong>編集可</strong>: 試作の進行に応じて自由にブラッシュアップする。 markup 正規性、 SemVer bump 等の formal 要件は scratch/ 段階では緩い適用。</li>
+  <li>大幅改訂は ADR (<a href="../decisions/"><code>../decisions/</code></a>) で記録するが、 軽微な refinement は inline 修正で OK。</li>
+  <li>constitution との関係: rules / folio-self-spec は constitution の不変原則 (P-1〜P-12) を <em>実装する</em> 位置付け。 不整合が出たら user と相談。</li>
+</ul>
+</section>
+
+<section id="s4-lifecycle" class="informative">
+<h2>§4. Lifecycle</h2>
+
+<ul>
+  <li><strong>現在 (Phase X2)</strong>: 試作と並行してブラッシュアップ中。</li>
+  <li><strong>完成後 (Phase X3)</strong>: <code>architecture/spec/</code> 配下に self-application で分解、 正式化。 scratch/specs/ は撤去 or archive。</li>
+</ul>
+</section>
+
+</body>
+</html>

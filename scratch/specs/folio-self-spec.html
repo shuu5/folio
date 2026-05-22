@@ -8,18 +8,18 @@
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <title>folio — self-spec (v0.4.2-draft)</title>
-<link rel="stylesheet" href="../common.css">
+<link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
   "@context": "https://folio.dev/schema",
   "@type": "FolioSelfSpec",
   "version": "0.4.2-draft",
-  "extends": "constitution.html",
+  "extends": "../constitution.html",
   "describes": "folio Layer 0 framework itself (provisional, to be self-applied to architecture/spec/ in Phase X3+)",
   "sections": ["s0-reader-guide", "s1-architecture", "s2-folio-layout", "s7-harness", "s8-plugin", "s9-bindings"]
 }
 </script>
-<script src="assets/mermaid.min.js" defer></script>
+<script src="../assets/mermaid.min.js" defer></script>
 <style>
 figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
 figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
@@ -35,15 +35,15 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
 </header>
 
 <aside class="informative">
-<p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href="rules.html">rules.html</a> を参照。 constitution の不変原則は <a href="constitution.html">constitution.html</a> を参照。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。</p>
-<p><strong>Provisional</strong>: 本書は folio framework 完成後 (Phase X3 以降) に folio 自身の <code>architecture/spec/</code> 配下に self-application で分解される予定。 詳細は <a href="decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a>。</p>
+<p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href="rules.html">rules.html</a> を参照。 constitution の不変原則は <a href="../constitution.html">constitution.html</a> を参照。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。</p>
+<p><strong>Provisional</strong>: 本書は folio framework 完成後 (Phase X3 以降) に folio 自身の <code>architecture/spec/</code> 配下に self-application で分解される予定。 詳細は <a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a>。</p>
 </aside>
 
 <section id="s0-reader-guide" class="informative">
 <h2>§0. Reader's Guide</h2>
 
 <aside class="reader-persona" data-persona="AI Agent">
-  <p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href="rules.html">rules.html</a> を参照。</p>
+  <p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href="rules.html">rules.html</a> を参照。 constitution の不変原則は <a href="../constitution.html">constitution.html</a> を参照。</p>
   <p>spec を編集する前に caller marker 環境変数を set する (<a href="rules.html#s10-1">rules.html §10.1</a> MUST + 本書 <a href="#s7-3-caller-marker">§7.3</a> hook flow)。 env var の具体名・値は <a href="#s9-bindings">§9 Bindings</a> に集約する。 cwd が <code>folio/</code> 配下 (Layer 0 編集) か consumer 配下 (Layer 1 編集) かを <a href="#s7-4-defense">§7.4 5-Layer Defense</a> で確認する。</p>
 </aside>
 </section>
