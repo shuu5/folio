@@ -4,46 +4,56 @@
 <meta charset="UTF-8">
 <meta name="folio-doc-type" content="constitution">
 <meta name="folio-layer" content="core">
-<meta name="folio-version" content="0.2.0-draft">
+<meta name="folio-version" content="0.4.0-draft">
 <meta name="folio-status" content="draft">
-<title>folio — constitution (v0.2.0-draft)</title>
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — constitution (v0.4.0-draft)</title>
 <link rel="stylesheet" href="common.css">
 <script type="application/ld+json">
 {
+  "@context": "https://folio.dev/schema",
   "@type": "FolioConstitution",
-  "version": "0.1.0-draft",
+  "version": "0.4.0-draft",
   "immutable": true,
   "principles": 12,
+  "tiers": {"Always": 7, "AskFirst": 3, "Never": 2},
   "stakeholderPerspectives": ["Developer", "AI Agent", "External Reviewer"]
 }
 </script>
+<script src="architecture/assets/mermaid.min.js" defer></script>
+<style>
+figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
+figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
+pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
+pre.mermaid[data-processed="true"] { visibility: visible; }
+</style>
 </head>
 <body>
 
 <header class="doc-header">
   <h1>folio constitution</h1>
-  <div class="meta">v0.2.0-draft &middot; status: draft &middot; 12 immutable principles, 3-tier boundary declarations</div>
+  <div class="meta">v0.4.0-draft &middot; status: draft &middot; 12 immutable principles, 3-tier boundary declarations, plugin-first Layer 0</div>
 </header>
 
 <aside class="informative">
-<p>本文書は IETF <strong>RFC 2119</strong> および <strong>RFC 8174 / BCP 14</strong> に定義される MUST / SHOULD / MAY / SHALL のキーワード解釈規約に従う。本文中の大文字キーワードは規範的要件である。</p>
+<p>本文書は IETF <strong>RFC 2119</strong> および <strong>RFC 8174 / BCP 14</strong> に定義される MUST / SHOULD / MAY / SHALL のキーワード解釈規約に従う。 本文中の大文字キーワードは規範的要件である。</p>
 </aside>
 
 <section id="s0-reader-guide" class="informative">
 <h2>§0. Reader's Guide — Stakeholder Perspectives (ISO/IEC/IEEE 42010:2022)</h2>
 
-<p>folio は 3 種類の reader を第一級 stakeholder として明示する。 各 spec file の <code>&lt;meta name="folio-stakeholders"&gt;</code> 属性で対象 persona を宣言する。</p>
+<p>folio は 3 種類の reader を第一級 stakeholder として明示する。 各 spec file の <code>&lt;meta name="folio-stakeholders"&gt;</code> 属性で対象 persona を宣言する。 具体的な caller marker / cwd 確認 mechanism は <a href="architecture-rules.html#s7-3-caller-marker">architecture-rules §7.3</a> 参照 (P-11 により本書には HOW を記載しない)。</p>
 
 <aside class="reader-persona" data-persona="Developer">
-<p><strong>あなたが Developer であれば</strong>: §2 不変原則 P-1〜P-12 を読み、 plan / implementation 前に矛盾しないか確認する。 §3 SemVer Policy に従って改訂を提案する。 ADR は <code>core/decisions/</code> に追加する。</p>
+<p><strong>あなたが Developer であれば</strong>: §2 不変原則 P-1〜P-12 を読み、 plan / implementation 前に矛盾しないか確認する。 §5 SemVer Policy に従って改訂を提案する。 ADR を起票して変更履歴を残す。</p>
 </aside>
 
 <aside class="reader-persona" data-persona="AI Agent">
-<p><strong>あなたが AI Agent (Claude Code / 他 LLM) であれば</strong>: spec edit 前に必ず本 constitution を読む (P-11 違反検出のため)。 <code>FOLIO_ARCHITECT_CONTEXT=folio-architect</code> を set してから <code>core/spec/</code> や <code>projects/*/architecture/spec/</code> 配下を編集する (architecture-rules.html §9)。 cwd が <code>~/projects/local-projects/folio/</code> 配下であることを最初に確認する (LLM 混同回避)。</p>
+<p><strong>あなたが AI Agent (Claude Code / 他 LLM) であれば</strong>: spec edit 前に本 constitution + <a href="architecture-rules.html">architecture-rules</a> を必読 (P-11 違反検出のため)。 caller context を <a href="architecture-rules.html#s7-3-caller-marker">architecture-rules §7.3</a> の定める方法で宣言してから spec 編集を行う。 cwd が folio repo (Layer 0) 配下か consumer project (Layer 1) 配下かを最初に確認する (LLM 混同回避)。</p>
 </aside>
 
 <aside class="reader-persona" data-persona="External Reviewer">
-<p><strong>あなたが External Reviewer (security audit / legal review 等) であれば</strong>: §2 P-1 (未来 anchor) と §2 P-3 (WHAT-only) を確認した上で、 「現在挙動 SSoT」 と誤読しないこと。 spec と実装の divergence は本 framework では <em>想定内</em> である (詳細は P-1 commentary)。</p>
+<p><strong>あなたが External Reviewer (security audit / legal review 等) であれば</strong>: §1 Purpose + P-1 (未来理想 anchor) を確認した上で、 「現在挙動 SSoT」 と誤読しないこと。 spec と実装の divergence は本 framework では <em>想定内</em> である (詳細は §1 commentary)。</p>
 </aside>
 </section>
 
@@ -60,65 +70,174 @@
   <li>場当たり的逸脱 (spec 不在の改造) を防ぐのが folio の存在意義。</li>
 </ul>
 
-<p>この思想は OpenSpec (Fission-AI) の「現在挙動 SSoT」 思想および BDD (Behavior-Driven Development) の「テスト挙動 SSoT」 思想と<strong>明確に分岐する</strong>。 採用フレームワークの選定で誤解しないこと。</p>
+<figure class="diagram" data-diagram-type="philosophy-divergence">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff', 'lineColor': '#2a4d6e', 'secondaryColor': '#5ac8b8', 'tertiaryColor': '#f5f8fa'}}}%%
+graph LR
+  accTitle: 未来 anchor vs 現在挙動 SSoT の思想分岐
+  accDescr: architecture spec の SSoT 解釈に 3 派閥がある。 folio は未来理想 anchor を採用、 OpenSpec は現在挙動 SSoT、 BDD はテスト挙動 SSoT。 drift 扱いも異なる
+  S["architecture spec"]
+  F["folio<br/><b>未来理想 anchor</b><br/>drift = 想定内<br/>(P-1)"]
+  O["OpenSpec<br/>現在挙動 SSoT<br/>drift = bug"]
+  B["BDD<br/>テスト挙動 SSoT<br/>drift = test fail"]
+  S --> F
+  S --> O
+  S --> B
+  style F fill:#5ac8b8,color:#08131a
+  style O fill:#f5f8fa,color:#08131a
+  style B fill:#f5f8fa,color:#08131a
+</pre>
+<figcaption>図 1. spec 思想の 3 分岐 — folio は <strong>未来理想 anchor</strong> を採用し、 OpenSpec (Fission-AI) や BDD の 「現在挙動 SSoT」 思想と明確に分岐する (P-1)。</figcaption>
+</figure>
 </section>
 
 <section id="s2-principles" class="normative">
 <h2>§2. Twelve Immutable Principles (3-tier Boundary Declarations)</h2>
 
-<p>folio は 12 の不変原則を <strong>3 tier</strong> に分類する。 tier は LLM が遵守度を判定する際の anchor となる。</p>
+<p>folio は 12 の不変原則を <strong>3 tier</strong> に分類する。 tier は LLM および人間が遵守度を判定する際の anchor となる。</p>
 
-<h3>§2.1 Always Tier (P-1 〜 P-7) — 不変、 例外なし</h3>
+<figure class="diagram" data-diagram-type="principles-tier">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e'}}}%%
+graph TD
+  accTitle: 12 原則 3-tier 構造
+  accDescr: Always tier に 7 原則 P-1 から P-7、 Ask-first tier に 3 原則 P-8 から P-10、 Never tier に 2 原則 P-11 と P-12。 上から下へ enforcement 強度が高まる
+  A["<b>Always tier</b><br/>P-1〜P-7 (7 原則)<br/><i>不変、 例外なし</i><br/>spec philosophy + format + structure"]
+  B["<b>Ask-first tier</b><br/>P-8〜P-10 (3 原則)<br/><i>user 承認後変更可</i><br/>AI accountability + config + amendment"]
+  C["<b>Never tier</b><br/>P-11〜P-12 (2 原則)<br/><i>絶対禁止</i><br/>HOW 混入 + Layer boundary 侵犯"]
+  A --> B
+  B --> C
+  style A fill:#e6f6f2,color:#08131a
+  style B fill:#fefbea,color:#08131a
+  style C fill:#fdf3f3,color:#08131a
+</pre>
+<figcaption>図 2. 12 原則の 3-tier 構造。 上から Always → Ask-first → Never の enforcement 強度。</figcaption>
+</figure>
+
+<h3 id="s2-1-always">§2.1 Always Tier (P-1〜P-7) — 不変、 例外なし</h3>
 
 <dl>
   <dt id="p-1"><strong>P-1: spec は未来理想の anchor である</strong></dt>
-  <dd>spec/ 配下の全文書は「あるべき設計の最終形」 を declarative に記述する。 現在実装の mirror ではない。 drift があるのは<em>当然</em> であり、 機械 diff は不可能かつ不要である。 検証は AI dialog accountability (P-8 で詳述) によって行う。</dd>
+  <dd>spec/ 配下の全文書は「あるべき設計の最終形」 を declarative に記述する。 現在実装の mirror ではない。 drift は<em>当然</em>であり、 機械 diff は不要。 検証は AI dialog accountability (P-8) によって行う。</dd>
 
   <dt id="p-2"><strong>P-2: format は HTML + common.css のみ</strong></dt>
-  <dd>spec / ADR / constitution / architecture-rules を含む全文書は HTML で記述する。 Markdown 例外: (a) <code>FOLIO.md</code> root marker (LLM が repo root を即特定するための plaintext)、 (b) <code>stacks/*/vocabulary.yaml</code> / <code>folio.config.yaml</code> (Zod 検証対象の machine-readable config)。 採用理由: 規模を絞れば token cost は問題にならず、 hyperlink + 図表現の豊かさが LLM/人間双方の理解を深める (cf. Anthropic 最近の声明 "specs designed for humans can be HTML")。</dd>
+  <dd>spec / ADR / constitution / architecture-rules / changes proposal を含む全文書は HTML で記述する。 Markdown 例外: (a) <code>FOLIO.md</code> root marker、 (b) <code>README.md</code> (GitHub 表示用)、 (c) <code>CLAUDE.md</code> (Claude Code project instructions、 P-11 root 例外)、 (d) <code>folio.config.yaml</code> 等の YAML config。 採用理由: 規模を絞れば token cost は問題にならず、 hyperlink + 図表現の豊かさが LLM/人間双方の理解を深める。</dd>
 
   <dt id="p-3"><strong>P-3: WHAT-only (HOW を spec に書かない)</strong></dt>
-  <dd>spec/ 配下に platform 固有の HOW (Claude Code primitives / tmux / specific path / specific CLI invocation) を書かない。 判定 test: 「Claude Code を別 AI platform に移行したら spec を書き直す必要があるか? Yes なら HOW 漏れ」。 HOW は <code>core/bindings/&lt;platform&gt;/</code> または <code>stacks/*/patterns/</code> に分離する。</dd>
+  <dd>spec / constitution / architecture-rules に platform 固有の HOW を書かない。 判定 test: 「同等の framework を別 AI platform に移行したら spec を書き直す必要があるか? Yes なら HOW 漏れ」。 HOW (env var 名、 具体 binary path、 specific CLI invocation 等) は <code>.claude-plugin/</code> harness または <code>CLAUDE.md</code> binding に分離する。</dd>
 
   <dt id="p-4"><strong>P-4: Declarative form (現在形宣言文のみ)</strong></dt>
   <dd>spec 本文は現在形の declarative narrative で記述する。 過去 narration (「Wave N で〜した」)、 未来 narration (「将来〜する予定」)、 wave-specific note は spec/ から禁止。 これらは <code>changes/</code> proposal、 <code>decisions/</code> ADR (frozen)、 または <code>research/</code> に分離する。</dd>
 
   <dt id="p-5"><strong>P-5: 1 entity = 1 canonical name</strong></dt>
-  <dd>同一概念に複数の名称を使用しない。 vocabulary は <code>stacks/*/vocabulary.yaml</code> で canonical name + forbidden synonyms を宣言する。 spec 本文で forbidden synonym が出現した場合、 specialist agent (spec-review-vocabulary) が違反として検出する。</dd>
+  <dd>同一概念に複数の名称を使用しない。 canonical name + forbidden synonyms の宣言は consumer project の vocabulary file で管理する。 spec 本文で forbidden synonym が出現した場合、 vocabulary review が違反として検出する (詳細 mechanism は <a href="architecture-rules.html#s7-2-specialists">architecture-rules §7.2</a>)。</dd>
 
   <dt id="p-6"><strong>P-6: Link integrity (orphan 禁止)</strong></dt>
-  <dd>spec/ 配下の全 file は inbound link を 1 以上持たねばならない (例外: 各 cluster の <code>README.html</code> = entry point)。 broken link 数、 orphan 数、 trace_extra 数は CI gate で 0 を強制する。 orphan = 知識の消失と等価である。</dd>
+  <dd>spec/ 配下の全 file は inbound link を 1 以上持たねばならない (例外: 各 cluster の <code>README.html</code> = entry point)。 broken link 数、 orphan 数、 trace_extra 数は CI gate で 0 を強制する (<a href="architecture-rules.html#s7-5-ci-gate">architecture-rules §7.5</a>)。 orphan = 知識の消失と等価である。</dd>
 
   <dt id="p-7"><strong>P-7: Content domain exclusivity</strong></dt>
   <dd>spec / ADR / changes / research の 4 領域は内容を排他的に保持する: <strong>spec/</strong> = what (WHAT-only 不変条件・構造) / <strong>decisions/</strong> = why (frozen ADR、 過去判断) / <strong>changes/</strong> = proposal (進行中の spec 更新提案、 dialog 凝固) / <strong>research/</strong> = exploration (spec 反映前の探索・思考保全)。 領域の混在は spec 純度を破壊する。</dd>
 </dl>
 
-<h3>§2.2 Ask-First Tier (P-8 〜 P-10) — user 承認後に変更可能</h3>
+<h3 id="s2-2-askfirst">§2.2 Ask-First Tier (P-8〜P-10) — user 承認後に変更可能</h3>
 
 <dl>
   <dt id="p-8"><strong>P-8: AI dialog accountability</strong></dt>
   <dd>AI Agent が spec を読んで実装案・refactor 案を提示する際、 「この案は constitution P-X と矛盾する」 「spec § Y との divergence がある」 を natural language reasoning で user に提示する責務を負う。 機械 diff の代わりに、 AI の自然言語推論が drift 検出 mechanism として機能する。</dd>
 
-  <dt id="p-9"><strong>P-9: Stack overlay 追加・変更前に user 確認</strong></dt>
-  <dd><code>stacks/*/</code> 配下に新 stack を追加する、 既存 stack の vocabulary / rules-overlay を変更する場合、 user に変更内容を提示して承認を得る。 stack 変更は project 横断的影響を持つため。</dd>
+  <dt id="p-9"><strong>P-9: Layer 1 consumer 固有 config 変更前に user 確認</strong></dt>
+  <dd>各 Layer 1 consumer project の <code>folio.config.yaml</code> や project 固有 vocabulary file の変更時、 user に変更内容を提示して承認を得る。 config 変更は project-wide 影響を持つため。</dd>
 
   <dt id="p-10"><strong>P-10: Constitution 自身への変更前に user 確認</strong></dt>
-  <dd>本 constitution.html への変更 (12 原則の追加・削除・文言変更) は user 承認 MUST。 MAJOR / MINOR / PATCH 判定は §3 SemVer Policy に従う。 ADR が constitution を Supersede する場合も同様。</dd>
+  <dd>本 constitution.html への変更 (12 原則の追加・削除・文言変更・tier 変更) は user 承認 MUST。 MAJOR / MINOR / PATCH 判定は §5 SemVer Policy に従う。 ADR が constitution を Supersede する場合も同様。</dd>
 </dl>
 
-<h3>§2.3 Never Tier (P-11 〜 P-12) — 絶対禁止、 例外なし</h3>
+<h3 id="s2-3-never">§2.3 Never Tier (P-11〜P-12) — 絶対禁止、 例外なし</h3>
 
 <dl>
-  <dt id="p-11"><strong>P-11: spec / constitution に HOW を書かない (P-3 強化)</strong></dt>
-  <dd>P-3 の WHAT-only 原則を絶対禁止 tier に escalate した版。 Claude Code 固有 primitives (Skill / Hook / cld-spawn)、 specific binary path、 tmux command、 OS-specific command を spec / constitution / architecture-rules に直接記述しない。 必要なら <code>core/bindings/claude-code/</code> 等の platform-specific overlay に隔離する。 platform 中立性は folio の universal 化の前提である。</dd>
+  <dt id="p-11"><strong>P-11: spec / constitution / architecture-rules に HOW を書かない (P-3 強化)</strong></dt>
+  <dd>P-3 の WHAT-only 原則を絶対禁止 tier に escalate した版。 platform 固有 primitives (specific tool 名、 binary path、 OS-specific command、 env var 名等の具体値) を spec / constitution / architecture-rules の本文に直接記述しない。 必要なら <code>.claude-plugin/</code> harness または <code>CLAUDE.md</code> binding (P-2 例外) に隔離する。 platform 中立性は folio の universal 化の前提である。</dd>
 
-  <dt id="p-12"><strong>P-12: 3 Layer boundary は侵犯不可</strong></dt>
-  <dd>folio は <strong>Layer 0 (META FRAMEWORK) のみ</strong> を提供する。 Layer 1 (各 project の architecture spec) および Layer 2 (各 project の実装物) は <em>別 git repo</em> として展開され、 folio repo 内に同居してはならない。 また、 旧 twill plugin (<code>~/projects/local-projects/twill/</code>) は完全 freeze 済 historical artifact であり、 folio から concept 継承する場合も active edit せず reference のみとする (LLM 混同回避の structural guard、 architecture-rules.html §10 参照)。</dd>
+  <dt id="p-12"><strong>P-12: Layer 0/1 boundary 侵犯不可 + folio は rules + plugin harness を一体提供する</strong></dt>
+  <dd>folio Layer 0 は <strong>rules (constitution + architecture-rules) と plugin harness (<code>.claude-plugin/</code>) を一体配布</strong>する (ESLint / Stylelint pattern)。 Layer 1 consumer project は別 git repo として展開され、 folio repo 内に同居してはならない。 また、 旧 twill plugin (<code>~/projects/local-projects/twill/</code>) は完全 freeze 済 historical artifact であり、 folio から concept 継承する場合も active edit せず reference のみとする (LLM 混同回避の structural guard、 <a href="architecture-rules.html#s7-4-defense">architecture-rules §7.4</a>)。</dd>
 </dl>
 </section>
 
-<section id="s3-versioning" class="normative">
-<h2>§3. Versioning Policy (SemVer)</h2>
+<section id="s3-layer-architecture" class="informative">
+<h2>§3. Layer Architecture (2-Layer 体系)</h2>
+
+<p>folio は <strong>2 層構造</strong> を採用する: <strong>Layer 0 = folio (META FRAMEWORK)</strong> および <strong>Layer 1 = consumer projects (各別 repo)</strong>。 Layer 0.5 等の小数点表記は採用しない (粒度表現として不適切、 user feedback で確定)。 harness は Layer 0 の構成要素として P-12 で一体配布される。</p>
+
+<figure class="diagram" data-diagram-type="layer-architecture">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
+graph TB
+  accTitle: folio 2-Layer Architecture
+  accDescr: Layer 0 folio は rules と plugin harness を一体提供し、 Layer 1 consumer projects (scribe、 各 webapp、 各 ML project 等) が install + folio.config.yaml で consume する。 scribe は special role として impl auto-gen も提供
+  subgraph L0["<b>Layer 0 — folio (本 repo)</b>"]
+    L0R["rules<br/>constitution.html<br/>architecture-rules.html"]
+    L0H[".claude-plugin/<br/>plugin harness<br/>(skills + agents + hooks + scripts)"]
+  end
+  subgraph L1["<b>Layer 1 — consumer projects (各別 repo)</b>"]
+    L1S["scribe<br/>(special role:<br/>folio harness の thin wrapper<br/>+ AI impl auto-gen)"]
+    L1W["my-ts-webapp<br/>(regular)"]
+    L1M["my-python-ml<br/>(regular)"]
+  end
+  L0 -->|"provides rules + harness<br/>(install + folio.config.yaml)"| L1S
+  L0 -->|"provides rules + harness"| L1W
+  L0 -->|"provides rules + harness"| L1M
+  L1S -.->|"optional helper:<br/>impl auto-gen"| L1W
+  L1S -.->|"optional helper:<br/>impl auto-gen"| L1M
+  style L0 fill:#2a4d6e,color:#ffffff
+  style L0R fill:#5ac8b8,color:#08131a
+  style L0H fill:#5ac8b8,color:#08131a
+  style L1S fill:#fefbea,color:#08131a
+  style L1W fill:#f5f8fa,color:#08131a
+  style L1M fill:#f5f8fa,color:#08131a
+</pre>
+<figcaption>図 3. folio 2-Layer 体系。 Layer 0 (本 repo) が rules + harness を一体提供、 Layer 1 (各別 repo) が consume。 scribe は special role (folio harness の thin wrapper + AI impl auto-gen helper)。</figcaption>
+</figure>
+
+<p>各 layer の役割・directory layout・consumer project の構造詳細は <a href="architecture-rules.html#s1-architecture">architecture-rules.html §1</a> および <a href="architecture-rules.html#s2-directory">§2</a> で規定する。</p>
+</section>
+
+<section id="s4-folio-plugin" class="informative">
+<h2>§4. Folio as a Plugin (P-12 の構造表現)</h2>
+
+<p>folio は <strong>Claude Code plugin として配布</strong>される (P-12)。 ESLint や Stylelint と同じ pattern で、 「rules + harness 一体配布」 を実現する。 consumer project は <code>folio.config.yaml</code> 1 file の宣言で folio plugin を採用し、 spec 編集 + harness enforce の両方を得る。</p>
+
+<figure class="diagram" data-diagram-type="plugin-structure">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
+graph TB
+  accTitle: folio plugin 一体構造
+  accDescr: folio plugin の .claude-plugin ディレクトリ内に plugin.json manifest と 7 種の構成要素 (skills、 agents、 hooks、 scripts、 bin、 refs、 static) が一体配布される
+  subgraph FP["<b>folio plugin (.claude-plugin/)</b>"]
+    PJ["plugin.json<br/>(manifest)"]
+    SK["skills/<br/>8 skill<br/>(/folio:init, architect,<br/>spec-edit, validate,<br/>review-* × 4)"]
+    AG["agents/<br/>8 specialist<br/>(explorer, architect,<br/>review-* × 6)"]
+    HK["hooks/<br/>PreToolUse +<br/>PostToolUse"]
+    SC["scripts/<br/>link / orphan /<br/>declarative /<br/>what-only check"]
+    BN["bin/<br/>folio CLI<br/>(validate, init,<br/>doctor)"]
+    RF["refs/<br/>principles +<br/>vocabulary +<br/>EARS templates"]
+  end
+  PJ --- SK
+  PJ --- AG
+  PJ --- HK
+  PJ --- SC
+  PJ --- BN
+  PJ --- RF
+  style FP fill:#f5f8fa,color:#08131a
+  style PJ fill:#2a4d6e,color:#ffffff
+</pre>
+<figcaption>図 4. folio plugin (.claude-plugin/) 一体構造。 plugin.json manifest が全 component を統合。 詳細 schema は <a href="architecture-rules.html#s8-plugin">architecture-rules §8 Plugin Integration</a> 参照。</figcaption>
+</figure>
+
+<p><strong>MCP (Model Context Protocol) は採用しない</strong>。 network API 制約を本 framework は許容せず、 harness は <code>skill + hook + CLI (local process)</code> のみで構成される。 同等の framework を別 AI platform (Cursor / Continue 等) へ移植する場合は、 platform-specific binding layer (将来の <code>bindings/</code>) を追加することで実現する。</p>
+</section>
+
+<section id="s5-versioning" class="normative">
+<h2>§5. Versioning Policy (SemVer)</h2>
 
 <p>本 constitution.html は <a href="https://semver.org/">Semantic Versioning 2.0.0</a> に準拠する。</p>
 
@@ -131,37 +250,61 @@
   </tbody>
 </table>
 
-<p>変更時は ADR (<code>core/decisions/ADR-NNNN-constitution-change-*.html</code>) を起票し、 本 constitution 内に <code>&lt;ins class="delta" data-delta-id="..."&gt;</code> で trace を inline 保存する (architecture-rules.html §5)。</p>
+<p><strong>1.0.0 未満</strong>は <em>development phase</em> として MAJOR/MINOR/PATCH の boundary を緩める (BC break を MINOR で許容)。 1.0.0 以降は strict SemVer。</p>
+
+<p>変更時は ADR を起票し、 本 constitution 内に delta marker を inline 保存する (<a href="architecture-rules.html#s5-delta">architecture-rules §5 Delta Marker Markup</a>)。</p>
 </section>
 
-<section id="s4-amendment" class="normative">
-<h2>§4. Amendment Procedure</h2>
+<section id="s6-amendment" class="normative">
+<h2>§6. Amendment Procedure</h2>
 
 <ol>
-  <li>変更提案を <code>changes/&lt;NNN&gt;-constitution-amendment/proposal.html</code> として起案 (proposal-only MUST、 design.html / tasks.html は optional)。</li>
-  <li>user 承認を AskUserQuestion 等で取得 (P-10)。</li>
-  <li>承認後、 ADR (<code>core/decisions/ADR-NNNN-...</code>) を Accepted status で作成。</li>
-  <li>constitution.html を編集し、 SemVer bump (§3) + delta marker (<code>&lt;ins class="delta"&gt;</code>) を inline 追加。</li>
-  <li>changes/ package を <code>archive/changes/YYYY-MM-DD-NNN-...</code> へ移動。</li>
+  <li>変更提案を <code>changes/</code> 配下に proposal として起案 (proposal-only MUST、 design + tasks は optional)。</li>
+  <li>user 承認を取得 (P-10)。</li>
+  <li>承認後、 ADR を Accepted status で作成。</li>
+  <li>constitution.html を編集し、 SemVer bump (§5) + delta marker を inline 追加。</li>
+  <li>changes/ package を archive/ へ移動。</li>
 </ol>
+
+<p>各 step の具体的 mechanism (delta marker syntax、 caller marker 適用方法、 specialist review 起動) は <a href="architecture-rules.html#s7-1-7phase">architecture-rules §7.1 7-phase PR Cycle</a> および関連 section に規定する。</p>
 </section>
 
-<section id="s5-citations" class="informative">
-<h2>§5. Citations &amp; Influences</h2>
+<section id="s7-citations" class="informative">
+<h2>§7. Citations &amp; Influences</h2>
 
 <ul>
   <li><strong>RFC 2119 / RFC 8174</strong> — MUST/SHOULD/MAY キーワード解釈 (本 constitution 全 normative section が準拠)。</li>
   <li><strong>arc42</strong> (<a href="https://arc42.org/">arc42.org</a>) — architecture documentation 12 sections。 folio は essential 5 sections (§1/§3/§5/§9/§10) の概念を採用、 完全 12 section 採用はしない (over-spec のため)。</li>
-  <li><strong>Diátaxis</strong> (<a href="https://diataxis.fr/">diataxis.fr</a>) — 4 documentation modes (Tutorial / Reference / How-to / Explanation)。 folio は projects/ 配下で 4 modes を物理 dir 分離する (architecture-rules.html §2)。</li>
+  <li><strong>Diátaxis</strong> (<a href="https://diataxis.fr/">diataxis.fr</a>) — 4 documentation modes (Tutorial / Reference / How-to / Explanation)。 各 Layer 1 consumer project で物理 dir 分離する (<a href="architecture-rules.html#s2-directory">architecture-rules §2</a>)。</li>
   <li><strong>ISO/IEC/IEEE 42010:2022</strong> — Architecture Description 国際標準、 Stakeholder Perspectives 概念を §0 で採用。</li>
-  <li><strong>EARS (Easy Approach to Requirements Syntax)</strong> — Mavin らによる acceptance criteria 形式言語。 folio は core 要件記述に <code>&lt;aside class="ears"&gt;</code> 形式で採用 (architecture-rules.html §6)。</li>
-  <li><strong>OpenSpec (Fission-AI)</strong> — changes/ lifecycle (proposal/design/tasks) を参考にしたが、 案 B (proposal-only MUST) に簡素化。 SSoT 解釈は OpenSpec の「現在挙動」 と分岐し、 folio は「未来理想」 を採用 (P-1)。</li>
-  <li><strong>AWS Kiro</strong> (<a href="https://kiro.dev/">kiro.dev</a>) — <code>steering/</code> 規約 (product/tech/structure 3 文書) の発想を採用。 EARS notation も Kiro が啓発元。</li>
+  <li><strong>EARS (Easy Approach to Requirements Syntax)</strong> — Mavin らによる acceptance criteria 形式言語 (<a href="architecture-rules.html#s6-ears">architecture-rules §6</a>)。</li>
+  <li><strong>OpenSpec (Fission-AI)</strong> — changes/ lifecycle (proposal/design/tasks) を参考にしたが、 proposal-only MUST に簡素化。 SSoT 解釈は OpenSpec の「現在挙動」 と分岐し、 folio は「未来理想」 を採用 (P-1)。</li>
+  <li><strong>AWS Kiro</strong> (<a href="https://kiro.dev/">kiro.dev</a>) — steering/ 規約 (product/tech/structure 3 文書) の発想を採用 (各 consumer project)。 EARS notation も Kiro 啓発元。</li>
   <li><strong>GitHub Spec Kit</strong> — <code>constitution.md</code> パターンを採用 (folio は <code>constitution.html</code> として html-native 化)。</li>
-  <li><strong>Anthropic 最近の声明</strong> (2026) — 「人間も読む仕様書は Markdown ではなく HTML でも良い」 という方向性が folio の HTML-only 採用 (P-2) の追加根拠。</li>
-  <li><strong>twill plugin</strong> (<code>~/projects/local-projects/twill/</code>) — folio の概念的ルーツ。 universal-ready な R-rule 群 (declarative narrative / link integrity / caller marker idea / drift 防止 v3) を概念継承するが、 twill 固有実装は採用しない (P-12 で隔離)。</li>
+  <li><strong>ESLint / Stylelint</strong> — rules + plugin engine 一体配布 pattern (P-12)。 folio plugin 構造の直接 reference。</li>
+  <li><strong>Anthropic 公式声明</strong> (2026) — 「人間も読む仕様書は Markdown ではなく HTML でも良い」 という方向性が folio の HTML-only 採用 (P-2) の追加根拠。</li>
+  <li><strong>twill plugin</strong> — folio の概念的ルーツ (P-12 で read-only reference として参照)。 universal-ready な原則 (declarative narrative、 link integrity、 caller marker idea、 drift 防止) を概念継承するが、 twill 固有実装は採用しない。</li>
 </ul>
 </section>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'antiscript',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#2a4d6e',
+        primaryTextColor: '#ffffff',
+        lineColor: '#2a4d6e',
+        secondaryColor: '#5ac8b8',
+        tertiaryColor: '#f5f8fa'
+      }
+    });
+  }
+});
+</script>
 
 </body>
 </html>
