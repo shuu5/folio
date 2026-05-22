@@ -162,6 +162,11 @@ graph TD
   <tbody>
     <tr>
       <td>2026-05-22</td>
+      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (REQ-CI-010 詳細化)、 relations.html §5 normative 化 + EARS REQ-REL-001/002/003、 §4.2 3-tier mapping 具体例追加</td>
+      <td>本 commit</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
       <td>relations.html を新設 (Phase 1 = JSON-LD + W3C 語彙 + inventory schema)、 rules.html §4.1 に JSON-LD 関係性表現を追加、 rules.html 自身の <code>&lt;head&gt;</code> JSON-LD も新規定準拠化、 README を index 化 (本 §1-§5)</td>
       <td>research/spec-graph-management-research.html 結論の規範化</td>
     </tr>
@@ -192,13 +197,10 @@ graph TD
       <td><code>&lt;head&gt;</code> JSON-LD が旧パターン (<code>@context</code> 文字列形式、 <code>@type: "FolioConstitution"</code> 等独自型)</td>
       <td>user 指示 「これ以上いじりたくない」 を遵守、 cross-ref のみ更新で head は据え置き。 dogfood failure 残存を許容</td>
     </tr>
-    <tr>
-      <td><a href="folio-self-spec.html">folio-self-spec.html</a></td>
-      <td>同上 (<code>@type: "FolioSelfSpec"</code> 等独自型、 dc/schema/folio prefix なし)</td>
-      <td>別 PR で <code>&lt;head&gt;</code> JSON-LD を <a href="relations.html#s3-2-full">relations.html §3.2 Full Example</a> パターンに更新。 P-10 user 確認後</td>
-    </tr>
   </tbody>
 </table>
+
+<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は本 commit (2026-05-22) で新規定 pattern に移行済 (§5 Change Log 参照)。</p>
 </section>
 
 <script>

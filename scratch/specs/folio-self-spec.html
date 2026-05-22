@@ -11,12 +11,21 @@
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
-  "@context": "https://folio.dev/schema",
-  "@type": "FolioSelfSpec",
-  "version": "0.4.2-draft",
-  "extends": "../constitution.html",
-  "describes": "folio Layer 0 framework itself (provisional, to be self-applied to architecture/spec/ in Phase X3+)",
-  "sections": ["s0-reader-guide", "s1-architecture", "s2-folio-layout", "s7-harness", "s8-plugin", "s9-bindings"]
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./folio-self-spec.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio self-spec",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "folio:extends": [{ "@id": "../constitution.html" }],
+  "dc:references": [
+    { "@id": "./rules.html" },
+    { "@id": "./relations.html" }
+  ]
 }
 </script>
 <script src="../assets/mermaid.min.js" defer></script>

@@ -409,6 +409,41 @@
 
 <p>AI agent は spec edit 開始時、 Tier 1 (inventory.json) のみ取得して全体構造を把握 MUST。 関連する spec のみ Tier 2 (各 spec head + 第 1 段落) を読み、 編集対象 spec のみ Tier 3 (本文) を読み込む。 全 Tier 3 一括読込は context 圧迫の原因のため SHOULD NOT。</p>
 
+<h4>例: folio specs の 3-tier mapping</h4>
+
+<table>
+  <caption>scratch/specs/ + constitution.html の Tier 別表現 (Phase X3 の inventory auto-generate 想定)</caption>
+  <thead>
+    <tr><th>file</th><th>Tier 1 (inventory.json entry summary)</th><th>Tier 2 (head + 冒頭 aside)</th><th>Tier 3 (本文)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>constitution.html</code></td>
+      <td>「folio の 12 不変原則 (P-1〜P-12、 3-tier)」</td>
+      <td>JSON-LD + §1 Purpose 第 1 段落</td>
+      <td>§1〜§7 全本文 + 不変原則本体</td>
+    </tr>
+    <tr>
+      <td><code>rules.html</code></td>
+      <td>「Layer 1 consumer 向け universal rules + Mandatory Actions」</td>
+      <td>JSON-LD + §0 Reader's Guide</td>
+      <td>§0、 §2〜§6、 §10 全本文</td>
+    </tr>
+    <tr>
+      <td><code>folio-self-spec.html</code></td>
+      <td>「folio Layer 0 framework 自身の architecture spec」</td>
+      <td>JSON-LD + §0 Reader's Guide</td>
+      <td>§0〜§9 全本文 + 8 mermaid 図</td>
+    </tr>
+    <tr>
+      <td><code>relations.html</code> (本書)</td>
+      <td>「spec 間関係性表現規約 (JSON-LD + W3C 語彙 + inventory)」</td>
+      <td>JSON-LD + §0 Reader's Guide</td>
+      <td>§0〜§6 全本文</td>
+    </tr>
+  </tbody>
+</table>
+
 <h3 id="s4-3-generation">§4.3 Auto-Generation Timing</h3>
 
 <table>
@@ -422,13 +457,13 @@
 </section>
 
 <!-- ====================================================================
-     §5 Bidirectional Reference (informative)
+     §5 Bidirectional Reference
      ==================================================================== -->
-<section id="s5-bidirectional" class="informative">
-<h2>§5. Bidirectional Reference (Informative)</h2>
+<section id="s5-bidirectional" class="normative">
+<h2>§5. Bidirectional Reference</h2>
 
 <aside class="informative">
-  <p>本 §5 は <strong>SHOULD レベル</strong>の informative ガイダンス。 試作 plugin の <code>folio link</code> CLI で auto-materialize する設計を予定 (Phase X3+)。 scratch 段階 (X2) では手動で双方向リンクを記述する SHOULD だが MUST ではない。</p>
+  <p>本 §5 は forward relation を spec 中で記述する <strong>MUST</strong> 規範および、 reverse relation の auto-materialize 計画 (Phase X3+) を集約する。 構成: §5.1 dual 対象関係 (table)、 §5.2 precedent (informative aside)、 §5.3 EARS 規範要件 (REQ-REL-001〜004)。</p>
 </aside>
 
 <h3 id="s5-1-pattern">§5.1 双方向 dual の対象関係</h3>
@@ -449,18 +484,38 @@
 
 <h3 id="s5-2-precedent">§5.2 Precedent (log4brains pattern)</h3>
 
-<p><a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">log4brains <code>Adr.supersedeBy()</code> メソッド</a> は ADR-A が ADR-B を supersede した際、 自動的に ADR-B 側の本文に逆参照 (<code>Supersedes ADR-A</code>) を追加する。 folio の <code>folio link supersede &lt;old&gt; &lt;new&gt;</code> CLI も同パターンで auto-materialize する設計。 詳細は調査レポート §3.6 (<a href="../research/spec-graph-management-research.html#s3-integrated">spec-graph-management-research.html §3</a>) を参照。</p>
+<aside class="informative">
+<p>双方向 auto-materialize の precedent として <a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">log4brains <code>Adr.supersedeBy()</code></a> がある (ADR-A が ADR-B を supersede した際、 ADR-B 側に逆参照を自動追加するパターン)。 folio framework も同設計を採用予定 (具体的な CLI 構文 / 実装機構は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7 系</a> に集約予定、 Phase X3+)。 詳細は <a href="../research/spec-graph-management-research.html#s3-integrated">spec-graph-management-research.html §3</a> を参照。</p>
+</aside>
 
-<h3 id="s5-3-conformance">§5.3 Phase 別 conformance</h3>
+<h3 id="s5-3-ears">§5.3 EARS 規範要件</h3>
 
-<table>
-  <thead><tr><th>項目</th><th>Phase X2 (現在)</th><th>Phase X3 以降</th></tr></thead>
-  <tbody>
-    <tr><td>forward 記述</td><td>MUST</td><td>MUST</td></tr>
-    <tr><td>reverse 記述</td><td>SHOULD (手動)</td><td>MUST (auto-materialize)</td></tr>
-    <tr><td>broken reverse 検出</td><td>未対応</td><td><code>folio link --check</code> CLI で MUST</td></tr>
-  </tbody>
-</table>
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-REL-001</span>:
+  Each spec <span class="ears-shall">SHALL</span> declare applicable forward relations
+  (e.g., <code>dc:replaces</code>, <code>dc:references</code>, <code>folio:depends-on</code>)
+  in its <code>&lt;head&gt;</code> JSON-LD block when such relations exist.
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-REL-002</span>:
+  WHEN Phase X3+ tooling is active and a forward relation is declared in any spec,
+  the system <span class="ears-shall">SHALL</span> auto-materialize the corresponding
+  reverse relation (e.g., <code>dc:isReplacedBy</code>) on the target spec.
+</p>
+
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-REL-003</span>:
+  In Phase X2 (current), reverse relations <span class="ears-shall">SHOULD</span>
+  be written manually until X3 tooling lands.
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-REL-004</span>:
+  WHEN a forward relation lacks its corresponding reverse relation in Phase X3+,
+  the link-check tooling <span class="ears-shall">SHALL</span> report a broken-reverse
+  violation (具体的な CLI 構文・実装機構は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7 系</a> に集約)。
+</p>
 </section>
 
 <!-- ====================================================================
