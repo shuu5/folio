@@ -6,64 +6,215 @@
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.4.2-draft">
 <meta name="folio-status" content="active">
-<title>folio — scratch/specs/ (framework spec drafts)</title>
+<title>folio — scratch/specs/ (framework spec index)</title>
 <link rel="stylesheet" href="../../common.css">
+<script src="../assets/mermaid.min.js" defer></script>
+<style>
+figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
+figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
+pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
+pre.mermaid[data-processed="true"] { visibility: visible; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio framework spec index",
+  "folio:version": "0.4.2-draft",
+  "dc:hasPart": [
+    { "@id": "./rules.html" },
+    { "@id": "./folio-self-spec.html" },
+    { "@id": "./relations.html" }
+  ]
+}
+</script>
 </head>
 <body>
 
 <header class="doc-header">
-  <h1>specs/ — folio framework spec drafts</h1>
-  <div class="meta">v0.4.2-draft &middot; ブラッシュアップ対象の folio framework spec を集約</div>
+  <h1>specs/ — folio framework spec index</h1>
+  <div class="meta">v0.4.2-draft &middot; ブラッシュアップ対象の folio framework spec を集約 (constitution は除く、 scratch/ 直下の特別枠)</div>
 </header>
 
 <aside class="informative">
-<p>本 dir は <strong>folio framework 自身の spec</strong> (constitution 以外) を draft 状態で集約する。 試作段階 (Phase X2) 中はここで自由にブラッシュアップする。 完成後 (Phase X3) に正式 location (<code>architecture/</code>) に移植予定。</p>
+<p>本 dir は folio framework 自身の spec (constitution 以外) を draft 状態で集約する。 試作段階 (Phase X2) ではここで自由にブラッシュアップする。 完成後 (Phase X3) に正式 location (<code>architecture/</code>) に移植予定。</p>
 </aside>
 
+<!-- ====================================================================
+     §1 Purpose
+     ==================================================================== -->
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
 
-<p>constitution が <strong>不変資産</strong> として固定された一方、 rules / folio-self-spec は試作の進行に応じて <strong>継続的にブラッシュアップ</strong>する必要がある。 両者を物理的に分離 (constitution = scratch/ 直下 / specs = scratch/specs/) することで、 「触らない」 と 「改訂可」 の境界を明示する。</p>
+<p>本 README は <strong>specs/ cluster の index</strong>。 cluster 内 spec file 同士の関係を一望し、 reader (人間 / AI agent) のナビゲーションを支える。 将来 (Phase X3+) は <code>scratch/specs/inventory.json</code> として auto-generate される予定 (<a href="relations.html#s4-inventory">relations.html §4</a>)、 scratch 段階では本 README が人手版 Tier 1 index を兼ねる。</p>
+
+<p>constitution (不変資産、 scratch/ 直下の特別枠) は本 cluster の対象外。 編集禁止、 cross-ref のみ。</p>
 </section>
 
-<section id="s2-contents" class="informative">
-<h2>§2. Contents</h2>
+<!-- ====================================================================
+     §2 File Inventory
+     ==================================================================== -->
+<section id="s2-inventory" class="informative">
+<h2>§2. File Inventory</h2>
 
 <table>
-  <thead><tr><th>file</th><th>role</th><th>status</th></tr></thead>
+  <caption>specs/ cluster の file 一覧 (現在 4 file)</caption>
+  <thead>
+    <tr><th>file</th><th>role</th><th>status</th><th>depends-on</th><th>extends</th></tr>
+  </thead>
   <tbody>
     <tr>
       <td><a href="rules.html"><code>rules.html</code></a></td>
-      <td>Layer 1 consumer project 向け universal rules (markup / naming / EARS / Mandatory Actions)</td>
-      <td>draft</td>
+      <td>Layer 1 consumer 向け universal rules (markup / naming / EARS / Mandatory Actions)</td>
+      <td>draft (v0.4.2)</td>
+      <td><a href="../constitution.html"><code>../constitution.html</code></a></td>
+      <td>—</td>
     </tr>
     <tr>
       <td><a href="folio-self-spec.html"><code>folio-self-spec.html</code></a></td>
       <td>folio Layer 0 framework 自身の architecture spec (provisional)</td>
-      <td>draft</td>
+      <td>draft (v0.4.2)</td>
+      <td><a href="../constitution.html"><code>../constitution.html</code></a></td>
+      <td><a href="rules.html"><code>rules.html</code></a> (§10 cross-ref)</td>
+    </tr>
+    <tr>
+      <td><a href="relations.html"><code>relations.html</code></a></td>
+      <td>spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory schema)</td>
+      <td>draft (v0.1.0)</td>
+      <td><a href="rules.html"><code>rules.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>README.html</code> (本 file)</td>
+      <td>specs/ cluster index (本 cluster の navigation)</td>
+      <td>active (v0.4.2)</td>
+      <td>—</td>
+      <td>—</td>
     </tr>
   </tbody>
 </table>
 </section>
 
-<section id="s3-rules" class="informative">
-<h2>§3. Rules</h2>
+<!-- ====================================================================
+     §3 Dependency Graph
+     ==================================================================== -->
+<section id="s3-graph" class="informative">
+<h2>§3. Dependency Graph</h2>
 
-<ul>
-  <li><strong>編集可</strong>: 試作の進行に応じて自由にブラッシュアップする。 markup 正規性、 SemVer bump 等の formal 要件は scratch/ 段階では緩い適用。</li>
-  <li>大幅改訂は ADR (<a href="../decisions/"><code>../decisions/</code></a>) で記録するが、 軽微な refinement は inline 修正で OK。</li>
-  <li>constitution との関係: rules / folio-self-spec は constitution の不変原則 (P-1〜P-12) を <em>実装する</em> 位置付け。 不整合が出たら user と相談。</li>
-</ul>
+<figure class="diagram">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'flowchart': {'curve': 'basis'}}}%%
+graph TD
+  CONST["constitution.html<br/>(scratch/ 直下、 不変)"]:::frozen
+  RULES["rules.html<br/>(Layer 1 universal rules)"]:::active
+  FSS["folio-self-spec.html<br/>(folio Layer 0 self-spec)"]:::active
+  REL["relations.html<br/>(関係性管理 spec)"]:::active
+  README["README.html<br/>(specs/ index)"]:::index
+
+  RULES -.->|extends| CONST
+  FSS -.->|extends| CONST
+  FSS -->|"references §10"| RULES
+  REL -->|depends-on| RULES
+  REL -.->|"references §2"| CONST
+  README -->|hasPart| RULES
+  README -->|hasPart| FSS
+  README -->|hasPart| REL
+
+  classDef frozen fill:#fff3e0,stroke:#e65100,stroke-width:2px
+  classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+  classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+</pre>
+<figcaption>図 1: specs/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は scratch/ 直下 (frozen)、 specs/ 配下 3 file は draft (active editing)。</figcaption>
+</figure>
 </section>
 
-<section id="s4-lifecycle" class="informative">
-<h2>§4. Lifecycle</h2>
+<!-- ====================================================================
+     §4 Reading Order
+     ==================================================================== -->
+<section id="s4-reading-order" class="informative">
+<h2>§4. Reading Order</h2>
 
-<ul>
-  <li><strong>現在 (Phase X2)</strong>: 試作と並行してブラッシュアップ中。</li>
-  <li><strong>完成後 (Phase X3)</strong>: <code>architecture/spec/</code> 配下に self-application で分解、 正式化。 scratch/specs/ は撤去 or archive。</li>
-</ul>
+<p>新規 reader (人間 / AI agent) は以下の順序で読む SHOULD。</p>
+
+<ol>
+  <li><strong><a href="../constitution.html">constitution.html</a></strong> — folio の 12 不変原則 (前提知識、 全 spec の基底)</li>
+  <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
+  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings)</li>
+  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD vocabulary、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
+</ol>
+
+<p>spec edit を行う AI agent は最低限 (1) + (2) を必読 MUST、 関係性宣言を変更する場合は (4) も MUST。 (3) は folio framework の動作変更を行う場合のみ必読。</p>
 </section>
+
+<!-- ====================================================================
+     §5 Change Log
+     ==================================================================== -->
+<section id="s5-changelog" class="informative">
+<h2>§5. Change Log</h2>
+
+<table>
+  <thead><tr><th>date</th><th>change</th><th>related ADR / commit</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>2026-05-22</td>
+      <td>relations.html を新設 (Phase 1 = JSON-LD + W3C 語彙 + inventory schema)、 rules.html §4.1 に JSON-LD 関係性表現を追加、 rules.html 自身の <code>&lt;head&gt;</code> JSON-LD も新規定準拠化、 README を index 化 (本 §1-§5)</td>
+      <td>research/spec-graph-management-research.html 結論の規範化</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>scratch/specs/ dir 新設、 rules.html + folio-self-spec.html を移動 (ブラッシュアップ可化)</td>
+      <td><a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
+      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> (v3)</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s6-todo" class="informative">
+<h2>§6. Open TODO</h2>
+
+<p>relations.html 導入に伴い既存 file に <strong>dogfood failure</strong> が残存。 別 PR で対応予定:</p>
+
+<table>
+  <thead><tr><th>file</th><th>問題</th><th>対応</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><a href="../constitution.html">../constitution.html</a></td>
+      <td><code>&lt;head&gt;</code> JSON-LD が旧パターン (<code>@context</code> 文字列形式、 <code>@type: "FolioConstitution"</code> 等独自型)</td>
+      <td>user 指示 「これ以上いじりたくない」 を遵守、 cross-ref のみ更新で head は据え置き。 dogfood failure 残存を許容</td>
+    </tr>
+    <tr>
+      <td><a href="folio-self-spec.html">folio-self-spec.html</a></td>
+      <td>同上 (<code>@type: "FolioSelfSpec"</code> 等独自型、 dc/schema/folio prefix なし)</td>
+      <td>別 PR で <code>&lt;head&gt;</code> JSON-LD を <a href="relations.html#s3-2-full">relations.html §3.2 Full Example</a> パターンに更新。 P-10 user 確認後</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        fontFamily: 'inherit',
+        fontSize: '14px'
+      }
+    });
+  }
+});
+</script>
 
 </body>
 </html>

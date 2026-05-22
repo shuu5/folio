@@ -11,12 +11,20 @@
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
-  "@context": "https://folio.dev/schema",
-  "@type": "FolioRules",
-  "version": "0.4.2-draft",
-  "extends": "../constitution.html",
-  "appliesTo": "Layer 1 consumer projects",
-  "sections": ["s0-reader-guide", "s2-directory", "s3-naming", "s4-format", "s5-delta", "s6-ears", "s10-mandatory"]
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./rules.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio rules",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "folio:extends": [{ "@id": "../constitution.html" }],
+  "dc:references": [
+    { "@id": "./relations.html" }
+  ]
 }
 </script>
 </head>
@@ -100,7 +108,9 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 
 <p>全 spec file は以下の構造を MUST 採用する。</p>
 
-<h3>§4.1 <code>&lt;head&gt;</code> Metadata (3 層)</h3>
+<h3>§4.1 <code>&lt;head&gt;</code> Metadata (3 層 + JSON-LD 関係性)</h3>
+
+<p>全 spec file の <code>&lt;head&gt;</code> は (1) <code>&lt;meta&gt;</code> tag による flat metadata、 (2) <code>&lt;title&gt;</code>、 (3) <code>&lt;link&gt;</code> stylesheet、 (4) <code>&lt;script type="application/ld+json"&gt;</code> による関係性ブロックの 4 要素を MUST 含む。 JSON-LD ブロックの内容 schema は <a href="relations.html#s3-jsonld">relations.html §3</a> に集約する。</p>
 
 <pre><code>&lt;head&gt;
 &lt;meta charset="UTF-8"&gt;
@@ -114,10 +124,12 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 &lt;title&gt;...&lt;/title&gt;
 &lt;link rel="stylesheet" href="../../common.css"&gt;
 &lt;script type="application/ld+json"&gt;
-{"@type": "FolioSpec", "id": "...", "version": "1.2.0", "stakeholderPerspective": ["Developer", "AI Agent"]}
+{ /* JSON-LD block: relations.html §3.2 Full Example を参照 */ }
 &lt;/script&gt;
 &lt;/head&gt;
 </code></pre>
+
+<p>採用する vocabulary (<code>dc:*</code>, <code>schema:*</code>, <code>folio:*</code>) および <code>@id</code> resolution rules は <a href="relations.html#s1-w3c-vocab">relations.html §1</a> (W3C 標準語彙) と <a href="relations.html#s2-folio-vocab">§2</a> (folio 独自語彙)、 <a href="relations.html#s3-3-id-resolution">§3.3</a> (@id 解決規則) に MUST 従う。 関係性のない spec (constitution.html 等) は <code>dc:references</code> / <code>folio:depends-on</code> を省略してよい。</p>
 
 <h3>§4.2 Body 冒頭 <code>aside.machine-readable</code></h3>
 
