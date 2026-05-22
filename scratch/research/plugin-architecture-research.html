@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="research-report">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-research-session" content="5592bf08">
+<meta name="folio-research-date" content="2026-05-23">
+<title>folio — Claude Code plugin 構成と HTML spec management 統合の徹底調査</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>Claude Code plugin 構成と HTML spec management 統合の徹底調査</h1>
+  <div class="meta">
+    v0.1.0-draft &middot; 調査日 2026-05-23 &middot; session 5592bf08 &middot;
+    調査範囲: 公式仕様 (plugin.json / SKILL.md / hooks / agents / scripts / 組合せ pattern) /
+    Git-based hook framework / Linter + SSG plugin architecture / ADR + spec OSS / JSON-LD lint mechanism
+  </div>
+</header>
+
+<aside class="informative">
+<p>本レポートは folio (META FRAMEWORK Layer 0) project の <strong>Phase X3 で着手する Claude Code plugin の最小実装設計</strong>に必要な情報を 5 並列調査 (researcher-1〜5) で <strong>76 ソース</strong> (公式 35 + GitHub 14 + 技術 blog 23 + ローカル twill 4) から集約した産物。 公式 docs (<code>code.claude.com</code> / <code>platform.claude.com</code>) を一次資料として優先、 log4brains の TypeScript ソース・twill plugin のローカル file・Beads の SessionStart hook 統合を <em>verified</em> で押さえた。 critique で <strong>PASS</strong> 判定済 (WARNING 4 件は §9 Open Questions に反映)。</p>
+<p>constitution P-11 (HOW 禁止) を遵守: 本レポートは設計推奨 (WHAT) を中心に記述し、 具体的な script 内容・binary path・CLI 構文は <code>.claude-plugin/</code> 配下の harness に隔離する設計を提案する。 試作駆動哲学 (prototype-driven) に合致した <strong>minimal viable plugin scope</strong> (Phase X3 着手分: 1 skill + 4 hook + 6 script + 1 CLI) を §7 で具体化。</p>
+</aside>
+
+<!-- ====================================================================
+     §1. Background & Sub-questions
+     ==================================================================== -->
+<section id="s1-background" class="informative">
+<h2>§1. 調査背景</h2>
+
+<h3>§1.1. folio の Phase X3 着手要件</h3>
+
+<p>folio は AI agent (Claude Code) と人間が共同で「仕様書 (architecture spec)」 を HTML 形式で書き続ける meta framework (P-2)。 Phase X1-X2 で rules.html / folio-self-spec.html / relations.html / constitution.html の 4 file が確定 (commit 75232b9)、 Phase X3 で「architecture/ という構造を作成し維持する」 試作 plugin の実装に着手する。 plugin の 6 機能候補:</p>
+
+<ol>
+  <li>architecture/ 構造の強制 (rule 違反 path で reject)</li>
+  <li>spec 追加時の README index 自動更新</li>
+  <li>JSON-LD lint (Edit 完了時 schema check)</li>
+  <li>broken link detection</li>
+  <li>双方向 link auto-materialize (forward 宣言時 reverse 自動追加)</li>
+  <li>caller marker enforcement (REQ-CM-001〜003)</li>
+</ol>
+
+<p>これらを Claude Code plugin の skills / hooks / scripts / slash commands でどう組み合わせるか、 業界事例 (pre-commit / husky / ESLint / log4brains / Beads / twill) を踏まえて設計判断する必要がある。</p>
+
+<h3>§1.2. 5 サブ質問</h3>
+
+<ol>
+  <li>Claude Code Plugin 公式仕様 (plugin.json manifest / SKILL.md format / hooks 全種 / agents / scripts / 組み合わせ pattern)</li>
+  <li>Git-based hook framework 業界事例 (pre-commit / husky / lefthook / lint-staged / pre-commit.ci) と PreToolUse / PostToolUse の使い分け</li>
+  <li>Linter plugin architecture と SSG/catalog hook system (ESLint / Stylelint / Prettier / Sphinx / MkDocs / Antora / Docusaurus / Backstage)</li>
+  <li>ADR / spec management OSS の具体実装 (log4brains / Beads / MADR / adr-tools / Specmatic / Spectral / ArchUnit / twill plugin)</li>
+  <li>JSON-LD validation の実装 + Claude Code PostToolUse hook で「Edit 後即時 lint」 する mechanism</li>
+</ol>
+
+<p>追加で <strong>Q3 use case matrix</strong> (8 use case × skill/hook/script/CLI) / <strong>Q6 folio Phase X3 minimal viable plugin 設計推奨</strong> / <strong>Q7 ADR 起票候補</strong> を全 worker findings の統合で導出。</p>
+</section>
+
+<!-- ====================================================================
+     §2. Claude Code Plugin 公式仕様 reference
+     ==================================================================== -->
+<section id="s2-claude-code-spec" class="informative">
+<h2>§2. Claude Code Plugin 公式仕様 reference</h2>
+
+<aside class="informative">
+<p><strong>verified 情報</strong>: 全項目を <code>code.claude.com/docs/en/</code> および <code>platform.claude.com/docs/en/</code> から WebFetch で取得、 確認日 2026-05-23。</p>
+</aside>
+
+<h3 id="s2-1-plugin-json">§2.1. plugin.json manifest (23 field、 大半は optional)</h3>
+
+<p>配置先: <code>&lt;plugin-root&gt;/.claude-plugin/plugin.json</code>。 manifest は <strong>optional</strong> (省略時は directory name から自動導出 + default 位置からコンポーネントを auto-discover)。</p>
+
+<table>
+  <caption>plugin.json 主要 field カテゴリ</caption>
+  <thead>
+    <tr><th>カテゴリ</th><th>field 群</th><th>規則</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>identity</td><td><code>name</code> / <code>displayName</code> / <code>version</code> / <code>description</code> / <code>author</code> / <code>homepage</code> / <code>repository</code> / <code>license</code> / <code>keywords</code></td><td>name は kebab-case (skill namespace に使用)、 version は semver (省略時は git SHA)</td></tr>
+    <tr><td>component (加算)</td><td><code>skills</code></td><td>default <code>skills/</code> に追加</td></tr>
+    <tr><td>component (置換)</td><td><code>commands</code> / <code>agents</code> / <code>outputStyles</code> / <code>experimental.themes</code> / <code>experimental.monitors</code></td><td>manifest 指定時は default ディレクトリをスキャンしない</td></tr>
+    <tr><td>component (独自 merge)</td><td><code>hooks</code> / <code>mcpServers</code> / <code>lspServers</code></td><td>設定 file への merge ルール</td></tr>
+    <tr><td>runtime</td><td><code>userConfig</code> / <code>settings</code> / <code>dependencies</code> / <code>channels</code> / <code>$schema</code></td><td>userConfig は enable 時に prompt、 <code>${user_config.KEY}</code> で hook command / MCP/LSP config / monitor / skill content (非 sensitive) に展開</td></tr>
+  </tbody>
+</table>
+
+<p><strong>全 path は <code>./</code> 相対指定 MUST</strong>。 環境変数: <code>${CLAUDE_PLUGIN_ROOT}</code> (絶対パス) / <code>${CLAUDE_PLUGIN_DATA}</code> (永続データ) / <code>${CLAUDE_PROJECT_DIR}</code> (project root)。</p>
+
+<h3 id="s2-2-layout">§2.2. plugin directory layout</h3>
+
+<pre><code>my-plugin/
+├── .claude-plugin/
+│   └── plugin.json
+├── skills/&lt;name&gt;/SKILL.md        ← Progressive Disclosure 3-tier (推奨)
+├── commands/&lt;name&gt;.md             ← legacy flat .md (Skills と同一 frontmatter)
+├── agents/&lt;name&gt;.md               ← subagent 定義 (plugin agent は hooks/mcpServers/permissionMode 非対応)
+├── hooks/hooks.json               ← 自動 detection (plugin.json 明示不要)
+├── scripts/                       ← 慣習 (必須でない)、 ${CLAUDE_PLUGIN_ROOT}/scripts/ で参照
+├── bin/                           ← Bash の PATH に追加
+├── monitors/monitors.json         ← experimental、 stdout 各行が notification
+├── output-styles/, themes/
+└── .mcp.json, .lsp.json
+</code></pre>
+
+<h3 id="s2-3-hooks">§2.3. Hooks — 29 イベント (公式 verified)</h3>
+
+<aside class="informative">
+<p><strong>重要訂正</strong>: 元クエリの「17 種」 は誤り。 公式 docs 記載のイベント数は <strong>29 種</strong> (2026-05-23 時点)。 folio spec 内の hook 数言及は 29 に統一する。</p>
+</aside>
+
+<table>
+  <caption>folio に関連する主要 hook event (29 種から抜粋)</caption>
+  <thead>
+    <tr><th>event</th><th>trigger</th><th>matcher</th><th>blocking (exit 2)</th><th>主用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>SessionStart</code></td><td>session 開始/再開</td><td>source enum</td><td>不可</td><td>context injection (Beads pattern)</td></tr>
+    <tr><td><code>UserPromptSubmit</code></td><td>user prompt 送信時</td><td>なし</td><td>可</td><td>prompt 検査・拡張</td></tr>
+    <tr><td><code>PreToolUse</code></td><td>ツール呼出前</td><td>tool name (regex)</td><td>可</td><td>caller marker check / file protection</td></tr>
+    <tr><td><code>PermissionRequest</code></td><td>権限ダイアログ</td><td>tool name</td><td>可</td><td>auto allow/deny</td></tr>
+    <tr><td><code>PostToolUse</code></td><td>ツール成功後</td><td>tool name</td><td>不可 (stderr → Claude)</td><td>lint feedback / auto-fix</td></tr>
+    <tr><td><code>PostToolUseFailure</code></td><td>ツール失敗後</td><td>tool name</td><td>不可</td><td>エラーログ収集</td></tr>
+    <tr><td><code>PostToolBatch</code></td><td>並列バッチ完了後</td><td>なし</td><td>可</td><td>agentic loop 停止</td></tr>
+    <tr><td><code>Stop</code> / <code>SubagentStop</code></td><td>応答終了</td><td>なし</td><td>可</td><td>end-of-session 検証</td></tr>
+    <tr><td><code>InstructionsLoaded</code></td><td>CLAUDE.md ロード時</td><td>5 source enum</td><td>不可</td><td>spec 自動 inject</td></tr>
+    <tr><td><code>FileChanged</code></td><td>監視 file 変更時</td><td>literal name (regex 不可)</td><td>不可</td><td>外部編集追従</td></tr>
+    <tr><td><code>PreCompact</code> / <code>PostCompact</code></td><td>context compaction</td><td>なし</td><td>可 / 不可</td><td>状態保存・復元</td></tr>
+  </tbody>
+</table>
+
+<p>Hook 5 type: <code>command</code> (shell コマンド、 <code>args</code> で exec form 可) / <code>http</code> (JSON POST) / <code>mcp_tool</code> (MCP tool 呼出) / <code>prompt</code> (Claude model 推論、 yes/no) / <code>agent</code> (subagent spawn、 experimental)。</p>
+
+<p><strong>stdin JSON</strong> (PreToolUse 例):</p>
+<pre><code>{
+  "session_id": "...", "transcript_path": "...", "cwd": "...",
+  "hook_event_name": "PreToolUse",
+  "permission_mode": "default|plan|acceptEdits|...",
+  "tool_name": "Write", "tool_input": {...}, "tool_use_id": "...",
+  "effort": {"level": "..."}
+}
+</code></pre>
+
+<p><strong>stdout JSON output</strong> (PreToolUse の deny 例):</p>
+<pre><code>{
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "permissionDecision": "deny",
+    "permissionDecisionReason": "caller marker not set"
+  }
+}
+</code></pre>
+
+<aside class="informative">
+<p><strong>既知バグ</strong>: <a href="https://github.com/anthropics/claude-code/issues/37210">GitHub Issue #37210</a> — Edit tool での <code>permissionDecision: "deny"</code> 無視ケース。 <code>exit 2 + stderr</code> の方が確実な fallback。 folio 実装時は PoC で動作確認 MUST。</p>
+</aside>
+
+<h3 id="s2-4-skill-md">§2.4. SKILL.md + Progressive Disclosure (3-tier)</h3>
+
+<p>frontmatter 全フィールド optional、 <code>description</code> のみ強推奨:</p>
+
+<pre><code>---
+name: skill-name
+description: "What it does... Use when..."
+when_to_use: "Additional context..."        # description に連結、 合計 1536 文字上限
+allowed-tools: "Read Grep Bash(git *)"
+model: sonnet
+effort: medium
+context: fork                                # subagent で実行
+agent: Explore
+hooks: {...}                                 # skill ライフサイクル hook
+paths: "src/**/*.ts"                         # glob で自動起動限定
+---
+</code></pre>
+
+<table>
+  <caption>Progressive Disclosure 3-tier (Anthropic Agent Skills、 relations.html §4.2 と整合)</caption>
+  <thead>
+    <tr><th>Level</th><th>内容</th><th>ロードタイミング</th><th>tokens</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Level 1 (Metadata)</td><td><code>name</code> + <code>description</code></td><td>常時 (session 開始時)</td><td>~100 / skill</td></tr>
+    <tr><td>Level 2 (Instructions)</td><td>SKILL.md body</td><td>trigger 時のみ</td><td>5,000 tokens 以下</td></tr>
+    <tr><td>Level 3 (Resources)</td><td>reference.md / scripts/</td><td>明示参照時のみ</td><td>unbounded</td></tr>
+  </tbody>
+</table>
+
+<p>Dynamic context injection (skill 本文): <code>!`&lt;command&gt;`</code> 構文で skill ロード前にコマンド実行・出力で置換。</p>
+
+<aside class="informative">
+<p><strong>用語注意</strong>: 「Progressive Disclosure」 という用語は <code>platform.claude.com</code> docs に明示、 <code>code.claude.com/docs/en/skills</code> では「supporting files」 として説明。 folio spec では「3-tier loading」 と呼び、 出典を明示する (relations.html §4.2 では既に Anthropic Agent Skills を出典に挙げて採用済)。</p>
+</aside>
+
+<h3 id="s2-5-slash-commands">§2.5. Slash Commands と Agents</h3>
+
+<p>公式 docs では <strong>skills と commands は統合</strong>。 <code>/slash-commands</code> 独立ページは存在しない (skills page に redirect)。</p>
+
+<table>
+  <thead><tr><th>方式</th><th>path</th><th>呼び出し</th></tr></thead>
+  <tbody>
+    <tr><td>Skills (推奨)</td><td><code>&lt;plugin&gt;/skills/&lt;name&gt;/SKILL.md</code></td><td><code>/plugin-name:name</code></td></tr>
+    <tr><td>Commands (legacy)</td><td><code>&lt;plugin&gt;/commands/&lt;name&gt;.md</code></td><td><code>/plugin-name:name</code></td></tr>
+  </tbody>
+</table>
+
+<p>Agents (subagent) 配置: <code>&lt;plugin&gt;/agents/&lt;name&gt;.md</code>。 v2.1.63 で <strong>Task tool → Agent tool 改名</strong> (Task は alias 継続)。 plugin agent では security 上 <code>hooks</code> / <code>mcpServers</code> / <code>permissionMode</code> が <strong>無視</strong>される。 built-in: <code>Explore</code> (Haiku、 read-only) / <code>Plan</code> / <code>general-purpose</code>。</p>
+
+<h3 id="s2-6-combinations">§2.6. 組み合わせ pattern</h3>
+
+<table>
+  <caption>公式 docs verified の 8 pattern</caption>
+  <thead><tr><th>pattern</th><th>実現方法</th><th>公式記載</th></tr></thead>
+  <tbody>
+    <tr><td>(a) hook → script</td><td><code>hooks.json</code> の <code>type: "command"</code> で <code>${CLAUDE_PLUGIN_ROOT}/scripts/...</code></td><td>あり</td></tr>
+    <tr><td>(b) skill → script</td><td>SKILL.md 本文で <code>!`bash ...`</code> または <code>allowed-tools</code> 経由</td><td>あり</td></tr>
+    <tr><td>(c) skill → subagent (fork)</td><td>frontmatter <code>context: fork, agent: Explore</code></td><td>あり</td></tr>
+    <tr><td>(d) slash command → skill</td><td>commands/ も skill system で動作</td><td>あり</td></tr>
+    <tr><td>(e) hook → agent</td><td><code>type: "agent"</code> (experimental)</td><td>experimental</td></tr>
+    <tr><td>(f) skill が hook を持つ</td><td>frontmatter <code>hooks:</code> でライフサイクル hook</td><td>あり</td></tr>
+    <tr><td>(g) hook が skill を直接 trigger</td><td>—</td><td><strong>公式 docs に記載なし</strong></td></tr>
+    <tr><td>(h) subagent が skills プリロード</td><td>agent frontmatter <code>skills:</code></td><td>あり</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ====================================================================
+     §3. Git-based hook framework 業界事例
+     ==================================================================== -->
+<section id="s3-git-hooks" class="informative">
+<h2>§3. Git-based hook framework 業界事例</h2>
+
+<h3 id="s3-1-comparison">§3.1. 6 tool 比較</h3>
+
+<table>
+  <thead>
+    <tr><th>tool</th><th>言語</th><th>config</th><th>実行モデル</th><th>性能</th><th>monorepo</th><th>用途</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>pre-commit</strong> (yelp)</td><td>Python</td><td><code>.pre-commit-config.yaml</code> + 外部 <code>.pre-commit-hooks.yaml</code></td><td>順次 (default)</td><td>中 (isolated env 構築)</td><td>限定</td><td>多言語 / 外部 hook repo</td></tr>
+    <tr><td><strong>husky</strong></td><td>Node.js</td><td><code>.husky/</code> shell scripts</td><td>順次</td><td>中 (Node 起動)</td><td>手動 + lint-staged</td><td>JS/TS 標準 (週 5M DL)</td></tr>
+    <tr><td><strong>lefthook</strong></td><td>Go (single binary)</td><td><code>lefthook.yml</code></td><td><strong>並列対応</strong></td><td><strong>高</strong> (Go binary)</td><td><code>root:</code> で限定</td><td>高性能 monorepo</td></tr>
+    <tr><td><strong>simple-git-hooks</strong></td><td>Node.js</td><td><code>package.json</code></td><td>順次</td><td>低 (zero deps)</td><td>非対応</td><td>小規模 minimal</td></tr>
+    <tr><td><strong>lint-staged</strong></td><td>Node.js</td><td><code>.lintstagedrc</code> / <code>package.json</code></td><td>glob ごと並列</td><td><strong>高</strong> (staged のみ)</td><td>glob で自然対応</td><td>husky/lefthook 併用</td></tr>
+    <tr><td><strong>pre-commit.ci</strong></td><td>SaaS</td><td><code>.pre-commit-config.yaml</code> の <code>ci:</code> section</td><td>PR 自動</td><td><strong>高</strong> (共有 cache)</td><td>repo 単位</td><td>CI 強制 + autofix PR</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-2-pretool-vs-git">§3.2. PreToolUse / PostToolUse vs git hook の対比</h3>
+
+<table>
+  <caption>4 軸対比 (researcher-2 統合)</caption>
+  <thead>
+    <tr><th>軸</th><th>PreToolUse</th><th>PostToolUse</th><th>git pre-commit</th><th>CI</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>発火</td><td>AI ツール実行直前</td><td>AI ツール成功直後</td><td><code>git commit</code> 時</td><td>PR/merge 時</td></tr>
+    <tr><td>介入 (block)</td><td><strong>可</strong> (exit 2 / JSON deny)</td><td>不可 (stderr → Claude)</td><td>可 (exit 非0)</td><td><strong>可</strong> (status check)</td></tr>
+    <tr><td>bypass 可</td><td>Claude 外編集は素通り</td><td>同左</td><td><code>--no-verify</code> で完全バイパス</td><td><strong>不可</strong></td></tr>
+    <tr><td>cross-file</td><td>1 file (Agent 経由で複数可)</td><td>同左</td><td>staged 全体一括</td><td>repo 全体</td></tr>
+    <tr><td>自動修正</td><td>PostToolUse で auto-fix</td><td>edit + stage 可</td><td>hook 内 modify (複雑)</td><td>autofix PR</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-3-defense-3layer">§3.3. 3 層防御 (defense in depth) 原則</h3>
+
+<pre><code>Layer 1: PreToolUse / PostToolUse hook  ← AI 編集時のリアルタイムチェック
+Layer 2: git pre-commit hook           ← commit 時 (human + AI 両方)
+Layer 3: CI (GitHub Actions)           ← merge gate (bypass 不可)
+</code></pre>
+
+<p><a href="https://xygeni.io/blog/why-pre-commit-hooks-fail-at-stopping-secrets/">Xygeni / AdamJ の指摘</a>: <code>--no-verify</code> の使用を完全に抑制することはできないため、 git hook でチェックしているのと同じ内容を CI/CD パイプラインでも実施することがベストプラクティス。</p>
+
+<table>
+  <caption>folio use case 別の推奨レイヤー</caption>
+  <thead><tr><th>use case</th><th>推奨</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td>caller marker check</td><td><strong>PreToolUse</strong> + pre-commit hook</td><td>AI 編集 block + 人手保護</td></tr>
+    <tr><td>JSON-LD lint</td><td><strong>PostToolUse</strong> (即時 feedback) + pre-commit (<code>--no-verify</code> 保険)</td><td>AI へのリアルタイム feedback + final gate</td></tr>
+    <tr><td>broken link detection</td><td><strong>CI</strong></td><td>全 file scan で hook には遅い、 PR merge gate が適切</td></tr>
+    <tr><td>双方向 link materialize</td><td><strong>PostToolUse</strong> auto-fix</td><td>atomic write + git add の連携 (idempotent 必須)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ====================================================================
+     §4. Linter + SSG plugin architecture
+     ==================================================================== -->
+<section id="s4-linter-ssg" class="informative">
+<h2>§4. Linter + SSG plugin architecture</h2>
+
+<h3 id="s4-1-common-patterns">§4.1. 共通 4 design pattern</h3>
+
+<table>
+  <caption>8 ツール (ESLint / Stylelint / Prettier / Sphinx / MkDocs / Antora / Docusaurus / Backstage) の帰納</caption>
+  <thead><tr><th>pattern</th><th>説明</th><th>採用例</th></tr></thead>
+  <tbody>
+    <tr><td>(a) Extension Point declarative 宣言</td><td>「宣言 manifest → runtime 登録」</td><td>全ツール (ESLint plugin.rules / Sphinx setup(app) / MkDocs entry_points / Antora register() / Docusaurus factory)</td></tr>
+    <tr><td>(b) Rule + Autofix + Meta 三位一体</td><td>検出ロジック + 修正 + メタ情報を 1 unit</td><td>ESLint <code>{meta, create(context)}</code> / Stylelint <code>createPlugin(name, fn)</code></td></tr>
+    <tr><td>(c) Lifecycle Event 順序保証</td><td>named event の pipeline 構造</td><td>Antora 14 step / Sphinx 8+ event / MkDocs Global→Page 2 層 / Docusaurus loadContent→contentLoaded→postBuild / Backstage 3 stage</td></tr>
+    <tr><td>(d) Context Object</td><td>plugin が runtime context 受領</td><td>ESLint <code>context</code> / Sphinx <code>app</code> / MkDocs <code>config/files/page</code> / Docusaurus <code>LoadContext + actions</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="s4-2-eslint">§4.2. ESLint Rule Unit (folio HTML lint に直接適用可能)</h3>
+
+<pre><code>module.exports = {
+  meta: {
+    type: "problem",
+    fixable: "code",
+    hasSuggestions: true,
+    schema: [{ type: "object", properties: {...} }],  // JSON Schema Draft-04
+    docs: { url: "..." }
+  },
+  create(context) {
+    return {
+      "Identifier": (node) =&gt; {
+        context.report({
+          node,
+          messageId: "...",
+          fix(fixer) {
+            return fixer.replaceText(node, newText);
+          }
+        });
+      }
+    };
+  }
+};
+</code></pre>
+
+<p><strong>Autofix 安全性原則</strong>:</p>
+<ul>
+  <li><strong>Idempotent</strong>: ESLint は fix 適用後に最大 10 回再 lint → 固定点収束</li>
+  <li><strong>競合解決</strong>: 同一 range の複数 fix は一方を棄却 (atomic でない fix の安全弁)</li>
+  <li><strong>Suggestion vs Fix 分離</strong>: 安全でない変更は <code>hasSuggestions</code> として提供</li>
+  <li><strong><code>meta.fixable</code> 強制宣言</strong>: fix 提供時に未宣言ならエラー → 意図しない autofix の防止</li>
+  <li><strong><code>--fix-dry-run</code></strong>: 変更を実行せず結果のみ返す</li>
+</ul>
+
+<h3 id="s4-3-mkdocs">§4.3. MkDocs Event System (folio README 自動更新パターンに最適合)</h3>
+
+<pre><code>class MyPlugin(BasePlugin):
+    @event_priority(-50)
+    def on_files(self, files, config):
+        files.append(File.generated(config, "virtual.md", content="..."))
+        return files
+
+    def on_page_markdown(self, markdown, page, **kwargs):
+        return modified_markdown  # None → 元のまま
+</code></pre>
+
+<p>Event 分類:</p>
+<ul>
+  <li><strong>One-time</strong>: <code>on_startup</code> / <code>on_shutdown</code> / <code>on_serve</code></li>
+  <li><strong>Global</strong>: <code>on_config</code> / <code>on_pre_build</code> / <code>on_files</code> / <code>on_nav</code> / <code>on_env</code> / <code>on_post_build</code></li>
+  <li><strong>Page</strong>: <code>on_pre_page</code> / <code>on_page_markdown</code> / <code>on_page_content</code> / <code>on_page_context</code> / <code>on_post_page</code></li>
+</ul>
+
+<h3 id="s4-4-antora">§4.4. Antora Generator Events (14 step、 SSoT enforcement に応用)</h3>
+
+<p>順序保証あり: <code>contextStarted</code> → <code>playbookBuilt</code> → <code>beforeProcess</code> → <code>contentAggregated</code> (ファイル追加可能) → <code>uiLoaded</code> → <code>contentClassified</code> (分類済み catalog 使用可能) → <code>documentsConverted</code> → <code>navigationBuilt</code> → <code>pagesComposed</code> → <code>redirectsProduced</code> → <code>siteMapped</code> → <code>beforePublish</code> → <code>sitePublished</code> → <code>contextStopped</code> / <code>contextClosed</code>。</p>
+
+<h3 id="s4-5-backstage">§4.5. Backstage Catalog Auto-Discovery</h3>
+
+<pre><code>EntityProvider (エッジ)
+  → getProviderName() で一意 bucket
+  → connect(connection)
+  → connection.applyMutation({type: 'full'|'delta', entities: [...]})
+     'full': bucket 全体置換
+     'delta': {added, removed}
+
+→ EntityProcessor (中継、 推奨は Provider に移行)
+  → preProcessEntity / postProcessEntity
+  → 新 entity / relation / error を emit
+
+→ Stitching (最終 catalog API 出力)
+</code></pre>
+
+<p>Provider 削除 → 即時 purge。 Processor はオーファン化のみ。 Provider は webhook / schedule / event 駆動 (柔軟)、 Processor は固定 loop。</p>
+</section>
+
+<!-- ====================================================================
+     §5. ADR / spec management OSS の具体実装
+     ==================================================================== -->
+<section id="s5-adr-spec-oss" class="informative">
+<h2>§5. ADR / spec management OSS の具体実装事例</h2>
+
+<h3 id="s5-1-log4brains">§5.1. log4brains — 双方向 link auto-materialize (TypeScript verified)</h3>
+
+<p>GitHub source 直接 fetch (<a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts"><code>packages/core/src/adr/domain/Adr.ts</code></a>):</p>
+
+<pre><code>class Adr extends AggregateRoot&lt;Props&gt; {
+  // ADR-A が ADR-B に supersede される時
+  supersedeBy(superseder: Adr): void {
+    const relation = new AdrRelation(this, "superseded by", superseder);
+    this.body.setHeaderMetadata("Status", relation.toMarkdown());
+    superseder.markAsSuperseder(this);  // ← ADR-B 側に逆参照を自動追加
+  }
+
+  private markAsSuperseder(superseded: Adr): void {
+    const relation = new AdrRelation(this, "Supersedes", superseded);
+    this.body.addLinkNoDuplicate(relation.toMarkdown());  // 重複防止
+  }
+}
+</code></pre>
+
+<p><strong>双方向 materialize の仕組み</strong>:</p>
+<ol>
+  <li><code>adr-A.supersedeBy(adr-B)</code> を呼ぶ</li>
+  <li>adr-A の Status header が <code>"superseded by: [adr-B-slug]"</code> に書き換え</li>
+  <li>同時に <code>adr-B.markAsSuperseder(adr-A)</code> 自動呼び出し</li>
+  <li>adr-B の Links section に <code>"Supersedes: [adr-A-slug]"</code> 追加 (重複防止付き)</li>
+</ol>
+
+<p><strong>ADR link resolver の設計決定</strong> (log4brains ADR 20201027): markdown parsing はドメイン層責務 (infra 層ではない)。 slug と filename を分離 → rename に強い。</p>
+
+<aside class="informative">
+<p><strong>注記</strong>: 関数名 <code>supersedeBy</code> / <code>markAsSuperseder</code> / <code>addLinkNoDuplicate</code> は GitHub blob fetch で verified だが、 行番号は本調査範囲外。 source URL から直接参照すること (log4brains の develop branch は変動可能)。</p>
+</aside>
+
+<h3 id="s5-2-beads">§5.2. Beads — 動的 context injection (Claude Code 統合 verified)</h3>
+
+<p><a href="https://github.com/steveyegge/beads">steveyegge/beads</a> は SQLite + Dolt のデュアルストレージで Issue dependency graph を管理し、 AI agent (Claude Code 等) に動的 context を inject する。</p>
+
+<pre><code>bd setup claude    # ~/.claude/settings.json に自動登録</code></pre>
+
+<pre><code>{
+  "hooks": {
+    "SessionStart": [{"command": "bd prime"}],
+    "PreCompact": [{"command": "bd prime --stealth"}]
+  }
+}
+</code></pre>
+
+<ul>
+  <li><code>bd prime</code>: 現在の issue 状態 + workflow rules を agent に注入 (~1-2k tokens、 MCP mode は ~50 tokens)</li>
+  <li>PreCompact: context compaction 前に再注入 → 状態連続性保持</li>
+  <li>CLAUDE.md minimal profile: static (mandate / rules) + dynamic (<code>bd prime</code> で real-time data 注入)</li>
+</ul>
+
+<p><strong>コンテキスト効率化</strong>: <code>IssueMinimal</code> model で ~80-95% トークン削減、 <code>~10-50k → ~2-5k</code>。 9 ツール対応 (Aider / Claude Code / Cursor / Factory.ai / Gemini CLI / Mux / Junie / OpenCode / Codex CLI)。</p>
+
+<h3 id="s5-3-adr-tools">§5.3. adr-tools (npryce) — bash 双方向</h3>
+
+<pre><code># adr new -s OLD_ID で supersede
+_adr_add_link "$old_adr" "Superceded by" "$new_adr"
+_adr_add_link "$new_adr" "Supercedes" "$old_adr"
+
+# custom: TARGET:LINK:REVERSE-LINK
+adr new -l "0004:Amended by:Amends"
+</code></pre>
+
+<p><code>_adr_add_link</code> ヘルパで grep/sed/awk による markdown 操作。 MADR (Markdown ADR) 自体には自動 cross-ref 更新機能はなく、 テンプレートのみ提供 (adr-tools / log4brains 等ツール層でカバー)。</p>
+
+<h3 id="s5-4-spectral">§5.4. Spectral — declarative rule (folio の lint rule 設計に応用)</h3>
+
+<pre><code>extends: ["spectral:oas"]
+rules:
+  my-rule:
+    description: "パス名は kebab-case"
+    severity: warn  # error / warn / info / hint / off
+    given: "$.paths[*]~"  # JSONPath
+    then:
+      function: pattern
+      functionOptions:
+        match: "^[a-z/-]+$"
+</code></pre>
+
+<p>severity 5 段階: error / warn / info / hint / off。 autofix は公式未対応 (validation のみ)。 Specmatic は <code>specmatic backward-compatibility-check</code> で非互換変更を exit 1 でブロック (folio の breaking change gate に応用可能)。</p>
+
+<h3 id="s5-5-twill">§5.5. twill plugin (folio predecessor) hook architecture</h3>
+
+<p><strong>verified</strong>: ローカル file 直接読取 (<code>/home/shuu5/projects/local-projects/twill/main/plugins/twl/hooks/hooks.json</code> 他)。</p>
+
+<p><strong>twill hooks.json の要点抜粋</strong>:</p>
+<pre><code>{
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [{"type": "command", "command": "pre-tool-use-worktree-boundary.sh"}] },
+      { "matcher": "Bash",
+        "hooks": [{"type": "command", "command": "pre-tool-use-host-safety.sh"}] },
+      { "matcher": "Edit|Write",
+        "hooks": [{"type": "command", "if": "Edit(deps.yaml)|Write(deps.yaml)",
+                   "command": "pre-tool-use-deps-yaml-guard.sh"}] },
+      { "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [{"type": "command", "command": "pre-tool-use-spec-write-boundary.sh"}] },
+      { "matcher": "Skill",
+        "hooks": [{"type": "command", "if": "Skill(phaser-*)",
+                   "command": "pre-tool-use-phase-gate.sh"}] }
+    ],
+    "PostToolUse":        [{ "matcher": "Edit|Write|NotebookEdit", ... }],
+    "PostToolUseFailure": [{ "matcher": "Bash", ... }],
+    "PreCompact":         [...],
+    "PostCompact":        [...]
+  }
+}
+</code></pre>
+
+<aside class="informative">
+<p><strong>注記</strong>: 上記抜粋は folio が継承すべき要点パターン (caller marker / boundary / phase-gate)。 twill の完全な hook 構成は実 file (<code>plugins/twl/hooks/hooks.json</code>) を直接参照のこと。 <code>host-safety</code> / <code>deps-yaml-guard</code> / <code>phase-gate</code> / <code>failure-learn</code> / <code>PostCompact</code> 等は twill 固有の context (multi-host 安全 / monorepo deps 管理) で folio には直接不要。</p>
+</aside>
+
+<p><strong>spec-write-boundary.sh の caller marker pattern</strong>:</p>
+<pre><code>caller="${TWL_TOOL_CONTEXT:-}"
+case "$caller" in
+  "")           exit 0 ;;           # user manual → allow
+  tool-architect) ... allow + warn ;;
+  *)  jq -nc '{hookSpecificOutput:{permissionDecision:"deny",...}}'; exit 0 ;;
+esac
+</code></pre>
+
+<p><strong>R-N 規律体系 (R-1〜R-44)</strong> — folio が継承すべき pattern:</p>
+
+<table>
+  <thead><tr><th>Rule</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td>R-1</td><td>新 file 追加時は README.html index table に entry 追加 MUST</td></tr>
+    <tr><td>R-2</td><td>新 file 追加時は architecture-graph.html に node + edge 追加 MUST</td></tr>
+    <tr><td>R-3</td><td>orphan 禁止 (inbound link ≥ 1)</td></tr>
+    <tr><td>R-4</td><td>削除/rename 時は inbound link 全更新 MUST</td></tr>
+    <tr><td>R-7</td><td>spec 編集前に <code>TWL_TOOL_CONTEXT=tool-architect</code> 設定 MUST</td></tr>
+    <tr><td>R-8</td><td>PR merge gate: broken link 0 + orphan 0 (CI)</td></tr>
+    <tr><td>R-14</td><td>declarative form (時系列マーカー / 過去 narration 禁止)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>twill 多層防御 L1-L5</strong>: L1 Skill (SKILL.md + rules) / L2 bats (unit test) / L3 PreToolUse hook + MCP tool / L4 Vale / textlint (optional) / L5 CI (spec-link-check.yml + spec-content-check.yml)。</p>
+
+<h3 id="s5-6-common-patterns">§5.6. 5 共通設計原則 (抽出)</h3>
+
+<table>
+  <thead><tr><th>pattern</th><th>説明</th><th>採用例</th></tr></thead>
+  <tbody>
+    <tr><td>(1) Domain entity + lifecycle event + side-effect handler</td><td>mutation method → 自動副作用呼出</td><td>log4brains <code>supersedeBy() → markAsSuperseder()</code></td></tr>
+    <tr><td>(2) Hook gate + caller context injection</td><td>env var で caller 識別 + 機械的許可/拒否</td><td>twill <code>TWL_TOOL_CONTEXT</code> / Beads <code>bd prime</code></td></tr>
+    <tr><td>(3) 静的ルール定義 + 機械検証</td><td>YAML/Java/MD 宣言 → validator → CI gate</td><td>ArchUnit / Spectral / twill R-N</td></tr>
+    <tr><td>(4) 動的 context injection</td><td>SessionStart hook → real-time data 注入</td><td>Beads <code>bd prime</code></td></tr>
+    <tr><td>(5) SSoT + cross-reference enforcement</td><td>複数 SSoT 相互参照 + 追加削除時の副作用規律</td><td>twill R-1〜R-8</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ====================================================================
+     §6. JSON-LD validation + lint mechanism
+     ==================================================================== -->
+<section id="s6-jsonld-lint" class="informative">
+<h2>§6. JSON-LD validation + lint mechanism</h2>
+
+<h3 id="s6-1-tools">§6.1. JSON-LD validation tool 比較</h3>
+
+<table>
+  <thead><tr><th>tool</th><th>言語</th><th>役割</th><th>folio 適合性</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ajv</strong> + ajv-cli</td><td>Node.js</td><td>JSON Schema validator</td><td><code>@context/@type/@id</code> 構造 + required check に最適、 最速</td></tr>
+    <tr><td><strong>jsonschema</strong> + check-jsonschema</td><td>Python</td><td>JSON Schema validator</td><td><code>iter_errors()</code> で全エラー取得、 Python ecosystem 統合</td></tr>
+    <tr><td><strong>pyld</strong></td><td>Python</td><td>JSON-LD processor</td><td><code>FrozenDocumentLoader</code> でオフライン、 <code>on_property_dropped</code> で unmapped property 検出</td></tr>
+    <tr><td><strong>jsonld.js</strong></td><td>Node.js</td><td>JSON-LD processor</td><td><code>{safe: true}</code> で lossy transform 検出、 カスタム documentLoader</td></tr>
+    <tr><td><strong>pySHACL</strong></td><td>Python</td><td>SHACL validator</td><td>RDF graph constraint (minCount/datatype/pattern)、 学習コスト高</td></tr>
+    <tr><td>schemaorg-jsd</td><td>Node.js</td><td>Schema.org + ajv</td><td>Schema.org 型のみ、 folio カスタム型未対応</td></tr>
+    <tr><td><del>jsonld-schema (mulesoft)</del></td><td>TypeScript</td><td>hybrid</td><td><strong>2024/01 archived、 採用不可</strong></td></tr>
+  </tbody>
+</table>
+
+<p><strong>folio 推奨 2 層構成</strong>:</p>
+<ol>
+  <li><strong>ajv</strong> (or jsonschema): JSON Schema check (<code>@context</code>存在・値、 <code>@type</code> enum、 <code>@id</code> URI format)</li>
+  <li><strong>pyld</strong> (FrozenDocumentLoader): expansion check (unmapped property をエラー化、 context resolution offline)</li>
+</ol>
+
+<h3 id="s6-2-schema">§6.2. folio 用 JSON Schema 例</h3>
+
+<pre><code>{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["@context", "@type", "@id"],
+  "properties": {
+    "@context": { "type": ["string", "object", "array"] },
+    "@type":    { "type": "string" },
+    "@id":      { "type": "string", "format": "uri" },
+    "dc:title": { "type": "string" },
+    "folio:version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+" },
+    "folio:depends-on": { "type": "array", "items": {...} }
+  },
+  "additionalProperties": true
+}
+</code></pre>
+
+<h3 id="s6-3-posttool-flow">§6.3. PostToolUse hook lint flow</h3>
+
+<pre><code>#!/usr/bin/env bash
+set -euo pipefail
+
+INPUT=$(cat)
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+
+[[ -z "$FILE_PATH" || "$FILE_PATH" != *.html ]] && exit 0
+[[ ! -f "$FILE_PATH" ]] && exit 0
+
+VALIDATION_OUTPUT=$(python3 "${CLAUDE_PLUGIN_ROOT}/scripts/validate_jsonld.py" "$FILE_PATH" 2&gt;&amp;1)
+VALIDATION_EXIT=$?
+
+if [[ $VALIDATION_EXIT -ne 0 ]]; then
+    echo "JSON-LD validation failed: $FILE_PATH" &gt;&amp;2
+    echo "$VALIDATION_OUTPUT" &gt;&amp;2
+    exit 2  # ← Claude が stderr を読んで修正に取り組む
+fi
+exit 0
+</code></pre>
+
+<h3 id="s6-4-failure-patterns">§6.4. failure 挙動 3 pattern</h3>
+
+<table>
+  <thead><tr><th>pattern</th><th>動作</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Pattern A: warn only</strong></td><td>exit 0 + stderr</td><td>dev 中・規約移行期</td></tr>
+    <tr><td><strong>Pattern B: block + feedback</strong></td><td>exit 2 + stderr</td><td>確定規約、 Claude に修正促す</td></tr>
+    <tr><td><strong>Pattern C: auto-fix</strong></td><td>idempotent edit + <code>os.replace()</code> で atomic</td><td>安全な機械修正 (双方向 link 等)</td></tr>
+  </tbody>
+</table>
+
+<p>auto-fix の安全性: idempotent + Biome の <code>lint --write</code> バグから学び、 まずは warn → 手動修正が安全。</p>
+
+<h3 id="s6-5-false-positive">§6.5. false positive 抑制 4 戦略</h3>
+
+<ol>
+  <li><strong>inline suppression comment</strong>: <code>&lt;!-- folio-lint-disable jsonld-required:dcterms:contributor --&gt;</code> (HTML comment、 lint script で parse)</li>
+  <li><strong>severity tuning</strong>: <code>.folio-lint.json</code> で rule 別に <code>error</code>/<code>warn</code>/<code>off</code></li>
+  <li><strong>allowlist</strong>: <code>.folio-lint-allow.json</code> で file glob + rule 組み合わせ</li>
+  <li><strong>temporal downgrade</strong>: 規約変更時は一時 <code>warn</code> に降格、 移行後 <code>error</code> 復帰</li>
+</ol>
+
+<p>実績例: ESLint <code>// eslint-disable-next-line</code> + <code>reportUnusedDisableDirectives</code> / Ruff <code># noqa: E501</code> / golangci-lint <code>//nolint:errcheck</code>。</p>
+
+<h3 id="s6-6-security">§6.6. security 考慮</h3>
+
+<ul>
+  <li>Hook は <strong>user full permission で実行</strong>、 sandbox なし</li>
+  <li>v2.1.139+ で hooks は controlling terminal なし (<code>/dev/tty</code> 不可)</li>
+  <li>shell injection 防止: <code>subprocess.run(['python3', 'script.py', file_path], shell=False)</code></li>
+  <li><code>--dangerously-skip-permissions</code> でも hook は動作 (PreToolUse deny で override 可能)</li>
+</ul>
+
+<h3 id="s6-7-pre-commit-vs-posttool">§6.7. pre-commit vs PostToolUse 使い分け</h3>
+
+<pre><code>[Claude Edit/Write]
+    ↓ PostToolUse hook ← AI 即時 feedback (修正コスト最低)
+[Claude が修正完了と判断]
+    ↓ git commit
+    ↓ pre-commit hook ← human + AI 両対応、 final gate (`--no-verify` 回避リスクあり)
+[push]
+    ↓ CI lint ← 唯一 bypass 不可
+</code></pre>
+
+<p><strong>推奨: 3 つ全て併用</strong>。</p>
+</section>
+
+<!-- ====================================================================
+     §7. folio Phase X3 minimal viable plugin 設計推奨
+     ==================================================================== -->
+<section id="s7-folio-design" class="normative">
+<h2>§7. folio Phase X3 minimal viable plugin 設計推奨</h2>
+
+<aside class="informative">
+<p>本 §7 は constitution P-11 (HOW 禁止) 遵守の上で、 試作駆動哲学 (prototype-driven、 2026-05-22 user 確定) に合致した <strong>最小実装の scope と sequence</strong> を提示する。 具体的な script 内容 / binary 名 / CLI 構文は <code>.claude-plugin/</code> 配下の harness に隔離するため、 本セクションは WHAT (役割分担と pattern) のみ記述。</p>
+</aside>
+
+<h3 id="s7-1-binding">§7.1. P-11 binding 隔離原則</h3>
+
+<table>
+  <caption>HOW の隔離先 (folio-self-spec.html §9 と整合)</caption>
+  <thead><tr><th>隔離対象</th><th>binding location</th><th>例</th></tr></thead>
+  <tbody>
+    <tr><td>環境変数 default 値</td><td><code>.claude-plugin/plugin.json</code> userConfig</td><td><code>caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"</code></td></tr>
+    <tr><td>hook script 実装</td><td><code>.claude-plugin/scripts/</code></td><td>validate_jsonld.py、 pre-edit-boundary.sh</td></tr>
+    <tr><td>CI script 実装</td><td><code>.claude-plugin/scripts/</code></td><td>link-integrity.py (lychee wrapper)</td></tr>
+    <tr><td>Claude Code 固有命名</td><td><code>CLAUDE.md</code> (P-2 Markdown 例外)</td><td>Skill / Hook 命名規約</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-2-use-case-matrix">§7.2. use case × 機能 matrix (Q3 統合)</h3>
+
+<p>8 use case の best fit を全 researcher の findings から導出 (実装 Step 番号は §7.4 を参照):</p>
+
+<table>
+  <thead>
+    <tr><th>use case</th><th>skill</th><th>hook</th><th>script</th><th>CLI (bin/)</th><th>best fit</th><th>Step</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>architecture/ 構造強制</td><td>folio-architect</td><td><strong>PreToolUse</strong></td><td>path-validator.sh</td><td>—</td><td><strong>hook + script</strong></td><td>2</td></tr>
+    <tr><td>README 自動更新 (新 spec で index 追記)</td><td>—</td><td><strong>PostToolUse</strong></td><td>readme-updater.py</td><td>folio inventory</td><td><strong>hook + script</strong></td><td>4</td></tr>
+    <tr><td>JSON-LD lint (Edit 完了時)</td><td>—</td><td><strong>PostToolUse</strong></td><td>validate_jsonld.py</td><td>folio validate</td><td><strong>hook + script</strong></td><td>3</td></tr>
+    <tr><td>broken link 検出</td><td>—</td><td>—</td><td>lychee runner</td><td>—</td><td><strong>CI (GitHub Actions)</strong></td><td>7</td></tr>
+    <tr><td>双方向 link auto-materialize</td><td>—</td><td><strong>PostToolUse</strong></td><td>bidir-materialize.py</td><td>folio fix</td><td><strong>hook + script (Pattern C)</strong></td><td>8</td></tr>
+    <tr><td>caller marker check</td><td>folio-architect (set 担当)</td><td><strong>PreToolUse</strong></td><td>check-caller-marker.sh</td><td>—</td><td><strong>skill (set) + hook (verify)</strong></td><td>2</td></tr>
+    <tr><td>context injection (Tier 1 inventory 自動読込)</td><td>folio-architect</td><td><strong>SessionStart</strong></td><td>inject-inventory.sh</td><td>folio prime</td><td><strong>hook + script</strong></td><td>5</td></tr>
+    <tr><td>inventory.json 自動 regenerate</td><td>—</td><td><strong>PostToolUse</strong> + <strong>FileChanged</strong></td><td>regen-inventory.py</td><td>folio inventory</td><td><strong>hook + CLI</strong></td><td>5</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-3-scope">§7.3. minimal viable plugin scope (Phase X3 着手分)</h3>
+
+<p>folio-self-spec.html §7.2 が定義する完成形は 8 skill + 8 agent + 7-phase PR cycle だが、 試作駆動哲学に従い <strong>Phase X3 着手は 1 skill から</strong>:</p>
+
+<table>
+  <caption>Phase X3 minimal — 1 skill + 4 hook + 6 script + 1 CLI</caption>
+  <thead><tr><th>category</th><th>component</th><th>役割</th></tr></thead>
+  <tbody>
+    <tr><td>skills/ (1)</td><td><code>folio-architect/SKILL.md</code></td><td>spec edit の唯一 author、 caller marker 設定の起点</td></tr>
+    <tr><td rowspan="4">hooks/hooks.json (4 hook)</td><td>SessionStart</td><td>inventory inject (Beads pattern §5.2)</td></tr>
+    <tr><td>PreToolUse: caller marker</td><td>env var 未 set or 異値で deny (twill pattern §5.5)</td></tr>
+    <tr><td>PreToolUse: path boundary</td><td>spec dir 外への作成を block</td></tr>
+    <tr><td>PostToolUse: JSON-LD lint + README update</td><td>schema check + index 自動更新</td></tr>
+    <tr><td rowspan="6">scripts/ (6)</td><td><code>inject-inventory.sh</code></td><td>SessionStart / PreCompact で inventory.json を context inject</td></tr>
+    <tr><td><code>check-caller-marker.sh</code></td><td>PreToolUse、 rules.html §10.1 REQ-CM</td></tr>
+    <tr><td><code>check-path-boundary.sh</code></td><td>PreToolUse、 spec dir 外の spec 作成を block</td></tr>
+    <tr><td><code>lint-jsonld.sh</code> + <code>validate_jsonld.py</code></td><td>PostToolUse、 ajv/pyld 2 層検証</td></tr>
+    <tr><td><code>update-readme-index.sh</code> + <code>update_readme_index.py</code></td><td>新 spec 追加時 README index 自動更新</td></tr>
+    <tr><td><code>link-integrity.py</code></td><td>CI script (lychee wrapper)、 broken link 0</td></tr>
+    <tr><td>bin/ (1)</td><td><code>folio</code> CLI</td><td><code>init</code> / <code>validate</code> / <code>inventory</code> / <code>prime</code> / <code>fix</code> サブコマンド</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s7-4-implementation-order">§7.4. implementation 順序 (依存関係)</h3>
+
+<pre><code>Step 1 (基盤): plugin.json + bin/folio (init + validate サブコマンド)
+   ↓
+Step 2 (boundary 強制): scripts/check-caller-marker.sh + check-path-boundary.sh
+                       + PreToolUse hook 登録
+   ↓
+Step 3 (lint): scripts/lint-jsonld.sh + validate_jsonld.py + PostToolUse hook
+   ↓
+Step 4 (auto-update): scripts/update-readme-index.sh + PostToolUse hook
+   ↓
+Step 5 (context injection): scripts/inject-inventory.sh + SessionStart / PreCompact hook
+                            + bin/folio prime
+   ↓
+Step 6 (skill): skills/folio-architect/SKILL.md (caller marker set の起点)
+   ↓
+Step 7 (CI integration): scripts/link-integrity.py + .github/workflows/spec-check.yml
+   ↓
+Step 8 (双方向 link materialize): scripts/bidir-materialize.py + PostToolUse hook (auto-fix mode)
+</code></pre>
+
+<p>各 step は独立して動作可能。 Phase X3 minimal は <strong>Step 1-3 のみで「動くもの」</strong> を成立させ、 Step 4-8 は段階的に追加 (試作駆動哲学に合致)。</p>
+
+<h3 id="s7-5-design-principles">§7.5. 設計 4 原則</h3>
+
+<ol>
+  <li><strong>declarative manifest</strong> (§4.1(a)): hooks.json で全 lifecycle を宣言、 script は実装 detail</li>
+  <li><strong>rule + fix + meta 三位一体</strong> (§4.1(b)): 各 lint rule に severity + fix mode + 適用条件を <code>.folio-lint.json</code> で集約</li>
+  <li><strong>idempotent autofix</strong> (§4.2 + §6.4 Pattern C): atomic write、 dry-run mode、 suggestion/fix 分離</li>
+  <li><strong>3 層防御</strong> (§3.3 + §6.7): PostToolUse (即時) → pre-commit (<code>--no-verify</code> 保険) → CI (final gate)</li>
+</ol>
+</section>
+
+<!-- ====================================================================
+     §8. ADR 起票候補
+     ==================================================================== -->
+<section id="s8-adr-candidates" class="informative">
+<h2>§8. ADR 起票候補 (Q7 統合)</h2>
+
+<aside class="informative">
+<p><strong>folio CLAUDE.md 制約</strong>: <code>scratch/decisions/</code> 配下への新規 ADR 起票は <strong>user 承認必須</strong> (frozen historical record)。 本 §8 は調査結果から推奨される設計判断 (起票候補) を提示するもので、 各 ADR の起票前に user 確認・承認を取得すること。</p>
+</aside>
+
+<table>
+  <thead><tr><th>ADR ID 候補</th><th>title</th><th>内容</th><th>関連 finding</th><th>優先度</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>ADR-0003</strong></td>
+      <td>plugin architecture: skill + hook + script + CLI 役割分担</td>
+      <td>folio plugin の最小構成 = 1 skill (folio-architect) + 4 hook + 6 script + 1 CLI (folio)。 P-11 binding 隔離原則を構造化。</td>
+      <td>§7.2 + §7.3</td>
+      <td><strong>MUST (Phase X3 着手前)</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0004</strong></td>
+      <td>JSON-LD lint mechanism: ajv + pyld 2 層構成</td>
+      <td>JSON Schema validator (高速 structural) + JSON-LD processor (semantic / unmapped property)。 PostToolUse hook で起動、 exit 2 + stderr で Claude feedback。</td>
+      <td>§6.1 + §6.3</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0005</strong></td>
+      <td>双方向 link auto-materialize の実装場所と pattern</td>
+      <td>log4brains の <code>supersedeBy() → markAsSuperseder()</code> domain entity + lifecycle side-effect handler pattern を採用、 PostToolUse hook で auto-fix mode (idempotent + atomic)</td>
+      <td>§5.1 + §6.4 Pattern C</td>
+      <td>SHOULD</td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0006</strong></td>
+      <td>caller marker hook 実装</td>
+      <td>PreToolUse hook + env var で spec edit を folio-architect skill 専任化、 twill spec-write-boundary pattern 継承</td>
+      <td>§5.5 + §2.6 (a)</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0007</strong></td>
+      <td>context injection mechanism (Beads-inspired)</td>
+      <td>SessionStart + PreCompact hook で inventory.json (Tier 1) を agent に inject、 動的 issue 状態は <code>folio prime</code> CLI 経由</td>
+      <td>§5.2 + §7.3</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0008</strong></td>
+      <td>3 層防御原則 (PostToolUse / pre-commit / CI)</td>
+      <td>layer 別役割: PostToolUse=AI 即時 feedback, pre-commit=<code>--no-verify</code> 保険, CI=final gate (bypass 不可)</td>
+      <td>§3.3 + §6.7</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0009</strong></td>
+      <td>linter false positive 抑制 4 戦略</td>
+      <td>inline suppression comment / severity tuning / allowlist / temporal downgrade を併用。 ESLint + Ruff + golangci-lint の実績 pattern 継承</td>
+      <td>§6.5</td>
+      <td>SHOULD</td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0010</strong></td>
+      <td>autofix 安全性原則</td>
+      <td>idempotent + atomic + suggestion/fix 分離 + meta.fixable 強制 + --fix-dry-run。 ESLint pattern を採用、 Biome 反面教師</td>
+      <td>§4.2 + §6.4</td>
+      <td>SHOULD</td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0011</strong></td>
+      <td>inventory.json auto-generation timing</td>
+      <td>spec file Edit/Write 後 (PostToolUse hook) + FileChanged hook (外部編集) で regen、 手動再生成は <code>folio inventory</code> CLI。 stale 状態は CI で detect</td>
+      <td>§4.3 + §4.4 + §7.3</td>
+      <td>SHOULD</td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0012</strong></td>
+      <td>hook 配置と plugin agent 制限の対処</td>
+      <td>plugin agents は hooks/mcpServers/permissionMode 非対応 (security)。 これらが必要な場合は <code>.claude/agents/</code> にコピー、 または skill frontmatter <code>hooks:</code> で対応</td>
+      <td>§2.5</td>
+      <td>SHOULD</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>起票手順</strong>: 各 ADR について (1) user に提示 → (2) user 承認取得 → (3) <code>scratch/decisions/ADR-NNNN-&lt;slug&gt;.html</code> に Accepted status で起票 → (4) 関連 spec section に cross-ref を追加。 CLAUDE.md の制約により自動起票は禁止。</p>
+</section>
+
+<!-- ====================================================================
+     §9. Open Questions and Future Work
+     ==================================================================== -->
+<section id="s9-open-questions" class="informative">
+<h2>§9. Open Questions / Future Work</h2>
+
+<aside class="informative">
+<p>critique で PASS 判定済だが、 実装段階で要確認の <strong>WARNING 4 件</strong> + <strong>追加検討 3 件</strong> を以下に整理する (追加調査不要、 設計判断には影響しない)。</p>
+</aside>
+
+<h3 id="s9-1-warnings">§9.1. WARNING (実装段階で要確認)</h3>
+
+<ol>
+  <li><strong>twill hooks.json の完全構成</strong>: §5.5 の抜粋は folio が継承すべき要点 pattern に絞っており、 twill の完全な hook 構成 (<code>host-safety</code> / <code>deps-yaml-guard</code> / <code>phase-gate</code> / <code>failure-learn</code> / <code>PostCompact</code>) は省略している。 folio 設計時に実 file (<code>~/projects/local-projects/twill/main/plugins/twl/hooks/hooks.json</code>) を直接参照のこと。</li>
+
+  <li><strong>log4brains TypeScript 行番号</strong>: §5.1 の関数名 (<code>supersedeBy</code> / <code>markAsSuperseder</code> / <code>addLinkNoDuplicate</code>) は verified だが、 行番号は本調査範囲外。 将来 log4brains バージョンアップで実装位置が変わっても追跡可能なように、 直接 URL (<a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">Adr.ts</a>) を保持する。</li>
+
+  <li><strong>ADR 起票の user 承認制約</strong>: §8 の ADR-0003〜ADR-0012 は推奨候補。 folio CLAUDE.md により <code>scratch/decisions/</code> 配下への新規起票は <strong>user 承認必須</strong>。 自動生成 + commit は禁止。 各 ADR を起票する前に user に提示し承認を取得する手続きを徹底する。</li>
+
+  <li><strong><code>architecture/</code> 未存在状態と <code>check-path-boundary.sh</code> の対象パス</strong>: folio CLAUDE.md では <code>architecture/</code> dir は Phase X3 完了後に user 主導で作成予定であり、 <strong>現時点では存在しない</strong>。 §7.2 / §7.3 の path boundary 機能は実装時に対象パスを <code>scratch/specs/</code> (現状) から <code>architecture/spec/</code> (Phase X3 完了後) に切替可能な userConfig 駆動の設計とすること。 例: <code>${FOLIO_SPEC_PATH:-scratch/specs}</code>。</li>
+</ol>
+
+<h3 id="s9-2-additional">§9.2. 追加検討事項</h3>
+
+<ol>
+  <li><strong>完成形 8 skill vs Phase X3 minimal 1 skill の関係</strong>: folio-self-spec.html §7.2 は完成形として 8 skill (<code>folio-init</code> / <code>folio-architect</code> / <code>folio-spec-edit</code> / <code>folio-validate</code> / <code>review-*</code> × 4) を定義。 本レポート §7.3 の minimal viable plugin は「1 skill (<code>folio-architect</code>) から着手」 を推奨。 試作駆動哲学に合致した段階的成長 (1 → 8) を意図しており、 完成形 8 skill は Phase X3 完遂後 (Phase X4+) の目標と位置付ける。</li>
+
+  <li><strong>PreToolUse deny bug (#37210) の動作確認</strong>: §2.3 の注記で「<code>exit 2 + stderr</code> が確実な fallback」 と述べているが、 twill <code>spec-write-boundary.sh</code> は実際には <code>exit 0 + JSON output</code> のみ (<code>exit 2</code> 未使用)。 folio 実装時は Phase X3 Step 2 (boundary 強制) で empirically verify する。</li>
+
+  <li><strong>Beads DeepWiki sources の二次性</strong>: §5.2 の Beads 記述は GitHub README (一次) + DeepWiki (AI 生成 wiki、 二次) を参照。 DeepWiki は信頼度高いが AI 生成のため、 重要設計判断は実 source code を一次資料として優先する。</li>
+</ol>
+
+<h3 id="s9-3-not-covered">§9.3. 本調査の範囲外 (将来の調査候補)</h3>
+
+<ul>
+  <li>mkdocs-material customization hooks (<code>overrides/</code> dir) の詳細 — folio が SSG patterns を直接採用しないなら不要</li>
+  <li>Prettier の HTML サポート (<code>prettier-plugin-html</code>) の AST 詳細 — folio HTML spec の format 統一が必要になった時点で再調査</li>
+  <li>ESLint v9 Language Plugin (HTML/CSS 対応) — folio HTML lint に最も関連する可能性ありだが Phase X3 minimal の scope 外</li>
+  <li>log4brains の file watcher 実装 (chokidar 等) — folio が live preview を実装する場合に調査</li>
+  <li>folio カスタム prefix の SHACL shapes 設計 — folio vocab 確定後に検討 (現時点では JSON Schema check が先行)</li>
+</ul>
+</section>
+
+<!-- ====================================================================
+     §10. References
+     ==================================================================== -->
+<section id="s10-references" class="informative">
+<h2>§10. References</h2>
+
+<p>全 76 sources (公式 docs 35 + GitHub リポジトリ 14 + 技術 blog / 比較記事 23 + ローカル twill 4)。 確認日 2026-05-23。</p>
+
+<h3 id="s10-1-official-docs">§10.1. 公式 docs (一次資料、 35 件)</h3>
+
+<h4>Claude Code (7 件)</h4>
+<ol>
+  <li><a href="https://code.claude.com/docs/en/plugins">Create plugins - Claude Code Docs</a></li>
+  <li><a href="https://code.claude.com/docs/en/plugins-reference">Plugins reference - Claude Code Docs</a></li>
+  <li><a href="https://code.claude.com/docs/en/skills">Extend Claude with skills - Claude Code Docs</a></li>
+  <li><a href="https://code.claude.com/docs/en/hooks">Hooks - Claude Code Docs</a></li>
+  <li><a href="https://code.claude.com/docs/en/sub-agents">Create custom subagents - Claude Code Docs</a></li>
+  <li><a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview">Agent Skills overview - platform.claude.com</a></li>
+  <li><a href="https://code.claude.com/docs/en/security">Claude Code Security</a></li>
+</ol>
+
+<h4>Git hook frameworks (6 件)</h4>
+<ol start="8">
+  <li><a href="https://pre-commit.com/">pre-commit official documentation</a></li>
+  <li><a href="https://typicode.github.io/husky/">Husky official documentation</a></li>
+  <li><a href="https://github.com/evilmartians/lefthook">Lefthook GitHub README</a></li>
+  <li><a href="https://github.com/lint-staged/lint-staged">lint-staged GitHub README</a></li>
+  <li><a href="https://github.com/toplenboren/simple-git-hooks">simple-git-hooks GitHub README</a></li>
+  <li><a href="https://pre-commit.ci/">pre-commit.ci official site</a></li>
+</ol>
+
+<h4>Linter / SSG (15 件)</h4>
+<ol start="14">
+  <li><a href="https://eslint.org/docs/latest/extend/plugins">ESLint Plugins Documentation</a></li>
+  <li><a href="https://eslint.org/docs/latest/extend/custom-rules">ESLint Custom Rules</a></li>
+  <li><a href="https://eslint.org/docs/latest/contribute/architecture/">ESLint Architecture</a></li>
+  <li><a href="https://eslint.org/docs/latest/extend/shareable-configs">ESLint Shareable Configs</a></li>
+  <li><a href="https://stylelint.io/developer-guide/plugins/">Stylelint Writing Plugins</a></li>
+  <li><a href="https://prettier.io/docs/en/plugins.html">Prettier Plugins</a></li>
+  <li><a href="https://www.sphinx-doc.org/en/master/extdev/">Sphinx Extension API</a></li>
+  <li><a href="https://www.sphinx-doc.org/en/master/extdev/appapi.html">Sphinx Application API</a></li>
+  <li><a href="https://www.sphinx-doc.org/en/master/extdev/event_callbacks.html">Sphinx Event Callbacks API</a></li>
+  <li><a href="https://www.mkdocs.org/dev-guide/plugins/">MkDocs Plugin Dev Guide</a></li>
+  <li><a href="https://docs.antora.org/antora/latest/extend/extensions/">Antora Extensions Overview</a></li>
+  <li><a href="https://docs.antora.org/antora/latest/extend/generator-events-reference/">Antora Generator Events Reference</a></li>
+  <li><a href="https://docusaurus.io/docs/api/plugin-methods/lifecycle-apis">Docusaurus Plugin Lifecycle APIs</a></li>
+  <li><a href="https://backstage.io/docs/features/software-catalog/external-integrations/">Backstage External Integrations</a></li>
+  <li><a href="https://backstage.io/docs/features/software-catalog/life-of-an-entity/">Backstage Life of an Entity</a></li>
+  <li><a href="https://eslint.org/docs/latest/extend/custom-rule-tutorial">ESLint Custom Rule Tutorial</a></li>
+</ol>
+
+<h4>ADR / spec OSS (2 件)</h4>
+<ol start="30">
+  <li><a href="https://docs.specmatic.io/contract_driven_development/backward_compatibility_rules">Specmatic Backward Compatibility Rules</a></li>
+  <li><a href="https://www.archunit.org/userguide/html/000_Index.html">ArchUnit User Guide</a></li>
+</ol>
+
+<h4>JSON-LD / validation (5 件)</h4>
+<ol start="32">
+  <li><a href="https://ajv.js.org/">Ajv JSON schema validator</a></li>
+  <li><a href="https://python-jsonschema.readthedocs.io/en/stable/validate/">jsonschema Python</a></li>
+  <li><a href="https://www.w3.org/TR/shacl/">W3C SHACL Spec</a></li>
+  <li><a href="https://eslint.org/docs/latest/use/configure/rules">ESLint Configure Rules</a></li>
+  <li><a href="https://golangci-lint.run/docs/linters/false-positives/">golangci-lint False Positives</a></li>
+</ol>
+
+<h3 id="s10-2-github">§10.2. GitHub リポジトリ (一次ソース、 14 件)</h3>
+
+<ol start="37">
+  <li><a href="https://github.com/thomvaill/log4brains">thomvaill/log4brains</a></li>
+  <li><a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">log4brains Adr.ts (TypeScript verified)</a></li>
+  <li><a href="https://github.com/steveyegge/beads">steveyegge/beads</a></li>
+  <li><a href="https://github.com/adr/madr">adr/madr</a></li>
+  <li><a href="https://github.com/npryce/adr-tools">npryce/adr-tools</a></li>
+  <li><a href="https://github.com/stoplightio/spectral">stoplightio/spectral</a></li>
+  <li><a href="https://github.com/TNG/ArchUnit">TNG/ArchUnit</a></li>
+  <li><a href="https://github.com/digitalbazaar/pyld">digitalbazaar/pyld</a></li>
+  <li><a href="https://github.com/digitalbazaar/jsonld.js/blob/main/README.md">digitalbazaar/jsonld.js README</a></li>
+  <li><a href="https://github.com/ajv-validator/ajv-cli">ajv-validator/ajv-cli</a></li>
+  <li><a href="https://github.com/RDFLib/pySHACL">RDFLib/pySHACL</a></li>
+  <li><a href="https://github.com/mulesoft-labs/json-ld-schema">mulesoft-labs/json-ld-schema (archived 2024/01)</a></li>
+  <li><a href="https://github.com/chharvey/schemaorg-jsd">chharvey/schemaorg-jsd</a></li>
+  <li><a href="https://github.com/anthropics/claude-code/issues/37210">PreToolUse permissionDecision deny ignored - Issue #37210</a></li>
+</ol>
+
+<h3 id="s10-3-blogs">§10.3. 技術 blog / 比較記事 (二次資料、 23 件)</h3>
+
+<ol start="51">
+  <li><a href="https://dev.to/myougatheaxo/git-hooks-with-claude-code-build-quality-gates-with-husky-and-pre-commit-27l0">Git Hooks with Claude Code (dev.to)</a></li>
+  <li><a href="https://www.andymadge.com/2026/03/10/git-hooks-comparison/">Git Hook Frameworks Comparison 2026 (Andy Madge)</a></li>
+  <li><a href="https://www.pixelmojo.io/blogs/claude-code-hooks-production-quality-ci-cd-patterns">Claude Code Hooks production CI/CD patterns (Pixelmojo)</a></li>
+  <li><a href="https://www.pkgpulse.com/guides/husky-vs-lefthook-vs-lint-staged-git-hooks-nodejs-2026">husky vs lefthook vs lint-staged 2026 (PkgPulse)</a></li>
+  <li><a href="https://evilmartians.com/chronicles/5-cool-and-surprising-ways-to-configure-lefthook-for-automation-joy">Lefthook advanced config (Evil Martians)</a></li>
+  <li><a href="https://xygeni.io/blog/why-pre-commit-hooks-fail-at-stopping-secrets/">Why Pre-Commit Hooks Fail at Stopping Secrets (Xygeni)</a></li>
+  <li><a href="https://thomvaill.github.io/log4brains/adr/adr/core/20201027-adr-link-resolver-in-the-domain/">log4brains ADR link resolver</a></li>
+  <li><a href="https://thomvaill.github.io/log4brains/adr/adr/web/20200925-use-nextjs-for-static-site-generation/">log4brains Use Next.js for SSG</a></li>
+  <li><a href="https://deepwiki.com/steveyegge/beads/8.4-ai-tool-integrations">Beads AI Tool Integrations (DeepWiki)</a></li>
+  <li><a href="https://deepwiki.com/steveyegge/beads/8.2-agent-workflow-guidelines">Beads Agent Workflow Guidelines (DeepWiki)</a></li>
+  <li><a href="https://deepwiki.com/steveyegge/beads/8.1-mcp-server">Beads MCP Server (DeepWiki)</a></li>
+  <li><a href="https://deepwiki.com/steveyegge/beads/8.3-claude-plugin">Beads Claude Plugin (DeepWiki)</a></li>
+  <li><a href="https://ianbull.com/posts/beads/">Beads memory for coding agent (Ian Bull)</a></li>
+  <li><a href="https://www.baeldung.com/java-archunit-intro">ArchUnit Baeldung intro</a></li>
+  <li><a href="https://blakecrosley.com/blog/claude-code-hooks-tutorial">Claude Code Hooks Tutorial (Blake Crosley)</a></li>
+  <li><a href="https://stevekinney.com/courses/ai-development/claude-code-hook-control-flow">Claude Code Hook Control Flow (Steve Kinney)</a></li>
+  <li><a href="https://switowski.com/blog/pre-commit-vs-ci/">Pre-commit vs CI (Sebastian Witowski)</a></li>
+  <li><a href="https://thelinuxcode.com/python-osreplace-for-safe-atomic-file-updates-in-real-systems/">Python os.replace() atomic file updates</a></li>
+  <li><a href="https://datawookie.dev/blog/2025/02/scraping-linked-ld-json-data/">Scraping JSON-LD with BeautifulSoup</a></li>
+  <li><a href="https://deepwiki.com/lint-staged/lint-staged/2-core-architecture">Core Architecture lint-staged (DeepWiki)</a></li>
+  <li><a href="https://www.eesel.ai/blog/hooks-reference-claude-code">Claude Code Hooks reference (eesel.ai)</a></li>
+  <li><a href="https://pypi.org/project/PyLD/">PyLD - PyPI</a></li>
+  <li><a href="https://thomvaill.github.io/log4brains/">log4brains official site (additional ADRs)</a></li>
+</ol>
+
+<h3 id="s10-4-local">§10.4. ローカルファイル (twill plugin、 folio predecessor verified、 4 件)</h3>
+
+<ol start="74">
+  <li><code>~/projects/local-projects/twill/main/plugins/twl/hooks/hooks.json</code> — twill hooks.json (verified)</li>
+  <li><code>~/projects/local-projects/twill/main/architecture/spec/gate-hook.html</code> — twill gate-hook spec</li>
+  <li><code>~/projects/local-projects/twill/main/plugins/twl/skills/tool-architect/refs/spec-management-rules.md</code> — twill R-N 規律</li>
+  <li><code>~/projects/local-projects/twill/main/architecture/decisions/ADR-0013-spec-clean-architecture.md</code> — twill ADR-0013</li>
+</ol>
+</section>
+
+<!-- ====================================================================
+     §11. Provenance
+     ==================================================================== -->
+<section id="s11-provenance" class="informative">
+<h2>§11. 調査メタデータ</h2>
+
+<dl>
+  <dt>調査日</dt><dd>2026-05-23</dd>
+  <dt>session_id</dt><dd>5592bf08</dd>
+  <dt>parallel researcher</dt><dd>5 (researcher-1〜5)</dd>
+  <dt>収集 sources</dt><dd>76 (公式 35 + GitHub 14 + 技術 blog 23 + ローカル twill 4)</dd>
+  <dt>critique 判定</dt><dd>PASS (WARNING 4 件は §9 Open Questions に反映済)</dd>
+  <dt>snapshot dir</dt><dd><code>/tmp/research-search-5592bf08/</code></dd>
+  <dt>前回調査との関係</dt><dd>本レポートは <a href="spec-graph-management-research.html">spec-graph-management-research.html</a> (session c3c53fbb、 2026-05-22) の plugin architecture 実装局面における後続調査。 前回は spec 関係性管理 + AI agent indexing を扱い、 本回は plugin harness 設計 (hook + script + skill + CLI) を扱う。</dd>
+  <dt>folio 整合性</dt><dd>constitution P-11 (HOW 禁止)、 P-12 (Layer 0 一体配布)、 試作駆動哲学 (2026-05-22 user 確定) と整合。 ADR 起票候補は user 承認必須 (CLAUDE.md 制約)。</dd>
+</dl>
+</section>
+
+</body>
+</html>
