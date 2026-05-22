@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="scratch-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="active">
+<title>folio — scratch/ (試作・工事用箱)</title>
+<link rel="stylesheet" href="../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>scratch/ — 試作・工事用箱</h1>
+  <div class="meta">v0.4.2-draft &middot; Phase X2 試作段階の作業場所</div>
+</header>
+
+<aside class="informative">
+<p>本 dir は folio framework が試作段階にある期間の <strong>工事用一時的箱</strong>。 試作・調査・要望整理・実装試行は すべてここで行う。 完成後 (Phase X3) に正式 location (<code>architecture/</code>) に移植、 scratch/ は撤去予定。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>folio framework は self-application paradox (自身を縛る rule で自身を書けない) を抱えている。 試作段階では folio rule に縛られず自由に書ける場所として scratch/ を採用する。</p>
+</section>
+
+<section id="s2-contents" class="informative">
+<h2>§2. Contents</h2>
+
+<p>現在 scratch/ 配下にあるもの (root から移動):</p>
+<ul>
+  <li><a href="constitution.html"><code>constitution.html</code></a> — 12 不変原則 (<strong>編集禁止</strong>)</li>
+  <li><a href="rules.html"><code>rules.html</code></a> — Layer 1 向け universal rules (当面編集禁止)</li>
+  <li><a href="folio-self-spec.html"><code>folio-self-spec.html</code></a> — folio 自身の architecture spec (当面編集禁止)</li>
+  <li><a href="decisions/"><code>decisions/</code></a> — ADR cluster</li>
+  <li><code>assets/mermaid.min.js</code> — vendor</li>
+</ul>
+
+<p>将来 (試作の進行に応じて) 追加予定:</p>
+<ul>
+  <li><code>research/</code> — user 要望 + 業界調査 (HTML 形式)</li>
+  <li><code>prototype/</code> — 試作 plugin の draft</li>
+  <li><code>test/</code> — 試作の test 実行ログ</li>
+</ul>
+</section>
+
+<section id="s3-rules" class="informative">
+<h2>§3. Rules</h2>
+
+<ul>
+  <li><strong>scratch/ 内は folio rule に縛られない</strong>。 markup 正規性、 命名規約、 declarative form 等の rule は適用しない。 自由に書く。</li>
+  <li>例外: 既存 file (<code>constitution.html</code>、 <code>rules.html</code>、 <code>folio-self-spec.html</code>、 <code>decisions/</code> 配下) は **編集禁止** (移動された frozen 資産)。</li>
+  <li>新規 file / dir 作成は自由。 思考 memo / 一時 work は柔軟に。</li>
+</ul>
+</section>
+
+<section id="s4-lifecycle" class="informative">
+<h2>§4. Lifecycle</h2>
+
+<ul>
+  <li><strong>現在 (Phase X2)</strong>: 試作・調査の作業場所として active。</li>
+  <li><strong>完成後 (Phase X3)</strong>: 試作 plugin を <code>.claude-plugin/</code> に正式移植、 folio 自身の architecture spec を <code>architecture/</code> に移植。 scratch/ は撤去 or archive。</li>
+</ul>
+</section>
+
+</body>
+</html>
