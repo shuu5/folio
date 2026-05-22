@@ -17,4 +17,4 @@ Phase X1 placeholder. 8 specialist agents will be implemented in Phase X2.
 
 ## Reference
 
-Spec for these agents is defined in [`architecture-rules.html` §7.2 Specialist Agents](../../architecture-rules.html).
+Spec for these agents is defined in [`folio-self-spec.html` §7.2 Specialist Agents](../../folio-self-spec.html#s7-2-specialists).

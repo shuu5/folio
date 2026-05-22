@@ -16,4 +16,4 @@ All scripts are platform-neutral (Python or shell) and consume `folio.config.yam
 
 ## Reference
 
-Spec for these scripts is defined in [`architecture-rules.html` §7.5 CI Gate Specification](../../architecture-rules.html).
+Spec for these scripts is defined in [`folio-self-spec.html` §7.5 CI Gate Specification](../../folio-self-spec.html#s7-5-ci-gate) (informative design)。 6 gate の MUST 規範 (REQ-CI-001 + REQ-CI-010〜015) は [`rules.html` §10.2 CI Gate Compliance](../../rules.html#s10-2) を参照。

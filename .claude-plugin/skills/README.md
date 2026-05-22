@@ -17,4 +17,4 @@ Phase X1 placeholder. 8 skills will be implemented in Phase X2.
 
 ## Reference
 
-Spec for these skills is defined in [`architecture-rules.html` §7 Harness Layer Components](../../architecture-rules.html).
+Spec for these skills is defined in [`folio-self-spec.html` §7 Harness Layer Components](../../folio-self-spec.html#s7-harness). MUST 規範 (caller marker + CI gate) は [`rules.html` §10 Mandatory Actions](../../rules.html#s10-mandatory) を参照。

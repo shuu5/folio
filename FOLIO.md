@@ -10,7 +10,8 @@
 │  ─────────────────────────────────────────                              │
 │  rules:                                                                 │
 │    • constitution.html (12 immutable principles, 3-tier)               │
-│    • architecture-rules.html (directory + markup + 7-phase + harness)  │
+│    • rules.html (Layer 1 向け universal rules: markup + naming + §10)  │
+│    • folio-self-spec.html (folio Layer 0 self-spec: harness + plugin)  │
 │  plugin harness (.claude-plugin/):                                     │
 │    • plugin.json manifest with userConfig                              │
 │    • skills/ × 8 (folio-init, folio-architect, folio-spec-edit, ...)   │
@@ -70,8 +71,10 @@
 
 ## Entry points
 
-- `constitution.html` — 12 immutable principles, 3-tier boundary declarations, 4 mermaid 図.
-- `architecture-rules.html` — directory layout, HTML markup, 7-phase PR cycle, harness layer, plugin integration, 8 mermaid 図.
+- `constitution.html` — 12 immutable principles, 3-tier boundary declarations, 2 mermaid 図 (v0.4.2-draft 以降: 4 → 2 図、 §3 §4 cross-ref スタブ).
+- `rules.html` — Layer 1 consumer 向け universal rules (directory layout + HTML markup + delta marker + EARS + §10 Mandatory Actions with REQ-CM/CI-* IDs).
+- `folio-self-spec.html` — folio Layer 0 framework 自身の architecture spec (2-Layer + folio repo layout + Harness Layer + Plugin Integration + Bindings、 8 mermaid 図、 provisional: Phase X3+ で self-application 予定).
+- `decisions/ADR-NNNN-<slug>.html` — Architecture Decision Records (ADR-0001 = architecture-rules split).
 - `.claude-plugin/plugin.json` — plugin manifest (name, version, userConfig).
 - `architecture/assets/mermaid.min.js` — self-hosted diagram rendering vendor.
 
@@ -80,9 +83,10 @@
 When you open a file in this repository:
 1. Verify `cwd` starts with `~/projects/local-projects/folio/`.
 2. Read `constitution.html` before any spec edit.
-3. Read `architecture-rules.html` to understand directory layout, markup conventions, and harness layer.
-4. Read `CLAUDE.md` for caller marker convention (the platform-specific binding).
-5. Set the caller marker env var (declared in `CLAUDE.md` / `.claude-plugin/plugin.json` userConfig) before writing to spec files.
+3. Read `rules.html` for Layer 1 consumer rules (markup + naming + §10 Mandatory Actions).
+4. Read `folio-self-spec.html` for folio framework 自身の architecture (Layer 0 = 本書の対象).
+5. Read `CLAUDE.md` for caller marker convention (the platform-specific binding).
+6. Set the caller marker env var (declared in `CLAUDE.md` / `.claude-plugin/plugin.json` userConfig) before writing to spec files.
 
-Do not confuse this with twill conventions (constitution P-12, architecture-rules §7.4).
+Do not confuse this with twill conventions (constitution P-12, folio-self-spec.html §7.4 5-Layer Defense).
 Do not confuse this with scribe / other Layer 1 consumer projects — those have their own `architecture/spec/`; folio provides the rules + harness they follow.
