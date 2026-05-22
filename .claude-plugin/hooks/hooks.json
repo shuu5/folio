@@ -1,0 +1,8 @@
+{
+  "_status": "Phase X1 placeholder — actual hook implementations land in Phase X2 (Layer 0 → Layer 1 harness build).",
+  "_planned_hooks": {
+    "PreToolUse": "Enforce caller marker env var (deny Write/Edit on architecture/spec/ when unset).",
+    "PostToolUse": "Run spec-validate-quick (link integrity + declarative form check) after Edit/Write."
+  },
+  "hooks": []
+}
