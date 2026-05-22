@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0002">
+<meta name="folio-adr-date" content="2026-05-22">
+<title>ADR-0002 — folio repo を scratch 中心の試作層に整理</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0002 — folio repo を scratch 中心の試作層に整理</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-22 &middot; folio v0.4.2-draft</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0002</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-22</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0001-architecture-rules-split.html, constitution.html, CLAUDE.md</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>PR #1 (ADR-0001 v3) で architecture-rules.html を rules.html + folio-self-spec.html に split し、 decisions/ dir + ADR-0001 を root 直下に新設した。 v0.4.2-draft 状態。</p>
+
+<p>ユーザーは v0.4.2-draft の状態を check し、 以下を指摘:</p>
+
+<ol>
+  <li><strong>FOLIO.md の存在意義が曖昧</strong>: README.md / CLAUDE.md と identity 情報が重複。</li>
+  <li><strong>ルート直下のばらつき</strong>: project meta / 規範文書 / 一時的自己説明 / styling / Layer 1 規範構造名 (architecture/) / ADR cluster / plugin harness が同階層に混在。</li>
+  <li><strong>architecture/ の二重意味</strong>: rules.html §2 で「Layer 1 consumer の規範構造名」 と規定しつつ、 folio 自身は <code>architecture/assets/mermaid.min.js</code> (vendor 置き場) として利用。</li>
+  <li><strong>永続性レベルの混在</strong>: 永続 (constitution / rules) と一時的 (folio-self-spec) が同 location。</li>
+</ol>
+
+<p>議論の末、 folio framework は「自身を縛る rule で自身を書く」 self-application paradox を抱えており、 試作段階では folio rule に従わない <strong>工事用の一時的な箱 (scratch)</strong> で作業し、 完成後に正式 location (<code>architecture/</code>) に移植する方針を採用。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1">§2.1 Scratch 中心の試作層を採用</h3>
+
+<p>folio repo の整理:</p>
+<ul>
+  <li>root 直下の <code>constitution.html</code>、 <code>rules.html</code>、 <code>folio-self-spec.html</code> を <code>scratch/</code> 配下に移動。</li>
+  <li>root の <code>decisions/</code> dir を <code>scratch/decisions/</code> に移動。</li>
+  <li>root の <code>architecture/assets/mermaid.min.js</code> を <code>scratch/assets/mermaid.min.js</code> に移動。</li>
+  <li><code>architecture/</code> dir を <strong>完全削除</strong>。 Phase X3 で plugin 完成後に user 主導で作成予定。</li>
+  <li><code>FOLIO.md</code> を削除 (identity marker 役は CLAUDE.md に統合)。</li>
+  <li><code>scratch/README.html</code> を新設 (scratch dir の目的・構成・運用説明)。</li>
+</ul>
+
+<h3 id="s2-2">§2.2 CLAUDE.md を簡素化</h3>
+
+<ul>
+  <li>必読 file を <code>scratch/constitution.html</code> のみに削減。</li>
+  <li>caller marker bash export 説明を削除 (architecture/ に触らないため不要)。</li>
+  <li>5 層防御 table を削除 (Identity 1 行で代替)。</li>
+  <li>plugin 構造説明を削除 (試作段階で固定不要)。</li>
+  <li>編集禁止 list を明示。</li>
+  <li>Directory Layout section を追加 (5 行以内、 dir 名と注意のみ)。</li>
+</ul>
+
+<h3 id="s2-3">§2.3 .claude-plugin/{skills,agents,scripts,static}/README.md を minimal placeholder 化</h3>
+
+<p>試作段階では plugin sub-README は詳細記述不要。 各 file を 1-2 行の placeholder に置換 (「Placeholder。 試作 plugin は scratch/ で開発中」)。</p>
+
+<h3 id="s2-4">§2.4 README.md を簡素化</h3>
+
+<p>Entry points を scratch/ 中心に書き換え、 status を「試作段階 (Phase X2)」 に更新、 tailnet URL を scratch/ 配下に。</p>
+
+<h3 id="s2-5">§2.5 SemVer bump</h3>
+
+<p>PATCH bump (v0.4.2-draft 維持)。 constitution 不変原則 + rules.html / folio-self-spec.html の semantic 不変 (移動 + cross-ref 更新のみ)。 P-10 user 承認: 本 dialog (2026-05-22 evening) で取得済。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li>ルート直下が clean (3 file + 3 dir のみ: README.md / CLAUDE.md / common.css + scratch/ / .claude-plugin/ / .gitignore)、 ばらつき解消。</li>
+  <li><code>architecture/</code> という名前を Layer 1 consumer の正規構造名として予約、 二重意味解消。</li>
+  <li>永続性レベルの分離 (永続 = root + .claude-plugin/、 一時的 = scratch/)。</li>
+  <li>self-application paradox の現実的回避: 試作中は folio rule に縛られず作業。</li>
+  <li>CLAUDE.md 簡素化 (101 行 → 50 行程度)、 Claude が誤動作する risk 低減。</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>cross-ref 一括更新コスト (移動した HTML の stylesheet + mermaid + 内部 link 等)。</li>
+  <li>Phase X3 で scratch → architecture/ への再 refactor が必要 (将来 cost)。</li>
+  <li>scratch/ 配下の HTML は folio rule に従わない混在状態に。</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>FOLIO.md 削除で 5 層防御の L2 (root marker) は CLAUDE.md が兼ねる (folio-self-spec.html §7.4 の table は試作段階では参照不要として保留)。</li>
+  <li>ADR-0001 v3 §2.1 の section 帰属表は scratch/ 配下の状態を反映していないが、 内容 semantic は不変 (rules.html / folio-self-spec.html という file 名は維持)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 A: <code>core/</code> dir に Layer 0 を隔離</td><td>folio 自身が folio rule に従わない (Layer 1 は architecture/、 folio は core/)、 self-application 移行が将来必要。</td></tr>
+    <tr><td>案 B: 最初から self-application (architecture/spec/ に folio 自身を入れる)</td><td>bootstrap paradox。 試作段階で「未完成の framework で自身を縛る」 のは現実的でない。 user 指摘で却下。</td></tr>
+    <tr><td>案 C: 現状維持 + 命名で区別</td><td>ばらつき未解消、 user 指摘に応えない。</td></tr>
+    <tr><td>案 D: scratch を別 repo として分離</td><td>cross-ref が複雑化、 開発 workflow 悪化。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>本 ADR を生んだ user-Claude dialog: 2026-05-22 evening (PR #1 merge 後の整理段階)。</li>
+  <li>関連 constitution 原則: P-1 (未来 anchor)、 P-7 (Content domain exclusivity)、 P-10 (Constitution 変更前 user 確認)、 P-11 (HOW 禁止)、 P-12 (Layer 0 一体配布)。</li>
+  <li>関連 ADR: <a href="ADR-0001-architecture-rules-split.html">ADR-0001-architecture-rules-split</a> (本 ADR の前提)。</li>
+  <li>後続 task: scratch/ 配下で feature-dev で試作 plugin (architecture/ 作成・維持機能) を開発。</li>
+</ul>
+</section>
+
+</body>
+</html>
