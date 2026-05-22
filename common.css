@@ -474,3 +474,20 @@ aside.ai-rationale,
 aside.ai-rationale[hidden] {
   display: none !important;
 }
+
+/* ========================================================================
+ * Normative cross-reference (highlight links to rules MUST sections)
+ * - 使い方: <a href="rules.html#s10-1" class="normative-ref">rules.html §10.1</a>
+ * - folio-self-spec.html の informative section から rules.html §10 MUST への
+ *   cross-ref を視覚的に強調する (reader が normative 参照と気づけるように)
+ * ====================================================================== */
+
+a.normative-ref {
+  font-weight: 700;
+  color: var(--folio-danger, #b34747);
+  text-decoration-color: var(--folio-danger, #b34747);
+}
+
+a.normative-ref:hover {
+  text-decoration-thickness: 2px;
+}

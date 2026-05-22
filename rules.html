@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="rules">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — rules (v0.4.2-draft)</title>
+<link rel="stylesheet" href="common.css">
+<script type="application/ld+json">
+{
+  "@context": "https://folio.dev/schema",
+  "@type": "FolioRules",
+  "version": "0.4.2-draft",
+  "extends": "constitution.html",
+  "appliesTo": "Layer 1 consumer projects",
+  "sections": ["s0-reader-guide", "s2-directory", "s3-naming", "s4-format", "s5-delta", "s6-ears", "s10-mandatory"]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio rules</h1>
+  <div class="meta">v0.4.2-draft &middot; status: draft &middot; Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)</div>
+</header>
+
+<aside class="informative">
+<p>本文書は <a href="constitution.html">constitution.html</a> の不変原則 (P-1〜P-12) を <em>実装する</em> rules 集である。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。 folio framework 自身の architecture spec は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
+</aside>
+
+<section id="s0-reader-guide" class="informative">
+<h2>§0. Reader's Guide</h2>
+
+<aside class="reader-persona" data-persona="Developer">
+  <p>本 rules は <strong>Layer 1 consumer project</strong> (folio framework を consume する各 project repo) に適用する。 folio Layer 0 本体の設計仕様は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
+  <p>constitution を読了後、 §2 (consumer directory layout) → §3〜§6 (markup rules) → §10 (Mandatory Actions: caller marker + CI gate) の順に参照する。 <code>folio.config.yaml</code> の schema 詳細は §2 内に集約。 MUST 要件は §10 に 1 箇所集約しており、 partial read でも全 MUST を把握できる。</p>
+</aside>
+</section>
+
+<section id="s2-directory" class="normative">
+<h2>§2. Directory Structure (Layer 1 consumer project)</h2>
+
+<pre><code>&lt;consumer-project&gt;/                   # 例: scribe / my-typescript-app / 等
+├── README.md
+├── CLAUDE.md (or AGENTS.md)          # platform-specific binding (P-2 例外、 P-11 root 例外)
+├── folio.config.yaml                 # folio plugin consume 宣言 + userConfig override
+│
+├── architecture/                     # Layer 1 spec (folio rules で書かれた)
+│   ├── spec/                         # Diátaxis Reference (cwd で context 即判定)
+│   │   ├── README.html               # spec entry point (constitution P-6)
+│   │   ├── constitution.html         # project 固有 constitution (folio core 継承 + project 固有)
+│   │   ├── overview.html
+│   │   └── ...
+│   ├── howto/                        # Diátaxis How-to
+│   ├── tutorial/                     # Diátaxis Tutorial
+│   ├── explanation/                  # Diátaxis Explanation
+│   ├── decisions/                    # ADR (project 固有)
+│   ├── changes/                      # 進行中 proposal (proposal-only MUST)
+│   ├── steering/                     # Kiro 慣習 (product / tech / structure)
+│   ├── research/                     # spec 反映前の探索
+│   └── archive/                      # 完了 changes / 旧 spec
+│
+└── &lt;実装本体 dir&gt;                    # 実装 (architecture/spec/ に従う)
+    ├── (scribe の場合) skills/, agents/, commands/
+    ├── (TS webapp の場合) src/, components/, app/
+    └── ...
+</code></pre>
+
+<p><strong>folio.config.yaml 構造</strong> (schema 詳細は <a href="folio-self-spec.html#s8-plugin">folio-self-spec.html §8</a>):</p>
+
+<pre><code>folio_version: "^0.4"                  # folio framework の依存 version (semver range)
+spec_path: "architecture/spec/"        # default、 userConfig で override 可能
+caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
+caller_marker_value: "folio-architect"
+review_model: "opus"                   # optional、 Phase F specialist の model
+</code></pre>
+
+<p><strong>cwd で context 即判定</strong>: AI Agent は cwd が <code>&lt;consumer&gt;/</code> 配下なら consumer project 編集中、 <code>&lt;consumer&gt;/architecture/spec/</code> 配下なら Layer 1 spec 編集中、 <code>&lt;consumer&gt;/skills/</code> 等の実装 dir 配下なら実装編集中、 と物理 dir で判定可能。 folio Layer 0 編集の判定は <a href="folio-self-spec.html#s7-4-defense">folio-self-spec.html §7.4 5-Layer Defense</a> を参照。</p>
+</section>
+
+<section id="s3-naming" class="normative">
+<h2>§3. File Naming Convention</h2>
+
+<ul>
+  <li>全 HTML file 名: <code>kebab-case.html</code> (例: <code>spec-taxonomy.html</code>)。 snake_case / camelCase 禁止。</li>
+  <li>ADR: <code>ADR-NNNN-&lt;slug&gt;.html</code> (4 桁 ID)。</li>
+  <li>changes package: <code>changes/&lt;NNN&gt;-&lt;slug&gt;/proposal.html</code>。</li>
+  <li>archive: <code>archive/changes/YYYY-MM-DD-NNN-&lt;slug&gt;/</code> で merge 後 timestamped。</li>
+  <li>vocabulary (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or architecture/、 P-2 YAML 例外)。</li>
+  <li>config: <code>folio.config.yaml</code> (consumer project root、 P-2 YAML 例外)。</li>
+  <li>entry point: 各 cluster は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。</li>
+</ul>
+</section>
+
+<section id="s4-format" class="normative">
+<h2>§4. HTML Format Conventions</h2>
+
+<p>全 spec file は以下の構造を MUST 採用する。</p>
+
+<h3>§4.1 <code>&lt;head&gt;</code> Metadata (3 層)</h3>
+
+<pre><code>&lt;head&gt;
+&lt;meta charset="UTF-8"&gt;
+&lt;meta name="folio-doc-type"     content="spec"&gt;     &lt;!-- constitution|spec|adr|changes|research|tutorial|howto|explanation --&gt;
+&lt;meta name="folio-layer"        content="core"&gt;     &lt;!-- core|project --&gt;
+&lt;meta name="folio-version"      content="1.2.0"&gt;
+&lt;meta name="folio-status"       content="active"&gt;   &lt;!-- draft|active|deprecated|archived --&gt;
+&lt;meta name="folio-stakeholders" content="Developer, AI Agent"&gt;
+&lt;meta name="folio-arc42"        content="section-5"&gt; &lt;!-- arc42 mapping (optional) --&gt;
+&lt;meta name="folio-diataxis"     content="reference"&gt; &lt;!-- tutorial|howto|reference|explanation --&gt;
+&lt;title&gt;...&lt;/title&gt;
+&lt;link rel="stylesheet" href="../../common.css"&gt;
+&lt;script type="application/ld+json"&gt;
+{"@type": "FolioSpec", "id": "...", "version": "1.2.0", "stakeholderPerspective": ["Developer", "AI Agent"]}
+&lt;/script&gt;
+&lt;/head&gt;
+</code></pre>
+
+<h3>§4.2 Body 冒頭 <code>aside.machine-readable</code></h3>
+
+<pre><code>&lt;aside class="machine-readable" aria-hidden="true"&gt;
+  &lt;dl&gt;
+    &lt;dt&gt;id&lt;/dt&gt;<dd>building-blocks</dd>
+    &lt;dt&gt;doc-type&lt;/dt&gt;<dd>spec</dd>
+    &lt;dt&gt;arc42-section&lt;/dt&gt;<dd>5</dd>
+    &lt;dt&gt;stakeholders&lt;/dt&gt;<dd>Developer, AI Agent</dd>
+    &lt;dt&gt;version&lt;/dt&gt;<dd>1.2.0</dd>
+    &lt;dt&gt;status&lt;/dt&gt;<dd>active</dd>
+  &lt;/dl&gt;
+&lt;/aside&gt;
+</code></pre>
+
+<h3>§4.3 RFC 2119 Boilerplate</h3>
+
+<p>全 normative section を含む file は冒頭に boilerplate aside (RFC 2119 / RFC 8174 / BCP 14 準拠) を持つ MUST。</p>
+
+<h3>§4.4 <code>section.normative</code> / <code>section.informative</code> Wrappers</h3>
+
+<p>MUST/SHALL を含む section は <code>&lt;section class="normative"&gt;</code> で wrap、 説明・rationale のみの section は <code>&lt;section class="informative"&gt;</code> で wrap する。 common.css が視覚的境界を表現する。</p>
+</section>
+
+<section id="s5-delta" class="normative">
+<h2>§5. Delta Marker Markup</h2>
+
+<p>spec 改訂の trace を spec 本文に inline 保存する。 OpenSpec の ADDED/MODIFIED/REMOVED に相当する HTML-native 実装。</p>
+
+<pre><code>&lt;ins class="delta" data-delta-id="D-2026-05-22-001" data-delta-date="2026-05-22"&gt;新しい要件テキスト&lt;/ins&gt;
+&lt;del class="delta" data-delta-id="D-2026-05-21-003" data-delta-superseded-by="D-2026-05-22-001"&gt;旧テキスト&lt;/del&gt;
+</code></pre>
+
+<p><strong>grep pattern</strong>: <code>data-delta-id</code> 属性で全変更を file 横断抽出可能。 命名: <code>D-YYYY-MM-DD-NNN</code> format で同日連番。</p>
+</section>
+
+<section id="s6-ears" class="normative">
+<h2>§6. EARS Notation Markup</h2>
+
+<p>acceptance criteria は <a href="https://alistairmavin.com/ears/">EARS (Easy Approach to Requirements Syntax)</a> の 5 pattern を採用する。</p>
+
+<table>
+  <thead><tr><th>pattern</th><th>template</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td>Ubiquitous</td><td>The system SHALL ...</td><td>無条件不変条件</td></tr>
+    <tr><td>Event-driven</td><td>WHEN [trigger], the system SHALL ...</td><td>event 応答</td></tr>
+    <tr><td>State-driven</td><td>WHILE [precondition], the system SHALL ...</td><td>状態継続中</td></tr>
+    <tr><td>Optional</td><td>WHERE [feature included], the system SHALL ...</td><td>機能オプション</td></tr>
+    <tr><td>Unwanted</td><td>IF [unwanted condition], THEN the system SHALL ...</td><td>異常応答</td></tr>
+  </tbody>
+</table>
+
+<pre><code>&lt;p class="ears" data-ears-pattern="event-driven"&gt;
+  &lt;span class="ears-id"&gt;REQ-002&lt;/span&gt;:
+  &lt;span class="ears-when"&gt;WHEN AI agent attempts to write to spec&lt;/span&gt;,
+  the system &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; verify caller context declaration.
+&lt;/p&gt;
+</code></pre>
+
+<p>specialist agent <code>spec-review-ears</code> (<a href="folio-self-spec.html#s7-2-specialists">folio-self-spec.html §7.2</a>) が pattern 完全性 + ID uniqueness を CI で検証する。</p>
+</section>
+
+<section id="s10-mandatory" class="normative">
+<h2>§10. Mandatory Actions for Layer 1 Consumer</h2>
+
+<p>本 §10 は Layer 1 consumer project が folio rules を consume する際に <strong>無条件に遵守すべき MUST 要件を 1 箇所に集約</strong>する。 §2〜§6 の markup / naming rules が「構造上の規則」 であるのに対し、 §10 は「動的な操作上の義務」 を規定する。 各 MUST の enforcement mechanism (hook flow / script 実装) は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7</a> を参照。</p>
+
+<section id="s10-1" class="normative">
+<h3>§10.1 Spec Edit Caller Marker</h3>
+
+<aside class="informative">
+  <p>本 §10.1 は IETF RFC 2119 / RFC 8174 / BCP 14 に定義される MUST に従う規範要件。 enforcement の hook flow chart は <a href="folio-self-spec.html#s7-3-caller-marker">folio-self-spec.html §7.3</a> を参照。</p>
+</aside>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-CM-001</span>:
+  <span class="ears-when">WHEN AI agent attempts to write to any file under <code>spec_path</code></span>,
+  the system <span class="ears-shall">SHALL</span> verify that the caller marker
+  environment variable is set to the declared value.
+</p>
+
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-CM-002</span>:
+  The AI agent <span class="ears-shall">SHALL</span> set the caller marker env var
+  (declared in <code>folio.config.yaml</code>) before invoking any spec Edit/Write tool call,
+  and <span class="ears-shall">SHALL</span> unset it immediately upon completion.
+</p>
+
+<p class="ears" data-ears-pattern="unwanted">
+  <span class="ears-id">REQ-CM-003</span>:
+  IF the caller marker env var is absent or holds an unexpected value,
+  THEN the PreToolUse hook <span class="ears-shall">SHALL</span> return
+  <code>permissionDecision: deny</code>.
+</p>
+
+<p>env var の具体名・値は <code>folio.config.yaml</code> で declare し、 binding 詳細は <a href="folio-self-spec.html#s9-bindings" class="normative-ref">folio-self-spec.html §9 Bindings</a> に集約する。</p>
+</section>
+
+<section id="s10-2" class="normative">
+<h3>§10.2 CI Gate Compliance</h3>
+
+<aside class="informative">
+  <p>本 §10.2 は規範要件 (RFC 2119 MUST)。 各 gate の script 実装は <a href="folio-self-spec.html#s7-5-ci-gate">folio-self-spec.html §7.5</a>、 binding location は <a href="folio-self-spec.html#s9-bindings" class="normative-ref">folio-self-spec.html §9 Bindings</a> を参照。</p>
+</aside>
+
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-CI-001</span>:
+  The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
+  enforce all six gates defined below before permitting merge.
+</p>
+
+<table>
+  <thead>
+    <tr><th>REQ-ID</th><th>gate</th><th>結果</th><th>根拠</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>REQ-CI-010</td><td>link-integrity gate</td><td>fail = merge block</td><td>P-6</td></tr>
+    <tr><td>REQ-CI-011</td><td>declarative-form gate</td><td>fail = merge block</td><td>P-4</td></tr>
+    <tr><td>REQ-CI-012</td><td>what-only gate</td><td>fail = merge block</td><td>P-3 / P-11</td></tr>
+    <tr><td>REQ-CI-013</td><td>vocabulary gate</td><td>fail = merge block</td><td>P-5</td></tr>
+    <tr><td>REQ-CI-014</td><td>EARS coverage gate</td><td>warn (merge 許可)</td><td>§6</td></tr>
+    <tr><td>REQ-CI-015</td><td>delta marker consistency gate</td><td>fail = merge block</td><td>§5</td></tr>
+  </tbody>
+</table>
+</section>
+
+</section>
+
+</body>
+</html>
