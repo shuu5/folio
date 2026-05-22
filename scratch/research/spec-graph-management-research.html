@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="research-report">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-research-session" content="c3c53fbb">
+<meta name="folio-research-date" content="2026-05-22">
+<title>folio — HTML 仕様書 graph 管理の徹底調査</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>HTML 仕様書 graph 管理の徹底調査</h1>
+  <div class="meta">
+    v0.1.0-draft &middot; 調査日 2026-05-22 &middot; session c3c53fbb &middot;
+    調査範囲: DB/graph 基盤 / SSG link graph / AI agent indexing / OSS 仕様書事例 / HTML metadata + drift detection
+  </div>
+</header>
+
+<aside class="informative">
+<p>本レポートは folio (META FRAMEWORK) の核心問題 ―― <strong>「AI agent と人間が共同編集する HTML 仕様書群の関係性整合性を、 context window を圧迫せずに保つ仕組み」</strong> ―― の解決策を 5 並列調査 (researcher-1〜5) で 117 ソースから集約した産物。 Beads (steveyegge/beads) パターンの類推適用を主軸に、 SSG / PKM の link graph 実装、 AI agent 親和 retrieval、 HTML metadata 埋め込み、 spec drift detection 等を横断的に検討した。 critique で PASS 判定済 (Phase 1 着手は追加調査なしで即時可能)。</p>
+</aside>
+
+<!-- ====================================================================
+     §1. Background & Core Problem
+     ==================================================================== -->
+<section id="s1-background" class="informative">
+<h2>§1. 調査背景</h2>
+
+<h3>§1.1. folio の核心問題</h3>
+
+<p>folio は AI agent (Claude Code) と人間が共同で「仕様書 (architecture spec)」 を書き続ける meta framework。 すべての spec を HTML 形式で記述するルール (P-2) のもと、 ディレクトリ整理 + index + 各仕様書間ハイパーリンクで関係性を表現したい。 ただし、 新規 spec ファイル追加時に <strong>既存ハイパーリンク網に正しく組み込まれ整合性が保たれる仕組み</strong> が必要。 一方で HTML ファイル全文を AI agent に毎回読ませると context window が圧迫され管理破綻する懸念がある。</p>
+
+<h3>§1.2. Beads パターン類推適用の動機</h3>
+
+<p>Beads (github.com/steveyegge/beads) は GitHub Issue の依存関係を Dolt (versioned SQL database) で管理し、 issue 間の関係をグラフとして表現することで AI agent が効率的に dependency を辿れる仕組みを実現している。 これと類推して spec ファイル間の関係 (cross-reference / 依存 / extend / supersede 等)、 要約・メタデータ、 グラフノード構造をデータベース技術で整理し、 AI が HTML 全文を読まなくても全体構造を把握できるか — を検証することが本調査の趣旨。</p>
+
+<h3>§1.3. 5 サブ質問</h3>
+
+<ol>
+  <li>HTML/Markdown 文書群の関係性を versioned SQL/graph database で管理する基盤技術の比較</li>
+  <li>SSG (Sphinx, Hugo, MkDocs, Docusaurus, Antora, DocFX) および PKM tools (Foam, Obsidian, Logseq, Roam, DokuWiki, MediaWiki) の link graph 実装パターン</li>
+  <li>AI agent (Claude Code, Continue.dev, Cursor) が大規模 documentation を context window 効率的に扱うための indexing / RAG / graph traversal パターン</li>
+  <li>仕様書・ADR・dependency tree 管理の OSS 実装事例 (Beads, log4brains, MADR, Specmatic, Spectral, ArchUnit, Backstage)</li>
+  <li>HTML 内 machine-readable metadata 埋め込み技術と spec drift detection</li>
+</ol>
+</section>
+
+<!-- ====================================================================
+     §2. Findings (5 サブ質問サマリ)
+     ==================================================================== -->
+<section id="s2-findings" class="informative">
+<h2>§2. 5 サブ質問の調査結果サマリ</h2>
+
+<h3>§2.1. DB/graph 基盤技術 (researcher-1)</h3>
+
+<dl>
+  <dt>Beads は Dolt 単一バックエンドへ完全移行 (v1.0.0)</dt>
+  <dd>SQLite + JSONL hybrid を捨て、 cell-level merge / multi-writer / built-in version history / native push-pull のためだけに Dolt を選択。 「dual storage の同期複雑性を排除しつつ分散バージョン管理を維持」 が決定打。</dd>
+
+  <dt>Dolt の技術基盤</dt>
+  <dd>Prolly Trees (content-addressed B-trees) + Commit Graph (Merkle DAG)。 fast diffs O(d)、 structural sharing、 embedded mode で Go アプリ組み込み可能。 SQL アクセス (MySQL 互換) + <code>dolt_*</code> system tables/procedures で version control 操作。</dd>
+
+  <dt>W3C 標準語彙 (DCMI)</dt>
+  <dd><code>dcterms:replaces</code> が <strong>「supersedes」 関係を W3C 標準としてすでに提供</strong> (URI: <code>http://purl.org/dc/terms/replaces</code>)。 ただし「depends-on」 の標準語彙は存在せず ドメイン固有 ontology が必要。</dd>
+
+  <dt>Property Graph vs RDF</dt>
+  <dd>一般的推奨は 「default で Property Graph、 interoperability 必要時のみ RDF」。 AI agent のクエリ生成では Cypher/GQL の方が SPARQL より好まれる傾向 (compact + expressive)。 ただし Beads は意図的に SQL を選択 (SQL は LLM training データが豊富)。</dd>
+</dl>
+
+<h3>§2.2. SSG/PKM の link graph 実装 (researcher-2)</h3>
+
+<p>12 ツールを 4 軸 (ストレージ / Backlink 戦略 / Link 解決 / Broken link 動作) で整理 (詳細マトリクスは §3.2 参照)。 ストレージは大別して 4 種類:</p>
+
+<ul>
+  <li><strong>Flat 圧縮ファイル</strong>: Sphinx <code>objects.inv</code> (zlib + 行形式)、 DocFX <code>xrefmap.yml</code> (YAML refs list)</li>
+  <li><strong>In-memory Map/Object</strong>: Antora ContentCatalog (<code>Map&lt;family, Map&lt;key, file&gt;&gt;</code>)、 Obsidian <code>resolvedLinks</code> (<code>Record&lt;src, Record&lt;dest, number&gt;&gt;</code>)</li>
+  <li><strong>RDBMS テーブル</strong>: MediaWiki <code>pagelinks</code> + <code>linktarget</code> (immutable、 正規化された varbinary キャッシュ + 整数 FK)</li>
+  <li><strong>EAV / Datalog DB</strong>: Logseq (DataScript の <code>:block/refs</code>, <code>:block/path-refs</code>)、 Roam (Datomic)、 Foam (graphlib)、 DokuWiki (専用 <code>.idx</code> + Memory/File Index)</li>
+</ul>
+
+<h3>§2.3. AI agent 向け doc indexing (researcher-3)</h3>
+
+<dl>
+  <dt>Claude Code は意図的に indexing しない</dt>
+  <dd>4 リスク (security, privacy, staleness, reliability) を回避するため。 3-tool hierarchy: Glob → Grep → Read。 深い探索は Explore sub-agent (Haiku) を spawn。 Amazon Science 2026 論文: agentic search は 「over 90% of RAG-level performance without a vector database」 を達成。</dd>
+
+  <dt>Anthropic Agent Skills: Progressive Disclosure (3-tier)</dt>
+  <dd>Tier 1 (metadata, 30-50 tokens) → Tier 2 (SKILL.md 本体) → Tier 3 (reference files) の段階的読込で <strong>140x efficiency</strong>。 folio HTML 仕様書管理に直接適用可能なパターン。</dd>
+
+  <dt>Microsoft GraphRAG / LazyGraphRAG</dt>
+  <dd>GraphRAG: Hierarchical Leiden clustering + community summary。 LazyGraphRAG: 標準 GraphRAG の indexing cost の <strong>0.1% (1000x 削減)</strong>、 query-time iterative deepening。 query cost 700x lower。</dd>
+
+  <dt>LlamaIndex DocumentSummaryIndex</dt>
+  <dd>folio の 2 段構造 (summary + detail) と最も近い実装。 LLM-based / Embedding-based の両 retrieval mode をサポート。</dd>
+</dl>
+
+<h3>§2.4. 仕様書 ADR OSS 事例 (researcher-4)</h3>
+
+<dl>
+  <dt>Beads dependency edge schema</dt>
+  <dd>9 種類のエッジ: <code>blocks</code> / <code>parent-child</code> / <code>related</code> / <code>discovered-from</code> / <code>conditional-blocks</code> / <code>waits-for</code> / <code>replies-to</code> / <code>supersedes</code> / <code>duplicates</code>。 hash-based ID (<code>bd-a1b2</code>) で分散衝突防止。</dd>
+
+  <dt>Beads Phase metaphor (folio へ完全に写像可能)</dt>
+  <dd><strong>Solid (Proto) / Liquid (Mol) / Vapor (Wisp)</strong> の三層抽象が folio の <code>constitution.html</code> (frozen) / <code>decisions/*.html</code> (ADR active) / <code>research/*.html</code> (ephemeral) に対応。</dd>
+
+  <dt>Beads AI agent integration: CLI + Hooks &gt; MCP</dt>
+  <dd>MCP tool schemas は 10-50k tokens 追加するが、 <code>bd prime</code> (CLI) は 1-2k tokens → <strong>10-50x context efficiency</strong>。 folio も同様に <code>folio prime</code> 相当の context injection を CLI で実現可能。</dd>
+
+  <dt>log4brains の <code>Adr.supersedeBy()</code> ―― 双方向リンク自動 materialization</dt>
+  <dd>古い側 status を <code>superseded by [new-slug](path)</code> に書換え、 新しい側に <code>Supersedes [old-slug](path)</code> リンクを自動追加。 これは Backstage の bidirectional relations (<code>dependsOn</code> ↔ <code>dependencyOf</code> 等) と同じ思想。 folio の P-10 amendment 戦略に直接転用可能。</dd>
+
+  <dt>MADR の trade-off (ADR-0009)</dt>
+  <dd>「freedom が parsing を犠牲にする」 と公式に認めている。 folio は <strong>frontmatter (機械可読) + 本文 markdown link (自由度)</strong> の dual-track で両立を目指せる余地あり。</dd>
+</dl>
+
+<h3>§2.5. HTML metadata + spec drift detection (researcher-5)</h3>
+
+<dl>
+  <dt>JSON-LD が 2026 デフォルト推奨</dt>
+  <dd><code>&lt;script type="application/ld+json"&gt;</code> ブロックで HTML 構造から decoupled。 <code>@id</code> による linked data 構築が容易。 microdata は nested で maintenance nightmare、 RDFa は niche shrinking、 HTML5 <code>data-*</code> は MDN が明示的に「機械可読 metadata に非推奨」 と警告。</dd>
+
+  <dt>extruct (Scrapinghub) ―― HTML → DB sync の決定的ツール</dt>
+  <dd>HTML から JSON-LD / Microdata / RDFa / Microformats / Open Graph / Dublin Core を統一的に抽出。 標準パイプライン: HTML fetch → extruct で JSON-LD 抽出 → 型チェック → DB 行に正規化。</dd>
+
+  <dt>Sambal モデル ―― JSON-LD ファーストな SSG</dt>
+  <dd>HTML page と raw schema.org JSON-LD の両方を生成。 <code>@id</code> で external resources への参照を持つ linked data を、 DB なしで構築可能。</dd>
+
+  <dt>Broken link detection: lychee + hyperlink が最有力</dt>
+  <dd>lychee (Rust async, TOML config, anchor 4 modes, GitHub Action 成熟) + hyperlink (Rust file-system only, Sentry docs 1.1GB を 4 秒, flake free) の組み合わせが folio に最適。</dd>
+
+  <dt>Spec drift detection</dt>
+  <dd>oasdiff (OpenAPI 用 450+ breaking change rules) のメタファー応用。 検出パイプライン: (i) lychee で anchor 検証、 (ii) extruct で JSON-LD 抽出 + Dolt sync、 (iii) Dolt SQL で <code>relations</code> テーブル整合性検証、 (iv) ADR supersede 関係を log4brains 風に materialize。</dd>
+</dl>
+</section>
+
+<!-- ====================================================================
+     §3. Integrated Perspectives
+     ==================================================================== -->
+<section id="s3-integrated" class="informative">
+<h2>§3. 統合観点</h2>
+
+<h3>§3.1. Beads パターンの完全分解 (researcher-1 + researcher-4 のクロス検証)</h3>
+
+<p>両 worker が独立に Beads を深掘りし、 結論が完全一致 ―― 信頼度 high。 Beads 設計の核心 4 判断:</p>
+
+<ol>
+  <li><strong>Dolt 単一バックエンド (v1.0.0)</strong> ―― SQLite + JSONL hybrid を捨てた</li>
+  <li><strong>Hash-based ID</strong> (<code>bd-a1b2</code>) ―― 分散衝突防止</li>
+  <li><strong>Phase metaphor (化学 metaphor)</strong> ―― Solid/Liquid/Vapor の三層抽象</li>
+  <li><strong>CLI + Hooks &gt; MCP</strong> ―― 10-50x context efficiency</li>
+</ol>
+
+<table>
+<caption>Beads dependency edge schema → folio relation vocabulary 候補</caption>
+<thead>
+<tr><th>Beads edge type</th><th>意味</th><th>ready 判定</th><th>folio 類推</th></tr>
+</thead>
+<tbody>
+<tr><td><code>blocks</code></td><td>X must close before Y</td><td>✓</td><td><code>depends-on</code></td></tr>
+<tr><td><code>parent-child</code></td><td>hierarchical</td><td>✓ (親 block 時)</td><td><code>subsection-of</code></td></tr>
+<tr><td><code>related</code></td><td>soft reference</td><td>✗</td><td><code>related-to</code></td></tr>
+<tr><td><code>discovered-from</code></td><td>audit trail</td><td>✗</td><td><code>discovered-during</code></td></tr>
+<tr><td><code>conditional-blocks</code></td><td>B runs only if A fails</td><td>✓</td><td><code>alternative-to</code></td></tr>
+<tr><td><code>waits-for</code></td><td>fanout gate</td><td>✓</td><td>(不要)</td></tr>
+<tr><td><code>supersedes</code></td><td>A replaces B</td><td>✗</td><td><strong><code>supersedes</code> (P-10 と直結)</strong></td></tr>
+<tr><td><code>duplicates</code></td><td>A duplicates B</td><td>✗</td><td><code>duplicate-of</code></td></tr>
+<tr><td><code>replies-to</code></td><td>message thread</td><td>✗</td><td>(不要)</td></tr>
+</tbody>
+</table>
+
+<table>
+<caption>Beads Phase metaphor ↔ folio Layer の完全 mapping</caption>
+<thead>
+<tr><th>Beads Phase</th><th>folio Layer</th><th>永続性</th><th>Sync</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Solid (Proto)</strong></td><td><code>scratch/constitution.html</code></td><td>Frozen template</td><td>Yes</td></tr>
+<tr><td><strong>Liquid (Mol)</strong></td><td><code>scratch/decisions/*.html</code> (ADR)</td><td>Active persistent</td><td>Yes</td></tr>
+<tr><td><strong>Vapor (Wisp)</strong></td><td><code>scratch/research/*.html</code> 等</td><td>Ephemeral</td><td>No (Wisp=true)</td></tr>
+</tbody>
+</table>
+
+<h3>§3.2. SSG/PKM link graph 実装マトリクス (researcher-2)</h3>
+
+<table>
+<caption>12 ツールを 4 軸で整理</caption>
+<thead>
+<tr><th>ツール</th><th>ストレージ</th><th>Backlink 戦略</th><th>Link 解決</th><th>Broken link 動作</th></tr>
+</thead>
+<tbody>
+<tr><td>Sphinx</td><td>flat zlib (<code>objects.inv</code>)</td><td>build バッチ</td><td>UID + domain:role</td><td>missing-reference event</td></tr>
+<tr><td>DocFX</td><td>YAML (<code>xrefmap.yml</code>)</td><td>build バッチ</td><td>UID 中央集権</td><td>build warning</td></tr>
+<tr><td>Antora</td><td>in-memory <code>Map</code> (ContentCatalog)</td><td>build バッチ</td><td>Resource ID <code>version@component:module:family$file</code></td><td>unresolved</td></tr>
+<tr><td>MkDocs</td><td>files coll. + page.toc</td><td>build バッチ</td><td>path + anchor</td><td><code>validation.links.*</code> 設定</td></tr>
+<tr><td>Docusaurus</td><td><code>Set</code> per page</td><td>build バッチ</td><td>path-based</td><td>production build のみ</td></tr>
+<tr><td>Hugo</td><td>page lookup + fallback</td><td>build バッチ</td><td>page → resource → global</td><td>warning</td></tr>
+<tr><td>Obsidian</td><td><code>Record&lt;src, Record&lt;dest, count&gt;&gt;</code></td><td>incremental (events)</td><td>shortest-path</td><td><code>unresolvedLinks</code> 別管理</td></tr>
+<tr><td>Foam</td><td>graphlib (dagre) NoteGraph</td><td>incremental</td><td>wikilink</td><td>graph 表示</td></tr>
+<tr><td>Logseq</td><td>Datalog EAV (<code>:block/refs</code>, <code>:block/path-refs</code>)</td><td>クエリ時計算</td><td>Datalog query</td><td>graph 表示</td></tr>
+<tr><td>Roam</td><td>Datomic EAV</td><td>クエリ時計算</td><td>block-uid 9 文字</td><td>graph 表示</td></tr>
+<tr><td>MediaWiki</td><td>RDBMS (<code>pagelinks</code> + <code>linktarget</code>)</td><td>incremental (LinksUpdate Job)</td><td>namespace + title FK</td><td>brokenlinks (旧版)</td></tr>
+<tr><td>DokuWiki</td><td><code>.idx</code> flat + relation_references</td><td>バックグラウンド (TaskRunner)</td><td>namespace + title</td><td>暗黙</td></tr>
+</tbody>
+</table>
+
+<h3>§3.3. Progressive Disclosure (researcher-3)</h3>
+
+<p>Anthropic が <strong>Agent Skills</strong> で実装している 3-tier loading が folio HTML 仕様書管理に直接適用可能:</p>
+
+<table>
+<caption>Anthropic Skills 3-tier model ↔ folio 文書層</caption>
+<thead>
+<tr><th>Tier</th><th>Anthropic Skills</th><th>tokens</th><th>folio 対応</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Tier 1</strong></td><td>YAML <code>name</code> + <code>description</code></td><td>30-50 / skill</td><td><code>CLAUDE.md</code>, <code>MEMORY.md</code>, inventory file (Sphinx <code>objects.inv</code> 風)</td></tr>
+<tr><td><strong>Tier 2</strong></td><td><code>SKILL.md</code> 本体</td><td>500-2000</td><td>各 <code>*.html</code> の <code>&lt;head&gt;</code> JSON-LD + 本文サマリ</td></tr>
+<tr><td><strong>Tier 3</strong></td><td><code>FORMS.md</code>, <code>REFERENCE.md</code></td><td>unbounded</td><td>各 <code>*.html</code> 本文 + <code>research/*.html</code></td></tr>
+</tbody>
+</table>
+
+<p>140x efficiency。 folio は <strong>vector DB に頼らず grep-friendly な HTML 構造</strong> を目指すべき (Claude Code は意図的に indexing しないため)。</p>
+
+<h3>§3.4. HTML metadata embedding 技術比較 (researcher-5)</h3>
+
+<table>
+<caption>5 種類の metadata 技術の folio fit 評価</caption>
+<thead>
+<tr><th>技術</th><th>folio fit</th><th>理由</th></tr>
+</thead>
+<tbody>
+<tr><td><strong>JSON-LD</strong> (<code>&lt;script type="application/ld+json"&gt;</code>)</td><td>★★★★★</td><td>HTML から decoupled、 <code>@id</code> で linked data、 Google 推奨、 Sambal 事例あり、 extruct で抽出容易</td></tr>
+<tr><td>Microdata</td><td>★★</td><td>visible content と 1:1 だが nested で破綻、 HTML 構造に tight coupling</td></tr>
+<tr><td>RDFa</td><td>★★</td><td>複数 vocabulary 同時可能だが complexity max、 niche shrinking</td></tr>
+<tr><td>HTML5 <code>data-*</code></td><td>★</td><td><strong>MDN が明示的に「機械可読 metadata に非推奨」</strong> と警告</td></tr>
+<tr><td>Custom <code>&lt;meta&gt;</code> tag</td><td>★★★</td><td>document-level metadata に向く、 Sphinx <code>objects.inv</code> のような flat 形式</td></tr>
+</tbody>
+</table>
+
+<h3>§3.5. dcterms:replaces が W3C 標準として "supersedes" を既に提供</h3>
+
+<p>folio が JSON-LD で関係性を表現する場合、 <strong>独自の <code>folio:supersedes</code> を作らず DCMI 既存語彙を使うべき</strong>:</p>
+
+<pre><code>{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "decisions/ADR-0042-database-choice.html",
+  "@type": "TechArticle",
+  "dc:replaces": { "@id": "decisions/ADR-0017-original-database.html" },
+  "folio:depends-on": { "@id": "constitution.html#P-3" }
+}</code></pre>
+
+<table>
+<caption>folio relation 語彙の選択指針</caption>
+<thead>
+<tr><th>folio 関係</th><th>標準語彙</th><th>備考</th></tr>
+</thead>
+<tbody>
+<tr><td>supersedes</td><td><code>dc:replaces</code></td><td>逆: <code>dc:isReplacedBy</code></td></tr>
+<tr><td>change history</td><td><code>dc:provenance</code></td><td>監査用</td></tr>
+<tr><td>cross-reference</td><td><code>dc:references</code> / <code>dc:isReferencedBy</code></td><td>双方向 dual</td></tr>
+<tr><td>subsection</td><td><code>dc:hasPart</code> / <code>dc:isPartOf</code></td><td>schema.org も同じ</td></tr>
+<tr><td><strong>depends-on</strong></td><td>(独自必要)</td><td>W3C 標準なし、 <code>folio:depends-on</code> 等</td></tr>
+<tr><td><strong>extends</strong></td><td>(独自必要)</td><td>schema.org <code>additionalType</code> で近似可能だが弱い</td></tr>
+<tr><td>derived-from</td><td><code>prov:wasDerivedFrom</code></td><td>PROV-O</td></tr>
+</tbody>
+</table>
+
+<h3>§3.6. Bidirectional Materialization (log4brains + Backstage)</h3>
+
+<p>log4brains の <code>Adr.supersedeBy()</code> メソッド (TypeScript ソースから直接抽出) は、 folio が採用すべき双方向リンク自動化パターン:</p>
+
+<pre><code>supersedeBy(superseder: Adr): void {
+  const relation = new AdrRelation(this, "superseded by", superseder);
+  this.body.setHeaderMetadata("Status", relation.toMarkdown());
+  superseder.markAsSuperseder(this);  // 自動的に逆参照を生成
+}
+
+private markAsSuperseder(superseded: Adr): void {
+  const relation = new AdrRelation(this, "Supersedes", superseded);
+  this.body.addLinkNoDuplicate(relation.toMarkdown());
+}
+</code></pre>
+
+<p>Backstage も同じ思想で 8 対の双方向 relations を提供 (<code>dependsOn</code> ↔ <code>dependencyOf</code>, <code>partOf</code> ↔ <code>hasPart</code>, <code>ownedBy</code> ↔ <code>ownerOf</code> 等)。 folio で同じパターンを採用すれば、 人間も AI も「片方を編集すれば反対側が自動で同期」 する保証が得られる。</p>
+</section>
+
+<!-- ====================================================================
+     §4. Recommendations for folio
+     ==================================================================== -->
+<section id="s4-recommendations" class="normative">
+<h2>§4. folio への具体的提案</h2>
+
+<h3>§4.1. 中核推奨: Phase 1 (案 B) → Phase 2 (案 A) の段階導入</h3>
+
+<aside class="informative">
+<p>folio が現在 scratch 試作段階であることを考慮し、 <strong>初手は最小複雑性、 ある閾値を超えたら DB を統合</strong> という二段階導入を提案する。 critique 結果 (PASS) によれば Phase 1 着手は追加調査なしで即時可能。</p>
+</aside>
+
+<h4>Phase 1 (現在 〜 specs ≦ 30 件): HTML 内 JSON-LD + inventory file</h4>
+
+<ol>
+  <li><strong>HTML <code>&lt;head&gt;</code> に JSON-LD ブロック埋め込み</strong>
+    <ul>
+      <li><code>&lt;script type="application/ld+json"&gt;</code> で関係性を機械可読化</li>
+      <li><code>dc:replaces</code>, <code>dc:references</code>, <code>dc:hasPart</code> など W3C 標準語彙を使用</li>
+      <li>独自語彙 (<code>folio:depends-on</code>, <code>folio:extends</code>) は <code>@context</code> で別 prefix 化</li>
+    </ul>
+  </li>
+  <li><strong><code>scratch/inventory.json</code> を build 時生成</strong>
+    <ul>
+      <li>Sphinx <code>objects.inv</code> パターンの JSON 版</li>
+      <li>各 spec の <code>{id, title, summary, status, relations[]}</code> を 1 ファイルに集約</li>
+      <li>AI agent は inventory.json のみで全体構造把握、 必要な spec のみ Read (Tier 1 → Tier 2 の自然な発生)</li>
+    </ul>
+  </li>
+  <li><strong>broken link CI</strong>
+    <ul>
+      <li>lychee で external link + anchor fragment 検証</li>
+      <li>hyperlink (file-system only) で内部 cross-reference 検証 (flake free)</li>
+      <li>GitHub Action として cron 実行 + PR-time validation</li>
+    </ul>
+  </li>
+  <li><strong>双方向リンク build hook</strong>
+    <ul>
+      <li>pre-commit hook または scripts/<code>folio-link-materialize.py</code> で log4brains 風に双方向化</li>
+      <li>例: ADR A が ADR B を <code>dc:replaces</code> したら、 ADR B 側に <code>dc:isReplacedBy</code> を自動追加</li>
+    </ul>
+  </li>
+</ol>
+
+<h4>Phase 2 (specs &gt; 30 件で管理破綻が見え始めたら): Dolt 統合</h4>
+
+<ol>
+  <li><strong>extruct で HTML → Dolt sync (one-way)</strong>
+    <ul>
+      <li><code>extruct.extract(html, syntaxes=['json-ld'], uniform=True)</code> で JSON-LD 抽出</li>
+      <li>Dolt の <code>specs</code> + <code>relations</code> テーブルに upsert</li>
+      <li>HTML 編集 → pre-commit hook → extruct → Dolt の片方向パイプライン</li>
+    </ul>
+  </li>
+  <li><strong>folio CLI 実装 (Beads <code>bd</code> 相当)</strong>
+    <ul>
+      <li><code>folio prime</code>: Beads <code>bd prime</code> 相当の context injection (CLI で 1-2k tokens 注入)</li>
+      <li><code>folio ready</code>: 未解決決定 / 未承認 amendment の列挙</li>
+      <li><code>folio graph &lt;id&gt;</code>: 指定 spec の dependency 上流 / 下流クエリ</li>
+      <li><code>folio supersede &lt;old&gt; &lt;new&gt;</code>: 双方向 materialization を CLI 一発で実行</li>
+    </ul>
+  </li>
+  <li><strong>MCP server で AI agent 統合 (補完)</strong>
+    <ul>
+      <li>Datasette + MCP plugin 経由で folio Dolt DB を Claude Code から SQL クエリ可能化</li>
+      <li>ただし MCP は補完であり、 CLI が primary (Beads の 10-50x context efficiency 根拠)</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>§4.2. 3 案の trade-off</h3>
+
+<table>
+<caption>採用候補 3 案の比較</caption>
+<thead>
+<tr><th>案</th><th>方針</th><th>主な利点</th><th>主な欠点</th><th>判定</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>A</strong></td>
+  <td>HTML SSoT + DB sync (片方向)</td>
+  <td>HTML 直接編集可能、 グラフクエリも可能、 P-2 尊重</td>
+  <td>sync パイプライン必要、 DB は cache (stale 可能性)、 保守コスト</td>
+  <td>Phase 2 採用</td>
+</tr>
+<tr>
+  <td><strong>B</strong></td>
+  <td>HTML 内 JSON-LD + inventory file (DB なし)</td>
+  <td>最もシンプル、 file system のみで完結、 P-1 (simplicity) と整合</td>
+  <td>グラフクエリは grep + JSON-LD parse の繰り返し、 scale 限界</td>
+  <td>Phase 1 採用</td>
+</tr>
+<tr>
+  <td><strong>C</strong></td>
+  <td>完全 DB 中心、 HTML はビュー生成</td>
+  <td>Beads 実証済、 cell-level merge、 distributed</td>
+  <td>HTML 直接編集禁止 → <strong>P-2 と正面衝突</strong>、 既存 HTML 移行コスト</td>
+  <td><strong>採用しない</strong></td>
+</tr>
+</tbody>
+</table>
+
+<h3>§4.3. 案 C を採用しない根拠</h3>
+
+<p>Beads は issue tracker の文脈で Dolt SSoT を採用したが、 folio の core value は異なる:</p>
+
+<ul>
+  <li><strong>folio P-2 (HTML SSoT) との正面衝突</strong>: 人間と AI が直接編集する HTML 仕様書という folio の core value を捨てることになる。</li>
+  <li><strong>folio P-1 (simplicity) との緊張</strong>: Dolt インストール必要 (Go binary)、 git workflow と Dolt commit graph の同期戦略が必要、 scratch 試作段階では over-engineering。</li>
+  <li><strong>Beads と folio の使用シーンの根本的違い</strong>: Beads = AI が自律的に管理する work graph (人間は補助)、 folio = 人間 + AI 共同編集の人間可読仕様書 (HTML 直編集が core)。</li>
+</ul>
+
+<p>案 A はこれらを回避しながら DB の利点を享受する妥協案。 Phase 2 で specs が増えてグラフクエリが必要になったときに導入する。</p>
+
+<h3>§4.4. 設計 4 原則 (調査結果からの抽出)</h3>
+
+<ol>
+  <li><strong>Progressive Disclosure</strong>: AI agent には常に「最小限の metadata + on-demand 詳細」 を提供 (Anthropic Skills と同パターン)</li>
+  <li><strong>Bidirectional Materialization</strong>: supersedes 等の関係は両端で書く (log4brains, Backstage パターン)</li>
+  <li><strong>W3C Standard Vocabulary 優先</strong>: 独自語彙より <code>dcterms</code> / <code>schema.org</code> / PROV-O を使う (interoperability)</li>
+  <li><strong>CI で機械検証</strong>: lychee + hyperlink + 独自 spec drift script を CI に組み込む</li>
+</ol>
+</section>
+
+<!-- ====================================================================
+     §5. Gaps & Future Research
+     ==================================================================== -->
+<section id="s5-gaps" class="informative">
+<h2>§5. 未解決事項・追加調査候補</h2>
+
+<p>critique で PASS と判定済だが、 Phase 2 (Dolt 統合) 着手前に取得を推奨する nice-to-have の gap が 4 件:</p>
+
+<dl>
+  <dt>1. Beads の Dolt 内部 SQL DDL (CREATE TABLE statements verbatim)</dt>
+  <dd>docs には table 名と column 一覧は出るが、 index / FK / CHECK 制約の完全な SQL DDL は未確認。 リポジトリの <code>internal/storage/dolt/</code> 配下の Go ファイル直接読みが必要。</dd>
+
+  <dt>2. schema.org <code>CreativeWork</code> / <code>TechArticle</code> 系の文書間関係プロパティ</dt>
+  <dd><code>isBasedOn</code>, <code>citation</code>, <code>hasPart</code> 等の詳細プロパティが文書間関係表現に使える可能性。 今回は <code>dc:*</code> 語彙を中心に調査したが、 schema.org の補完候補として深掘り余地あり。</dd>
+
+  <dt>3. HTML SSoT graph DB sync の production 事例</dt>
+  <dd>SSG (Sambal/Astro/Next.js) では DB→HTML が一般的で、 HTML→DB の事例は extruct を使った scraping/監査用途以外見当たらず。 folio は意図的に新しい設計領域 (草分け) になる可能性。</dd>
+
+  <dt>4. HyDE / GraphRAG を HTML/Markdown documentation に適用した production case study</dt>
+  <dd>HyDE は一般 retrieval 用途の事例はあるが、 仕様書 documentation 向けの具体実装は未確認。 GraphRAG / LazyGraphRAG も knowledge base 中心の事例が多く、 spec documentation 向けは限定的。</dd>
+</dl>
+
+<p>これらは Phase 2 着手時の設計検討で WebFetch + 追加 researcher spawn で補完予定。 Phase 1 着手には影響しない。</p>
+
+<h3>§5.1. 検出された緊張関係 (tensions)</h3>
+
+<ul>
+  <li><strong>Claude Code は indexing しない vs Beads は Dolt 採用</strong>: 異なる layer の判断 (session 内 retrieval は agentic search、 persistent storage は別途)。 folio は両方を組み合わせる戦略が可能。</li>
+  <li><strong>SSG は DB→HTML、 folio は HTML→DB</strong>: 方向が逆。 extruct + 独自パイプラインで実装する必要あり (Sambal が一部 hint)。</li>
+  <li><strong>MADR 自由度 vs 機械可読性</strong>: MADR-0009 で公式に認められたトレードオフ。 folio は frontmatter (機械) + 本文 markdown link (自由) の dual-track で両立可能。</li>
+</ul>
+</section>
+
+<!-- ====================================================================
+     §6. References
+     ==================================================================== -->
+<section id="s6-references" class="informative">
+<h2>§6. 参照ソース一覧</h2>
+
+<p>計 117 件。 全ソースは 2026-05-22 に確認。 公式ソース (Anthropic / W3C / DCMI / MS Research / GitHub README / 公式 docs) は 46% を占める。</p>
+
+<h3>§6.1. DB / Graph 基盤技術 (researcher-1)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Title</th><th>URL</th><th>Source Type</th></tr>
+</thead>
+<tbody>
+<tr><td>1</td><td>Beads GitHub repository (steveyegge/beads)</td><td><a href="https://github.com/steveyegge/beads">github.com/steveyegge/beads</a></td><td>GitHub README</td></tr>
+<tr><td>2</td><td>Restoring Beads Classic — DoltHub Blog</td><td><a href="https://www.dolthub.com/blog/2026-04-02-restoring-beads-classic/">dolthub.com/blog/2026-04-02</a></td><td>公式 blog</td></tr>
+<tr><td>3</td><td>Beads DeepWiki</td><td><a href="https://deepwiki.com/steveyegge/beads">deepwiki.com/steveyegge/beads</a></td><td>コミュニティ wiki</td></tr>
+<tr><td>4</td><td>Beads Architecture - DeepWiki (Dolt backend)</td><td><a href="https://deepwiki.com/steveyegge/beads/5.3-dolt-backend">deepwiki.com/.../5.3-dolt-backend</a></td><td>コミュニティ wiki</td></tr>
+<tr><td>5</td><td>Beads Agent Memory - MorphLLM</td><td><a href="https://www.morphllm.com/beads-agent-memory">morphllm.com/beads-agent-memory</a></td><td>技術 blog</td></tr>
+<tr><td>6</td><td>Beads ARCHITECTURE.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/ARCHITECTURE.md">github.com/.../ARCHITECTURE.md</a></td><td>GitHub docs</td></tr>
+<tr><td>7</td><td>Beads FAQ.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/FAQ.md">github.com/.../FAQ.md</a></td><td>GitHub docs</td></tr>
+<tr><td>8</td><td>Beads DOLT.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/DOLT.md">github.com/.../DOLT.md</a></td><td>GitHub docs</td></tr>
+<tr><td>9</td><td>Beads MOLECULES.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/MOLECULES.md">github.com/.../MOLECULES.md</a></td><td>GitHub docs</td></tr>
+<tr><td>10</td><td>Beads CLAUDE_INTEGRATION.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/CLAUDE_INTEGRATION.md">github.com/.../CLAUDE_INTEGRATION.md</a></td><td>GitHub docs</td></tr>
+<tr><td>11</td><td>Beads METADATA.md</td><td><a href="https://github.com/steveyegge/beads/blob/main/docs/METADATA.md">github.com/.../METADATA.md</a></td><td>GitHub docs</td></tr>
+<tr><td>12</td><td>Dolt Storage Engine — DoltHub Docs</td><td><a href="https://docs.dolthub.com/architecture/storage-engine">docs.dolthub.com/architecture/storage-engine</a></td><td>公式 docs</td></tr>
+<tr><td>13</td><td>What Is Dolt? — DoltHub Docs</td><td><a href="https://docs.dolthub.com/">docs.dolthub.com</a></td><td>公式 docs</td></tr>
+<tr><td>14</td><td>How to Version Control a Database — DoltHub Blog</td><td><a href="https://www.dolthub.com/blog/2026-01-07-how-to-version-control-a-database/">dolthub.com/blog/2026-01-07</a></td><td>公式 blog</td></tr>
+<tr><td>15</td><td>Schema.org Documentation</td><td><a href="https://schema.org/docs/documents.html">schema.org/docs/documents.html</a></td><td>公式 標準</td></tr>
+<tr><td>16</td><td>DCMI: Replaces property</td><td><a href="https://www.dublincore.org/specifications/dublin-core/dcmi-terms/terms/replaces/">dublincore.org/.../replaces/</a></td><td>W3C 標準</td></tr>
+<tr><td>17</td><td>Dublin Core to PROV Mapping — W3C</td><td><a href="https://www.w3.org/TR/prov-dc/">w3.org/TR/prov-dc/</a></td><td>W3C 標準</td></tr>
+<tr><td>18</td><td>RDF Triple Stores vs Property Graphs — Neo4j Blog</td><td><a href="https://neo4j.com/blog/knowledge-graph/rdf-vs-property-graphs-knowledge-graphs/">neo4j.com/blog/.../rdf-vs-property-graphs</a></td><td>ベンダー blog</td></tr>
+<tr><td>19</td><td>Neo4j Cypher Manual Introduction</td><td><a href="https://neo4j.com/docs/cypher-manual/current/introduction/">neo4j.com/docs/cypher-manual</a></td><td>公式 docs</td></tr>
+<tr><td>20</td><td>Schema.org: Evolution of Structured Data — ACM Queue</td><td><a href="https://queue.acm.org/detail.cfm?id=2857276">queue.acm.org/detail.cfm?id=2857276</a></td><td>学術</td></tr>
+<tr><td>21</td><td>Property Graph vs RDF Triple Store — PLOS One</td><td><a href="https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0144578">journals.plos.org/plosone</a></td><td>学術</td></tr>
+<tr><td>22</td><td>Datasette Agent — Simon Willison</td><td><a href="https://simonw.substack.com/p/datasette-agent-an-ai-assistant-for">simonw.substack.com/.../datasette-agent</a></td><td>技術 blog</td></tr>
+<tr><td>23</td><td>Text2Cypher arxiv 2412.10064</td><td><a href="https://arxiv.org/html/2412.10064v1">arxiv.org/html/2412.10064v1</a></td><td>学術</td></tr>
+<tr><td>24</td><td>DITA OASIS specification</td><td><a href="https://docs.oasis-open.org/dita/dita/v1.3/os/part0-overview/introduction/about-the-dita-specification.html">docs.oasis-open.org/dita</a></td><td>公式 標準</td></tr>
+<tr><td>25</td><td>sqlite-schema-viz</td><td><a href="https://github.com/paulsmith/sqlite-schema-viz">github.com/paulsmith/sqlite-schema-viz</a></td><td>GitHub tool</td></tr>
+</tbody>
+</table>
+
+<h3>§6.2. SSG / PKM Link Graph 実装 (researcher-2)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Title</th><th>URL</th><th>Source Type</th></tr>
+</thead>
+<tbody>
+<tr><td>26</td><td>sphinx.ext.intersphinx</td><td><a href="https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html">sphinx-doc.org/.../intersphinx.html</a></td><td>Official docs</td></tr>
+<tr><td>27</td><td>sphobjinv objects.inv v2 Syntax</td><td><a href="https://sphobjinv.readthedocs.io/en/stable/syntax.html">sphobjinv.readthedocs.io</a></td><td>Project docs</td></tr>
+<tr><td>28</td><td>sphinx/util/inventory.py source</td><td><a href="https://github.com/sphinx-doc/sphinx/blob/master/sphinx/util/inventory.py">github.com/sphinx-doc/sphinx</a></td><td>Source code</td></tr>
+<tr><td>29</td><td>Sphinx Domain API</td><td><a href="https://www.sphinx-doc.org/en/master/extdev/domainapi.html">sphinx-doc.org/.../domainapi.html</a></td><td>Official docs</td></tr>
+<tr><td>30</td><td>DocFX Links and Cross References</td><td><a href="https://dotnet.github.io/docfx/docs/links-and-cross-references.html">dotnet.github.io/docfx</a></td><td>Official docs</td></tr>
+<tr><td>31</td><td>Antora Xref Macros</td><td><a href="https://docs.antora.org/antora/latest/page/xref/">docs.antora.org/antora</a></td><td>Official docs</td></tr>
+<tr><td>32</td><td>Antora content-catalog.js source</td><td><a href="https://gitlab.com/antora/antora/-/raw/main/packages/content-classifier/lib/content-catalog.js">gitlab.com/antora/antora</a></td><td>Source code</td></tr>
+<tr><td>33</td><td>MkDocs Link Validation (DeepWiki)</td><td><a href="https://deepwiki.com/mkdocs-ng/mkdocs/3.5-link-validation">deepwiki.com/mkdocs-ng</a></td><td>DeepWiki</td></tr>
+<tr><td>34</td><td>docusaurus brokenLinks.ts source</td><td><a href="https://github.com/facebook/docusaurus/blob/main/packages/docusaurus/src/server/brokenLinks.ts">github.com/facebook/docusaurus</a></td><td>Source code</td></tr>
+<tr><td>35</td><td>Hugo Link render hooks</td><td><a href="https://gohugo.io/render-hooks/links/">gohugo.io/render-hooks/links</a></td><td>Official docs</td></tr>
+<tr><td>36</td><td>Obsidian MetadataCache</td><td><a href="https://docs.obsidian.md/Reference/TypeScript+API/MetadataCache">docs.obsidian.md/.../MetadataCache</a></td><td>Official docs</td></tr>
+<tr><td>37</td><td>Obsidian resolvedLinks</td><td><a href="https://docs.obsidian.md/Reference/TypeScript+API/MetadataCache/resolvedLinks">docs.obsidian.md/.../resolvedLinks</a></td><td>Official docs</td></tr>
+<tr><td>38</td><td>obsidian-backlink-cache plugin</td><td><a href="https://github.com/mnaoumov/obsidian-backlink-cache">github.com/mnaoumov/obsidian-backlink-cache</a></td><td>GitHub</td></tr>
+<tr><td>39</td><td>Foam PR #83 graph refactor</td><td><a href="https://github.com/foambubble/foam/pull/83">github.com/foambubble/foam/pull/83</a></td><td>GitHub PR</td></tr>
+<tr><td>40</td><td>Logseq Database Schema (DeepWiki)</td><td><a href="https://deepwiki.com/logseq/logseq/4.2-database-schema-and-validation">deepwiki.com/logseq/logseq</a></td><td>DeepWiki</td></tr>
+<tr><td>41</td><td>Logseq datascript schema gist</td><td><a href="https://gist.github.com/tiensonqin/9a40575827f8f63eec54432443ecb929">gist.github.com/tiensonqin</a></td><td>Gist</td></tr>
+<tr><td>42</td><td>Logseq path-refs forum</td><td><a href="https://discuss.logseq.com/t/what-are-path-refs/10413">discuss.logseq.com/.../path-refs</a></td><td>Forum</td></tr>
+<tr><td>43</td><td>Roam Data Structure Deep Dive</td><td><a href="https://www.zsolt.blog/2021/01/Roam-Data-Structure-Query.html">zsolt.blog/.../Roam-Data-Structure</a></td><td>Tech blog</td></tr>
+<tr><td>44</td><td>MediaWiki Pagelinks table</td><td><a href="https://www.mediawiki.org/wiki/Manual:Pagelinks_table">mediawiki.org/.../Pagelinks_table</a></td><td>Official docs</td></tr>
+<tr><td>45</td><td>MediaWiki Linktarget table</td><td><a href="https://www.mediawiki.org/wiki/Manual:Linktarget_table">mediawiki.org/.../Linktarget_table</a></td><td>Official docs</td></tr>
+<tr><td>46</td><td>MediaWiki LinksUpdate.php source</td><td><a href="https://doc.wikimedia.org/mediawiki-core/master/php/LinksUpdate_8php_source.html">doc.wikimedia.org/.../LinksUpdate</a></td><td>Source docs</td></tr>
+<tr><td>47</td><td>MediaWiki RefreshLinksJob</td><td><a href="https://www.mediawiki.org/wiki/Manual:RefreshLinksJob.php">mediawiki.org/.../RefreshLinksJob</a></td><td>Official docs</td></tr>
+<tr><td>48</td><td>DokuWiki devel:metadata</td><td><a href="https://www.dokuwiki.org/devel:metadata">dokuwiki.org/devel:metadata</a></td><td>Official docs</td></tr>
+<tr><td>49</td><td>DokuWiki Indexing (DeepWiki)</td><td><a href="https://deepwiki.com/dokuwiki/dokuwiki/3.1-search-and-indexing">deepwiki.com/dokuwiki/dokuwiki</a></td><td>DeepWiki</td></tr>
+<tr><td>50</td><td>DokuWiki indexer.php source</td><td><a href="https://github.com/dokuwiki/dokuwiki/blob/master/inc/indexer.php">github.com/dokuwiki/dokuwiki</a></td><td>Source code</td></tr>
+</tbody>
+</table>
+
+<h3>§6.3. AI agent 向け doc indexing (researcher-3)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Title</th><th>URL</th><th>Source Type</th></tr>
+</thead>
+<tbody>
+<tr><td>51</td><td>Best practices for Claude Code</td><td><a href="https://code.claude.com/docs/en/best-practices">code.claude.com/docs/en/best-practices</a></td><td>Anthropic 公式</td></tr>
+<tr><td>52</td><td>Contextual Retrieval — Anthropic</td><td><a href="https://www.anthropic.com/news/contextual-retrieval">anthropic.com/news/contextual-retrieval</a></td><td>Anthropic 公式</td></tr>
+<tr><td>53</td><td>Claude Code Doesn't Index Your Codebase</td><td><a href="https://vadim.blog/claude-code-no-indexing">vadim.blog/claude-code-no-indexing</a></td><td>Tech blog</td></tr>
+<tr><td>54</td><td>Effective context engineering — Anthropic</td><td><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">anthropic.com/engineering/...context</a></td><td>Anthropic 公式</td></tr>
+<tr><td>55</td><td>Equipping agents with Agent Skills — Anthropic</td><td><a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">anthropic.com/engineering/...skills</a></td><td>Anthropic 公式</td></tr>
+<tr><td>56</td><td>Claude Skills Solve the Context Window Problem</td><td><a href="https://tylerfolkman.substack.com/p/the-complete-guide-to-claude-skills">tylerfolkman.substack.com</a></td><td>Tech blog</td></tr>
+<tr><td>57</td><td>GraphRAG — Microsoft Research</td><td><a href="https://www.microsoft.com/en-us/research/blog/graphrag-unlocking-llm-discovery-on-narrative-private-data/">microsoft.com/.../graphrag</a></td><td>MS Research 公式</td></tr>
+<tr><td>58</td><td>LazyGraphRAG — Microsoft Research</td><td><a href="https://www.microsoft.com/en-us/research/blog/lazygraphrag-setting-a-new-standard-for-quality-and-cost/">microsoft.com/.../lazygraphrag</a></td><td>MS Research 公式</td></tr>
+<tr><td>59</td><td>GraphRAG vs LazyGraphRAG</td><td><a href="https://dev.to/pullreview/graphrag-vs-lazygraphrag-revolutionizing-retrieval-augmented-generation-fhi">dev.to/.../graphrag-vs-lazygraphrag</a></td><td>Community blog</td></tr>
+<tr><td>60</td><td>Knowledge Base vs Knowledge Graph 2026</td><td><a href="https://www.kloia.com/blog/knowledge-base-vs-knowledge-graph-llm">kloia.com/blog/...kg-llm</a></td><td>Tech blog</td></tr>
+<tr><td>61</td><td>Implementing Contextual Retrieval</td><td><a href="https://medium.com/the-ai-forum/implementing-contextual-retrieval-in-rag-pipeline-8f1bc7cbd5e0">medium.com/.../contextual-retrieval</a></td><td>Tech blog</td></tr>
+<tr><td>62</td><td>LlamaIndex Index Types Guide</td><td><a href="https://developers.llamaindex.ai/python/framework/module_guides/indexing/index_guide/">developers.llamaindex.ai</a></td><td>LlamaIndex 公式</td></tr>
+<tr><td>63</td><td>DocumentSummaryIndex — LlamaIndex</td><td><a href="https://www.llamaindex.ai/blog/a-new-document-summary-index-for-llm-powered-qa-systems-9a32ece2f9ec">llamaindex.ai/blog/.../summary-index</a></td><td>LlamaIndex 公式</td></tr>
+<tr><td>64</td><td>GraphRAG v2 with LlamaIndex</td><td><a href="https://developers.llamaindex.ai/python/examples/cookbooks/graphrag_v2/">developers.llamaindex.ai/.../graphrag_v2</a></td><td>LlamaIndex 公式</td></tr>
+<tr><td>65</td><td>Cursor Codebase Indexing</td><td><a href="https://cursor.com/docs/context/codebase-indexing">cursor.com/docs/context/codebase-indexing</a></td><td>Cursor 公式</td></tr>
+<tr><td>66</td><td>How Cursor Actually Indexes Your Codebase</td><td><a href="https://towardsdatascience.com/how-cursor-actually-indexes-your-codebase/">towardsdatascience.com/.../cursor-indexes</a></td><td>Tech blog</td></tr>
+<tr><td>67</td><td>claude-context (zilliztech)</td><td><a href="https://github.com/zilliztech/claude-context">github.com/zilliztech/claude-context</a></td><td>GitHub</td></tr>
+<tr><td>68</td><td>HyDE</td><td><a href="https://www.emergentmind.com/topics/hypothetical-document-embeddings-hyde">emergentmind.com/.../hyde</a></td><td>Research summary</td></tr>
+<tr><td>69</td><td>Better RAG with HyDE — Zilliz</td><td><a href="https://zilliz.com/learn/improve-rag-and-information-retrieval-with-hyde-hypothetical-document-embeddings">zilliz.com/learn/.../hyde</a></td><td>Vendor blog</td></tr>
+<tr><td>70</td><td>Knowledge Graphs vs RAG 2026</td><td><a href="https://atlan.com/know/knowledge-graphs-vs-rag-for-ai/">atlan.com/know/.../kg-vs-rag</a></td><td>Industry blog</td></tr>
+<tr><td>71</td><td>CLAUDE.md Configuration Hierarchy</td><td><a href="https://agentfactory.panaversity.org/docs/General-Agents-Foundations/claude-code-teams-cicd/claude-md-configuration-hierarchy">agentfactory.panaversity.org</a></td><td>Tutorial</td></tr>
+</tbody>
+</table>
+
+<h3>§6.4. 仕様書 ADR OSS 事例 (researcher-4)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Title</th><th>URL</th><th>Source Type</th></tr>
+</thead>
+<tbody>
+<tr><td>72</td><td>log4brains AdrStatus.ts</td><td><a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/AdrStatus.ts">github.com/thomvaill/log4brains/.../AdrStatus.ts</a></td><td>Source code</td></tr>
+<tr><td>73</td><td>log4brains AdrRelation.ts</td><td><a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/AdrRelation.ts">github.com/.../AdrRelation.ts</a></td><td>Source code</td></tr>
+<tr><td>74</td><td>log4brains Adr.ts</td><td><a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">github.com/.../Adr.ts</a></td><td>Source code</td></tr>
+<tr><td>75</td><td>MADR full template</td><td><a href="https://github.com/adr/madr/blob/main/template/adr-template.md">github.com/adr/madr/.../adr-template.md</a></td><td>Public template</td></tr>
+<tr><td>76</td><td>MADR ADR-0013 YAML frontmatter</td><td><a href="https://adr.github.io/madr/decisions/0013-use-yaml-front-matter-for-meta-data.html">adr.github.io/madr/.../0013-yaml</a></td><td>公式 ADR</td></tr>
+<tr><td>77</td><td>MADR ADR-0009 Links between ADRs</td><td><a href="https://adr.github.io/madr/decisions/0009-support-links-between-adrs-inside-an-adrs.html">adr.github.io/madr/.../0009-links</a></td><td>公式 ADR</td></tr>
+<tr><td>78</td><td>mkdocs-material-adr</td><td><a href="https://github.com/Kl0ven/mkdocs-material-adr">github.com/Kl0ven/mkdocs-material-adr</a></td><td>OSS</td></tr>
+<tr><td>79</td><td>ArchUnit User Guide</td><td><a href="https://www.archunit.org/userguide/html/000_Index.html">archunit.org/userguide</a></td><td>公式 docs</td></tr>
+<tr><td>80</td><td>Spectral Create a Ruleset</td><td><a href="https://docs.stoplight.io/docs/spectral/01baf06bdd05a-create-a-ruleset">docs.stoplight.io/.../spectral/ruleset</a></td><td>公式 docs</td></tr>
+<tr><td>81</td><td>Spectral GitHub</td><td><a href="https://github.com/stoplightio/spectral">github.com/stoplightio/spectral</a></td><td>OSS</td></tr>
+<tr><td>82</td><td>Specmatic Contract Testing</td><td><a href="https://docs.specmatic.io/contract_driven_development/contract_testing.html">docs.specmatic.io/.../contract_testing</a></td><td>公式 docs</td></tr>
+<tr><td>83</td><td>Specmatic MCP Server</td><td><a href="https://github.com/specmatic/specmatic-mcp-server">github.com/specmatic/specmatic-mcp-server</a></td><td>OSS</td></tr>
+<tr><td>84</td><td>Backstage Catalog Descriptor Format</td><td><a href="https://backstage.io/docs/features/software-catalog/descriptor-format/">backstage.io/docs/.../descriptor-format</a></td><td>公式 docs</td></tr>
+<tr><td>85</td><td>Backstage Creating the Catalog Graph</td><td><a href="https://backstage.io/docs/features/software-catalog/creating-the-catalog-graph/">backstage.io/docs/.../catalog-graph</a></td><td>公式 docs</td></tr>
+<tr><td>86</td><td>Backstage ADR005 Catalog Core Entities</td><td><a href="https://backstage.io/docs/architecture-decisions/adrs-adr005/">backstage.io/docs/.../adrs-adr005</a></td><td>公式 ADR</td></tr>
+<tr><td>87</td><td>IETF RFC Process</td><td><a href="https://www.ietf.org/process/rfcs/">ietf.org/process/rfcs</a></td><td>公式仕様</td></tr>
+<tr><td>88</td><td>IETF Datatracker</td><td><a href="https://datatracker.ietf.org/">datatracker.ietf.org</a></td><td>公式ツール</td></tr>
+<tr><td>89</td><td>Diátaxis Framework</td><td><a href="https://diataxis.fr/">diataxis.fr</a></td><td>Framework</td></tr>
+<tr><td>90</td><td>log4brains public ADR site</td><td><a href="https://thomvaill.github.io/log4brains/adr/">thomvaill.github.io/log4brains/adr</a></td><td>Public site</td></tr>
+</tbody>
+</table>
+
+<h3>§6.5. HTML metadata + spec drift detection (researcher-5)</h3>
+
+<table>
+<thead>
+<tr><th>#</th><th>Title</th><th>URL</th><th>Source Type</th></tr>
+</thead>
+<tbody>
+<tr><td>91</td><td>HTML Microdata (W3C)</td><td><a href="https://www.w3.org/TR/2017/WD-microdata-20171010/">w3.org/TR/2017/WD-microdata</a></td><td>W3C 標準</td></tr>
+<tr><td>92</td><td>Google Structured Data</td><td><a href="https://developers.google.com/custom-search/docs/structured_data">developers.google.com/.../structured_data</a></td><td>Google 公式</td></tr>
+<tr><td>93</td><td>extruct (Scrapinghub)</td><td><a href="https://github.com/scrapinghub/extruct">github.com/scrapinghub/extruct</a></td><td>OSS</td></tr>
+<tr><td>94</td><td>Microdata vs JSON-LD vs RDFa 2026</td><td><a href="https://rishikc.com/articles/structured-data-formats-compared-microdata-jsonld-rdfa-2026/">rishikc.com/articles/structured-data</a></td><td>Tech blog</td></tr>
+<tr><td>95</td><td>Microdata vs RDFa vs JSON-LD</td><td><a href="https://www.structured-context.com/foundations/microdata-vs-rdfa-vs-json-ld/">structured-context.com</a></td><td>Tech blog</td></tr>
+<tr><td>96</td><td>Scrape JSON-LD with extruct</td><td><a href="https://hackersandslackers.com/scrape-metadata-json-ld/">hackersandslackers.com/.../json-ld</a></td><td>Tutorial</td></tr>
+<tr><td>97</td><td>TechArticle (schema.org)</td><td><a href="https://schema.org/TechArticle">schema.org/TechArticle</a></td><td>schema.org 公式</td></tr>
+<tr><td>98</td><td>JSON-LD vs Microdata vs RDFa 2026</td><td><a href="https://schemavalidator.org/guides/microdata-vs-json-ld">schemavalidator.org/.../microdata-vs-json-ld</a></td><td>Tech guide</td></tr>
+<tr><td>99</td><td>meta HTML element (MDN)</td><td><a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta">developer.mozilla.org/.../meta</a></td><td>MDN 公式</td></tr>
+<tr><td>100</td><td>JSON-LD 1.1 (W3C)</td><td><a href="https://www.w3.org/TR/json-ld11/">w3.org/TR/json-ld11</a></td><td>W3C 標準</td></tr>
+<tr><td>101</td><td>JSON-LD spices up SSG</td><td><a href="https://chen4119.me/blog/2021/json-ld-spices-up-staticness-of-static-site-generator/">chen4119.me/.../json-ld-ssg</a></td><td>Tech blog</td></tr>
+<tr><td>102</td><td>JSON-LD Tutorial 2026</td><td><a href="https://squin.org/structured-data/json-ld-tutorial/">squin.org/.../json-ld-tutorial</a></td><td>Tutorial</td></tr>
+<tr><td>103</td><td>Sambal (JSON-LD SSG)</td><td><a href="https://sambal.dev/about/">sambal.dev/about</a></td><td>Project site</td></tr>
+<tr><td>104</td><td>data-* attribute (MDN)</td><td><a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/data-*">developer.mozilla.org/.../data-*</a></td><td>MDN 公式</td></tr>
+<tr><td>105</td><td>Single source of truth (Wikipedia)</td><td><a href="https://en.wikipedia.org/wiki/Single_source_of_truth">en.wikipedia.org/wiki/Single_source_of_truth</a></td><td>Reference</td></tr>
+<tr><td>106</td><td>lychee</td><td><a href="https://github.com/lycheeverse/lychee">github.com/lycheeverse/lychee</a></td><td>OSS</td></tr>
+<tr><td>107</td><td>lychee-action</td><td><a href="https://github.com/lycheeverse/lychee-action">github.com/lycheeverse/lychee-action</a></td><td>OSS</td></tr>
+<tr><td>108</td><td>htmltest</td><td><a href="https://github.com/wjdp/htmltest">github.com/wjdp/htmltest</a></td><td>OSS</td></tr>
+<tr><td>109</td><td>muffet</td><td><a href="https://github.com/raviqqe/muffet">github.com/raviqqe/muffet</a></td><td>OSS</td></tr>
+<tr><td>110</td><td>Link checking benchmarks</td><td><a href="https://wellshapedwords.com/posts/linkchecking/benchmarks/">wellshapedwords.com/.../benchmarks</a></td><td>Tech blog</td></tr>
+<tr><td>111</td><td>hyperlink (untitaker)</td><td><a href="https://github.com/untitaker/hyperlink">github.com/untitaker/hyperlink</a></td><td>OSS</td></tr>
+<tr><td>112</td><td>html-proofer</td><td><a href="https://github.com/gjtorikian/html-proofer">github.com/gjtorikian/html-proofer</a></td><td>OSS</td></tr>
+<tr><td>113</td><td>mlc (Markup Link Checker)</td><td><a href="https://github.com/becheran/mlc">github.com/becheran/mlc</a></td><td>OSS</td></tr>
+<tr><td>114</td><td>Azure SDK broken link detection</td><td><a href="https://devblogs.microsoft.com/azure-sdk/broken-link-detection-in-the-azure-sdk/">devblogs.microsoft.com/.../broken-link</a></td><td>MS 公式 blog</td></tr>
+<tr><td>115</td><td>API Schema Drift Tools 2026</td><td><a href="https://dev.to/flarecanary/api-schema-drift-detection-tools-compared-2026-1ib4">dev.to/.../api-schema-drift</a></td><td>Tech blog</td></tr>
+<tr><td>116</td><td>oasdiff</td><td><a href="https://www.oasdiff.com/">oasdiff.com</a></td><td>Project site</td></tr>
+<tr><td>117</td><td>MyST Cross-references</td><td><a href="https://myst-parser.readthedocs.io/en/latest/syntax/cross-referencing.html">myst-parser.readthedocs.io/.../cross-referencing</a></td><td>公式 docs</td></tr>
+</tbody>
+</table>
+
+</section>
+
+<!-- ====================================================================
+     §7. Provenance
+     ==================================================================== -->
+<section id="s7-provenance" class="informative">
+<h2>§7. 調査メタデータ</h2>
+
+<dl>
+  <dt>調査セッション ID</dt>
+  <dd><code>c3c53fbb</code> (snapshot: <code>/tmp/research-search-c3c53fbb/</code>)</dd>
+
+  <dt>調査日</dt>
+  <dd>2026-05-22</dd>
+
+  <dt>使用ワークフロー</dt>
+  <dd><code>/research:controller-search</code> (deep モード) — Plan → Parallel Research (5 workers) → Integrate → Critique → Report の 5 段階</dd>
+
+  <dt>調査担当 researcher 5 名</dt>
+  <dd>researcher-1 (DB/graph 基盤) / researcher-2 (SSG/PKM link graph) / researcher-3 (AI agent indexing) / researcher-4 (仕様書 ADR 事例) / researcher-5 (HTML metadata + drift)</dd>
+
+  <dt>合計 WebSearch 回数 / Fetch 成功件数</dt>
+  <dd>WebSearch 62 回 / WebFetch 成功 68 件 (5 worker 合計)</dd>
+
+  <dt>品質検証</dt>
+  <dd>critic specialist で評価 → <strong>Overall Verdict: PASS</strong> (Coverage / Relevance / Citation Accuracy / Gap すべて PASS)</dd>
+
+  <dt>本レポートの位置づけ</dt>
+  <dd><code>scratch/research/</code> 配下の調査資料。 folio rule に縛られない自由形式。 試作 plugin が完成したら archive 候補。</dd>
+</dl>
+</section>
+
+</body>
+</html>
