@@ -329,9 +329,9 @@ flowchart TD
     <tr>
       <td>L4 caller marker</td>
       <td>env var</td>
-      <td>folio caller marker (具体値 §9)</td>
-      <td>同 env var (Layer 1 spec 編集時)</td>
-      <td>異名 (twill 固有、 §9 参照)</td>
+      <td>folio caller marker (具体値は §9 + <code>.claude-plugin/plugin.json</code> userConfig)</td>
+      <td>同 env var (Layer 1 spec 編集時、 <code>folio.config.yaml</code> で override 可能)</td>
+      <td>異名 (twill 固有、 folio scope 外、 旧 twill repo を参照)</td>
     </tr>
     <tr>
       <td>L5 directory naming</td>
@@ -498,14 +498,14 @@ flowchart TB
       <td>plugin install 時に各 consumer の <code>folio.config.yaml</code> で override 可能</td>
     </tr>
     <tr>
-      <td>caller marker env var の具体値 (現状 default は <code>FOLIO_ARCHITECT_CONTEXT=folio-architect</code>)</td>
+      <td>caller marker env var の具体値 (default は <code>.claude-plugin/plugin.json</code> userConfig.caller_marker_env + .caller_marker_value を参照)</td>
       <td><code>.claude-plugin/plugin.json</code> userConfig + <code>CLAUDE.md</code></td>
-      <td>本書 §7.3 では WHAT のみ規定、 具体値は plugin.json default</td>
+      <td>本書 §7.3 では WHAT のみ規定、 具体値は plugin.json default に隔離 (P-11)</td>
     </tr>
     <tr>
-      <td>hook script の実装 (<code>caller-marker-check.sh</code> 等)</td>
+      <td>hook script の実装 (例: caller marker enforcement、 spec validate 等)</td>
       <td><code>.claude-plugin/scripts/</code></td>
-      <td>本書 §7.3 で flow chart は規定、 script content は plugin 内 (Phase X2 実装)</td>
+      <td>本書 §7.3 で flow chart は規定、 script content は <code>.claude-plugin/scripts/</code> 配下</td>
     </tr>
     <tr>
       <td>CI check script (<code>link-integrity.py</code> 等)</td>

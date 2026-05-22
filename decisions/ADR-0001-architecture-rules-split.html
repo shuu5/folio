@@ -22,7 +22,7 @@
   "date": "2026-05-22",
   "revision": "v3",
   "supersedes": null,
-  "related": ["constitution.html", "architecture-rules.html"]
+  "related": ["constitution.html", "rules.html", "folio-self-spec.html"]
 }
 </script>
 </head>
@@ -55,7 +55,7 @@
     <dt>revision</dt><dd>v3</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>supersedes</dt><dd>(none)</dd>
-    <dt>related</dt><dd>constitution.html, architecture-rules.html</dd>
+    <dt>related</dt><dd>constitution.html, rules.html, folio-self-spec.html</dd>
   </dl>
 </aside>
 
@@ -147,14 +147,14 @@
 
 <h3 id="s2-3">§2.3 constitution.html §3 §4 を cross-ref スタブに縮小 + §1 Purpose 補強</h3>
 
-<p><strong>constitution §3 縮小文</strong>:</p>
+<p><strong>constitution §3 縮小文</strong> (実装と整合、 anchor は long-form):</p>
 <blockquote>
-  <p>folio は Layer 0 (本 repo) + Layer 1 (consumer projects) の 2 層を採用する (P-12)。 詳細は <a href="../folio-self-spec.html#s1">folio-self-spec.html §1</a>。</p>
+  <p>folio は Layer 0 (本 repo) + Layer 1 (consumer projects) の 2 層を採用する (P-12)。 詳細 (2-Layer 体系図 + table + Resolution flow) は <a href="../folio-self-spec.html#s1-architecture">folio-self-spec.html §1</a>、 consumer project の directory layout は <a href="../rules.html#s2-directory">rules.html §2</a> を参照。</p>
 </blockquote>
 
-<p><strong>constitution §4 縮小文</strong>:</p>
+<p><strong>constitution §4 縮小文</strong> (実装と整合、 anchor は long-form、 MCP 不採用宣言を保持):</p>
 <blockquote>
-  <p>folio は Claude Code plugin として配布される (P-12)。 plugin 構造の詳細は <a href="../folio-self-spec.html#s7">folio-self-spec.html §7</a> + <a href="../folio-self-spec.html#s8">§8</a>。</p>
+  <p>folio は Claude Code plugin として配布される (P-12)。 plugin 構造の詳細は <a href="../folio-self-spec.html#s7-harness">folio-self-spec.html §7</a> + <a href="../folio-self-spec.html#s8-plugin">§8</a>。 folio harness は <strong>skill + hook + CLI (local process)</strong> のみで構成し、 MCP (Model Context Protocol) は採用しない。</p>
 </blockquote>
 
 <p><strong>constitution §1 Purpose 補強</strong> (冒頭 p の直後、 独立 p):</p>
@@ -475,6 +475,8 @@ binding 詳細は &lt;a href="folio-self-spec.html#s9-bindings"&gt;folio-self-sp
   <li>v3 改訂を生んだ Phase 4 Architecture Design: 2026-05-22 evening (2 並列 architect agent)。</li>
   <li>関連 constitution 原則: P-1 (未来 anchor), P-2 (HTML only), P-3 (WHAT-only), P-4 (Declarative), P-5 (Canonical name), P-6 (Link integrity), P-7 (Content domain exclusivity), P-10 (Constitution 変更前 user 確認), P-11 (HOW 禁止), P-12 (Layer 0 一体配布)。</li>
   <li>doobidoo conversation_id (commit 4 push 後保存): <code>folio-adr-0001-split-v3-2026-05-22</code>。</li>
+  <li><strong>ADR meta version policy</strong>: 本 ADR の <code>&lt;meta name="folio-version" content="0.4.1-draft"&gt;</code> は ADR が起票された時点 (v0.4.1-draft 段階) を記録する。 本 ADR 適用によって framework version は v0.4.2-draft に bump されたが、 ADR 自身の meta version は起票時 snapshot として 0.4.1-draft を保持する慣習。 framework の現行 version は本 ADR §2.4 SemVer bump section + commit 3/4 で 0.4.2-draft に反映済。</li>
+  <li>Phase 6 Quality Review (2026-05-22 evening、 3 並列 code-reviewer agent) で発見された 11 findings は commit 5 で一括 fix (Critical 3 + High 3 + Medium 5)。</li>
   <li>後続 ADR 候補:
     <ul>
       <li>ADR-0002: folio plugin 8 skill + 8 agent の命名と責務確定。</li>

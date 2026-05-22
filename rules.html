@@ -213,14 +213,14 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <code>permissionDecision: deny</code>.
 </p>
 
-<p>env var の具体名・値は <code>folio.config.yaml</code> で declare し、 binding 詳細は <a href="folio-self-spec.html#s9-bindings" class="normative-ref">folio-self-spec.html §9 Bindings</a> に集約する。</p>
+<p>env var の具体名・値は <code>folio.config.yaml</code> で declare し、 binding 詳細は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に集約する。</p>
 </section>
 
 <section id="s10-2" class="normative">
 <h3>§10.2 CI Gate Compliance</h3>
 
 <aside class="informative">
-  <p>本 §10.2 は規範要件 (RFC 2119 MUST)。 各 gate の script 実装は <a href="folio-self-spec.html#s7-5-ci-gate">folio-self-spec.html §7.5</a>、 binding location は <a href="folio-self-spec.html#s9-bindings" class="normative-ref">folio-self-spec.html §9 Bindings</a> を参照。</p>
+  <p>本 §10.2 は規範要件 (RFC 2119 MUST)。 各 gate の script 実装は <a href="folio-self-spec.html#s7-5-ci-gate">folio-self-spec.html §7.5</a>、 binding location は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> を参照。</p>
 </aside>
 
 <p class="ears" data-ears-pattern="ubiquitous">
@@ -228,6 +228,8 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
   enforce all six gates defined below before permitting merge.
 </p>
+
+<p><small>REQ-CI-002 〜 REQ-CI-009 は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 6 gate は REQ-CI-010 〜 REQ-CI-015 を採用。</small></p>
 
 <table>
   <thead>

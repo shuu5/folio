@@ -10,7 +10,7 @@ Phase X1 placeholder. CI check scripts will be implemented in Phase X2.
 | `orphan-check.py` | P-6 (orphan detection) | same |
 | `declarative-check.py` | P-4 (declarative form, no past/future narration) | same |
 | `what-only-check.py` | P-3 / P-11 (platform-specific HOW detection) | same |
-| `caller-marker-check.sh` | P-13 (caller marker env var presence) | PreToolUse hook |
+| `caller-marker-check.sh` | rules.html §10.1 REQ-CM-003 (caller marker env var presence) | PreToolUse hook |
 
 All scripts are platform-neutral (Python or shell) and consume `folio.config.yaml` from the consumer project root.
 

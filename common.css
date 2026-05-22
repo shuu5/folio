@@ -484,8 +484,8 @@ aside.ai-rationale[hidden] {
 
 a.normative-ref {
   font-weight: 700;
-  color: var(--folio-danger, #b34747);
-  text-decoration-color: var(--folio-danger, #b34747);
+  color: var(--folio-danger, #b22323);
+  text-decoration-color: var(--folio-danger, #b22323);
 }
 
 a.normative-ref:hover {
