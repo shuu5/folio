@@ -92,7 +92,7 @@
    * note DESIGN.md には 2 種類記載:
    *   - Main Content 940px (メインコンテンツ幅、 table + code 中心の技術文書向け)
    *   - Article (Small) 620px (note 記事本文、 散文中心、 1 行可読性最適)
-   * folio の constitution / architecture-rules は table + code 中心の仕様書のため Main Content (940px) を採用。
+   * folio の constitution / rules / folio-self-spec は table + code 中心の仕様書のため Main Content (940px) を採用。
    * 純粋な散文 narrative section は内部で max-width 620px (var(--folio-width-narrative)) に制限可能。
    */
   --folio-width-main:        940px;              /* default body 幅 (技術文書) */
@@ -473,4 +473,21 @@ em     { font-style: italic; color: var(--folio-text-primary); }
 aside.ai-rationale,
 aside.ai-rationale[hidden] {
   display: none !important;
+}
+
+/* ========================================================================
+ * Normative cross-reference (highlight links to rules MUST sections)
+ * - 使い方: <a href="rules.html#s10-1" class="normative-ref">rules.html §10.1</a>
+ * - folio-self-spec.html の informative section から rules.html §10 MUST への
+ *   cross-ref を視覚的に強調する (reader が normative 参照と気づけるように)
+ * ====================================================================== */
+
+a.normative-ref {
+  font-weight: 700;
+  color: var(--folio-danger, #b22323);
+  text-decoration-color: var(--folio-danger, #b22323);
+}
+
+a.normative-ref:hover {
+  text-decoration-thickness: 2px;
 }

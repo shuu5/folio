@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.4.1-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0001">
+<meta name="folio-adr-date" content="2026-05-22">
+<meta name="folio-adr-revision" content="v3">
+<title>ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)</title>
+<link rel="stylesheet" href="../common.css">
+<script type="application/ld+json">
+{
+  "@context": "https://folio.dev/schema",
+  "@type": "FolioADR",
+  "id": "ADR-0001",
+  "title": "architecture-rules.html を rules.html + folio-self-spec.html に分離",
+  "status": "accepted",
+  "date": "2026-05-22",
+  "revision": "v3",
+  "supersedes": null,
+  "related": ["constitution.html", "rules.html", "folio-self-spec.html"]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-22 &middot; Revision: v3 &middot; folio v0.4.1-draft → v0.4.2-draft (PATCH bump)</div>
+</header>
+
+<aside class="informative">
+<p>本 ADR は IETF <strong>RFC 2119</strong> および <strong>RFC 8174 / BCP 14</strong> に定義される MUST / SHOULD / MAY / SHALL のキーワード解釈規約に従う。</p>
+</aside>
+
+<aside class="informative">
+<p><strong>Revision History</strong>:</p>
+<ul>
+  <li><strong>v1 (2026-05-22 morning)</strong>: Initial draft after dig Round 1〜3。 split + provisional aside + constitution §3 §4 縮小 + 4 commits plan。</li>
+  <li><strong>v2 (2026-05-22 afternoon)</strong>: Phase 2 Explorer 1/2/3 findings 反映。 §9 帰属を folio-self-spec.html 一本化、 §10 Mandatory Actions 新設、 §0 Reader Guide 片方特化、 commit 3/4 scope 拡張、 §1 Purpose 補強位置確定。</li>
+  <li><strong>v3 (2026-05-22 evening、 本書)</strong>: Phase 4 Agent A/B findings 反映。 §2.5 commit 3 precise list (行番号付き 10+ 操作点)、 §2.6 §10 markup を EARS REQ-ID 形式で確定 (Agent A draft)、 §2.7 Branch Strategy 新設 (feature branch + draft PR squash merge)、 §2.8 Mermaid 移植 詳細 新設。</li>
+</ul>
+</aside>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0001</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-22</dd>
+    <dt>revision</dt><dd>v3</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>supersedes</dt><dd>(none)</dd>
+    <dt>related</dt><dd>constitution.html, rules.html, folio-self-spec.html</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>v0.4.1-draft 時点で <code>architecture-rules.html</code> は以下の 2 種類の異質な内容を 1 file に混在して保持している。</p>
+
+<ul>
+  <li><strong>(A) universal rules</strong> — Layer 1 consumer が従う規則集 (file naming、 HTML format、 delta marker、 EARS notation、 caller marker MUST、 CI gate MUST 等)。</li>
+  <li><strong>(B) folio framework 自身の architecture spec</strong> — folio plugin の internal design (2-Layer Architecture、 folio repo layout、 Harness Layer、 Plugin Integration、 Bindings)。</li>
+</ul>
+
+<p>この混在は以下の問題を生じる。</p>
+
+<ol>
+  <li><strong>名前と内容の乖離</strong>: 「architecture-rules」 は (A) を示唆するが、 実体は (A) + (B) の hybrid。</li>
+  <li><strong>SSoT 違反疑い (constitution P-7)</strong>: <code>constitution.html §3</code> (Layer Architecture) + <code>§4</code> (Folio as a Plugin) が <code>architecture-rules §1</code> + <code>§8</code> と内容重複。</li>
+  <li><strong>self-application paradox</strong>: folio framework 完成後、 (B) は folio 自身の <code>architecture/spec/</code> 配下に self-application されるべき (dogfooding)。 v0.4.1 段階では未完成のため「仮組み」 として (A) と同居。</li>
+</ol>
+
+<p>ユーザーは v0.4.1-draft dig セッション (2026-05-22) で本問題を指摘:</p>
+
+<blockquote>
+  <p>architecture-rules の立ち位置がよくわからない。 folio の architecture spec 的な内容が書かれているが、 それこそ architecture-spec として定義したい構造をとっていない。 ……architecture-rules という名前が分かりづらい。 ようは仮組みの folio の未来 spec 的な性格なのだと思うのだ。</p>
+</blockquote>
+
+<p>Phase 2 Codebase Exploration (3 並列 explorer agent、 2026-05-22 afternoon) で以下を発見:</p>
+
+<ol>
+  <li>cross-ref 影響: 30+ 箇所 (constitution.html 12 箇所 + CLAUDE.md 6 箇所 + その他)。</li>
+  <li>§0 Reader Guide の 2 persona aside は実は split 後の 2 reader を内包 → 片方特化が筋良い。</li>
+  <li>§9 Bindings は全 binding location が <code>.claude-plugin/</code> 配下 → folio-self-spec.html 一本化が SSoT 遵守。</li>
+  <li>§7 内部混在: §7.3 + §7.5 は MUST 文 / design 文の分離が必要。</li>
+  <li>constitution §1 Purpose 補強位置: 冒頭 p の直後 (独立 p) が narrative 整合性最良。</li>
+</ol>
+
+<p>Phase 4 Architecture Design (2 並列 architect agent、 2026-05-22 evening) で以下を refine:</p>
+
+<ol>
+  <li>rules.html 番号体系: 欠番維持 (§0 / §2 / §3-§6 / §10、 §7-§9 欠番) で folio-self-spec.html (§7-§9) と対称的空白に。</li>
+  <li>§10 markup: EARS REQ-ID (REQ-CM-* + REQ-CI-*) + <code>&lt;table&gt;</code> 形式で reader experience 最大化。</li>
+  <li>commit 3 scope は実際 10+ 操作点 (ADR v2 「5 箇所」 表記は粗い)、 行番号付き precise list 必要。</li>
+  <li>main 直接 commit は broken link time window high severity、 feature branch + draft PR squash merge 推奨。</li>
+  <li>mermaid 図移植の漏れリスク (constitution 図 3 ノードラベル + architecture-rules 図 1/2 ノードラベル)。</li>
+</ol>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<p>Phase X2 開始時に以下の作業を実施する MUST。</p>
+
+<h3 id="s2-1">§2.1 architecture-rules.html を 2 file に split</h3>
+
+<p>section 帰属 (v2 確定、 v3 で再掲):</p>
+
+<table>
+  <thead>
+    <tr><th>section / 要素</th><th>帰属</th><th>備考</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>§0 Reader Guide (Developer persona)</td><td>rules.html §0</td><td>Layer 1 consumer 開発者向けに書き直し</td></tr>
+    <tr><td>§0 Reader Guide (AI Agent persona)</td><td>folio-self-spec.html §0</td><td>caller marker 操作手順 + folio plugin の読み方</td></tr>
+    <tr><td>§1 2-Layer Architecture</td><td>folio-self-spec.html §1</td><td>mermaid 図 1 + table 移植</td></tr>
+    <tr><td>§2.1 folio repo layout</td><td>folio-self-spec.html §2</td><td>mermaid 図 2 移植</td></tr>
+    <tr><td>§2.2 Layer 1 consumer layout + folio.config.yaml</td><td>rules.html §2</td><td>—</td></tr>
+    <tr><td>§3 File Naming</td><td>rules.html §3</td><td>—</td></tr>
+    <tr><td>§4 HTML Format</td><td>rules.html §4</td><td>—</td></tr>
+    <tr><td>§5 Delta Marker</td><td>rules.html §5</td><td>—</td></tr>
+    <tr><td>§6 EARS Notation</td><td>rules.html §6</td><td>—</td></tr>
+    <tr><td>§7.1〜§7.5 (informative design 部)</td><td>folio-self-spec.html §7</td><td>MUST 文は rules §10 への cross-ref に置換</td></tr>
+    <tr><td>§7.3 Caller Marker MUST</td><td><strong>rules.html §10.1</strong></td><td>EARS REQ-CM-001〜003</td></tr>
+    <tr><td>§7.5 CI Gate MUST (6 gate 定義)</td><td><strong>rules.html §10.2</strong></td><td>EARS REQ-CI-001 + REQ-CI-010〜015</td></tr>
+    <tr><td>§8 Plugin Integration</td><td>folio-self-spec.html §8</td><td>—</td></tr>
+    <tr><td>§9 Bindings</td><td>folio-self-spec.html §9</td><td>一本化 (SSoT 遵守)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>rules.html applicability statement</strong> (§0 内に inline):</p>
+
+<blockquote>
+  <p>本 rules は Layer 1 consumer project (folio framework を consume する各 project repo) に適用する。 Layer 0 (folio framework 本体) の設計は <code>folio-self-spec.html</code> を参照。</p>
+</blockquote>
+
+<h3 id="s2-2">§2.2 architecture-rules.html 冒頭に provisional aside を追加 (commit 1)</h3>
+
+<p>commit 2 の split 前段階として、 commit 1 で architecture-rules.html 冒頭 (<code>&lt;body&gt;</code> 直後、 既存 <code>&lt;aside class="informative"&gt;</code> の前) に provisional aside を追加する。 split 完了 (commit 2) と同時に本 aside は撤去。</p>
+
+<h3 id="s2-3">§2.3 constitution.html §3 §4 を cross-ref スタブに縮小 + §1 Purpose 補強</h3>
+
+<p><strong>constitution §3 縮小文</strong> (実装と整合、 anchor は long-form):</p>
+<blockquote>
+  <p>folio は Layer 0 (本 repo) + Layer 1 (consumer projects) の 2 層を採用する (P-12)。 詳細 (2-Layer 体系図 + table + Resolution flow) は <a href="../folio-self-spec.html#s1-architecture">folio-self-spec.html §1</a>、 consumer project の directory layout は <a href="../rules.html#s2-directory">rules.html §2</a> を参照。</p>
+</blockquote>
+
+<p><strong>constitution §4 縮小文</strong> (実装と整合、 anchor は long-form、 MCP 不採用宣言を保持):</p>
+<blockquote>
+  <p>folio は Claude Code plugin として配布される (P-12)。 plugin 構造の詳細は <a href="../folio-self-spec.html#s7-harness">folio-self-spec.html §7</a> + <a href="../folio-self-spec.html#s8-plugin">§8</a>。 folio harness は <strong>skill + hook + CLI (local process)</strong> のみで構成し、 MCP (Model Context Protocol) は採用しない。</p>
+</blockquote>
+
+<p><strong>constitution §1 Purpose 補強</strong> (冒頭 p の直後、 独立 p):</p>
+<blockquote>
+  <p>folio は <strong>Layer 0 META FRAMEWORK</strong> であり、 各 consumer project は <strong>Layer 1</strong> として別 git repo に展開される (P-12)。 Layer 0 は rules (constitution + rules.html) と plugin harness (.claude-plugin/) を一体配布し、 Layer 1 は folio.config.yaml 1 file の宣言で全体を consume する。</p>
+</blockquote>
+
+<p>constitution §5 / §6 / §7 の番号は維持する (renumber しない)。 mermaid 図 3 + 図 4 を constitution から削除、 folio-self-spec.html へ移植 (詳細は §2.8)。</p>
+
+<h3 id="s2-4">§2.4 SemVer bump + constitution P-2/3/11/12 plain text 修正</h3>
+
+<p>本 ADR 適用は不変原則 (P-1〜P-12) の <strong>semantic を変更しない</strong>。 P-2/P-3/P-11/P-12 の plain text file 名列挙を以下に書き換える:</p>
+
+<table>
+  <thead>
+    <tr><th>原則</th><th>現文 (抜粋)</th><th>改訂案</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>P-2</td>
+      <td>"spec / ADR / constitution / architecture-rules / changes proposal を含む全文書"</td>
+      <td>"spec / ADR / <strong>spec writing documents (constitution / rules / folio-self-spec)</strong> / changes proposal を含む全文書"</td>
+    </tr>
+    <tr>
+      <td>P-3</td>
+      <td>"spec / constitution / architecture-rules に platform 固有 HOW を記述しない"</td>
+      <td>"spec / <strong>constitution / rules / folio-self-spec</strong> に platform 固有 HOW を記述しない"</td>
+    </tr>
+    <tr>
+      <td>P-11</td>
+      <td>"spec / constitution / architecture-rules に HOW を書かない"</td>
+      <td>"spec / <strong>constitution / rules / folio-self-spec</strong> に HOW を書かない"</td>
+    </tr>
+    <tr>
+      <td>P-12 (rules 言及部)</td>
+      <td>"rules (constitution + architecture-rules) と plugin harness を一体として配布"</td>
+      <td>"rules (<strong>constitution + rules + folio-self-spec</strong>) と plugin harness を一体として配布"</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>SemVer 判定</strong>: <strong>PATCH bump</strong> (v0.4.1-draft → v0.4.2-draft、 constitution.html / rules.html / folio-self-spec.html / plugin.json すべて同 version)。 constitution §5 cross-ref 補正規定の延長として解釈。</p>
+
+<p><strong>P-10 (constitution 自身への変更前 user 確認)</strong>: 本 dig session (2026-05-22) でユーザーが P-2/3/11/12 改訂を承認済。 commit 3 で改訂箇所に <code>&lt;aside class="ai-rationale" data-decision="2026-05-22" data-adr="ADR-0001-v3" hidden&gt;</code> を inline で添付し、 P-10 承認を文書化する。</p>
+
+<h3 id="s2-5">§2.5 commit 粒度 — Precise List (v3 で行番号付き 10+ 操作点に refine)</h3>
+
+<p>4 commit に分割。 各 commit の precise file operations:</p>
+
+<h4>commit 1 — provisional aside 追加 (+ ADR-0001 v3 起票)</h4>
+
+<table>
+  <thead><tr><th>file</th><th>行 (approx)</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>architecture-rules.html</td><td>L30 (<code>&lt;body&gt;</code> 直後)</td><td>provisional aside (約 14 行) を L37 既存 <code>&lt;aside class="informative"&gt;</code> 直前に挿入</td></tr>
+    <tr><td>decisions/ADR-0001-architecture-rules-split.html</td><td>新規 (本 file)</td><td>git add (decisions/ dir 新設)</td></tr>
+  </tbody>
+</table>
+
+<h4>commit 2 — split (rules.html + folio-self-spec.html 作成 + architecture-rules.html 削除 + common.css 更新)</h4>
+
+<table>
+  <thead><tr><th>file</th><th>行 (approx)</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>rules.html (新規)</td><td>0 → 約 250 行</td><td>§0 (Developer persona) + §2 + §3〜§6 + §10 Mandatory Actions 新設</td></tr>
+    <tr><td>folio-self-spec.html (新規)</td><td>0 → 約 500 行</td><td>§0 (AI Agent persona) + §1 + §2 + §7 informative (MUST cross-ref 化) + §8 + §9</td></tr>
+    <tr><td>architecture-rules.html</td><td>全削除</td><td><code>git rm</code></td></tr>
+    <tr><td>common.css</td><td>末尾</td><td><code>.normative-ref</code> CSS class 追加 (font-weight: bold; color: var(--folio-danger))</td></tr>
+  </tbody>
+</table>
+
+<p>新 file の <code>&lt;meta folio-version&gt;</code> は <code>0.4.2-draft</code> で開始 (commit 3 で constitution と version 整合)。</p>
+
+<h4>commit 3 — constitution 修正 (10+ 操作点)</h4>
+
+<table>
+  <thead><tr><th>file</th><th>行 (approx)</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>constitution.html</td><td>L7 (meta)</td><td><code>folio-version</code> を <code>0.4.1-draft</code> → <code>0.4.2-draft</code></td></tr>
+    <tr><td>constitution.html</td><td>L52 (§0 AI Agent aside)</td><td>2 href (architecture-rules.html / #s7-3-caller-marker) を rules.html + folio-self-spec.html 分割 (#s7-3-caller-marker は folio-self-spec.html へ)</td></tr>
+    <tr><td>constitution.html</td><td>L63 (§1 冒頭 p 直後)</td><td>Layer 概念 1 文 (独立 p、 §2.3 文面) を挿入</td></tr>
+    <tr><td>constitution.html</td><td>L124 (P-2 dd)</td><td>plain text 修正 (§2.4 改訂案) + P-10 inline aside 添付</td></tr>
+    <tr><td>constitution.html</td><td>L127 (P-3 dd)</td><td>plain text 修正</td></tr>
+    <tr><td>constitution.html</td><td>L158-L159 (P-11 dt + dd)</td><td>plain text 修正</td></tr>
+    <tr><td>constitution.html</td><td>L162 (P-12 dd)</td><td>plain text 修正</td></tr>
+    <tr><td>constitution.html</td><td>L164 (P-12 ai-rationale aside)</td><td>"architecture-rules §7.4" → "folio-self-spec.html §7.4"</td></tr>
+    <tr><td>constitution.html</td><td>L170-L205 (§3 全体)</td><td>本文 + mermaid 図 3 削除、 cross-ref スタブ (§2.3 文面、 href 付き) に縮小</td></tr>
+    <tr><td>constitution.html</td><td>L208-L240 (§4 全体)</td><td>本文 + mermaid 図 4 削除、 cross-ref スタブ (§2.3 文面、 href 付き) に縮小</td></tr>
+    <tr><td>constitution.html</td><td>L259 (§5 内 link)</td><td>"architecture-rules.html#s5-delta" → "rules.html#s5"</td></tr>
+    <tr><td>constitution.html</td><td>L273 (§6 内 link)</td><td>"architecture-rules.html#s7-1-7phase" → "folio-self-spec.html#s7-1-7phase"</td></tr>
+    <tr><td>constitution.html</td><td>JSON-LD (L13-L21)</td><td>tiers metadata 維持 (P-1〜P-12 数 + tier 不変)</td></tr>
+  </tbody>
+</table>
+
+<h4>commit 4 — cross-ref 一括 + ADR status accepted + 全 version 整合</h4>
+
+<table>
+  <thead><tr><th>file</th><th>行 (approx)</th><th>操作</th></tr></thead>
+  <tbody>
+    <tr><td>FOLIO.md</td><td>L14 (ASCII 図)</td><td>"architecture-rules.html" を "rules.html / folio-self-spec.html" に 2 行分割</td></tr>
+    <tr><td>FOLIO.md</td><td>L74 (Entry points)</td><td>同上</td></tr>
+    <tr><td>FOLIO.md</td><td>L83-L87 (AI Agent 手順)</td><td>read 順序更新 + §7.4 参照 → folio-self-spec.html §7.4</td></tr>
+    <tr><td>README.md</td><td>L22 (table)</td><td>2 行分割</td></tr>
+    <tr><td>README.md</td><td>L43-L44 (tailnet URL)</td><td>2 URL 分割</td></tr>
+    <tr><td>README.md</td><td>L55 (§7.4 参照)</td><td>folio-self-spec.html §7.4</td></tr>
+    <tr><td>CLAUDE.md</td><td>L3 (§9 Bindings 参照)</td><td>folio-self-spec.html §9</td></tr>
+    <tr><td>CLAUDE.md</td><td>L18 (必読 list)</td><td>rules.html + folio-self-spec.html (2 file)</td></tr>
+    <tr><td>CLAUDE.md</td><td>L28 (caller marker)</td><td>"§7.3" → "rules.html §10.1 + folio-self-spec.html §7.3"</td></tr>
+    <tr><td>CLAUDE.md</td><td>L40 (§7.4 参照)</td><td>folio-self-spec.html §7.4</td></tr>
+    <tr><td>CLAUDE.md</td><td>L55 (5 層防御 table)</td><td>folio-self-spec.html §7.4</td></tr>
+    <tr><td>CLAUDE.md</td><td>L65 (format ルール)</td><td>"architecture-rules" → "rules + folio-self-spec"</td></tr>
+    <tr><td>CLAUDE.md</td><td>L70 (plugin 構造)</td><td>folio-self-spec.html §8</td></tr>
+    <tr><td>CLAUDE.md</td><td>L99 (§9 Bindings)</td><td>folio-self-spec.html §9</td></tr>
+    <tr><td>.claude-plugin/plugin.json</td><td>L3 (version)</td><td>"0.4.0-draft" → "0.4.2-draft"</td></tr>
+    <tr><td>.claude-plugin/skills/README.md</td><td>L20</td><td>folio-self-spec.html §7</td></tr>
+    <tr><td>.claude-plugin/agents/README.md</td><td>L20</td><td>folio-self-spec.html §7.2</td></tr>
+    <tr><td>.claude-plugin/scripts/README.md</td><td>L19</td><td>"rules.html §10.2 + folio-self-spec.html §7.5" に分割</td></tr>
+    <tr><td>.claude-plugin/static/README.md</td><td>L7</td><td>"rules.html / folio-self-spec.html"</td></tr>
+    <tr><td>decisions/ADR-0001-architecture-rules-split.html</td><td>L8 (meta status)</td><td>"proposed" → "accepted"</td></tr>
+    <tr><td>decisions/ADR-0001-architecture-rules-split.html</td><td>§5 Trace</td><td>doobidoo conversation_id 記録 (commit 4 push 後に追記)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-6">§2.6 rules.html §10 Mandatory Actions — EARS REQ-ID Markup (v3 で Agent A draft 確定)</h3>
+
+<p><strong>§10 reader guide</strong>:</p>
+
+<pre><code>&lt;section id="s10-mandatory" class="normative"&gt;
+&lt;h2&gt;§10. Mandatory Actions for Layer 1 Consumer&lt;/h2&gt;
+
+&lt;p&gt;本 §10 は Layer 1 consumer project が folio rules を consume する際に
+&lt;strong&gt;無条件に遵守すべき MUST 要件を一箇所に集約&lt;/strong&gt;する。
+§2〜§6 の markup / naming rules が「構造上の規則」であるのに対し、
+§10 は「動的な操作上の義務」を規定する。
+各 MUST の enforcement mechanism (hook flow / script 実装) は
+&lt;a href="folio-self-spec.html#s7"&gt;folio-self-spec.html §7&lt;/a&gt; を参照。&lt;/p&gt;
+</code></pre>
+
+<p><strong>§10.1 Spec Edit Caller Marker</strong>:</p>
+
+<pre><code>&lt;section id="s10-1" class="normative"&gt;
+&lt;h3&gt;§10.1 Spec Edit Caller Marker&lt;/h3&gt;
+
+&lt;aside class="informative"&gt;
+  &lt;p&gt;本 §10.1 は IETF RFC 2119 / RFC 8174 / BCP 14 に定義される MUST に従う規範要件。
+  enforcement の hook flow chart は
+  &lt;a href="folio-self-spec.html#s7-3-caller-marker"&gt;folio-self-spec.html §7.3&lt;/a&gt; 参照。&lt;/p&gt;
+&lt;/aside&gt;
+
+&lt;p class="ears" data-ears-pattern="event-driven"&gt;
+  &lt;span class="ears-id"&gt;REQ-CM-001&lt;/span&gt;:
+  &lt;span class="ears-when"&gt;WHEN AI agent attempts to write to any file under &lt;code&gt;spec_path&lt;/code&gt;&lt;/span&gt;,
+  the system &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; verify that the caller marker
+  environment variable is set to the declared value.
+&lt;/p&gt;
+
+&lt;p class="ears" data-ears-pattern="ubiquitous"&gt;
+  &lt;span class="ears-id"&gt;REQ-CM-002&lt;/span&gt;:
+  The AI agent &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; set the caller marker env var
+  (declared in &lt;code&gt;folio.config.yaml&lt;/code&gt;) before invoking any spec Edit/Write tool call,
+  and &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; unset it immediately upon completion.
+&lt;/p&gt;
+
+&lt;p class="ears" data-ears-pattern="unwanted"&gt;
+  &lt;span class="ears-id"&gt;REQ-CM-003&lt;/span&gt;:
+  IF the caller marker env var is absent or holds an unexpected value,
+  THEN the PreToolUse hook &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; return
+  &lt;code&gt;permissionDecision: deny&lt;/code&gt;.
+&lt;/p&gt;
+
+&lt;p&gt;env var の具体名・値は &lt;code&gt;folio.config.yaml&lt;/code&gt; で declare し、
+binding 詳細は &lt;a href="folio-self-spec.html#s9-bindings"&gt;folio-self-spec.html §9&lt;/a&gt; に集約。&lt;/p&gt;
+&lt;/section&gt;
+</code></pre>
+
+<p><strong>§10.2 CI Gate Compliance</strong>:</p>
+
+<pre><code>&lt;section id="s10-2" class="normative"&gt;
+&lt;h3&gt;§10.2 CI Gate Compliance&lt;/h3&gt;
+
+&lt;aside class="informative"&gt;
+  &lt;p&gt;本 §10.2 は規範要件 (RFC 2119 MUST)。
+  各 gate の script 実装は
+  &lt;a href="folio-self-spec.html#s7-5-ci-gate"&gt;folio-self-spec.html §7.5&lt;/a&gt; 参照。&lt;/p&gt;
+&lt;/aside&gt;
+
+&lt;p class="ears" data-ears-pattern="ubiquitous"&gt;
+  &lt;span class="ears-id"&gt;REQ-CI-001&lt;/span&gt;:
+  The Layer 1 consumer CI workflow &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt;
+  enforce all six gates defined below before permitting merge.
+&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;REQ-ID&lt;/th&gt;&lt;th&gt;gate&lt;/th&gt;&lt;th&gt;結果&lt;/th&gt;&lt;th&gt;根拠&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-010&lt;/td&gt;&lt;td&gt;link-integrity gate&lt;/td&gt;&lt;td&gt;fail = merge block&lt;/td&gt;&lt;td&gt;P-6&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-011&lt;/td&gt;&lt;td&gt;declarative-form gate&lt;/td&gt;&lt;td&gt;fail = merge block&lt;/td&gt;&lt;td&gt;P-4&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-012&lt;/td&gt;&lt;td&gt;what-only gate&lt;/td&gt;&lt;td&gt;fail = merge block&lt;/td&gt;&lt;td&gt;P-3 / P-11&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-013&lt;/td&gt;&lt;td&gt;vocabulary gate&lt;/td&gt;&lt;td&gt;fail = merge block&lt;/td&gt;&lt;td&gt;P-5&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-014&lt;/td&gt;&lt;td&gt;EARS coverage gate&lt;/td&gt;&lt;td&gt;warn (merge 許可)&lt;/td&gt;&lt;td&gt;§6&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;REQ-CI-015&lt;/td&gt;&lt;td&gt;delta marker consistency gate&lt;/td&gt;&lt;td&gt;fail = merge block&lt;/td&gt;&lt;td&gt;§5&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+&lt;/section&gt;
+</code></pre>
+
+<h3 id="s2-7">§2.7 Branch Strategy — feature branch + draft PR squash merge (v3 で新設)</h3>
+
+<p>main 直接 commit は broken link time window (commit 2 split → commit 4 cross-ref 修正 までの中間状態) が high severity risk のため、 <strong>feature branch 戦略</strong>を採用する MUST。</p>
+
+<ol>
+  <li><code>git checkout -b split/adr-0001-v3</code> で feature branch 作成。</li>
+  <li>commit 1〜4 を branch 上で順次実行。</li>
+  <li><code>git push -u origin split/adr-0001-v3</code> で branch push。</li>
+  <li><code>gh pr create --draft</code> で draft PR 作成、 user が diff 全体を review。</li>
+  <li>review OK 後、 user が <code>gh pr ready</code> + <code>gh pr merge --merge</code> (normal merge、 4 commit history 保持) で main に取り込み。 squash merge は採用しない (4 commit の独立性を git history に残す)。</li>
+</ol>
+
+<h3 id="s2-8">§2.8 Mermaid 移植 詳細 (v3 で新設)</h3>
+
+<p><strong>architecture-rules.html の 8 mermaid 図の帰属</strong>:</p>
+
+<table>
+  <thead><tr><th>元 図番号</th><th><code>data-diagram-type</code></th><th>帰属</th><th>修正</th></tr></thead>
+  <tbody>
+    <tr><td>図 1</td><td>layer-detail</td><td>folio-self-spec.html §1</td><td>ノード <code>AR["architecture-rules.html"]</code> → <code>R["rules.html"]</code> + 別ノードで folio-self-spec.html 表現</td></tr>
+    <tr><td>図 2</td><td>folio-layout</td><td>folio-self-spec.html §2</td><td>ノード <code>RULES</code> 内 plain text "architecture-rules.html" → "rules.html + folio-self-spec.html"</td></tr>
+    <tr><td>図 3</td><td>phase-flow</td><td>folio-self-spec.html §7.1</td><td>変更なし</td></tr>
+    <tr><td>図 4</td><td>specialist-spawn</td><td>folio-self-spec.html §7.2</td><td>変更なし</td></tr>
+    <tr><td>図 5</td><td>caller-marker-flow</td><td>folio-self-spec.html §7.3</td><td>変更なし</td></tr>
+    <tr><td>図 6</td><td>defense-pipeline</td><td>folio-self-spec.html §7.4</td><td>変更なし</td></tr>
+    <tr><td>図 7</td><td>ci-gate-pipeline</td><td>folio-self-spec.html §7.5</td><td>変更なし</td></tr>
+    <tr><td>図 8</td><td>plugin-integration</td><td>folio-self-spec.html §8</td><td>変更なし</td></tr>
+  </tbody>
+</table>
+
+<p><strong>constitution 内 mermaid 図の処理</strong>:</p>
+
+<table>
+  <thead><tr><th>constitution 元 図番号</th><th>処理</th></tr></thead>
+  <tbody>
+    <tr><td>図 1 philosophy-divergence</td><td>constitution に保持 (constitution §1 残存)</td></tr>
+    <tr><td>図 2 principles-tier</td><td>constitution に保持 (constitution §2 残存)</td></tr>
+    <tr><td>図 3 layer-architecture</td><td>削除 (architecture-rules.html 図 1 に統合済のため重複)</td></tr>
+    <tr><td>図 4 plugin-structure</td><td>削除 (architecture-rules.html 図 8 に統合済のため重複)</td></tr>
+  </tbody>
+</table>
+
+<p>figure caption 番号: folio-self-spec.html 内で図 1 から再採番。 constitution 図 3 + 図 4 は削除済のため移植は不要 (folio-self-spec.html 図 1 (元 architecture-rules 図 1) + 図 8 (元 architecture-rules 図 8) が機能を担う)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3 id="s3-1">§3.1 Positive</h3>
+
+<ul>
+  <li>名前と内容の整合性確保 — rules.html は純 rules + §10、 folio-self-spec.html は純 self-spec。</li>
+  <li>SSoT (P-7) 改善 — 重複ゼロ。</li>
+  <li>reader experience 向上 — rules.html だけ参照すれば Layer 1 consumer の MUST が §10 で 1 箇所把握可能。</li>
+  <li>§0 persona 振り分けで各 file の reader 明確化。</li>
+  <li>EARS REQ-ID (REQ-CM-* + REQ-CI-*) で MUST の traceability 確保。</li>
+  <li>self-application path 明示。</li>
+  <li>plugin manifest との整合 (plugin.json userConfig.spec_path 一致)。</li>
+  <li>feature branch + draft PR で broken link time window ゼロ化。</li>
+</ul>
+
+<h3 id="s3-2">§3.2 Negative</h3>
+
+<ul>
+  <li>cross-ref 修正コスト — 30+ 箇所 (commit 4)。</li>
+  <li>file 数増加 — folio repo root の HTML file 数 +1 (constitution + rules + folio-self-spec)。</li>
+  <li>rules.html の section 番号非連続 (§7-§9 欠番)、 folio-self-spec.html とセットで完結。</li>
+  <li>constitution P-2/3/11/12 plain text 改訂は微弱な constitution 安定性影響 (PATCH bump で semantic 影響なしと判定)。</li>
+</ul>
+
+<h3 id="s3-3">§3.3 Neutral</h3>
+
+<ul>
+  <li>constitution renumber 不実施 (番号維持)。</li>
+  <li>本 ADR が folio 初の ADR。</li>
+  <li>changes/ proposal スキップ折衷。</li>
+  <li>PATCH bump + P-10 本 dig session 承認。</li>
+  <li>v3 で ADR の長さが大幅増加 (implementation details inline)、 ただし single SSoT file として完結。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>A. self-application を Phase X2 で直接実施</td><td>bootstrap paradox。 Phase X3 以降で再検討。</td></tr>
+    <tr><td>B. keep + 内部境界明示のみ</td><td>名前と内容の乖離未解消。</td></tr>
+    <tr><td>C. Phase X2 完了直前に split</td><td>plugin 実装中の参照修正大規模化。</td></tr>
+    <tr><td>D. Phase X1.5 として独立 phase 化</td><td>「0.5 等の小数点表記不採用」 と非整合。</td></tr>
+    <tr><td>E. constitution §3 §4 完全削除</td><td>独立読可能性低下。</td></tr>
+    <tr><td>F. constitution renumber</td><td>外部 cross-ref 不変性優先。</td></tr>
+    <tr><td>G. §9 Bindings を rules.html に配置</td><td>SSoT 違反 (binding location が .claude-plugin/ 配下)。</td></tr>
+    <tr><td>H. §7 全体を folio-self-spec へ (MUST cross-ref のみ)</td><td>reader experience 劣化。</td></tr>
+    <tr><td>I. §7 全体を rules.html へ</td><td>folio-self-spec が欠陥、 純粋性違反。</td></tr>
+    <tr><td>J. MUST を §10 ではなく §4-§6 に inline 分散</td><td>discoverability 低。</td></tr>
+    <tr><td>K. P-2/3/11/12 plain text 保留 (ADR-0002 で別途)</td><td>一時的不整合発生。</td></tr>
+    <tr><td>L. P-2/3/11/12 plain text 抽象化のみ</td><td>reader が具体 file 名判別不能。</td></tr>
+    <tr><td>M. main 直接 commit (ADR v2 想定)</td><td>broken link time window high severity。 feature branch 採用。</td></tr>
+    <tr><td>N. squash merge</td><td>4 commit の独立性が git history から失われる。 normal merge 採用。</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>本 ADR を生んだ dig セッション: 2026-05-22 morning (Round 1〜3、 計 11 確定事項)。</li>
+  <li>v2 改訂を生んだ Phase 2 Codebase Exploration: 2026-05-22 afternoon (3 並列 explorer agent)。</li>
+  <li>v3 改訂を生んだ Phase 4 Architecture Design: 2026-05-22 evening (2 並列 architect agent)。</li>
+  <li>関連 constitution 原則: P-1 (未来 anchor), P-2 (HTML only), P-3 (WHAT-only), P-4 (Declarative), P-5 (Canonical name), P-6 (Link integrity), P-7 (Content domain exclusivity), P-10 (Constitution 変更前 user 確認), P-11 (HOW 禁止), P-12 (Layer 0 一体配布)。</li>
+  <li>doobidoo conversation_id (commit 4 push 後保存): <code>folio-adr-0001-split-v3-2026-05-22</code>。</li>
+  <li><strong>ADR meta version policy</strong>: 本 ADR の <code>&lt;meta name="folio-version" content="0.4.1-draft"&gt;</code> は ADR が起票された時点 (v0.4.1-draft 段階) を記録する。 本 ADR 適用によって framework version は v0.4.2-draft に bump されたが、 ADR 自身の meta version は起票時 snapshot として 0.4.1-draft を保持する慣習。 framework の現行 version は本 ADR §2.4 SemVer bump section + commit 3/4 で 0.4.2-draft に反映済。</li>
+  <li>Phase 6 Quality Review (2026-05-22 evening、 3 並列 code-reviewer agent) で発見された 11 findings は commit 5 で一括 fix (Critical 3 + High 3 + Medium 5)。</li>
+  <li>後続 ADR 候補:
+    <ul>
+      <li>ADR-0002: folio plugin 8 skill + 8 agent の命名と責務確定。</li>
+      <li>ADR-0003: caller marker hook 実装方針 (PreToolUse / PostToolUse の bash script content)。</li>
+      <li>ADR-0004: (B) self-application timing と前提条件 (Phase X3 以降)。</li>
+      <li>ADR-0005: folio CLI (folio validate / init / doctor) の command surface。</li>
+    </ul>
+  </li>
+</ul>
+</section>
+
+</body>
+</html>

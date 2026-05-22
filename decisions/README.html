@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — decisions/ (ADR cluster)</title>
+<link rel="stylesheet" href="../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>decisions/ — Architecture Decision Records</h1>
+  <div class="meta">v0.4.2-draft &middot; folio Layer 0 の ADR cluster</div>
+</header>
+
+<aside class="informative">
+<p>本 cluster は folio framework に関する architectural decision を記録する Architecture Decision Records (ADR) を保持する。 <a href="../rules.html#s3-naming">rules.html §3 File Naming Convention</a> に従い、 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置する。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>decisions/ は <a href="../constitution.html#p-7">constitution P-7 (Content domain exclusivity)</a> における「decisions = why」 領域を担う:</p>
+<ul>
+  <li><strong>spec</strong> (constitution / rules / folio-self-spec) = <em>what</em> (構造・不変条件)</li>
+  <li><strong>decisions</strong> (本 cluster) = <em>why</em> (frozen ADR、 architectural decisions)</li>
+  <li><strong>changes</strong> (将来 cluster、 未作成) = <em>proposal</em> (進行中の更新提案)</li>
+  <li><strong>research</strong> (将来 cluster、 未作成) = <em>exploration</em> (spec 反映前の探索)</li>
+</ul>
+</section>
+
+<section id="s2-adr-status" class="informative">
+<h2>§2. ADR Status Lifecycle</h2>
+
+<table>
+  <thead><tr><th>status</th><th>意味</th></tr></thead>
+  <tbody>
+    <tr><td><code>proposed</code></td><td>draft 段階、 user 承認待ち</td></tr>
+    <tr><td><code>accepted</code></td><td>user 承認済、 適用済</td></tr>
+    <tr><td><code>deprecated</code></td><td>古い ADR、 後続 ADR で superseded された</td></tr>
+    <tr><td><code>superseded</code></td><td>明示的に新 ADR で置換された (<code>supersedes</code> 属性で trace)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3-adr-list" class="informative">
+<h2>§3. Current ADRs</h2>
+
+<table>
+  <thead><tr><th>ID</th><th>title</th><th>status</th><th>revision</th><th>date</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><a href="ADR-0001-architecture-rules-split.html">ADR-0001</a></td>
+      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
+      <td>accepted</td>
+      <td>v3</td>
+      <td>2026-05-22</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s4-naming" class="informative">
+<h2>§4. Naming Convention</h2>
+
+<p>ADR file 名は <code>ADR-NNNN-&lt;slug&gt;.html</code> 形式 (4 桁連番 + kebab-case slug)。 <a href="../rules.html#s3-naming">rules.html §3 File Naming Convention</a> を参照。</p>
+</section>
+
+<section id="s5-amendment" class="informative">
+<h2>§5. ADR Creation Procedure</h2>
+
+<p><a href="../constitution.html#s6-amendment">constitution §6 Amendment Procedure</a> に従う:</p>
+<ol>
+  <li>変更提案を <code>changes/</code> 配下に proposal として起案 (proposal-only MUST)。</li>
+  <li>user 承認を取得 (P-10、 constitution 改訂の場合)。</li>
+  <li>ADR を Accepted status で本 cluster に作成。</li>
+  <li>constitution / rules / folio-self-spec を編集し、 SemVer bump + delta marker を inline 追加。</li>
+  <li>changes package を <code>archive/</code> へ移動。</li>
+</ol>
+
+<p><strong>例外</strong>: folio 初の ADR (ADR-0001) は <code>changes/</code> dir 未存在の bootstrap 段階で起票されたため、 proposal step を skip した折衷を採用。 後続 ADR は本手順を遵守する MUST。</p>
+</section>
+
+</body>
+</html>
