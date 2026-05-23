@@ -454,6 +454,40 @@
     <tr><td>scratch 段階 (現在 X2)</td><td>inventory.json は <strong>生成しない</strong>。 必要なら手動の <code>specs/README.html</code> 内 file inventory 表が代替</td><td>X2 (現在)</td></tr>
   </tbody>
 </table>
+
+<h3 id="s4-4-input-output">§4.4 Input / Output Behavior</h3>
+
+<aside class="informative">
+<p>本 §4.4 は <code>folio inventory</code> CLI (<a href="folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離 (P-11)。</p>
+</aside>
+
+<h4 id="s4-4-1-scan">§4.4.1 Scan target directories</h4>
+
+<ul>
+  <li><strong>scratch 段階 (Phase X2、 現在)</strong>: <code>scratch/specs/</code> + <code>scratch/decisions/</code> + <code>scratch/research/</code> を MUST scan</li>
+  <li><strong>正式化後 (Phase X3+)</strong>: <code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> + <code>architecture/changes/</code> を MUST scan</li>
+  <li>scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの</li>
+</ul>
+
+<h4 id="s4-4-2-output">§4.4.2 Output path</h4>
+
+<ul>
+  <li><strong>scratch 段階</strong>: <code>scratch/inventory.json</code> (試作 plugin 完成後に生成、 現在は手動 README index 表が代替)</li>
+  <li><strong>正式化後</strong>: <code>architecture/inventory.json</code></li>
+</ul>
+
+<h4 id="s4-4-3-failure">§4.4.3 Failure mode</h4>
+
+<table>
+  <thead><tr><th>失敗種別</th><th>動作</th></tr></thead>
+  <tbody>
+    <tr><td>JSON-LD parse error</td><td>該当 file を skip + stderr に warn、 inventory 全体生成は継続</td></tr>
+    <tr><td>stale 検出 (CI build 時)</td><td>CI failure (<a href="rules.html#s10-2">rules.html §10.2 REQ-CI-016</a> json-ld-validation gate と integration)</td></tr>
+    <tr><td>file system access error</td><td>fatal exit、 stderr に error</td></tr>
+  </tbody>
+</table>
+
+<p>本 §4.4 の規範を実機検証する scenario は <a href="verification.html#s2-targets">verification.html §2 (verification 対象)</a> 経由で <code>scratch/verification/scenarios/inventory-regen.yaml</code> に集約される。</p>
 </section>
 
 <!-- ====================================================================

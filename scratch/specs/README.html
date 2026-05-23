@@ -90,6 +90,13 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
       <td>—</td>
     </tr>
     <tr>
+      <td><a href="verification.html"><code>verification.html</code></a></td>
+      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 REQ-VER-001〜005)</td>
+      <td>draft (v0.1.0)</td>
+      <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
       <td><code>README.html</code> (本 file)</td>
       <td>specs/ cluster index (本 cluster の navigation)</td>
       <td>active (v0.4.2)</td>
@@ -118,9 +125,14 @@ graph TD
 
   RULES -.->|extends| CONST
   FSS -.->|extends| CONST
+  VER["verification.html<br/>(sandbox verification framework)"]:::active
   FSS -->|"references §10"| RULES
   REL -->|depends-on| RULES
   REL -.->|"references §2"| CONST
+  VER -->|depends-on| RULES
+  VER -->|depends-on| REL
+  VER -.->|"references §7.6"| FSS
+  README -->|hasPart| VER
   README -->|hasPart| RULES
   README -->|hasPart| FSS
   README -->|hasPart| REL
@@ -144,11 +156,12 @@ graph TD
 <ol>
   <li><strong><a href="../constitution.html">constitution.html</a></strong> — folio の 12 不変原則 (前提知識、 全 spec の基底)</li>
   <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
-  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings)</li>
+  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings、 §7.6 試作 minimal scope)</li>
   <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD vocabulary、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
+  <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 着手前 / 試作 plugin 実機検証の規範)</li>
 </ol>
 
-<p>spec edit を行う AI agent は最低限 (1) + (2) を必読 MUST、 関係性宣言を変更する場合は (4) も MUST。 (3) は folio framework の動作変更を行う場合のみ必読。</p>
+<p>spec edit を行う AI agent は最低限 (1) + (2) を必読 MUST、 関係性宣言を変更する場合は (4) も MUST、 試作 plugin 実装 / 検証時は (3) + (5) も MUST。</p>
 </section>
 
 <!-- ====================================================================
@@ -160,6 +173,11 @@ graph TD
 <table>
   <thead><tr><th>date</th><th>change</th><th>related ADR / commit</th></tr></thead>
   <tbody>
+    <tr>
+      <td>2026-05-23</td>
+      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 REQ-CI-016 (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
+      <td>research/plugin-architecture-research.html + research/plugin-sandbox-verification-research.html 結論の規範化</td>
+    </tr>
     <tr>
       <td>2026-05-22</td>
       <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (REQ-CI-010 詳細化)、 relations.html §5 normative 化 + EARS REQ-REL-001/002/003、 §4.2 3-tier mapping 具体例追加</td>
@@ -197,10 +215,15 @@ graph TD
       <td><code>&lt;head&gt;</code> JSON-LD が旧パターン (<code>@context</code> 文字列形式、 <code>@type: "FolioConstitution"</code> 等独自型)</td>
       <td>user 指示 「これ以上いじりたくない」 を遵守、 cross-ref のみ更新で head は据え置き。 dogfood failure 残存を許容</td>
     </tr>
+    <tr>
+      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> / <a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
+      <td>ADR-0001 は旧 <code>@context</code> 文字列形式、 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
+      <td>既存 ADR は frozen (P-10、 historical record) として保持、 新規 ADR のみ新 pattern。 P-5 違反 trace として記録</td>
+    </tr>
   </tbody>
 </table>
 
-<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は本 commit (2026-05-22) で新規定 pattern に移行済 (§5 Change Log 参照)。</p>
+<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は前 commit (2026-05-22) で新規定 pattern に移行済 (§5 Change Log 参照)。</p>
 </section>
 
 <script>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0003">
+<meta name="folio-adr-date" content="2026-05-23">
+<title>ADR-0003 — folio plugin minimal architecture (skill + hook + script + CLI)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0003-plugin-architecture.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0003 — folio plugin minimal architecture",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/plugin-architecture-research.html" },
+    { "@id": "../specs/folio-self-spec.html#s7-harness" },
+    { "@id": "../specs/folio-self-spec.html#s8-plugin" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0003 — folio plugin minimal architecture (skill + hook + script + CLI)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-23 &middot; folio v0.4.2-draft</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0003</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-23</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>plugin-architecture-research.html, folio-self-spec.html §7, §8</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio Phase X3 着手にあたり、 plugin の component 構成 (skill / hook / script / CLI の役割分担と最小実装範囲) を確定する必要があった。 <a href="../specs/folio-self-spec.html#s7-2-specialists">folio-self-spec.html §7.2</a> は完成形として 8 specialist agents (spec-explorer / spec-architect / spec-review × 6) を定義済だが、 試作段階 (Phase X2) では「動くものを先に作る」 試作駆動哲学に沿って **minimal viable plugin scope** から着手すべきと user が確認 (2026-05-22)。</p>
+
+<p>5 並列 researcher × 76 ソース調査 (<a href="../research/plugin-architecture-research.html">plugin-architecture-research.html</a>) で Claude Code 公式 plugin 仕様 (hooks 29 種、 SKILL.md frontmatter、 plugin.json manifest) と業界事例 (twill / log4brains / Beads / pre-commit / ESLint) を verify、 §7.3 で minimal viable plugin scope を導出した。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-scope">§2.1 Phase X3 minimal viable plugin scope</h3>
+
+<p>folio plugin Phase X3 着手分として以下の構成を採用する。</p>
+
+<table>
+  <caption>Phase X3 minimal — 1 skill + 4 hook + 6 script + 1 CLI</caption>
+  <thead><tr><th>category</th><th>count</th><th>component</th><th>役割 (WHAT)</th></tr></thead>
+  <tbody>
+    <tr><td>skills/</td><td>1</td><td><code>folio-architect</code></td><td>spec edit の唯一 author、 caller marker 設定の起点</td></tr>
+    <tr><td rowspan="4">hooks/</td><td rowspan="4">4</td><td>SessionStart</td><td>inventory.json (Tier 1) を agent に inject (Beads pattern)</td></tr>
+    <tr><td>PreToolUse: caller marker</td><td>env var 未 set or 異値で deny (twill pattern)</td></tr>
+    <tr><td>PreToolUse: path boundary</td><td>spec dir 外への作成を block</td></tr>
+    <tr><td>PostToolUse: JSON-LD lint + README update</td><td>schema check + index 自動更新</td></tr>
+    <tr><td rowspan="6">scripts/</td><td rowspan="6">6</td><td><code>inject-inventory</code></td><td>SessionStart / PreCompact で inventory を context inject</td></tr>
+    <tr><td><code>check-caller-marker</code></td><td>PreToolUse、 <a href="../specs/rules.html#s10-1">rules.html §10.1 REQ-CM-001〜003</a></td></tr>
+    <tr><td><code>check-path-boundary</code></td><td>PreToolUse、 spec dir 外 spec 作成を block</td></tr>
+    <tr><td><code>lint-jsonld</code></td><td>PostToolUse、 ajv + pyld 2 層検証 (ADR-0004 候補)</td></tr>
+    <tr><td><code>update-readme-index</code></td><td>新 spec 追加時 README index 自動更新</td></tr>
+    <tr><td><code>link-integrity</code></td><td>CI script、 <a href="../specs/rules.html#s10-2">rules.html §10.2 REQ-CI-010</a></td></tr>
+    <tr><td>bin/</td><td>1</td><td><code>folio</code> CLI</td><td><code>init</code> / <code>validate</code> / <code>inventory</code> / <code>prime</code> / <code>fix</code> subcommands</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2-relation">§2.2 完成形 (8 agents) との関係</h3>
+
+<p>本 ADR の 1 skill は <a href="../specs/folio-self-spec.html#s7-2-specialists">§7.2 完成形 8 agents</a> の subset として位置付ける。 段階的成長 path: <strong>1 skill (Phase X3) → 2-3 skill (Phase X4) → 8 agent 完成形 (Phase X5+)</strong>。 試作で発見した修正点 / 必要追加機能を spec に逐次反映し、 完成形に近づける。 完成形 §7.2 は変更しない、 試作段階の現状は <a href="../specs/folio-self-spec.html#s7-6">§7.6 (新設)</a> に局所化する。</p>
+
+<h3 id="s2-3-binding">§2.3 P-11 binding 隔離</h3>
+
+<p><a href="../constitution.html#s2-principles">constitution P-11</a> (HOW 禁止) 遵守のため、 具体的な script 内容 / binary 名 / CLI 構文は <code>.claude-plugin/</code> 配下の harness に隔離する。 本 ADR は WHAT (役割分担と最小構成) のみ規定する。 具体的 binding は <a href="../specs/folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に集約する設計を継続する。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li><strong>試作実装着手の barrier 最小化</strong>: 1 skill + 4 hook + 6 script + 1 CLI で「動くもの」 を Phase X3 で成立可能</li>
+  <li><strong>段階的成長 path 確定</strong>: 完成形 §7.2 を変更せず、 試作状態を §7.6 に局所化</li>
+  <li><strong>業界実績 pattern を継承</strong>: twill hook architecture / Beads context injection / log4brains 双方向 link materialize</li>
+  <li><strong>P-11 整合</strong>: WHAT のみ規定、 HOW は <code>.claude-plugin/</code> + §9 Bindings に隔離</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>完成形 (8 agents + 7-phase PR cycle) との gap が大きく、 「現在の試作 plugin」 と「完成形 spec」 の二重認識 cost が reader に発生</li>
+  <li>段階的成長における ADR 更新 cycle (1 skill → 2-3 → 8) を別 ADR で trace する必要</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>具体的 CLI subcommand (<code>init</code> / <code>validate</code> / <code>inventory</code> / <code>prime</code> / <code>fix</code>) は WHAT 列挙、 引数仕様等の HOW は <code>.claude-plugin/</code> 実装時に確定</li>
+  <li>SHOULD 候補 ADR (ADR-0004 JSON-LD lint mechanism / ADR-0006 caller marker hook / ADR-0007 context injection / ADR-0008 3 層防御) は別 PR で逐次起票</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 A: 完成形 8 agents を初版で全部実装</td><td>試作駆動 (user 確定 2026-05-22) と矛盾、 「動くものを後にする」 巨大計画リスク、 Phase X3 着手遅延</td></tr>
+    <tr><td>案 B: 最小 1 hook のみ (caller marker check のみ)</td><td>JSON-LD lint / README update / context injection 等の核心機能を欠く、 試作の「動くもの」 として不完全</td></tr>
+    <tr><td>案 C: skill なし、 全部 hook + script</td><td>spec edit の context injection が agent 側で機能せず、 folio-architect SKILL が果たす「spec edit entry point」 role が欠落</td></tr>
+    <tr><td>案 D: MCP server 採用</td><td>plugin-architecture-research §5.2 Beads pattern: 「CLI + Hooks &gt; MCP」 (10-50x context efficiency)。 試作段階で MCP overhead を避ける</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>本 ADR を生んだ調査: <a href="../research/plugin-architecture-research.html">plugin-architecture-research.html</a> (76 sources、 5 並列 researcher、 critique PASS) — 特に §7.3 minimal scope、 §7.4 implementation 8 step、 §5.5 twill hook architecture</li>
+  <li>関連 constitution 原則: P-1 (未来 anchor、 完成形 §7.2 を未来 anchor として保持)、 P-7 (Content domain exclusivity、 試作状態は §7.6 / 完成形は §7.2 と分離)、 P-11 (HOW 禁止、 binding 隔離)、 P-12 (Layer 0 一体配布)</li>
+  <li>関連 ADR (将来候補、 user 承認後別 PR で起票予定): ADR-0004 JSON-LD lint mechanism、 ADR-0006 caller marker hook 実装、 ADR-0007 context injection (Beads-inspired)、 ADR-0008 3 層防御原則</li>
+  <li>後続 task: 試作 plugin 実装着手 (Phase X3)、 verification framework (<a href="../specs/verification.html">verification.html</a>、 ADR-0013) で実機検証</li>
+</ul>
+</section>
+
+</body>
+</html>

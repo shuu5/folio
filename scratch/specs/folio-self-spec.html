@@ -381,14 +381,14 @@ flowchart LR
 
 <h3 id="s7-5-ci-gate">§7.5 CI Gate Specification</h3>
 
-<p>CI workflow が強制すべき 6 gate の MUST 要件は <a href="rules.html#s10-2" class="normative-ref">rules.html §10.2</a> (REQ-CI-001 + REQ-CI-010〜015) に規定する。 本 §7.5 は各 gate の script 実装参照 (<code>.claude-plugin/scripts/</code>) を <em>informative</em> に解説する。 具体的 script 実装は <a href="#s9-bindings">§9 Bindings</a> に集約。</p>
+<p>CI workflow が強制すべき 7 gate の MUST 要件は <a href="rules.html#s10-2" class="normative-ref">rules.html §10.2</a> (REQ-CI-001 + REQ-CI-010〜016) に規定する。 本 §7.5 は各 gate の script 実装参照 (<code>.claude-plugin/scripts/</code>) を <em>informative</em> に解説する。 具体的 script 実装は <a href="#s9-bindings">§9 Bindings</a> に集約。</p>
 
 <figure class="diagram" data-diagram-type="ci-gate-pipeline">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
 flowchart LR
   accTitle: CI Gate Pipeline
-  accDescr: PR / commit から merge までの 6 gate (link integrity、 declarative form、 what-only、 vocabulary、 EARS coverage、 delta marker consistency) を順次通過した場合のみ merge 許可
+  accDescr: PR / commit から merge までの 7 gate (link integrity、 declarative form、 what-only、 vocabulary、 EARS coverage、 delta marker consistency、 json-ld-validation) を順次通過した場合のみ merge 許可
   PR["PR / push"]
   PR --> G1["link-integrity<br/>(P-6)"]
   G1 --> G2["declarative-form<br/>(P-4)"]
@@ -396,18 +396,32 @@ flowchart LR
   G3 --> G4["vocabulary<br/>(P-5)"]
   G4 --> G5["EARS coverage<br/>(§6)"]
   G5 --> G6["delta marker<br/>consistency<br/>(§5)"]
-  G6 --> OK["merge allowed"]
+  G6 --> G7["json-ld-validation<br/>(relations §3)"]
+  G7 --> OK["merge allowed"]
   G1 -. "fail" .-> BL["merge blocked"]
   G2 -. "fail" .-> BL
   G3 -. "fail" .-> BL
   G4 -. "fail" .-> BL
   G5 -. "warn" .-> OK
   G6 -. "fail" .-> BL
+  G7 -. "fail" .-> BL
   style OK fill:#5ac8b8,color:#08131a
   style BL fill:#fdf3f3,color:#08131a
 </pre>
-<figcaption>図 7. CI gate pipeline。 6 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。</figcaption>
+<figcaption>図 7. CI gate pipeline。 7 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。 G7 (json-ld-validation) は 2026-05-23 追加 (REQ-CI-016、 verification framework と integration)。</figcaption>
 </figure>
+
+<h3 id="s7-6-phase-x3-minimal">§7.6 Phase X3 Minimal Implementation</h3>
+
+<aside class="informative">
+<p>本 §7.6 は試作段階 (Phase X3) における plugin minimal scope を記述する。 <a href="#s7-2-specialists">§7.2 (完成形 8 specialist agents)</a> は未来 anchor として保持し、 現状の試作 scope を本 §7.6 に局所化する。 採用根拠は <a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a>、 実機検証 framework は <a href="verification.html">verification.html</a>。</p>
+</aside>
+
+<p>Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href="../decisions/ADR-0003-plugin-architecture.html#s2-decision">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は ADR-0003 への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。</p>
+
+<p>段階的成長 path: <strong>1 skill (Phase X3) → 2-3 skill (Phase X4) → 8 agents 完成形 (Phase X5+)</strong>。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
+
+<p>本 minimal plugin の実機検証は <a href="verification.html">verification.html</a> (sandbox verification framework) で実施する。 verification scope の段階的対比 (完成形 §7.2 vs 試作段階 §7.6) は <a href="verification.html#s4-2-completion-vs-prototype">verification.html §4.2</a> に集約 (SSoT)。</p>
 </section>
 
 <section id="s8-plugin" class="normative">

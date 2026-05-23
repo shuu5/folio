@@ -238,10 +238,10 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <p class="ears" data-ears-pattern="ubiquitous">
   <span class="ears-id">REQ-CI-001</span>:
   The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
-  enforce all six gates defined below before permitting merge.
+  enforce all seven gates defined below before permitting merge.
 </p>
 
-<p><small>REQ-CI-002 〜 REQ-CI-009 は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 6 gate は REQ-CI-010 〜 REQ-CI-015 を採用。</small></p>
+<p><small>REQ-CI-002 〜 REQ-CI-009 は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 7 gate は REQ-CI-010 〜 REQ-CI-016 を採用。</small></p>
 
 <table>
   <thead>
@@ -254,12 +254,23 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     <tr><td>REQ-CI-013</td><td>vocabulary gate</td><td>fail = merge block</td><td>P-5</td></tr>
     <tr><td>REQ-CI-014</td><td>EARS coverage gate</td><td>warn (merge 許可)</td><td>§6</td></tr>
     <tr><td>REQ-CI-015</td><td>delta marker consistency gate</td><td>fail = merge block</td><td>§5</td></tr>
+    <tr><td>REQ-CI-016</td><td>json-ld-validation gate</td><td>fail = merge block</td><td><a href="relations.html#s3-jsonld">relations §3</a></td></tr>
   </tbody>
 </table>
 
 <aside class="informative">
   <p><strong>REQ-CI-010 link-integrity gate の補足</strong>: 検証対象は (a) external URL、 (b) anchor fragment、 (c) 内部 file-system reference の 3 種類を cover する。 推奨ツール候補は <a href="../research/spec-graph-management-research.html#s2-findings">spec-graph-management-research.html §2</a> を参照 (具体ツール選定 / enforcement binding は §10.2 冒頭 aside の通り <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に集約)。</p>
 </aside>
+
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-CI-016</span>:
+  The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
+  verify that every spec file&apos;s <code>&lt;head&gt;</code> JSON-LD block
+  conforms to the schema defined in <a href="relations.html#s3-jsonld">relations.html §3</a>.
+  Detailed assertion strategy (exit code + stderr 中心、 <code>permissionDecision: deny</code>
+  JSON は SHOULD NOT 使用) は <a href="verification.html#s3-ears">verification.html §3 REQ-VER-003</a>
+  を参照。
+</p>
 </section>
 
 </section>
