@@ -20,11 +20,10 @@ set -uo pipefail
 
 EXPECTED_VAR="${FOLIO_CALLER_MARKER_ENV:-FOLIO_ARCHITECT_CONTEXT}"
 EXPECTED_VAL="${FOLIO_CALLER_MARKER_VALUE:-folio-architect}"
-SPEC_PATH_RAW="${FOLIO_SPEC_PATH:-scratch/specs/}"
 
-# SPEC_PATH 正規化: 空文字防止 + 末尾 / 強制 (R1-3/R2-4)
-[[ -z "$SPEC_PATH_RAW" ]] && SPEC_PATH_RAW="scratch/specs/"
-SPEC_PATH="${SPEC_PATH_RAW%/}/"
+# SPEC_PATH 正規化: `${:-}` は unset + empty 両対応のため二重 fallback 不要 (R1-M1 fix)
+SPEC_PATH="${FOLIO_SPEC_PATH:-scratch/specs/}"
+SPEC_PATH="${SPEC_PATH%/}/"
 
 # 変数名 sanity check (alnum + _ のみ、 数字始まり禁止) — indirect expansion 防御 (R2-2)
 if [[ ! "$EXPECTED_VAR" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then

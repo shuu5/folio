@@ -12,27 +12,28 @@
 # 判定 (試作 minimum):
 #   - Write tool のみ (Edit は既存 file 修正なので path boundary 不問)
 #   - file_path が .html
-#   - content に `<meta name="folio-doc-type" content="spec">` を含む
+#   - content に `name="folio-doc-type"` + `content="spec"` (or single quote 版) を
+#     word boundary 付きで検出 (`spec-draft` 等の誤検出回避、 属性順両対応)
 #   - file_path が spec_path 配下でない
 #   → deny
 #
 # 環境変数:
 #   FOLIO_SPEC_PATH  既定 "scratch/specs/"
 #
-# 試作 note: content の grep は単純 proximity match (typical HTML head での 1 行 meta タグ前提)。
-# multi-line meta や属性順 reverse 等の edge case は試作 scope 外、 spec 化時に整理。
+# Phase 6 Step 2 review 反映:
+#   - R2-H1 regex word boundary (closing quote で limit)
+#   - R2-H2 tool_name 空時 fail-closed
+#   - R2-M3 single quote 属性対応
+#   - R1-M1 dead code (二重 fallback) 削除
 
 set -uo pipefail
 
-SPEC_PATH_RAW="${FOLIO_SPEC_PATH:-scratch/specs/}"
-[[ -z "$SPEC_PATH_RAW" ]] && SPEC_PATH_RAW="scratch/specs/"
-SPEC_PATH="${SPEC_PATH_RAW%/}/"
+SPEC_PATH="${FOLIO_SPEC_PATH:-scratch/specs/}"
+SPEC_PATH="${SPEC_PATH%/}/"
 
-# stdin payload (空文字許容 = direct test invocation)
 payload=$(cat 2>/dev/null || true)
 [[ -z "$payload" ]] && exit 0
 
-# jq 必須、 fail-closed
 command -v jq >/dev/null 2>&1 || {
   echo "folio: jq not found in PATH (required for path boundary check, fail-closed)" >&2
   exit 2
@@ -41,6 +42,12 @@ command -v jq >/dev/null 2>&1 || {
 tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null)
 file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 content=$(printf '%s' "$payload" | jq -r '.tool_input.content // empty' 2>/dev/null)
+
+# tool_name 空 = 不正 payload、 fail-closed (R2-H2)
+if [[ -z "$tool_name" ]]; then
+  echo "folio: tool_name missing from hook payload (fail-closed)" >&2
+  exit 2
+fi
 
 # Write 以外通過 (Edit / NotebookEdit は既存 file 修正)
 [[ "$tool_name" == "Write" ]] || exit 0
@@ -51,9 +58,10 @@ case "$file_path" in
   *) exit 0 ;;
 esac
 
-# content に folio-doc-type=spec を含むか (両属性順序を許容)
-if ! printf '%s' "$content" | grep -E -q 'name="folio-doc-type"[^>]*content="spec"|content="spec"[^>]*name="folio-doc-type"'; then
-  # spec ではない (cluster-readme / adr / rules 等) → 通過
+# folio-doc-type=spec を word boundary 付きで検出 (R2-H1 false positive 防止 + R2-M3 single quote)
+# 文字クラス `["']` で name / content 両属性の double quote / single quote を同時許容。
+# spec 値は閉じ quote で boundary (e.g. `content="spec-draft"` は match しない)。
+if ! printf '%s' "$content" | grep -E -q "name=[\"']folio-doc-type[\"'][^>]*content=[\"']spec[\"']|content=[\"']spec[\"'][^>]*name=[\"']folio-doc-type[\"']"; then
   exit 0
 fi
 
@@ -62,7 +70,6 @@ case "$file_path" in
   "${SPEC_PATH}"*|*"/${SPEC_PATH}"*) exit 0 ;;
 esac
 
-# spec_path 外で spec を作ろうとしている → deny
 {
   echo "folio path boundary check: spec files (folio-doc-type=spec) must be created under ${SPEC_PATH}"
   echo "  file: ${file_path}"

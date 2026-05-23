@@ -1,13 +1,17 @@
 schema_version: "0.1"
-req_id: "REQ-CM-004"
+req_id: "REQ-VER-007"
 ears_pattern: "unwanted"
 description: |
   Primary: ADR-0003 §2.1 path boundary — spec dir 外への spec file 作成を block。
   試作 minimum (Option Pragmatic): Write tool + `.html` + content marker
-  `<meta name="folio-doc-type" content="spec">` の同時条件で判定。
+  `<meta name="folio-doc-type" content="spec">` (single quote 版含む) の同時条件で判定。
   spec_path 外なら deny。
-  Note: REQ-CM-004 は試作で導入。 rules.html §10.1 への昇格は Phase X3 後段で検討。
-  Reference: ADR-0003 §2.1, verification.html §3.3 REQ-VER-003.
+
+  REQ-VER-007 は本 scenario 用の verification-specific REQ (verification.html §3 REQ-VER-002 の
+  「verification-specific REQ-VER-* defined in this §3」 条項に従う、 試作で導入)。
+  verification.html §3 への REQ-VER-007 正式追加 + given.content schema 拡張は
+  Phase X3 後段で spec 編集 commit にて対応予定。
+  Reference: ADR-0003 §2.1, verification.html §3 REQ-VER-002 + REQ-VER-003.
 
 setup:
   env: {}
@@ -103,6 +107,33 @@ scenarios:
     expect:
       exit_code: 2
       stderr_contains: "folio path boundary check"
+
+  - name: "single quote 属性 content='spec' でも検出 (R2-M3 fix)"
+    given:
+      env: {}
+      file_path: "scratch/random/spec.html"
+      content: |
+        <html><head>
+        <meta name='folio-doc-type' content='spec'>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
+  - name: "content='spec-draft' (prefix 一致) は spec ではない → allow (R2-H1 fix)"
+    given:
+      env: {}
+      file_path: "scratch/random/draft.html"
+      content: |
+        <html><head>
+        <meta name="folio-doc-type" content="spec-draft">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
 
 teardown:
   cleanup_files: []
