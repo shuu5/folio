@@ -1,0 +1,153 @@
+schema_version: "0.1"
+req_id: "REQ-CI-016"
+ears_pattern: "ubiquitous"
+description: |
+  Primary: rules.html §10.2 REQ-CI-016 (JSON-LD validation gate)。
+  試作 minimum (Option B Light): 新規作成 .html file の <script type="application/ld+json"> block が
+  relations.html §3.2 pattern (object @context + @id + @type 必須) に準拠か check。
+  完成形は ajv + pyld 2 層 (ADR-0004 候補)、 試作は jq + bash + sed の純粋 shell。
+  Reference: rules.html §10.2 REQ-CI-016, relations.html §3.2, verification.html §3.3 REQ-VER-003.
+
+setup:
+  env: {}
+  fixtures: []
+
+scenarios:
+  - name: "新 pattern (object @context + 必須 key) → allow"
+    given:
+      env: {}
+      file_path: "scratch/specs/new-spec.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": {"dc": "http://purl.org/dc/terms/", "folio": "https://folio.dev/spec/v1/"},
+          "@id": "./new-spec.html",
+          "@type": "schema:TechArticle"
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "旧 pattern @context 文字列 → deny (dogfood failure 検出)"
+    given:
+      env: {}
+      file_path: "scratch/specs/legacy.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": "https://folio.dev/spec/v1/",
+          "@id": "./legacy.html",
+          "@type": "FolioConstitution"
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "@context must be object"
+
+  - name: "必須 key 不在 (@id 抜け) → deny"
+    given:
+      env: {}
+      file_path: "scratch/specs/incomplete.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": {"folio": "https://folio.dev/spec/v1/"},
+          "@type": "schema:TechArticle"
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "required keys missing"
+
+  - name: "JSON 構文壊れ → deny"
+    given:
+      env: {}
+      file_path: "scratch/specs/broken.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": {"folio": "https://folio.dev/spec/v1/"},
+          "@id": "./broken.html",
+          "@type": "schema:TechArticle",,
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "parse failed"
+
+  - name: "JSON-LD block 不在 (普通の HTML) → allow"
+    given:
+      env: {}
+      file_path: "scratch/random/plain.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><title>plain page</title></head>
+        <body><p>no JSON-LD here</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "Edit tool は対象外 → allow (試作 minimum scope)"
+    given:
+      env: {}
+      file_path: "scratch/specs/existing.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "非 .html (.md) → allow"
+    given:
+      env: {}
+      file_path: "scratch/notes.md"
+      content: "some markdown"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "新 pattern (object @context、 stakeholders 等 folio:* 拡張あり) → allow"
+    given:
+      env: {}
+      file_path: "scratch/specs/with-stakeholders.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
+          "@id": "./with-stakeholders.html",
+          "@type": "schema:TechArticle",
+          "folio:version": "0.1.0",
+          "folio:stakeholders": ["Developer", "AI Agent"]
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+teardown:
+  cleanup_files: []
