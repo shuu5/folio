@@ -1,35 +1,36 @@
 {
   "name": "folio",
   "version": "0.4.2-draft",
-  "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. Consumed by Layer 1 projects via folio.config.yaml.",
+  "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. Phase X3 試作実装 (minimal scope = ADR-0003: 1 skill + 4 hook + 6 script + 1 CLI).",
+  "author": {
+    "name": "shuu5",
+    "url": "https://github.com/shuu5"
+  },
   "homepage": "https://github.com/shuu5/folio",
   "userConfig": {
     "spec_path": {
       "type": "string",
-      "default": "architecture/spec/",
-      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live."
+      "title": "Spec Path",
+      "default": "scratch/specs/",
+      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live. 完成形では architecture/spec/、 Phase X3 試作中は scratch/specs/。"
     },
     "caller_marker_env": {
       "type": "string",
+      "title": "Caller Marker Env Var Name",
       "default": "FOLIO_ARCHITECT_CONTEXT",
       "description": "Environment variable name that AI agent must set before editing files under spec_path."
     },
     "caller_marker_value": {
       "type": "string",
+      "title": "Caller Marker Expected Value",
       "default": "folio-architect",
       "description": "Expected value of the caller marker env var. Hook denies edit if env var is unset or differs."
     },
     "review_model": {
       "type": "string",
+      "title": "Review LLM Model",
       "default": "opus",
       "description": "LLM model for Phase F specialist review agents. Overridable per consumer project."
     }
-  },
-  "_placeholders": {
-    "skills": "Planned: folio-init, folio-architect, folio-spec-edit, folio-validate, folio-review-{vocabulary,structure,ssot,temporal} (Phase X2 implementation).",
-    "agents": "Planned: spec-explorer, spec-architect, spec-review-{vocabulary,structure,ssot,temporal,ears,stakeholder} (Phase X2 implementation).",
-    "hooks": "Planned: PreToolUse caller-marker enforce, PostToolUse spec-validate (Phase X2 implementation).",
-    "scripts": "Planned: link-integrity.py, orphan-check.py, declarative-check.py, what-only-check.py (Phase X2 implementation).",
-    "bin": "Planned: folio (shell wrapper for `folio validate`, `folio init`) (Phase X2 implementation)."
   }
 }

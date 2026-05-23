@@ -1,0 +1,4 @@
+# scratch/verification/baselines/local/ は実行生成 (golden 比較先)
+# .gitignore 自体のみ追跡、 他は ignore
+*
+!.gitignore

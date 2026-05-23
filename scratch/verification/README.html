@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<title>folio — scratch/verification/ (sandbox verification framework)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio sandbox verification cluster index",
+  "folio:version": "0.1.0-draft",
+  "dc:references": [
+    { "@id": "../specs/verification.html" },
+    { "@id": "../decisions/ADR-0013-verification-framework.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>verification/ — sandbox verification (実体 + runner)</h1>
+  <div class="meta">v0.1.0-draft &middot; status: active &middot; ADR-0013 で採用された framework の試作実装</div>
+</header>
+
+<aside class="informative">
+<p>本 dir は <a href="../specs/verification.html">scratch/specs/verification.html</a> (SSoT) の試作実装。 spec が WHAT、 本 dir が HOW (P-11 隔離)。</p>
+</aside>
+
+<section id="s1-layout" class="informative">
+<h2>§1. Layout</h2>
+<table>
+  <thead><tr><th>path</th><th>役割</th><th>VCS</th></tr></thead>
+  <tbody>
+    <tr><td><code>scenarios/</code></td><td>use case 別 YAML scenario (1 REQ = 1 scenario、 verification.html §3.2 schema)</td><td>追跡</td></tr>
+    <tr><td><code>fixtures/</code></td><td>scenario が参照する test data (mock payload 等)</td><td>追跡</td></tr>
+    <tr><td><code>baselines/reference/</code></td><td>golden file (期待値、 verification.html §3.4 / REQ-VER-004)</td><td>追跡</td></tr>
+    <tr><td><code>baselines/local/</code></td><td>実行時 actual 出力 (golden 比較先)</td><td>ignore (.gitignore)</td></tr>
+    <tr><td><code>runner.sh</code></td><td>軽量 bash runner (bash + yq + jq)、 Gap 2 で採用</td><td>追跡</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s2-usage" class="informative">
+<h2>§2. Usage</h2>
+<pre><code># 単一 scenario 実行 (Step 1 で実装)
+./runner.sh scenarios/caller-marker.yaml
+
+# 前提:
+#   yq (mikefarah/yq v4.x) が PATH にあること
+#   jq が PATH にあること
+</code></pre>
+</section>
+
+<section id="s3-status" class="informative">
+<h2>§3. Status (Phase X3 進捗)</h2>
+<table>
+  <thead><tr><th>scenario</th><th>related REQ</th><th>status</th></tr></thead>
+  <tbody>
+    <tr><td><code>scenarios/caller-marker.yaml</code></td><td>REQ-CM-001〜003 (rules.html §10.1)</td><td>Step 1 着手予定</td></tr>
+    <tr><td><code>scenarios/path-boundary.yaml</code></td><td>REQ-CM-* (path boundary)</td><td>Step 2 (未着手)</td></tr>
+    <tr><td><code>scenarios/jsonld-lint.yaml</code></td><td>REQ-CI-016 (rules.html §10.2)</td><td>Step 3 (未着手)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s4-references" class="informative">
+<h2>§4. References</h2>
+<ul>
+  <li><a href="../specs/verification.html">../specs/verification.html</a> — SSoT (REQ-VER-001〜006)</li>
+  <li><a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a> — framework 採用決定</li>
+  <li><a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a> — twill experiment-verified との境界</li>
+  <li><a href="../research/plugin-sandbox-verification-research.html">plugin-sandbox-verification-research.html</a> — 87 sources 調査</li>
+</ul>
+</section>
+
+</body>
+</html>
