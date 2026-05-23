@@ -285,6 +285,26 @@ graph TD
       <td><code>.claude-plugin/{agents,skills,scripts,bin,refs,static}/README.md</code> は Phase X1 placeholder のまま</td>
       <td>試作完了時に整理 (Phase X3 終盤)</td>
     </tr>
+    <tr>
+      <td>ADR-0003 §2.1 script 命名 drift</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (P-10) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
+      <td>ADR-0004 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
+    </tr>
+    <tr>
+      <td>PostToolUse README update 未実装</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 hook 表は 「PostToolUse: JSON-LD lint + README update」 を 1 エントリで宣言、 実装は <code>check-jsonld-lint.sh</code> (Step 3) のみ、 README update (<code>scripts/update-readme-index</code>) は Step 4 で別 hook 追加予定</td>
+      <td>Step 4 (README update slice) で実装</td>
+    </tr>
+    <tr>
+      <td>JSON-LD 複数 block 検査</td><td>LOW</td>
+      <td>check-jsonld-lint.sh は試作 minimum で単一 block 前提、 1 .html に複数 <code>&lt;script type="application/ld+json"&gt;</code> がある場合は連結 parse される</td>
+      <td>完成形 (ADR-0004 候補、 ajv + pyld 2 層) で multi-block 対応</td>
+    </tr>
+    <tr>
+      <td>@context 空 object {} は通過</td><td>LOW</td>
+      <td>試作 Light は <code>@context</code> の type が object であることのみ check、 中身が空でも allow (scenario で trace)</td>
+      <td>完成形で semantic check (context resolution) で検出</td>
+    </tr>
   </tbody>
 </table>
 

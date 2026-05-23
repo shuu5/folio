@@ -44,10 +44,13 @@ case "$file_path" in
   *) exit 0 ;;
 esac
 
-# JSON-LD block 抽出 (sed: <script type="application/ld+json"> から </script> までの間の行)
-ldjson=$(printf '%s' "$content" | sed -n '/<script[^>]*type="application\/ld+json"[^>]*>/,/<\/script>/{
-  //!p
-}')
+# JSON-LD block 抽出 (試作 minimum: 単一 block 前提、 複数 block は ADR-0004 完成形で対応)
+# sed: 開始 tag 〜 終了 tag を含む全行を出力 → 開始 tag より前と終了 tag より後を削除
+#   - R2-H2 fix: type 属性 single quote / double quote 両対応 ([\"'])
+#   - R1-H1 fix: 開始 tag と data が同一行に書かれた場合も data を欠落させない
+ldjson=$(printf '%s' "$content" | \
+  sed -n "/<script[^>]*type=[\"']application\/ld+json[\"']/,/<\/script>/p" | \
+  sed "s/.*<script[^>]*type=[\"']application\/ld+json[\"'][^>]*>//; s/<\/script>.*//")
 
 # JSON-LD block 不在 → spec / ADR / cluster-readme ではない可能性、 通過
 if [[ -z "$ldjson" ]]; then

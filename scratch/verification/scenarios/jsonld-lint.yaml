@@ -3,9 +3,9 @@ req_id: "REQ-CI-016"
 ears_pattern: "ubiquitous"
 description: |
   Primary: rules.html §10.2 REQ-CI-016 (JSON-LD validation gate)。
-  試作 minimum (Option B Light): 新規作成 .html file の <script type="application/ld+json"> block が
-  relations.html §3.2 pattern (object @context + @id + @type 必須) に準拠か check。
-  完成形は ajv + pyld 2 層 (ADR-0004 候補)、 試作は jq + bash + sed の純粋 shell。
+  試作 Light (Option B): 新規作成 .html file の application/ld+json script block に対し、
+  必須 key (@context / @id / @type) 存在 + @context object 形式 + JSON well-formed の 3 段 check。
+  単一 block 前提、 複数 block 検査は完成形 (ADR-0004 候補、 2 層検証) で対応予定。
   Reference: rules.html §10.2 REQ-CI-016, relations.html §3.2, verification.html §3.3 REQ-VER-003.
 
 setup:
@@ -112,6 +112,7 @@ scenarios:
     given:
       env: {}
       file_path: "scratch/specs/existing.html"
+      content: ""
     when:
       tool: "Edit"
     expect:
@@ -141,6 +142,77 @@ scenarios:
           "@type": "schema:TechArticle",
           "folio:version": "0.1.0",
           "folio:stakeholders": ["Developer", "AI Agent"]
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "JSON-LD 開始 tag と data が同一行 → allow (R1-H1 fix verify)"
+    given:
+      env: {}
+      file_path: "scratch/specs/inline.html"
+      content: '<!DOCTYPE html><html><head><script type="application/ld+json">{"@context":{"folio":"https://folio.dev/spec/v1/"},"@id":"./inline.html","@type":"schema:TechArticle"}</script></head></html>'
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "single quote type 属性 → allow (R2-H2 fix verify、 新 pattern 内容)"
+    given:
+      env: {}
+      file_path: "scratch/specs/single-quote.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type='application/ld+json'>
+        {
+          "@context": {"folio": "https://folio.dev/spec/v1/"},
+          "@id": "./single-quote.html",
+          "@type": "schema:TechArticle"
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "single quote + 旧 pattern @context 文字列 → deny (R2-H2 fix で hook が起動かつ deny)"
+    given:
+      env: {}
+      file_path: "scratch/specs/single-quote-legacy.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type='application/ld+json'>
+        {
+          "@context": "https://folio.dev/spec/v1/",
+          "@id": "./legacy.html",
+          "@type": "FolioConstitution"
+        }
+        </script>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "@context must be object"
+
+  - name: "@context 空 object {} → allow (R2-M2 trace、 試作 scope は構造のみ check)"
+    given:
+      env: {}
+      file_path: "scratch/specs/empty-context.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <script type="application/ld+json">
+        {
+          "@context": {},
+          "@id": "./empty-context.html",
+          "@type": "schema:TechArticle"
         }
         </script>
         </head></html>
