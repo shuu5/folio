@@ -8,9 +8,11 @@
 #
 # scenario file 名 (basename without .yaml) と hook script 名は次の規約で mapping:
 #   scenarios/caller-marker.yaml → .claude-plugin/scripts/check-caller-marker.sh
+#   scenarios/path-boundary.yaml → .claude-plugin/scripts/check-path-boundary.sh
 #
 # verification.html §3.2 schema 準拠の YAML を期待。
-# Step 2 以降 multi-scenario / multi-hook 対応は本 runner を拡張予定。
+# Step 2 で `given.content` を payload に含めるよう拡張 (Write hook 対応)。
+# Step 3 以降 multi-scenario / multi-hook 対応は本 runner を拡張予定。
 
 set -uo pipefail
 
@@ -52,15 +54,16 @@ for i in $(seq 0 $((COUNT - 1))); do
   name=$(yq -r ".scenarios[$i].name" "$SCENARIO_FILE")
   tool=$(yq -r ".scenarios[$i].when.tool" "$SCENARIO_FILE")
   file_path=$(yq -r ".scenarios[$i].given.file_path // \"\"" "$SCENARIO_FILE")
+  scenario_content=$(yq -r ".scenarios[$i].given.content // \"\"" "$SCENARIO_FILE")
   exp_exit=$(yq -r ".scenarios[$i].expect.exit_code" "$SCENARIO_FILE")
   exp_stderr=$(yq -r ".scenarios[$i].expect.stderr_contains // \"\"" "$SCENARIO_FILE")
 
   # given.env を JSON で取得 (空 dict なら "{}")
   env_keys_json=$(yq -o=json ".scenarios[$i].given.env // {}" "$SCENARIO_FILE")
 
-  # mock hook JSON payload (tool_name + tool_input.file_path)
-  payload=$(jq -n --arg tool "$tool" --arg fp "$file_path" \
-    '{tool_name: $tool, tool_input: {file_path: $fp}}')
+  # mock hook JSON payload (tool_name + tool_input.{file_path, content})
+  payload=$(jq -n --arg tool "$tool" --arg fp "$file_path" --arg ct "$scenario_content" \
+    '{tool_name: $tool, tool_input: {file_path: $fp, content: $ct}}')
 
   # env 構築: scenario 指定 env + HOME/PATH 継承の clean 環境
   env_args=()
