@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — plugin sandbox verification research (v0.1.0-draft)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./plugin-sandbox-verification-research.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio plugin sandbox verification research",
+  "folio:version": "0.1.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./plugin-architecture-research.html" },
+    { "@id": "./spec-graph-management-research.html" },
+    { "@id": "../constitution.html" },
+    { "@id": "../specs/rules.html" },
+    { "@id": "../specs/folio-self-spec.html" },
+    { "@id": "../specs/relations.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio plugin sandbox verification research</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft &middot; Phase X3 minimal plugin の実機検証フレーム設計調査 (87 sources、 5 researcher 並列調査、 session 59a916c0、 2026-05-23)</div>
+</header>
+
+<aside class="informative">
+<p>本文書は <a href="../constitution.html">constitution</a> の P-3 (WHAT-only) + P-11 (HOW 禁止) 遵守の上で、 <a href="plugin-architecture-research.html">plugin-architecture-research.html</a> で確定した folio Phase X3 minimal plugin (1 skill + 4 hook + 6 script + 1 CLI) を sandbox で実機検証するフレームワーク設計の調査結果である。 前回 2 レポート (plugin-architecture / spec-graph-management) は web 上の情報のみで実機 verify 未実施。 minimal plugin 実装直前に「動くと思って書いたが動かない」 リスクを低減するため本調査を実施。</p>
+<p>本レポートは folio rule に縛られない自由形式 HTML (research/ 配下、 <a href="../constitution.html#p-7">constitution P-7</a> Content domain exclusivity)。 stylesheet は <code>../../common.css</code> を参照。</p>
+</aside>
+
+<section id="s1-background" class="informative">
+<h2>§1. 調査背景</h2>
+
+<h3 id="s1-1-problem">§1.1 中核問題</h3>
+
+<p>folio Phase X3 着手直前で、 plugin 構成 (1 skill + 4 hook + 6 script + 1 CLI、 <a href="plugin-architecture-research.html#s7-3-scope">§7.3</a>) は確定したが、 hooks の実挙動 / PreToolUse permissionDecision deny bug (Issue #37210 / #33106) / lint script の throughput を <strong>自前で確認していない</strong>。 「机上設計と現実の乖離」 リスクを潰すため、 plugin の <strong>機能単位 (use case 単位) の sandbox 検証フレーム</strong> を設計する必要がある。</p>
+
+<aside class="informative">
+<p><strong>twill experiment-verified との関係 (重要 context)</strong>: twill は「情報ひとつひとつ」 (HOW level) に experiment-verified label を付ける方式 (memory hash a6d6b7c1)。 folio は constitution P-3 + P-11 のため「情報単位 HOW」 の verified は本研究の責務外。 「情報単位 experiment-verified」 は将来別 plugin で対応予定 (今回 scope 外)。 本研究は <strong>plugin 機能単位 (use case 単位) の sandbox 検証</strong> のみを対象とする (詳細は §8)。</p>
+</aside>
+
+<h3 id="s1-2-subquestions">§1.2 10 サブ質問</h3>
+
+<table>
+  <thead><tr><th>#</th><th>サブ質問</th><th>担当</th></tr></thead>
+  <tbody>
+    <tr><td>Q1</td><td>Claude Code 公式 plugin development workflow (test/dev/sandbox、 Issue #37210 等の verify)</td><td>researcher-1</td></tr>
+    <tr><td>Q2</td><td>類似 plugin ecosystem test harness deep dive (VS Code / Neovim / JetBrains / MCP / Chrome / Obsidian / Cursor / Continue / Aider)</td><td>researcher-2</td></tr>
+    <tr><td>Q3</td><td>AI agent behavior evaluation framework (LangChain / OpenAI / Anthropic / AutoGen / CrewAI / LangGraph / Inspect AI / Promptfoo / Helicone)</td><td>researcher-3</td></tr>
+    <tr><td>Q4</td><td>Conformance test suite design pattern (W3C WPT / LSP / TypeScript baseline / IETF RFC / OpenAPI Specmatic)</td><td>researcher-4</td></tr>
+    <tr><td>Q5</td><td>隔離環境構築 sandbox runtime (Nix / Docker / git worktree / Devbox / mise / Firecracker / Vagrant / WSL2)</td><td>researcher-5</td></tr>
+    <tr><td>Q6</td><td>Property-based / behavioral testing (Hypothesis / fast-check / mutation / Gherkin / EARS→scenario)</td><td>researcher-3 統合</td></tr>
+    <tr><td>Q7</td><td>観察 instrumentation (transcript / hook stdio / golden file / snapshot / structured logging)</td><td>researcher-4 統合</td></tr>
+    <tr><td>Q8</td><td>folio 用 sandbox verification framework 推奨設計</td><td>controller 統合導出</td></tr>
+    <tr><td>Q9</td><td>twill experiment-verified との境界明文化</td><td>controller 統合導出</td></tr>
+    <tr><td>Q10</td><td>ADR 起票候補</td><td>controller 統合導出</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s1-3-method">§1.3 調査手法</h3>
+
+<p>差分調査モード (DIFFERENTIAL_MODE=true、 既存 memory 前提: hash f621abb6 plugin-architecture / hash 96b16f0c twl Hooks/MCP / hash 322df262 Claude Code v2.1 更新)。 5 researcher を並列 spawn (sonnet model)、 67 fetch 成功 (failure 4)、 87 unique sources を集約。 critic 判定 PASS (WARNING 3 + Gap 5、 詳細は §9-§10)。</p>
+</section>
+
+<section id="s2-q1-claude-code" class="informative">
+<h2>§2. Q1 — Claude Code 公式仕様 reference (test/dev workflow)</h2>
+
+<h3 id="s2-1-dev-mode">§2.1 Development mode: <code>--plugin-dir</code> が公式 dev install</h3>
+
+<p>結論: <code>--dev</code> フラグは <strong>存在しない</strong>。 公式の "development install" 相当は <code>claude --plugin-dir ./my-plugin</code> (verified [1])。 セッション限定ロード (install なし) がセキュリティ境界。</p>
+
+<table>
+  <thead><tr><th>機能</th><th>command</th><th>備考</th></tr></thead>
+  <tbody>
+    <tr><td>dev install</td><td><code>claude --plugin-dir ./my-plugin</code></td><td>install なし、 session 限定。 同名 installed plugin より優先 (managed settings 上書き不可)</td></tr>
+    <tr><td>ZIP 対応 (v2.1.128+)</td><td><code>claude --plugin-dir ./my-plugin.zip</code></td><td>CI build artifact テスト用</td></tr>
+    <tr><td>URL 指定</td><td><code>claude --plugin-url https://example.com/my-plugin.zip</code></td><td>説明用ダミー URL [1]</td></tr>
+    <tr><td>複数同時</td><td><code>--plugin-dir ./p1 --plugin-dir ./p2</code></td><td>複数 plugin 同時テスト可</td></tr>
+    <tr><td>hot reload</td><td><code>/reload-plugins</code></td><td>plugins / skills / agents / hooks / plugin MCP / plugin LSP をリロード。 <strong>monitors は除外</strong> (session restart 必要)</td></tr>
+    <tr><td>デバッグ</td><td><code>claude --debug</code></td><td>plugin load 詳細 / manifest error / skill/agent/hook registration 状況 [2]</td></tr>
+    <tr><td>validate</td><td><code>claude plugin validate [--strict]</code></td><td>plugin.json / frontmatter / hooks.json の syntax/schema check。 marketplace community 審査と同一ツール [1]</td></tr>
+    <tr><td>token cost</td><td><code>claude plugin details &lt;name&gt;</code></td><td>各 skill の token cost 確認</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2-hook-test">§2.2 Hook テストパターン: 公式に automated framework なし (deduced)</h3>
+
+<p>公式は「Test the script manually」 と手動実行を推奨 [2]。 公式に hook の automated test framework は <strong>存在しない</strong>。 推奨手順:</p>
+
+<ol>
+  <li><code>chmod +x ./scripts/your-script.sh</code> (実行権限確認)</li>
+  <li>shebang 行確認 (<code>#!/bin/bash</code>)</li>
+  <li><code>${CLAUDE_PLUGIN_ROOT}</code> 利用確認</li>
+  <li><strong><code>echo '{...JSON}' | bash ./hooks/script.sh</code> で stdin/exit code/stdout を手動 verify</strong></li>
+  <li><code>claude --debug</code> で hook 起動確認</li>
+  <li>event 名の大小区別 (<code>PostToolUse</code> not <code>postToolUse</code>)</li>
+  <li>matcher pattern (<code>"matcher": "Write|Edit"</code>)</li>
+</ol>
+
+<p>hook handler type は 5 種 (<code>command</code> / <code>http</code> / <code>mcp_tool</code> / <code>prompt</code> / <code>agent</code>)。</p>
+
+<h3 id="s2-3-skill-test">§2.3 Skill テスト = Evaluation-Driven Development (verified)</h3>
+
+<p>公式推奨アプローチ [3]:</p>
+
+<ol>
+  <li>Skill なしで Claude に representative task → 失敗観察</li>
+  <li><strong>失敗ケースをカバーする 3 つ以上の evaluation シナリオ作成</strong></li>
+  <li>baseline performance 測定</li>
+  <li>Skill 記述 (最小限)</li>
+  <li>evaluation で改善測定 → iterate</li>
+</ol>
+
+<p>Evaluation JSON 形式 (公式サンプル):</p>
+
+<pre><code>{
+  "skills": ["pdf-processing"],
+  "query": "...",
+  "files": ["test-files/document.pdf"],
+  "expected_behavior": ["...", "..."]
+}
+</code></pre>
+
+<aside class="informative">
+<p><strong>重要な公式注記</strong>: 「There is not currently a built-in way to run these evaluations. We expect that you can come up with your own evaluation system.」 (platform.claude.com agent-skills/best-practices [3])。 つまり JSON evaluation schema は定義されているが、 <strong>実行システムはユーザー自作必須</strong>。 Haiku / Sonnet / Opus すべてでテスト推奨。 SKILL.md は 500 行以下、 参照深度 1 レベル。</p>
+</aside>
+
+<h3 id="s2-4-transcript">§2.4 Transcript / Log capture: 公式 API なし、 JSONL 自動保存 (verified)</h3>
+
+<ul>
+  <li>セッションデータは <code>~/.claude/projects/&lt;encoded-project-path&gt;/</code> に <strong>JSONL 形式で自動保存</strong> [7] (詳細 schema は §5.1)</li>
+  <li>非公式 <code>simonw/claude-code-transcripts</code> は「unofficial and undocumented APIs の変更により broken」 [8]</li>
+  <li>LangSmith 連携: <code>LANGCHAIN_TRACING_V2=true</code> 等で送信可能 ― <strong>注記: この主張は researcher-1 の検索結果由来で、 公式 Claude Code docs に LangSmith 連携の専用 page は未確認</strong></li>
+  <li><code>/plugin Errors タブ</code> (UI) でエラー確認</li>
+</ul>
+
+<h3 id="s2-5-marketplace">§2.5 Marketplace 審査 (verified)</h3>
+
+<p>2 つの公式 marketplace [4]:</p>
+
+<ul>
+  <li><code>claude-plugins-official</code>: Anthropic 管理、 申請プロセスなし、 裁量で決定</li>
+  <li><code>claude-community</code>: 第三者 submission を review 後掲載
+    <ul>
+      <li><code>claude plugin validate</code> ローカル実行必須</li>
+      <li>submission: <code>claude.ai/settings/plugins/submit</code> or <code>platform.claude.com/plugins/submit</code></li>
+      <li>review pipeline = <code>claude plugin validate</code> + <strong>automated safety screening</strong> (詳細非公開)</li>
+      <li>承認後: 特定の commit SHA に pin、 nightly sync で <code>anthropics/claude-plugins-community/marketplace.json</code> 反映</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="s2-6-deny-bug">§2.6 PreToolUse <code>permissionDecision: "deny"</code> Bug 群 (4 件 verified)</h3>
+
+<p><strong>全 4 件が Closed / not planned</strong>:</p>
+
+<table>
+  <thead><tr><th>Issue</th><th>対象</th><th>内容</th><th>ステータス</th></tr></thead>
+  <tbody>
+    <tr><td><a href="https://github.com/anthropics/claude-code/issues/37210">#37210</a> [5]</td><td>Edit tool</td><td>well-formed deny が無視される</td><td><strong>Closed / not planned</strong></td></tr>
+    <tr><td><a href="https://github.com/anthropics/claude-code/issues/33106">#33106</a> [6]</td><td>MCP server tools</td><td>deny が無視される (built-in は動作)</td><td><strong>Closed / not planned</strong> (2026-03-11)</td></tr>
+    <tr><td><a href="https://github.com/anthropics/claude-code/issues/39344">#39344</a> [7]</td><td>settings.deny vs hook</td><td>hook の "ask" が deny rules を silent bypass</td><td>Closed (2026-03-26)、 <code>area:security</code> ラベル</td></tr>
+    <tr><td>#18312 [URL 未確認]</td><td>allow list 内ツール</td><td>Bash allow list で deny/ask 完全無視</td><td>Closed</td></tr>
+  </tbody>
+</table>
+
+<p><strong>公式設計と実態の乖離</strong>:</p>
+
+<aside class="informative">
+<p>公式 doc (<code>code.claude.com/docs/en/permissions</code>) は明記 [12]:</p>
+<blockquote>
+<p>"Hook decisions do not bypass permission rules. Deny and ask rules are evaluated regardless of what a PreToolUse hook returns... A hook that exits with code 2 stops the tool call before permission rules are evaluated."</p>
+</blockquote>
+<p><strong>実態</strong>: 上記 4 Issue で deny が無視される → <strong><code>permissionDecision: deny</code> JSON は信頼できない、 <code>exit 2 + stderr</code> が確実な fallback</strong>。 Anthropic 公式コメントは全 4 Issue で確認されず。</p>
+</aside>
+
+<h3 id="s2-7-sandbox-misc">§2.7 Claude Code 別途 Sandbox 機構 (plugin 関連ではない)</h3>
+
+<ul>
+  <li><code>sandbox.filesystem</code> 設定 + OS レベルの filesystem/network アクセス制限 (Bash tool 限定)</li>
+  <li><code>autoAllowBashIfSandboxed: true</code> (default) で sandbox 内 Bash は prompt なし</li>
+  <li><strong>plugin development mode (<code>--plugin-dir</code>) では sandbox の記述なし</strong> (unsandboxed)</li>
+  <li>monitors は「run unsandboxed at the same trust level as hooks」 と明記</li>
+  <li><strong>BoxLite sandbox 統合提案 (Issue #15888) は Anthropic により "not planned" として却下</strong> [13]。 公式 plugin isolation sandbox は存在しない</li>
+</ul>
+</section>
+
+<section id="s3-q2-ecosystem" class="informative">
+<h2>§3. Q2 — 類似 plugin ecosystem test harness deep dive (9 事例)</h2>
+
+<h3 id="s3-1-matrix">§3.1 9 事例の 4 軸 (runner / scenario / instrumentation / CI) 整理</h3>
+
+<table>
+  <thead>
+    <tr><th>事例</th><th>Runner Architecture</th><th>Scenario Format</th><th>Observation</th><th>CI 統合</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>VS Code Extension</strong> [14][15][16][17]</td>
+      <td>別プロセス Extension Host + <code>@vscode/test-electron</code> + Mocha</td>
+      <td><code>.vscode-test.mjs</code> (<code>defineConfig</code>)</td>
+      <td>SourceMapStore, Test Explorer UI, exit code</td>
+      <td>xvfb-run + GitHub Actions</td>
+    </tr>
+    <tr>
+      <td><strong>@vscode/test-cli</strong> [16][17]</td>
+      <td>CLI 設定駆動、 Mocha</td>
+      <td><code>.vscode-test.mjs</code></td>
+      <td>AST / eval 二方式テスト抽出</td>
+      <td><code>vscode-test</code> コマンド</td>
+    </tr>
+    <tr>
+      <td><strong>Neovim plenary.nvim</strong> [19][20][21]</td>
+      <td>ヘッドレス nvim 別インスタンス per file</td>
+      <td><code>*_spec.lua</code> (Busted BDD)</td>
+      <td>luassert spy/stub/mock, coroutine async</td>
+      <td><code>nvim --headless -c PlenaryBustedDirectory</code> exit 0/1</td>
+    </tr>
+    <tr>
+      <td><strong>Neovim busted+shim</strong> [22]</td>
+      <td>XDG 分離 shim + <code>-l</code> フラグ</td>
+      <td><code>*_spec.lua</code></td>
+      <td>message trace table</td>
+      <td><code>.busted</code> config</td>
+    </tr>
+    <tr>
+      <td><strong>JetBrains IntelliJ</strong> [23][24][25]</td>
+      <td>二プロセス (Starter+Driver) + JMX/RMI、 Light/Heavy 二層</td>
+      <td><code>testdata/</code> + JUnit 5</td>
+      <td>bundled plugin が例外収集、 error log</td>
+      <td>Gradle + JUnit 5</td>
+    </tr>
+    <tr>
+      <td><strong>MCP Inspector</strong> (公式) [28]</td>
+      <td>React UI + Node.js Proxy + stdio/SSE/HTTP</td>
+      <td>CLI <code>--cli</code> + JSON output</td>
+      <td>JSON-RPC 完全可視化</td>
+      <td>CLI mode</td>
+    </tr>
+    <tr>
+      <td><strong>mcp-recorder</strong> [30]</td>
+      <td>Proxy record/replay/verify</td>
+      <td><code>cassette.json</code> (metadata + interactions) + scenarios.yml</td>
+      <td>request/response/latency 記録</td>
+      <td>pytest plugin <code>@mcp_cassette</code></td>
+    </tr>
+    <tr>
+      <td><strong>MCPSpec</strong> [31]</td>
+      <td>YAML declarative + session recording</td>
+      <td><strong>YAML テストコレクション</strong> (10 assertion type)</td>
+      <td>schema drift detection</td>
+      <td><code>mcpspec ci-init</code> 自動生成</td>
+    </tr>
+    <tr>
+      <td><strong>Obsidian</strong> [36][37]</td>
+      <td>Node.js hidden API + sandbox vault</td>
+      <td>なし (非構造化)</td>
+      <td>なし</td>
+      <td>未成熟</td>
+    </tr>
+    <tr>
+      <td><strong>Chrome Extension (MV3)</strong> [26][27]</td>
+      <td>Puppeteer/Playwright + Browser context</td>
+      <td>Jest <code>beforeEach</code>/<code>afterEach</code></td>
+      <td><code>extensionRealms()</code> / service worker target</td>
+      <td>xvfb-run (headed mode 必須)</td>
+    </tr>
+    <tr>
+      <td><strong>Continue.dev</strong> [33]</td>
+      <td>モノレポ 3 層 (Jest/Vitest/npm)</td>
+      <td>Jest/Vitest 標準</td>
+      <td>PR ごと自動実行</td>
+      <td>PR merge ブロッカー</td>
+    </tr>
+    <tr>
+      <td><strong>Aider</strong> [34]</td>
+      <td>pytest 自己テスト + auto-fix loop</td>
+      <td>pytest</td>
+      <td><code>--test-cmd</code> 任意コマンド</td>
+      <td>pytest CI</td>
+    </tr>
+    <tr>
+      <td><strong>pi-test-harness</strong> [35]</td>
+      <td>実 runtime + 境界 3 点モック</td>
+      <td>Playbook DSL (<code>when</code>/<code>calls</code>/<code>says</code>)</td>
+      <td>event collection 全ステップ</td>
+      <td>exit code</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s3-2-patterns">§3.2 6 応用 pattern (folio 用、 A〜F)</h3>
+
+<dl>
+  <dt><strong>Pattern A: 別プロセス Plugin Sandbox</strong> (VS Code / JetBrains)</dt>
+  <dd>Plugin を Host process から分離した isolated subprocess で実行、 IPC (JSON-RPC / RMI 相当) で通信。 <strong>folio 応用</strong>: plugin verification 時に plugin を別プロセスで起動し、 folio API への呼び出しを intercept・記録</dd>
+
+  <dt><strong>Pattern B: Light / Heavy 二層</strong> (JetBrains)</dt>
+  <dd><strong>Light</strong>: in-memory fixture、 plugin state のみリセット、 高速。 <strong>Heavy</strong>: フル環境再構築、 実ファイルシステム、 低速だが現実的。 <strong>folio 応用</strong>: 普段の unit 検証は Light (in-memory)、 phase 完了時の統合検証は Heavy (実 sandbox)</dd>
+
+  <dt><strong>Pattern C: Record → Replay → Verify</strong> (mcp-recorder)</dt>
+  <dd>plugin との interaction を cassette として記録、 CI では live plugin なしに cassette を replay。 schema drift 検知 (ツール/API インターフェース変更の自動検出)。 <strong>folio 応用</strong>: plugin API contract を cassette 化、 upgrade 時の互換性自動検証</dd>
+
+  <dt><strong>Pattern D: Playbook ベース Scenario</strong> (pi-test-harness)</dt>
+  <dd><code>when(trigger, actions=[calls(...), says(...)])</code> 形式の宣言的シナリオ、 LLM/外部プロセス境界のみ差替、 実 runtime はそのまま。 <strong>folio 応用</strong>: plugin の動作シナリオを Playbook 形式 YAML/DSL で記述</dd>
+
+  <dt><strong>Pattern E: YAML 宣言テストコレクション</strong> (MCPSpec)</dt>
+  <dd><code>action: verify_plugin_contract</code> 相当のアクション定義、 10 種以上の assertion type、 environment variable injection、 tags、 parallel execution、 <code>ci-init</code> で GitHub Actions スクリプト自動生成。 <strong>folio 応用</strong>: verification rule を YAML で宣言し <code>folio verify</code> で実行</dd>
+
+  <dt><strong>Pattern F: XDG / ENV 分離</strong> (Neovim shim)</dt>
+  <dd>XDG_CONFIG_HOME / XDG_DATA_HOME を tmp ディレクトリに向けて完全分離、 symlink で test plugin を動的注入・削除。 <strong>folio 応用</strong>: sandbox vault のデータディレクトリを一時 dir に向け、 本番 vault 汚染防止</dd>
+</dl>
+
+<h3 id="s3-3-common">§3.3 全事例共通 pattern (folio でも必須採用)</h3>
+
+<ol>
+  <li><strong>プロセス分離</strong>: テスト対象は必ず別プロセスまたは隔離環境で実行</li>
+  <li><strong>宣言的 scenario</strong>: テスト条件を設定 file (YAML / <code>.mjs</code> / <code>.lua</code>) で宣言</li>
+  <li><strong>exit code による CI gating</strong>: 0=pass / 1=fail でパイプラインをブロック</li>
+  <li><strong>fixture lifecycle 管理</strong>: <code>before_each</code> / <code>after_each</code> で状態リセット</li>
+  <li><strong>観察の非侵入性</strong>: 本番コードを変更せず instrumentation (SourceMapStore / event collection / cassette)</li>
+</ol>
+</section>
+
+<section id="s4-q3-q6" class="informative">
+<h2>§4. Q3 + Q6 — AI agent eval framework + Property/Behavioral testing</h2>
+
+<h3 id="s4-1-inspect-ai">§4.1 Inspect AI (UK AISI) — Task/Dataset/Solver/Scorer 4 層 (verified)</h3>
+
+<ul>
+  <li><strong>Task</strong> = REQ 単位のシナリオに直接マッピング可能 [38][39][40]</li>
+  <li><strong>Solver</strong>: <code>generate()</code> / <code>chain_of_thought()</code> / <code>self_critique()</code> chain + カスタム Solver</li>
+  <li><strong>Scorer</strong>: <code>exact()</code> / <code>includes()</code> / <code>pattern()</code> / <strong><code>model_graded_qa(grader_models=[...])</code></strong> で複数 grader majority voting [41]</li>
+  <li><strong>Agent eval</strong>: <code>react()</code> built-in + <code>use_tools()</code> + <code>generate_loop()</code> (ツール呼び出し停止までループ)</li>
+  <li><strong>Multi-agent</strong>: <code>handoff()</code> で会話履歴共有</li>
+  <li><strong>Agent Bridge</strong>: AutoGen / LangChain 等の外部 framework 連携</li>
+  <li><strong>Sandbox</strong>: Docker / K8s / Proxmox でツール実行環境分離、 <code>sandbox().read_file()</code> / <code>sandbox().exec()</code> でスコアリング時検査</li>
+  <li>200+ 事前構築 eval 同梱、 METR / Apollo Research 採用</li>
+</ul>
+
+<h3 id="s4-2-promptfoo">§4.2 Promptfoo — YAML 宣言 + 多様な assertion (verified)</h3>
+
+<p>現在 OpenAI が取得済み (MIT ライセンス維持) [42][43]。</p>
+
+<table>
+  <thead><tr><th>assertion 種別</th><th>用途</th><th>特徴</th></tr></thead>
+  <tbody>
+    <tr><td><code>llm-rubric</code></td><td>rubric pass/fail</td><td>迅速・明確</td></tr>
+    <tr><td><code>g-eval</code></td><td>CoT 複数次元</td><td>高精度・高 latency</td></tr>
+    <tr><td><code>factuality</code></td><td>参照との一貫性</td><td>ground truth あり</td></tr>
+    <tr><td><code>select-best</code></td><td>pairwise 比較</td><td>モデル間優劣</td></tr>
+    <tr><td><code>context-faithfulness</code></td><td>RAG faithfulness</td><td>検索 context 根拠</td></tr>
+  </tbody>
+</table>
+
+<ul>
+  <li><strong>Judge プロンプト標準構造 (RCAF)</strong>: Role / Rubric as Context / Action / Format。 セキュリティ指示 + スコアリング規則 + JSON 出力 (reason/score/pass) + コンテキスト</li>
+  <li><strong>Multi-judge voting</strong>: <code>assert-set</code> の <code>threshold: 0.66</code> で 3 judge 中 2 合格要求</li>
+  <li><strong>段階的パイプライン</strong>: 決定論的 check (高速) → 軽量 judge (常時) → 高精度 judge (条件付き)</li>
+  <li><strong>YAML 設定</strong>: <code>description</code> / <code>env</code> / <code>prompts</code> / <code>providers</code> / <code>defaultTest</code> / <code>scenarios</code> / <code>tests</code> 順、 Nunjucks 変数展開</li>
+</ul>
+
+<h3 id="s4-3-llm-judge">§4.3 LLM-as-judge 4 主要バイアス対策 (verified)</h3>
+
+<table>
+  <thead><tr><th>バイアス</th><th>対策</th></tr></thead>
+  <tbody>
+    <tr><td>Position bias (提示順序による好み)</td><td>位置交換 (swap)</td></tr>
+    <tr><td>Verbosity bias (長い回答への過評価)</td><td>内容基準の明示</td></tr>
+    <tr><td>Self-preference bias (同系統モデルへの過評価)</td><td>異系統 judge 使用</td></tr>
+    <tr><td>Non-determinism (スコアの不安定性)</td><td>temperature=0、 複数回実行平均</td></tr>
+  </tbody>
+</table>
+
+<ul>
+  <li>Few-shot prompting で GPT-4 一致率 65% → 77.5% に改善 [47]</li>
+  <li>Calibration: 30-50 多様例 + 人間ラベル + 90% 一致率確認 + hold-out 検証 + ドリフト監視</li>
+  <li><strong>DAG 構造</strong>: 評価を原子的サブタスクに分割、 各ノードが特定の判断</li>
+  <li><strong>folio 適用</strong>: REQ ごとに専用 judge を割り当てる単一次元分解がベストプラクティス</li>
+</ul>
+
+<h3 id="s4-4-hypothesis">§4.4 Hypothesis — RuleBasedStateMachine (verified)</h3>
+
+<p>プラグイン状態遷移の自動検証パターン [50]:</p>
+
+<table>
+  <thead><tr><th>デコレータ</th><th>機能</th></tr></thead>
+  <tbody>
+    <tr><td><code>@initialize</code></td><td>テスト前に exactly once 実行 (プラグイン登録)</td></tr>
+    <tr><td><code>@rule</code></td><td>基本操作定義 (任意順で呼び出し、 lifecycle 操作)</td></tr>
+    <tr><td><code>@precondition</code></td><td>ルール実行前条件チェック</td></tr>
+    <tr><td><code>@invariant</code></td><td>各ステップ後に必ず実行する検証 (REQ 維持)</td></tr>
+    <tr><td><code>Bundle</code></td><td>生成値の名前付きコレクション (target/consumes で再利用)</td></tr>
+  </tbody>
+</table>
+
+<p><strong>folio 適用</strong>: hook 状態遷移 (unregistered → registered → active → error) を状態機械でモデル化、 全操作列に対して REQ invariant が保たれることを検証可能。</p>
+
+<h3 id="s4-5-fast-check">§4.5 fast-check — Model-based Testing (JS/TS、 deduced)</h3>
+
+<aside class="informative">
+<p><strong>注記</strong>: fast-check の主張は researcher-3 の GitHub OSS README 水準の情報による。 fast-check 公式 docs (<code>fast-check.dev</code>) の直接フェッチは未実施 (critic WARNING、 §10 Gap 5)。 概念レベルでは正確だが、 <code>fc.ModelBasedTesting</code> API の具体的な使用例は実装段階で公式 docs 直接確認推奨。</p>
+</aside>
+
+<ul>
+  <li>「UI、 API、 状態機械のテストにプロパティベーステストを活用」 公式サポート [51]</li>
+  <li>Stateful tests: 決定論的モデル → コマンドシーケンス生成 → 実システムで実行 → モデルと結果常時比較</li>
+  <li><code>fc.ModelBasedTesting</code> で <code>commands</code> と <code>model</code> を指定、 Jest/Mocha/Vitest で実行</li>
+  <li><strong>folio 適用</strong>: TypeScript plugin の場合、 fast-check で plugin registry の状態遷移を property test (Phase X4+ 候補)</li>
+</ul>
+
+<h3 id="s4-6-ears-gherkin">§4.6 EARS → Gherkin/BDD 1:1 変換 (verified)</h3>
+
+<table>
+  <thead><tr><th>EARS パターン</th><th>構文</th><th>Gherkin 対応</th></tr></thead>
+  <tbody>
+    <tr><td>Ubiquitous</td><td><code>The [system] shall [behavior]</code></td><td>Given (初期) + When (任意) + Then</td></tr>
+    <tr><td>Event-Driven</td><td><code>When [trigger], the [system] shall [response]</code></td><td>Given (前提) + <strong>When</strong> (トリガー) + Then</td></tr>
+    <tr><td>State-Driven</td><td><code>While [state], the [system] shall [behavior]</code></td><td><strong>Given</strong> (状態) + When + Then</td></tr>
+    <tr><td>Unwanted Behavior</td><td><code>If [error], then the [system] shall [recovery]</code></td><td>Given + When (エラー) + Then (復旧)</td></tr>
+    <tr><td>Optional Feature</td><td><code>Where [feature enabled], the [system] shall [behavior]</code></td><td>Given (機能有効) + When + Then</td></tr>
+  </tbody>
+</table>
+
+<p><strong>変換キー原則</strong>: EARS の 1 要件 = 1 Gherkin シナリオ (conductofcode.io で実証済 [52])。 自動変換ツールは RequireKit が <code>/generate-bdd</code> コマンドで EARS → Given-When-Then 自動生成 [53][54]。</p>
+
+<p><strong>folio REQ-CM-001 (Event-Driven) 変換例</strong>:</p>
+
+<pre><code>EARS: "WHEN AI agent attempts to write to spec_path, the system SHALL verify caller marker env var"
+↓
+Feature: spec edit caller marker enforcement
+  Scenario: caller marker is set correctly → allow
+    Given the AI agent has set FOLIO_ARCHITECT_CONTEXT=folio-architect
+    When the agent attempts to Write to scratch/specs/example.html
+    Then PreToolUse hook SHALL emit exit code 0 (allow)
+  Scenario: caller marker missing → deny
+    Given FOLIO_ARCHITECT_CONTEXT is unset
+    When the agent attempts to Write to scratch/specs/example.html
+    Then PreToolUse hook SHALL emit exit code 2 (block) with stderr message
+</code></pre>
+
+<h3 id="s4-7-langchain-misc">§4.7 LangChain Trajectory eval / その他</h3>
+
+<ul>
+  <li><strong>軌跡評価 vs 出力評価</strong> [44][45]: 出力評価は最終回答のみで内部判断の失敗を見落とす。 軌跡評価はツール選択・中間推論・会話ターン全体を評価</li>
+  <li><strong>Scoring Evaluator</strong>: 1-10 スケールのカスタム基準、 <code>PairwiseStringEvalChain</code> で A/B テスト</li>
+  <li><strong>LangGraph</strong> [49]: explicit state で inspectable (Hypothesis state machine と相性良)</li>
+  <li><strong>AutoGen</strong>: emergent flow で unit test 困難、 録音 transcript の integration test 主軸</li>
+  <li><strong>Mutation testing</strong> (Stryker / mutmut / LLMorpheus [55]): folio 直接適用は LLM 非決定性と相性要検討</li>
+  <li><strong>Anthropic RSP eval</strong> [46]: 自動テスト + 標準化ベンチマーク + 専門家 red-teaming の 3 層構成 (folio eval pipeline 参考)</li>
+</ul>
+</section>
+
+<section id="s5-q4-q7" class="informative">
+<h2>§5. Q4 + Q7 — Conformance test suite design + Observability instrumentation</h2>
+
+<h3 id="s5-1-wpt">§5.1 W3C Web Platform Tests (WPT) scenario file 構造 (verified)</h3>
+
+<ul>
+  <li><strong>testharness.js</strong> ベースの JS テスト (最多)</li>
+  <li><strong>reftest</strong> (HTML pair) [56]:
+    <ul>
+      <li><code>&lt;link rel="match" href="references/test-ref.html"&gt;</code> で参照リンク</li>
+      <li>reference は同等描画を produce するが、 テスト対象技術を使わない</li>
+      <li><code>rel="mismatch"</code> で「異なること」 確認も可</li>
+      <li>fuzzy matching: <code>&lt;meta name=fuzzy content="maxDifference=15;totalPixels=300"&gt;</code></li>
+    </ul>
+  </li>
+  <li><strong>manifest</strong> (<code>MANIFEST.json</code>): 自動生成、 <code>wpt manifest</code> で更新</li>
+  <li><strong>メタデータ (期待値)</strong> [57]: INI-like 形式の <code>.ini</code> ファイル、 <code>tests/</code> 構造をミラーした <code>metadata/</code> ディレクトリに <code>file.html.ini</code> 形式で配置
+    <ul>
+      <li>キー例: <code>expected: PASS</code> / <code>disabled: true</code> / <code>fuzzy: ...</code></li>
+      <li>conditional value 構文: Python-like の <code>if</code> 式で platform 依存の期待値記述</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="s5-2-ts-baseline">§5.2 TypeScript compiler test baseline (verified)</h3>
+
+<p>Two-directory model [59][60]:</p>
+
+<pre><code>tests/baselines/reference/   ← VCS 管理 (期待値)
+tests/baselines/local/       ← 実行生成 (.gitignore)
+</code></pre>
+
+<ul>
+  <li><strong>baseline ファイル拡張子</strong>: <code>.js</code> (コンパイル出力) / <code>.errors.txt</code> / <code>.types</code> / <code>.symbols</code></li>
+  <li><strong>regression detection flow</strong>:
+    <ol>
+      <li><code>reference/</code> vs <code>local/</code> の diff</li>
+      <li>差分 → test FAIL</li>
+      <li>変更が正当なら <code>jake baseline-accept</code> で reference に昇格</li>
+      <li><code>jake baseline-accept[soft]</code> は新規のみ (delete なし)</li>
+    </ol>
+  </li>
+</ul>
+
+<h3 id="s5-3-specmatic">§5.3 Specmatic / Arazzo (OpenAPI/AsyncAPI conformance、 verified)</h3>
+
+<p>API 仕様を "Executable Contract" としてそのまま実行 [61][62]。 Scenario format (<code>*.arazzo_inputs.json</code>):</p>
+
+<pre><code>{
+  "WorkflowName": {
+    "DEFAULT": { "productType": "Electronics", "maxPrice": 1000 },
+    "GetProducts.IsArrayEmpty": { "maxPrice": 0 }
+  }
+}
+</code></pre>
+
+<ul>
+  <li><code>DEFAULT</code> 基底 + named scenario 差分のみ指定してマージ</li>
+  <li><code>$failureMessage</code> で期待失敗メッセージ</li>
+  <li><strong>検証フロー</strong>: OpenAPI/AsyncAPI spec に対して実サービス実行、 happy + unhappy path、 closed-loop testing (spec 内参照でペイロード検証)</li>
+</ul>
+
+<h3 id="s5-4-snapshot">§5.4 Golden file / Snapshot testing の使い分け (verified)</h3>
+
+<p><strong>用語整理</strong>: Golden file ≈ Snapshot ≈ Golden master ≈ Known-answer testing (本質的に同じ概念)。</p>
+
+<table>
+  <thead><tr><th>状況</th><th>推奨</th><th>ツール例</th></tr></thead>
+  <tbody>
+    <tr><td>複雑な出力構造 (DOM, AST)</td><td>Snapshot testing</td><td>Jest <code>*.snap</code> [65]</td></tr>
+    <tr><td>テキスト/CLI 出力</td><td>Golden file</td><td>TypeScript baseline</td></tr>
+    <tr><td>非決定的な値</td><td>Property matcher で動的値をマスク</td><td>Jest <code>expect.any(Date)</code></td></tr>
+    <tr><td>小さな focused output</td><td>Inline snapshot</td><td>insta <code>assert_snapshot!(value, @"...")</code> [66]</td></tr>
+    <tr><td>大きなコーパス</td><td>External <code>.snap</code>/<code>.yml</code></td><td>pytest-regressions [68]</td></tr>
+  </tbody>
+</table>
+
+<p>4 つの diff/regression detection pattern:</p>
+
+<ol>
+  <li><strong>two-directory model</strong> (TypeScript): <code>reference/</code> vs <code>local/</code></li>
+  <li><strong>single-file update</strong> (Jest): <code>.snap</code> 直接更新 + VCS 追跡</li>
+  <li><strong>accept/reject workflow</strong> (insta): <code>.snap.new</code> → review → <code>.snap</code> 昇格</li>
+  <li><strong>database model</strong> (http-conformance): 結果を DB → Notebook 分析</li>
+</ol>
+
+<h3 id="s5-5-transcript">§5.5 Claude Code transcript capture format (verified)</h3>
+
+<p>JSONL 形式 (append-only) [70]、 <code>~/.claude/projects/&lt;encoded-project-path&gt;/</code>:</p>
+
+<pre><code>{"type":"user","uuid":"...","parentUuid":"...","timestamp":"2024-01-01T00:00:00Z","sessionId":"abc","cwd":"/path","gitBranch":"main","version":"1.0","message":{"role":"user","content":"Your prompt"}}
+{"type":"assistant","uuid":"...","parentUuid":"...","timestamp":"...","message":{"role":"assistant","content":[{"type":"text","text":"..."},{"type":"tool_use","id":"call_1","name":"Bash","input":{"command":"npm test"}}],"usage":{...}}}
+{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"call_1","content":"Test output"}]}}
+</code></pre>
+
+<ul>
+  <li><strong>Universal fields</strong>: <code>type</code> / <code>uuid</code> / <code>parentUuid</code> / <code>timestamp</code> / <code>sessionId</code> / <code>cwd</code> / <code>gitBranch</code> / <code>version</code></li>
+  <li><strong>Hook 経由の capture</strong>: <code>transcript_path</code> が全 hook イベント stdin JSON に含まれる、 SessionStart で <code>transcript_path</code> / <code>session_id</code> / <code>cwd</code> 利用可</li>
+  <li><strong>Hook stdin/stdout format</strong>: stdin JSON (session_id, transcript_path, cwd, tool_name, tool_input)、 stdout JSON (continue, decision, reason, systemMessage)</li>
+  <li><strong>exit code</strong>: 0=success, <strong>2=blocking</strong> (PreToolUse では action ブロック)、 その他=非ブロッキングエラー</li>
+</ul>
+
+<h3 id="s5-6-otel">§5.6 OpenTelemetry を CLI hook 経由で emit (verified)</h3>
+
+<ul>
+  <li><strong>claude_telemetry</strong> [72] (hook ベース wrapper): PreToolUse/PostToolUse で span capture、 span 階層 <code>claude.agent.run</code> → <code>tool.*</code>、 OTLP export</li>
+  <li><strong>opentelemetry-instrumentation-claude-agent-sdk</strong> [73]: <code>invoke_agent</code> span (CLIENT) → <code>execute_tool</code> spans (INTERNAL)、 <code>gen_ai.*</code> 属性、 <code>TRACEPARENT</code>/<code>TRACESTATE</code> で distributed trace 統合、 <code>OTEL_LOG_RAW_API_BODIES=1</code> (v2.1.111+)</li>
+  <li><strong>OTLP File Exporter</strong> [74]: JSON Lines (<code>.jsonl</code>)、 UTF-8、 各行 complete JSON object、 <code>\n</code> 区切り。 Top-level: <code>TracesData</code> / <code>MetricsData</code> / <code>LogsData</code> (混在不可)</li>
+</ul>
+
+<h3 id="s5-7-format">§5.7 Scenario file format 比較 (folio 用推奨導出)</h3>
+
+<table>
+  <thead><tr><th>特性</th><th>YAML</th><th>JSON</th><th>Markdown</th></tr></thead>
+  <tbody>
+    <tr><td>人間可読性</td><td>高 (コメント可)</td><td>中</td><td>最高</td></tr>
+    <tr><td>パーサビリティ</td><td>厳密 (注意)</td><td>高速・安定</td><td>限定的</td></tr>
+    <tr><td>コメント</td><td>可</td><td>不可</td><td>可 (prose)</td></tr>
+    <tr><td>LLM 可読性</td><td>GPT 系強</td><td>フォーマット失敗リスク</td><td>トークン効率最良</td></tr>
+    <tr><td>主用途</td><td>Config, OpenAPI</td><td>API responses, Smithy</td><td>ドキュメント</td></tr>
+    <tr><td>落とし穴</td><td>Norway problem, indent</td><td>trailing comma</td><td>テーブル解析</td></tr>
+  </tbody>
+</table>
+
+<p><strong>実際の採用状況</strong>: WPT (INI + HTML) / TypeScript (テキスト + <code>////</code> fourslash) / Specmatic Arazzo (JSON) / pytest-regressions (YAML) / Jest (<code>.snap</code> 独自) / Smithy (YAML/JSON) / h2spec (Go コード埋込) / <strong>MCPSpec (YAML)</strong>。</p>
+
+<p><strong>folio 推奨 (§7 で詳述)</strong>: シナリオ定義 = YAML、 期待値出力 = JSON Lines / 独自テキスト、 Narrative = Markdown、 差分表示 = テキスト diff。</p>
+</section>
+
+<section id="s6-q5" class="informative">
+<h2>§6. Q5 — 隔離環境構築 + Claude Code sandbox 可否</h2>
+
+<h3 id="s6-1-comparison">§6.1 9 方式比較表</h3>
+
+<table>
+  <thead><tr><th>方式</th><th>Declarative</th><th>Hermetic</th><th>起動時間</th><th>folio 適合性</th><th>API access 制御</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Nix flake</strong> [75][76]</td><td>最高</td><td>最高 (bit-for-bit)</td><td>~0.3 秒 (初回 20 分)</td><td>高 (学習コスト大)</td><td>OS level</td></tr>
+    <tr><td><strong>Devbox</strong> [77]</td><td>高 (JSON)</td><td>高 (Nix 同等)</td><td>~1.5 秒 (初回 4 分)</td><td><strong>最適 (試作段階)</strong></td><td>OS level</td></tr>
+    <tr><td><strong>mise</strong> [78]</td><td>中 (TOML)</td><td>中 (ツール版のみ)</td><td>~10ms</td><td>ツール版用途</td><td>なし</td></tr>
+    <tr><td><strong>git worktree</strong> [8][79]</td><td>なし</td><td>なし (ファイルのみ)</td><td>即時</td><td><strong>最軽量 (repo 内完結)</strong></td><td>なし</td></tr>
+    <tr><td><strong>Docker / Podman</strong> [80][84][85]</td><td>中 (Dockerfile)</td><td>中〜高 (digest)</td><td>ms 〜 秒 (初回 8 分)</td><td>CI 向け</td><td>ネットワーク制御可</td></tr>
+    <tr><td><strong>devcontainer.json</strong></td><td>中</td><td>中 (image drift 有)</td><td>数秒</td><td>VS Code 連携</td><td>コンテナ境界</td></tr>
+    <tr><td><strong>Firecracker microVM</strong> [81]</td><td>低</td><td>最高 (KVM)</td><td>~125ms</td><td>過剰 (hook 検証のみ)</td><td>VM 境界</td></tr>
+    <tr><td><strong>Vagrant / QEMU</strong> [82]</td><td>中 (Vagrantfile)</td><td>高</td><td>数分</td><td>過剰</td><td>VM 境界</td></tr>
+    <tr><td><strong>WSL2</strong> [83]</td><td>なし</td><td>なし</td><td>数秒</td><td>Windows 向け</td><td>なし</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-2-claude-sandbox">§6.2 「Claude Code 自体を sandbox で動かす」 判定</h3>
+
+<aside class="informative">
+<p><strong>結論: 現実的に実行可能。 ただし以下の前提条件がある (verified [9][13][84][85])。</strong></p>
+</aside>
+
+<ol>
+  <li><code>api.anthropic.com</code> への外部アクセスは Claude Code 動作に必須。 完全網断は不可</li>
+  <li><strong>API key (<code>ANTHROPIC_API_KEY</code>) は sandbox 起動前に注入必要</strong>。 起動後の追加はコンテナ再起動が必要で会話 context を失う</li>
+  <li><strong><code>~/.claude</code> (ユーザーレベル設定) は sandbox 内で無効</strong>。 プロジェクトレベル設定 (<code>.claude/settings.json</code>) のみ有効</li>
+  <li><strong>hook の unit test (スクリプトロジック検証) は API call 不要</strong>。 JSON stdin / exit code / stdout をテストするだけで OK</li>
+  <li>hook の <strong>統合テスト</strong> (実際の Claude セッション内で hook が正しく発火するか) は API call が必要</li>
+  <li>Claude Code 本体 API call 部分の mock は技術的に困難 (プロプライエタリ)。 hook script 自体は JSON I/O のみで mock 容易</li>
+</ol>
+
+<p>Docker 公式 sandbox: <code>sbx run claude</code> コマンドが存在 [9]。 認証は環境変数 or OAuth。 Squid proxy で他ドメイン遮断しつつ Anthropic API のみ許可可。</p>
+
+<p><strong>BoxLite sandbox 統合提案 (Issue #15888) は Anthropic により "not planned" として却下</strong> [13]。 公式 plugin isolation sandbox は存在しない。</p>
+
+<h3 id="s6-3-3step">§6.3 folio 用 3 段階推奨パターン</h3>
+
+<table>
+  <thead><tr><th>Step</th><th>方式</th><th>API call</th><th>適用フェーズ</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Step 1 (API 不要)</strong></td><td>hook script を <code>echo '{...}' | bash ./hooks/script.sh</code> で直接 unit test</td><td>不要</td><td>Phase X3 最初 = MUST</td></tr>
+    <tr><td><strong>Step 2 (軽量)</strong></td><td>git worktree (<code>.claude/worktrees/</code>) に test project 作成、 <code>.claude/settings.json</code> で hook 設定</td><td>API key 注入で可</td><td>Phase X3 中盤 = SHOULD</td></tr>
+    <tr><td><strong>Step 3 (本格)</strong></td><td>統合テストが必要な場合のみ Docker Compose (Squid 付き) で Claude Code 実行</td><td>必須 (Anthropic API のみ allowlist)</td><td>Phase X4+ = MAY</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-4-boundary">§6.4 「folio 軽量」 vs「本格 hermetic」 の境界</h3>
+
+<dl>
+  <dt><strong>軽量 (folio 試作段階に適合)</strong></dt>
+  <dd>
+    <ul>
+      <li><strong>git worktree</strong>: <code>.claude/worktrees/</code> 配下、 ファイル隔離のみ。 ポート衝突等の runtime isolation は別途対策必要</li>
+      <li><strong>Devbox</strong>: <code>devbox.json</code> をリポジトリに含め Layer 1 consumer に配布、 Nix の複雑さ隠蔽</li>
+    </ul>
+  </dd>
+
+  <dt><strong>本格 hermetic (Phase X3 以降・本番 CI)</strong></dt>
+  <dd>
+    <ul>
+      <li><strong>Nix flake</strong>: <code>flake.nix</code> + <code>flake.lock</code> + <code>nix flake check</code> で CI、 学習コスト高</li>
+      <li><strong>Docker Compose + Squid proxy</strong>: <code>internal: true</code> + ドメイン allowlist で外部 API 制御</li>
+    </ul>
+  </dd>
+</dl>
+</section>
+
+<section id="s7-q8" class="informative">
+<h2>§7. Q8 — folio 用 Sandbox Verification Framework 推奨設計</h2>
+
+<h3 id="s7-1-principles">§7.1 設計原則 (folio constitution と整合)</h3>
+
+<ul>
+  <li><strong>P-3 (WHAT-only) + P-11 (HOW 禁止)</strong>: verification framework 本体は WHAT (どの REQ を検証するか) のみ規定。 HOW (具体 runner / shell 構文 / file path) は <code>scratch/verification/</code> 配下に隔離</li>
+  <li><strong>P-12 (Layer 0 一体配布)</strong>: 完成形では verification framework も <code>.claude-plugin/</code> の一部として配布候補。 ただし <strong>Phase X3 段階では plugin 本体と分離した試作物</strong> として <code>scratch/verification/</code> に配置</li>
+  <li><strong>試作駆動哲学</strong>: 1 use case の verification scenario から開始、 8 use case 全 cover は段階的に拡張</li>
+</ul>
+
+<h3 id="s7-2-layout">§7.2 配置 (scratch 内)</h3>
+
+<pre><code>scratch/
+├── specs/                          (既存)
+├── decisions/                      (既存)
+├── research/                       (既存、 本レポートを含む)
+├── verification/                   ← 新規 (本フレーム)
+│   ├── README.html                 entry point + 全 scenario 一覧
+│   ├── scenarios/                  use case 別 scenario file
+│   │   ├── caller-marker.yaml      REQ-CM-001〜003
+│   │   ├── path-boundary.yaml      check-path-boundary.sh
+│   │   ├── jsonld-lint.yaml        REQ-CI-010〜015 関連
+│   │   ├── readme-update.yaml      auto-update on new spec
+│   │   ├── context-inject.yaml     SessionStart inventory inject
+│   │   ├── bidir-link.yaml         REQ-REL-002
+│   │   ├── inventory-regen.yaml    REQ-REL-004
+│   │   └── ears-coverage.yaml      REQ-CI-014
+│   ├── fixtures/                   テストデータ
+│   │   ├── valid-spec.html         REQ-REL-001 通過用
+│   │   ├── invalid-jsonld.html     JSON-LD lint fail 用
+│   │   └── ...
+│   ├── baselines/                  期待値 (golden file pattern)
+│   │   ├── reference/              VCS 管理
+│   │   └── local/                  実行生成 (.gitignore)
+│   └── runner.sh                   軽量 bash runner (試作)
+</code></pre>
+
+<p><strong>理由</strong>: scratch/ は folio rule に縛られない箱 (CLAUDE.md 明記)。 verification 自体は HOW なので本体 specs/ と分離 (P-11 整合)。</p>
+
+<h3 id="s7-3-format">§7.3 Scenario format 推奨: YAML (MCPSpec / Promptfoo / pytest-regressions 流)</h3>
+
+<p>folio scenario file の標準構造 (例: <code>caller-marker.yaml</code>):</p>
+
+<pre><code># scratch/verification/scenarios/caller-marker.yaml
+schema_version: "0.1"
+req_id: "REQ-CM-001"
+ears_pattern: "event-driven"
+description: |
+  WHEN AI agent attempts to write to spec_path,
+  the system SHALL verify caller marker env var.
+
+setup:
+  env:
+    FOLIO_ARCHITECT_CONTEXT: "folio-architect"
+  fixtures:
+    - source: fixtures/valid-spec.html
+      dest: scratch/specs/test-target.html
+
+scenarios:
+  - name: "caller marker set correctly → allow"
+    given:
+      env: { FOLIO_ARCHITECT_CONTEXT: "folio-architect" }
+    when:
+      tool: "Edit"
+      file_path: "scratch/specs/test-target.html"
+      tool_input: { ... }
+    expect:
+      exit_code: 0
+      stderr: ""
+      decision: "allow"
+
+  - name: "caller marker missing → deny (exit 2 fallback)"
+    given:
+      env: { FOLIO_ARCHITECT_CONTEXT: "" }
+    when:
+      tool: "Edit"
+      file_path: "scratch/specs/test-target.html"
+    expect:
+      exit_code: 2          # Issue #37210/#33106 対策の確実な fallback
+      stderr_contains: "FOLIO_ARCHITECT_CONTEXT"
+      decision: "deny"
+
+teardown:
+  cleanup_files:
+    - scratch/specs/test-target.html
+</code></pre>
+
+<p><strong>設計判断の根拠</strong>:</p>
+
+<ul>
+  <li><strong>YAML 採用</strong> (§5.7 比較表より): コメント可、 構造明確、 MCPSpec 実績</li>
+  <li><strong>EARS → Gherkin Given/When/Then 1:1 マッピング</strong> (§4.6 より): REQ-ID 直結</li>
+  <li><strong>exit code 中心の assertion</strong> (§2.6 より): <code>permissionDecision: deny</code> は信頼できない、 <code>exit 2 + stderr</code> を verify</li>
+  <li><strong>fixtures + baselines 分離</strong> (§5.4 より): TypeScript baseline pattern + WPT reftest pattern の折衷</li>
+  <li><strong>Setup / Teardown</strong> (§3.3 共通): before_each / after_each 相当</li>
+</ul>
+
+<h3 id="s7-4-runner">§7.4 Runner 選択 trade-off</h3>
+
+<table>
+  <thead><tr><th>選択肢</th><th>利点</th><th>欠点</th><th>folio 適合性</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>独自 bash runner (<code>runner.sh</code>)</strong></td>
+      <td>試作早い、 依存ゼロ、 P-11 隔離容易、 hook script との親和性</td>
+      <td>scenario 仕様の標準化なし</td>
+      <td><strong>Phase X3 最初 = 推奨</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Promptfoo</strong> (YAML + llm-rubric) [42]</td>
+      <td>LLM judge 統合、 OSS 実績、 YAML 自然</td>
+      <td>重量、 plugin verification 用ではない</td>
+      <td>Phase X4+ (LLM behavior eval 必要時)</td>
+    </tr>
+    <tr>
+      <td><strong>MCPSpec</strong> (YAML + 10 assertion) [31]</td>
+      <td>MCP 専用だが汎用 YAML scenario pattern が参考</td>
+      <td>MCP 専用名前空間、 folio に直適合せず</td>
+      <td>参考のみ</td>
+    </tr>
+    <tr>
+      <td><strong>Inspect AI</strong> (Python Task/Scorer) [38]</td>
+      <td>高機能、 sandbox 統合、 multi-agent</td>
+      <td>Python 依存、 試作段階に重い</td>
+      <td>Phase X4+ (Anthropic eval methodology 採用時)</td>
+    </tr>
+    <tr>
+      <td><strong>pytest-regressions + Hypothesis</strong> [68][50]</td>
+      <td>golden file + property test、 Python 標準</td>
+      <td>Python 必須、 hook script 中心の folio に過剰</td>
+      <td>Step 2-3 で <code>validate_jsonld.py</code> のテストに採用可</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>Phase X3 推奨</strong>: <strong>独自 bash runner</strong>。 試作駆動哲学に合致。 完成形は Inspect AI / Promptfoo 統合候補だが、 まず動くものを 1 scenario から作る。</p>
+
+<aside class="informative">
+<p><strong>注記 (Open Question Gap 2)</strong>: runner.sh の具体的 interface 仕様 (YAML parse は <code>yq</code> か Python+PyYAML か、 assertion 評価ロジック、 exit code 集計方法) は本研究段階では未確定。 ADR-0013 起票前に最低限の設計選択が必要。</p>
+</aside>
+
+<h3 id="s7-5-usecases">§7.5 8 use case verification scenario 設計</h3>
+
+<p><a href="plugin-architecture-research.html#s7-3-scope">plugin-architecture-research.html §7.3</a> の Phase X3 minimal plugin (1 skill + 4 hook + 6 script + 1 CLI) と整合した 8 use case を REQ から導出:</p>
+
+<table>
+  <thead>
+    <tr><th>#</th><th>Use case</th><th>scenario file</th><th>REQ source</th><th>Step</th><th>検証 method</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td><td>caller marker check</td><td><code>caller-marker.yaml</code></td>
+      <td><a href="../specs/rules.html#s10-1">REQ-CM-001〜003</a></td><td>Step 2</td>
+      <td>echo JSON pipe + exit code</td>
+    </tr>
+    <tr>
+      <td>2</td><td>path boundary check</td><td><code>path-boundary.yaml</code></td>
+      <td>(rules.html §10)</td><td>Step 2</td>
+      <td>echo JSON pipe + exit code</td>
+    </tr>
+    <tr>
+      <td>3</td><td>JSON-LD lint</td><td><code>jsonld-lint.yaml</code></td>
+      <td><a href="../specs/rules.html#s4-format">rules §4.1</a> + <a href="../specs/relations.html#s3-jsonld">relations §3</a></td><td>Step 3</td>
+      <td>fixture + lint script + golden output</td>
+    </tr>
+    <tr>
+      <td>4</td><td>README update</td><td><code>readme-update.yaml</code></td>
+      <td>(<a href="../specs/relations.html#s4-inventory">relations §4 inventory</a>)</td><td>Step 4</td>
+      <td>新 spec 追加 → README diff baseline</td>
+    </tr>
+    <tr>
+      <td>5</td><td>context injection (SessionStart)</td><td><code>context-inject.yaml</code></td>
+      <td>(Beads pattern)</td><td>Step 5</td>
+      <td>session start hook → injected content snapshot</td>
+    </tr>
+    <tr>
+      <td>6</td><td>双方向 link materialize</td><td><code>bidir-link.yaml</code></td>
+      <td><a href="../specs/relations.html#s5-3-ears">REQ-REL-002</a></td><td>Step 8</td>
+      <td>forward 宣言 → reverse 自動付与 baseline</td>
+    </tr>
+    <tr>
+      <td>7</td><td>inventory.json regen</td><td><code>inventory-regen.yaml</code></td>
+      <td><a href="../specs/relations.html#s5-3-ears">REQ-REL-004</a></td><td>Step 5</td>
+      <td>spec edit → inventory.json diff baseline</td>
+    </tr>
+    <tr>
+      <td>8</td><td>EARS coverage report</td><td><code>ears-coverage.yaml</code></td>
+      <td><a href="../specs/rules.html#s10-2">REQ-CI-014</a></td><td>Step 7</td>
+      <td>EARS markup 完全性 grep + REQ-ID uniqueness</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s7-6-ci">§7.6 CI 統合 + 観察 instrumentation</h3>
+
+<ul>
+  <li><strong>PR ごと sandbox verification 自動実行</strong>: GitHub Actions で <code>bash scratch/verification/runner.sh</code> 起動、 exit code 0/1 で merge gating</li>
+  <li><strong>Phase X3 minimal scope</strong>: scenario 1-3 (caller marker + path boundary + JSON-LD lint) のみ CI gate、 残りは warn のみ → 段階的に fail 化</li>
+  <li><strong>transcript capture</strong>: <code>~/.claude/projects/&lt;path&gt;/*.jsonl</code> を session 終了時に <code>scratch/verification/transcripts/</code> にコピー (§5.5)</li>
+  <li><strong>hook stdio capture</strong>: runner が stdin/stdout/stderr/exit_code をすべて golden file (<code>baselines/local/</code>) に書き出し</li>
+  <li><strong>OpenTelemetry はオプション</strong>: 試作段階では JSON Lines (<code>.jsonl</code>) 直接出力で十分 (§5.6)</li>
+  <li><strong>snapshot pattern</strong>: <code>baselines/reference/</code> (VCS) vs <code>baselines/local/</code> (gitignore) の TypeScript 2-dir model + <code>runner.sh --accept</code> で reference 昇格 (§5.2, §5.4)</li>
+</ul>
+</section>
+
+<section id="s8-q9" class="informative">
+<h2>§8. Q9 — twill experiment-verified との境界明文化</h2>
+
+<h3 id="s8-1-twill">§8.1 twill の experiment-verified pattern (reference)</h3>
+
+<p><strong>twill</strong> は spec 内の「情報ひとつひとつ」 (HOW level) に <code>experiment-verified</code> label を付ける方式 (memory hash a6d6b7c1 / 09550ec2):</p>
+
+<ul>
+  <li>4-state status: <code>proposed</code> / <code>accepted</code> / <code>experiment-verified</code> / <code>archived</code></li>
+  <li>各 claim を bats / smoke test で実機検証</li>
+  <li>EXP-019〜031 等の番号で個別 hyperlink</li>
+  <li>spec の中身 (情報単位 HOW) に verified label を埋め込む</li>
+</ul>
+
+<h3 id="s8-2-folio-vs-twill">§8.2 folio の方針: 機能単位 (use case 単位) sandbox 検証</h3>
+
+<table>
+  <thead><tr><th>軸</th><th>twill (情報単位)</th><th>folio (機能単位)</th></tr></thead>
+  <tbody>
+    <tr><td>検証対象</td><td>spec 内の各 claim (HOW level)</td><td>plugin の use case (機能単位)</td></tr>
+    <tr><td>検証 marker</td><td><code>experiment-verified</code> label を spec 内 inline</td><td>scenario YAML file (spec 本体外、 <code>scratch/verification/</code>)</td></tr>
+    <tr><td>検証粒度</td><td>1 claim = 1 EXP</td><td>1 use case = 1 scenario (REQ 単位 with EARS)</td></tr>
+    <tr><td>spec 内容</td><td>情報単位 verified</td><td>WHAT-only (verified label なし)</td></tr>
+    <tr><td>constitution 整合</td><td>(twill 独自)</td><td>P-3 + P-11 遵守</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s8-3-rationale">§8.3 なぜ folio が twill 方式を採用しないか</h3>
+
+<ol>
+  <li><strong>P-3 WHAT-only 違反</strong>: 情報単位 verified label を spec 内に書くと、 spec が HOW を保持してしまう (どの EXP で verify したか、 verify したコマンド等)</li>
+  <li><strong>P-11 HOW 絶対禁止</strong>: experiment-verified の HOW (実行コマンド、 verify 結果のスニペット) は spec 本文に書けない</li>
+  <li><strong>Layer 0 一体配布 (P-12) と矛盾</strong>: 情報単位 verified は spec を実装依存にする、 spec が「未来理想 anchor」 (P-1) でなくなる</li>
+</ol>
+
+<h3 id="s8-4-future">§8.4 情報単位 verified が将来別 plugin として独立する根拠</h3>
+
+<p>将来、 folio Layer 0 のオプション plugin として <strong><code>folio-claim-verifier</code></strong> (仮称) を提供する設計余地:</p>
+
+<ul>
+  <li>各 spec の inline claim に <code>data-claim-id="C-001"</code> 等を付与</li>
+  <li>別 file (<code>scratch/claims/C-001.html</code> 等) で claim 単位の verify status を管理</li>
+  <li>folio core (本 verification framework) は機能単位 sandbox、 別 plugin は情報単位 verified という二層構成</li>
+  <li><strong>本研究の scope 外</strong> (今回は機能単位のみ規定、 情報単位は別 plugin で隔離)</li>
+</ul>
+
+<h3 id="s8-5-what-only">§8.5 本 verification framework が WHAT のみ規定する設計</h3>
+
+<ul>
+  <li><code>scratch/verification/scenarios/*.yaml</code> は WHAT (どの REQ をどう検証するか、 use case 単位) のみ規定</li>
+  <li>HOW (runner.sh の実装、 fixture の中身、 baseline の binary 形式) は <code>scratch/verification/</code> 配下に隔離</li>
+  <li>将来 <code>architecture/verification/</code> に移植時、 binding を <code>.claude-plugin/scripts/</code> に分離</li>
+  <li>情報単位 verified は別 plugin に隔離 (将来 work)</li>
+</ul>
+</section>
+
+<section id="s9-q10" class="informative">
+<h2>§9. Q10 — ADR 起票候補</h2>
+
+<aside class="informative">
+<p><strong>folio CLAUDE.md 制約</strong>: <code>scratch/decisions/</code> 配下への新規 ADR 起票は <strong>user 承認必須</strong> (frozen historical record)。 本 §9 は調査結果から推奨される設計判断 (起票候補) を提示するもので、 各 ADR の起票前に user 確認・承認を取得すること。</p>
+</aside>
+
+<table>
+  <thead><tr><th>ADR ID 候補</th><th>title</th><th>内容</th><th>関連 finding</th><th>優先度</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>ADR-0013</strong></td>
+      <td>plugin verification framework (sandbox 設計 + scenario format + runner)</td>
+      <td>folio Phase X3 用 sandbox verification framework を <code>scratch/verification/</code> に配置。 YAML scenario + bash runner + 2-dir baseline。 8 use case を REQ から 1:1 派生。 P-3/P-11 整合のため本体 spec とは分離。</td>
+      <td>§7 全般</td>
+      <td><strong>MUST (Phase X3 着手前)</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0014</strong></td>
+      <td>verification scenarios を EARS REQ から導出する規範</td>
+      <td>EARS 5 pattern を Gherkin Given/When/Then に 1:1 変換。 RequireKit <code>/generate-bdd</code> 相当のルールを folio 用に定式化。 1 REQ = 1 scenario MUST。</td>
+      <td>§4.6 (EARS→Gherkin)、 §7.3 (scenario format)</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0015</strong></td>
+      <td>sandbox verification vs experiment-verified (twill 方式) の境界</td>
+      <td>folio は機能単位 sandbox verification を採用、 情報単位 experiment-verified は将来別 plugin で独立。 P-3 (WHAT-only) + P-11 (HOW 禁止) との整合を明文化。 twill 方式採用しない根拠。</td>
+      <td>§8 全般</td>
+      <td><strong>MUST</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0016</strong></td>
+      <td>exit code 中心の assertion 規範 (Issue #37210/#33106 対策)</td>
+      <td><code>permissionDecision: deny</code> JSON は信頼できない (Closed/not planned バグ群)。 verification scenario の assertion は <code>exit_code: 2</code> + <code>stderr_contains</code> を確実な fallback とする。</td>
+      <td>§2.6 (Issue verify)、 §7.3 (scenario format)</td>
+      <td><strong>SHOULD</strong> (Issue #39344 fix 状況確認後)</td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0017</strong></td>
+      <td>hook unit test vs integration test の境界</td>
+      <td>unit test (echo JSON pipe + exit code) は API call 不要、 Phase X3 で MUST 実装。 integration test (実 Claude session 内 hook 発火) は API call 必要、 Phase X4+ で Docker Compose + Squid 採用候補。</td>
+      <td>§6.2, §6.3</td>
+      <td><strong>SHOULD</strong></td>
+    </tr>
+    <tr>
+      <td><strong>ADR-0018</strong></td>
+      <td>scenario file の golden baseline 管理 (2-dir model + accept workflow)</td>
+      <td>TypeScript baseline pattern + insta accept workflow を採用。 <code>baselines/reference/</code> (VCS) vs <code>baselines/local/</code> (gitignore)、 <code>runner.sh --accept</code> で昇格。</td>
+      <td>§5.2, §5.4, §7.3</td>
+      <td>SHOULD</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>起票手順</strong>: 各 ADR について (1) user に提示 → (2) user 承認取得 → (3) <code>scratch/decisions/ADR-NNNN-&lt;slug&gt;.html</code> に Accepted status で起票 → (4) 関連 spec section に cross-ref を追加。 CLAUDE.md の制約により自動起票は禁止。</p>
+</section>
+
+<section id="s10-open-questions" class="informative">
+<h2>§10. Open Questions / Future Work</h2>
+
+<aside class="informative">
+<p>critique で PASS 判定済だが、 実装段階で要確認の <strong>Gap 5 件</strong> (MUST 2 + SHOULD 2 + LOW 1) + <strong>WARNING 3 件</strong> + <strong>本調査範囲外 1 件</strong> を以下に整理する。</p>
+</aside>
+
+<h3 id="s10-1-gaps">§10.1 Gaps (実装直前の盲点、 critic 検出)</h3>
+
+<dl>
+  <dt><strong>Gap 1 (MUST)</strong>: Issue #39344 の fix 確認未完了</dt>
+  <dd>§2.6 で「Closed (2026-03-26)」 と記載したが、 fix が実施されたかは未確認。 ADR-0016 の「exit code 2 が確実な fallback」 推奨の根拠が、 この fix 未確認に依存している。 もし #39344 が fix 済みであれば <code>permissionDecision: deny</code> JSON も信頼できる可能性があり、 assertion 戦略が変わる。 <strong>推奨検索</strong>: <code>site:github.com/anthropics/claude-code/issues/39344 fix resolved commit</code>、 <code>"Claude Code" changelog v2.1 "permissions" "hook" fix release notes</code>。</dd>
+
+  <dt><strong>Gap 2 (MUST)</strong>: <code>runner.sh</code> の仕様不在</dt>
+  <dd>§7.4 で <code>runner.sh</code> を Phase X3 の中核として推奨しているが、 runner.sh の具体的なインターフェース仕様 (YAML scenario の parse 方法、 assertion 評価ロジック、 exit code の集計方法) は未記載。 ADR-0013 起票時に runner.sh の最低限の設計決定 (<strong>bash + yq か、 Python + PyYAML か等</strong>) が必要。 <strong>推奨検索</strong>: <code>bash YAML parser yq script lightweight test runner exit code assertion</code>、 <code>"yq" YAML parsing bash script test framework minimal 2026</code>。</dd>
+
+  <dt><strong>Gap 3 (SHOULD)</strong>: <code>claude plugin validate</code> の全 check 項目</dt>
+  <dd>§2.1/§2.5 で「marketplace 審査と同一 check」 と確認されているが、 具体的な全チェック項目リストが未取得 (公式 docs は「syntax and schema errors」 のみ)。 folio plugin が validate を通過するための必要条件が不完全。 <strong>推奨検索</strong>: <code>"claude plugin validate" checks items list "strict" mode output format</code>、 <code>site:github.com/anthropics/claude-code "plugin.json" schema required fields validation</code>。</dd>
+
+  <dt><strong>Gap 4 (SHOULD)</strong>: Issue #18312 の URL 確認</dt>
+  <dd>§2.6 の 4 件 Bug 表で言及されているが Evidence Table に URL 未記載。 4 件目のデータとして補完が望ましい。 <strong>推奨検索</strong>: <code>site:github.com/anthropics/claude-code/issues "18312" Bash allow list deny ignore</code>。</dd>
+
+  <dt><strong>Gap 5 (LOW)</strong>: fast-check の公式 docs 直接確認</dt>
+  <dd>§4.5 が <code>(deduced)</code> ラベル (GitHub OSS README 水準)。 <code>fc.ModelBasedTesting</code> API の具体的な使用例が公式 docs (<code>fast-check.dev</code>) から未取得。 folio TypeScript plugin 実装時に直接参照が必要になる可能性 (Phase X4+ 候補)。 <strong>推奨検索</strong>: <code>fast-check "ModelBasedTesting" "commands" API documentation TypeScript example</code>、 <code>site:fast-check.dev model-based testing stateful</code>。</dd>
+</dl>
+
+<h3 id="s10-2-warnings">§10.2 Citation WARNING (critic 検出)</h3>
+
+<ol>
+  <li><strong>Issue #18312 URL 未記載</strong>: §2.6 で言及するが Evidence Table に URL なし (Gap 4 と重複)。 主結論 (exit code 2 fallback) への影響は軽微だが独立ソースとしての検証は未完了</li>
+  <li><strong>LangSmith 連携の単独ソース</strong>: §2.4 の <code>LANGCHAIN_TRACING_V2=true</code> 主張は専用 URL が Evidence Table に未記載。 公式 Claude Code docs に LangSmith 連携の専用 page が確認できなかった。 transcript capture の主方法 (JSONL 自動保存) は公式 verified、 LangSmith は補足情報に留めるべき</li>
+  <li><strong>fast-check の信頼度ラベル</strong>: §4.5 を <code>(deduced)</code> に修正済 (本レポート反映済)。 機能説明自体は正確、 Phase X3 採用なし</li>
+</ol>
+
+<h3 id="s10-3-out-of-scope">§10.3 本調査の範囲外 (将来の調査候補)</h3>
+
+<ul>
+  <li><strong>情報単位 experiment-verified 別 plugin (folio-claim-verifier)</strong>: §8.4 で言及した将来構想。 twill 方式の利点取り込みと P-3/P-11 整合の両立。 Phase X4+ で別途調査</li>
+  <li><strong>Inspect AI / Promptfoo の folio 統合詳細</strong>: §7.4 で Phase X4+ 候補として位置付け。 完成形 verification framework 設計時に再調査</li>
+  <li><strong>Continue.dev / Aider / Cursor の plugin test 詳細</strong>: §3.1 で薄いカバー。 folio 設計への影響は軽微</li>
+  <li><strong>Inspect AI の Claude Code sandbox との統合</strong>: Docker/K8s sandbox は機能ありだが Claude Code 公式 sandbox との統合方法は未確認</li>
+  <li><strong>MANIFEST.json (WPT) の完全 JSON schema</strong>: 大型 file のため閲覧困難、 folio inventory.json schema 設計時に再調査の可能性</li>
+  <li><strong>LSP test suite の具体的 fixture</strong> (JSON-RPC request/response ペア): vscode-languageserver-node の実コード直接閲覧が必要</li>
+</ul>
+</section>
+
+<section id="s11-references" class="informative">
+<h2>§11. References (Evidence Table)</h2>
+
+<p>全 87 sources (公式 docs 多数 + GitHub OSS 多数 + tech blog 多数 + GitHub Issues 4 件)。 確認日 2026-05-23。</p>
+
+<h3 id="s11-1-claude-code">§11.1 Claude Code 公式 + Issues (13 件)</h3>
+
+<ol>
+  <li><a href="https://code.claude.com/docs/en/plugins">Create plugins - Claude Code Docs</a> (公式)</li>
+  <li><a href="https://code.claude.com/docs/en/plugins-reference">Plugins reference - Claude Code Docs</a> (公式)</li>
+  <li><a href="https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices">Skill authoring best practices - Claude API Docs</a> (公式)</li>
+  <li><a href="https://code.claude.com/docs/en/plugin-marketplaces">Create and distribute a plugin marketplace</a> (公式)</li>
+  <li><a href="https://github.com/anthropics/claude-code/issues/37210">Issue #37210: PreToolUse deny ignored for Edit tool</a></li>
+  <li><a href="https://github.com/anthropics/claude-code/issues/33106">Issue #33106: PreToolUse deny not enforced for MCP tools</a></li>
+  <li><a href="https://github.com/anthropics/claude-code/issues/39344">Issue #39344: permissionDecision "ask" silently overrides deny rules</a></li>
+  <li><a href="https://code.claude.com/docs/en/worktrees">Run parallel sessions with worktrees</a> (公式)</li>
+  <li><a href="https://docs.docker.com/ai/sandboxes/agents/claude-code/">Claude Code - Docker Docs</a> (公式)</li>
+  <li><a href="https://github.com/anthropics/claude-code/blob/main/plugins/README.md">Claude Code plugin README (GitHub)</a> (公式)</li>
+  <li><a href="https://github.com/simonw/claude-code-transcripts">simonw/claude-code-transcripts (broken)</a> (Community)</li>
+  <li><a href="https://code.claude.com/docs/en/permissions">Configure permissions</a> (公式)</li>
+  <li><a href="https://github.com/anthropics/claude-code/issues/15888">Issue #15888: Proposal BoxLite integration</a></li>
+  <li><a href="https://code.claude.com/docs/en/hooks">Hooks reference</a> (公式)</li>
+</ol>
+
+<h3 id="s11-2-vscode-jetbrains">§11.2 VS Code / Neovim / JetBrains / Chrome (12 件)</h3>
+
+<ol start="14">
+  <li><a href="https://code.visualstudio.com/api/working-with-extensions/testing-extension">Testing Extensions - VS Code API</a> (公式)</li>
+  <li><a href="https://www.npmjs.com/package/@vscode/test-electron">@vscode/test-electron - npm</a> (公式 Package)</li>
+  <li><a href="https://github.com/microsoft/vscode-test-cli">GitHub - microsoft/vscode-test-cli</a> (公式 GitHub)</li>
+  <li><a href="https://deepwiki.com/microsoft/vscode-extension-test-runner/1-overview">vscode-extension-test-runner DeepWiki</a> (Community)</li>
+  <li><a href="https://code.visualstudio.com/api/language-extensions/language-server-extension-guide">Language Server Extension Guide - VS Code</a> (公式)</li>
+  <li><a href="https://deepwiki.com/nvim-lua/plenary.nvim/10.1-testing-framework">plenary.nvim Testing Framework - DeepWiki</a> (Community)</li>
+  <li><a href="https://github.com/nvim-lua/plenary.nvim/blob/master/TESTS_README.md">plenary.nvim TESTS_README.md</a> (公式 GitHub)</li>
+  <li><a href="https://hiphish.github.io/blog/2024/01/29/testing-neovim-plugins-with-busted/">Testing Neovim Plugins with Busted</a> (Blog)</li>
+  <li><a href="https://zignar.net/2022/10/26/testing-neovim-lsp-plugins/">Testing Neovim LSP plugins</a> (Blog)</li>
+  <li><a href="https://plugins.jetbrains.com/docs/intellij/testing-plugins.html">IntelliJ Platform Plugin SDK - Testing Overview</a> (公式)</li>
+  <li><a href="https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-intro-dependencies-and-first-integration-test/">Integration Tests for Plugin Developers - JetBrains Blog</a> (公式 Blog)</li>
+  <li><a href="https://plugins.jetbrains.com/docs/intellij/light-and-heavy-tests.html">Light and Heavy Tests - IntelliJ SDK</a> (公式)</li>
+  <li><a href="https://pptr.dev/next/guides/chrome-extensions">Chrome Extensions Testing - Puppeteer Docs</a> (公式)</li>
+  <li><a href="https://developer.chrome.com/docs/extensions/how-to/test/puppeteer">Test Chrome Extensions with Puppeteer - Chrome Developers</a> (公式)</li>
+</ol>
+
+<h3 id="s11-3-mcp">§11.3 MCP / Plugin testing tools (8 件)</h3>
+
+<ol start="28">
+  <li><a href="https://github.com/modelcontextprotocol/inspector">MCP Inspector - GitHub</a> (公式 GitHub)</li>
+  <li><a href="https://apigene.ai/blog/how-to-test-mcp-server">How to Test MCP Servers - Apigene Blog</a> (Blog)</li>
+  <li><a href="https://github.com/devhelmhq/mcp-recorder">mcp-recorder - GitHub</a> (GitHub)</li>
+  <li><a href="https://light-handle.github.io/mcpspec/">MCPSpec - Ship Reliable MCP Servers</a> (Tool Site)</li>
+  <li><a href="https://mcpcat.io/guides/writing-unit-tests-mcp-servers/">MCP Unit Testing Guide - MCPcat</a> (Blog)</li>
+  <li><a href="https://github.com/continuedev/continue/blob/main/CONTRIBUTING.md">Continue.dev CONTRIBUTING.md</a> (公式 GitHub)</li>
+  <li><a href="https://github.com/aider-ai/aider">GitHub - Aider-AI/aider</a> (公式 GitHub)</li>
+  <li><a href="https://github.com/marcfargas/pi-test-harness">pi-test-harness - GitHub</a> (GitHub)</li>
+  <li><a href="https://forum.obsidian.md/t/unit-testing-your-plugins-aka-automating-obsidian/54416">Unit Testing Your Plugins - Obsidian Forum</a> (Community)</li>
+  <li><a href="https://rup12.net/posts/running-obsidian-headless/">Running Obsidian on a headless server</a> (Blog)</li>
+</ol>
+
+<h3 id="s11-4-eval">§11.4 AI agent eval framework (12 件)</h3>
+
+<ol start="38">
+  <li><a href="https://inspect.aisi.org.uk/">Inspect AI (UK AISI 公式)</a></li>
+  <li><a href="https://github.com/UKGovernmentBEIS/inspect_ai">GitHub - UKGovernmentBEIS/inspect_ai</a> (OSS)</li>
+  <li><a href="https://inspect.aisi.org.uk/agents.html">Using Agents - Inspect AI</a> (公式)</li>
+  <li><a href="https://inspect.aisi.org.uk/scorers.html">Scorers - Inspect AI</a> (公式)</li>
+  <li><a href="https://www.promptfoo.dev/docs/guides/llm-as-a-judge/">LLM as a Judge Evaluation Guide - Promptfoo</a> (公式)</li>
+  <li><a href="https://www.promptfoo.dev/docs/integrations/agent-skill/">Agent Skills for Evals - Promptfoo</a> (公式)</li>
+  <li><a href="https://www.langchain.com/articles/llm-evaluation-framework">LLM Evaluation Framework: Trajectories vs. Outputs - LangChain</a> (公式 Article)</li>
+  <li><a href="https://blog.langchain.com/pairwise-evaluations-with-langsmith/">Pairwise Evaluations with LangSmith</a> (公式 Blog)</li>
+  <li><a href="https://www.anthropic.com/transparency/model-report">Anthropic Transparency Hub</a> (公式)</li>
+  <li><a href="https://www.confident-ai.com/blog/why-llm-as-a-judge-is-the-best-llm-evaluation-method">LLM-as-a-Judge Complete Guide - Confident AI</a> (Blog)</li>
+  <li><a href="https://arize.com/docs/ax/evaluate/evaluators/trace-and-session-evals/trace-level-evaluations/agent-trajectory-evaluations">Agent Trajectory Evaluations - Arize AX</a> (公式)</li>
+  <li><a href="https://designrevision.com/blog/ai-agent-frameworks">AI Agent Frameworks Compared 2026</a> (Comparison)</li>
+</ol>
+
+<h3 id="s11-5-property">§11.5 Property / Behavioral testing + EARS conversion (6 件)</h3>
+
+<ol start="50">
+  <li><a href="https://hypothesis.readthedocs.io/en/latest/stateful.html">Hypothesis Stateful Tests</a> (公式)</li>
+  <li><a href="https://github.com/dubzzz/fast-check">fast-check (GitHub)</a> (OSS)</li>
+  <li><a href="https://conductofcode.io/post/easy-approach-to-requirements-syntax-and-the-segue-to-behavior-driven-development/">EARS to BDD - conductofcode.io</a> (Blog)</li>
+  <li><a href="http://requirekit.ai/core-concepts/ears-notation/">RequireKit EARS Notation</a> (Tool Docs)</li>
+  <li><a href="https://requirekit.ai/core-concepts/bdd-scenarios/">RequireKit BDD Scenarios</a> (Tool Docs)</li>
+  <li><a href="https://github.com/githubnext/llmorpheus">LLMorpheus - LLM-based mutation testing</a> (OSS)</li>
+</ol>
+
+<h3 id="s11-6-conformance">§11.6 Conformance test design (9 件)</h3>
+
+<ol start="56">
+  <li><a href="https://web-platform-tests.org/writing-tests/reftests.html">Reftests — web-platform-tests documentation</a> (公式)</li>
+  <li><a href="https://web-platform-tests.org/tools/wptrunner/docs/expectation.html">Test Metadata — web-platform-tests documentation</a> (公式)</li>
+  <li><a href="https://github.com/web-platform-tests/wpt">GitHub - web-platform-tests/wpt</a></li>
+  <li><a href="https://hamednourhani.gitbooks.io/typescript-book/content/docs/compiler/contributing.html">Contributing · typescript-book</a> (Blog)</li>
+  <li><a href="https://github.com/orta/typescript-notes/blob/master/systems/testing/fourslash.md">TypeScript fourslash notes</a> (GitHub)</li>
+  <li><a href="https://docs.specmatic.io/supported_protocols/arazzo.html">Arazzo - Specmatic docs</a> (公式)</li>
+  <li><a href="https://smithy.io/2.0/additional-specs/http-protocol-compliance-tests.html">HTTP Protocol Compliance Tests - Smithy 2.0</a> (公式)</li>
+  <li><a href="https://github.com/cispa/http-conformance">GitHub - cispa/http-conformance</a></li>
+  <li><a href="https://github.com/summerwind/h2spec">GitHub - summerwind/h2spec</a></li>
+</ol>
+
+<h3 id="s11-7-snapshot">§11.7 Snapshot / golden file (5 件)</h3>
+
+<ol start="65">
+  <li><a href="https://jestjs.io/docs/snapshot-testing">Snapshot Testing - Jest</a> (公式)</li>
+  <li><a href="https://insta.rs/">Insta - Snapshot Testing for Rust</a> (公式)</li>
+  <li><a href="https://yossarian.net/til/post/snapshot-testing-with-insta/">TIL: Snapshot testing with insta</a> (Blog)</li>
+  <li><a href="https://pytest-regressions.readthedocs.io/en/latest/overview.html">pytest-regressions documentation</a> (公式)</li>
+  <li><a href="https://kentcdodds.com/blog/effective-snapshot-testing">Effective Snapshot Testing - Kent C. Dodds</a> (Blog)</li>
+</ol>
+
+<h3 id="s11-8-observability">§11.8 Observability / Telemetry (5 件)</h3>
+
+<ol start="70">
+  <li><a href="https://claude-dev.tools/docs/jsonl-format">Claude Code JSONL transcript format</a> (Community Docs)</li>
+  <li><a href="https://github.com/TechNickAI/claude_telemetry">GitHub - TechNickAI/claude_telemetry</a></li>
+  <li><a href="https://github.com/justinbarias/opentelemetry-instrumentation-claude-agent-sdk">GitHub - justinbarias/opentelemetry-instrumentation-claude-agent-sdk</a></li>
+  <li><a href="https://opentelemetry.io/docs/specs/otel/protocol/file-exporter/">OpenTelemetry Protocol File Exporter</a> (公式 Spec)</li>
+</ol>
+
+<h3 id="s11-9-sandbox">§11.9 Sandbox runtime (12 件)</h3>
+
+<ol start="75">
+  <li><a href="https://wiki.nixos.org/wiki/Flakes">Flakes - Official NixOS Wiki</a> (公式)</li>
+  <li><a href="https://serokell.io/blog/practical-nix-flakes">Practical Nix Flakes - Serokell</a> (Blog)</li>
+  <li><a href="https://www.devtoolreviews.com/reviews/devbox-vs-dev-containers-vs-nix-2026">Devbox vs Dev Containers vs Nix (2026)</a> (Comparison)</li>
+  <li><a href="https://mise.jdx.dev/dev-tools/comparison-to-asdf.html">mise comparison to asdf</a> (公式)</li>
+  <li><a href="https://www.penligent.ai/hackinglabs/git-worktrees-need-runtime-isolation-for-parallel-ai-agent-development/">Git Worktrees Need Runtime Isolation</a> (Blog)</li>
+  <li><a href="https://code.visualstudio.com/docs/devcontainers/containers">Developing inside a Container - VS Code Docs</a> (公式)</li>
+  <li><a href="https://northflank.com/blog/how-to-sandbox-ai-agents">How to sandbox AI agents in 2026 - Northflank</a> (Blog)</li>
+  <li><a href="https://github.com/ppggff/vagrant-qemu">vagrant-qemu GitHub</a></li>
+  <li><a href="https://serverspace.io/support/help/the-difference-between-wsl-1-and-wsl-2-comparison-performance-and-compatibility/">WSL1 vs WSL2 comparison</a> (Tech Article)</li>
+  <li><a href="https://www.arcade.dev/blog/using-docker-sandboxes-with-claude-code/">Docker Sandboxes + Claude Code: What Works, What Breaks</a> (Blog)</li>
+  <li><a href="https://shaharia.com/blog/run-claude-code-docker-network-isolation/">Claude Code Docker Compose Network Isolation</a> (Blog)</li>
+  <li><a href="https://www.mindstudio.ai/blog/git-worktrees-claude-code-parallel-development">How to Use Git Worktrees with Claude Code - MindStudio</a> (Blog)</li>
+  <li><a href="https://scottspence.com/posts/measuring-claude-code-skill-activation-with-sandboxed-evals">Measuring Claude Code Skill Activation With Sandboxed Evals</a> (Blog)</li>
+</ol>
+</section>
+
+<section id="s12-meta" class="informative">
+<h2>§12. メタ情報</h2>
+
+<dl>
+  <dt>session_id</dt><dd>59a916c0</dd>
+  <dt>created_at</dt><dd>2026-05-23T14:31:01+09:00</dd>
+  <dt>researchers</dt><dd>5 並列 (researcher-1〜5、 sonnet model)</dd>
+  <dt>sources_total</dt><dd>87 件 (公式 docs 多数 + GitHub OSS + Tech blog + Community + GitHub Issues 4 件)</dd>
+  <dt>fetch_success / failure</dt><dd>67 / 4 (Obsidian testing GitHub、 Aider GitHub、 Specmatic AsyncAPI 404、 insta.rs 詳細)</dd>
+  <dt>critique_verdict</dt><dd>PASS (WARNING 3 件 + Gap 5 件は §10 に反映済)</dd>
+  <dt>snapshot</dt><dd><code>/tmp/research-search-59a916c0/</code></dd>
+  <dt>関連 memory hash</dt><dd>f621abb6 (plugin-architecture-research、 2026-05-23) / 96b16f0c (twl Hooks/MCP、 2026-05-08) / 322df262 (Claude Code v2.1 更新、 2026-03-31) / a6d6b7c1 (twill dig 第 4 弾、 2026-05-13、 experiment-verified の reference)</dd>
+</dl>
+</section>
+
+</body>
+</html>
