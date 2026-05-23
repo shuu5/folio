@@ -12,19 +12,35 @@
 #   FOLIO_CALLER_MARKER_ENV   既定 "FOLIO_ARCHITECT_CONTEXT"
 #   FOLIO_CALLER_MARKER_VALUE 既定 "folio-architect"
 #   FOLIO_SPEC_PATH           既定 "scratch/specs/"
+#
+# 失敗時は fail-closed (jq 不在 / 不正変数名 → deny)。 必須依存欠落で
+# bypass されないこと優先 (R2-1 / R2-2 review 反映)。
 
 set -uo pipefail
 
 EXPECTED_VAR="${FOLIO_CALLER_MARKER_ENV:-FOLIO_ARCHITECT_CONTEXT}"
 EXPECTED_VAL="${FOLIO_CALLER_MARKER_VALUE:-folio-architect}"
-SPEC_PATH="${FOLIO_SPEC_PATH:-scratch/specs/}"
+SPEC_PATH_RAW="${FOLIO_SPEC_PATH:-scratch/specs/}"
+
+# SPEC_PATH 正規化: 空文字防止 + 末尾 / 強制 (R1-3/R2-4)
+[[ -z "$SPEC_PATH_RAW" ]] && SPEC_PATH_RAW="scratch/specs/"
+SPEC_PATH="${SPEC_PATH_RAW%/}/"
+
+# 変数名 sanity check (alnum + _ のみ、 数字始まり禁止) — indirect expansion 防御 (R2-2)
+if [[ ! "$EXPECTED_VAR" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  echo "folio: invalid caller marker env var name: '${EXPECTED_VAR}'" >&2
+  exit 2
+fi
 
 # stdin payload (空文字許容 = direct test invocation)
 payload=$(cat 2>/dev/null || true)
 [[ -z "$payload" ]] && exit 0
 
-# tool_name / file_path 抽出 (jq 必須)
-command -v jq >/dev/null 2>&1 || { echo "folio: jq not found in PATH" >&2; exit 0; }
+# tool_name / file_path 抽出 (jq 必須、 fail-closed (R2-1))
+command -v jq >/dev/null 2>&1 || {
+  echo "folio: jq not found in PATH (required for spec edit gating, fail-closed)" >&2
+  exit 2
+}
 tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null)
 file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
@@ -35,7 +51,6 @@ case "$tool_name" in
 esac
 
 # spec_path 配下でない file は通過
-# SPEC_PATH に末尾 / がある前提、 file_path が "scratch/specs/..." または "*/scratch/specs/..." の両方を match
 case "$file_path" in
   "${SPEC_PATH}"*|*"/${SPEC_PATH}"*) ;;
   *) exit 0 ;;

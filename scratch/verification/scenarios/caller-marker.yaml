@@ -1,10 +1,16 @@
 schema_version: "0.1"
-req_id: "REQ-CM-001"
+req_id: "REQ-CM-003"
 ears_pattern: "unwanted"
 description: |
-  When FOLIO_ARCHITECT_CONTEXT is unset or differs from "folio-architect",
-  the PreToolUse hook MUST deny Edit/Write on scratch/specs/ files.
-  Reference: rules.html §10.1 REQ-CM-001~003, verification.html §3.3 REQ-VER-003.
+  Primary: REQ-CM-003 (unwanted) — IF caller marker env var is absent or holds
+  unexpected value, THEN PreToolUse hook MUST return deny.
+  Also covers REQ-CM-001 (event-driven verify) by exercising the hook's
+  verification path, and REQ-CM-002 boundary via non-spec scenarios.
+  Reference: rules.html §10.1, verification.html §3.3 REQ-VER-003.
+
+setup:
+  env: {}
+  fixtures: []
 
 scenarios:
   - name: "marker unset → deny on spec file"
@@ -56,3 +62,6 @@ scenarios:
     expect:
       exit_code: 2
       stderr_contains: "folio caller marker check"
+
+teardown:
+  cleanup_files: []

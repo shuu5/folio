@@ -71,13 +71,11 @@ for i in $(seq 0 $((COUNT - 1))); do
     done < <(printf '%s' "$env_keys_json" | jq -r 'to_entries[] | "\(.key)\t\(.value)"')
   fi
 
-  # 実行 (set -e 無効で exit code 補足)
-  set +e
+  # 実行 (set -e 未使用、 exit code は $? で補足、 redirect は left-to-right で
+  # `2>&1 >/dev/null` は「stderr → 元 stdout、 stdout → /dev/null」 の意 (R2-3 検証済))
   actual_stderr=$(env -i HOME="$HOME" PATH="$PATH" ${env_args[@]+"${env_args[@]}"} \
     "$HOOK_SCRIPT" <<<"$payload" 2>&1 >/dev/null)
   actual_exit=$?
-  set -e
-  set +e  # 後続も unbound 等で死なないように
 
   # assertion
   ok=true
