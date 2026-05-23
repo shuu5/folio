@@ -1,0 +1,58 @@
+schema_version: "0.1"
+req_id: "REQ-CM-001"
+ears_pattern: "unwanted"
+description: |
+  When FOLIO_ARCHITECT_CONTEXT is unset or differs from "folio-architect",
+  the PreToolUse hook MUST deny Edit/Write on scratch/specs/ files.
+  Reference: rules.html §10.1 REQ-CM-001~003, verification.html §3.3 REQ-VER-003.
+
+scenarios:
+  - name: "marker unset → deny on spec file"
+    given:
+      env: {}
+      file_path: "scratch/specs/rules.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio caller marker check"
+
+  - name: "marker correct → allow on spec file"
+    given:
+      env:
+        FOLIO_ARCHITECT_CONTEXT: "folio-architect"
+      file_path: "scratch/specs/rules.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "marker wrong value → deny"
+    given:
+      env:
+        FOLIO_ARCHITECT_CONTEXT: "random-tool"
+      file_path: "scratch/specs/rules.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio caller marker check"
+
+  - name: "non-spec file → allow regardless of marker"
+    given:
+      env: {}
+      file_path: "README.md"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "Write tool on spec → deny when unset"
+    given:
+      env: {}
+      file_path: "scratch/specs/new-spec.html"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio caller marker check"
