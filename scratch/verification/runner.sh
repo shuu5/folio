@@ -2,17 +2,22 @@
 # scratch/verification/runner.sh
 # Phase X3 試作 sandbox verification runner (bash + yq + jq、 Gap 2 採用)
 #
-# 用法: runner.sh <scenario.yaml>
-#   scenario YAML 1 件を読み、 各 scenario を hook script に対し実行、
-#   exit_code + stderr_contains を assert、 PASS/FAIL カウントを表示。
+# 用法: runner.sh [--accept] <scenario.yaml>
+#   scenario YAML 1 件を読み、 scenario.kind に応じて 2 経路へ dispatch:
+#     - kind: hook (既定、 省略可)  … 各 scenario を hook script に mock payload で実行、
+#                                       exit_code + stderr_contains を assert (REQ-VER-001〜008)。
+#     - kind: cli-golden            … bin/folio を command で repo root 実行 → output_file と
+#                                       golden を jq -S + normalize.exclude_paths 削除で正規化 →
+#                                       byte-exact 比較 + exit_code assert (REQ-VER-010/011)。
+#                                       --accept で local→reference golden 更新 (REQ-VER-004)。
 #
-# scenario file 名 (basename without .yaml) と hook script 名は次の規約で mapping:
+# kind: hook の scenario file 名 (basename without .yaml) と hook script 名の mapping:
 #   scenarios/caller-marker.yaml → .claude-plugin/scripts/check-caller-marker.sh
 #   scenarios/path-boundary.yaml → .claude-plugin/scripts/check-path-boundary.sh
 #
 # verification.html §3.2 schema 準拠の YAML を期待。
 # Step 2 で `given.content` を payload に含めるよう拡張 (Write hook 対応)。
-# Step 3 以降 multi-scenario / multi-hook 対応は本 runner を拡張予定。
+# Step 3 で kind: cli-golden を追加 (CLI subcommand 検証、 hook flow は不変)。
 
 set -uo pipefail
 
@@ -20,12 +25,20 @@ set -uo pipefail
 command -v yq >/dev/null 2>&1 || { echo "ERROR: yq (mikefarah/yq v4.x) not found in PATH" >&2; exit 1; }
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq not found in PATH" >&2; exit 1; }
 
-# --- args ---
-if [[ $# -lt 1 ]]; then
-  echo "Usage: $0 <scenario.yaml>" >&2
+# --- args (--accept は kind: cli-golden 専用、 hook scenario では無視される) ---
+ACCEPT=0
+SCENARIO_FILE=""
+for arg in "$@"; do
+  case "$arg" in
+    --accept) ACCEPT=1 ;;
+    -*) echo "ERROR: unknown flag: $arg" >&2; exit 1 ;;
+    *) SCENARIO_FILE="$arg" ;;
+  esac
+done
+if [[ -z "$SCENARIO_FILE" ]]; then
+  echo "Usage: $0 [--accept] <scenario.yaml>" >&2
   exit 1
 fi
-SCENARIO_FILE="$1"
 [[ -f "$SCENARIO_FILE" ]] || { echo "ERROR: scenario file not found: $SCENARIO_FILE" >&2; exit 1; }
 
 # --- repo root + plugin root 推定 ---
@@ -33,7 +46,117 @@ SCRIPT_DIR=$(dirname "$(realpath "$0")")
 REPO_ROOT=$(realpath "${SCRIPT_DIR}/../..")
 PLUGIN_ROOT="${REPO_ROOT}/.claude-plugin"
 
-# --- scenario file → hook script の mapping (試作: 単純 basename mapping) ---
+# ============================================================================
+# kind: cli-golden handler (REQ-VER-010/011 + REQ-VER-004 2-dir + --accept)
+#   1. bin/folio を scenario.command で repo root 実行 (output_file 生成)
+#   2. raw output_file → baselines/local/ へ materialize (2-dir model)
+#   3. output_file と golden を jq -S + normalize.exclude_paths 削除で正規化
+#   4. 正規化 JSON の byte-exact 一致 + exit_code 一致を assert
+#   --accept: local → reference golden を更新 (raw、 generatedAt 保持)
+# 出力 format は hook flow と揃える ("Results: N passed, M failed (total T)")。
+# ============================================================================
+run_cli_golden() {
+  local scenario="$1"
+  local req_id output_file golden exp_exit
+  req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
+  output_file=$(yq -r '.output_file' "$scenario")          # repo root 相対
+  golden=$(yq -r '.golden' "$scenario")                    # SCRIPT_DIR (verification dir) 相対
+  exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
+
+  local -a cmd=()
+  while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
+
+  local out_abs golden_abs local_dir local_abs
+  out_abs="${REPO_ROOT}/${output_file}"
+  golden_abs="${SCRIPT_DIR}/${golden}"
+  local_dir="${SCRIPT_DIR}/baselines/local"
+  local_abs="${local_dir}/$(basename "$golden")"
+
+  echo "=== scenario: ${scenario}"
+  echo "    req_id:  ${req_id}"
+  echo "    kind:    cli-golden"
+  echo "    command: folio ${cmd[*]}"
+  echo ""
+
+  # 1. CLI を repo root で実行
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" )
+  local actual_exit=$?
+
+  if [[ ! -f "$out_abs" ]]; then
+    echo "  [FAIL] ${req_id}: output_file not produced: ${output_file}" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+    return 1
+  fi
+
+  # 2. raw output → baselines/local/ (REQ-VER-004 2-dir、 .gitignore 済)
+  mkdir -p "$local_dir"
+  cp "$out_abs" "$local_abs"
+
+  # normalize filter: . | del(<exclude_path>) ...
+  local norm_filter="." p
+  while IFS= read -r p; do
+    [[ -z "$p" ]] && continue
+    norm_filter="${norm_filter} | del(${p})"
+  done < <(yq -r '.normalize.exclude_paths // [] | .[]' "$scenario")
+
+  # --accept: local → reference golden (raw、 generatedAt 保持で §4.1 MUST 充足)
+  if [[ "$ACCEPT" == "1" ]]; then
+    mkdir -p "$(dirname "$golden_abs")"
+    cp "$local_abs" "$golden_abs"
+    echo "  [ACCEPT] golden refreshed from local: ${golden}"
+    echo ""; echo "Results: accepted (1 golden updated)"
+    return 0
+  fi
+
+  if [[ ! -f "$golden_abs" ]]; then
+    echo "  [FAIL] ${req_id}: golden not found: ${golden} (run with --accept to create)" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+    return 1
+  fi
+
+  # 3. 両者を正規化
+  local norm_actual norm_golden
+  norm_actual=$(jq -S "$norm_filter" "$out_abs" 2>&1) || {
+    echo "  [FAIL] ${req_id}: jq normalize failed (actual): ${norm_actual}" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+  norm_golden=$(jq -S "$norm_filter" "$golden_abs" 2>&1) || {
+    echo "  [FAIL] ${req_id}: jq normalize failed (golden): ${norm_golden}" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+
+  # 4. assert: byte-exact 一致 + exit_code 一致
+  local ok=true
+  local reasons=()
+  if [[ "$actual_exit" != "$exp_exit" ]]; then
+    ok=false; reasons+=("exit_code mismatch (expected=${exp_exit}, got=${actual_exit})")
+  fi
+  if [[ "$norm_actual" != "$norm_golden" ]]; then
+    ok=false; reasons+=("normalized output != golden (byte diff)")
+  fi
+
+  if $ok; then
+    echo "  [PASS] ${req_id} (normalized output == golden, exit ${actual_exit})"
+    echo ""; echo "Results: 1 passed, 0 failed (total 1)"
+    return 0
+  else
+    echo "  [FAIL] ${req_id}" >&2
+    for r in "${reasons[@]}"; do echo "         - $r" >&2; done
+    if [[ "$norm_actual" != "$norm_golden" ]]; then
+      echo "         --- diff (< golden | > actual、 正規化後) ---" >&2
+      diff <(printf '%s\n' "$norm_golden") <(printf '%s\n' "$norm_actual") >&2 || true
+    fi
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+    return 1
+  fi
+}
+
+# --- kind dispatch: cli-golden のみ別経路、 省略時 (hook) は以降の既存 flow ---
+KIND=$(yq -r '.kind // "hook"' "$SCENARIO_FILE")
+if [[ "$KIND" == "cli-golden" ]]; then
+  run_cli_golden "$SCENARIO_FILE"
+  exit $?
+fi
+
+# --- (kind: hook) scenario file → hook script の mapping (試作: 単純 basename mapping) ---
 SCENARIO_BASENAME=$(basename "$SCENARIO_FILE" .yaml)
 HOOK_SCRIPT="${PLUGIN_ROOT}/scripts/check-${SCENARIO_BASENAME}.sh"
 [[ -x "$HOOK_SCRIPT" ]] || { echo "ERROR: hook script not found or not executable: $HOOK_SCRIPT" >&2; exit 1; }

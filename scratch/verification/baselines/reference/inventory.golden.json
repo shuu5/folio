@@ -1,0 +1,283 @@
+{
+  "$schema": "https://folio.dev/inventory/v1.json",
+  "generatedAt": "2026-05-24T23:19:46Z",
+  "folioVersion": "0.4.2-draft",
+  "specs": [
+    {
+      "@id": "specs/README.html",
+      "title": "folio framework spec index",
+      "summary": "ブラッシュアップ対象の folio framework spec を集約 (constitution は除く、 scratch/ 直下の特別枠)",
+      "doc-type": "cluster-readme",
+      "status": "active",
+      "version": "0.4.2-draft",
+      "stakeholders": [],
+      "relations": {
+        "dc:hasPart": [
+          "specs/rules.html",
+          "specs/folio-self-spec.html",
+          "specs/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "specs/folio-self-spec.html",
+      "title": "folio self-spec",
+      "summary": "folio Layer 0 framework 自身の architecture spec (provisional)",
+      "doc-type": "self-spec",
+      "status": "draft",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "folio:extends": [
+          "constitution.html"
+        ],
+        "dc:references": [
+          "specs/rules.html",
+          "specs/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "specs/relations.html",
+      "title": "folio relations spec",
+      "summary": "spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)",
+      "doc-type": "spec",
+      "status": "draft",
+      "version": "0.1.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/rules.html#s4-format",
+          "constitution.html#s2-principles",
+          "research/spec-graph-management-research.html"
+        ],
+        "folio:depends-on": [
+          "specs/rules.html"
+        ]
+      }
+    },
+    {
+      "@id": "specs/rules.html",
+      "title": "folio rules",
+      "summary": "Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)",
+      "doc-type": "rules",
+      "status": "draft",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "folio:extends": [
+          "constitution.html"
+        ],
+        "dc:references": [
+          "specs/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "specs/verification.html",
+      "title": "folio verification spec",
+      "summary": "sandbox verification framework spec (機能単位 use case verification の SSoT)",
+      "doc-type": "spec",
+      "status": "draft",
+      "version": "0.1.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "folio:extends": [
+          "constitution.html"
+        ],
+        "dc:references": [
+          "specs/rules.html",
+          "specs/folio-self-spec.html",
+          "specs/relations.html",
+          "research/plugin-sandbox-verification-research.html",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html"
+        ],
+        "folio:depends-on": [
+          "specs/rules.html",
+          "specs/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0001-architecture-rules-split.html",
+      "title": "ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)",
+      "summary": "folio v0.4.1-draft → v0.4.2-draft (PATCH bump)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.1-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {}
+    },
+    {
+      "@id": "decisions/ADR-0003-plugin-architecture.html",
+      "title": "ADR-0003 — folio plugin minimal architecture",
+      "summary": "folio v0.4.2-draft",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/plugin-architecture-research.html",
+          "specs/folio-self-spec.html#s7-harness",
+          "specs/folio-self-spec.html#s8-plugin"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0004-jsonld-lint-mechanism.html",
+      "title": "ADR-0004 — JSON-LD lint mechanism",
+      "summary": "retrospective (実装 + e2e 検証済)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/relations.html#s3-2-full",
+          "specs/rules.html#s10-2",
+          "specs/verification.html#s3-6-verification-specific",
+          "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0006-caller-marker-hook.html",
+      "title": "ADR-0006 — caller marker hook (hybrid env var OR marker file)",
+      "summary": "retrospective (実装 + e2e 検証済)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/rules.html#s10-1",
+          "specs/folio-self-spec.html#s7-3-caller-marker",
+          "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0013-verification-framework.html",
+      "title": "ADR-0013 — sandbox verification framework",
+      "summary": "folio v0.4.2-draft",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/plugin-sandbox-verification-research.html",
+          "specs/verification.html",
+          "decisions/ADR-0003-plugin-architecture.html"
+        ],
+        "folio:depends-on": [
+          "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
+      "title": "ADR-0015 — sandbox verification vs experiment-verified の境界",
+      "summary": "folio v0.4.2-draft",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/plugin-sandbox-verification-research.html",
+          "specs/verification.html",
+          "decisions/ADR-0013-verification-framework.html"
+        ],
+        "folio:depends-on": [
+          "decisions/ADR-0013-verification-framework.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0019-path-boundary-pragmatic.html",
+      "title": "ADR-0019 — path boundary hook (Option Pragmatic)",
+      "summary": "retrospective (実装 + e2e 検証済)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0003-plugin-architecture.html#s2-1-scope",
+          "specs/verification.html#s3-6-verification-specific",
+          "decisions/ADR-0006-caller-marker-hook.html"
+        ]
+      }
+    },
+    {
+      "@id": "research/plugin-sandbox-verification-research.html",
+      "title": "folio plugin sandbox verification research",
+      "summary": "Phase X3 minimal plugin の実機検証フレーム設計調査 (87 sources、 5 researcher 並列調査、 session 59a916c0、 2026-05-23)",
+      "doc-type": "research",
+      "status": "draft",
+      "version": "0.1.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/plugin-architecture-research.html",
+          "research/spec-graph-management-research.html",
+          "constitution.html",
+          "specs/rules.html",
+          "specs/folio-self-spec.html",
+          "specs/relations.html"
+        ]
+      }
+    }
+  ]
+}

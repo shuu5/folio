@@ -7,6 +7,10 @@
 .folio/
 .tmp/
 
+# folio inventory CLI の生成物 (REQ-VER-010、 generatedAt を含む作業用 output)。
+# 検証の golden は scratch/verification/baselines/reference/ に track する。
+scratch/inventory.json
+
 # Claude Code session externalization
 .supervisor/
 .mailbox/

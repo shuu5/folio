@@ -1,11 +1,207 @@
 #!/usr/bin/env bash
-# folio CLI skeleton (Phase X3 試作)
+# folio CLI (Phase X3 試作)
 # 完成形は init / validate / inventory / prime / fix subcommands (ADR-0003 §2.1)
-# 試作段階は version / help のみ実装
+# 試作段階は version / help / inventory を実装
+#
+# inventory subcommand (REQ-VER-010):
+#   relations.html §4.4.1 の scan 対象 (scratch/specs/ + scratch/decisions/ +
+#   scratch/research/ の <head> JSON-LD を持つ .html) を走査し、 §4.1 schema 準拠の
+#   scratch/inventory.json を生成する。 cwd = repo root 前提 (REQ-VER-011 「at repo root」)。
+#   依存: jq / grep -P / awk / realpath / date (python 等の追加 runtime 依存なし、
+#   既存 plugin (bin/folio / runner.sh / *.sh) の bash idiom に統一)。
 
 set -uo pipefail
 
 VERSION="0.4.2-draft"
+
+# ============================================================================
+# inventory helpers — HTML spec から field 抽出 (folio 自身の整った spec 群が対象)
+# ============================================================================
+
+# <head> 内の最初の application/ld+json ブロック本文を stdout に返す (無ければ空)。
+# </head> 到達で打ち切るため body 中の (エスケープされた) 言及には反応しない:
+#   prose の `&lt;script type="application/ld+json"&gt;` は `<script` に一致しないので除外。
+folio_extract_head_jsonld() {
+  awk '
+    /<\/head>/ { exit }
+    capturing && /<\/script>/ { exit }
+    capturing { print }
+    /<script[^>]*type="application\/ld\+json"/ { capturing = 1 }
+  ' "$1"
+}
+
+# <meta name="$2" content="..."> の content を stdout に返す (無ければ空文字)。
+folio_extract_meta() {
+  grep -oP "<meta name=\"$2\" content=\"\K[^\"]*" "$1" 2>/dev/null | head -1
+}
+
+# <title>...</title> の text を stdout に返す。
+folio_extract_title() {
+  grep -oP '<title>\K[^<]*' "$1" 2>/dev/null | head -1
+}
+
+# <header> .meta div の最終 &middot; セグメントを summary として返す
+# (§4.1 source: spec <header> .meta)。 HTML entity を最小 decode + trim。
+folio_extract_summary() {
+  local meta seg
+  meta=$(grep -oP '<div class="meta">\K[^<]*' "$1" 2>/dev/null | head -1)
+  [[ -z "$meta" ]] && return 0
+  seg="$meta"
+  [[ "$meta" == *"&middot;"* ]] && seg="${meta##*&middot;}"
+  # trim 前後 whitespace
+  seg="${seg#"${seg%%[![:space:]]*}"}"
+  seg="${seg%"${seg##*[![:space:]]}"}"
+  printf '%s' "$seg" | sed -e 's/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&#39;/'"'"'/g; s/&middot;/·/g'
+}
+
+# 相対 @id ($1) を、 その spec が属する subdir ($2) 起点で解決し scratch ($3) 相対へ
+# 正規化して返す。 #anchor は保持。 例 (subdir=specs):
+#   ./rules.html#s4-format        -> specs/rules.html#s4-format
+#   ../constitution.html          -> constitution.html
+#   ../research/foo.html          -> research/foo.html
+folio_resolve_relpath() {
+  local rawid="$1" subdir="$2" scratch_abs="$3" pathpart anchor resolved
+  if [[ "$rawid" == *"#"* ]]; then
+    pathpart="${rawid%%#*}"
+    anchor="#${rawid#*#}"
+  else
+    pathpart="$rawid"
+    anchor=""
+  fi
+  resolved=$(realpath -m --relative-to="$scratch_abs" "${scratch_abs}/${subdir}/${pathpart}")
+  printf '%s%s' "$resolved" "$anchor"
+}
+
+# JSON-LD block ($1) から relation を集約した object を返す (§4.1 specs[].relations)。
+# relation = 値が [{ "@id": ... }, ...] 形式の dc:* / folio:* 等のプロパティ
+# (dc:title=string / folio:version=string / folio:stakeholders=[string] は形が違うので自動除外)。
+# 各 @id は subdir ($2) 起点で scratch ($3) 相対へ正規化。 無ければ "{}"。
+folio_build_relations() {
+  local block="$1" subdir="$2" scratch_abs="$3" pairs lines k rawid res
+  pairs=$(printf '%s' "$block" | jq -r '
+    to_entries[]
+    | select(.value | type == "array")
+    | select(.value | length > 0)
+    | select(.value | all(.[]?; type == "object" and has("@id")))
+    | .key as $k | .value[]."@id" | "\($k)\t\(.)"
+  ' 2>/dev/null)
+  [[ -z "$pairs" ]] && { printf '{}'; return 0; }
+  lines=""
+  while IFS=$'\t' read -r k rawid; do
+    [[ -z "$k" ]] && continue
+    res=$(folio_resolve_relpath "$rawid" "$subdir" "$scratch_abs")
+    lines+="${k}"$'\t'"${res}"$'\n'
+  done <<< "$pairs"
+  printf '%s' "$lines" | jq -R -s '
+    [ split("\n")[] | select(length > 0) | split("\t") | {key: .[0], val: .[1]} ]
+    | reduce .[] as $e ({}; .[$e.key] += [$e.val])
+  '
+}
+
+# 1 spec file ($1) から inventory entry (compact JSON) を stdout に返す。
+# JSON-LD block が無い / parse 不能なら return 1 (caller が skip)。 $2 = scratch 絶対 path。
+folio_build_entry() {
+  local f="$1" scratch_abs="$2" rel subdir block doctype status version title summary stakeholders relations
+
+  rel=$(realpath -m --relative-to="$scratch_abs" "$f")   # 例 specs/relations.html
+  subdir="${rel%%/*}"                                     # 例 specs
+
+  block=$(folio_extract_head_jsonld "$f")
+  [[ -z "$block" ]] && return 1                           # JSON-LD ブロック無し = scan 対象外 (§4.4.1)
+  if ! printf '%s' "$block" | jq -e . >/dev/null 2>&1; then
+    echo "folio inventory: WARN: JSON-LD parse error, skipping ${f}" >&2   # §4.4.3
+    return 1
+  fi
+
+  # MUST fields
+  doctype=$(folio_extract_meta "$f" folio-doc-type)
+  status=$(folio_extract_meta "$f" folio-status)
+  version=$(folio_extract_meta "$f" folio-version)
+
+  # title: JSON-LD dc:title 優先 → <title> fallback
+  title=$(printf '%s' "$block" | jq -r '."dc:title" // empty' 2>/dev/null)
+  [[ -z "$title" ]] && title=$(folio_extract_title "$f")
+
+  # summary (SHOULD): .meta 最終セグメント
+  summary=$(folio_extract_summary "$f")
+
+  # stakeholders (SHOULD): JSON-LD folio:stakeholders 配列優先 → meta split fallback
+  stakeholders=$(printf '%s' "$block" | jq -c 'if (."folio:stakeholders" | type) == "array" then ."folio:stakeholders" else empty end' 2>/dev/null)
+  if [[ -z "$stakeholders" ]]; then
+    local meta_stake
+    meta_stake=$(folio_extract_meta "$f" folio-stakeholders)
+    if [[ -n "$meta_stake" ]]; then
+      stakeholders=$(printf '%s' "$meta_stake" | jq -R 'split(", ")')
+    else
+      stakeholders="[]"
+    fi
+  fi
+
+  # relations (SHOULD): JSON-LD dc:* / folio:* link プロパティ集約
+  relations=$(folio_build_relations "$block" "$subdir" "$scratch_abs")
+
+  jq -n -c \
+    --arg id "$rel" \
+    --arg title "$title" \
+    --arg summary "$summary" \
+    --arg doctype "$doctype" \
+    --arg status "$status" \
+    --arg version "$version" \
+    --argjson stakeholders "$stakeholders" \
+    --argjson relations "$relations" \
+    '{"@id": $id, title: $title, summary: $summary, "doc-type": $doctype, status: $status, version: $version, stakeholders: $stakeholders, relations: $relations}'
+}
+
+# folio inventory: scratch/inventory.json を生成 (REQ-VER-010 / relations.html §4)。
+folio_cmd_inventory() {
+  command -v jq >/dev/null 2>&1 || { echo "folio inventory: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
+
+  local plugin_json=".claude-plugin/plugin.json"
+  [[ -f "$plugin_json" ]] || { echo "folio inventory: ${plugin_json} not found — run at repo root" >&2; exit 1; }
+
+  local scratch_abs
+  scratch_abs=$(realpath -m scratch)
+  [[ -d "$scratch_abs" ]] || { echo "folio inventory: scratch/ not found — run at repo root" >&2; exit 1; }
+
+  local folio_version generated_at out_file
+  folio_version=$(jq -r '.version // "unknown"' "$plugin_json")
+  generated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  out_file="${scratch_abs}/inventory.json"
+
+  # scan dirs: §4.4.1 order (specs → decisions → research)、 dir 内は LC_ALL=C 安定 sort
+  local dirs=("specs" "decisions" "research") d f entry
+  local entries=()
+  for d in "${dirs[@]}"; do
+    local dir_abs="${scratch_abs}/${d}"
+    [[ -d "$dir_abs" ]] || { echo "folio inventory: scan dir missing: scratch/${d} (fatal)" >&2; exit 1; }   # §4.4.3 fs access error
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      entry=$(folio_build_entry "$f" "$scratch_abs") || continue
+      [[ -n "$entry" ]] && entries+=("$entry")
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
+  local specs_json
+  if [[ ${#entries[@]} -gt 0 ]]; then
+    specs_json=$(printf '%s\n' "${entries[@]}" | jq -s '.')
+  else
+    specs_json="[]"
+  fi
+
+  jq -n \
+    --arg schema "https://folio.dev/inventory/v1.json" \
+    --arg gen "$generated_at" \
+    --arg ver "$folio_version" \
+    --argjson specs "$specs_json" \
+    '{"$schema": $schema, generatedAt: $gen, folioVersion: $ver, specs: $specs}' \
+    > "$out_file"
+
+  echo "folio inventory: wrote scratch/inventory.json (${#entries[@]} specs)" >&2
+}
+
+# ============================================================================
+# dispatch
+# ============================================================================
 
 case "${1:-version}" in
   version|--version|-V)
@@ -16,18 +212,21 @@ case "${1:-version}" in
 folio v${VERSION} — Layer 0 META FRAMEWORK CLI (Phase X3 試作)
 
 Subcommands:
-  version, --version       version 表示 (現在のみ実装)
+  version, --version       version 表示
   help, --help             本ヘルプ
+  inventory                inventory.json 生成 (relations.html §4、 cwd=repo root)
 
 Phase X3 試作で実装予定 (ADR-0003 §2.1):
   init                     consumer project の初期化
   validate                 spec の構造検証
-  inventory                inventory.json 生成
   prime                    agent context inject
   fix                      自動修正 (双方向 link 等)
 
 完成形 spec: scratch/specs/folio-self-spec.html §7.2 + ADR-0003
 EOF
+    ;;
+  inventory)
+    folio_cmd_inventory
     ;;
   *)
     echo "folio: unknown subcommand '${1}' (Phase X3 試作では未実装)" >&2
