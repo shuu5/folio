@@ -13,11 +13,11 @@
 
 <header class="doc-header">
   <h1>scratch/ — 試作・工事用箱</h1>
-  <div class="meta">v0.4.2-draft &middot; Phase X2 試作段階の作業場所</div>
+  <div class="meta">v0.4.2-draft &middot; Phase X3 試作段階の作業場所</div>
 </header>
 
 <aside class="informative">
-<p>本 dir は folio framework が試作段階にある期間の <strong>工事用一時的箱</strong>。 試作・調査・要望整理・実装試行は すべてここで行う。 完成後 (Phase X3) に正式 location (<code>architecture/</code>) に移植、 scratch/ は撤去予定。</p>
+<p>本 dir は folio framework が試作段階にある期間の <strong>工事用一時的箱</strong>。 試作・調査・要望整理・実装試行は すべてここで行う。 完成後 (Phase X4+) に正式 location (<code>architecture/</code>) に移植、 scratch/ は撤去予定。</p>
 </aside>
 
 <section id="s1-purpose" class="informative">
@@ -37,16 +37,13 @@
 
 <p>サブ dir:</p>
 <ul>
-  <li><a href="specs/"><code>specs/</code></a> — folio framework spec drafts (<code>rules.html</code> + <code>folio-self-spec.html</code>、 ブラッシュアップ可)</li>
+  <li><a href="specs/"><code>specs/</code></a> — folio framework spec drafts (<code>rules.html</code> / <code>folio-self-spec.html</code> / <code>relations.html</code> / <code>verification.html</code> + <code>README.html</code>、 ブラッシュアップ可)</li>
   <li><a href="decisions/"><code>decisions/</code></a> — ADR cluster (frozen、 新規起票は user 承認 MUST)</li>
   <li><a href="research/"><code>research/</code></a> — user 要望 + 業界調査 (HTML 形式、 自由形式)</li>
+  <li><a href="verification/"><code>verification/</code></a> — Phase X3 sandbox verification framework (<code>scenarios/</code> / <code>fixtures/</code> / <code>baselines/</code> + <code>runner.sh</code>、 ADR-0013)</li>
 </ul>
 
-<p>将来 (試作の進行に応じて) 追加予定:</p>
-<ul>
-  <li><code>prototype/</code> — 試作 plugin の draft</li>
-  <li><code>test/</code> — 試作の test 実行ログ</li>
-</ul>
+<p>試作 plugin 本体は scratch/ ではなく plugin root 直下 (<code>.claude-plugin/</code> + <code>hooks/</code>) で実装 (Phase X3、 ADR-0003)。 完成形 (Phase X4+) で <code>architecture/</code> へ移植予定。</p>
 </section>
 
 <section id="s3-rules" class="informative">
@@ -64,8 +61,8 @@
 <h2>§4. Lifecycle</h2>
 
 <ul>
-  <li><strong>現在 (Phase X2)</strong>: 試作・調査の作業場所として active。</li>
-  <li><strong>完成後 (Phase X3)</strong>: 試作 plugin を <code>.claude-plugin/</code> に正式移植、 folio 自身の architecture spec を <code>architecture/</code> に移植。 scratch/ は撤去 or archive。</li>
+  <li><strong>現在 (Phase X3)</strong>: 試作・調査の作業場所として active。 試作 plugin 本体は <code>.claude-plugin/</code> + <code>hooks/</code> で実装中。</li>
+  <li><strong>完成後 (Phase X4+)</strong>: 試作 plugin の残部を plugin root 直下へ正式整理、 folio 自身の architecture spec を <code>architecture/</code> に移植。 scratch/ は撤去 or archive。</li>
 </ul>
 </section>
 
