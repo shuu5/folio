@@ -12,9 +12,18 @@
 #   FOLIO_CALLER_MARKER_ENV   既定 "FOLIO_ARCHITECT_CONTEXT"
 #   FOLIO_CALLER_MARKER_VALUE 既定 "folio-architect"
 #   FOLIO_SPEC_PATH           既定 "scratch/specs/"
+#   FOLIO_MARKER_FILE         既定 ".folio/architect-active" (hybrid marker file)
 #
-# 失敗時は fail-closed (jq 不在 / 不正変数名 → deny)。 必須依存欠落で
-# bypass されないこと優先 (R2-1 / R2-2 review 反映)。
+# marker は hybrid (env var OR file) で判定する (Stage 1):
+#   - env var ($FOLIO_CALLER_MARKER_ENV == $FOLIO_CALLER_MARKER_VALUE): cld 起動時に
+#     set する従来方式。 sandbox scenario はこちらを given.env で検証。
+#   - marker file ($FOLIO_MARKER_FILE 存在): folio-architect SKILL が mid-session で
+#     touch/rm する方式。 env は実行中の hook へ伝播しないため、 SKILL 経由の正規
+#     spec 編集はこの file marker で allow する。
+#   どちらか一方で allow、 両方無ければ deny (fail-closed)。
+#
+# 失敗時は fail-closed (jq 不在 / 不正変数名 / env・file 共に無し → deny)。
+# 必須依存欠落で bypass されないこと優先 (R2-1 / R2-2 review 反映)。
 #
 # 共通ロジックは plugin-lib.sh に集約 (Phase 3 DRY refactor)。
 # 注: 空 tool_name は下記 case *) で allow される (現行挙動)。 path-boundary /
@@ -53,15 +62,25 @@ esac
 # spec_path 配下でない file は通過
 folio_under_spec_path "$file_path" "$SPEC_PATH" || exit 0
 
-# caller marker 検証
+# caller marker 検証 (hybrid: env var OR marker file のどちらかで allow)
+# (1) env var 方式 (cld 起動時 set、 sandbox scenario はこちら)
 actual_val="${!EXPECTED_VAR:-}"
 if [[ "$actual_val" == "$EXPECTED_VAL" ]]; then
   exit 0
 fi
 
-# deny
+# (2) marker file 方式 (folio-architect SKILL が mid-session で touch、 env が実行中に
+#     hook へ伝播しない制約への対処)。 file の存在のみで判定 (内容は問わない)。
+marker_file="${FOLIO_MARKER_FILE:-.folio/architect-active}"
+if [[ -f "$marker_file" ]]; then
+  exit 0
+fi
+
+# deny (env・file 共に無し)
 folio_deny \
-  "folio caller marker check: ${EXPECTED_VAR} must equal '${EXPECTED_VAL}' to edit ${SPEC_PATH}" \
-  "  current value: '${actual_val:-(unset)}'" \
+  "folio caller marker check: edit of ${SPEC_PATH} requires ${EXPECTED_VAR}='${EXPECTED_VAL}' OR marker file '${marker_file}'" \
+  "  current env value: '${actual_val:-(unset)}'" \
+  "  marker file '${marker_file}': absent" \
   "  file: ${file_path}" \
+  "  hint: invoke /folio-architect to set the marker (or set ${EXPECTED_VAR}=${EXPECTED_VAL})" \
   "  reference: scratch/specs/rules.html §10.1 (REQ-CM-001~003)"
