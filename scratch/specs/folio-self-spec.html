@@ -461,6 +461,8 @@ flowchart LR
 }
 </code></pre>
 
+<p class="informative"><strong>注 (Phase X3 試作)</strong>: 上記は完成形 schema。 試作中の実 <code>plugin.json</code> は <code>spec_path</code> default を <code>scratch/specs/</code> とする (folio 自身を self-host するための、 完成形 <code>architecture/spec/</code> の暫定 override)。 完成形移行 (Phase X4+) で <code>architecture/spec/</code> に戻す。 また実 plugin.json は各 userConfig に <code>title</code> field を持つ (claude plugin validate 要件)。</p>
+
 <h3>§8.2 userConfig override mechanism</h3>
 
 <p>各 Layer 1 consumer project は <code>folio.config.yaml</code> で <code>plugin.json</code> userConfig の default を override 可能。 例:</p>

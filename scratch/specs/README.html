@@ -91,7 +91,7 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
     </tr>
     <tr>
       <td><a href="verification.html"><code>verification.html</code></a></td>
-      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 REQ-VER-001〜005)</td>
+      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 REQ-VER-001〜008)</td>
       <td>draft (v0.1.0)</td>
       <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
       <td>—</td>
@@ -158,7 +158,7 @@ graph TD
   <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
   <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings、 §7.6 試作 minimal scope)</li>
   <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD vocabulary、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
-  <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 着手前 / 試作 plugin 実機検証の規範)</li>
+  <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 Step 1〜4 完遂済 / 試作 plugin 実機検証の規範)</li>
 </ol>
 
 <p>spec edit を行う AI agent は最低限 (1) + (2) を必読 MUST、 関係性宣言を変更する場合は (4) も MUST、 試作 plugin 実装 / 検証時は (3) + (5) も MUST。</p>
@@ -251,14 +251,14 @@ graph TD
       <td>upstream fix 公式アナウンス時に full 解消 (現状で実用上影響なし)</td>
     </tr>
     <tr>
-      <td>verification §3.2 schema 拡張</td><td>MEDIUM</td>
-      <td>scenario YAML <code>given.content</code> フィールドが <a href="verification.html#s3-2-yaml-schema">§3.2 schema</a> 未追加 (Step 2 で runner.sh 拡張、 実装が spec を追い越した SSoT divergence)</td>
-      <td>Phase X3 後段の spec 編集 commit (R3-M1 review)</td>
+      <td>verification §3.2 schema 拡張</td><td>✓ 完遂</td>
+      <td>scenario YAML の <code>given.{env, file_path, content}</code> + <code>when.tool</code> を <a href="verification.html#s3-2-yaml-schema">§3.2 schema</a> に展開 (Stage 2a / D-6、 実装と整合)</td>
+      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
     </tr>
     <tr>
-      <td>verification §3 REQ-VER-007 昇格</td><td>MEDIUM</td>
-      <td>path boundary 用 REQ-VER-007 を scenarios/path-boundary.yaml に試作導入、 <a href="verification.html#s3-ears">verification.html §3</a> への正式追加 + <a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> §2.1 を Option Pragmatic 具体仕様で update</td>
-      <td>同上 (R3-H1 spec side)</td>
+      <td>verification §3 REQ-VER-007/008 昇格</td><td>✓ 完遂</td>
+      <td>REQ-VER-007 (path boundary) + REQ-VER-008 (README index staleness) を <a href="verification.html#s3-6-verification-specific">verification.html §3.6</a> に EARS 文として正式追加 (Stage 2a / D-4)。 ADR-0003 §2.1 は frozen のため update せず、 divergence は本 §6.2 で trace</td>
+      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
     </tr>
     <tr>
       <td>hook 並列順序仕様</td><td>MEDIUM</td>
@@ -266,9 +266,9 @@ graph TD
       <td>upstream docs 更新待ち or 実機検証</td>
     </tr>
     <tr>
-      <td>shared lib 化</td><td>SHOULD</td>
-      <td>SPEC_PATH 正規化 / jq check / case 分岐 が両 hook script で重複、 <code>.claude-plugin/scripts/plugin-lib.sh</code> 候補</td>
-      <td>Step 3 着手時に検討 (3 つ目 hook 追加 timing)</td>
+      <td>shared lib 化 (実装済)</td><td>✓ 完遂</td>
+      <td><code>plugin-lib.sh</code> 実装 (Phase 3 DRY refactor、 commit c292b47)。 8 関数 (folio_spec_path / read_payload / require_jq / json_field / under_spec_path / is_html / require_write_tool / deny) を 4 hook script が source 再利用</td>
+      <td>解消済 (Phase 3)</td>
     </tr>
     <tr>
       <td>plugin 実機 install 確認</td><td>✓ 完遂</td>
@@ -281,9 +281,9 @@ graph TD
       <td>commit 1b18ddb、 解消済。 ADR-0003 §2.3 「<code>.claude-plugin/</code> 配下に隔離」 の適用範囲は scripts/ 等の HOW に narrowing 解釈 (ADR 本文は frozen 維持、 CLAUDE.md §6 + 本 §6.2 で trace)</td>
     </tr>
     <tr>
-      <td>CLAUDE.md plugin root warning</td><td>LOW</td>
-      <td>claude plugin validate で 「CLAUDE.md root は project context、 distribute 時は SKILL に移行推奨」 warning。 現状は project 用として valid</td>
-      <td>Step 6 で folio-architect SKILL.md 実装時に移行</td>
+      <td>CLAUDE.md plugin root warning</td><td>LOW (恒久 benign)</td>
+      <td>claude plugin validate で 「CLAUDE.md root は project context、 distribute 時は SKILL に移行推奨」 warning。 <strong>Stage 1 で folio-architect SKILL.md を実装したが warning は残存</strong> (warning は CLAUDE.md の存在自体が要因で SKILL 有無と無関係と判明)。 project 用として valid</td>
+      <td>恒久 benign (distribute 時に CLAUDE.md を分離する場合のみ解消)</td>
     </tr>
     <tr>
       <td>LOW 級 review findings</td><td>LOW</td>
@@ -301,9 +301,9 @@ graph TD
       <td>ADR-0004 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
     </tr>
     <tr>
-      <td>PostToolUse README update 未実装</td><td>MEDIUM</td>
-      <td>ADR-0003 §2.1 hook 表は 「PostToolUse: JSON-LD lint + README update」 を 1 エントリで宣言、 実装は <code>check-jsonld-lint.sh</code> (Step 3) のみ、 README update (<code>scripts/update-readme-index</code>) は Step 4 で別 hook 追加予定</td>
-      <td>Step 4 (README update slice) で実装</td>
+      <td>PostToolUse README update (check 型、 Step 4 完遂)</td><td>✓ 完遂</td>
+      <td>ADR-0003 §2.1「PostToolUse: README update」の試作 slice = <code>check-readme-index.sh</code> 実装済 (commit 5a2d9f2)。 挙動型 = check 型 (cluster README index 未掲載の .html を staleness notify、 file 改変なし)。 REQ-VER-008 / verification.html §3.6 (下記 divergence 行参照)</td>
+      <td>Step 4 完了 (解消済、 commit 5a2d9f2)</td>
     </tr>
     <tr>
       <td>JSON-LD 複数 block 検査</td><td>LOW</td>
@@ -314,6 +314,21 @@ graph TD
       <td>@context 空 object {} は通過</td><td>LOW</td>
       <td>試作 Light は <code>@context</code> の type が object であることのみ check、 中身が空でも allow (scenario で trace)</td>
       <td>完成形で semantic check (context resolution) で検出</td>
+    </tr>
+    <tr>
+      <td>ADR-0003 §2.1 update-readme-index (mutate) vs check-readme-index.sh (check 型) divergence</td><td>MEDIUM (trace)</td>
+      <td>ADR-0003 §2.1 は <code>update-readme-index</code> (自動更新 mutate) を宣言。 実装は <code>check-readme-index.sh</code> (check 型、 staleness 通知のみ、 file 改変なし)。 ADR は frozen (P-10) のため修正不可。 試作 slice として check 型を採用 (副作用ゼロ + jsonld-lint と一貫、 理由は check-readme-index.sh §1 comment)。 命名も論理名 update-readme-index → check-readme-index (check-* prefix 統一)</td>
+      <td>完成形 mutate 移行時に ADR-0004 候補で formal 化</td>
+    </tr>
+    <tr>
+      <td>SessionStart / inject-inventory 未実装</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 SessionStart hook (<code>inject-inventory</code> script、 Beads pattern で inventory.json を agent context に inject) は宣言済だが未実装。 hooks.json に SessionStart entry なし、 inject-inventory.sh 不在</td>
+      <td>Step 5 (context injection slice) で実装</td>
+    </tr>
+    <tr>
+      <td>ADR-0003 §2.1 script count 6 vs 実装 5 file + plugin-lib</td><td>LOW</td>
+      <td>ADR 宣言 6 script vs 実装 5 file (check-caller-marker / check-path-boundary / check-jsonld-lint / check-readme-index / plugin-lib)。 差異: inject-inventory 未実装 (上記行) / link-integrity 未実装 (CI、 Phase X4+) / lint-jsonld→check-jsonld-lint 命名 / plugin-lib.sh 追加 (ADR 未宣言 shared lib)</td>
+      <td>inject-inventory=Step 5、 link-integrity=Phase X4+、 命名/lib=ADR-0004 候補</td>
     </tr>
   </tbody>
 </table>
