@@ -23,46 +23,54 @@
 - **`scratch/specs/` 配下** — `rules.html` / `folio-self-spec.html` / `relations.html` / `verification.html` は試作の進行に応じて自由に改訂する。
 - **`scratch/research/` 配下** — user 要望 + 業界調査の集約場所、 自由形式 HTML。
 - **`scratch/verification/` 配下** — Phase X3 sandbox verification framework (scenarios / fixtures / baselines / runner.sh)、 ADR-0013 + verification.html。
-- **`.claude-plugin/` 配下** — Phase X3 試作 plugin 本体 (ADR-0003 minimal scope: 1 skill + 4 hook + 6 script + 1 CLI)。 完成形 binding 隔離先 (P-11)。
+- **`hooks/` 配下 (plugin root 直下)** — Claude Code 公式仕様で hooks/ は plugin root 直下 MUST、 `hooks/hooks.json` で hook 宣言 (Phase 2.5 移動済)。
+- **`.claude-plugin/` 配下** — Phase X3 試作 plugin の manifest (`plugin.json`) + scripts/ skills/ 等の HOW 実装 (hooks/ は plugin root へ移動済、 P-11 部分隔離)。
 - **`scratch/` 直下に新規 file / dir 作成** — 思考 memo / 一時 work / prototype 等は柔軟に。
 
 ## 4. 作業場所
 
-試作・調査・要望整理は `scratch/`、 plugin 本体実装は `.claude-plugin/` で行う (Phase X3 着手後)。
+試作・調査・要望整理は `scratch/`、 plugin 本体実装は `.claude-plugin/` + `hooks/` で行う (Phase X3 着手後)。
 
 - `scratch/` は folio rule に縛られない **工事用の一時的な箱**。
-- `.claude-plugin/` は P-11 binding 隔離先 (HOW を spec から隔離)。
+- `hooks/` は Claude Code 公式仕様の hook 宣言 location (plugin root 直下 MUST)。
+- `.claude-plugin/` は P-11 部分隔離先 (HOW のうち hooks/ skills/ agents/ commands/ 以外を集約、 詳細は ADR-0003 §2.3 と本 §6 Layout 注記)。
 - 完成後 (Phase X4+) に正式 location 移植予定、 `scratch/` は撤去候補。
 
 ## 5. Format
 
 - spec / ADR / constitution は **HTML** で記述する (P-2)。
 - Markdown 例外: `README.md`, `CLAUDE.md`, YAML config (`*.yaml`)。
-- `.claude-plugin/` 配下は HOW のため bash / json / md 等を許容 (P-11 隔離)。
+- `.claude-plugin/` 配下は HOW のため bash / json / md 等を許容 (P-11 部分隔離)。
+- `hooks/hooks.json` は Claude Code 公式 schema 準拠 (JSON)。
 - `scratch/verification/scenarios/` は YAML (verification.html §3.2 schema)。
 
 ## 6. Directory Layout
 
 ```
-folio/
-├── README.md / CLAUDE.md / common.css   root meta + style (永続)
-├── scratch/                              作業場所 (試作・調査・実装試行)
-│   ├── constitution.html                 (不変、 編集禁止、 特別枠)
-│   ├── specs/                            (ブラッシュアップ可)
-│   ├── decisions/                        (既存 ADR frozen、 新規は user 承認)
-│   ├── research/                         (要望 + 業界調査、 自由形式)
-│   ├── verification/                     (Phase X3 sandbox verification、 ADR-0013)
-│   │   ├── scenarios/                    use case 別 YAML
-│   │   ├── fixtures/                     テストデータ
-│   │   ├── baselines/{reference,local}/  golden (VCS) vs 実行生成 (.gitignore)
-│   │   └── runner.sh                     軽量 bash runner
-│   └── assets/                           (mermaid vendor 等)
-└── .claude-plugin/                       Phase X3 試作 plugin 本体 (ADR-0003)
-    ├── plugin.json                       manifest
-    ├── hooks/hooks.json                  hook 宣言
-    ├── scripts/                          hook 実装 + CI script (試作中)
-    ├── skills/                           folio-architect (Phase X3 後段)
-    └── bin/folio                         CLI skeleton
+folio/                                      Phase X3 試作 plugin root (ADR-0003)
+├── README.md / CLAUDE.md / common.css     root meta + style (永続)
+├── .claude-plugin/                         Claude Code manifest + 内部 HOW (P-11 部分隔離)
+│   ├── plugin.json                         Claude Code 必須 manifest (場所固定)
+│   ├── scripts/                            hook script (hooks.json から path 指定で参照)
+│   ├── skills/                             試作 placeholder (完成形では plugin root へ移動候補)
+│   ├── refs/ static/                       試作 placeholder
+│   └── bin/folio                           CLI skeleton (将来 plugin root 移動候補)
+├── hooks/                                  Claude Code 公式仕様 = plugin root 直下 MUST
+│   └── hooks.json                          hook 宣言 (PreToolUse × 2 + PostToolUse、 Phase X3 Step 1-3 = MVP core)
+├── scratch/                                作業場所 (試作・調査・実装試行)
+│   ├── README.html                         scratch cluster index
+│   ├── constitution.html                   (不変、 編集禁止、 特別枠)
+│   ├── specs/                              (rules / folio-self-spec / relations / verification + README、 ブラッシュアップ可)
+│   ├── decisions/                          (ADR cluster、 既存 frozen、 新規は user 承認)
+│   ├── research/                           (要望 + 業界調査、 自由形式)
+│   ├── verification/                       (Phase X3 sandbox verification、 ADR-0013)
+│   │   ├── scenarios/                      use case 別 YAML (caller-marker / path-boundary / jsonld-lint)
+│   │   ├── fixtures/                       テストデータ
+│   │   ├── baselines/{reference,local}/    golden (VCS) vs 実行生成 (.gitignore)
+│   │   └── runner.sh                       軽量 bash runner (bash + yq + jq)
+│   └── assets/                             (mermaid vendor 等)
 ```
 
-`architecture/` は **存在しない**。 完成形 (Phase X4+) では `.claude-plugin/` + 移植先 `architecture/` の役割分担に移行 (P-12)。 Phase X3 着手段階では `.claude-plugin/` のみ実装、 `architecture/` は作らない。
+`architecture/` は **存在しない**。 完成形 (Phase X4+) では `.claude-plugin/` 内残部 + 移植先 `architecture/` の役割分担に移行 (P-12)。 Phase X3 着手段階では `.claude-plugin/` + `hooks/` のみ実装、 `architecture/` は作らない。
+
+**Phase 2.5 (commit 1b18ddb)**: 公式 plugin 仕様 (plugins-reference L733: 「`.claude-plugin/` には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下」) に従い、 `hooks/` を plugin root 直下に移動。 scripts/ は `.claude-plugin/scripts/` 維持で P-11 部分隔離継続 (hooks.json command で path 指定参照)。 ADR-0003 §2.3 「.claude-plugin/ 配下に隔離」 の適用範囲は scripts/ 等の HOW 実装に narrowing (ADR 本文は frozen、 適用解釈は本 §6 + specs/README.html §6.2 で trace)。

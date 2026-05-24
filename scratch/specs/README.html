@@ -175,6 +175,11 @@ graph TD
   <tbody>
     <tr>
       <td>2026-05-24</td>
+      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で P-11 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
+      <td>commit 1b18ddb、 spawn 検証 × 3 (folio-test-090218 / -b093240 / -c094741) で 真因確定 + Option A/B/C 比較 → Option C 採用</td>
+    </tr>
+    <tr>
+      <td>2026-05-24</td>
       <td>§6 Open TODO を 3 sub-section に再編 (§6.1 dogfood / §6.2 Phase X3 deferred / §6.3 ADR 候補)。 Phase X3 Step 0-2 完遂 (sandbox-verified 2/3、 14/14 PASS) 過程で発生した deferred 事項を集約 trace。 spec 本文の編集なし、 informative TODO の整理のみ</td>
       <td>Phase X3 Step 0 (b0a1155) / Step 1 (53f9929 + dffe235) / Step 2 (e01f089 + 63c9cc6) 累積</td>
     </tr>
@@ -241,9 +246,9 @@ graph TD
   <thead><tr><th>項目</th><th>severity</th><th>内容</th><th>解消 timing</th></tr></thead>
   <tbody>
     <tr>
-      <td>Gap 1 (#39344 fix)</td><td>MUST</td>
-      <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認</td>
-      <td>fix 確認後、 verification.html §3.3 REQ-VER-006 SHOULD NOT 緩和可能</td>
+      <td>Gap 1 (#39344 fix)</td><td>LOW (一部解消)</td>
+      <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認。 <strong>Phase 2.5 実機検証で PostToolUse blocking error は機能 (commit 1b18ddb)</strong>、 exit 2 + stderr 経路は信頼可能と判明 (REQ-VER-006 SHOULD NOT は維持で問題なし)</td>
+      <td>upstream fix 公式アナウンス時に full 解消 (現状で実用上影響なし)</td>
     </tr>
     <tr>
       <td>verification §3.2 schema 拡張</td><td>MEDIUM</td>
@@ -266,9 +271,14 @@ graph TD
       <td>Step 3 着手時に検討 (3 つ目 hook 追加 timing)</td>
     </tr>
     <tr>
-      <td>plugin 実機 install 確認</td><td>SHOULD</td>
-      <td>現状 sandbox-verified は runner.sh scenario level (14/14 PASS)、 実環境 (<code>claude --plugin-dir</code>) で hook 動作確認 = <a href="verification.html#s4-1-3step">verification.html §4.1</a> Step 2 (worktree-based integration test)</td>
-      <td>Phase X3 後段 SHOULD (Step 1-3 完遂後)</td>
+      <td>plugin 実機 install 確認</td><td>✓ 完遂</td>
+      <td>Phase 2.5 で <a href="verification.html#s4-1-3step">verification.html §4.1</a> Step 2 (worktree-based integration test) 達成。 symlink (<code>~/.claude/plugins/folio</code>) + Option C 構造 (hooks/ plugin root 直下) で cld auto discovery 経由 plugin load、 3 hook 全実機 fire 確認 (caller marker / path boundary / jsonld-lint)。 検証経過: <strong>plugin 構造誤り発覚 → 公式仕様調査 (plugins-reference L733) → Option C 採用 → 再検証 PASS</strong></td>
+      <td>commit 1b18ddb、 解消済</td>
+    </tr>
+    <tr>
+      <td>Phase 2.5: plugin 構造修正 (hooks/ 配置 fix)</td><td>✓ 完遂</td>
+      <td>当初 <code>.claude-plugin/hooks/hooks.json</code> 配置で hook 認識されず (公式仕様 L733: <code>.claude-plugin/</code> には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下 MUST)。 fix: git mv で <code>hooks/hooks.json</code> に移動、 hooks.json 内 command path を <code>${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/</code> に書き換え (scripts/ は P-11 部分隔離維持)</td>
+      <td>commit 1b18ddb、 解消済。 ADR-0003 §2.3 「<code>.claude-plugin/</code> 配下に隔離」 の適用範囲は scripts/ 等の HOW に narrowing 解釈 (ADR 本文は frozen 維持、 CLAUDE.md §6 + 本 §6.2 で trace)</td>
     </tr>
     <tr>
       <td>CLAUDE.md plugin root warning</td><td>LOW</td>
