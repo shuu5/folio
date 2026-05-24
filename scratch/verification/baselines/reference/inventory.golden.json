@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-24T23:19:46Z",
+  "generatedAt": "2026-05-24T23:33:37Z",
   "folioVersion": "0.4.2-draft",
   "specs": [
     {
@@ -233,6 +233,27 @@
         ],
         "folio:depends-on": [
           "decisions/ADR-0013-verification-framework.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0018-cli-golden-harness.html",
+      "title": "ADR-0018 — CLI golden-diff verification harness",
+      "summary": "retrospective (Track 1 実装 + GREEN 検証済)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/verification.html#s3-6-verification-specific",
+          "specs/verification.html#s3-4-baseline",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0003-plugin-architecture.html"
         ]
       }
     },

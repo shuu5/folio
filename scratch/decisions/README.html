@@ -103,6 +103,13 @@
       <td>2026-05-23</td>
     </tr>
     <tr>
+      <td><a href="ADR-0018-cli-golden-harness.html">ADR-0018</a></td>
+      <td>CLI golden-diff verification harness (kind:cli-golden)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
       <td><a href="ADR-0019-path-boundary-pragmatic.html">ADR-0019</a></td>
       <td>path boundary hook (Option Pragmatic: content-marker 検出)</td>
       <td>accepted</td>
@@ -112,7 +119,7 @@
   </tbody>
 </table>
 
-<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 残る ADR-0005 / 0007〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0016〜0018 (ADR-0017 = hook unit test vs integration test 境界 等) は SHOULD ランク、 Gap (Issue #39344 fix 等) 解消後に起票。</p>
+<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 残る ADR-0005 / 0007〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 残る ADR-0016 (exit code 中心 assertion、 Gap 解消後) / ADR-0017 (hook unit test vs integration test 境界、 Track 2 後) は SHOULD ランクで起票待ち。</p>
 </section>
 
 <section id="s4-naming" class="informative">
