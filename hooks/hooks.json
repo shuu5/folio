@@ -32,6 +32,16 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-readme-index.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ]
   }

@@ -76,7 +76,12 @@ for i in $(seq 0 $((COUNT - 1))); do
 
   # 実行 (set -e 未使用、 exit code は $? で補足、 redirect は left-to-right で
   # `2>&1 >/dev/null` は「stderr → 元 stdout、 stdout → /dev/null」 の意 (R2-3 検証済))
-  actual_stderr=$(env -i HOME="$HOME" PATH="$PATH" ${env_args[@]+"${env_args[@]}"} \
+  # hook は cwd=REPO_ROOT で起動する: 実機 Claude Code は project root を cwd とし file_path を
+  # 絶対化するため、 hook が file_path から実 file (例 cluster README、 readme-index.yaml) を読む
+  # 場合に runner 起動 cwd へ依存しないよう REPO_ROOT へ cd する。 cd は command substitution の
+  # subshell 内なので runner 本体の cwd・上記 yq 読込・payload 構築には影響しない。 disk を読まない
+  # 既存 hook (caller-marker / path-boundary / jsonld-lint) は cwd 非依存のため挙動不変。
+  actual_stderr=$(cd "$REPO_ROOT" && env -i HOME="$HOME" PATH="$PATH" ${env_args[@]+"${env_args[@]}"} \
     "$HOOK_SCRIPT" <<<"$payload" 2>&1 >/dev/null)
   actual_exit=$?
 
