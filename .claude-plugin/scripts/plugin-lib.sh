@@ -1,0 +1,109 @@
+# shellcheck shell=bash
+# .claude-plugin/scripts/plugin-lib.sh
+# folio Phase X3 試作 plugin — hook script 共通ロジック (shared library)
+#
+# 3 hook script (check-caller-marker.sh / check-path-boundary.sh /
+# check-jsonld-lint.sh) が共有する小関数を集約 (Phase 3 DRY refactor)。
+# behavior-preserving: 各 script の現行挙動を厳密保持 (sandbox 26/26 PASS 維持)。
+#
+# === source 専用 (実行しない) =================================================
+# このファイルは関数のみ定義し、 top-level で set / exit / cat 等の副作用を
+# 持たない (source 時の副作用ゼロ)。 各 hook script は自身の先頭で
+# `set -uo pipefail` を宣言した後に source する:
+#     source "$(dirname "${BASH_SOURCE[0]}")/plugin-lib.sh"
+#
+# === exit する関数に注意 ======================================================
+# folio_require_jq / folio_require_write_tool / folio_deny は script を終了
+# させる (`exit`)。 command substitution `$(...)` 内で呼ぶと subshell だけが
+# 終了して script は継続してしまうため、 必ず文 (statement) として呼ぶこと。
+# 一方 folio_spec_path / folio_read_payload / folio_json_field は値を stdout
+# に返すだけ (exit しない) なので `$(...)` で呼んでよい。
+# folio_under_spec_path / folio_is_html は述語 (return 0/1)、 exit は呼び出し
+# 側が `|| exit 0` 等で判断する。
+
+# --- spec_path 正規化 ---------------------------------------------------------
+# FOLIO_SPEC_PATH (既定 "scratch/specs/") を読み、 末尾 slash 1 個に正規化して
+# stdout に返す。 `${:-}` は unset + empty 両対応 (二重 fallback 不要)。
+folio_spec_path() {
+  local p="${FOLIO_SPEC_PATH:-scratch/specs/}"
+  p="${p%/}/"
+  printf '%s' "$p"
+}
+
+# --- stdin payload 読込 -------------------------------------------------------
+# Claude Code hook の JSON payload を stdin から読み stdout に返す。 空文字は
+# 許容 (direct test invocation)。 空判定 + exit 0 は呼び出し側で行う (allow-exit
+# を script flow に残す方針):
+#     payload=$(folio_read_payload); [[ -z "$payload" ]] && exit 0
+folio_read_payload() {
+  cat 2>/dev/null || true
+}
+
+# --- jq 必須 (fail-closed) ----------------------------------------------------
+# jq が PATH に無ければ deny (exit 2)。 $1 = 用途説明 (message に埋め込む)。
+# 必須依存欠落で gate が bypass されないことを優先 (fail-closed)。
+# ※ exit するため文として呼ぶこと。
+folio_require_jq() {
+  command -v jq >/dev/null 2>&1 && return 0
+  echo "folio: jq not found in PATH (required for $1, fail-closed)" >&2
+  exit 2
+}
+
+# --- JSON field 抽出 ----------------------------------------------------------
+# $1 = payload (JSON 文字列)、 $2 = jq filter。 jq -r で抽出して stdout に返す。
+# jq error は握りつぶす (2>/dev/null)。 不在 key は呼び出し側 filter の
+# `// empty` で空文字になる想定。
+folio_json_field() {
+  printf '%s' "$1" | jq -r "$2" 2>/dev/null
+}
+
+# --- spec_path 配下判定 (述語) ------------------------------------------------
+# $1 = file_path、 $2 = 正規化済 spec_path (末尾 slash 付き)。 file_path が
+# spec_path 配下なら return 0、 そうでなければ return 1。
+# case の 2 branch は元 script から verbatim 保持 (挙動不変):
+#   "$2"*    = 相対 path (例 "scratch/specs/x.html") の prefix 一致
+#   *"/$2"*  = "/spec_path/" を含む path、 特に絶対 path
+#              (例 "/repo/scratch/specs/x.html") に対応。 Claude Code は hook の
+#              file_path を絶対 path 化するため (v2.1.84~) この branch が必須。
+# polarity (allow/deny) は呼び出し側が決める:
+#     caller-marker:  folio_under_spec_path "$fp" "$sp" || exit 0   # 配下のみ gate
+#     path-boundary:  folio_under_spec_path "$fp" "$sp" && exit 0   # 配下なら allow
+folio_under_spec_path() {
+  case "$1" in
+    "$2"*|*"/$2"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# --- .html 拡張子判定 (述語) --------------------------------------------------
+# $1 = file_path。 .html なら return 0、 そうでなければ return 1。
+folio_is_html() {
+  case "$1" in
+    *.html) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# --- Write tool 限定 gate (fail-closed) ---------------------------------------
+# $1 = tool_name。 path-boundary / jsonld-lint 共通の前段 gate:
+#   - tool_name 空 (不正 payload) → deny (exit 2、 fail-closed)
+#   - tool_name が Write 以外    → 対象外として allow (exit 0)
+#   - Write                      → return 0 (継続)
+# ※ exit する (0 or 2) ため文として呼ぶこと。
+# 注: caller-marker は Edit|Write|NotebookEdit を独自 case で扱い、 空 tool_name を
+#     allow する (現行挙動)。 この非一貫の統一は別 Issue 化 (本 refactor では厳密保持)。
+folio_require_write_tool() {
+  if [[ -z "$1" ]]; then
+    echo "folio: tool_name missing from hook payload (fail-closed)" >&2
+    exit 2
+  fi
+  [[ "$1" == "Write" ]] || exit 0
+}
+
+# --- deny 出力 + exit 2 -------------------------------------------------------
+# 各引数を 1 行ずつ stderr に出力して exit 2。 PreToolUse では deny、 PostToolUse
+# では violation 通知。 ※ exit するため文として呼ぶこと。
+folio_deny() {
+  printf '%s\n' "$@" >&2
+  exit 2
+}

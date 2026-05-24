@@ -25,38 +25,29 @@
 #   - R2-H2 tool_name 空時 fail-closed
 #   - R2-M3 single quote 属性対応
 #   - R1-M1 dead code (二重 fallback) 削除
+#
+# 共通ロジックは plugin-lib.sh に集約 (Phase 3 DRY refactor)。
 
 set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/plugin-lib.sh" \
+  || { echo "folio: cannot load plugin-lib.sh (fail-closed)" >&2; exit 2; }
 
-SPEC_PATH="${FOLIO_SPEC_PATH:-scratch/specs/}"
-SPEC_PATH="${SPEC_PATH%/}/"
+SPEC_PATH=$(folio_spec_path)
 
-payload=$(cat 2>/dev/null || true)
+payload=$(folio_read_payload)
 [[ -z "$payload" ]] && exit 0
 
-command -v jq >/dev/null 2>&1 || {
-  echo "folio: jq not found in PATH (required for path boundary check, fail-closed)" >&2
-  exit 2
-}
+folio_require_jq "path boundary check"
 
-tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null)
-file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
-content=$(printf '%s' "$payload" | jq -r '.tool_input.content // empty' 2>/dev/null)
+tool_name=$(folio_json_field "$payload" '.tool_name // empty')
+file_path=$(folio_json_field "$payload" '.tool_input.file_path // empty')
+content=$(folio_json_field "$payload" '.tool_input.content // empty')
 
-# tool_name 空 = 不正 payload、 fail-closed (R2-H2)
-if [[ -z "$tool_name" ]]; then
-  echo "folio: tool_name missing from hook payload (fail-closed)" >&2
-  exit 2
-fi
-
-# Write 以外通過 (Edit / NotebookEdit は既存 file 修正)
-[[ "$tool_name" == "Write" ]] || exit 0
+# tool_name 空 → fail-closed (R2-H2)、 Write 以外は対象外として通過
+folio_require_write_tool "$tool_name"
 
 # .html 以外通過
-case "$file_path" in
-  *.html) ;;
-  *) exit 0 ;;
-esac
+folio_is_html "$file_path" || exit 0
 
 # folio-doc-type=spec を word boundary 付きで検出 (R2-H1 false positive 防止 + R2-M3 single quote)
 # 文字クラス `["']` で name / content 両属性の double quote / single quote を同時許容。
@@ -66,13 +57,9 @@ if ! printf '%s' "$content" | grep -E -q "name=[\"']folio-doc-type[\"'][^>]*cont
 fi
 
 # spec_path 配下なら通過
-case "$file_path" in
-  "${SPEC_PATH}"*|*"/${SPEC_PATH}"*) exit 0 ;;
-esac
+folio_under_spec_path "$file_path" "$SPEC_PATH" && exit 0
 
-{
-  echo "folio path boundary check: spec files (folio-doc-type=spec) must be created under ${SPEC_PATH}"
-  echo "  file: ${file_path}"
-  echo "  reference: scratch/decisions/ADR-0003-plugin-architecture.html §2.1 path boundary"
-} >&2
-exit 2
+folio_deny \
+  "folio path boundary check: spec files (folio-doc-type=spec) must be created under ${SPEC_PATH}" \
+  "  file: ${file_path}" \
+  "  reference: scratch/decisions/ADR-0003-plugin-architecture.html §2.1 path boundary"

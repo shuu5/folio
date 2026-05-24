@@ -15,15 +15,18 @@
 #
 # 失敗時は fail-closed (jq 不在 / 不正変数名 → deny)。 必須依存欠落で
 # bypass されないこと優先 (R2-1 / R2-2 review 反映)。
+#
+# 共通ロジックは plugin-lib.sh に集約 (Phase 3 DRY refactor)。
+# 注: 空 tool_name は下記 case *) で allow される (現行挙動)。 path-boundary /
+#     jsonld-lint の fail-closed (空→deny) とは非一貫だが本 refactor では厳密保持。
 
 set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/plugin-lib.sh" \
+  || { echo "folio: cannot load plugin-lib.sh (fail-closed)" >&2; exit 2; }
 
 EXPECTED_VAR="${FOLIO_CALLER_MARKER_ENV:-FOLIO_ARCHITECT_CONTEXT}"
 EXPECTED_VAL="${FOLIO_CALLER_MARKER_VALUE:-folio-architect}"
-
-# SPEC_PATH 正規化: `${:-}` は unset + empty 両対応のため二重 fallback 不要 (R1-M1 fix)
-SPEC_PATH="${FOLIO_SPEC_PATH:-scratch/specs/}"
-SPEC_PATH="${SPEC_PATH%/}/"
+SPEC_PATH=$(folio_spec_path)
 
 # 変数名 sanity check (alnum + _ のみ、 数字始まり禁止) — indirect expansion 防御 (R2-2)
 if [[ ! "$EXPECTED_VAR" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
@@ -32,28 +35,23 @@ if [[ ! "$EXPECTED_VAR" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
 fi
 
 # stdin payload (空文字許容 = direct test invocation)
-payload=$(cat 2>/dev/null || true)
+payload=$(folio_read_payload)
 [[ -z "$payload" ]] && exit 0
 
 # tool_name / file_path 抽出 (jq 必須、 fail-closed (R2-1))
-command -v jq >/dev/null 2>&1 || {
-  echo "folio: jq not found in PATH (required for spec edit gating, fail-closed)" >&2
-  exit 2
-}
-tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null)
-file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+folio_require_jq "spec edit gating"
+tool_name=$(folio_json_field "$payload" '.tool_name // empty')
+file_path=$(folio_json_field "$payload" '.tool_input.file_path // empty')
 
 # matcher 外の tool は通過 (hooks.json matcher で絞り込み済の想定だが念のため)
+# ※ 空 tool_name もここで allow される (現行挙動を厳密保持)
 case "$tool_name" in
   Edit|Write|NotebookEdit) ;;
   *) exit 0 ;;
 esac
 
 # spec_path 配下でない file は通過
-case "$file_path" in
-  "${SPEC_PATH}"*|*"/${SPEC_PATH}"*) ;;
-  *) exit 0 ;;
-esac
+folio_under_spec_path "$file_path" "$SPEC_PATH" || exit 0
 
 # caller marker 検証
 actual_val="${!EXPECTED_VAR:-}"
@@ -62,10 +60,8 @@ if [[ "$actual_val" == "$EXPECTED_VAL" ]]; then
 fi
 
 # deny
-{
-  echo "folio caller marker check: ${EXPECTED_VAR} must equal '${EXPECTED_VAL}' to edit ${SPEC_PATH}"
-  echo "  current value: '${actual_val:-(unset)}'"
-  echo "  file: ${file_path}"
-  echo "  reference: scratch/specs/rules.html §10.1 (REQ-CM-001~003)"
-} >&2
-exit 2
+folio_deny \
+  "folio caller marker check: ${EXPECTED_VAR} must equal '${EXPECTED_VAL}' to edit ${SPEC_PATH}" \
+  "  current value: '${actual_val:-(unset)}'" \
+  "  file: ${file_path}" \
+  "  reference: scratch/specs/rules.html §10.1 (REQ-CM-001~003)"

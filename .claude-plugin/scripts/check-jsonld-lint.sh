@@ -14,35 +14,27 @@
 # exit: 0 = allow, 2 = violation (PostToolUse なので tool は実行済、 user 通知用)
 #
 # 失敗時は fail-closed (jq 不在 / tool_name 空 → exit 2)。
+#
+# 共通ロジックは plugin-lib.sh に集約 (Phase 3 DRY refactor)。
 
 set -uo pipefail
+source "$(dirname "${BASH_SOURCE[0]}")/plugin-lib.sh" \
+  || { echo "folio: cannot load plugin-lib.sh (fail-closed)" >&2; exit 2; }
 
-payload=$(cat 2>/dev/null || true)
+payload=$(folio_read_payload)
 [[ -z "$payload" ]] && exit 0
 
-command -v jq >/dev/null 2>&1 || {
-  echo "folio: jq not found in PATH (required for JSON-LD lint, fail-closed)" >&2
-  exit 2
-}
+folio_require_jq "JSON-LD lint"
 
-tool_name=$(printf '%s' "$payload" | jq -r '.tool_name // empty' 2>/dev/null)
-file_path=$(printf '%s' "$payload" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
-content=$(printf '%s' "$payload" | jq -r '.tool_input.content // empty' 2>/dev/null)
+tool_name=$(folio_json_field "$payload" '.tool_name // empty')
+file_path=$(folio_json_field "$payload" '.tool_input.file_path // empty')
+content=$(folio_json_field "$payload" '.tool_input.content // empty')
 
-# tool_name 空 = 不正 payload、 fail-closed
-if [[ -z "$tool_name" ]]; then
-  echo "folio: tool_name missing from hook payload (fail-closed)" >&2
-  exit 2
-fi
-
-# Write 以外通過 (試作 minimum: Edit / NotebookEdit は scope 外、 完成形で対応)
-[[ "$tool_name" == "Write" ]] || exit 0
+# tool_name 空 → fail-closed、 Write 以外は対象外として通過
+folio_require_write_tool "$tool_name"
 
 # .html 以外通過
-case "$file_path" in
-  *.html) ;;
-  *) exit 0 ;;
-esac
+folio_is_html "$file_path" || exit 0
 
 # JSON-LD block 抽出 (試作 minimum: 単一 block 前提、 複数 block は ADR-0004 完成形で対応)
 # sed: 開始 tag 〜 終了 tag を含む全行を出力 → 開始 tag より前と終了 tag より後を削除
@@ -59,12 +51,10 @@ fi
 
 # jq parse 可能か (well-formed check)
 if ! printf '%s' "$ldjson" | jq . >/dev/null 2>&1; then
-  {
-    echo "folio JSON-LD lint: JSON-LD block parse failed (invalid JSON)"
-    echo "  file: ${file_path}"
-    echo "  reference: scratch/specs/relations.html §3.2"
-  } >&2
-  exit 2
+  folio_deny \
+    "folio JSON-LD lint: JSON-LD block parse failed (invalid JSON)" \
+    "  file: ${file_path}" \
+    "  reference: scratch/specs/relations.html §3.2"
 fi
 
 # 必須 key check (@context, @id, @type) — 個別チェックで missing list を構築
@@ -75,25 +65,21 @@ for key in '@context' '@id' '@type'; do
   fi
 done
 if [[ -n "$missing" ]]; then
-  {
-    echo "folio JSON-LD lint: required keys missing"
-    echo "  file: ${file_path}"
-    echo "  missing: ${missing}"
-    echo "  reference: scratch/specs/relations.html §3.2 (required: @context, @id, @type)"
-  } >&2
-  exit 2
+  folio_deny \
+    "folio JSON-LD lint: required keys missing" \
+    "  file: ${file_path}" \
+    "  missing: ${missing}" \
+    "  reference: scratch/specs/relations.html §3.2 (required: @context, @id, @type)"
 fi
 
 # @context は object 形式 MUST (新 pattern、 旧 string 形式は deny)
 ctx_type=$(printf '%s' "$ldjson" | jq -r '."@context" | type' 2>/dev/null)
 if [[ "$ctx_type" != "object" ]]; then
-  {
-    echo "folio JSON-LD lint: @context must be object (new pattern), got ${ctx_type}"
-    echo "  file: ${file_path}"
-    echo "  fix: change to object form, e.g. {\"dc\":\"http://purl.org/dc/terms/\", \"schema\":\"https://schema.org/\", \"folio\":\"https://folio.dev/spec/v1/\"}"
-    echo "  reference: scratch/specs/relations.html §3.2"
-  } >&2
-  exit 2
+  folio_deny \
+    "folio JSON-LD lint: @context must be object (new pattern), got ${ctx_type}" \
+    "  file: ${file_path}" \
+    "  fix: change to object form, e.g. {\"dc\":\"http://purl.org/dc/terms/\", \"schema\":\"https://schema.org/\", \"folio\":\"https://folio.dev/spec/v1/\"}" \
+    "  reference: scratch/specs/relations.html §3.2"
 fi
 
 exit 0
