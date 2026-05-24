@@ -135,5 +135,37 @@ scenarios:
     expect:
       exit_code: 0
 
+  - name: "絶対 path で spec_path 配下に spec 作成 → allow (folio_under_spec_path 第2 branch lock-in)"
+    # 第2 branch *"/$2"* を削除すると絶対 path が spec_path 配下と認識されず、
+    # 正当な spec を誤 deny する回帰。 Claude Code は file_path を絶対化する (v2.1.84~) ため
+    # 実機ではこれが常態。 expect=0 が第2 branch を lock-in。
+    given:
+      env: {}
+      file_path: "/home/user/folio/scratch/specs/abs-spec.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "絶対 path で spec_path 外に spec 作成 → deny (実機の絶対 path 入力で gate 動作)"
+    given:
+      env: {}
+      file_path: "/home/user/folio/scratch/random/abs-spec.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
 teardown:
   cleanup_files: []

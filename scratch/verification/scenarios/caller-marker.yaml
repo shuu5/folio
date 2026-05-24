@@ -63,5 +63,18 @@ scenarios:
       exit_code: 2
       stderr_contains: "folio caller marker check"
 
+  - name: "絶対 path 配下 spec + marker unset → deny (folio_under_spec_path 第2 branch lock-in)"
+    # Claude Code は hook の file_path を絶対 path 化する (v2.1.84~)。 絶対 path でも
+    # spec_path 配下と認識し gate を効かせること。 第2 branch *"/$2"* を削除すると
+    # 絶対 path が配下と認識されず gate bypass (allow) になる security 回帰 → expect=2 で lock-in。
+    given:
+      env: {}
+      file_path: "/home/user/folio/scratch/specs/rules.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio caller marker check"
+
 teardown:
   cleanup_files: []
