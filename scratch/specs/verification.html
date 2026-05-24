@@ -201,6 +201,22 @@ teardown:
   cleanup_files: [ ... ]
 </code></pre>
 
+<p><strong>scenario kind</strong>: 上記は hook を mock payload で叩く <code>kind: hook</code> (既定、 省略可) の schema。 CLI subcommand (<code>bin/folio</code>) を golden 比較で検証する <code>kind: cli-golden</code> は次の追加 field を持つ (REQ-VER-011、 hook payload field は無視):</p>
+
+<pre><code>schema_version: "0.1"
+req_id: "REQ-VER-010"
+kind: "cli-golden"             # hook (既定) | cli-golden
+description: |
+  bin/folio inventory が relations.html §4.1 schema 準拠の inventory.json を生成する。
+command: ["inventory"]          # bin/folio に渡す引数列
+output_file: "scratch/inventory.json"          # CLI が生成する成果物 (repo root 相対)
+golden: "baselines/reference/inventory.golden.json"   # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
+normalize:
+  exclude_paths: [".generatedAt"]               # golden-diff 前に除外する非決定的 field (jq path)
+expect:
+  exit_code: 0
+</code></pre>
+
 <h3 id="s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</h3>
 
 <p class="ears" data-ears-pattern="ubiquitous">
@@ -284,6 +300,30 @@ teardown:
   exit code でなく file system state を一次 assertion とする。 実装 =
   <a href="../verification/e2e/README.html">scratch/verification/e2e/</a> (runbook + golden、
   sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-010</span>:
+  <span class="ears-when">WHEN the <code>folio inventory</code> CLI subcommand runs</span>,
+  it <span class="ears-shall">SHALL</span> produce an <code>inventory.json</code> conforming to the
+  <a href="relations.html#s4-1-structure">relations.html §4.1 schema</a> (required fields
+  <code>$schema</code> / <code>generatedAt</code> / <code>folioVersion</code> / <code>specs[]</code>),
+  scanning the directories defined in <a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a>。
+  conformance は §3.4 golden baseline との <code>kind: cli-golden</code> diff で検証する
+  (非決定的 <code>generatedAt</code> は <code>normalize.exclude_paths</code> で除外)。
+  scenario: <code>scenarios/inventory-gen.yaml</code> (REQ-VER-011 harness が実行)。
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-011</span>:
+  <span class="ears-when">WHEN a scenario carries <code>kind: cli-golden</code></span>,
+  the verification harness <span class="ears-shall">SHALL</span> (1) run <code>bin/folio</code> with the
+  scenario <code>command</code> at repo root, (2) normalize both the produced <code>output_file</code>
+  and the <code>golden</code> via <code>jq -S</code> with <code>normalize.exclude_paths</code> deleted,
+  and (3) assert byte-exact equality of the normalized JSON plus <code>exit_code</code> match。
+  golden 更新は明示的 accept workflow (<code>--accept</code>、 §3.4 REQ-VER-004) を経る MUST。
+  これは hook scenario (<code>kind: hook</code>) の exit-code 中心 assertion (REQ-VER-003) とは
+  別の assertion 経路を成す (CLI subcommand 検証の SSoT、 ADR-0018 候補で retrospective trace 予定)。
 </p>
 </section>
 
