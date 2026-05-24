@@ -184,8 +184,13 @@ setup:
 
 scenarios:
   - name: "..."                 # scenario 名
-    given: { ... }              # Gherkin Given (前提)
-    when:  { ... }              # Gherkin When (トリガー)
+    given:                      # Gherkin Given (前提)
+      env: { KEY: "value" }     # 環境変数 (任意、 例 FOLIO_ARCHITECT_CONTEXT)
+      file_path: "..."          # tool に渡す対象 file path (相対 or 絶対)
+      content: |                # Write tool 時の file 内容 (任意、 marker/JSON-LD 検出に使用)
+        ...
+    when:                       # Gherkin When (トリガー)
+      tool: "Edit|Write|NotebookEdit"   # mock payload の tool_name
     expect:
       exit_code: 0|2|N           # § 3.3 (assertion 戦略) 参照
       stderr_contains: "..."
@@ -238,6 +243,31 @@ teardown:
 </table>
 
 <p>変換 reference: <a href="https://conductofcode.io/post/easy-approach-to-requirements-syntax-and-the-segue-to-behavior-driven-development/">conductofcode.io EARS-to-BDD</a> / <a href="http://requirekit.ai/core-concepts/ears-notation/">RequireKit</a>。</p>
+
+<h3 id="s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</h3>
+
+<p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file が SSoT 実装。</p>
+
+<p class="ears" data-ears-pattern="unwanted">
+  <span class="ears-id">REQ-VER-007</span>:
+  IF a Write tool creates a <code>.html</code> file carrying
+  <code>&lt;meta name="folio-doc-type" content="spec"&gt;</code> outside the configured
+  <code>spec_path</code>, THEN the PreToolUse path-boundary hook
+  <span class="ears-shall">SHALL</span> deny (exit 2)。
+  scenario: <code>scenarios/path-boundary.yaml</code> (ADR-0003 §2.1 Option Pragmatic、
+  絶対 path 配下も第 2 branch <code>*"/$2"*</code> で gate)。
+</p>
+
+<p class="ears" data-ears-pattern="unwanted">
+  <span class="ears-id">REQ-VER-008</span>:
+  IF a Write tool creates a <code>.html</code> file under a cluster directory that
+  contains a <code>README.html</code> index, and the new file is not listed in that
+  index, THEN the PostToolUse README-index hook <span class="ears-shall">SHALL</span>
+  notify (exit 2、 PostToolUse のため file は作成済)。
+  scenario: <code>scenarios/readme-index.yaml</code>。 これは check 型 staleness 通知で、
+  ADR-0003 §2.1「README update」の試作 slice。 ADR literal は「自動更新 (mutate)」だが
+  試作は check 型を採用 (divergence trace = specs/README.html §6.2)。
+</p>
 </section>
 
 <!-- ====================================================================
