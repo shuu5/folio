@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-caller-marker.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-caller-marker.sh",
             "timeout": 5000
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-path-boundary.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-path-boundary.sh",
             "timeout": 5000
           }
         ]
@@ -28,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/check-jsonld-lint.sh",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-jsonld-lint.sh",
             "timeout": 5000
           }
         ]
