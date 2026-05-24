@@ -246,7 +246,7 @@ teardown:
 
 <h3 id="s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</h3>
 
-<p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file が SSoT 実装。</p>
+<p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file (REQ-VER-009 は <a href="../verification/e2e/runbook.md">agent-driven runbook</a>) が SSoT 実装。</p>
 
 <p class="ears" data-ears-pattern="unwanted">
   <span class="ears-id">REQ-VER-007</span>:
@@ -267,6 +267,23 @@ teardown:
   scenario: <code>scenarios/readme-index.yaml</code>。 これは check 型 staleness 通知で、
   ADR-0003 §2.1「README update」の試作 slice。 ADR literal は「自動更新 (mutate)」だが
   試作は check 型を採用 (divergence trace = specs/README.html §6.2)。
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-009</span>:
+  <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a
+  live-loaded session (§4.1 Step 2 worktree integration)</span>,
+  an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios
+  (<code>scratch/verification/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
+  so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario
+  observations as golden baselines under
+  <code>scratch/verification/e2e/baselines/reference/</code>。
+  primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、
+  PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない
+  (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、
+  exit code でなく file system state を一次 assertion とする。 実装 =
+  <a href="../verification/e2e/README.html">scratch/verification/e2e/</a> (runbook + golden、
+  sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
 </p>
 </section>
 
@@ -297,6 +314,17 @@ teardown:
   Phase X3 着手時点で Step 1 (hook script unit test) を <span class="ears-shall">MUST</span> 実装する。
   Step 2 / Step 3 は段階追加 (SHOULD / MAY)。
 </p>
+
+<aside class="informative">
+<p><strong>Step 2 の試作実装 = agent-driven runbook 方式 (REQ-VER-009)</strong>: 完成形の Step 2 は
+test project + hook 設定で sandbox を構築し API key 注入で自動実行する (上表)。 試作段階では、
+folio plugin を load 済の Claude Code session で <strong>agent 自身が <a href="../verification/e2e/runbook.md">runbook</a>
+を読んで実 Edit/Write tool を操作し</strong>、 live hook (caller-marker / path-boundary / jsonld-lint /
+readme-index) を発火させて観察する軽量方式を採る。 一次 assertion は exit code でなく
+<strong>file 作成有無</strong> (PreToolUse deny ⇒ 不在 / PostToolUse notify ⇒ 存在)。 これは
+worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X4+。 詳細と golden は
+<a href="../verification/e2e/README.html">scratch/verification/e2e/</a>。</p>
+</aside>
 
 <h3 id="s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</h3>
 

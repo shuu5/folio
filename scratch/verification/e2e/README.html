@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<title>folio — scratch/verification/e2e/ (agent-driven e2e integration test)</title>
+<link rel="stylesheet" href="../../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio e2e integration test cluster index",
+  "folio:version": "0.1.0-draft",
+  "dc:references": [
+    { "@id": "../../specs/verification.html" },
+    { "@id": "../README.html" },
+    { "@id": "../../decisions/ADR-0013-verification-framework.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>verification/e2e/ — agent-driven e2e integration test</h1>
+  <div class="meta">v0.1.0-draft &middot; status: active &middot; REQ-VER-009 / verification.html §4.1 Step 2 の試作実装</div>
+</header>
+
+<aside class="informative">
+<p>本 cluster は folio plugin を<strong>ひとまとまりの道具</strong>として実シナリオで使い、 想定通り動くかを観察する <a href="../../specs/verification.html#s4-1-3step">verification.html §4.1 Step 2 (worktree integration)</a> の試作実装。 <a href="../README.html">sandbox 単体テスト (../scenarios/ + runner.sh)</a> が hook script を mock payload で個別検証するのに対し、 本 e2e は <strong>live load 済 plugin の 4 hook + marker + SKILL を実際の Edit/Write tool 操作で発火させ</strong>、 道具としての統合挙動を end-to-end で検証する。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose — sandbox 単体テストとの違い</h2>
+<table>
+  <thead><tr><th>軸</th><th>sandbox (../scenarios/ + runner.sh)</th><th>e2e (本 cluster)</th></tr></thead>
+  <tbody>
+    <tr><td>検証対象</td><td>hook script 単体 (stdin payload → exit code)</td><td>live load 済 plugin 全体 (4 hook + marker + SKILL)</td></tr>
+    <tr><td>発火方式</td><td>mock JSON payload を <code>echo | bash</code></td><td>agent の実 Edit/Write tool 操作 (Claude Code が hook を発火)</td></tr>
+    <tr><td>一次 assertion</td><td>exit_code + stderr_contains</td><td><strong>file 作成有無</strong> (PreToolUse deny → 不在 / PostToolUse notify → 存在)</td></tr>
+    <tr><td>実行者</td><td>runner.sh (自動)</td><td>agent が <a href="runbook.md">runbook.md</a> を読んで手動 walk</td></tr>
+    <tr><td>前提</td><td>yq + jq</td><td>folio plugin が load 済 session (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)</td></tr>
+  </tbody>
+</table>
+<p>一次 assertion を「file 作成有無」とする理由: PreToolUse の deny は transcript に確実には現れない (<a href="../../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a> / Issue #39344 等)。 一方 file system 上の作成/不在は決定的に観察できる。 PreToolUse deny → file 不在、 PostToolUse notify → file 存在 + 通知、 という対応で hook の発火を間接的かつ確実に判定する。</p>
+</section>
+
+<section id="s2-inventory" class="informative">
+<h2>§2. File Inventory</h2>
+<table>
+  <thead><tr><th>path</th><th>役割</th><th>VCS</th></tr></thead>
+  <tbody>
+    <tr><td><code>README.html</code></td><td>本 cluster index (この file)</td><td>追跡</td></tr>
+    <tr><td><code>runbook.md</code></td><td>5 シナリオの手順書 (agent が読んで実行する markdown)</td><td>追跡</td></tr>
+    <tr><td><code>baselines/reference/</code></td><td>walk 観察結果の golden JSON (file_created / hook_fired / notify 記録)</td><td>追跡</td></tr>
+    <tr><td><code>baselines/local/</code></td><td>再 walk 時の actual 出力 (golden 比較先)</td><td>ignore (.gitignore)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3-scenarios" class="informative">
+<h2>§3. Scenarios (5 件)</h2>
+<table>
+  <thead><tr><th>ID</th><th>シナリオ</th><th>marker</th><th>期待観察 (一次 = file 作成有無)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>S-A</strong></td><td>happy-path: 正規 spec を書く</td><td>SET</td><td>file <strong>作成</strong> (4 hook 通過) + readme-index notify (未掲載のため)</td></tr>
+    <tr><td><strong>S-B</strong></td><td>guardrail: 誤りを捕まえる (B1 marker無 / B2 spec_path外 / B3 string@context / B4 README未掲載)</td><td>B1=UNSET, B2-4=SET</td><td>B1/B2 <strong>不在</strong> (PreToolUse deny) / B3/B4 <strong>作成</strong> + PostToolUse notify</td></tr>
+    <tr><td><strong>S-C</strong></td><td>false-positive: gate 対象外は誤作動しない</td><td>UNSET</td><td>file <strong>作成</strong> / Edit allow (spec_path 外は非 gate)</td></tr>
+    <tr><td><strong>S-D</strong></td><td>CLI: <code>bin/folio version</code> / <code>help</code></td><td>—</td><td>exit 0 + 出力 (skeleton)</td></tr>
+    <tr><td><strong>S-E</strong></td><td>marker-ux: 手動 set→edit→unset フロー成立</td><td>SET→UNSET</td><td>set 中は spec 編集可、 unset 後は deny 復帰 (fail-open しない)</td></tr>
+  </tbody>
+</table>
+<p>各シナリオの詳細手順と期待観察は <a href="runbook.md">runbook.md</a>、 walk 結果の golden は <a href="baselines/reference/">baselines/reference/</a> を参照。</p>
+</section>
+
+<section id="s4-prerequisites" class="informative">
+<h2>§4. 実行前提</h2>
+<ul>
+  <li>folio plugin が load 済の Claude Code session であること (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)。 未 load の session では hook が発火せず e2e は無意味。</li>
+  <li>worktree 内で実行し、 probe file (<code>scratch/specs/e2e-*.html</code> / <code>scratch/random-e2e/</code> 等) は walk 後に全削除すること (working tree を汚さない)。</li>
+  <li>marker file <code>.folio/architect-active</code> は <code>.gitignore</code> 済。 walk 完了後は必ず <code>rm -f</code> すること (残留すると sandbox の caller-marker unset→deny scenario が壊れ、 fail-open リスクも残る)。</li>
+  <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の 36/36 PASS を walk 前後で維持すること。</li>
+</ul>
+</section>
+
+<section id="s5-references" class="informative">
+<h2>§5. References</h2>
+<ul>
+  <li><a href="../../specs/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-009</a> — e2e integration test の規範 REQ</li>
+  <li><a href="../../specs/verification.html#s4-1-3step">verification.html §4.1 Step 2</a> — agent-driven runbook 方式</li>
+  <li><a href="../README.html">../README.html</a> — verification cluster index (sandbox 単体テスト)</li>
+  <li><a href="../../decisions/ADR-0013-verification-framework.html">ADR-0013</a> — verification framework 採用決定</li>
+  <li><a href="runbook.md">runbook.md</a> — 5 シナリオ手順書</li>
+</ul>
+</section>
+
+</body>
+</html>

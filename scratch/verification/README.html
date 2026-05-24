@@ -47,8 +47,12 @@
     <tr><td><code>baselines/reference/</code></td><td>golden file (期待値、 verification.html §3.4 / REQ-VER-004)</td><td>追跡</td></tr>
     <tr><td><code>baselines/local/</code></td><td>実行時 actual 出力 (golden 比較先)</td><td>ignore (.gitignore)</td></tr>
     <tr><td><code>runner.sh</code></td><td>軽量 bash runner (bash + yq + jq)、 Gap 2 で採用</td><td>追跡</td></tr>
+    <tr><td><code>e2e/</code></td><td>agent-driven e2e integration test (live load 済 plugin を実 tool 操作で発火、 REQ-VER-009)。 <a href="e2e/README.html">e2e/README.html</a> 参照</td><td>追跡</td></tr>
   </tbody>
 </table>
+<aside class="informative">
+<p>本 dir には 2 層の検証がある: <strong>sandbox 単体テスト</strong> (<code>scenarios/</code> + <code>runner.sh</code>、 hook script を mock payload で個別検証) と <strong>e2e integration test</strong> (<code><a href="e2e/README.html">e2e/</a></code>、 live load 済 plugin 全体を実 Edit/Write tool 操作で発火させ道具として検証)。 前者は <code>exit_code</code>、 後者は <strong>file 作成有無</strong> を一次 assertion とする。</p>
+</aside>
 </section>
 
 <section id="s2-usage" class="informative">
