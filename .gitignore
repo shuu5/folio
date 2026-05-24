@@ -10,3 +10,7 @@
 # Claude Code session externalization
 .supervisor/
 .mailbox/
+
+# spawn 先 git worktree (session:spawn cld-spawn = worktrees/、 native claude --worktree = .claude/worktrees/)
+worktrees/
+.claude/worktrees/
