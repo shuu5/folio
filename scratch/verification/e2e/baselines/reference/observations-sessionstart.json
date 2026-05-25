@@ -9,7 +9,7 @@
     "cwd": "/home/shuu5/projects/local-projects/folio",
     "plugin_load": "~/.claude/plugins/folio symlink -> main repo (母艦 deploy fix 後に復旧、 9 plugins / 10 hooks load)。 fresh spawn が folio plugin を load し SessionStart hook を発火。",
     "primary_assertion": "fresh session の初期 context に folio Tier 1 inventory digest が注入されているか (spawn agent が digest header + 件数 + entries を引用できるか)。",
-    "note": "read-only 観察。 spawn は編集せず初期 context の報告のみ。 SessionStart source = startup を検証 (compact source = post-compaction は未検証、 docs-canonical)。"
+    "note": "read-only 観察。 spawn は編集せず初期 context の報告のみ。 SessionStart source = startup を検証 (compact source = post-compaction は別観察 S-F-compact で 2026-05-25 実 compaction により検証済)。"
   },
   "hooks_under_test": [
     "SessionStart (matcher 省略 = startup/resume/clear/compact 全 source) -> inject-inventory.sh -> folio prime"
@@ -43,12 +43,35 @@
       },
       "result": "PASS",
       "interpretation": "fresh folio session の起動時、 SessionStart hook → inject-inventory.sh → folio prime stdout → context 注入の full chain が動作。 spawn agent が Tier 1 digest header + 15 specs + entries を初期 context から引用できた。 = folio の signature 機能 (architect への文脈注入) が実 session で動く実証 (user の『道具として動くか』への YES)。"
+    },
+    {
+      "id": "S-F-compact",
+      "name": "SessionStart:compact context injection (実 compaction 後に Tier 1 digest が再注入されるか)",
+      "operation": "folio-loaded session で実 /compact を実行 → 圧縮後の SessionStart:compact hook 発火 → inject-inventory.sh → folio prime stdout が post-compaction context に注入されるかを session 自身が観察 (S-F の fresh-spawn とは別 method = 実 compaction trigger)",
+      "expected": {
+        "digest_injected": true,
+        "source": "compact",
+        "header_first_line": "# folio inventory digest — Tier 1 (progressive disclosure)"
+      },
+      "observed": {
+        "digest_injected": true,
+        "source": "SessionStart:compact",
+        "header_quoted": [
+          "# folio inventory digest — Tier 1 (progressive disclosure)",
+          "# 15 specs · folio 0.4.2-draft"
+        ],
+        "spec_count": 15,
+        "evidence": "/compact 出力末尾の 'SessionStart:compact hook success: # folio inventory digest …' system reminder に digest header + 15 specs + entries が出現。 ADR-0017 起票前の観察のため 15 specs。",
+        "caveat": "本 session は ADR-0007 amend (commit 4430e22) で hooks.json から PreCompact 除去済だが live session は除去前 hooks をメモリ保持しており、 /compact 時に folio PreCompact も inject-inventory.sh を発火 (transitional、 次 reload で SessionStart 単一に収束)。 SessionStart は PreCompact 除去と無関係のため本 compact-source 注入の検証は汚染されない。"
+      },
+      "result": "PASS",
+      "interpretation": "実 compaction の SessionStart:compact source が Tier 1 digest を post-compaction context に注入することをライブ実証。 ADR-0007 §2.1 が docs-canonical としていた compact-source 再注入が e2e-verified に昇格。 context injection 機能の integration-only な半分 (ADR-0017 §2.4) が startup + compact 両 source で被覆された。"
     }
   ],
   "summary": {
-    "observation_points": 1,
-    "pass": 1,
+    "observation_points": 2,
+    "pass": 2,
     "fail": 0,
-    "verdict": "SessionStart:startup context injection が実 fresh session で動作 (Tier 1 digest 注入 PASS)。 Track 2 の signature 機能をライブ実証。 残: compact source (post-compaction 再注入) は compaction の実 trigger 要で未検証 (docs-canonical、 ADR-0007 §2.1 amendment)、 PreCompact hook は stdout 非注入で除去済。"
+    "verdict": "SessionStart context injection が startup (S-F) + compact (S-F-compact) 両 source で実 session 動作を実証 (Tier 1 digest 注入 PASS×2)。 Track 2 の signature 機能をライブ被覆。 compact source は 2026-05-25 の実 /compact で検証し ADR-0007 §2.1 を docs-canonical → e2e-verified に格上げ (ADR-0017 §2.4 の integration-only 半分)。 PreCompact hook は stdout 非注入で除去済 (live session の stale 登録は次 reload で収束)。"
   }
 }

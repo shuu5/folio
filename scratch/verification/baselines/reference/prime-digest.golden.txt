@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 15 specs · folio 0.4.2-draft
+# 16 specs · folio 0.4.2-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## specs/README.html
@@ -61,6 +61,11 @@
 - title: ADR-0015 — sandbox verification vs experiment-verified の境界
 - doc-type: adr · status: accepted
 - summary: folio v0.4.2-draft
+
+## decisions/ADR-0017-unit-integration-boundary.html
+- title: ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界
+- doc-type: adr · status: accepted
+- summary: retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)
 
 ## decisions/ADR-0018-cli-golden-harness.html
 - title: ADR-0018 — CLI golden-diff verification harness

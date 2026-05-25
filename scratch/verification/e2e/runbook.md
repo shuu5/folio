@@ -161,7 +161,7 @@ spec 件数 + 各エントリ (`## <@id-path>` / title / doc-type·status / summ
 = SessionStart hook → inject-inventory.sh → folio prime stdout → context 注入の full chain が動作。
 
 **注**: SessionStart は matcher 省略で startup/resume/clear/compact 全 source 発火。本 S-F は **startup source** を検証。
-compact source (post-compaction 再注入) は compaction の実 trigger が要るため未検証 (docs-canonical、ADR-0007 §2.1 amendment)。
+compact source (post-compaction 再注入) は 2026-05-25 の実 /compact で **検証済** (S-F-compact、observations-sessionstart.json、ADR-0007 §2.1 を e2e-verified に格上げ、ADR-0017 §2.4)。
 PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除去済。
 
 **後始末**: spawn window を kill (read-only 観察、commit/編集なし)。golden は `baselines/reference/observations-sessionstart.json`。

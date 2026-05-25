@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-25T00:29:03Z",
+  "generatedAt": "2026-05-25T05:42:23Z",
   "folioVersion": "0.4.2-draft",
   "specs": [
     {
@@ -254,6 +254,30 @@
         ],
         "folio:depends-on": [
           "decisions/ADR-0013-verification-framework.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0017-unit-integration-boundary.html",
+      "title": "ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界",
+      "summary": "retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/verification.html#s5-2-pending-adrs",
+          "specs/verification.html#s3-3-assertion",
+          "specs/verification.html#s3-6-verification-specific",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0018-cli-golden-harness.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html"
         ]
       }
     },
