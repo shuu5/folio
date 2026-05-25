@@ -61,9 +61,13 @@
 <section id="s2-decision" class="normative">
 <h2>§2. Decision</h2>
 
-<h3 id="s2-1-mechanism">§2.1 mechanism = SessionStart + PreCompact hook → folio prime stdout</h3>
+<h3 id="s2-1-mechanism">§2.1 mechanism = SessionStart hook → folio prime stdout (matcher 省略 = 全 source)</h3>
 
-<p>SessionStart hook と PreCompact hook が <code>folio prime</code> を実行し、 その <strong>stdout を agent context に注入</strong>する (Beads pattern、 stdout ベース、 MCP 不使用)。 SessionStart = session 開始/再開時の初期注入、 PreCompact = compaction 前の再注入で状態連続性を保持。</p>
+<p>SessionStart hook が <code>folio prime</code> を実行し、 その <strong>stdout を agent context に注入</strong>する (Beads pattern、 stdout ベース、 MCP 不使用)。 matcher を省略するため SessionStart は <strong>startup / resume / clear / compact の全 source で発火</strong>し、 session 開始/再開時の初期注入に加え compaction 後 (compact source) の再注入も担う。</p>
+
+<aside class="informative">
+<p><strong>amendment (2026-05-25、 e2e-driven)</strong>: 当初案は SessionStart + PreCompact 両 hook で stdout 注入する設計だったが、 Claude Code docs 上 <strong>PreCompact stdout は context 注入されない</strong> (state 保存用)。 <a href="../verification/e2e/runbook.md">e2e</a> で SessionStart:startup 注入は <strong>PASS</strong> 確認、 PreCompact 注入は docs と齟齬 (project memory <code>sessionstart-vs-precompact-injection</code>)。 post-compaction 再注入は SessionStart の compact source が docs-canonical に担うため、 <strong>PreCompact hook を除去</strong> (hooks.json) し SessionStart 単一に簡素化した。</p>
+</aside>
 
 <h3 id="s2-2-content">§2.2 注入内容 = Tier 1 inventory digest (compact text)</h3>
 
@@ -87,14 +91,14 @@
   <li><strong>動的</strong>: 静的 CLAUDE.md と異なり live inventory を反映 (auto-regen で常に最新)</li>
   <li><strong>compact</strong>: Tier 1 digest ~1-2k tokens、 full inventory より軽量 (3-tier progressive disclosure)</li>
   <li><strong>CLI + hooks 効率</strong>: MCP overhead なし (ADR-0003 案 D、 10-50x)。 <code>folio prime</code> は手動でも再利用可能</li>
-  <li>PreCompact 再注入で compaction を跨いだ状態連続性</li>
+  <li>SessionStart の compact source (matcher 省略で発火) が compaction 後の再注入を担い状態連続性を保持 (PreCompact hook 不要)</li>
 </ul>
 
 <h3>Negative</h3>
 <ul>
   <li>SessionStart 毎の scan コスト (auto-regen)。 spec 数が増えれば無視できなくなる (完成形で incremental / cache 検討)</li>
-  <li>stdout 注入は Claude Code SessionStart hook の挙動に依存 (実装時に additionalContext vs stdout を PoC で verify MUST)</li>
-  <li>PreCompact 再注入が compaction 毎に token を消費</li>
+  <li>stdout 注入は Claude Code SessionStart の挙動に依存 → <strong>e2e で startup 注入を verify 済 (PASS)</strong> (§2.1 amendment)。 stdout が正典 (additionalContext JSON も可)</li>
+  <li>PreCompact stdout は docs 上 context 注入されないため当初の PreCompact 案は無効 → §2.1 amendment で除去。 post-compaction 再注入 (SessionStart:compact source) は docs-based、 compaction の実 e2e は未実施 (startup のみ empirical verified)</li>
 </ul>
 
 <h3>Neutral</h3>
@@ -109,7 +113,8 @@
 <table>
   <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
   <tbody>
-    <tr><td>案 A (採用): SessionStart + PreCompact hook → folio prime stdout → Tier 1 digest 注入</td><td>Beads verified pattern、 動的・compact・CLI+hooks 効率、 手動 prime 再利用可</td></tr>
+    <tr><td>案 A (採用): SessionStart hook (matcher 省略 = 全 source) → folio prime stdout → Tier 1 digest 注入</td><td>Beads-inspired、 動的・compact・CLI+hooks 効率、 手動 prime 再利用可。 compact source で post-compaction も再注入 (e2e startup PASS)</td></tr>
+    <tr><td>案 F: PreCompact hook で stdout 再注入 (当初案、 2026-05-25 amend で却下)</td><td>Claude Code docs 上 PreCompact stdout は context 注入されない (state 保存用)。 post-compaction 再注入は SessionStart:compact source が docs-canonical</td></tr>
     <tr><td>案 B: MCP server で context 提供</td><td>ADR-0003 案 D で却下済: Beads CLI+hooks が MCP より 10-50x context 効率</td></tr>
     <tr><td>案 C: 静的 CLAUDE.md に inventory を埋込</td><td>動的でない (spec 追加・編集を反映できない)、 手動更新コスト</td></tr>
     <tr><td>案 D: full inventory.json をそのまま注入</td><td>token 過多 (~8KB+)、 Tier 1 compact digest の趣旨 (relations §4.2) を defeat</td></tr>
@@ -123,14 +128,15 @@
 <h2>§5. Trace</h2>
 
 <ul>
-  <li>実装 (Track 2 spawn 予定): <code>.claude-plugin/bin/folio</code> (<code>prime</code> subcommand) + <code>hooks/hooks.json</code> (SessionStart + PreCompact) + <code>.claude-plugin/scripts/inject-inventory.sh</code> (prime wrapper)</li>
+  <li>実装 (Track 2 spawn = commit 53d0f0d): <code>.claude-plugin/bin/folio</code> (<code>prime</code> subcommand) + <code>hooks/hooks.json</code> (SessionStart、 matcher 省略 = 全 source) + <code>.claude-plugin/scripts/inject-inventory.sh</code> (prime wrapper)</li>
   <li>WHAT 起点: <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> (SessionStart + inject-inventory) — 本 ADR が mechanism / content / staleness を確定</li>
   <li>注入内容の根拠: <a href="../specs/relations.html#s4-2-tier">relations.html §4.2 Tier 1</a> (3-tier progressive disclosure)</li>
   <li>pattern 出典: <a href="../research/plugin-architecture-research.html#s5-2-beads">plugin-architecture-research §5.2 Beads</a> (SessionStart/PreCompact + bd prime stdout、 verified)</li>
-  <li>検証: <a href="../specs/verification.html#s3-6-verification-specific">REQ-VER-012</a> (<code>folio prime</code> digest を cli-golden で golden-diff、 stdout capture) + SessionStart 実注入は e2e (REQ-VER-009 型、 fresh session で digest が context に出るか)</li>
+  <li>検証: <a href="../specs/verification.html#s3-6-verification-specific">REQ-VER-012</a> (<code>folio prime</code> digest を cli-golden で golden-diff、 capture:stdout、 PASS) + <strong>SessionStart 実注入 e2e = PASS</strong> (fresh session で Tier 1 digest が context に注入されることを確認、 <a href="../verification/e2e/runbook.md">e2e runbook</a> S-F)</li>
   <li>producer 依存: Track 1 <a href="../specs/verification.html#s3-6-verification-specific">REQ-VER-010</a> (<code>folio inventory</code> → inventory.json)。 prime は consumer</li>
   <li>関連 constitution 原則: P-3 (WHAT-only)、 P-11 (HOW 隔離、 digest layout は §9)、 P-1 (未来 anchor、 完成形 relevance filtering)</li>
   <li>本 ADR は <a href="./ADR-0003-plugin-architecture.html#s3-consequences">ADR-0003 §3 Neutral</a> の「ADR-0007 候補」 を起票確定する (forward decision、 user 承認 2026-05-25、 実装は Track 2)</li>
+  <li><strong>amendment 2026-05-25 (e2e-driven)</strong>: PreCompact hook を除去 (§2.1 amendment + §4 案 F)。 PreCompact stdout 非注入の docs 知見は folio project memory <code>sessionstart-vs-precompact-injection</code>。 <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> の「SessionStart / PreCompact で inject」 記述は frozen のため触れず、 本 ADR が実機検証後の確定 mechanism (SessionStart 単一、 compact source で post-compaction カバー) を保持する</li>
 </ul>
 </section>
 

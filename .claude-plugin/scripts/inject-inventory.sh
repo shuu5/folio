@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # .claude-plugin/scripts/inject-inventory.sh
-# folio Phase X3 試作 plugin — SessionStart / PreCompact context injection hook (ADR-0007 §2.1〜2.3)。
+# folio Phase X3 試作 plugin — SessionStart context injection hook (ADR-0007 §2.1〜2.3)。
 #
 # folio prime の stdout (Tier 1 inventory digest) を agent context へ注入する薄い wrapper
 # (Beads `bd prime` pattern、 plugin-architecture-research §5.2)。 SessionStart hook は exit 0 の
@@ -10,8 +10,9 @@
 #
 # ※ folio prime は cwd=project root を前提に scratch/inventory.json を読む (不在/stale 時 auto-regen)。
 #   Claude Code hook は project root を cwd として起動するため追加の cd は不要。
-# ※ 注: PreCompact stdout の context 注入挙動は公式 docs 上未確認 (SessionStart のみ verified)。
-#   実 context 注入は e2e (REQ-VER-009 型、 fresh session) で別途検証する (verification.html §3.6)。
+# ※ SessionStart は matcher 省略で startup/resume/clear/compact 全 source 発火 (compact source が
+#   post-compaction 再注入を担う)。 SessionStart:startup 注入は e2e PASS (REQ-VER-009、 §3.6)。
+#   PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除去済 (旧設計)。
 
 set -uo pipefail
 

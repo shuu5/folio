@@ -1,0 +1,54 @@
+{
+  "schema": "folio-e2e-observations/v1",
+  "req": "REQ-VER-012 (+ ADR-0007 context injection)",
+  "method": "fresh-session SessionStart injection 観察 (agent-driven、 runbook S-F)。 Edit/Write 操作でなく fresh cld session を spawn し、 起動時 SessionStart hook が Tier 1 digest を context に注入するかを spawn agent に報告させる。 SessionStart hook は session 起動時のみ発火するため既存 session では観察不可。",
+  "session": {
+    "date": "2026-05-25",
+    "host": "ipatho-server-2",
+    "spawn_window": "e2e-ss",
+    "cwd": "/home/shuu5/projects/local-projects/folio",
+    "plugin_load": "~/.claude/plugins/folio symlink -> main repo (母艦 deploy fix 後に復旧、 9 plugins / 10 hooks load)。 fresh spawn が folio plugin を load し SessionStart hook を発火。",
+    "primary_assertion": "fresh session の初期 context に folio Tier 1 inventory digest が注入されているか (spawn agent が digest header + 件数 + entries を引用できるか)。",
+    "note": "read-only 観察。 spawn は編集せず初期 context の報告のみ。 SessionStart source = startup を検証 (compact source = post-compaction は未検証、 docs-canonical)。"
+  },
+  "hooks_under_test": [
+    "SessionStart (matcher 省略 = startup/resume/clear/compact 全 source) -> inject-inventory.sh -> folio prime"
+  ],
+  "observations": [
+    {
+      "id": "S-F",
+      "name": "SessionStart context injection (Tier 1 digest が fresh session の context に出るか)",
+      "operation": "folio repo を cwd に fresh cld session を spawn → 起動時 SessionStart hook 発火 → spawn agent に初期 context の folio digest を報告させる",
+      "expected": {
+        "digest_injected": true,
+        "header_first_line": "# folio inventory digest — Tier 1 (progressive disclosure)",
+        "spec_count": 15,
+        "entry_format": "## <@id-path> + title + doc-type·status + summary"
+      },
+      "observed": {
+        "digest_injected": true,
+        "header_quoted": [
+          "# folio inventory digest — Tier 1 (progressive disclosure)",
+          "# 15 specs · folio 0.4.2-draft",
+          "# Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 / Tier 3 on demand."
+        ],
+        "spec_count": 15,
+        "first_entries_quoted": [
+          "## specs/README.html (title: folio framework spec index / cluster-readme · active)",
+          "## specs/folio-self-spec.html (title: folio self-spec / self-spec · draft)",
+          "## specs/relations.html (title: folio relations spec / spec · draft)"
+        ],
+        "hook_source": "SessionStart:startup hook success (folio digest 1 件、 他 plugin の SessionStart 注入は本 folio-loaded fresh session では非観測)",
+        "agent_note": "spawn は @id が URI 形式でない点を指摘したが、 folio の @id は相対 path (relations §4.1) で `## <path>` 見出しがまさに @id = 正しい (misread)"
+      },
+      "result": "PASS",
+      "interpretation": "fresh folio session の起動時、 SessionStart hook → inject-inventory.sh → folio prime stdout → context 注入の full chain が動作。 spawn agent が Tier 1 digest header + 15 specs + entries を初期 context から引用できた。 = folio の signature 機能 (architect への文脈注入) が実 session で動く実証 (user の『道具として動くか』への YES)。"
+    }
+  ],
+  "summary": {
+    "observation_points": 1,
+    "pass": 1,
+    "fail": 0,
+    "verdict": "SessionStart:startup context injection が実 fresh session で動作 (Tier 1 digest 注入 PASS)。 Track 2 の signature 機能をライブ実証。 残: compact source (post-compaction 再注入) は compaction の実 trigger 要で未検証 (docs-canonical、 ADR-0007 §2.1 amendment)、 PreCompact hook は stdout 非注入で除去済。"
+  }
+}

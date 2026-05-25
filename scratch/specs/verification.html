@@ -343,8 +343,9 @@ expect:
   (<a href="../decisions/ADR-0007-context-injection.html">ADR-0007 §2.4</a>)。
   conformance は §3.4 golden baseline との <code>kind: cli-golden</code> (<code>capture: stdout</code> +
   <code>compare: text</code>) diff で検証する。 scenario: <code>scenarios/prime-digest.yaml</code>。
-  SessionStart + PreCompact hook による実 context 注入 (ADR-0007 §2.1) は e2e (REQ-VER-009 型、
-  fresh session で digest が context に現れるか) で別途検証する。
+  SessionStart hook による実 context 注入 (ADR-0007 §2.1、 matcher 省略で全 source 発火) は e2e
+  (REQ-VER-009 型) で検証 = <strong>SessionStart:startup 注入 PASS</strong> (fresh session で Tier 1
+  digest が context に注入されることを確認)。 PreCompact は ADR-0007 amend (2026-05-25) で除去 (stdout 非注入)。
 </p>
 </section>
 

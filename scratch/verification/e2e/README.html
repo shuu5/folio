@@ -67,7 +67,7 @@
 </section>
 
 <section id="s3-scenarios" class="informative">
-<h2>§3. Scenarios (5 件)</h2>
+<h2>§3. Scenarios (6 件)</h2>
 <table>
   <thead><tr><th>ID</th><th>シナリオ</th><th>marker</th><th>期待観察 (一次 = file 作成有無)</th></tr></thead>
   <tbody>
@@ -76,6 +76,7 @@
     <tr><td><strong>S-C</strong></td><td>false-positive: gate 対象外は誤作動しない</td><td>UNSET</td><td>file <strong>作成</strong> / Edit allow (spec_path 外は非 gate)</td></tr>
     <tr><td><strong>S-D</strong></td><td>CLI: <code>bin/folio version</code> / <code>help</code></td><td>—</td><td>exit 0 + 出力 (skeleton)</td></tr>
     <tr><td><strong>S-E</strong></td><td>marker-ux: 手動 set→edit→unset フロー成立</td><td>SET→UNSET</td><td>set 中は spec 編集可、 unset 後は deny 復帰 (fail-open しない)</td></tr>
+    <tr><td><strong>S-F</strong></td><td>SessionStart context injection (Tier 1 digest 注入、 REQ-VER-012 / ADR-0007、 Track 2)</td><td>—</td><td>fresh session の初期 context に digest <strong>注入</strong> (full chain 動作)、 startup source = PASS。 golden = <code>observations-sessionstart.json</code></td></tr>
   </tbody>
 </table>
 <p>各シナリオの詳細手順と期待観察は <a href="runbook.md">runbook.md</a>、 walk 結果の golden は <a href="baselines/reference/">baselines/reference/</a> を参照。</p>

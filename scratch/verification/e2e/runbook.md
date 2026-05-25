@@ -2,6 +2,7 @@
 
 folio plugin を **ひとまとまりの道具** として実シナリオで使い、想定通り動くかを観察する手順書。
 verification.html §4.1 Step 2 (worktree integration) / REQ-VER-009 の試作実装。
+S-A〜S-E は Track 0 の Edit/Write walk。S-F は Track 2 追加 (SessionStart context injection、REQ-VER-012 / ADR-0007、fresh-session 起動観察)。
 
 agent (あなた) がこの runbook を読み、**実際の Edit/Write tool で操作** して live load 済 plugin の
 hook を発火させ、観察を記録する。sandbox 単体テスト (`../scenarios/` + `runner.sh`) とは別物
@@ -139,6 +140,31 @@ init/validate 等の本実装は Phase X3 試作では未実装 (unknown subcomm
   `/folio-architect` する **Phase X4+ で追加検証**、と記録する。
 
 **後始末**: `rm -f .folio/architect-active` (E1 で既に unset 済)。e2e-e.html は deny で不在。
+
+---
+
+## S-F — SessionStart context injection (★Track 2: 道具が architect に文脈を渡すか / REQ-VER-012 / ADR-0007)
+
+**目的**: folio の signature 機能 — fresh session 起動時に SessionStart hook が Tier 1 inventory digest を
+context に注入するか実観察する。S-A〜S-E (Edit/Write 操作) とは別 method = **fresh session 起動の観察**。
+
+**前提**: folio plugin が load される環境 (`~/.claude/plugins/folio` symlink + cld auto discovery)。
+SessionStart hook は session 起動時にのみ発火するため既存 session では観察不可 → **fresh session (spawn) 必須**。
+
+**操作**:
+1. folio repo を cwd に fresh cld session を spawn (`cld-spawn --cd <folio repo>`)。
+2. spawn の prompt で「起動時 context に folio inventory digest が注入されているか、編集せず観察のみ報告せよ」と指示。
+3. spawn の応答を capture。
+
+**期待観察**: spawn が初期 context に Tier 1 digest を受領 = 先頭 `# folio inventory digest — Tier 1` +
+spec 件数 + 各エントリ (`## <@id-path>` / title / doc-type·status / summary) を引用できる。
+= SessionStart hook → inject-inventory.sh → folio prime stdout → context 注入の full chain が動作。
+
+**注**: SessionStart は matcher 省略で startup/resume/clear/compact 全 source 発火。本 S-F は **startup source** を検証。
+compact source (post-compaction 再注入) は compaction の実 trigger が要るため未検証 (docs-canonical、ADR-0007 §2.1 amendment)。
+PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除去済。
+
+**後始末**: spawn window を kill (read-only 観察、commit/編集なし)。golden は `baselines/reference/observations-sessionstart.json`。
 
 ---
 

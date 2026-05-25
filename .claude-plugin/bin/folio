@@ -256,7 +256,7 @@ folio_prime_emit_digest() {
 
 # folio prime: Tier 1 inventory digest を stdout 出力 (ADR-0007 §2.1〜2.4)。
 # inventory.json が不在/stale なら folio inventory で auto-regen してから出力 (§2.4)。
-# hook (SessionStart / PreCompact) からの注入経路であると同時に手動 entry point でもある (§2.3)。
+# SessionStart hook からの注入経路であると同時に手動 entry point でもある (§2.3、 PreCompact は ADR-0007 amend で除去)。
 folio_cmd_prime() {
   command -v jq >/dev/null 2>&1 || { echo "folio prime: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
