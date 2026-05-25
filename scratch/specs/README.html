@@ -229,8 +229,8 @@ graph TD
     </tr>
     <tr>
       <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> / <a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
-      <td>ADR-0001 は旧 <code>@context</code> 文字列形式、 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
-      <td>既存 ADR は frozen (P-10、 historical record) として保持、 新規 ADR のみ新 pattern。 P-5 違反 trace として記録</td>
+      <td>ADR-0001 は旧 <code>@context</code> 文字列形式だったが <strong>2026-05-25 に構造準拠化</strong> (folio validate が検出 → machine-readable block のみ object 化 + <code>@id</code> 追加、 commit 147674b、 user ratify 済)。 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015 等) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
+      <td>ADR-0001 は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/prime golden 不変)。 ADR-0002 は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
     </tr>
   </tbody>
 </table>
