@@ -131,28 +131,37 @@ graph TB
 <pre><code>folio/
 ├── FOLIO.md                          # root marker (Markdown 例外、 P-2)
 ├── README.md                         # GitHub 表示用 (Markdown 例外、 P-2)
-├── CLAUDE.md                         # Claude Code project instructions (Markdown 例外、 P-2、 P-11 root 例外)
-├── constitution.html                 # 13 immutable principles (P-1〜P-13)
-├── rules.html                        # Layer 1 consumer 向け universal rules
-├── folio-self-spec.html              # 本書 — folio framework 自身の self-spec
+├── CLAUDE.md                         # AI-agent instruction (Markdown 例外、 P-2、 P-11 root 例外)
 ├── common.css                        # design tokens
 ├── .gitignore
 │
-├── architecture/                     # folio 自身の architecture artifact 配置
-│   └── assets/
-│       └── mermaid.min.js            # self-hosted diagram rendering
+├── architecture/                     # folio 自身の design-intent 空間 (self-host、 P-7 3-domain)
+│   ├── spec/                         # design intent (WHAT)
+│   │   ├── README.html               # spec entry point (P-6)
+│   │   ├── constitution.html         # 13 immutable principles (P-1〜P-13)
+│   │   ├── rules.html                # Layer 1 consumer 向け universal rules
+│   │   ├── folio-self-spec.html      # 本書 — folio 自身の self-spec
+│   │   ├── relations.html            # spec 間関係性 (JSON-LD + inventory)
+│   │   └── verification.html         # verification contract
+│   ├── decisions/                    # decision (WHY): ADR-NNNN-&lt;slug&gt;.html
+│   ├── research/                     # exploration (spec 反映前の探索)
+│   └── assets/                       # mermaid.min.js (support、 domain でない)
 │
-├── decisions/                        # ADR (folio 自身)
-│   └── ADR-NNNN-&lt;slug&gt;.html
+├── verification/                     # HOW-test sibling (executable、 P-3/P-11、 ADR-0022)
+│   ├── scenarios/                    # use case 別 YAML
+│   ├── fixtures/  baselines/  e2e/   # テストデータ / golden / 統合検証
+│   └── runner.sh                     # 軽量 runner (bash + yq + jq)
 │
-└── .claude-plugin/                   # plugin harness (P-12 一体配布)
+├── hooks/                            # Claude Code 公式仕様: plugin root 直下 MUST
+│   └── hooks.json                    # hook 宣言 (PreToolUse / PostToolUse / SessionStart)
+│
+└── .claude-plugin/                   # plugin harness (P-12 一体配布、 HOW)
     ├── plugin.json                   # manifest (name, version, userConfig)
-    ├── skills/                       # 8 skill (folio-init, folio-architect, folio-spec-edit, folio-validate, review-* × 4)
-    ├── agents/                       # 8 specialist agents (explorer, architect, review-* × 6)
-    ├── hooks/                        # PreToolUse + PostToolUse hook config
-    ├── scripts/                      # CI check scripts (Python / shell)
-    ├── bin/                          # CLI executables (folio validate / init / doctor)
-    ├── refs/                         # skill + agent 共有 reference (principles, vocabulary, EARS templates)
+    ├── skills/                       # folio-architect 等 (完成形 §7.2)
+    ├── agents/                       # specialist agents (完成形 §7.2)
+    ├── scripts/                      # hook script 実装 (CI check)
+    ├── bin/                          # CLI: folio validate / init / fix
+    ├── refs/                         # skill + agent 共有 reference
     └── static/                       # plugin-bundled static assets
 </code></pre>
 
@@ -160,26 +169,26 @@ graph TB
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
 graph TD
-  accTitle: folio Repository Layout (Layer 0)
-  accDescr: folio repo の root 直下に rules (constitution + rules + folio-self-spec + common.css) と plugin harness (.claude-plugin/) と architecture/assets/ (mermaid vendor) と decisions/ (ADR) が並ぶ
+  accTitle: folio Repository Layout (Layer 0, canonical self-host)
+  accDescr: folio repo は architecture/ (spec/decisions/research/assets の design-intent 空間) と verification/ (HOW-test sibling) と hooks/ + .claude-plugin/ (HOW harness) と root marker file が並ぶ
   ROOT["folio/"]
-  ROOT --> RULES["rules<br/>(constitution.html<br/>rules.html<br/>folio-self-spec.html<br/>common.css)"]
-  ROOT --> MD["Markdown 例外<br/>(FOLIO.md / README.md /<br/>CLAUDE.md)"]
-  ROOT --> ARCH["architecture/assets/<br/>mermaid.min.js"]
-  ROOT --> DEC["decisions/<br/>(ADR-NNNN-*.html)"]
-  ROOT --> PLUGIN[".claude-plugin/<br/>(plugin harness)"]
-  PLUGIN --> PJ["plugin.json"]
-  PLUGIN --> SK["skills/ (8)"]
-  PLUGIN --> AG["agents/ (8)"]
-  PLUGIN --> HK["hooks/"]
-  PLUGIN --> SC["scripts/"]
-  PLUGIN --> BN["bin/"]
-  PLUGIN --> RF["refs/"]
-  PLUGIN --> ST["static/"]
+  ROOT --> ARCH["architecture/<br/>(design-intent 空間)"]
+  ROOT --> VER["verification/<br/>(HOW-test sibling)"]
+  ROOT --> HK["hooks/<br/>(hooks.json)"]
+  ROOT --> PLUGIN[".claude-plugin/<br/>(plugin harness, HOW)"]
+  ROOT --> MD["root marker<br/>(FOLIO.md / README.md /<br/>CLAUDE.md / common.css)"]
+  ARCH --> SPEC["spec/ (WHAT)<br/>constitution / rules /<br/>folio-self-spec /<br/>relations / verification"]
+  ARCH --> DEC["decisions/ (WHY)<br/>ADR-NNNN-*"]
+  ARCH --> RES["research/<br/>(exploration)"]
+  ARCH --> AST["assets/<br/>(mermaid, support)"]
+  PLUGIN --> BN["bin/<br/>(validate / init / fix)"]
+  PLUGIN --> SCM["scripts/ skills/<br/>agents/ refs/ static/"]
   style ROOT fill:#2a4d6e,color:#ffffff
+  style ARCH fill:#5ac8b8,color:#08131a
+  style VER fill:#fefbea,color:#08131a
   style PLUGIN fill:#5ac8b8,color:#08131a
 </pre>
-<figcaption>図 2. folio repo (Layer 0) 内部構造。 rules + harness を一体配布。 plugin harness は <code>.claude-plugin/</code> 配下に 7 種類の構成要素を持つ。</figcaption>
+<figcaption>図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し architecture/{spec,decisions,research} を持つ (consumer と一意)。 verification/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (ADR-0022)。</figcaption>
 </figure>
 </section>
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-25T13:09:13Z",
+  "generatedAt": "2026-05-25T14:02:43Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -364,6 +364,29 @@
           "specs/relations.html#s4-4-1-scan",
           "specs/verification.html",
           "decisions/ADR-0001-architecture-rules-split.html",
+          "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0022-x4-0-canonical-layout.html",
+      "title": "ADR-0022 — X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)",
+      "summary": "forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "constitution.html#p-7",
+          "constitution.html#p-13",
+          "specs/folio-self-spec.html#s2-folio-layout",
+          "specs/rules.html#s2-directory",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
           "decisions/ADR-0003-plugin-architecture.html"
         ]
       }

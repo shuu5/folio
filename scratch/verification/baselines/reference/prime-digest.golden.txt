@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 18 specs · folio 0.5.0-draft
+# 19 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## specs/README.html
@@ -86,6 +86,11 @@
 - title: ADR-0021 — constitution X4 amendment (脱-instance + 3-domain + P-13 新設)
 - doc-type: adr · status: accepted
 - summary: forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)
+
+## decisions/ADR-0022-x4-0-canonical-layout.html
+- title: ADR-0022 — X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)
+- doc-type: adr · status: accepted
+- summary: forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)
 
 ## research/plugin-sandbox-verification-research.html
 - title: folio plugin sandbox verification research

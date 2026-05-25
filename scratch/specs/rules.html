@@ -56,24 +56,24 @@
 ├── CLAUDE.md (or AGENTS.md)          # platform-specific binding (P-2 例外、 P-11 root 例外)
 ├── folio.config.yaml                 # folio plugin consume 宣言 + userConfig override
 │
-├── architecture/                     # Layer 1 spec (folio rules で書かれた)
-│   ├── spec/                         # Diátaxis Reference (cwd で context 即判定)
+├── architecture/                     # Layer 1 design-intent 空間 (folio rules で書かれた、 P-7 3-domain)
+│   ├── spec/                         # design intent (WHAT、 cwd で context 即判定)
 │   │   ├── README.html               # spec entry point (constitution P-6)
 │   │   ├── constitution.html         # project 固有 constitution (folio core 継承 + project 固有)
 │   │   ├── overview.html
 │   │   └── ...
-│   ├── howto/                        # Diátaxis How-to
-│   ├── tutorial/                     # Diátaxis Tutorial
-│   ├── explanation/                  # Diátaxis Explanation
-│   ├── decisions/                    # ADR (project 固有)
-│   ├── steering/                     # Kiro 慣習 (product / tech / structure)
-│   └── research/                     # spec 反映前の探索
+│   ├── decisions/                    # decision (WHY、 ADR project 固有)
+│   └── research/                     # exploration (spec 反映前の探索)
 │
-└── &lt;実装本体 dir&gt;                    # 実装 (architecture/spec/ に従う)
+├── verification/                     # HOW-test (consumer の test 体系: tests/ 等でも可、 P-13、 ADR-0022)
+│
+└── &lt;実装本体 dir&gt;                    # HOW-impl (architecture/spec/ に従う)
     ├── (scribe の場合) skills/, agents/, commands/
     ├── (TS webapp の場合) src/, components/, app/
     └── ...
 </code></pre>
+
+<p class="informative">folio が govern するのは <code>architecture/</code> の 3 domain (design intent / decision / exploration) + <code>verification/</code> (HOW-test) のみ (<a href="../constitution.html#p-7">P-7</a> + <a href="../constitution.html#p-13">P-13</a>、 <a href="../decisions/ADR-0022-x4-0-canonical-layout.html">ADR-0022</a>)。 一般 documentation (Diátaxis tutorial / how-to / explanation 等) や AI-steering context は consumer の<strong>自由領域</strong>で folio は規定しない (consumer が <code>docs/</code> 等で任意に持つ)。</p>
 
 <p><strong>folio.config.yaml 構造</strong> (schema 詳細は <a href="folio-self-spec.html#s8-plugin">folio-self-spec.html §8</a>):</p>
 
