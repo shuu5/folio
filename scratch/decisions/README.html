@@ -24,13 +24,13 @@
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
 
-<p>decisions/ は <a href="../constitution.html#p-7">constitution P-7 (Content domain exclusivity)</a> における「decisions = why」 領域を担う:</p>
+<p>decisions/ は <a href="../constitution.html#p-7">constitution P-7 (Content domain exclusivity)</a> における「decision = why」 領域を担う (<a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a> で 3-domain 化、 changes/ 廃止):</p>
 <ul>
-  <li><strong>spec</strong> (constitution / rules / folio-self-spec) = <em>what</em> (構造・不変条件)</li>
-  <li><strong>decisions</strong> (本 cluster) = <em>why</em> (frozen ADR、 architectural decisions)</li>
-  <li><strong>changes</strong> (将来 cluster、 未作成) = <em>proposal</em> (進行中の更新提案)</li>
-  <li><strong>research</strong> (将来 cluster、 未作成) = <em>exploration</em> (spec 反映前の探索)</li>
+  <li><strong>design intent</strong> (WHAT) = 構造・不変条件 (declarative design-intent 文書)</li>
+  <li><strong>decision</strong> (本 cluster、 WHY) = frozen ADR、 architectural decisions</li>
+  <li><strong>exploration</strong> = spec 反映前の探索</li>
 </ul>
+<p>更新提案は専用領域 (旧 changes/) を持たず、 ADR (why) + delta marker (trace) + version control review で表現する (P-7 / <a href="../constitution.html#s6-amendment">§6</a>)。 実装 (HOW) とその verification は design-intent 空間の外 (<a href="../constitution.html#s2-principles">P-13</a>)。</p>
 </section>
 
 <section id="s2-adr-status" class="informative">
@@ -137,10 +137,17 @@
       <td>—</td>
       <td>2026-05-25</td>
     </tr>
+    <tr>
+      <td><a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a></td>
+      <td>constitution X4 amendment (脱-instance + 3-domain + P-13 新設)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
   </tbody>
 </table>
 
-<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 ADR-0007 (context injection、 SessionStart + PreCompact) は 2026-05-25 に Track 2 着手の forward decision として user 承認・起票済 (§3 table)。 残る ADR-0005 / 0008〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 ADR-0017 (verification の unit/integration 境界) も 2026-05-25 に Track 1/2 後 retrospective 起票済 (§3 table)。 ADR-0020 (folio validate 試作 scope = 内部 link-integrity + jsonld structural) は 2026-05-25 に Track 3 forward decision として user 承認・起票済 (§3 table)。 残る ADR-0016 (exit code 中心 assertion、 Gap 1 解消後) は SHOULD ランクで起票待ち。</p>
+<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 ADR-0007 (context injection、 SessionStart + PreCompact) は 2026-05-25 に Track 2 着手の forward decision として user 承認・起票済 (§3 table)。 残る ADR-0005 / 0008〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 ADR-0017 (verification の unit/integration 境界) も 2026-05-25 に Track 1/2 後 retrospective 起票済 (§3 table)。 ADR-0020 (folio validate 試作 scope = 内部 link-integrity + jsonld structural) は 2026-05-25 に Track 3 forward decision として user 承認・起票済 (§3 table)。 ADR-0021 (constitution X4 amendment = 脱-instance + 3-domain + P-13 新設) は 2026-05-25 に X4 先行タスクとして user 承認・起票済 (§3 table、 SemVer 0.5.0-draft)。 残る ADR-0016 (exit code 中心 assertion、 Gap 1 解消後) は SHOULD ランクで起票待ち。</p>
 </section>
 
 <section id="s4-naming" class="informative">
@@ -152,16 +159,16 @@
 <section id="s5-amendment" class="informative">
 <h2>§5. ADR Creation Procedure</h2>
 
-<p><a href="../constitution.html#s6-amendment">constitution §6 Amendment Procedure</a> に従う:</p>
+<p><a href="../constitution.html#s6-amendment">constitution §6 Amendment Procedure</a> に従う (<a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a> で changes/ + archive/ 廃止):</p>
 <ol>
-  <li>変更提案を <code>changes/</code> 配下に proposal として起案 (proposal-only MUST)。</li>
+  <li>変更提案を proposal として起案 (review 用、 version control branch 上。 専用 changes/ dir は持たない)。</li>
   <li>user 承認を取得 (P-10、 constitution 改訂の場合)。</li>
   <li>ADR を Accepted status で本 cluster に作成。</li>
-  <li>constitution / rules / folio-self-spec を編集し、 SemVer bump + delta marker を inline 追加。</li>
-  <li>changes package を <code>archive/</code> へ移動。</li>
+  <li>design-intent 文書を編集し、 SemVer bump + delta marker を inline 追加。</li>
+  <li>version control の review (PR / diff) で trace を確定 (archive/ への移動は行わない — git 履歴が archive を兼ねる)。</li>
 </ol>
 
-<p><strong>例外</strong>: folio 初の ADR (ADR-0001) は <code>changes/</code> dir 未存在の bootstrap 段階で起票されたため、 proposal step を skip した折衷を採用。 後続 ADR は本手順を遵守する MUST。</p>
+<p><strong>例外</strong>: folio 初の ADR (ADR-0001) は bootstrap 段階で起票されたため proposal step を skip した折衷を採用。 後続 ADR は本手順を遵守する MUST。</p>
 </section>
 
 </body>

@@ -1,7 +1,7 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-25T06:01:45Z",
-  "folioVersion": "0.4.2-draft",
+  "generatedAt": "2026-05-25T13:09:13Z",
+  "folioVersion": "0.5.0-draft",
   "specs": [
     {
       "@id": "specs/README.html",
@@ -341,6 +341,30 @@
           "decisions/ADR-0003-plugin-architecture.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0018-cli-golden-harness.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0021-constitution-x4-amendment.html",
+      "title": "ADR-0021 — constitution X4 amendment (脱-instance + 3-domain + P-13 新設)",
+      "summary": "forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "constitution.html#s2-principles",
+          "constitution.html#s6-amendment",
+          "specs/rules.html#s10-2",
+          "specs/relations.html#s4-4-1-scan",
+          "specs/verification.html",
+          "decisions/ADR-0001-architecture-rules-split.html",
+          "decisions/ADR-0003-plugin-architecture.html"
         ]
       }
     },

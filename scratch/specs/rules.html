@@ -66,10 +66,8 @@
 │   ├── tutorial/                     # Diátaxis Tutorial
 │   ├── explanation/                  # Diátaxis Explanation
 │   ├── decisions/                    # ADR (project 固有)
-│   ├── changes/                      # 進行中 proposal (proposal-only MUST)
 │   ├── steering/                     # Kiro 慣習 (product / tech / structure)
-│   ├── research/                     # spec 反映前の探索
-│   └── archive/                      # 完了 changes / 旧 spec
+│   └── research/                     # spec 反映前の探索
 │
 └── &lt;実装本体 dir&gt;                    # 実装 (architecture/spec/ に従う)
     ├── (scribe の場合) skills/, agents/, commands/
@@ -95,8 +93,6 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <ul>
   <li>全 HTML file 名: <code>kebab-case.html</code> (例: <code>spec-taxonomy.html</code>)。 snake_case / camelCase 禁止。</li>
   <li>ADR: <code>ADR-NNNN-&lt;slug&gt;.html</code> (4 桁 ID)。</li>
-  <li>changes package: <code>changes/&lt;NNN&gt;-&lt;slug&gt;/proposal.html</code>。</li>
-  <li>archive: <code>archive/changes/YYYY-MM-DD-NNN-&lt;slug&gt;/</code> で merge 後 timestamped。</li>
   <li>vocabulary (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or architecture/、 P-2 YAML 例外)。</li>
   <li>config: <code>folio.config.yaml</code> (consumer project root、 P-2 YAML 例外)。</li>
   <li>entry point: 各 cluster は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。</li>
