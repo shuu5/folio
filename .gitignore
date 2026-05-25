@@ -11,8 +11,8 @@
 # 検証の golden は scratch/verification/baselines/reference/ に track する。
 scratch/inventory.json
 
-# Claude Code session externalization
-.supervisor/
+# Claude Code session externalization (cc-session ready-compaction = .claude-session/)
+.claude-session/
 .mailbox/
 
 # spawn 先 git worktree (session:spawn cld-spawn = worktrees/、 native claude --worktree = .claude/worktrees/)
