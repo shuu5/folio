@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-24T23:33:37Z",
+  "generatedAt": "2026-05-25T00:29:03Z",
   "folioVersion": "0.4.2-draft",
   "specs": [
     {
@@ -187,6 +187,27 @@
           "specs/rules.html#s10-1",
           "specs/folio-self-spec.html#s7-3-caller-marker",
           "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0007-context-injection.html",
+      "title": "ADR-0007 — context injection (SessionStart + PreCompact, Beads-inspired)",
+      "summary": "forward (user 承認済、 実装は Track 2 spawn)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0003-plugin-architecture.html#s2-1-scope",
+          "specs/relations.html#s4-2-tier",
+          "research/plugin-architecture-research.html#s5-2-beads",
+          "specs/verification.html#s3-6-verification-specific"
         ]
       }
     },

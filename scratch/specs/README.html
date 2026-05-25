@@ -337,17 +337,17 @@ graph TD
 
 <p>Phase X3 進行中に逐次起票候補。 自動起票禁止 (<a href="../../CLAUDE.md">CLAUDE.md</a> §2)、 user 確認必須:</p>
 
-<p><strong>起票済</strong> (2026-05-25、 retrospective batch — 試作実装 + e2e 検証後に起票、 <a href="../decisions/README.html#s3-adr-list">decisions/README §3</a>):</p>
+<p><strong>起票済</strong> (2026-05-25、 <a href="../decisions/README.html#s3-adr-list">decisions/README §3</a>):</p>
 <ul>
-  <li>✓ <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> JSON-LD lint mechanism (試作 Option B Light = jq 構造 check、 完成形 ajv+pyld 2 層は defer)</li>
-  <li>✓ <a href="../decisions/ADR-0006-caller-marker-hook.html">ADR-0006</a> caller marker hook (hybrid: env var OR marker file)</li>
+  <li>✓ <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> JSON-LD lint mechanism (試作 Option B Light = jq 構造 check、 完成形 ajv+pyld 2 層は defer) — retrospective</li>
+  <li>✓ <a href="../decisions/ADR-0006-caller-marker-hook.html">ADR-0006</a> caller marker hook (hybrid: env var OR marker file) — retrospective</li>
+  <li>✓ <a href="../decisions/ADR-0007-context-injection.html">ADR-0007</a> context injection (SessionStart + PreCompact、 Beads-inspired) — forward (Track 2)</li>
   <li>✓ <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> CLI golden-diff verification harness (kind:cli-golden、 Track 1 実装後 retrospective)</li>
   <li>✓ <a href="../decisions/ADR-0019-path-boundary-pragmatic.html">ADR-0019</a> path boundary hook (Option Pragmatic: content-marker 検出)</li>
 </ul>
 
 <p><strong>起票候補</strong> (未起票、 user 承認 MUST):</p>
 <ul>
-  <li>ADR-0007 context injection (Beads-inspired、 Track 2 = SessionStart inject 実装時に起票予定)</li>
   <li>ADR-0008 3 層防御原則 (全体設計まとまった時点)</li>
   <li>ADR-0014 — <strong>見送り</strong> (verification §3.5 で実質規範化済)</li>
   <li>ADR-0016 exit code 中心 assertion (Gap 1 解消後)</li>

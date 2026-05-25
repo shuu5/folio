@@ -89,6 +89,13 @@
       <td>2026-05-25</td>
     </tr>
     <tr>
+      <td><a href="ADR-0007-context-injection.html">ADR-0007</a></td>
+      <td>context injection (SessionStart + PreCompact、 Beads-inspired)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
       <td><a href="ADR-0013-verification-framework.html">ADR-0013</a></td>
       <td>sandbox verification framework (<code>scratch/verification/</code>)</td>
       <td>accepted</td>
@@ -119,7 +126,7 @@
   </tbody>
 </table>
 
-<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 残る ADR-0005 / 0007〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 残る ADR-0016 (exit code 中心 assertion、 Gap 解消後) / ADR-0017 (hook unit test vs integration test 境界、 Track 2 後) は SHOULD ランクで起票待ち。</p>
+<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 ADR-0007 (context injection、 SessionStart + PreCompact) は 2026-05-25 に Track 2 着手の forward decision として user 承認・起票済 (§3 table)。 残る ADR-0005 / 0008〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../specs/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 残る ADR-0016 (exit code 中心 assertion、 Gap 解消後) / ADR-0017 (hook unit test vs integration test 境界、 Track 2 後) は SHOULD ランクで起票待ち。</p>
 </section>
 
 <section id="s4-naming" class="informative">

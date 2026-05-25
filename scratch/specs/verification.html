@@ -201,21 +201,28 @@ teardown:
   cleanup_files: [ ... ]
 </code></pre>
 
-<p><strong>scenario kind</strong>: 上記は hook を mock payload で叩く <code>kind: hook</code> (既定、 省略可) の schema。 CLI subcommand (<code>bin/folio</code>) を golden 比較で検証する <code>kind: cli-golden</code> は次の追加 field を持つ (REQ-VER-011、 hook payload field は無視):</p>
+<p><strong>scenario kind</strong>: 上記は hook を mock payload で叩く <code>kind: hook</code> (既定、 省略可) の schema。 CLI subcommand (<code>bin/folio</code>) を golden 比較で検証する <code>kind: cli-golden</code> は次の field を持つ (REQ-VER-011、 hook payload field は無視)。 出力ソース <code>capture</code> (file | stdout) と比較方式 <code>compare</code> (json | text) の 2 軸で 2 種の CLI 出力に対応する:</p>
 
 <pre><code>schema_version: "0.1"
-req_id: "REQ-VER-010"
-kind: "cli-golden"             # hook (既定) | cli-golden
+req_id: "REQ-VER-010"           # 検証対象 REQ
+kind: "cli-golden"              # hook (既定) | cli-golden
 description: |
-  bin/folio inventory が relations.html §4.1 schema 準拠の inventory.json を生成する。
+  CLI subcommand の出力を golden と比較する。
 command: ["inventory"]          # bin/folio に渡す引数列
-output_file: "scratch/inventory.json"          # CLI が生成する成果物 (repo root 相対)
-golden: "baselines/reference/inventory.golden.json"   # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
+
+capture: "file"                 # file (既定) = output_file を読む | stdout = command の stdout を捕捉
+output_file: "scratch/inventory.json"          # capture:file 時、 CLI が生成する成果物 (repo root 相対)
+
+compare: "json"                 # json (既定) = jq -S 正規化 + exclude_paths 除外 | text = plain byte-exact
 normalize:
-  exclude_paths: [".generatedAt"]               # golden-diff 前に除外する非決定的 field (jq path)
+  exclude_paths: [".generatedAt"]               # compare:json 時、 除外する非決定的 field (jq path)
+
+golden: "baselines/reference/inventory.golden.json"   # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
 expect:
   exit_code: 0
 </code></pre>
+
+<p>例: <code>inventory-gen.yaml</code> (REQ-VER-010) は <code>capture:file</code> + <code>compare:json</code> (inventory.json を jq 正規化比較)。 <code>prime-digest.yaml</code> (REQ-VER-012) は <code>capture:stdout</code> + <code>compare:text</code> (<code>folio prime</code> の text digest を byte-exact 比較)。</p>
 
 <h3 id="s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</h3>
 
@@ -323,7 +330,21 @@ expect:
   and (3) assert byte-exact equality of the normalized JSON plus <code>exit_code</code> match。
   golden 更新は明示的 accept workflow (<code>--accept</code>、 §3.4 REQ-VER-004) を経る MUST。
   これは hook scenario (<code>kind: hook</code>) の exit-code 中心 assertion (REQ-VER-003) とは
-  別の assertion 経路を成す (CLI subcommand 検証の SSoT、 ADR-0018 候補で retrospective trace 予定)。
+  別の assertion 経路を成す (CLI subcommand 検証の SSoT、 <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> で trace)。
+</p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-012</span>:
+  <span class="ears-when">WHEN the <code>folio prime</code> CLI subcommand runs</span>,
+  it <span class="ears-shall">SHALL</span> emit a Tier 1 inventory digest (per-spec
+  <code>@id</code> / <code>title</code> / <code>summary</code> / <code>doc-type</code> / <code>status</code>、
+  <a href="relations.html#s4-2-tier">relations.html §4.2 Tier 1</a>) to stdout as agent-readable text,
+  auto-regenerating <code>inventory.json</code> if missing or stale
+  (<a href="../decisions/ADR-0007-context-injection.html">ADR-0007 §2.4</a>)。
+  conformance は §3.4 golden baseline との <code>kind: cli-golden</code> (<code>capture: stdout</code> +
+  <code>compare: text</code>) diff で検証する。 scenario: <code>scenarios/prime-digest.yaml</code>。
+  SessionStart + PreCompact hook による実 context 注入 (ADR-0007 §2.1) は e2e (REQ-VER-009 型、
+  fresh session で digest が context に現れるか) で別途検証する。
 </p>
 </section>
 

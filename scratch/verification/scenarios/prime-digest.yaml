@@ -1,0 +1,27 @@
+schema_version: "0.1"
+req_id: "REQ-VER-012"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio prime が inventory.json から Tier 1 digest (per-spec @id/title/summary/doc-type/status) を
+  agent-readable text として stdout 出力する (ADR-0007)。 inventory.json が stale/不在なら
+  auto-regen してから出力。 digest を golden と byte-exact 比較 (capture:stdout, compare:text) で検証。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/012) ---
+command: ["prime"]                                     # bin/folio に渡す引数列
+capture: "stdout"                                      # command の stdout を捕捉 (cf. inventory-gen の output_file)
+compare: "text"                                        # plain text byte-exact 比較 (cf. inventory-gen の json = jq -S)
+golden: "baselines/reference/prime-digest.golden.txt"  # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
+
+expect:
+  exit_code: 0
+
+# === RED 状態メモ (Track 2 spawn = feature-dev 実装前) ===
+# 本 scenario は現時点で RED。 GREEN にするため spawn が実装する 4 点:
+#   1. bin/folio prime          — inventory.json → Tier 1 text digest を stdout 出力。
+#                                 inventory.json が stale/不在なら folio inventory を auto-regen (ADR-0007 §2.4)
+#   2. cli-golden harness 拡張   — capture:stdout (command stdout 捕捉) + compare:text (plain diff)。
+#                                 既定の capture:file (output_file) + compare:json (jq -S) は不変保持
+#   3. baselines/reference/prime-digest.golden.txt — prime 出力を generate → 人間 review → commit (golden)
+#   4. hooks/hooks.json          — SessionStart + PreCompact hook → folio prime (実注入は e2e で別途観察、 REQ-VER-009 型)
+# GREEN 条件: prime stdout == golden (text byte-exact) かつ exit_code == 0。
