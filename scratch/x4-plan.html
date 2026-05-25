@@ -95,5 +95,53 @@
 </ul>
 </section>
 
+<section id="s5-x40-resolved" class="informative">
+<h2>§5. X4-0 layout 確定結果 (2026-05-25)</h2>
+<p>Phase 1 (constitution amendment <a href="decisions/ADR-0021-constitution-x4-amendment.html">ADR-0021</a>) + dig を経て、 §3 の全 layout 論点が解決した (user 承認: F1/F3/F4 + Q3 + amendment 議論)。 canonical 構造を以下に確定。 これを self-spec §2 / rules §2 に反映 + ADR-0022 起票 = X4-0 残作業 (PARENT)、 物理移動 = X4-C (SPAWN)。</p>
+
+<h3>確定した canonical layout</h3>
+<pre><code>folio Layer 0 (self-host):
+folio/
+├── FOLIO.md / README.md / CLAUDE.md / common.css   # root (外部規約 + style)
+├── architecture/
+│   ├── spec/        # design intent: constitution / rules / folio-self-spec / relations / verification / README
+│   ├── decisions/   # decision (ADR)
+│   ├── research/    # exploration
+│   └── assets/      # mermaid (support、 domain でない)
+├── verification/    # HOW-test sibling (scenarios/ fixtures/ baselines/ e2e/ runner.sh)
+├── hooks/ + .claude-plugin/   # HOW-impl (harness)
+└── inventory.json   # generated (gitignore)
+
+consumer Layer 1:
+&lt;consumer&gt;/
+├── README.md / CLAUDE.md / folio.config.yaml
+├── architecture/{spec,decisions,research}/   # 3-domain (Diátaxis/steering は除去)
+├── verification/   # HOW-test
+└── &lt;impl&gt;/         # src/ skills/ 等</code></pre>
+
+<h3>論点解決 (§3 table)</h3>
+<table>
+  <thead><tr><th>論点</th><th>確定</th><th>根拠</th></tr></thead>
+  <tbody>
+    <tr><td>constitution/rules/self-spec 配置</td><td>architecture/spec/ に flat (folio 完全 self-host)</td><td>F1</td></tr>
+    <tr><td>decisions/ 配置</td><td>architecture/decisions/</td><td>3-domain</td></tr>
+    <tr><td>relations/verification.html 配置</td><td>contract = architecture/spec/ (design intent)</td><td>amendment 議論</td></tr>
+    <tr><td>verification framework 実体 移植先</td><td>repo-root verification/ sibling (architecture/ 外、 executable HOW)</td><td>P-3/P-11 + TDD</td></tr>
+    <tr><td>research/ 扱い</td><td>architecture/research/ (exploration domain、 保持)</td><td>3-domain</td></tr>
+    <tr><td>spec_path 解釈</td><td>architecture/spec/ canonical、 location は override 可。 folio self-host = architecture/spec/</td><td>Q3</td></tr>
+    <tr><td>CLI 命名 (自動修正)</td><td>fix (doctor 不採用)</td><td>F4</td></tr>
+    <tr><td>Diátaxis (howto/tutorial/explanation) + Kiro steering/</td><td>canonical から除去 (triad に絞る)。 一般 docs/AI-context は consumer 自由領域、 folio 非 govern</td><td>F3</td></tr>
+  </tbody>
+</table>
+
+<h3>X4-0 残作業 (PARENT) → X4-C (SPAWN)</h3>
+<ol>
+  <li>ADR-0022 起票 (X4-0 canonical layout 確定、 user 承認済 via AskUq F1/F3/F4)</li>
+  <li>self-spec §2 rework (flat-root → architecture/{spec,decisions,research} + verification sibling、 layout tree + mermaid ×2 更新) + CLI doctor→fix (§2 bin / §7 系)</li>
+  <li>rules §2 rework (Diátaxis howto/tutorial/explanation + steering 除去、 3-domain + verification sibling 反映) + doctor→fix</li>
+  <li>(X4-C, SPAWN) 物理移動 scratch→architecture + bin/folio scan dir + scripts/plugin.json spec_path + golden 再生成</li>
+</ol>
+</section>
+
 </body>
 </html>
