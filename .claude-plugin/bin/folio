@@ -360,7 +360,9 @@ folio_cmd_validate() {
           violations+=("${rel}"$'\t'"[link-missing-file] ${key} -> ${pathpart} (target file not found)")
           link_fail=1
         elif [[ -n "$anchor" ]]; then
-          # anchor = target file 内の HTML 要素 id="..."/'...' 存在を確認 (grep -F = 固定文字列)
+          # anchor = target file 内の HTML 要素 id="..."/'...' 存在を確認 (grep -F = 固定文字列)。
+          # 試作 heuristic: data-*-id 等への substring 誤一致は理論上あり得るが、 折り目正しい
+          # folio spec の id naming (sN-...) では非衝突。 精緻な id parse は完成形 (ADR-0004 ajv/pyld)。
           if ! grep -qF "id=\"${anchor}\"" "$target_abs" && ! grep -qF "id='${anchor}'" "$target_abs"; then
             violations+=("${rel}"$'\t'"[link-broken-anchor] ${key} -> ${pathpart}#${anchor} (anchor id not found in target)")
             link_fail=1
@@ -375,15 +377,17 @@ folio_cmd_validate() {
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
+  # per-gate status は fail flag から一意に導出 (clean なら両 [OK])。 clean/violation 分岐で
+  # 重複させず、 「clean ⟹ 全 gate OK」 の不変条件を出力構造に持たせる (review R2 反映)。
+  if [[ "$link_fail" -eq 1 ]]; then printf '  [FAIL] internal link-integrity\n'; else printf '  [OK] internal link-integrity\n'; fi
+  if [[ "$struct_fail" -eq 1 ]]; then printf '  [FAIL] jsonld structural\n'; else printf '  [OK] jsonld structural\n'; fi
+
+  # clean / violation は最終ブロック + exit code のみ分岐 (gate status は上で共通出力済)
   if [[ ${#violations[@]} -eq 0 ]]; then
-    printf '  [OK] internal link-integrity\n'
-    printf '  [OK] jsonld structural\n'
     printf '\nclean: 0 violations\n'
     return 0
   fi
 
-  if [[ "$link_fail" -eq 1 ]]; then printf '  [FAIL] internal link-integrity\n'; else printf '  [OK] internal link-integrity\n'; fi
-  if [[ "$struct_fail" -eq 1 ]]; then printf '  [FAIL] jsonld structural\n'; else printf '  [OK] jsonld structural\n'; fi
   printf '\nviolations (%d):\n' "${#violations[@]}"
   printf '%s\n' "${violations[@]}" | LC_ALL=C sort | while IFS=$'\t' read -r vfile vdetail; do
     printf '  %s %s\n' "$vfile" "$vdetail"

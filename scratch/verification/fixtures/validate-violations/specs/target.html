@@ -3,17 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="folio-doc-type" content="fixture">
-<title>validate fixture — target (clean anchor target)</title>
+<title>validate fixture — target (clean anchor target + external-URL skip)</title>
 <script type="application/ld+json">
 {
   "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
   "@id": "./target.html",
   "@type": "schema:TechArticle",
-  "dc:title": "validate fixture target"
+  "dc:title": "validate fixture target",
+  "dc:references": [
+    { "@id": "https://example.com/external-ref" }
+  ]
 }
 </script>
 </head>
 <body>
-<section id="s2-decision"><h2>§2. Decision</h2><p>broken-anchor fixture が参照する有効な anchor target (#s2-decision)。</p></section>
+<section id="s2-decision"><h2>§2. Decision</h2><p>broken-anchor fixture が参照する有効な anchor target (#s2-decision)。 dc:references の external URL は試作 scope 外で skip され clean を維持する (ADR-0020 §2.2 回帰ガード)。</p></section>
 </body>
 </html>
