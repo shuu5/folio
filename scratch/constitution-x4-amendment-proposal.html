@@ -65,6 +65,13 @@
   </tbody>
 </table>
 <p>dominant = MAJOR (P-13 追加)。 1.0.0 未満は boundary 緩和 (§5) のため、 提案 version = <strong><code>0.5.0-draft</code></strong> (0.x における MAJOR 級 bump)。 post-1.0 なら真の MAJOR。</p>
+
+<h3 id="s1-scope">scope 確定 (本 session 決定、 delegated)</h3>
+<ul>
+  <li><strong>Plan A 境界 = core + changes/ 全 purge</strong>: constitution + count fix(4) + relations §4.4.1 + <strong>rules §2/§3 の changes/+archive/ 削除</strong> + plugin.json version。 changes/ を live spec から完全消去し lingering 矛盾を残さない (「最小整合」より優れる: debt ゼロ、 コストは数行削除のみ)。 layout の restructure (architecture/ root / verification sibling / specs→spec) は X4-0。 全て spec/doc → PARENT、 実装ゼロ。</li>
+  <li><strong>version</strong>: <code>plugin.json</code> + <code>constitution.html</code> のみ 0.5.0-draft へ bump (framework 核 + bundle)。 rules/self-spec/relations/README の編集は PATCH 級整合 fix のため version 据え置き、 X4-0 rework 時に 0.5.0 へ align。</li>
+  <li><strong>P-4 追加</strong>: grep [A] で P-4 も changes/ 参照と判明 → core 修正に追加 (§2 P-4)。</li>
+</ul>
 </section>
 
 <section id="s2-principles" class="normative">
@@ -80,6 +87,11 @@
 <p><strong>before</strong>: <strong>spec / constitution / rules / folio-self-spec</strong> に platform 固有 HOW を記述しない。 判定基準: 同等の framework を別 AI platform に移植する際に書き直しが必要であれば HOW 漏れである。</p>
 <p><strong>after</strong>: <strong>design-intent 文書</strong>に platform 固有 HOW を記述しない。 判定基準: 同等の framework を別 AI platform に移植する際に書き直しが必要であれば HOW 漏れである。</p>
 <p class="informative"><em>変更点</em>: enumeration → 「design-intent 文書」。 portability test (判定基準) は verbatim 保持。</p>
+
+<h3 id="s2-p4">✏ P-4 (Declarative form)</h3>
+<p><strong>before</strong>: spec 本文は現在形の declarative narrative で記述する。 過去 narration、 未来 narration、 wave-specific note は spec から禁止する。 これらは <strong>changes/ proposal</strong>、 decisions/ ADR、 research/ に分離する。</p>
+<p><strong>after</strong>: spec 本文は現在形の declarative narrative で記述する。 過去 narration、 未来 narration、 wave-specific note は spec から禁止する。 これらは <strong>decision record (ADR)、 exploration note、 version control の review</strong> に分離する。</p>
+<p class="informative"><em>変更点</em>: 「changes/ proposal」 削除 (changes/ 廃止)。 grep [A] で発見した proposal 当初の見落とし。</p>
 
 <h3 id="s2-p7">✏ P-7 (Content domain exclusivity) — 4→3 domain</h3>
 <p><strong>before</strong>: 4 領域は内容を排他的に保持する: spec/ = what (構造・不変条件) / decisions/ = why (frozen ADR) / <strong>changes/ = proposal (進行中の更新提案)</strong> / research/ = exploration (spec 反映前の探索)。</p>
@@ -144,17 +156,36 @@
 <p><strong>scope 分離</strong>: 本 amendment の <em>core</em> = constitution (P-2/3/7/11/13 + §6 + metadata) + relations §4.4.1 (changes/ 即時整合)。 self-spec §2 / rules §2 の layout rework は本質的に X4-0 layout 確定であり、 constitution が layout 不変になった後に X4-0 で実施 (本 amendment が X4-0 を unblock する関係)。</p>
 </section>
 
-<section id="s6-procedure" class="informative">
-<h2>§6. 進行手順 (本 amendment の実行 checklist)</h2>
+<section id="s6-plan" class="informative">
+<h2>§6. Phased Execution Plan (parent / spawn 分担)</h2>
+
+<p><strong>分担原則</strong>: declarative (spec / ADR / constitution / RED scenario / design 決定 / review / merge) = <strong>PARENT (本 session)</strong>。 executable な実装 (bin/folio / scripts / hooks のコード) = <strong>SPAWN (session:spawn + feature-dev:feature-dev)</strong>。 この fault line は <strong>P-13 の WHAT/HOW 分離の workflow 形</strong> — parent が WHAT + RED test を確定し、 spawn が HOW を GREEN にする。 Phase 1 (amendment) は実装ゼロのため parent のみ、 spawn は X4-C (migration) から発火する。</p>
+
+<table>
+  <thead><tr><th>Phase</th><th>内容</th><th>担当</th><th>実装</th></tr></thead>
+  <tbody>
+    <tr><td><strong>P1 — amendment</strong></td><td>ADR-0021 + constitution 編集 + changes/ 全 purge + count fix + plugin.json version</td><td><strong>PARENT</strong></td><td>なし (全 spec/doc)</td></tr>
+    <tr><td><strong>X4-0 — layout</strong></td><td>self-spec §2/§7.1 + rules §2 を canonical 構造 rework + X4-0 ADR + version align</td><td><strong>PARENT</strong></td><td>なし (spec + 設計)</td></tr>
+    <tr><td><strong>X4-C — migration</strong></td><td>scratch→architecture 物理移動 + bin/folio scan dir + scripts spec_path + golden 再生成</td><td><strong>SPAWN</strong></td><td>あり (parent: spec+RED+review+merge)</td></tr>
+    <tr><td>(任意) folio trace</td><td>P-13 traceability index tool (test req_id scan → REQ→spec→test→impl + gap 検出)</td><td><strong>SPAWN</strong></td><td>あり (parent: REQ-VER+ADR+RED)</td></tr>
+    <tr><td>X4-A/B/D/E</td><td>init / fix / architect / e2e (<a href="x4-plan.html">x4-plan §2</a>)</td><td><strong>SPAWN</strong></td><td>あり (同 pattern)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s6-1-phase1">§6.1 Phase 1 (amendment) checklist — PARENT, 本 session, 実装ゼロ</h3>
 <ol>
-  <li>[今ここ] 本 proposal を user review。 文面・scope の合意。</li>
-  <li>amendment ADR 起票 (<strong>user 承認 MUST</strong>)。 候補 ID = ADR-0021 (constitution X4 amendment: 脱-instance + 3-domain + P-13)。 ADR に before/after 要約 + SemVer 根拠 + ripple scope を記録。</li>
-  <li>constitution.html を編集: P-2/P-3/P-7/P-11 改訂 + P-13 追記 + §6 書き換え + metadata (version 0.5.0-draft / principles 13 / tiers Always 8 / title・header) + delta marker (<code>&lt;ins/del class="delta"&gt;</code>, rules §5)。</li>
-  <li>relations.html §4.4.1 の changes/ 即時整合。</li>
-  <li>sandbox 8/8 GREEN 確認 (constitution は hook 検証に非依存だが回帰確認)。 inventory/golden 不変を確認。</li>
-  <li>commit + push (conventional commit + 日本語 body)。</li>
-  <li>self-spec §2 / rules §2 の layout rework は X4-0 へ引き継ぎ (x4-plan §3 論点表と統合)。</li>
+  <li>[今ここ] proposal review → scope 合意。</li>
+  <li>ADR-0021 起票 (<strong>user 承認 MUST</strong>): constitution X4 amendment (脱-instance P-2/3/4/11 + 3-domain P-7 + P-13 新設 + changes/ 廃止)。 before/after + SemVer 根拠 + scope を記録。</li>
+  <li>constitution.html 編集 (P-10 承認後): P-2/3/4/7/11 + P-13 + §6 + §7 注記 + metadata (version 0.5.0-draft / principles 13 / tiers Always 8 / title・header) + delta marker (rules §5)。 ※scratch 直下・spec_path 外 → caller-marker 不要。</li>
+  <li>changes/ 全 purge: rules §2/§3 (L69/72/98/99 削除) + relations §4.4.1 (L468)。 ※scratch/specs/ → <strong>marker dance</strong> (.folio/architect-active set → 編集 → rm -f)。</li>
+  <li>count fix: specs/README L157 + relations L422/L562 + self-spec L135 (12→13 / P-1〜P-13)。 ※marker dance。</li>
+  <li>plugin.json version → 0.5.0-draft。</li>
+  <li>検証: sandbox 8/8 GREEN (回帰、 constitution は hook 非依存) + inventory/golden 不変確認 (constitution は scratch 直下で inventory 非対象、 specs 編集は header 不変なら golden 不変)。</li>
+  <li>commit + push (conventional + 日本語 body)。</li>
 </ol>
+
+<h3 id="s6-2-after">§6.2 Phase 1 後</h3>
+<p>X4-0 (layout 確定) を PARENT で着手 — constitution が layout 不変になったため self-spec §2 / rules §2 の canonical rework が安全に行える (x4-plan §3 論点表の解決)。 その後 X4-C (migration) から実装を SPAWN + feature-dev に委譲する。 X4 全体の分解は <a href="x4-plan.html">x4-plan.html</a> を参照。</p>
 </section>
 
 </body>
