@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-25T14:02:43Z",
+  "generatedAt": "2026-05-25T15:44:32Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -388,6 +388,29 @@
           "specs/rules.html#s2-directory",
           "decisions/ADR-0021-constitution-x4-amendment.html",
           "decisions/ADR-0003-plugin-architecture.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+      "title": "ADR-0023 — X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)",
+      "summary": "forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "constitution.html#p-7",
+          "constitution.html#p-12",
+          "constitution.html#p-13",
+          "specs/folio-self-spec.html#s2-folio-layout",
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html"
         ]
       }
     },
