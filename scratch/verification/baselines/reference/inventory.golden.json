@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-25T05:42:23Z",
+  "generatedAt": "2026-05-25T06:01:45Z",
   "folioVersion": "0.4.2-draft",
   "specs": [
     {
@@ -319,6 +319,28 @@
           "decisions/ADR-0003-plugin-architecture.html#s2-1-scope",
           "specs/verification.html#s3-6-verification-specific",
           "decisions/ADR-0006-caller-marker-hook.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0020-validate-scope.html",
+      "title": "ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)",
+      "summary": "forward (Track 3、 user 承認済、 実装は spawn)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.4.2-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "specs/rules.html#s10-2",
+          "specs/verification.html#s3-6-verification-specific",
+          "decisions/ADR-0003-plugin-architecture.html",
+          "decisions/ADR-0004-jsonld-lint-mechanism.html",
+          "decisions/ADR-0018-cli-golden-harness.html"
         ]
       }
     },

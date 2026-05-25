@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 16 specs · folio 0.4.2-draft
+# 17 specs · folio 0.4.2-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## specs/README.html
@@ -76,6 +76,11 @@
 - title: ADR-0019 — path boundary hook (Option Pragmatic)
 - doc-type: adr · status: accepted
 - summary: retrospective (実装 + e2e 検証済)
+
+## decisions/ADR-0020-validate-scope.html
+- title: ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)
+- doc-type: adr · status: accepted
+- summary: forward (Track 3、 user 承認済、 実装は spawn)
 
 ## research/plugin-sandbox-verification-research.html
 - title: folio plugin sandbox verification research

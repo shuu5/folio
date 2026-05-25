@@ -328,7 +328,7 @@ graph TD
     <tr>
       <td>ADR-0003 §2.1 script count 6 vs 実装 5 file + plugin-lib</td><td>LOW</td>
       <td>ADR 宣言 6 script vs 実装 5 file (check-caller-marker / check-path-boundary / check-jsonld-lint / check-readme-index / plugin-lib)。 差異: inject-inventory 未実装 (上記行) / link-integrity 未実装 (CI、 Phase X4+) / lint-jsonld→check-jsonld-lint 命名 / plugin-lib.sh 追加 (ADR 未宣言 shared lib)</td>
-      <td>inject-inventory=Step 5、 link-integrity=Phase X4+、 命名/lib=ADR-0004 候補</td>
+      <td>inject-inventory=Step 5 (Track 2 解消済)、 link-integrity: internal(anchor+fs)=Track 3 <code>folio validate</code> に取込 (<a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a>)・external URL CI script=Phase X4+、 命名/lib=ADR-0004 候補</td>
     </tr>
   </tbody>
 </table>
@@ -345,6 +345,7 @@ graph TD
   <li>✓ <a href="../decisions/ADR-0017-unit-integration-boundary.html">ADR-0017</a> verification の unit (sandbox) vs integration (e2e) 境界 — retrospective (Track 1/2 後)</li>
   <li>✓ <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> CLI golden-diff verification harness (kind:cli-golden、 Track 1 実装後 retrospective)</li>
   <li>✓ <a href="../decisions/ADR-0019-path-boundary-pragmatic.html">ADR-0019</a> path boundary hook (Option Pragmatic: content-marker 検出)</li>
+  <li>✓ <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> folio validate 試作 scope (内部 link-integrity + jsonld structural、 Track 3 forward) — 実装は spawn</li>
 </ul>
 
 <p><strong>起票候補</strong> (未起票、 user 承認 MUST):</p>

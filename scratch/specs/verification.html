@@ -347,6 +347,23 @@ expect:
   (REQ-VER-009 型) で検証 = <strong>SessionStart:startup 注入 PASS</strong> (fresh session で Tier 1
   digest が context に注入されることを確認)。 PreCompact は ADR-0007 amend (2026-05-25) で除去 (stdout 非注入)。
 </p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-013</span>:
+  <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>,
+  it <span class="ears-shall">SHALL</span> scan the spec set (<a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a>
+  と同一 = <code>scratch/{specs,decisions,research}</code> の <code>&lt;head&gt;</code> JSON-LD <code>.html</code>) and check two gates:
+  (a) <strong>internal link-integrity</strong> — each JSON-LD relation <code>@id</code> resolves to an existing target file,
+  and any <code>#anchor</code> resolves to an existing <code>id</code> in that target (<a href="rules.html#s10-2">REQ-CI-010</a> の (b)+(c));
+  (b) <strong>jsonld structural</strong> — parse + required <code>@context</code>/<code>@id</code>/<code>@type</code> +
+  <code>@context</code> == object (<a href="rules.html#s10-2">REQ-CI-016</a>、 <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> Option B Light)。
+  exit code は <strong>0 = clean / 1 = violation 検出 / 2 = tool error</strong> (jq 不在等、 fail-closed)、 違反は human-readable report を stdout 出力する。
+  検査 root の override (test isolation) を提供する <span class="ears-shall">MUST</span>。 external URL check と prose gate (REQ-CI-011〜015) は
+  試作 scope 外 (Phase X4+、 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020 §2.2</a>)。
+  conformance: clean 集合は <code>scenarios/validate-clean.yaml</code> (cli-golden、 capture:stdout、 exit 0)、 violation 検出
+  (missing file ref / broken anchor / jsonld 構造違反の 3 種) は実装時に <code>scenarios/validate-violations.yaml</code> + seeded fixtures で
+  実証する <span class="ears-shall">MUST</span> (exit 1 + report)。 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> で trace。
+</p>
 </section>
 
 <!-- ====================================================================
