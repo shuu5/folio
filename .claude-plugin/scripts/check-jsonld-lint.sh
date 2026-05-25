@@ -49,37 +49,16 @@ if [[ -z "$ldjson" ]]; then
   exit 0
 fi
 
-# jq parse 可能か (well-formed check)
-if ! printf '%s' "$ldjson" | jq . >/dev/null 2>&1; then
+# 構造 check は plugin-lib.sh の共有関数に委譲 (ADR-0020 §2.4 DRY、 bin/folio validate と共用)。
+# folio_jsonld_structural_check は parse → 必須 key (@context/@id/@type) → @context==object を
+# short-circuit で判定し、 clean なら return 0 (無出力)、 違反なら reason を stdout + return 1。
+# 旧 inline 3 段 check の deny 文言 (parse failed / required keys missing / @context must be object)
+# は reason に内包され、 sandbox jsonld-lint scenario の stderr_contains assertion を保持する。
+if ! reason=$(folio_jsonld_structural_check "$ldjson"); then
   folio_deny \
-    "folio JSON-LD lint: JSON-LD block parse failed (invalid JSON)" \
+    "folio JSON-LD lint: ${reason}" \
     "  file: ${file_path}" \
-    "  reference: scratch/specs/relations.html §3.2"
-fi
-
-# 必須 key check (@context, @id, @type) — 個別チェックで missing list を構築
-missing=""
-for key in '@context' '@id' '@type'; do
-  if ! printf '%s' "$ldjson" | jq -e --arg k "$key" 'has($k)' >/dev/null 2>&1; then
-    missing="${missing:+$missing, }$key"
-  fi
-done
-if [[ -n "$missing" ]]; then
-  folio_deny \
-    "folio JSON-LD lint: required keys missing" \
-    "  file: ${file_path}" \
-    "  missing: ${missing}" \
-    "  reference: scratch/specs/relations.html §3.2 (required: @context, @id, @type)"
-fi
-
-# @context は object 形式 MUST (新 pattern、 旧 string 形式は deny)
-ctx_type=$(printf '%s' "$ldjson" | jq -r '."@context" | type' 2>/dev/null)
-if [[ "$ctx_type" != "object" ]]; then
-  folio_deny \
-    "folio JSON-LD lint: @context must be object (new pattern), got ${ctx_type}" \
-    "  file: ${file_path}" \
-    "  fix: change to object form, e.g. {\"dc\":\"http://purl.org/dc/terms/\", \"schema\":\"https://schema.org/\", \"folio\":\"https://folio.dev/spec/v1/\"}" \
-    "  reference: scratch/specs/relations.html §3.2"
+    "  reference: scratch/specs/relations.html §3.2 (required @context/@id/@type, @context object)"
 fi
 
 exit 0

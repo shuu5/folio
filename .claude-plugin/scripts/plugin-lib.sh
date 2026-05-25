@@ -107,3 +107,36 @@ folio_deny() {
   printf '%s\n' "$@" >&2
   exit 2
 }
+
+# --- JSON-LD 構造 check (共有: per-file hook + batch validate) -----------------
+# $1 = 抽出済 JSON-LD block 文字列。 relations.html §3.2 の構造規範を順に check:
+#   (1) JSON well-formed (jq parse)
+#   (2) 必須 key (@context / @id / @type) 存在
+#   (3) @context == object 形式 (旧 string 形式は不可、 空 {} は object なので可)
+# clean なら return 0 (無出力)、 違反なら最初の 1 件の reason を stdout に出力して
+# return 1 (short-circuit = check-jsonld-lint.sh の現行挙動を厳密保持)。 file path /
+# reference 等の文脈は caller が付す (hook は deny message に、 validate は report に)。
+# 依存: jq (caller が folio_require_jq 済の前提)。 exit しない (値を返すだけ)。
+# ADR-0020 §2.4 DRY: check-jsonld-lint.sh と bin/folio validate が本関数を共用する。
+folio_jsonld_structural_check() {
+  local block="$1" missing="" key ctx_type
+  if ! printf '%s' "$block" | jq -e . >/dev/null 2>&1; then
+    printf 'JSON-LD block parse failed (invalid JSON)'
+    return 1
+  fi
+  for key in '@context' '@id' '@type'; do
+    if ! printf '%s' "$block" | jq -e --arg k "$key" 'has($k)' >/dev/null 2>&1; then
+      missing="${missing:+$missing, }$key"
+    fi
+  done
+  if [[ -n "$missing" ]]; then
+    printf 'required keys missing: %s' "$missing"
+    return 1
+  fi
+  ctx_type=$(printf '%s' "$block" | jq -r '."@context" | type' 2>/dev/null)
+  if [[ "$ctx_type" != "object" ]]; then
+    printf '@context must be object (new pattern), got %s' "$ctx_type"
+    return 1
+  fi
+  return 0
+}
