@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>validate fixture — missing file reference</title>
+<script type="application/ld+json">
+{
+  "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
+  "@id": "./missing-ref.html",
+  "@type": "schema:TechArticle",
+  "dc:references": [
+    { "@id": "./nonexistent.html" }
+  ]
+}
+</script>
+</head>
+<body><p>存在しない file を参照する違反 fixture (link-missing-file)。</p></body>
+</html>

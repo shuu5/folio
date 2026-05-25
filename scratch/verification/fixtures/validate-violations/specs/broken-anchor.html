@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>validate fixture — broken anchor reference</title>
+<script type="application/ld+json">
+{
+  "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
+  "@id": "./broken-anchor.html",
+  "@type": "schema:TechArticle",
+  "dc:references": [
+    { "@id": "./target.html#s9-nonexistent" }
+  ]
+}
+</script>
+</head>
+<body><p>target.html は存在するが #s9-nonexistent anchor は不在 (link-broken-anchor)。</p></body>
+</html>

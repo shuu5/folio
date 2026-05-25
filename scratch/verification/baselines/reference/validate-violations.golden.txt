@@ -1,0 +1,10 @@
+folio validate — internal link-integrity + jsonld structural (ADR-0020)
+root: scratch/verification/fixtures/validate-violations
+files checked: 4 · relations checked: 2
+  [FAIL] internal link-integrity
+  [FAIL] jsonld structural
+
+violations (3):
+  specs/bad-jsonld.html [jsonld-structural] @context must be object (new pattern), got string
+  specs/broken-anchor.html [link-broken-anchor] dc:references -> specs/target.html#s9-nonexistent (anchor id not found in target)
+  specs/missing-ref.html [link-missing-file] dc:references -> specs/nonexistent.html (target file not found)

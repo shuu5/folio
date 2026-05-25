@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>validate fixture — jsonld structural violation</title>
+<script type="application/ld+json">
+{
+  "@context": "https://folio.dev/spec/v1/",
+  "@id": "./bad-jsonld.html",
+  "@type": "schema:TechArticle"
+}
+</script>
+</head>
+<body><p>@context が string (object でない) = jsonld-structural violation。 dc:references なし。</p></body>
+</html>
