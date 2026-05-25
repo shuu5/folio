@@ -18,7 +18,7 @@
 #   → deny
 #
 # 環境変数:
-#   FOLIO_SPEC_PATH  既定 "scratch/specs/"
+#   FOLIO_SPEC_PATH  既定 "architecture/spec/"
 #
 # Phase 6 Step 2 review 反映:
 #   - R2-H1 regex word boundary (closing quote で limit)
@@ -62,4 +62,4 @@ folio_under_spec_path "$file_path" "$SPEC_PATH" && exit 0
 folio_deny \
   "folio path boundary check: spec files (folio-doc-type=spec) must be created under ${SPEC_PATH}" \
   "  file: ${file_path}" \
-  "  reference: scratch/decisions/ADR-0003-plugin-architecture.html §2.1 path boundary"
+  "  reference: architecture/decisions/ADR-0003-plugin-architecture.html §2.1 path boundary"

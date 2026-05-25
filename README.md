@@ -2,7 +2,7 @@
 
 A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy.
 
-**Status**: 試作段階 (Phase X2)。 すべての試作・調査・要望整理は [`scratch/`](./scratch/) で行う。 完成後 (Phase X3) に正式 location (`architecture/`) に移植予定。
+**Status**: Phase X4。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `verification/` HOW-test) へ物理移植済。 folio は自身の rules を self-host する。
 
 ## 2-Layer Architecture (at a glance)
 
@@ -16,17 +16,18 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 
 | file / dir | role |
 |---|---|
-| [`scratch/constitution.html`](./scratch/constitution.html) | folio の 12 不変原則 (編集禁止) |
-| [`scratch/`](./scratch/) | 試作・調査・実装試行の作業場所 |
+| [`architecture/spec/constitution.html`](./architecture/spec/constitution.html) | folio の 13 不変原則 (編集禁止) |
+| [`architecture/`](./architecture/) | design-intent 空間 (spec / decisions / research / assets、 self-host) |
+| [`verification/`](./verification/) | sandbox verification framework (scenarios / fixtures / golden / runner.sh) |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions |
-| [`.claude-plugin/`](./.claude-plugin/) | plugin harness placeholder (試作段階、 触らない) |
+| [`.claude-plugin/`](./.claude-plugin/) + [`hooks/`](./hooks/) | plugin harness (manifest + CLI + hook 宣言 / script) |
 
 ## Local preview (tailnet)
 
 `python3 -m http.server 8000` is served on `ipatho-server-2`:
 
-- <http://ipatho-server-2.taild4e917.ts.net:8000/scratch/constitution.html>
-- <http://ipatho-server-2.taild4e917.ts.net:8000/scratch/>
+- <http://ipatho-server-2.taild4e917.ts.net:8000/architecture/spec/constitution.html>
+- <http://ipatho-server-2.taild4e917.ts.net:8000/architecture/>
 
 (Reachable only from tailnet-joined devices.)
 

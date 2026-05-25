@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0015">
+<meta name="folio-adr-date" content="2026-05-23">
+<title>ADR-0015 — sandbox verification vs experiment-verified (twill 方式) の境界</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0015-sandbox-vs-experiment-verified.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0015 — sandbox verification vs experiment-verified の境界",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/plugin-sandbox-verification-research.html" },
+    { "@id": "../spec/verification.html" },
+    { "@id": "./ADR-0013-verification-framework.html" }
+  ],
+  "folio:depends-on": [
+    { "@id": "./ADR-0013-verification-framework.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0015 — sandbox verification vs experiment-verified (twill 方式) の境界</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-23 &middot; folio v0.4.2-draft</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0015</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-23</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>depends-on</dt><dd>ADR-0013-verification-framework</dd>
+    <dt>related</dt><dd>plugin-sandbox-verification-research.html §8, verification.html §1</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0013-verification-framework.html">ADR-0013</a> で sandbox verification framework を採用したが、 folio の predecessor である twill plugin は「<strong>experiment-verified</strong>」 概念 (情報単位 verified、 HOW level claim に label 付与、 4-state lifecycle: proposed / accepted / experiment-verified / archived) を採用している (twill memory hash a6d6b7c1 / 09550ec2)。 folio が twill 方式を採用するか、 別方式を採用するかを明文化する必要がある。</p>
+
+<p>user 確認 (2026-05-22): folio は constitution P-3 (WHAT-only) + P-11 (HOW 禁止) のため「情報単位 HOW」 の verified は spec に書けない。 「情報単位 experiment-verified」 は将来別 plugin として独立する予定で、 本 ADR-0013 framework は <strong>機能単位 (use case 単位)</strong> の sandbox 検証のみを対象とする。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-folio-scope">§2.1 folio framework = 機能単位 sandbox verification</h3>
+
+<p>folio の verification framework (ADR-0013) は <strong>plugin の機能 (use case) を sandbox で実機検証</strong>することのみを対象とする。 検証対象例: PreToolUse hook の caller marker check / PostToolUse hook の JSON-LD lint / SessionStart hook の inventory inject。</p>
+
+<h3 id="s2-2-out-of-scope">§2.2 情報単位 experiment-verified は scope 外</h3>
+
+<p>spec 内の各 claim (例: 「Claude Code hooks は 29 種」 「ajv は最速の JSON Schema validator」 等) の HOW level verified label 付与は本 framework の対象外。 将来別 plugin <strong><code>folio-claim-verifier</code></strong> (仮称) として独立する設計余地を保持する。</p>
+
+<h3 id="s2-3-comparison">§2.3 2 方式の境界表</h3>
+
+<table>
+  <thead><tr><th>軸</th><th>twill (情報単位)</th><th>folio (機能単位)</th></tr></thead>
+  <tbody>
+    <tr><td>検証対象</td><td>spec 内の各 claim (HOW level)</td><td>plugin の use case (機能単位)</td></tr>
+    <tr><td>検証 marker</td><td><code>experiment-verified</code> label を spec 内 inline</td><td>scenario YAML file (spec 本体外、 <code>scratch/verification/scenarios/</code>)</td></tr>
+    <tr><td>検証粒度</td><td>1 claim = 1 EXP (例: EXP-019〜031)</td><td>1 use case = 1 scenario (REQ 単位 with EARS)</td></tr>
+    <tr><td>spec 内容</td><td>情報単位 verified label を含む</td><td>WHAT-only (verified label なし、 cross-ref のみ)</td></tr>
+    <tr><td>constitution 整合</td><td>(twill 独自設計)</td><td>P-3 + P-11 + P-7 遵守</td></tr>
+    <tr><td>担当 plugin</td><td>twill plugin 本体</td><td>folio (機能単位) / <code>folio-claim-verifier</code> 仮称 (情報単位、 将来)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-4-rationale">§2.4 採用しない理由 (3 件)</h3>
+
+<ol>
+  <li><strong>P-3 WHAT-only 違反</strong>: 情報単位 verified label を spec 内に書くと、 spec が HOW を保持してしまう (どの EXP で verify したか、 verify したコマンド等)。 spec が「未来理想 anchor」 (P-1) でなくなる</li>
+  <li><strong>P-11 HOW 絶対禁止</strong>: experiment-verified の HOW (実行コマンド、 verify 結果のスニペット) は spec 本文に書けない (binding に隔離すべき内容)</li>
+  <li><strong>P-12 Layer 0 一体配布と矛盾</strong>: 情報単位 verified は spec を実装依存にする、 Layer 0 (folio rules) が「未来理想」 を提示する役割と整合しない</li>
+</ol>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li><strong>folio constitution 整合維持</strong>: P-3/P-7/P-11 違反なし</li>
+  <li><strong>spec の純粋性</strong>: 未来 anchor として読める、 実装依存しない</li>
+  <li><strong>分離設計の余地保持</strong>: 情報単位 verified が必要になっても別 plugin で対応可能</li>
+  <li><strong>twill 方式の利点も将来取り込み可能</strong>: 別 plugin として独立すれば twill 方式の有用性 (claim 単位 trace) を再現可能</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>spec 内の各 claim (例: research 引用) の verify status は本 framework では追跡不能</li>
+  <li>将来 <code>folio-claim-verifier</code> 開発時に二層 verification の認知負荷が発生</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>本 ADR は WHAT (境界の規範) のみ規定、 将来 <code>folio-claim-verifier</code> の具体設計は別 ADR で対応</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 A: twill 方式を全面採用 (情報単位 verified label を spec inline)</td><td>constitution P-3/P-11/P-12 と正面衝突、 user 明示で却下 (2026-05-22)</td></tr>
+    <tr><td>案 B: 機能単位 + 情報単位を folio core に両方統合</td><td>folio framework 肥大化、 試作段階の minimal scope と矛盾、 将来別 plugin に分離する方が clean</td></tr>
+    <tr><td>案 C: verified 概念自体を採用しない</td><td>research → spec への trace が薄くなる、 「未検証 claim を spec に書く」 リスク、 sandbox 検証 (機能単位) は P-3 違反しないので採用</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>本 ADR を生んだ調査: <a href="../research/plugin-sandbox-verification-research.html#s8-q9">plugin-sandbox-verification-research.html §8 (Q9 twill 境界明文化)</a></li>
+  <li>関連 constitution 原則: P-1 (未来 anchor、 spec の純粋性)、 P-3 (WHAT-only、 採用しない根拠)、 P-7 (Content domain exclusivity、 verification は別 dir)、 P-11 (HOW 禁止、 採用しない根拠)、 P-12 (Layer 0 一体配布、 情報単位 verified は別 plugin)</li>
+  <li>twill reference (採用しないが将来別 plugin の reference): twill plugin の experiment-verified 4-state lifecycle (proposed / accepted / experiment-verified / archived)、 EXP-NNN 番号体系、 bats / smoke test integration</li>
+  <li>関連 ADR: <a href="./ADR-0013-verification-framework.html">ADR-0013</a> (本 ADR の前提、 機能単位 sandbox verification framework)</li>
+  <li>後続 task (将来別 plugin): <code>folio-claim-verifier</code> (情報単位 verified、 Phase X4+ 候補) の設計 ADR 起票</li>
+</ul>
+</section>
+
+</body>
+</html>

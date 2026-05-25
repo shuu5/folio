@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — decisions/ (ADR cluster)</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>decisions/ — Architecture Decision Records</h1>
+  <div class="meta">v0.5.0-draft &middot; folio Layer 0 の ADR cluster</div>
+</header>
+
+<aside class="informative">
+<p>本 cluster は folio framework に関する architectural decision を記録する Architecture Decision Records (ADR) を保持する。 <a href="../spec/rules.html#s3-naming">rules.html §3 File Naming Convention</a> に従い、 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置する。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>decisions/ は <a href="../spec/constitution.html#p-7">constitution P-7 (Content domain exclusivity)</a> における「decision = why」 領域を担う (<a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a> で 3-domain 化、 changes/ 廃止):</p>
+<ul>
+  <li><strong>design intent</strong> (WHAT) = 構造・不変条件 (declarative design-intent 文書)</li>
+  <li><strong>decision</strong> (本 cluster、 WHY) = frozen ADR、 architectural decisions</li>
+  <li><strong>exploration</strong> = spec 反映前の探索</li>
+</ul>
+<p>更新提案は専用領域 (旧 changes/) を持たず、 ADR (why) + delta marker (trace) + version control review で表現する (P-7 / <a href="../spec/constitution.html#s6-amendment">§6</a>)。 実装 (HOW) とその verification は design-intent 空間の外 (<a href="../spec/constitution.html#s2-principles">P-13</a>)。</p>
+</section>
+
+<section id="s2-adr-status" class="informative">
+<h2>§2. ADR Status Lifecycle</h2>
+
+<table>
+  <thead><tr><th>status</th><th>意味</th></tr></thead>
+  <tbody>
+    <tr><td><code>proposed</code></td><td>draft 段階、 user 承認待ち</td></tr>
+    <tr><td><code>accepted</code></td><td>user 承認済、 適用済</td></tr>
+    <tr><td><code>deprecated</code></td><td>古い ADR、 後続 ADR で superseded された</td></tr>
+    <tr><td><code>superseded</code></td><td>明示的に新 ADR で置換された (<code>supersedes</code> 属性で trace)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3-adr-list" class="informative">
+<h2>§3. Current ADRs</h2>
+
+<table>
+  <thead><tr><th>ID</th><th>title</th><th>status</th><th>revision</th><th>date</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><a href="ADR-0001-architecture-rules-split.html">ADR-0001</a></td>
+      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
+      <td>accepted</td>
+      <td>v3</td>
+      <td>2026-05-22</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0002-scratch-layout.html">ADR-0002</a></td>
+      <td>folio repo を scratch 中心の試作層に整理</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-22</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0003-plugin-architecture.html">ADR-0003</a></td>
+      <td>folio plugin minimal architecture (1 skill + 4 hook + 6 script + 1 CLI)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-23</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a></td>
+      <td>JSON-LD lint mechanism (試作 Option B Light: jq 構造 check)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0006-caller-marker-hook.html">ADR-0006</a></td>
+      <td>caller marker hook (hybrid: env var OR marker file)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0007-context-injection.html">ADR-0007</a></td>
+      <td>context injection (SessionStart + PreCompact、 Beads-inspired)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0013-verification-framework.html">ADR-0013</a></td>
+      <td>sandbox verification framework (<code>scratch/verification/</code>)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-23</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a></td>
+      <td>sandbox verification vs experiment-verified (twill 方式) の境界</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-23</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0017-unit-integration-boundary.html">ADR-0017</a></td>
+      <td>verification の unit (sandbox) vs integration (e2e) 境界</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0018-cli-golden-harness.html">ADR-0018</a></td>
+      <td>CLI golden-diff verification harness (kind:cli-golden)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0019-path-boundary-pragmatic.html">ADR-0019</a></td>
+      <td>path boundary hook (Option Pragmatic: content-marker 検出)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0020-validate-scope.html">ADR-0020</a></td>
+      <td>folio validate 試作 scope (内部 link-integrity + jsonld structural)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a></td>
+      <td>constitution X4 amendment (脱-instance + 3-domain + P-13 新設)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0022-x4-0-canonical-layout.html">ADR-0022</a></td>
+      <td>X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-25</td>
+    </tr>
+    <tr>
+      <td><a href="ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a></td>
+      <td>X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-05-26</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>番号体系メモ</strong>: ADR-0004 (JSON-LD lint) / ADR-0006 (caller marker) / ADR-0019 (path boundary) は 2026-05-25 に <strong>retrospective 起票済</strong> (試作実装 + e2e 検証後、 §3 table 参照)。 ADR-0007 (context injection、 SessionStart + PreCompact) は 2026-05-25 に Track 2 着手の forward decision として user 承認・起票済 (§3 table)。 残る ADR-0005 / 0008〜0012 は <a href="../research/plugin-architecture-research.html#s8-adr-candidates">plugin-architecture-research §8</a> および <a href="../research/plugin-sandbox-verification-research.html#s9-q10">plugin-sandbox-verification-research §9</a> の起票候補として予約 (user 承認後起票)。 ADR-0014 (EARS REQ → scenario 導出) は <a href="../spec/verification.html#s3-ears">verification.html §3</a> で実質規範化されたため別 ADR 起票は見送り。 ADR-0018 (CLI golden-diff harness) は 2026-05-25 に Track 1 実装後 retrospective 起票済 (§3 table)。 ADR-0017 (verification の unit/integration 境界) も 2026-05-25 に Track 1/2 後 retrospective 起票済 (§3 table)。 ADR-0020 (folio validate 試作 scope = 内部 link-integrity + jsonld structural) は 2026-05-25 に Track 3 forward decision として user 承認・起票済 (§3 table)。 ADR-0021 (constitution X4 amendment = 脱-instance + 3-domain + P-13 新設) は 2026-05-25 に X4 先行タスクとして user 承認・起票済 (§3 table、 SemVer 0.5.0-draft)。 ADR-0022 (X4-0 canonical layout 確定 = architecture/spec/ flat self-host + verification sibling + Diátaxis/steering 除去 + fix 命名) は 2026-05-25 に ADR-0021 後の X4-0 layout 確定として user 承認 (AskUq F1/F3/F4)・起票済 (§3 table)。 ADR-0023 (X4-C scratch→architecture 物理 migration = canonical layout 実体化 + scratch 撤去) は 2026-05-26 に ADR-0022 後の物理移動の実行決定として user 承認 (AskUq Q1/Q2/Q3)・起票済 (§3 table、 実行は SPAWN + feature-dev)。 残る ADR-0016 (exit code 中心 assertion、 Gap 1 解消後) は SHOULD ランクで起票待ち。</p>
+</section>
+
+<section id="s4-naming" class="informative">
+<h2>§4. Naming Convention</h2>
+
+<p>ADR file 名は <code>ADR-NNNN-&lt;slug&gt;.html</code> 形式 (4 桁連番 + kebab-case slug)。 <a href="../spec/rules.html#s3-naming">rules.html §3 File Naming Convention</a> を参照。</p>
+</section>
+
+<section id="s5-amendment" class="informative">
+<h2>§5. ADR Creation Procedure</h2>
+
+<p><a href="../spec/constitution.html#s6-amendment">constitution §6 Amendment Procedure</a> に従う (<a href="ADR-0021-constitution-x4-amendment.html">ADR-0021</a> で changes/ + archive/ 廃止):</p>
+<ol>
+  <li>変更提案を proposal として起案 (review 用、 version control branch 上。 専用 changes/ dir は持たない)。</li>
+  <li>user 承認を取得 (P-10、 constitution 改訂の場合)。</li>
+  <li>ADR を Accepted status で本 cluster に作成。</li>
+  <li>design-intent 文書を編集し、 SemVer bump + delta marker を inline 追加。</li>
+  <li>version control の review (PR / diff) で trace を確定 (archive/ への移動は行わない — git 履歴が archive を兼ねる)。</li>
+</ol>
+
+<p><strong>例外</strong>: folio 初の ADR (ADR-0001) は bootstrap 段階で起票されたため proposal step を skip した折衷を採用。 後続 ADR は本手順を遵守する MUST。</p>
+</section>
+
+</body>
+</html>

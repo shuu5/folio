@@ -1,7 +1,0 @@
-folio validate — internal link-integrity + jsonld structural (ADR-0020)
-root: scratch
-files checked: 20 · relations checked: 87
-  [OK] internal link-integrity
-  [OK] jsonld structural
-
-clean: 0 violations

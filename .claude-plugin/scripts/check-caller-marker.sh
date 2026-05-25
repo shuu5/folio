@@ -11,7 +11,7 @@
 # 環境変数 (userConfig から injection 想定、 試作中は default):
 #   FOLIO_CALLER_MARKER_ENV   既定 "FOLIO_ARCHITECT_CONTEXT"
 #   FOLIO_CALLER_MARKER_VALUE 既定 "folio-architect"
-#   FOLIO_SPEC_PATH           既定 "scratch/specs/"
+#   FOLIO_SPEC_PATH           既定 "architecture/spec/"
 #   FOLIO_MARKER_FILE         既定 ".folio/architect-active" (hybrid marker file)
 #
 # marker は hybrid (env var OR file) で判定する (Stage 1):
@@ -83,4 +83,4 @@ folio_deny \
   "  marker file '${marker_file}': absent" \
   "  file: ${file_path}" \
   "  hint: invoke /folio-architect to set the marker (or set ${EXPECTED_VAR}=${EXPECTED_VAL})" \
-  "  reference: scratch/specs/rules.html §10.1 (REQ-CM-001~003)"
+  "  reference: architecture/spec/rules.html §10.1 (REQ-CM-001~003)"

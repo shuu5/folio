@@ -8,7 +8,7 @@
 # digest を stdout に流すだけでよい。 digest 生成・staleness auto-regen の実体は bin/folio prime 側
 # (HOW は CLI に集約、 hook は注入経路のみ。 P-11)。
 #
-# ※ folio prime は cwd=project root を前提に scratch/inventory.json を読む (不在/stale 時 auto-regen)。
+# ※ folio prime は cwd=project root を前提に repo-root inventory.json を読む (不在/stale 時 auto-regen)。
 #   Claude Code hook は project root を cwd として起動するため追加の cd は不要。
 # ※ SessionStart は matcher 省略で startup/resume/clear/compact 全 source 発火 (compact source が
 #   post-compaction 再注入を担う)。 SessionStart:startup 注入は e2e PASS (REQ-VER-009、 §3.6)。

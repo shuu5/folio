@@ -1,0 +1,38 @@
+schema_version: "0.1"
+req_id: "REQ-VER-013"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate が seeded fixtures に対し 3 種の違反を検出し exit 1 + report を出すことを実証する
+  (ADR-0020 §2.1 / REQ-VER-013、 validate-clean.yaml = clean 側の violation-detection 対):
+    - missing file ref : dc:references @id が実在しない file を指す (specs/missing-ref.html)
+    - broken anchor    : @id の #anchor が target file 内に存在しない (specs/broken-anchor.html)
+    - jsonld structural: @context が object でない (string) (specs/bad-jsonld.html)
+  検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation、
+  cli-golden harness は command[] のみ渡すため flag で override)。 conformance は golden baseline
+  との byte-exact diff で検証 (capture:stdout, compare:text、 REQ-VER-011)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
+command: ["validate", "--root", "verification/fixtures/validate-violations"]
+capture: "stdout"                                        # validate の report を stdout 捕捉
+compare: "text"                                          # plain text byte-exact 比較
+golden: "baselines/reference/validate-violations.golden.txt"  # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
+
+setup:
+  fixtures:
+    # 実体は verification/fixtures/validate-violations/spec/ に VCS 管理 (runner の
+    # cli-golden handler は setup を読まないが、 validate が --root 経由で実ディスクを検査する)。
+    # path-boundary hook を避けるため doc-type=fixture + Bash heredoc 作成 (Write tool 非経由)。
+    - "validate-violations/spec/target.html"        # clean target (broken-anchor の参照先 #s2-decision)
+    - "validate-violations/spec/missing-ref.html"   # missing file ref (./nonexistent.html)
+    - "validate-violations/spec/broken-anchor.html" # broken anchor (./target.html#s9-nonexistent)
+    - "validate-violations/spec/bad-jsonld.html"    # jsonld structural (@context が string)
+
+expect:
+  exit_code: 1                                           # violation 検出 (0=clean / 2=tool error)
+
+# === 実装メモ (Track 3 spawn = feature-dev) ===
+# validate-clean.yaml (exit 0) と対を成す violation-detection scenario。 fixtures は 4 file:
+# target (clean、 anchor 参照先) + 3 違反 file。 validate --root で fixtures root を検査し、
+# files checked: 4 / relations checked: 2 / violations 3 (両 gate FAIL) を report、 exit 1。
+# golden は spawn が generate → 人間 review → ./runner.sh --accept で commit。

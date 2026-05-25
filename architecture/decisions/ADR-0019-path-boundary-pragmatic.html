@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0019">
+<meta name="folio-adr-date" content="2026-05-25">
+<title>ADR-0019 — path boundary hook (Option Pragmatic: content-marker 検出)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0019-path-boundary-pragmatic.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0019 — path boundary hook (Option Pragmatic)",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0003-plugin-architecture.html#s2-1-scope" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0006-caller-marker-hook.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0019 — path boundary hook (Option Pragmatic: content-marker 検出)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; retrospective (実装 + e2e 検証済)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0019</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-25</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0003 §2.1, verification.html §3.6 REQ-VER-007, ADR-0006</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> は PreToolUse hook「path boundary」 を「spec dir 外への作成を block」 と WHAT level で列挙したが、 <strong>spec 作成の検出 mechanism (「spec が作られようとしている」 をどう判定するか)</strong> は未確定だった。 試作中、 検出方式の選択肢は full HTML/meta DOM parse から path heuristic only まで幅があり、 採用した「Option Pragmatic」 は <code>scenarios/path-boundary.yaml</code> / <a href="../spec/verification.html#s3-6-verification-specific">verification.html §3.6</a> / <a href="../spec/README.html#s6-3-adr-candidates">specs/README §6.3</a> で名称参照されるのみで、 正式な決定記録を欠いていた。</p>
+
+<p>本 ADR は「Option Pragmatic」 を正式に定義し、 <a href="./ADR-0006-caller-marker-hook.html">ADR-0006 (caller marker)</a> との防御責務分担を明文化する (retrospective、 実装 + e2e 検証後)。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-option-pragmatic">§2.1 Option Pragmatic = content-marker 検出</h3>
+
+<p><code>.claude-plugin/scripts/check-path-boundary.sh</code> を <strong>PreToolUse (Write) hook</strong> として実装し、 以下の条件を <strong>全て</strong>満たす時に deny する:</p>
+
+<ol>
+  <li>tool = Write (Edit は既存 file 修正のため対象外)</li>
+  <li>file_path が <code>.html</code></li>
+  <li>content に <code>folio-doc-type=spec</code> marker を含む (regex、 閉じ quote で word boundary、 属性順 agnostic、 single/double quote 両対応)</li>
+  <li>file_path が <code>FOLIO_SPEC_PATH</code> (既定 <code>scratch/specs/</code>) 配下でない</li>
+</ol>
+
+<h3 id="s2-2-word-boundary">§2.2 word boundary による false positive 回避</h3>
+
+<p>content marker 検出は閉じ quote で boundary を取り (<code>content="spec"</code> は match、 <code>content="spec-draft"</code> は match しない)、 属性順 (<code>name</code> 先 / <code>content</code> 先) と quote 種別 (single / double) の両方を許容する。</p>
+
+<h3 id="s2-3-defense-division">§2.3 caller marker との防御責務分担</h3>
+
+<p>path boundary は <a href="./ADR-0006-caller-marker-hook.html">caller marker (ADR-0006)</a> と直交する 2 gate を構成する:</p>
+<ul>
+  <li><strong>caller marker</strong>: spec_path <em>配下</em>の編集を gate (誰が編集してよいか)</li>
+  <li><strong>path boundary</strong>: spec_path <em>外</em>への spec 作成を block (spec がどこに作られてよいか)</li>
+</ul>
+<p>両者の組合せにより「spec は spec_path にのみ存在し、 architect のみが編集する」 を保証する。 path boundary は marker が set 済でも spec_path 外作成を捕捉する (e2e walk S-B2)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li><strong>純粋 grep で高速</strong>: DOM parse 不要、 content marker の正規表現検出のみ</li>
+  <li><strong>精度</strong>: path 推測でなく content marker 判定 → 非 spec の <code>.html</code> (research / cluster-readme) を誤検出しない</li>
+  <li><strong>直交 gate</strong>: marker set 済でも spec_path 外 spec 作成を捕捉 (caller marker と独立)</li>
+  <li><strong>実機検証済</strong>: sandbox <code>scenarios/path-boundary.yaml</code> 11/11 PASS (絶対 path lock-in 含む) + e2e walk S-B2 で live deny 確認</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>content marker 依存 (<code>folio-doc-type</code> meta を欠く spec は escape — ただし rules は meta を MUST 化済)</li>
+  <li>Write tool のみ (Edit 経由の spec relocation は unguarded)</li>
+  <li>single/double quote + 属性順の regex 保守コスト</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>厳密な meta/DOM parse 方式 (Option Strict) は完成形 upgrade path として残す</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 Strict: full meta/DOM parse で <code>folio-doc-type</code> 抽出</td><td>bash での HTML parse は脆弱 + overhead。 試作段階に過剰</td></tr>
+    <tr><td>案 Pragmatic (採用): content marker の grep 検出 + spec_path 配下判定</td><td>純粋 grep・高速・精度十分。 word boundary で false positive 回避</td></tr>
+    <tr><td>案 Path-only: path heuristic のみ (content check 無し)</td><td>非 spec の <code>.html</code> (research report / cluster-readme) を false positive で block</td></tr>
+    <tr><td>案 None: caller marker のみに依存</td><td>caller marker は spec_path <em>配下</em>の編集のみ gate。 spec_path <em>外</em>への spec 作成を阻止できない (防御の穴)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>実装: <code>.claude-plugin/scripts/check-path-boundary.sh</code> (PreToolUse Write hook)</li>
+  <li>enforce する REQ: <a href="../spec/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-007</a> (verification-specific、 path boundary)</li>
+  <li>WHAT 起点: <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> path boundary (本 ADR が「Option Pragmatic」 を正式定義)</li>
+  <li>検証: sandbox <a href="../../verification/scenarios/path-boundary.yaml">scenarios/path-boundary.yaml</a> (11/11 PASS、 絶対 path lock-in 含む) + e2e <a href="../../verification/e2e/runbook.md">runbook</a> S-B2</li>
+  <li>直交 gate: <a href="./ADR-0006-caller-marker-hook.html">ADR-0006 (caller marker)</a> と 2 axis 防御を構成</li>
+  <li>関連 constitution 原則: P-7 (Content domain exclusivity、 spec は spec_path に限局)、 P-11 (HOW 隔離)</li>
+  <li>番号: <a href="../spec/README.html#s6-3-adr-candidates">specs/README §6.3</a> で path boundary 用 ADR-0019 として予約済 (ADR-0004〜0012 予約枠外の新規候補)</li>
+</ul>
+</section>
+
+</body>
+</html>

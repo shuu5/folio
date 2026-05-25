@@ -1,6 +1,6 @@
 ---
 name: folio-architect
-description: folio spec edit の正規 author entry point。scratch/specs/ 配下の spec HTML を編集する前に必ず呼び出し、caller marker を set してから編集し、完了後に unset する。folio-self-spec.html §7.1 Phase E の最小実装。
+description: folio spec edit の正規 author entry point。architecture/spec/ 配下の spec HTML を編集する前に必ず呼び出し、caller marker を set してから編集し、完了後に unset する。folio-self-spec.html §7.1 Phase E の最小実装。
 disable-model-invocation: true
 ---
 
@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 folio spec edit の**唯一の正規 author entry point**（folio-self-spec.html §7.1 の 7-Phase PR Cycle Phase E に相当する最小実装）。
 
-`scratch/specs/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL 経由で **caller marker file を set** しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
+`architecture/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL 経由で **caller marker file を set** しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
 
 ## marker 機構（hybrid: env OR file）
 
@@ -26,11 +26,11 @@ env は実行中の hook に伝播しないため、**session 内での正規 sp
 mkdir -p .folio && touch .folio/architect-active
 ```
 
-これ以降、`scratch/specs/` 配下の Edit/Write が caller-marker hook で allow される。
+これ以降、`architecture/spec/` 配下の Edit/Write が caller-marker hook で allow される。
 
 ### Step 2: spec を編集
 
-通常の Edit / Write tool で `scratch/specs/` 配下の spec HTML を編集する。編集内容は本 SKILL 呼び出し時の指示（または進行中タスク）に従う。
+通常の Edit / Write tool で `architecture/spec/` 配下の spec HTML を編集する。編集内容は本 SKILL 呼び出し時の指示（または進行中タスク）に従う。
 
 - path-boundary / jsonld-lint hook は別途有効なので、新規 spec は spec_path 配下に置き、JSON-LD は object 形式 `@context` にすること。
 - README index に未掲載の新 spec は readme-index hook が notify する → cluster README の §2 inventory にも追記する。
@@ -51,7 +51,7 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 ```
 
 - [ ] Step 1 で marker を set したか
-- [ ] spec 編集が `scratch/specs/` 配下に収まっているか（spec_path 外は path-boundary が deny）
+- [ ] spec 編集が `architecture/spec/` 配下に収まっているか（spec_path 外は path-boundary が deny）
 - [ ] Step 3 で marker を削除したか
 
 ## stale marker の cleanup

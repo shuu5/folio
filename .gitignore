@@ -8,8 +8,8 @@
 .tmp/
 
 # folio inventory CLI の生成物 (REQ-VER-010、 generatedAt を含む作業用 output)。
-# 検証の golden は scratch/verification/baselines/reference/ に track する。
-scratch/inventory.json
+# 検証の golden は verification/baselines/reference/ に track する。
+inventory.json
 
 # Claude Code session externalization (cc-session ready-compaction = .claude-session/)
 .claude-session/

@@ -11,8 +11,8 @@
     "spec_path": {
       "type": "string",
       "title": "Spec Path",
-      "default": "scratch/specs/",
-      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live. 完成形では architecture/spec/、 Phase X3 試作中は scratch/specs/。"
+      "default": "architecture/spec/",
+      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live. canonical default = architecture/spec/ (folio self-host、 X4-C で scratch/ から物理移植済、 ADR-0023)。"
     },
     "caller_marker_env": {
       "type": "string",

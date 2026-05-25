@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0020">
+<meta name="folio-adr-date" content="2026-05-25">
+<title>ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0020-validate-scope.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/rules.html#s10-2" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0004-jsonld-lint-mechanism.html" },
+    { "@id": "./ADR-0018-cli-golden-harness.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; forward (Track 3、 user 承認済、 実装は spawn)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0020</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-25</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>rules.html §10.2 REQ-CI-010/016, verification.html §3.6 REQ-VER-013, ADR-0003 §2.1 (validate 宣言), ADR-0004 (jsonld 機構), ADR-0018 (cli-golden)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0003-plugin-architecture.html">ADR-0003 §2.1</a> は <code>folio</code> CLI に <code>validate</code> subcommand を、 CI script に <code>link-integrity</code> を列挙したが、 いずれも未実装で <code>bin/folio</code> help に「実装予定」 と宣言されているのみ。 spec 上は <a href="../spec/rules.html#s10-2">rules.html §10.2</a> が CI 7 gate (REQ-CI-010〜016) を規範化済だが、 <strong>runtime で enforce するのは per-file の 4 hook のみ</strong>で、 spec 群を横断検証する batch validator が存在しない。</p>
+
+<p>Track 1 (<code>folio inventory</code>) で spec の <code>&lt;head&gt;</code> JSON-LD を scan し <code>@id</code> を scratch 相対 path へ解決する機構 (<code>folio_resolve_relpath</code> / <code>folio_build_relations</code>) を実装済。 Track 2 で <a href="./ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> の jsonld 構造 check が per-file hook (<code>check-jsonld-lint.sh</code>) として稼働中。 <strong>これらを横断 batch に再利用すれば validate が低コストで実装できる</strong>段階に達した。 確定すべきは: <strong>validate が試作段階でどの gate を担うか (scope)</strong> と <strong>その tool / 検証方式</strong>。</p>
+
+<p>前 session で feature-dev が手動発見した broken cross-ref (relations.html §4.4 の <code>inventory-regen.yaml</code> → 実在しない、 commit adf662a) のような<strong>内部 link 切れを機械検出</strong>する価値が、 本 ADR の動機である。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-scope">§2.1 試作 scope = 内部 link-integrity + jsonld structural の 2 gate</h3>
+
+<p><code>folio validate</code> は inventory と同じ spec 集合 (<code>scratch/{specs,decisions,research}</code> の <code>&lt;head&gt;</code> JSON-LD を持つ <code>.html</code>) を横断し、 <strong>bash + jq で決定的に検査できる 2 gate</strong>を試作実装する:</p>
+
+<ol>
+  <li><strong>internal link-integrity</strong> (<a href="../spec/rules.html#s10-2">REQ-CI-010</a> の (b) anchor fragment + (c) 内部 fs reference): 各 spec の JSON-LD relation (<code>dc:references</code> 等の <code>@id</code>) を <code>folio_resolve_relpath</code> で解決し、 (i) target file が存在するか、 (ii) <code>#anchor</code> 付きなら target file 内に当該 <code>id</code> が存在するか を検証する。</li>
+  <li><strong>jsonld structural</strong> (<a href="../spec/rules.html#s10-2">REQ-CI-016</a> partial = <a href="./ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> Option B Light): 各 spec の JSON-LD block を parse + 必須 key (<code>@context</code> / <code>@id</code> / <code>@type</code>) + <code>@context</code> == object を検証する (<code>check-jsonld-lint.sh</code> と同一規範)。</li>
+</ol>
+
+<h3 id="s2-2-defer">§2.2 試作で defer する gate (Phase X4+)</h3>
+
+<table>
+  <thead><tr><th>defer 対象</th><th>理由</th><th>解消 timing</th></tr></thead>
+  <tbody>
+    <tr><td>external URL check (<a href="../spec/rules.html#s10-2">REQ-CI-010</a> の (a))</td><td>network 依存で非決定的・CI 限定。 lychee 等の外部 tool が適 (bash+jq で完結しない)</td><td>Phase X4+ <code>link-integrity</code> CI script (validate とは別 component)</td></tr>
+    <tr><td>prose gate (what-only / vocabulary / declarative / EARS coverage / delta marker、 REQ-CI-011〜015)</td><td>HTML prose の semantic 解析要、 試作の bash+jq では tractable でない</td><td>Phase X4+ (完成形 validate に段階追加)</td></tr>
+  </tbody>
+</table>
+
+<p>これにより <a href="../spec/README.html#s6-2-phase-x3-deferred">specs/README §6.2</a> の「link-integrity = Phase X4+」 は <strong>external 部分に narrowing</strong> される: 内部 link-integrity (anchor + fs ref) は本 Track 3 で前倒し実装、 external URL は X4+ 維持。</p>
+
+<h3 id="s2-3-interface">§2.3 interface / 出力 / exit code</h3>
+
+<p><code>folio validate</code> は inventory/prime と同じく cwd = repo root で動作し、 既定で <code>scratch/</code> の spec 集合を検査する。 <strong>test isolation のため検査 root の override を MUST 提供</strong>する (具体 flag / env は HOW = <a href="../spec/folio-self-spec.html#s9-bindings">folio-self-spec §9 Bindings</a> / 実装で確定、 fixtures を汚染なく検査するため)。 出力は human-readable な violation report を stdout、 exit code は <strong>0 = clean / 1 = violation 検出 (REQ-CI 「fail = merge block」 に対応) / 2 = tool error (jq 不在等、 fail-closed)</strong>。</p>
+
+<h3 id="s2-4-reuse">§2.4 plugin-lib batch 再利用 (DRY)</h3>
+
+<p><code>check-jsonld-lint.sh</code> の構造 check ロジックを <code>plugin-lib.sh</code> の関数へ抽出し、 <strong>per-file hook (payload の content に対し) と batch validate (file の抽出 block に対し) が同一関数を共用</strong>する (behavior-preserving、 sandbox 維持)。 internal link-integrity は <code>bin/folio</code> の既存 <code>folio_extract_head_jsonld</code> / <code>folio_build_relations</code> / <code>folio_resolve_relpath</code> を再利用する。 検証は <a href="./ADR-0018-cli-golden-harness.html">ADR-0018 cli-golden</a> harness (clean 集合 → exit 0、 broken fixture → exit 1 + report、 golden-diff)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li><strong>内部 link 切れ・jsonld 構造違反を横断検出</strong>: per-file hook が新規 Write しか見ないのに対し、 validate は全 spec を一括検査 (broken cross-ref を merge 前に捕捉)</li>
+  <li><strong>低コスト実装</strong>: inventory の @id 解決 + jsonld hook の構造 check を再利用、 新規依存ゼロ (bash+jq)</li>
+  <li><strong>DRY 改善</strong>: jsonld 構造 check が hook と validate で 1 箇所に集約 (plugin-lib.sh)</li>
+  <li><strong>CI gate の足場</strong>: REQ-CI-010 (内部) + REQ-CI-016 が CLI で実行可能に = 完成形 CI pipeline (folio-self-spec §7.5) の漸進実装</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>external URL / prose gate を含まないため REQ-CI 7 gate の完全実装ではない (§2.2 で defer 明示、 README §6.2 trace)</li>
+  <li>internal link-integrity は JSON-LD relation (<code>@id</code>) を一次対象とする。 prose 中の <code>&lt;a href&gt;</code> 全網羅は完成形で拡張 (試作は機械可読な relation を優先)</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>jsonld structural は ADR-0004 と同じ Option B Light (構造のみ、 semantic は ajv+pyld の完成形へ)。 validate は同 Light 規範を batch に適用するだけで新規判断を増やさない</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 A (採用): 内部 link-integrity + jsonld structural の 2 gate、 bash/jq、 既存機構再利用、 cli-golden 検証</td><td>決定的・低コスト・高価値 (broken cross-ref 検出)、 inventory/hook の再利用度が最大</td></tr>
+    <tr><td>案 B: REQ-CI 7 gate を試作で全実装</td><td>prose gate (what-only/vocabulary 等) は semantic 解析要で bash+jq では tractable でない。 試作 scope 過大</td></tr>
+    <tr><td>案 C: external URL check も今含める (lychee)</td><td>network 依存で非決定的、 cli-golden の byte-exact と相性悪。 外部 tool 依存追加。 X4+ CI script が適所</td></tr>
+    <tr><td>案 D: jsonld を ajv (JSON Schema) で完成形検証</td><td>ADR-0004 が試作は Option B Light と決定済。 validate も同 Light を踏襲 (段階的成長)</td></tr>
+    <tr><td>案 E: batch validator を作らず per-file hook のみ</td><td>hook は新規 Write しか見ず、 既存 spec 群の横断 regression (link 切れ) を捕捉できない。 batch が必要</td></tr>
+    <tr><td>案 F: ADR 化せず REQ-CI-010/016 の純粋実装扱い</td><td>scope narrowing (内部のみ) + tool 選択 (bash/jq vs lychee/ajv) は ADR-0004/0018 と同型の mechanism decision。 trace 価値があり user 承認で起票 (2026-05-25)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>WHAT 起点: <a href="./ADR-0003-plugin-architecture.html">ADR-0003 §2.1</a> (<code>validate</code> subcommand + <code>link-integrity</code> CI script を宣言) — 本 ADR が試作 scope / tool / 検証方式を確定</li>
+  <li>enforce する REQ: <a href="../spec/rules.html#s10-2">rules.html §10.2 REQ-CI-010</a> (link-integrity、 内部 (b)+(c) のみ) + <a href="../spec/rules.html#s10-2">REQ-CI-016</a> (json-ld-validation) + <a href="../spec/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-013</a> (validate 挙動の検証 REQ、 本 ADR と同 commit で追加)</li>
+  <li>再利用元: <code>bin/folio</code> の <code>folio_resolve_relpath</code> / <code>folio_build_relations</code> / <code>folio_extract_head_jsonld</code> (Track 1) + <code>check-jsonld-lint.sh</code> 構造 check (<a href="./ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a>、 plugin-lib.sh へ抽出予定)</li>
+  <li>検証方式: <a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a> cli-golden harness (clean → exit 0 / broken fixture → exit 1 + report)</li>
+  <li>実装: Track 3 spawn (<code>bin/folio</code> validate subcommand + plugin-lib.sh jsonld 抽出 + scenarios/fixtures)。 forward decision (user 承認 2026-05-25、 実装は spawn の feature-dev)</li>
+  <li>defer trace: external URL = Phase X4+ <code>link-integrity</code> CI script、 prose gate = X4+。 <a href="../spec/README.html#s6-2-phase-x3-deferred">specs/README §6.2</a> の「link-integrity Phase X4+」 を internal(Track 3)/external(X4+) に narrowing</li>
+  <li>関連 constitution 原則: P-3 (WHAT-only、 本 ADR は scope/tool の why)、 P-6 (link integrity = validate の核心 gate)、 P-11 (HOW 隔離、 validate 実装は <code>.claude-plugin/bin/</code> + scripts/)</li>
+</ul>
+</section>
+
+</body>
+</html>

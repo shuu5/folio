@@ -1,0 +1,171 @@
+schema_version: "0.1"
+req_id: "REQ-VER-007"
+ears_pattern: "unwanted"
+description: |
+  Primary: ADR-0003 §2.1 path boundary — spec dir 外への spec file 作成を block。
+  試作 minimum (Option Pragmatic): Write tool + `.html` + content marker
+  `<meta name="folio-doc-type" content="spec">` (single quote 版含む) の同時条件で判定。
+  spec_path 外なら deny。
+
+  REQ-VER-007 は本 scenario 用の verification-specific REQ (verification.html §3 REQ-VER-002 の
+  「verification-specific REQ-VER-* defined in this §3」 条項に従う、 試作で導入)。
+  verification.html §3 への REQ-VER-007 正式追加 + given.content schema 拡張は
+  Phase X3 後段で spec 編集 commit にて対応予定。
+  Reference: ADR-0003 §2.1, verification.html §3 REQ-VER-002 + REQ-VER-003.
+
+setup:
+  env: {}
+  fixtures: []
+
+scenarios:
+  - name: "spec を spec_path 配下に作成 → allow"
+    given:
+      env: {}
+      file_path: "architecture/spec/new-feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "spec を spec_path 外 (architecture/random/) で作成 → deny"
+    given:
+      env: {}
+      file_path: "architecture/random/new-feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
+  - name: "cluster-readme (.html, spec ではない) を spec_path 外で作成 → allow"
+    given:
+      env: {}
+      file_path: "verification/README.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="cluster-readme">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "ADR (.html, doc-type=adr) を spec_path 外で作成 → allow"
+    given:
+      env: {}
+      file_path: "architecture/decisions/ADR-9999-test.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="adr">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "Edit tool は対象外 → allow (たとえ spec を spec_path 外で編集しても)"
+    given:
+      env: {}
+      file_path: "architecture/random/spec.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "非 .html を spec_path 外で作成 → allow"
+    given:
+      env: {}
+      file_path: "architecture/random/notes.md"
+      content: "some markdown"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "属性順序 reverse (content 先 → name 後) でも検出"
+    given:
+      env: {}
+      file_path: "architecture/random/spec.html"
+      content: |
+        <html><head>
+        <meta content="spec" name="folio-doc-type">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
+  - name: "single quote 属性 content='spec' でも検出 (R2-M3 fix)"
+    given:
+      env: {}
+      file_path: "architecture/random/spec.html"
+      content: |
+        <html><head>
+        <meta name='folio-doc-type' content='spec'>
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
+  - name: "content='spec-draft' (prefix 一致) は spec ではない → allow (R2-H1 fix)"
+    given:
+      env: {}
+      file_path: "architecture/random/draft.html"
+      content: |
+        <html><head>
+        <meta name="folio-doc-type" content="spec-draft">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "絶対 path で spec_path 配下に spec 作成 → allow (folio_under_spec_path 第2 branch lock-in)"
+    # 第2 branch *"/$2"* を削除すると絶対 path が spec_path 配下と認識されず、
+    # 正当な spec を誤 deny する回帰。 Claude Code は file_path を絶対化する (v2.1.84~) ため
+    # 実機ではこれが常態。 expect=0 が第2 branch を lock-in。
+    given:
+      env: {}
+      file_path: "/home/user/folio/architecture/spec/abs-spec.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "絶対 path で spec_path 外に spec 作成 → deny (実機の絶対 path 入力で gate 動作)"
+    given:
+      env: {}
+      file_path: "/home/user/folio/architecture/random/abs-spec.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head>
+        <meta name="folio-doc-type" content="spec">
+        </head></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio path boundary check"
+
+teardown:
+  cleanup_files: []

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.4.2-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0017">
+<meta name="folio-adr-date" content="2026-05-25">
+<title>ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0017-unit-integration-boundary.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界",
+  "folio:version": "0.4.2-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/verification.html#s5-2-pending-adrs" },
+    { "@id": "../spec/verification.html#s3-3-assertion" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0013-verification-framework.html" },
+    { "@id": "./ADR-0018-cli-golden-harness.html" },
+    { "@id": "./ADR-0007-context-injection.html" },
+    { "@id": "./ADR-0015-sandbox-vs-experiment-verified.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0017</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-25</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>verification.html §5.2 (本 ADR 起票枠), §3.3 REQ-VER-003, §3.6 REQ-VER-009/012, ADR-0013, ADR-0018, ADR-0007, ADR-0015</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0013-verification-framework.html">ADR-0013</a> は sandbox verification framework (<code>scratch/verification/</code>) の<strong>存在</strong>を決定したが、 framework 内部に 2 種の検証 method が育った後も<strong>両者の境界は明文化されていなかった</strong>:</p>
+
+<ul>
+  <li><strong>sandbox 単体テスト</strong> (<a href="../../verification/scenarios/">scenarios/</a> + <code>runner.sh</code>): hook script 単体を mock JSON payload で発火 (<code>echo | bash</code>、 <a href="../spec/verification.html#s3-3-assertion">REQ-VER-003</a> = exit code 中心)、 または CLI subcommand 単体を golden-diff (<a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a> kind:cli-golden)。 <strong>plugin load 非依存</strong>・決定的・CI 可能。</li>
+  <li><strong>e2e 統合テスト</strong> (<a href="../../verification/e2e/">e2e/</a> + <a href="../../verification/e2e/runbook.md">runbook.md</a>): live load 済 plugin を<strong>ひとまとまりの道具</strong>として実 Edit/Write tool 操作 + fresh session 起動で発火させる (<a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-009</a>)。 一次 assertion は file 作成有無。</li>
+</ul>
+
+<p>Track 1 (cli-golden、 ADR-0018) と Track 2 (<a href="./ADR-0007-context-injection.html">ADR-0007</a> context injection の e2e S-F) でこの 2 method が両方とも実体を持ったため、 <a href="../spec/verification.html#s5-2-pending-adrs">verification.html §5.2</a> が「Phase X3 Step 1 完了後」 に予約していた本 ADR (<strong>hook unit test vs integration test 境界</strong>) を起票確定する時期に達した。 確定すべきは: <strong>どの failure class をどちらの層が所有するか</strong>、 <strong>各層の assertion model</strong>、 <strong>integration 層でしか検証できない behavior の判定規則</strong>。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-two-layer">§2.1 二層モデルを採用する</h3>
+
+<p>folio の verification は <strong>unit 層 (sandbox)</strong> と <strong>integration 層 (e2e)</strong> の 2 層で構成する。 両者は包含関係になく、 <strong>所有する failure class が異なる</strong> 相補的な層である。</p>
+
+<table>
+  <thead><tr><th>軸</th><th>unit 層 (sandbox)</th><th>integration 層 (e2e)</th></tr></thead>
+  <tbody>
+    <tr><td>location</td><td><code>verification/scenarios/</code> + <code>runner.sh</code></td><td><code>verification/e2e/</code> + <code>runbook.md</code></td></tr>
+    <tr><td>検証対象</td><td>hook script 単体 / CLI subcommand 単体 (隔離)</td><td>live load 済 plugin 全体 (hook chain + marker + SKILL + SessionStart)</td></tr>
+    <tr><td>発火</td><td>mock payload <code>echo | bash</code> (kind:hook) / <code>bin/folio</code> 直接実行 (kind:cli-golden)</td><td>実 Edit/Write tool 操作 + fresh session 起動 (agent-driven)</td></tr>
+    <tr><td>assertion</td><td>exit code + stderr_contains (<a href="../spec/verification.html#s3-3-assertion">REQ-VER-003</a>) / byte-exact golden-diff (<a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a>)</td><td>file 作成有無 (deny→不在 / notify→存在、 <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-009</a>) + fresh session の context 観察 (S-F)</td></tr>
+    <tr><td>実行者 / 決定性</td><td><code>runner.sh</code> (自動・決定的・<strong>CI 可能</strong>・plugin load 非依存)</td><td>agent が runbook を walk (<strong>live plugin load 必須</strong>・CI 不可)</td></tr>
+    <tr><td>所有 failure class</td><td>hook / CLI の<strong>ロジック正当性</strong> (component 単位)</td><td>plugin packaging・hook 登録・hook 間相互作用・Claude Code 統合点 (deny bug 可視性・SessionStart source 発火・stdout→context 注入)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2-default-unit">§2.2 unit 層が既定 (default to unit)</h3>
+
+<p>ある behavior が <strong>単一 script への mock payload</strong> または <strong>単一 CLI command の隔離実行</strong>で exercise できるなら、 その behavior は unit 層で検証する MUST。 unit 層は決定的・高速・CI 可能であり、 regression を component 単位で pinpoint できる。 integration 層は unit で代替できない場合の<strong>例外</strong>として用いる (e2e は実 session / 実 tool / agent walk が必要でコスト大)。</p>
+
+<h3 id="s2-3-integration-only">§2.3 integration 層でしか検証できない behavior (integration-only)</h3>
+
+<p>以下は mock が再現できない <strong>live Claude Code runtime 依存</strong>であり、 unit 層に移せない。 これらは integration 層 (e2e) で検証する MUST:</p>
+
+<ol>
+  <li><strong>実 tool 発火</strong>: hook が実際の Edit/Write tool 呼び出しで発火するか (mock payload は「script が動く」 ことしか示さない)。 加えて PreToolUse deny の可視性問題 (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a> / Issue #39344) のため一次 assertion を file 作成有無に置く。</li>
+  <li><strong>hook 間相互作用</strong>: 複数 hook (caller-marker + path-boundary 等) の実行順序・1 つが deny した時の他 hook 挙動。</li>
+  <li><strong>SessionStart source 発火 + stdout→context 注入</strong>: SessionStart が startup / compact 等の source で実際に発火し、 その stdout が agent context に注入されるか。 これは Claude Code の SessionStart 機構そのものに依存する。</li>
+  <li><strong>plugin packaging / 登録</strong>: <code>~/.claude/plugins/&lt;name&gt;</code> symlink + cld auto discovery 経由で plugin が load され hook が登録されるか。</li>
+</ol>
+
+<h3 id="s2-4-canonical-example">§2.4 規範例 — context injection (unit-testable な半分と integration-only な半分)</h3>
+
+<p>同一機能が <strong>unit 層と integration 層に分割される</strong> ことを最も明瞭に示すのが <a href="./ADR-0007-context-injection.html">ADR-0007</a> の context injection である。 この境界規則の canonical example として保持する:</p>
+
+<ul>
+  <li><strong>digest 内容 (unit)</strong>: <code>folio prime</code> が出力する Tier 1 digest text は <code>kind:cli-golden</code> + capture:stdout で golden-diff 検証する (<a href="../../verification/scenarios/prime-digest.yaml">prime-digest.yaml</a>、 <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-012</a>)。 決定的・CI 可能。</li>
+  <li><strong>注入そのもの (integration-only)</strong>: SessionStart hook が実際に発火し stdout が context に届くかは §2.3-(3) の通り live runtime 依存で unit 化不能。 e2e で 2 source を実証: <strong>startup source</strong> = fresh spawn 観察で PASS (runbook S-F)、 <strong>compact source</strong> = 2026-05-25 の実 compaction で SessionStart:compact が Tier 1 digest を注入することを実観察 PASS (<a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations-sessionstart.json</a>)。</li>
+</ul>
+
+<p>inject-inventory.sh に mock payload を流せば「script が動く」 ことは unit で言えるが、 「Claude Code が stdout を context に注入する」 ことは言えない — これが本 ADR の境界そのものである。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<h3>Positive</h3>
+<ul>
+  <li><strong>検証層の責務が明確</strong>: 新 hook / CLI は既定で unit、 §2.3 該当時のみ e2e を追加 — どちらを書くべきか迷わない</li>
+  <li><strong>CI 健全性の基準が固定</strong>: unit 層 (sandbox + cli-golden) は plugin load 非依存で常時 green を保てる (現 6 scenario)。 e2e は live session でのみ意味を持つ補完</li>
+  <li><strong>integration failure を取り逃さない</strong>: deny 可視性・SessionStart 注入・hook 間相互作用は unit では原理的に検出不能 → e2e で網羅する設計が明文化された</li>
+  <li><strong>context injection 機能の完全検証</strong>: unit (digest golden) + e2e (startup + compact 両 source) で機能の両半分を被覆。 folio signature 機能がライブ実証済</li>
+</ul>
+
+<h3>Negative</h3>
+<ul>
+  <li>e2e は CI 不可・agent walk 必須でコストが高い → §2.2 で「unit 既定・e2e 例外」 を MUST 化して濫用を防ぐ</li>
+  <li>e2e の compact source 観察は実 compaction trigger が要る (再現に手間)。 一度の実証で docs-canonical を補強する運用</li>
+</ul>
+
+<h3>Neutral</h3>
+<ul>
+  <li>本 ADR は folio <strong>内部</strong>の unit/integration 境界。 folio-sandbox 全体 vs twill experiment-verified の<strong>外部</strong>境界は <a href="./ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a> が担う (直交)</li>
+  <li>完成形では e2e の一部を Claude Code SDK / headless harness で半自動化する余地 (現試作は agent-driven runbook)</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+
+<table>
+  <thead><tr><th>案</th><th>採用しなかった理由</th></tr></thead>
+  <tbody>
+    <tr><td>案 A (採用): 二層モデル (unit=sandbox / integration=e2e) + 境界規則 (unit 既定、 §2.3 該当のみ e2e)</td><td>所有 failure class が相補的で包含関係なし。 unit の CI 決定性と e2e の統合被覆を両立、 判定規則が明確</td></tr>
+    <tr><td>案 B: unit 層のみ (sandbox + cli-golden、 e2e 廃止)</td><td>deny 可視性 (research §2.6)・SessionStart 注入・hook 間相互作用が原理的に検出不能。 framework を生んだ動機 (実機統合の不確実性) を defeat</td></tr>
+    <tr><td>案 C: e2e 層のみ (agent eyeball で全検証)</td><td>CI 不可・非決定的・低速、 component 単位の regression pinpoint 不能。 <a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a> が既に golden-diff の決定性を選択済</td></tr>
+    <tr><td>案 D: ADR-0013 に統合 (別 ADR 化しない)</td><td>ADR-0013 は framework の<em>存在</em>決定。 unit/integration 境界 + 層別 assertion model は Track 1/2 で実体化した別の決定であり、 §5.2 が ADR-0017 枠を予約済</td></tr>
+    <tr><td>案 E: kind:hook と kind:cli-golden を別「層」 と扱う</td><td>両者は共に unit 層 (隔離 component 検証)。 本質的な軸は assertion 方式でなく unit-vs-integration (live runtime 依存か否か)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li>unit 層実装: <a href="../../verification/scenarios/">scenarios/</a> (kind:hook 4 + kind:cli-golden 2) + <code>runner.sh</code> (commit c65a2de で cli-golden 拡張)</li>
+  <li>integration 層実装: <a href="../../verification/e2e/">e2e/</a> (runbook S-A〜S-F) + golden <a href="../../verification/e2e/baselines/reference/">baselines/reference/</a></li>
+  <li>enforce する REQ: <a href="../spec/verification.html#s3-3-assertion">REQ-VER-003</a> (unit = exit code 中心) + <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-009</a> (integration = e2e、 file 作成有無) + <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-012</a> (prime digest = unit golden、 注入 = integration)</li>
+  <li>canonical example のライブ証跡: <a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations-sessionstart.json</a> (S-F startup PASS + compact-source PASS、 2026-05-25)。 <a href="./ADR-0007-context-injection.html">ADR-0007</a> §2.1/§3/§4 を compact-source の docs-canonical → e2e-verified に同 commit で格上げ</li>
+  <li>関連 ADR: <a href="./ADR-0013-verification-framework.html">ADR-0013</a> (framework 存在)、 <a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a> (unit の CLI 拡張)、 <a href="./ADR-0007-context-injection.html">ADR-0007</a> (canonical example の機能)、 <a href="./ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a> (外部境界、 直交)</li>
+  <li>関連 constitution 原則: P-3 (WHAT-only、 本 ADR は検証層設計の why)、 P-11 (HOW 隔離、 runner / e2e は scratch/verification/)</li>
+  <li>本 ADR は <a href="../spec/verification.html#s5-2-pending-adrs">verification.html §5.2</a> の「ADR-0017 hook unit test vs integration test 境界」 (Phase X3 Step 1 完了後) を起票確定する (retrospective、 Track 1/2 で 2 層が実体化した後)</li>
+</ul>
+</section>
+
+</body>
+</html>

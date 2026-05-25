@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="active">
+<title>folio — architecture/spec/ (framework spec index)</title>
+<link rel="stylesheet" href="../../common.css">
+<script src="../assets/mermaid.min.js" defer></script>
+<style>
+figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
+figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
+pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
+pre.mermaid[data-processed="true"] { visibility: visible; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio framework spec index",
+  "folio:version": "0.5.0-draft",
+  "dc:hasPart": [
+    { "@id": "./rules.html" },
+    { "@id": "./folio-self-spec.html" },
+    { "@id": "./relations.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>architecture/spec/ — folio framework spec index</h1>
+  <div class="meta">v0.5.0-draft &middot; ブラッシュアップ対象の folio framework spec を集約 (constitution は spec graph scan 対象外の特別枠)</div>
+</header>
+
+<aside class="informative">
+<p>本 dir (<code>architecture/spec/</code>) は folio framework の design-intent spec を集約する (constitution + rules + folio-self-spec + relations + verification)。 spec は draft 状態でブラッシュアップ対象、 constitution は不変資産 (scan 対象外)。 X4-C で <code>scratch/</code> から canonical layout へ物理移植済 (<a href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)。</p>
+</aside>
+
+<!-- ====================================================================
+     §1 Purpose
+     ==================================================================== -->
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>本 README は <strong>spec/ cluster の index</strong>。 cluster 内 spec file 同士の関係を一望し、 reader (人間 / AI agent) のナビゲーションを支える。 repo-root <code>inventory.json</code> は <code>folio inventory</code> CLI で auto-generate される (<a href="relations.html#s4-inventory">relations.html §4</a>)、 本 README はその人手版 Tier 1 navigation index を兼ねる。</p>
+
+<p>constitution (不変資産、 spec graph scan 対象外の特別枠) は本 cluster の index 対象外。 編集禁止、 cross-ref のみ。</p>
+</section>
+
+<!-- ====================================================================
+     §2 File Inventory
+     ==================================================================== -->
+<section id="s2-inventory" class="informative">
+<h2>§2. File Inventory</h2>
+
+<table>
+  <caption>spec/ cluster の file 一覧 (現在 4 file)</caption>
+  <thead>
+    <tr><th>file</th><th>role</th><th>status</th><th>depends-on</th><th>extends</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="rules.html"><code>rules.html</code></a></td>
+      <td>Layer 1 consumer 向け universal rules (markup / naming / EARS / Mandatory Actions)</td>
+      <td>draft (v0.5.0)</td>
+      <td><a href="./constitution.html"><code>./constitution.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><a href="folio-self-spec.html"><code>folio-self-spec.html</code></a></td>
+      <td>folio Layer 0 framework 自身の architecture spec (provisional)</td>
+      <td>draft (v0.5.0)</td>
+      <td><a href="./constitution.html"><code>./constitution.html</code></a></td>
+      <td><a href="rules.html"><code>rules.html</code></a> (§10 cross-ref)</td>
+    </tr>
+    <tr>
+      <td><a href="relations.html"><code>relations.html</code></a></td>
+      <td>spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory schema)</td>
+      <td>draft (v0.5.0)</td>
+      <td><a href="rules.html"><code>rules.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><a href="verification.html"><code>verification.html</code></a></td>
+      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 REQ-VER-001〜008)</td>
+      <td>draft (v0.1.0)</td>
+      <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><code>README.html</code> (本 file)</td>
+      <td>spec/ cluster index (本 cluster の navigation)</td>
+      <td>active (v0.5.0)</td>
+      <td>—</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ====================================================================
+     §3 Dependency Graph
+     ==================================================================== -->
+<section id="s3-graph" class="informative">
+<h2>§3. Dependency Graph</h2>
+
+<figure class="diagram">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'flowchart': {'curve': 'basis'}}}%%
+graph TD
+  CONST["constitution.html<br/>(spec/ 内、 不変・scan 対象外)"]:::frozen
+  RULES["rules.html<br/>(Layer 1 universal rules)"]:::active
+  FSS["folio-self-spec.html<br/>(folio Layer 0 self-spec)"]:::active
+  REL["relations.html<br/>(関係性管理 spec)"]:::active
+  README["README.html<br/>(spec/ index)"]:::index
+
+  RULES -.->|extends| CONST
+  FSS -.->|extends| CONST
+  VER["verification.html<br/>(sandbox verification framework)"]:::active
+  FSS -->|"references §10"| RULES
+  REL -->|depends-on| RULES
+  REL -.->|"references §2"| CONST
+  VER -->|depends-on| RULES
+  VER -->|depends-on| REL
+  VER -.->|"references §7.6"| FSS
+  README -->|hasPart| VER
+  README -->|hasPart| RULES
+  README -->|hasPart| FSS
+  README -->|hasPart| REL
+
+  classDef frozen fill:#fff3e0,stroke:#e65100,stroke-width:2px
+  classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+  classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+</pre>
+<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (frozen・scan 対象外)、 spec/ 配下 3 file は draft (active editing)。</figcaption>
+</figure>
+</section>
+
+<!-- ====================================================================
+     §4 Reading Order
+     ==================================================================== -->
+<section id="s4-reading-order" class="informative">
+<h2>§4. Reading Order</h2>
+
+<p>新規 reader (人間 / AI agent) は以下の順序で読む SHOULD。</p>
+
+<ol>
+  <li><strong><a href="./constitution.html">constitution.html</a></strong> — folio の 13 不変原則 (前提知識、 全 spec の基底)</li>
+  <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
+  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings、 §7.6 試作 minimal scope)</li>
+  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD vocabulary、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
+  <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 Step 1〜4 完遂済 / 試作 plugin 実機検証の規範)</li>
+</ol>
+
+<p>spec edit を行う AI agent は最低限 (1) + (2) を必読 MUST、 関係性宣言を変更する場合は (4) も MUST、 試作 plugin 実装 / 検証時は (3) + (5) も MUST。</p>
+</section>
+
+<!-- ====================================================================
+     §5 Change Log
+     ==================================================================== -->
+<section id="s5-changelog" class="informative">
+<h2>§5. Change Log</h2>
+
+<table>
+  <thead><tr><th>date</th><th>change</th><th>related ADR / commit</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>2026-05-24</td>
+      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で P-11 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
+      <td>commit 1b18ddb、 spawn 検証 × 3 (folio-test-090218 / -b093240 / -c094741) で 真因確定 + Option A/B/C 比較 → Option C 採用</td>
+    </tr>
+    <tr>
+      <td>2026-05-24</td>
+      <td>§6 Open TODO を 3 sub-section に再編 (§6.1 dogfood / §6.2 Phase X3 deferred / §6.3 ADR 候補)。 Phase X3 Step 0-2 完遂 (sandbox-verified 2/3、 14/14 PASS) 過程で発生した deferred 事項を集約 trace。 spec 本文の編集なし、 informative TODO の整理のみ</td>
+      <td>Phase X3 Step 0 (b0a1155) / Step 1 (53f9929 + dffe235) / Step 2 (e01f089 + 63c9cc6) 累積</td>
+    </tr>
+    <tr>
+      <td>2026-05-23</td>
+      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 REQ-CI-016 (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
+      <td>research/plugin-architecture-research.html + research/plugin-sandbox-verification-research.html 結論の規範化</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (REQ-CI-010 詳細化)、 relations.html §5 normative 化 + EARS REQ-REL-001/002/003、 §4.2 3-tier mapping 具体例追加</td>
+      <td>本 commit</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>relations.html を新設 (Phase 1 = JSON-LD + W3C 語彙 + inventory schema)、 rules.html §4.1 に JSON-LD 関係性表現を追加、 rules.html 自身の <code>&lt;head&gt;</code> JSON-LD も新規定準拠化、 README を index 化 (本 §1-§5)</td>
+      <td>research/spec-graph-management-research.html 結論の規範化</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>scratch/specs/ dir 新設、 rules.html + folio-self-spec.html を移動 (ブラッシュアップ可化)</td>
+      <td><a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
+      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> (v3)</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s6-todo" class="informative">
+<h2>§6. Open TODO</h2>
+
+<h3 id="s6-1-dogfood">§6.1 Dogfood failure (frozen file、 user 判断待ち)</h3>
+
+<p>relations.html 導入に伴い既存 file に <strong>dogfood failure</strong> が残存:</p>
+
+<table>
+  <thead><tr><th>file</th><th>問題</th><th>対応</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><a href="./constitution.html">./constitution.html</a></td>
+      <td><code>&lt;head&gt;</code> JSON-LD が旧パターン (<code>@context</code> 文字列形式、 <code>@type: "FolioConstitution"</code> 等独自型)</td>
+      <td>user 指示 「これ以上いじりたくない」 を遵守、 cross-ref のみ更新で head は据え置き。 dogfood failure 残存を許容</td>
+    </tr>
+    <tr>
+      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> / <a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
+      <td>ADR-0001 は旧 <code>@context</code> 文字列形式だったが <strong>2026-05-25 に構造準拠化</strong> (folio validate が検出 → machine-readable block のみ object 化 + <code>@id</code> 追加、 commit 147674b、 user ratify 済)。 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015 等) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
+      <td>ADR-0001 は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/prime golden 不変)。 ADR-0002 は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は前 commit (2026-05-22) で新規定 pattern に移行済 (§5 Change Log 参照)。</p>
+
+<h3 id="s6-2-phase-x3-deferred">§6.2 Phase X3 進行中の defer 事項 (2026-05-24 集約)</h3>
+
+<p>Phase X3 Step 0-2 着手・実装の過程で発生した defer 事項。 Step 3 以降または別 commit で対応予定:</p>
+
+<table>
+  <caption>Phase X3 deferred issues (整理 2026-05-24)</caption>
+  <thead><tr><th>項目</th><th>severity</th><th>内容</th><th>解消 timing</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Gap 1 (#39344 fix)</td><td>LOW (一部解消)</td>
+      <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認。 <strong>Phase 2.5 実機検証で PostToolUse blocking error は機能 (commit 1b18ddb)</strong>、 exit 2 + stderr 経路は信頼可能と判明 (REQ-VER-006 SHOULD NOT は維持で問題なし)</td>
+      <td>upstream fix 公式アナウンス時に full 解消 (現状で実用上影響なし)</td>
+    </tr>
+    <tr>
+      <td>verification §3.2 schema 拡張</td><td>✓ 完遂</td>
+      <td>scenario YAML の <code>given.{env, file_path, content}</code> + <code>when.tool</code> を <a href="verification.html#s3-2-yaml-schema">§3.2 schema</a> に展開 (Stage 2a / D-6、 実装と整合)</td>
+      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
+    </tr>
+    <tr>
+      <td>verification §3 REQ-VER-007/008 昇格</td><td>✓ 完遂</td>
+      <td>REQ-VER-007 (path boundary) + REQ-VER-008 (README index staleness) を <a href="verification.html#s3-6-verification-specific">verification.html §3.6</a> に EARS 文として正式追加 (Stage 2a / D-4)。 ADR-0003 §2.1 は frozen のため update せず、 divergence は本 §6.2 で trace</td>
+      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
+    </tr>
+    <tr>
+      <td>hook 並列順序仕様</td><td>MEDIUM</td>
+      <td>hooks.json 内 2 つの PreToolUse hook (caller-marker + path-boundary) の実行順序 / 1 つが deny 時の他 hook 動作が Claude Code 公式仕様で未明示 (動作は OK 確認済)</td>
+      <td>upstream docs 更新待ち or 実機検証</td>
+    </tr>
+    <tr>
+      <td>shared lib 化 (実装済)</td><td>✓ 完遂</td>
+      <td><code>plugin-lib.sh</code> 実装 (Phase 3 DRY refactor、 commit c292b47)。 8 関数 (folio_spec_path / read_payload / require_jq / json_field / under_spec_path / is_html / require_write_tool / deny) を 4 hook script が source 再利用</td>
+      <td>解消済 (Phase 3)</td>
+    </tr>
+    <tr>
+      <td>plugin 実機 install 確認</td><td>✓ 完遂</td>
+      <td>Phase 2.5 で <a href="verification.html#s4-1-3step">verification.html §4.1</a> Step 2 (worktree-based integration test) 達成。 symlink (<code>~/.claude/plugins/folio</code>) + Option C 構造 (hooks/ plugin root 直下) で cld auto discovery 経由 plugin load、 3 hook 全実機 fire 確認 (caller marker / path boundary / jsonld-lint)。 検証経過: <strong>plugin 構造誤り発覚 → 公式仕様調査 (plugins-reference L733) → Option C 採用 → 再検証 PASS</strong></td>
+      <td>commit 1b18ddb、 解消済</td>
+    </tr>
+    <tr>
+      <td>Phase 2.5: plugin 構造修正 (hooks/ 配置 fix)</td><td>✓ 完遂</td>
+      <td>当初 <code>.claude-plugin/hooks/hooks.json</code> 配置で hook 認識されず (公式仕様 L733: <code>.claude-plugin/</code> には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下 MUST)。 fix: git mv で <code>hooks/hooks.json</code> に移動、 hooks.json 内 command path を <code>${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/</code> に書き換え (scripts/ は P-11 部分隔離維持)</td>
+      <td>commit 1b18ddb、 解消済。 ADR-0003 §2.3 「<code>.claude-plugin/</code> 配下に隔離」 の適用範囲は scripts/ 等の HOW に narrowing 解釈 (ADR 本文は frozen 維持、 CLAUDE.md §6 + 本 §6.2 で trace)</td>
+    </tr>
+    <tr>
+      <td>CLAUDE.md plugin root warning</td><td>LOW (恒久 benign)</td>
+      <td>claude plugin validate で 「CLAUDE.md root は project context、 distribute 時は SKILL に移行推奨」 warning。 <strong>Stage 1 で folio-architect SKILL.md を実装したが warning は残存</strong> (warning は CLAUDE.md の存在自体が要因で SKILL 有無と無関係と判明)。 project 用として valid</td>
+      <td>恒久 benign (distribute 時に CLAUDE.md を分離する場合のみ解消)</td>
+    </tr>
+    <tr>
+      <td>LOW 級 review findings</td><td>LOW</td>
+      <td>yq 多重呼び (R1-2) / NotebookEdit test / subdirectory test / absolute path test / matcher array 形式 / 用語 cross-ref / FOLIO_SPEC_PATH override scenario</td>
+      <td>Step 3 以降の shared lib 化 + fold back</td>
+    </tr>
+    <tr>
+      <td>Phase X1 placeholder README.md</td><td>LOW</td>
+      <td><code>.claude-plugin/{agents,skills,scripts,bin,refs,static}/README.md</code> は Phase X1 placeholder のまま</td>
+      <td>試作完了時に整理 (Phase X3 終盤)</td>
+    </tr>
+    <tr>
+      <td>ADR-0003 §2.1 script 命名 drift</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (P-10) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
+      <td>ADR-0004 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
+    </tr>
+    <tr>
+      <td>PostToolUse README update (check 型、 Step 4 完遂)</td><td>✓ 完遂</td>
+      <td>ADR-0003 §2.1「PostToolUse: README update」の試作 slice = <code>check-readme-index.sh</code> 実装済 (commit 5a2d9f2)。 挙動型 = check 型 (cluster README index 未掲載の .html を staleness notify、 file 改変なし)。 REQ-VER-008 / verification.html §3.6 (下記 divergence 行参照)</td>
+      <td>Step 4 完了 (解消済、 commit 5a2d9f2)</td>
+    </tr>
+    <tr>
+      <td>JSON-LD 複数 block 検査</td><td>LOW</td>
+      <td>check-jsonld-lint.sh は試作 minimum で単一 block 前提、 1 .html に複数 <code>&lt;script type="application/ld+json"&gt;</code> がある場合は連結 parse される</td>
+      <td>完成形 (ADR-0004 候補、 ajv + pyld 2 層) で multi-block 対応</td>
+    </tr>
+    <tr>
+      <td>@context 空 object {} は通過</td><td>LOW</td>
+      <td>試作 Light は <code>@context</code> の type が object であることのみ check、 中身が空でも allow (scenario で trace)</td>
+      <td>完成形で semantic check (context resolution) で検出</td>
+    </tr>
+    <tr>
+      <td>ADR-0003 §2.1 update-readme-index (mutate) vs check-readme-index.sh (check 型) divergence</td><td>MEDIUM (trace)</td>
+      <td>ADR-0003 §2.1 は <code>update-readme-index</code> (自動更新 mutate) を宣言。 実装は <code>check-readme-index.sh</code> (check 型、 staleness 通知のみ、 file 改変なし)。 ADR は frozen (P-10) のため修正不可。 試作 slice として check 型を採用 (副作用ゼロ + jsonld-lint と一貫、 理由は check-readme-index.sh §1 comment)。 命名も論理名 update-readme-index → check-readme-index (check-* prefix 統一)</td>
+      <td>完成形 mutate 移行時に ADR-0004 候補で formal 化</td>
+    </tr>
+    <tr>
+      <td>SessionStart / inject-inventory 未実装</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 SessionStart hook (<code>inject-inventory</code> script、 Beads pattern で inventory.json を agent context に inject) は宣言済だが未実装。 hooks.json に SessionStart entry なし、 inject-inventory.sh 不在</td>
+      <td>Step 5 (context injection slice) で実装</td>
+    </tr>
+    <tr>
+      <td>ADR-0003 §2.1 script count 6 vs 実装 5 file + plugin-lib</td><td>LOW</td>
+      <td>ADR 宣言 6 script vs 実装 5 file (check-caller-marker / check-path-boundary / check-jsonld-lint / check-readme-index / plugin-lib)。 差異: inject-inventory 未実装 (上記行) / link-integrity 未実装 (CI、 Phase X4+) / lint-jsonld→check-jsonld-lint 命名 / plugin-lib.sh 追加 (ADR 未宣言 shared lib)</td>
+      <td>inject-inventory=Step 5 (Track 2 解消済)、 link-integrity: internal(anchor+fs)=Track 3 <code>folio validate</code> に取込 (<a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a>)・external URL CI script=Phase X4+、 命名/lib=ADR-0004 候補</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s6-3-adr-candidates">§6.3 ADR 起票候補 (user 承認 MUST)</h3>
+
+<p>Phase X3 進行中に逐次起票候補。 自動起票禁止 (<a href="../../CLAUDE.md">CLAUDE.md</a> §2)、 user 確認必須:</p>
+
+<p><strong>起票済</strong> (2026-05-25、 <a href="../decisions/README.html#s3-adr-list">decisions/README §3</a>):</p>
+<ul>
+  <li>✓ <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> JSON-LD lint mechanism (試作 Option B Light = jq 構造 check、 完成形 ajv+pyld 2 層は defer) — retrospective</li>
+  <li>✓ <a href="../decisions/ADR-0006-caller-marker-hook.html">ADR-0006</a> caller marker hook (hybrid: env var OR marker file) — retrospective</li>
+  <li>✓ <a href="../decisions/ADR-0007-context-injection.html">ADR-0007</a> context injection (SessionStart + PreCompact、 Beads-inspired) — forward (Track 2)</li>
+  <li>✓ <a href="../decisions/ADR-0017-unit-integration-boundary.html">ADR-0017</a> verification の unit (sandbox) vs integration (e2e) 境界 — retrospective (Track 1/2 後)</li>
+  <li>✓ <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> CLI golden-diff verification harness (kind:cli-golden、 Track 1 実装後 retrospective)</li>
+  <li>✓ <a href="../decisions/ADR-0019-path-boundary-pragmatic.html">ADR-0019</a> path boundary hook (Option Pragmatic: content-marker 検出)</li>
+  <li>✓ <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> folio validate 試作 scope (内部 link-integrity + jsonld structural、 Track 3 forward) — 実装は spawn</li>
+</ul>
+
+<p><strong>起票候補</strong> (未起票、 user 承認 MUST):</p>
+<ul>
+  <li>ADR-0008 3 層防御原則 (全体設計まとまった時点)</li>
+  <li>ADR-0014 — <strong>見送り</strong> (verification §3.5 で実質規範化済)</li>
+  <li>ADR-0016 exit code 中心 assertion (Gap 1 解消後)</li>
+</ul>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'base',
+      themeVariables: {
+        fontFamily: 'inherit',
+        fontSize: '14px'
+      }
+    });
+  }
+});
+</script>
+
+</body>
+</html>

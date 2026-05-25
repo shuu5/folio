@@ -22,10 +22,10 @@
 # 側が `|| exit 0` 等で判断する。
 
 # --- spec_path 正規化 ---------------------------------------------------------
-# FOLIO_SPEC_PATH (既定 "scratch/specs/") を読み、 末尾 slash 1 個に正規化して
+# FOLIO_SPEC_PATH (既定 "architecture/spec/") を読み、 末尾 slash 1 個に正規化して
 # stdout に返す。 `${:-}` は unset + empty 両対応 (二重 fallback 不要)。
 folio_spec_path() {
-  local p="${FOLIO_SPEC_PATH:-scratch/specs/}"
+  local p="${FOLIO_SPEC_PATH:-architecture/spec/}"
   p="${p%/}/"
   printf '%s' "$p"
 }
@@ -61,9 +61,9 @@ folio_json_field() {
 # $1 = file_path、 $2 = 正規化済 spec_path (末尾 slash 付き)。 file_path が
 # spec_path 配下なら return 0、 そうでなければ return 1。
 # case の 2 branch は元 script から verbatim 保持 (挙動不変):
-#   "$2"*    = 相対 path (例 "scratch/specs/x.html") の prefix 一致
+#   "$2"*    = 相対 path (例 "architecture/spec/x.html") の prefix 一致
 #   *"/$2"*  = "/spec_path/" を含む path、 特に絶対 path
-#              (例 "/repo/scratch/specs/x.html") に対応。 Claude Code は hook の
+#              (例 "/repo/architecture/spec/x.html") に対応。 Claude Code は hook の
 #              file_path を絶対 path 化するため (v2.1.84~) この branch が必須。
 # polarity (allow/deny) は呼び出し側が決める:
 #     caller-marker:  folio_under_spec_path "$fp" "$sp" || exit 0   # 配下のみ gate
