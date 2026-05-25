@@ -200,6 +200,85 @@ folio_cmd_inventory() {
 }
 
 # ============================================================================
+# prime helpers — Tier 1 digest を context へ注入 (ADR-0007、 REQ-VER-012)
+# ============================================================================
+
+# inventory.json ($1) が不在 or stale なら 0 (regen 要)、 fresh なら 1 を返す。
+# ADR-0007 §2.4: spec の「追加・編集・削除」 が inventory 生成後にあれば stale。
+#   - 不在                          → regen
+#   - scan dir 自身が inv より新しい → 子の add/delete で dir mtime 更新 = stale
+#   - 直下 .html が inv より新しい   → 内容編集 (or add) で file mtime 更新 = stale
+# find -newer は strict (>) 比較。 inv は scan 後に書かれ mtime が最大のため、
+# regen 直後は fresh と判定され無限 regen しない。
+folio_prime_needs_regen() {
+  local inv="$1" scratch_abs="$2"
+  [[ -f "$inv" ]] || return 0
+
+  local d dirs=()
+  for d in specs decisions research; do
+    [[ -d "${scratch_abs}/${d}" ]] && dirs+=("${scratch_abs}/${d}")
+  done
+  [[ ${#dirs[@]} -eq 0 ]] && return 1   # scan dir 皆無は inventory 側で fatal、 ここでは触らない
+
+  local newer
+  newer=$(find "${dirs[@]}" -maxdepth 1 \( -type d -o -name '*.html' \) -newer "$inv" -print -quit 2>/dev/null)
+  [[ -n "$newer" ]] && return 0         # stale
+  return 1                              # fresh
+}
+
+# inventory.json ($1) から Tier 1 digest を stdout に出力 (relations.html §4.2 Tier 1 =
+# @id / title / summary / doc-type / status)。 full relations / version / stakeholders は
+# 注入しない (3-tier progressive disclosure、 ADR-0007 §2.2)。 非決定的 field (generatedAt)
+# は含めない — compare:text の byte-exact golden を安定させるため。 spec 列挙順は
+# inventory.json の決定的順序 (specs→decisions→research、 dir 内 LC_ALL=C) を保持する。
+folio_prime_emit_digest() {
+  local inv="$1" count fver body
+  count=$(jq '.specs | length' "$inv")
+  fver=$(jq -r '.folioVersion // "unknown"' "$inv")
+
+  # 各 spec = 4 行 block、 block 間は空行 1。 末尾の空行は $() が除去するので
+  # 最終 block 後に余分な trailing blank は残らない (byte-exact 安定)。
+  body=$(jq -r '
+    .specs[] |
+    "## \(."@id")",
+    "- title: \(.title)",
+    "- doc-type: \(."doc-type") · status: \(.status)",
+    "- summary: \(if (.summary // "") == "" then "(none)" else .summary end)",
+    ""
+  ' "$inv")
+
+  printf '# folio inventory digest — Tier 1 (progressive disclosure)\n'
+  printf '# %s specs · folio %s\n' "$count" "$fver"
+  printf '# Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.\n'
+  printf '\n'
+  printf '%s\n' "$body"
+}
+
+# folio prime: Tier 1 inventory digest を stdout 出力 (ADR-0007 §2.1〜2.4)。
+# inventory.json が不在/stale なら folio inventory で auto-regen してから出力 (§2.4)。
+# hook (SessionStart / PreCompact) からの注入経路であると同時に手動 entry point でもある (§2.3)。
+folio_cmd_prime() {
+  command -v jq >/dev/null 2>&1 || { echo "folio prime: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
+
+  local plugin_json=".claude-plugin/plugin.json"
+  [[ -f "$plugin_json" ]] || { echo "folio prime: ${plugin_json} not found — run at repo root" >&2; exit 1; }
+
+  local scratch_abs
+  scratch_abs=$(realpath -m scratch)
+  [[ -d "$scratch_abs" ]] || { echo "folio prime: scratch/ not found — run at repo root" >&2; exit 1; }
+
+  local inv="${scratch_abs}/inventory.json"
+
+  # §2.4 staleness = auto-regen (folio inventory は stderr に "wrote ..." を出す = stdout 非汚染)
+  if folio_prime_needs_regen "$inv" "$scratch_abs"; then
+    folio_cmd_inventory
+  fi
+  [[ -f "$inv" ]] || { echo "folio prime: inventory.json unavailable after regen attempt" >&2; exit 1; }
+
+  folio_prime_emit_digest "$inv"
+}
+
+# ============================================================================
 # dispatch
 # ============================================================================
 
@@ -215,11 +294,11 @@ Subcommands:
   version, --version       version 表示
   help, --help             本ヘルプ
   inventory                inventory.json 生成 (relations.html §4、 cwd=repo root)
+  prime                    Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen)
 
 Phase X3 試作で実装予定 (ADR-0003 §2.1):
   init                     consumer project の初期化
   validate                 spec の構造検証
-  prime                    agent context inject
   fix                      自動修正 (双方向 link 等)
 
 完成形 spec: scratch/specs/folio-self-spec.html §7.2 + ADR-0003
@@ -227,6 +306,9 @@ EOF
     ;;
   inventory)
     folio_cmd_inventory
+    ;;
+  prime)
+    folio_cmd_prime
     ;;
   *)
     echo "folio: unknown subcommand '${1}' (Phase X3 試作では未実装)" >&2

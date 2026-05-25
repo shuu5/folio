@@ -47,59 +47,62 @@ REPO_ROOT=$(realpath "${SCRIPT_DIR}/../..")
 PLUGIN_ROOT="${REPO_ROOT}/.claude-plugin"
 
 # ============================================================================
-# kind: cli-golden handler (REQ-VER-010/011 + REQ-VER-004 2-dir + --accept)
-#   1. bin/folio を scenario.command で repo root 実行 (output_file 生成)
-#   2. raw output_file → baselines/local/ へ materialize (2-dir model)
-#   3. output_file と golden を jq -S + normalize.exclude_paths 削除で正規化
-#   4. 正規化 JSON の byte-exact 一致 + exit_code 一致を assert
-#   --accept: local → reference golden を更新 (raw、 generatedAt 保持)
+# kind: cli-golden handler (REQ-VER-010/011/012 + REQ-VER-004 2-dir + --accept)
+#   capture (file|stdout) × compare (json|text) の 2 軸で 2 種の CLI 出力に対応
+#   (verification.html §3.2):
+#     - capture:file  (既定) … CLI が生成する output_file を読む  (例 inventory-gen)
+#     - capture:stdout       … command の stdout を捕捉            (例 prime-digest)
+#     - compare:json  (既定) … jq -S 正規化 + exclude_paths 削除後に byte-exact (inventory)
+#     - compare:text         … 正規化なしの plain byte-exact diff          (prime digest)
+#   共通 flow: actual を baselines/local/ へ materialize (2-dir model) → golden と比較。
+#   --accept: local → reference golden を更新 (両 mode 共通、 §3.4 REQ-VER-004 accept workflow)。
 # 出力 format は hook flow と揃える ("Results: N passed, M failed (total T)")。
 # ============================================================================
 run_cli_golden() {
   local scenario="$1"
-  local req_id output_file golden exp_exit
+  local req_id golden exp_exit capture compare output_file
   req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
-  output_file=$(yq -r '.output_file' "$scenario")          # repo root 相対
   golden=$(yq -r '.golden' "$scenario")                    # SCRIPT_DIR (verification dir) 相対
   exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
+  capture=$(yq -r '.capture // "file"' "$scenario")        # file (既定) | stdout
+  compare=$(yq -r '.compare // "json"' "$scenario")        # json (既定) | text
+  output_file=$(yq -r '.output_file // ""' "$scenario")    # capture:file 専用 (repo root 相対)
 
   local -a cmd=()
   while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
 
-  local out_abs golden_abs local_dir local_abs
-  out_abs="${REPO_ROOT}/${output_file}"
+  local golden_abs local_dir local_abs
   golden_abs="${SCRIPT_DIR}/${golden}"
   local_dir="${SCRIPT_DIR}/baselines/local"
   local_abs="${local_dir}/$(basename "$golden")"
+  mkdir -p "$local_dir"
 
   echo "=== scenario: ${scenario}"
   echo "    req_id:  ${req_id}"
-  echo "    kind:    cli-golden"
+  echo "    kind:    cli-golden (capture:${capture}, compare:${compare})"
   echo "    command: folio ${cmd[*]}"
   echo ""
 
-  # 1. CLI を repo root で実行
-  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" )
-  local actual_exit=$?
-
-  if [[ ! -f "$out_abs" ]]; then
-    echo "  [FAIL] ${req_id}: output_file not produced: ${output_file}" >&2
-    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
-    return 1
+  # 1. CLI を repo root 実行 → actual を baselines/local/ へ materialize (REQ-VER-004 2-dir、 .gitignore 済)
+  local actual_exit
+  if [[ "$capture" == "stdout" ]]; then
+    # stdout を捕捉 (stderr は端末へ素通し = auto-regen log 等の観察用)
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" ) > "$local_abs"
+    actual_exit=$?
+  else
+    # capture:file — CLI が output_file を生成、 それを local へ複写
+    local out_abs="${REPO_ROOT}/${output_file}"
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" )
+    actual_exit=$?
+    if [[ ! -f "$out_abs" ]]; then
+      echo "  [FAIL] ${req_id}: output_file not produced: ${output_file}" >&2
+      echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+      return 1
+    fi
+    cp "$out_abs" "$local_abs"
   fi
 
-  # 2. raw output → baselines/local/ (REQ-VER-004 2-dir、 .gitignore 済)
-  mkdir -p "$local_dir"
-  cp "$out_abs" "$local_abs"
-
-  # normalize filter: . | del(<exclude_path>) ...
-  local norm_filter="." p
-  while IFS= read -r p; do
-    [[ -z "$p" ]] && continue
-    norm_filter="${norm_filter} | del(${p})"
-  done < <(yq -r '.normalize.exclude_paths // [] | .[]' "$scenario")
-
-  # --accept: local → reference golden (raw、 generatedAt 保持で §4.1 MUST 充足)
+  # 2. --accept: local → reference golden (両 mode 共通、 §3.4 REQ-VER-004 accept workflow)
   if [[ "$ACCEPT" == "1" ]]; then
     mkdir -p "$(dirname "$golden_abs")"
     cp "$local_abs" "$golden_abs"
@@ -114,39 +117,54 @@ run_cli_golden() {
     return 1
   fi
 
-  # 3. 両者を正規化
-  local norm_actual norm_golden
-  norm_actual=$(jq -S "$norm_filter" "$out_abs" 2>&1) || {
-    echo "  [FAIL] ${req_id}: jq normalize failed (actual): ${norm_actual}" >&2
-    echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
-  norm_golden=$(jq -S "$norm_filter" "$golden_abs" 2>&1) || {
-    echo "  [FAIL] ${req_id}: jq normalize failed (golden): ${norm_golden}" >&2
-    echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
-
-  # 4. assert: byte-exact 一致 + exit_code 一致
-  local ok=true
-  local reasons=()
+  # 3. assert: exit_code 一致 + (compare mode 別) 出力一致
+  local ok=true reasons=() diff_kind=""
+  local norm_actual="" norm_golden=""
   if [[ "$actual_exit" != "$exp_exit" ]]; then
     ok=false; reasons+=("exit_code mismatch (expected=${exp_exit}, got=${actual_exit})")
   fi
-  if [[ "$norm_actual" != "$norm_golden" ]]; then
-    ok=false; reasons+=("normalized output != golden (byte diff)")
+
+  if [[ "$compare" == "text" ]]; then
+    # plain byte-exact (正規化なし)
+    if ! cmp -s "$local_abs" "$golden_abs"; then
+      ok=false; reasons+=("output != golden (byte diff)"); diff_kind="text"
+    fi
+  else
+    # compare:json — jq -S 正規化 + normalize.exclude_paths 削除後に byte-exact
+    local norm_filter="." p
+    while IFS= read -r p; do
+      [[ -z "$p" ]] && continue
+      norm_filter="${norm_filter} | del(${p})"
+    done < <(yq -r '.normalize.exclude_paths // [] | .[]' "$scenario")
+
+    norm_actual=$(jq -S "$norm_filter" "$local_abs" 2>&1) || {
+      echo "  [FAIL] ${req_id}: jq normalize failed (actual): ${norm_actual}" >&2
+      echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+    norm_golden=$(jq -S "$norm_filter" "$golden_abs" 2>&1) || {
+      echo "  [FAIL] ${req_id}: jq normalize failed (golden): ${norm_golden}" >&2
+      echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+    if [[ "$norm_actual" != "$norm_golden" ]]; then
+      ok=false; reasons+=("normalized output != golden (byte diff)"); diff_kind="json"
+    fi
   fi
 
   if $ok; then
-    echo "  [PASS] ${req_id} (normalized output == golden, exit ${actual_exit})"
+    echo "  [PASS] ${req_id} (output == golden, exit ${actual_exit})"
     echo ""; echo "Results: 1 passed, 0 failed (total 1)"
     return 0
-  else
-    echo "  [FAIL] ${req_id}" >&2
-    for r in "${reasons[@]}"; do echo "         - $r" >&2; done
-    if [[ "$norm_actual" != "$norm_golden" ]]; then
-      echo "         --- diff (< golden | > actual、 正規化後) ---" >&2
-      diff <(printf '%s\n' "$norm_golden") <(printf '%s\n' "$norm_actual") >&2 || true
-    fi
-    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
-    return 1
   fi
+
+  echo "  [FAIL] ${req_id}" >&2
+  for r in "${reasons[@]}"; do echo "         - $r" >&2; done
+  if [[ "$diff_kind" == "text" ]]; then
+    echo "         --- diff (< golden | > actual) ---" >&2
+    diff "$golden_abs" "$local_abs" >&2 || true
+  elif [[ "$diff_kind" == "json" ]]; then
+    echo "         --- diff (< golden | > actual、 正規化後) ---" >&2
+    diff <(printf '%s\n' "$norm_golden") <(printf '%s\n' "$norm_actual") >&2 || true
+  fi
+  echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+  return 1
 }
 
 # --- kind dispatch: cli-golden のみ別経路、 省略時 (hook) は以降の既存 flow ---

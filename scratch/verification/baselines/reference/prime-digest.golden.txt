@@ -1,0 +1,78 @@
+# folio inventory digest — Tier 1 (progressive disclosure)
+# 15 specs · folio 0.4.2-draft
+# Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
+
+## specs/README.html
+- title: folio framework spec index
+- doc-type: cluster-readme · status: active
+- summary: ブラッシュアップ対象の folio framework spec を集約 (constitution は除く、 scratch/ 直下の特別枠)
+
+## specs/folio-self-spec.html
+- title: folio self-spec
+- doc-type: self-spec · status: draft
+- summary: folio Layer 0 framework 自身の architecture spec (provisional)
+
+## specs/relations.html
+- title: folio relations spec
+- doc-type: spec · status: draft
+- summary: spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)
+
+## specs/rules.html
+- title: folio rules
+- doc-type: rules · status: draft
+- summary: Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)
+
+## specs/verification.html
+- title: folio verification spec
+- doc-type: spec · status: draft
+- summary: sandbox verification framework spec (機能単位 use case verification の SSoT)
+
+## decisions/ADR-0001-architecture-rules-split.html
+- title: ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)
+- doc-type: adr · status: accepted
+- summary: folio v0.4.1-draft → v0.4.2-draft (PATCH bump)
+
+## decisions/ADR-0003-plugin-architecture.html
+- title: ADR-0003 — folio plugin minimal architecture
+- doc-type: adr · status: accepted
+- summary: folio v0.4.2-draft
+
+## decisions/ADR-0004-jsonld-lint-mechanism.html
+- title: ADR-0004 — JSON-LD lint mechanism
+- doc-type: adr · status: accepted
+- summary: retrospective (実装 + e2e 検証済)
+
+## decisions/ADR-0006-caller-marker-hook.html
+- title: ADR-0006 — caller marker hook (hybrid env var OR marker file)
+- doc-type: adr · status: accepted
+- summary: retrospective (実装 + e2e 検証済)
+
+## decisions/ADR-0007-context-injection.html
+- title: ADR-0007 — context injection (SessionStart + PreCompact, Beads-inspired)
+- doc-type: adr · status: accepted
+- summary: forward (user 承認済、 実装は Track 2 spawn)
+
+## decisions/ADR-0013-verification-framework.html
+- title: ADR-0013 — sandbox verification framework
+- doc-type: adr · status: accepted
+- summary: folio v0.4.2-draft
+
+## decisions/ADR-0015-sandbox-vs-experiment-verified.html
+- title: ADR-0015 — sandbox verification vs experiment-verified の境界
+- doc-type: adr · status: accepted
+- summary: folio v0.4.2-draft
+
+## decisions/ADR-0018-cli-golden-harness.html
+- title: ADR-0018 — CLI golden-diff verification harness
+- doc-type: adr · status: accepted
+- summary: retrospective (Track 1 実装 + GREEN 検証済)
+
+## decisions/ADR-0019-path-boundary-pragmatic.html
+- title: ADR-0019 — path boundary hook (Option Pragmatic)
+- doc-type: adr · status: accepted
+- summary: retrospective (実装 + e2e 検証済)
+
+## research/plugin-sandbox-verification-research.html
+- title: folio plugin sandbox verification research
+- doc-type: research · status: draft
+- summary: Phase X3 minimal plugin の実機検証フレーム設計調査 (87 sources、 5 researcher 並列調査、 session 59a916c0、 2026-05-23)
