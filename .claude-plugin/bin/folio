@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # folio CLI (Phase X3 試作)
 # 完成形は init / validate / inventory / prime / fix subcommands (ADR-0003 §2.1)
-# 試作段階は version / help / inventory / prime / validate を実装
+# 試作段階は version / help / init / inventory / prime / validate を実装
 #
 # inventory subcommand (REQ-VER-010):
 #   relations.html §4.4.1 の scan 対象 (architecture/spec/ + architecture/decisions/ +
@@ -401,6 +401,363 @@ folio_cmd_validate() {
 }
 
 # ============================================================================
+# init helpers — consumer canonical layout を scaffold (REQ-VER-014、 ADR-0024)
+#   生成物 = ADR-0024 §2.1 標準 seed: architecture/{spec,decisions,research} の cluster
+#   README (P-6 entry point) + spec/{constitution,overview}.html starter template +
+#   verification/.gitkeep (P-13 HOW-test dir) + folio.config.yaml (§2.5 defaults)。
+#   idempotent (§2.3): 既存 file は preserve (上書き禁止)、 欠損のみ生成。
+#   seed .html は通常 conforming JSON-LD (@context object + @id + @type、 §2.2)、 relation @id は
+#   全 resolve するため生成 skeleton は folio validate が clean (§2.4 品質ゲート)。
+#   exit 0=success / 2=tool error (fail-closed)。 assets/ や CLAUDE.md/README.md は生成しない (§2.1)。
+# ============================================================================
+
+# 1 seed file を idempotent に生成。 $1 = 生成先絶対 path、 $2 = 報告用 relative base (target dir)。
+# 内容は stdin (heredoc) から読む。 既存なら preserve して "exists" 報告、 欠損なら mkdir + 生成して
+# "create" 報告 (target 相対 path)。 write 失敗時のみ return 1 (caller が exit 2、 fail-closed)。
+folio_init_write() {
+  local dest="$1" base="$2" rel
+  rel=$(realpath -m --relative-to="$base" "$dest")
+  if [[ -e "$dest" ]]; then
+    printf 'exists  %s\n' "$rel"
+    return 0
+  fi
+  mkdir -p "$(dirname "$dest")" || return 1
+  cat > "$dest" || return 1            # stdin → file (heredoc bytes を厳密保持、 trailing newline 込み)
+  printf 'create  %s\n' "$rel"
+}
+
+# folio init [<dir>]: consumer canonical layout を <dir> (省略時 cwd) に scaffold (REQ-VER-014)。
+# 既存 file を preserve しつつ欠損 seed のみ生成し、 per-file の create/exists を stdout 報告する。
+folio_cmd_init() {
+  command -v realpath >/dev/null 2>&1 || { echo "folio init: realpath not found in PATH (required, fail-closed)" >&2; exit 2; }
+
+  local target arch
+  target=$(realpath -m "${1:-.}")
+  arch="${target}/architecture"
+
+  mkdir -p "$target" || { echo "folio init: cannot create target directory: ${target} (fail-closed)" >&2; exit 2; }
+  echo "folio init: scaffolding consumer canonical layout at ${target}"
+
+  local rc=0
+
+  # --- folio.config.yaml (§2.5 defaults、 P-2 YAML 例外) ---
+  folio_init_write "${target}/folio.config.yaml" "$target" <<'YAML' || rc=1
+folio_version: "^0.5"
+spec_path: "architecture/spec/"
+caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
+caller_marker_value: "folio-architect"
+review_model: "opus"
+YAML
+
+  # --- architecture/spec/ (design-intent WHAT cluster、 P-7) ---
+  folio_init_write "${arch}/spec/README.html" "$target" <<'HTML' || rc=1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>architecture/spec/ — spec index</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "spec cluster index",
+  "folio:version": "0.1.0-draft",
+  "dc:hasPart": [
+    { "@id": "./constitution.html" },
+    { "@id": "./overview.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>architecture/spec/ — spec index</h1>
+  <div class="meta">v0.1.0-draft &middot; status: active &middot; project design-intent (WHAT) cluster の entry point</div>
+</header>
+
+<aside class="informative">
+<p>本 dir (<code>architecture/spec/</code>) はこの project の <strong>design-intent spec</strong> (構造・不変条件・WHAT) を集約する cluster です。 spec file は <a href="https://folio.dev/">folio</a> framework の rules に従い HTML + JSON-LD で記述します。 共通 stylesheet (<code>common.css</code>) は project root に任意で配置してください。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+<p>本 README は <strong>spec/ cluster の index</strong> (entry point) です。 cluster 内の spec を一望し、 reader (人間 / AI agent) のナビゲーションを支えます。</p>
+</section>
+
+<section id="s2-contents" class="informative">
+<h2>§2. Contents</h2>
+<ul>
+  <li><a href="constitution.html"><code>constitution.html</code></a> — この project の constitution (folio Layer 0 core を継承し、 project 固有の不変原則を定義)</li>
+  <li><a href="overview.html"><code>overview.html</code></a> — project architecture の overview</li>
+</ul>
+<p>新しい spec を追加したら本 index に追記してください。</p>
+</section>
+
+</body>
+</html>
+HTML
+
+  folio_init_write "${arch}/spec/constitution.html" "$target" <<'HTML' || rc=1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="constitution">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>project constitution (starter)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./constitution.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "project constitution",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>project constitution (starter)</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft &middot; この project の不変原則 (folio Layer 0 core 継承 + project 固有)</div>
+</header>
+
+<aside class="informative">
+<p>本文書は IETF <a href="https://datatracker.ietf.org/doc/html/rfc2119">RFC 2119</a> / <a href="https://datatracker.ietf.org/doc/html/rfc8174">RFC 8174</a> / <a href="https://datatracker.ietf.org/doc/html/bcp14">BCP 14</a> の MUST / SHOULD / MAY 解釈規約に従う。</p>
+</aside>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>constitution</dd>
+    <dt>doc-type</dt><dd>constitution</dd>
+    <dt>status</dt><dd>draft</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent</dd>
+    <dt>version</dt><dd>0.1.0-draft</dd>
+  </dl>
+</aside>
+
+<section id="s1-inheritance" class="informative">
+<h2>§1. folio Layer 0 core の継承</h2>
+<p>本 project は <a href="https://folio.dev/">folio</a> framework の Layer 0 core 原則 (declarative WHAT / link-integrity / single source of truth 等) を継承します。 本 constitution は、 それらを前提に <strong>この project 固有の不変原則</strong>を追記する場所です。</p>
+</section>
+
+<section id="s2-principles" class="normative">
+<h2>§2. Project-Specific Principles</h2>
+<p>以下にこの project 固有の不変原則を定義してください (placeholder)。</p>
+
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">P-1</span>:
+  The project <span class="ears-shall">SHALL</span> &lt;ここに最初の不変原則を記述&gt;.
+</p>
+
+<p><em>(原則を追加するたびに P-2, P-3, ... と連番で追記します。)</em></p>
+</section>
+
+<section id="s3-amendment" class="informative">
+<h2>§3. Amendment</h2>
+<p>本 constitution の改訂は <code>architecture/decisions/</code> の ADR で trace し、 version を bump してください。</p>
+</section>
+
+</body>
+</html>
+HTML
+
+  folio_init_write "${arch}/spec/overview.html" "$target" <<'HTML' || rc=1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>project overview (starter)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./overview.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "project overview",
+  "folio:version": "0.1.0-draft",
+  "folio:extends": [
+    { "@id": "./constitution.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>project overview (starter)</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft &middot; project architecture の俯瞰</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>overview</dd>
+    <dt>doc-type</dt><dd>spec</dd>
+    <dt>status</dt><dd>draft</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent</dd>
+    <dt>version</dt><dd>0.1.0-draft</dd>
+  </dl>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+<p>本文書はこの project の architecture を俯瞰する overview です。 system の目的・主要コンポーネント・設計方針の入口として、 詳細 spec への導線を提供します。</p>
+</section>
+
+<section id="s2-context" class="informative">
+<h2>§2. System Context</h2>
+<p><em>(この system が何を解決し、 誰が・何と相互作用するかを記述してください。)</em></p>
+</section>
+
+<section id="s3-building-blocks" class="informative">
+<h2>§3. Building Blocks</h2>
+<p><em>(主要コンポーネントと責務を記述してください。 詳細は個別 spec file に分割します。)</em></p>
+</section>
+
+</body>
+</html>
+HTML
+
+  # --- architecture/decisions/ (decision WHY cluster、 P-7) ---
+  folio_init_write "${arch}/decisions/README.html" "$target" <<'HTML' || rc=1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>architecture/decisions/ — ADR index</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "decisions cluster index",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>architecture/decisions/ — Architecture Decision Records</h1>
+  <div class="meta">v0.1.0-draft &middot; status: active &middot; decision (WHY) cluster の entry point</div>
+</header>
+
+<aside class="informative">
+<p>本 dir (<code>architecture/decisions/</code>) はこの project の <strong>Architecture Decision Records (ADR)</strong> を保持する cluster です。 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置します。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+<p>decisions/ は architectural decision の WHY を記録します。 spec (WHAT) の背景にある意思決定とその根拠を trace します。</p>
+</section>
+
+<section id="s2-adr-list" class="informative">
+<h2>§2. ADRs</h2>
+<p>まだ ADR はありません。 最初の決定を記録したら本 index に追記してください。</p>
+</section>
+
+</body>
+</html>
+HTML
+
+  # --- architecture/research/ (exploration cluster、 P-7) ---
+  folio_init_write "${arch}/research/README.html" "$target" <<'HTML' || rc=1
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>architecture/research/ — exploration index</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "research cluster index",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>architecture/research/ — exploration</h1>
+  <div class="meta">v0.1.0-draft &middot; status: active &middot; exploration cluster の entry point</div>
+</header>
+
+<aside class="informative">
+<p>本 dir (<code>architecture/research/</code>) は spec に反映する前の <strong>探索・調査資料</strong>を集約する cluster です。 自由形式で memo / 調査結果 / 設計案を蓄積し、 確定した内容を spec/ や decisions/ に昇格させます。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+<p>research/ は exploration 領域です。 厳密な markup 規約に縛られず、 design intent が固まる前の思考を自由に記録します。</p>
+</section>
+
+</body>
+</html>
+HTML
+
+  # --- verification/ (HOW-test dir、 P-13、 ADR-0022) ---
+  folio_init_write "${target}/verification/.gitkeep" "$target" <<'EOF' || rc=1
+EOF
+
+  if [[ "$rc" -ne 0 ]]; then
+    echo "folio init: one or more files could not be written (fail-closed)" >&2
+    exit 2
+  fi
+  echo "folio init: done (existing files preserved, missing files created)"
+}
+
+# ============================================================================
 # dispatch
 # ============================================================================
 
@@ -415,17 +772,23 @@ folio v${VERSION} — Layer 0 META FRAMEWORK CLI (Phase X3 試作)
 Subcommands:
   version, --version       version 表示
   help, --help             本ヘルプ
+  init [<dir>]             consumer canonical layout を scaffold (省略時 cwd、 ADR-0024)
+                           (idempotent: 既存 file preserve、 exit 0=success/2=tool error)
   inventory                inventory.json 生成 (relations.html §4、 cwd=repo root)
   prime                    Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen)
   validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural 検査
                            (ADR-0020、 exit 0=clean/1=violation/2=tool error、 --root で検査 root override)
 
 Phase X3 試作で実装予定 (ADR-0003 §2.1):
-  init                     consumer project の初期化
   fix                      自動修正 (双方向 link 等)
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
+    ;;
+  init)
+    shift
+    folio_cmd_init "$@"
+    exit $?
     ;;
   inventory)
     folio_cmd_inventory

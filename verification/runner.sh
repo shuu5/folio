@@ -3,13 +3,18 @@
 # Phase X3 試作 sandbox verification runner (bash + yq + jq、 Gap 2 採用)
 #
 # 用法: runner.sh [--accept] <scenario.yaml>
-#   scenario YAML 1 件を読み、 scenario.kind に応じて 2 経路へ dispatch:
+#   scenario YAML 1 件を読み、 scenario.kind に応じて 3 経路へ dispatch:
 #     - kind: hook (既定、 省略可)  … 各 scenario を hook script に mock payload で実行、
 #                                       exit_code + stderr_contains を assert (REQ-VER-001〜008)。
 #     - kind: cli-golden            … bin/folio を command で repo root 実行 → output_file と
 #                                       golden を jq -S + normalize.exclude_paths 削除で正規化 →
 #                                       byte-exact 比較 + exit_code assert (REQ-VER-010/011)。
 #                                       --accept で local→reference golden 更新 (REQ-VER-004)。
+#     - kind: cli-scaffold          … `folio init <tmp>` を fresh temp root に実行 →
+#                                       (a) exit_code (b) 生成 file 集合 + folio.config.yaml の
+#                                       golden 比較 (c) `folio validate --root` clean (d) idempotency
+#                                       を assert (REQ-VER-014、 init = tree 生成のため単一 output の
+#                                       cli-golden と別経路)。 --accept で golden 更新。
 #
 # kind: hook の scenario file 名 (basename without .yaml) と hook script 名の mapping:
 #   scenarios/caller-marker.yaml → .claude-plugin/scripts/check-caller-marker.sh
@@ -167,11 +172,128 @@ run_cli_golden() {
   return 1
 }
 
-# --- kind dispatch: cli-golden のみ別経路、 省略時 (hook) は以降の既存 flow ---
+# ============================================================================
+# kind: cli-scaffold handler (REQ-VER-014 + ADR-0024)
+#   init は tree (複数 file) を temp dir に生成するため、 単一 output 前提の cli-golden では
+#   不足。 verification.html REQ-VER-014 が委譲する 「既存 cli-golden harness の拡張、 HOW は
+#   実装時確定」 の HOW として別 kind を新設する。 §3.2 schema と整合: schema_version / req_id /
+#   kind / command / golden / expect.exit_code を踏襲し、 scaffold 固有の validate_root を足す。
+#   既存 hook / cli-golden 経路は kind 分岐で隔離され不変 (既存 8 scenario に影響なし)。
+#
+#   flow: fresh temp root に `folio init <tmp>` → 4 assertion:
+#     (a) init exit_code == expect.exit_code
+#     (b) 生成 file 集合 (find -printf '%P' 相対 sort) + folio.config.yaml content == golden (byte-exact)
+#     (c) `folio validate --root <tmp>/<validate_root>` clean (exit 0)
+#     (d) idempotency: 再 init で全 file content 不変 (preserve、 上書きなし)
+#   golden / report に temp path は焼かない (%P で root prefix 除去 → 非決定値を排除)。
+#   --accept: local → reference golden 更新 (§3.4 REQ-VER-004、 cli-golden と共通方針)。
+#   temp dir は SCAFFOLD_TMP (global) に置き dispatcher が後始末する (早期 return 多数のため)。
+# ============================================================================
+run_cli_scaffold() {
+  local scenario="$1"
+  local req_id golden exp_exit validate_root
+  req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
+  golden=$(yq -r '.golden' "$scenario")                    # SCRIPT_DIR (verification dir) 相対
+  exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
+  validate_root=$(yq -r '.validate_root // "architecture"' "$scenario")   # 生成 tree 内の validate root
+
+  local -a cmd=()
+  while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
+
+  local golden_abs local_dir local_abs
+  golden_abs="${SCRIPT_DIR}/${golden}"
+  local_dir="${SCRIPT_DIR}/baselines/local"
+  local_abs="${local_dir}/$(basename "$golden")"
+  mkdir -p "$local_dir"
+
+  echo "=== scenario: ${scenario}"
+  echo "    req_id:  ${req_id}"
+  echo "    kind:    cli-scaffold"
+  echo "    command: folio ${cmd[*]} <tmp>"
+  echo ""
+
+  # fresh temp root (dispatcher が後で rm -rf。 golden は %P 相対のみ → temp path 非依存)
+  SCAFFOLD_TMP=$(mktemp -d) || { echo "  [FAIL] ${req_id}: mktemp failed" >&2; echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+  local tmp="$SCAFFOLD_TMP"
+
+  # 1. init を temp root に実行 (cwd=REPO_ROOT、 他 CLI subcommand と同条件)
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" "$tmp" ) >/dev/null
+  local init_exit=$?
+
+  # 2. 決定的 manifest = 生成 file 集合 (%P 相対 sort) + folio.config.yaml content → local へ materialize
+  {
+    find "$tmp" -mindepth 1 -type f -printf '%P\n' | LC_ALL=C sort
+    echo "--- folio.config.yaml ---"
+    cat "${tmp}/folio.config.yaml" 2>/dev/null
+  } > "$local_abs"
+
+  # --accept: local → reference golden (§3.4 REQ-VER-004 accept workflow)
+  if [[ "$ACCEPT" == "1" ]]; then
+    mkdir -p "$(dirname "$golden_abs")"
+    cp "$local_abs" "$golden_abs"
+    echo "  [ACCEPT] golden refreshed from local: ${golden}"
+    echo ""; echo "Results: accepted (1 golden updated)"
+    return 0
+  fi
+
+  if [[ ! -f "$golden_abs" ]]; then
+    echo "  [FAIL] ${req_id}: golden not found: ${golden} (run with --accept to create)" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+    return 1
+  fi
+
+  # 3. assertions (a)〜(d)
+  local ok=true reasons=()
+  if [[ "$init_exit" != "$exp_exit" ]]; then
+    ok=false; reasons+=("init exit_code mismatch (expected=${exp_exit}, got=${init_exit})")
+  fi
+  if ! cmp -s "$local_abs" "$golden_abs"; then
+    ok=false; reasons+=("scaffold manifest (file 集合 + config) != golden (byte diff)")
+  fi
+  local vexit
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "${tmp}/${validate_root}" ) >/dev/null
+  vexit=$?
+  if [[ "$vexit" != "0" ]]; then
+    ok=false; reasons+=("folio validate on scaffold not clean (exit ${vexit})")
+  fi
+  # idempotency: 再 init 前後で全 file の sha256 が不変 = preserve (上書きなし) を実証
+  local snap1 snap2 reinit_exit
+  snap1=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" "$tmp" ) >/dev/null
+  reinit_exit=$?
+  snap2=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+  if [[ "$reinit_exit" != "0" ]]; then
+    ok=false; reasons+=("re-init exit_code != 0 (got=${reinit_exit})")
+  fi
+  if [[ "$snap1" != "$snap2" ]]; then
+    ok=false; reasons+=("re-init mutated existing files (idempotency violated)")
+  fi
+
+  if $ok; then
+    echo "  [PASS] ${req_id} (scaffold == golden, validate clean, idempotent)"
+    echo ""; echo "Results: 1 passed, 0 failed (total 1)"
+    return 0
+  fi
+
+  echo "  [FAIL] ${req_id}" >&2
+  for r in "${reasons[@]}"; do echo "         - $r" >&2; done
+  echo "         --- manifest diff (< golden | > actual) ---" >&2
+  diff "$golden_abs" "$local_abs" >&2 || true
+  echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+  return 1
+}
+
+# --- kind dispatch: cli-golden / cli-scaffold は別経路、 省略時 (hook) は以降の既存 flow ---
 KIND=$(yq -r '.kind // "hook"' "$SCENARIO_FILE")
 if [[ "$KIND" == "cli-golden" ]]; then
   run_cli_golden "$SCENARIO_FILE"
   exit $?
+fi
+if [[ "$KIND" == "cli-scaffold" ]]; then
+  run_cli_scaffold "$SCENARIO_FILE"
+  rc=$?
+  [[ -n "${SCAFFOLD_TMP:-}" && -d "$SCAFFOLD_TMP" ]] && rm -rf "$SCAFFOLD_TMP"
+  exit $rc
 fi
 
 # --- (kind: hook) scenario file → hook script の mapping (試作: 単純 basename mapping) ---

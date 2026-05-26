@@ -1,0 +1,27 @@
+schema_version: "0.1"
+req_id: "REQ-VER-014"
+ears_pattern: "event-driven"
+kind: "cli-scaffold"
+description: |
+  folio init が consumer canonical Layer 1 layout を temp root に scaffold する (ADR-0024 / REQ-VER-014):
+    (a) exit 0、
+    (b) 生成 tree の file 集合 + folio.config.yaml content を golden 比較、
+    (c) folio validate --root <tmp>/architecture が clean (exit 0)、
+    (d) idempotency: 再 init で既存 file を preserve (上書きなし)。
+  init は tree (複数 file) を生成するため、 単一 output 前提の cli-golden ではなく kind:cli-scaffold で
+  検証する (verification.html REQ-VER-014 「既存 cli-golden harness の拡張が要る可能性、 HOW は実装時確定」
+  の HOW = runner.sh の cli-scaffold handler)。 golden は temp path を含まない決定的 manifest。
+
+# --- cli-scaffold scenario (verification.html §3.2 kind 拡張、 REQ-VER-011/014) ---
+command: ["init"]                                       # target dir は harness が fresh temp で供給
+golden: "baselines/reference/init-scaffold.golden.txt"  # 生成 file 集合 + folio.config.yaml (VCS 管理、 §3.4 REQ-VER-004)
+validate_root: "architecture"                           # 生成 tree 内の validate 検査 root (temp 相対)
+
+expect:
+  exit_code: 0                                          # init success (2 = tool error, fail-closed)
+
+# === 実装メモ (X4-A spawn = feature-dev) ===
+# ADR-0024 §2.1 標準 seed = architecture/{spec,decisions,research} cluster README (P-6) +
+# spec/{constitution,overview}.html starter (通常 conforming JSON-LD、 §2.2) + verification/.gitkeep +
+# folio.config.yaml (§2.5)。 golden は ./runner.sh --accept scenarios/init-scaffold.yaml で generate →
+# 人間 review → commit。 GREEN 条件: manifest == golden かつ init/validate/再init すべて exit 0。
