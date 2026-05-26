@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0028">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0028 — X5-γ 二層 enforcement モデル + prose-gate 機械化 (validate に REQ-CI-013/014/015、 011/012 は agent-only、 minimal CI)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0028-prose-gate-mechanization.html",
+  "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "./ADR-0029-phase-f-agent-set.html" }
+  ],
+  "dc:title": "ADR-0028 — X5-γ 二層 enforcement モデル + prose-gate 機械化 (validate に REQ-CI-013/014/015、 011/012 は agent-only、 minimal CI)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/folio-self-spec.html#s7-5-ci-gate" },
+    { "@id": "../spec/rules.html#s10-2" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "./ADR-0025-folio-fix-bidirectional.html" },
+    { "@id": "./ADR-0027-x4-d-architect-skill-review-agents.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0028 — X5-γ 二層 enforcement モデル + prose-gate 機械化 (validate に REQ-CI-013/014/015、 011/012 は agent-only、 minimal CI)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実装は本 ADR 承認後)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0028</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>folio-self-spec §7.5 (CI Gate Spec)、 rules §10.2 (REQ-CI gates、 本 ADR が 013/014/015 を機械実装)、 verification §3.6 (REQ-VER-013 validate 傘下)、 ADR-0020 (validate scope = 本 ADR が拡張)、 ADR-0025 (folio fix + broken-reverse gate = validate infra)、 ADR-0027 (Phase F review agents = LLM ceiling)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="../spec/rules.html#s10-2">rules.html §10.2</a> は 7 CI gate (REQ-CI-010〜016) を規定するが、 現状 deterministic に実装済なのは <strong>REQ-CI-010 (link-integrity) と REQ-CI-016 (json-ld-validation)</strong> の 2 gate のみ (<code>folio validate</code>、 <a href="./ADR-0020-validate-scope.html">ADR-0020</a>)。 残る <strong>REQ-CI-011〜015 (prose gate)</strong> は table 宣言のみで <a href="./ADR-0020-validate-scope.html">ADR-0020</a> が X4+ 完成形へ defer 済。</p>
+
+<p>一方 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027 (X4-D)</a> が Phase F に LLM review agent 3 個 (ears / vocabulary / ssot) を導入した。 ここで <strong>prose gate と review agent が同一 folio 原則を二重に守る緊張</strong>が顕在化する: REQ-CI-013 vocabulary ⟷ <code>spec-review-vocabulary</code> (P-5)、 REQ-CI-014 EARS-coverage ⟷ <code>spec-review-ears</code> (§6)、 REQ-CI-011 declarative-form ⟷ temporal 軸 (P-4)、 REQ-CI-012 what-only ⟷ <code>spec-review-ssot</code> (P-7境界)。</p>
+
+<p>X5 方向性として user は <strong>γ (選択的完成)</strong> を選択 (AskUq、 「長期的に安定する folio plugin」 が目標)。 γ は完成形を額面通り全 build せず、 <strong>価値が重複しない要素のみ</strong>実装する。 本 ADR は prose gate 群の enforcement 方式をこの γ 方針で確定する (agent セットの確定は <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> を承けた companion ADR で別途規定)。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-two-layer">§2.1 二層 enforcement モデル</h3>
+<p>各 folio 原則の品質 enforcement を以下の 2 層に役割分離する。 同一原則を二つの重い機構で冗長に守らず、 <strong>機械化可能な部分集合は floor、 意味的残余は ceiling</strong> と分担する。</p>
+<table>
+  <thead><tr><th>層</th><th>機構</th><th>性質</th><th>タイミング</th></tr></thead>
+  <tbody>
+    <tr><td><strong>deterministic floor</strong></td><td><code>folio validate</code> gate</td><td>決定的・機械化可能部分集合</td><td>merge / CI (強制)</td></tr>
+    <tr><td><strong>LLM ceiling</strong></td><td>Phase F review agent</td><td>意味的 nuance (floor が捕れない新規 synonym 等)</td><td>authoring (folio-architect、 advisory)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2-mechanize">§2.2 prose-gate 機械化 (validate 拡張)</h3>
+<p>以下 3 gate を <code>folio validate</code> の deterministic gate として実装する (<a href="./ADR-0020-validate-scope.html">ADR-0020</a> の validate scope を 2-gate + broken-reverse から拡張)。</p>
+<ul>
+  <li><strong>REQ-CI-013 vocabulary</strong> (block): canonical-name + forbidden-synonym リストに対する決定的検査。 設定源 (<code>folio.config.yaml</code> の vocabulary map か専用 spec) は実装時 (WS1) に確定。</li>
+  <li><strong>REQ-CI-014 EARS-coverage</strong> (warn): normative requirement の <code>ears-shall</code> span / <code>data-ears-pattern</code> markup の presence / count を検査 (<a href="../spec/rules.html#s6-ears">rules §6</a>)。 <a href="../spec/rules.html#s10-2">rules §10.2</a> の warn 設計 (merge 許可) を踏襲する。</li>
+  <li><strong>REQ-CI-015 delta-marker</strong> (block): delta marker markup の well-formed + 整合検査 (<a href="../spec/rules.html#s5-delta">rules §5</a>)。</li>
+</ul>
+
+<h3 id="s2-3-agent-only">§2.3 agent-only に留める prose gate (hard gate 化しない)</h3>
+<p><strong>REQ-CI-011 declarative-form</strong> (P-4) と <strong>REQ-CI-012 what-only</strong> (P-3 / P-11) は deterministic hard gate 化しない。 意味的判定であり機械化精度が低く false positive / negative が大きいため、 §2.1 の <strong>LLM ceiling のみで担保</strong>する (authoring advisory): 011 は temporal 軸 review agent、 012 は <code>spec-review-ssot</code>。 rules §10.2 table の 011/012 は規範として保持するが、 その enforcement 実体は CI hard gate でなく Phase F agent とする。</p>
+
+<h3 id="s2-4-minimal-ci">§2.4 minimal CI</h3>
+<p>GitHub Actions で PR ごとに <code>folio validate</code> (全 deterministic gate) + <code>tests/runner.sh</code> (sandbox) を auto-run し merge gating する。 <a href="../spec/verification.html#s4-2-completion-vs-prototype">verification.html §4.2</a> 「完成形 = 全 scenario PR ごと auto-run + merge gating」 の軽量版。 <strong>Inspect AI / Promptfoo 移行は DEFER</strong> (独自 bash runner が folio 規模で十分、 §4.2 は WS で optional / future に reconcile)。</p>
+
+<h3 id="s2-5-verification">§2.5 verification (REQ-VER)</h3>
+<p>新 deterministic gate は <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-013 (validate)</a> 傘下で sandbox scenario (<code>validate-clean</code> / <code>validate-violations</code> 拡張) により決定的に検証する。 LLM ceiling 側 (011/012 の agent 検出) は <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-016 (b)</a> の検出有無 assertion に従う。</p>
+
+<h3 id="s2-6-application">§2.6 適用範囲</h3>
+<p>実装物 (WS1 / WS4): <code>.claude-plugin/bin/folio validate</code> への gate 追加 (013 / 014 / 015) + vocabulary config + sandbox scenario 拡張 + GitHub Actions workflow + <a href="../spec/rules.html#s10-2">rules §10.2</a> / <a href="../spec/folio-self-spec.html#s7-5-ci-gate">§7.5</a> の enforcement 実体注記 + <a href="../spec/verification.html#s4-2-completion-vs-prototype">verification §4.2</a> reconcile (Inspect AI = future)。 <strong>実装方式 (PARENT 一括 / SPAWN feature-dev) は本 ADR 承認後に決定</strong>。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>二重 enforcement の緊張を解消</strong>: 機械化可能な原則は決定的 floor (低保守・CI 強制)、 意味的残余は LLM ceiling (authoring advisory) と明確に役割分担。 同一原則を二つの重い機構で守らない。</li>
+  <li><strong>CI で回帰を merge gate 可能</strong>: deterministic floor があることで PR ごとの自動 gating が成立 (LLM agent は非決定的で CI gate に不適)。</li>
+  <li><strong>長期安定に資する</strong>: 決定的 gate は保守コストが低く再現的。 prose gate を「全 LLM 化」 や 「全機械化」 せず、 各原則の性質に応じて最適配置。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>011 declarative-form / 012 what-only は CI hard gate を持たず authoring agent 依存 = merge 時の決定的強制がない (意味的ゆえ受容)。</li>
+  <li>vocabulary gate は canonical / forbidden リストの設定保守が要る (新語追加時)。 ただし新規 synonym の発見は LLM ceiling が補完。</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>rules §10.2 の 7-gate table は規範として不変。 本 ADR は各 gate の <strong>enforcement 実体</strong> (deterministic validate / LLM agent / hard gate なし) を確定するもので、 gate 宣言自体は据置。</li>
+  <li>Inspect AI 移行を DEFER しても §4.2 完成形 anchor は保持 (future として reconcile)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>二層モデル + 013/014/015 機械化 + 011/012 agent-only (採用)</td><td>各原則の性質 (機械化可能性) に応じた最適配置。 CI に決定的 floor、 authoring に意味的 ceiling (AskUq γ 方針)</td></tr>
+    <tr><td>REQ-CI-011〜015 を全機械化 (validate に 5 gate)</td><td>不採用 — declarative-form / what-only は意味的で機械化精度が低く、 決定的 hard gate 化すると false positive で merge を不当 block</td></tr>
+    <tr><td>REQ-CI-011〜015 を全 LLM 化 (validate が LLM を呼ぶ)</td><td>不採用 — 非決定的・低速・API 依存で CI gate が不安定。 validate の決定性 (<a href="./ADR-0020-validate-scope.html">ADR-0020</a>) を破壊</td></tr>
+    <tr><td>prose gate を作らず Phase F agent のみ</td><td>不採用 — CI に deterministic floor がなく、 PR で回帰を merge gate できない (LLM agent は authoring advisory で gate 不可)</td></tr>
+    <tr><td>Inspect AI / Promptfoo へ全面移行</td><td>不採用 / DEFER — 独自 bash runner (<code>tests/runner.sh</code>) が現 folio 規模で十分。 完成形候補として §4.2 に future 保持</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/rules.html#s10-2">rules §10.2 (REQ-CI-010〜016)</a> + <a href="../spec/folio-self-spec.html#s7-5-ci-gate">§7.5 CI Gate Spec</a>。 <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate scope = 本 ADR が deterministic gate を拡張)。 <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> (folio fix + broken-reverse gate = validate の決定的 gate infra)。 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> (Phase F review agent = LLM ceiling、 本 ADR の二層モデルの上層)。</li>
+  <li>決定経緯: X5 方向性 AskUq で <strong>γ (選択的完成)</strong> を user 選択。 prose gate と Phase F agent の二重 enforcement 緊張を二層モデルで解消し、 機械化可能な 013/014/015 を validate に、 意味的な 011/012 を agent ceiling に配置。</li>
+  <li>適用 (実装、 方式は承認後決定): <code>folio validate</code> gate 追加 (013/014/015) + vocabulary config + sandbox scenario 拡張 + GitHub Actions CI + rules §10.2 / §7.5 enforcement 実体注記 + verification §4.2 reconcile。</li>
+  <li>関連原則: P-6 (link-integrity、 既存 010)、 P-5 (canonical naming = 013 vocabulary gate)、 P-4 (declarative = 011 agent ceiling / §6 EARS = 014 gate)、 P-3 / P-11 (what-only = 012 agent ceiling)、 P-13 ((a) spec 適合性 = folio validate floor + Phase F ceiling の役割分担)。</li>
+</ul>
+</section>
+
+</body>
+</html>

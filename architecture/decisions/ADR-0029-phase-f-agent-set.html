@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0029">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0029-phase-f-agent-set.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/folio-self-spec.html#s7-2-specialists" },
+    { "@id": "../spec/folio-self-spec.html#s7-1-7phase" },
+    { "@id": "../spec/folio-self-spec.html#s7-6-phase-x3-minimal" },
+    { "@id": "../spec/verification.html#s4-2-completion-vs-prototype" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0027-x4-d-architect-skill-review-agents.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実 amend は WS2)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0029</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>folio-self-spec §7.2 (8 specialist 完成形、 本 ADR が v1.0 確定セットへ改訂)、 §7.1 (7-Phase、 Phase F 並列数)、 §7.6 (growth path)、 verification §4.2 (完成形 vs 試作)、 §3.6 (REQ-VER-016)、 ADR-0027 (X4-D 3 agent + §7.2 「未来 anchor 保持」 stance = 本 ADR が refine)、 ADR-0028 (companion、 structure cut の根拠 = validate deterministic floor)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027 (X4-D)</a> は <a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 完成形 8 specialist agents</a> のうち 3 個 (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) を実装し、 残 5 個 (<code>spec-explorer</code> / <code>spec-architect</code> / <code>spec-review-{structure,temporal,stakeholder}</code>) を X5+ 据置、 <strong>§7.2 完成形 8 agents は「未来 anchor として保持」</strong>とした。</p>
+
+<p>X5 方向性 AskUq で user は <strong>γ (選択的完成)</strong> を選択 (目標「長期的に安定する folio plugin」)。 γ は完成形を額面通り全 build せず、 <strong>価値が重複しない要素のみ</strong>実装する。 ここで残 5 agent には性質差がある: (a) <code>spec-review-structure</code> は <code>folio validate</code> の link-integrity (REQ-CI-010) + readme-index + naming で<strong>機械被覆と重複</strong> (ADR-0027 §4 が既に自認)、 (b) <code>spec-review-temporal</code> は P-4 declarative の<strong>意味的判定で LLM-distinctive</strong> (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 が 011 を agent ceiling に委ねた対の軸)、 (c) <code>spec-explorer</code> / <code>spec-architect</code> は folio-architect が <strong>inline で機能</strong>中、 (d) <code>spec-review-stakeholder</code> (ISO 42010) は <strong>niche</strong>。</p>
+
+<p>本 ADR は <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (gate enforcement の二層モデル) の companion として、 Phase F の <strong>agent セットを v1.0 向けに確定</strong>し、 ADR-0027 が保持した §7.2 完成形 anchor を γ 方針で<strong>剪定改訂</strong>する。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-set">§2.1 Phase F v1.0 agent セット = 4 review agent</h3>
+<p>Phase F (Quality Review) の review agent を <strong>4 個</strong>に確定する: <code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code> (実装済) + <code>spec-review-temporal</code> (新規)。</p>
+
+<h3 id="s2-2-temporal">§2.2 spec-review-temporal を build</h3>
+<p>P-4 declarative form + wave-specific narrative 検出 (<a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 F軸4</a>) を担う review agent を実装する。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 で REQ-CI-011 (declarative-form) を hard gate 化せず agent ceiling に委ねたが、 その ceiling 実体が本 agent である。 contract は他 review agent と同型: <code>agents/spec-review-temporal.md</code> (plugin root)、 scoped name <code>folio:spec-review-temporal</code>、 <code>tools: Read, Grep, Glob</code> (read-only)、 <code>model</code> = <code>review_model</code> (opus) または inherit。</p>
+
+<h3 id="s2-3-structure-cut">§2.3 spec-review-structure を CUT</h3>
+<p><a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 F軸2</a> (directory structure / file naming / cross-ref / heading hierarchy) は <code>folio validate</code> の link-integrity (REQ-CI-010 = cross-ref) + readme-index hook (cluster 掲載) + naming convention で<strong>機械的に被覆される</strong>ため、 専用 LLM review agent を実装しない (<a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> §4 の「structure は validate が cover」自認を確定)。 deterministic floor が担い、 LLM ceiling を別立てしない。</p>
+
+<h3 id="s2-4-defer">§2.4 post-1.0 opt-in に defer</h3>
+<ul>
+  <li><code>spec-explorer</code> (Phase B) / <code>spec-architect</code> (Phase D): folio-architect が inline 実行中で機能しており、 agent 化 (並列探索/設計) は<strong>実 large-consumer 需要が顕在化した時点</strong>で行う。</li>
+  <li><code>spec-review-stakeholder</code> (Phase F軸6、 ISO 42010 Stakeholder Perspectives): niche ゆえ post-1.0。</li>
+</ul>
+<p>これらは削除でなく <strong>defer</strong> であり、 §7.2 に post-1.0 anchor として残す。</p>
+
+<h3 id="s2-5-amend">§2.5 §7.2 完成形 anchor 改訂 (実 amend は WS2)</h3>
+<p><a href="../spec/folio-self-spec.html#s7-2-specialists">folio-self-spec §7.2</a> を「8 agents 完成形 (未来 anchor 保持)」から <strong>「v1.0 確定セット + post-1.0 deferred」</strong>へ改訂する: v1.0 = Phase F 4 review agent (ears/vocabulary/ssot/temporal) + structure は <code>folio validate</code> 被覆 + Phase B/D は folio-architect inline、 post-1.0 deferred = explorer / architect / stakeholder。 <a href="../spec/folio-self-spec.html#s7-1-7phase">§7.1</a> の Phase F 「6 並列固定」 を 「4 並列 (v1.0)」 に、 <a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">§7.6 growth path</a> と <a href="../spec/verification.html#s4-2-completion-vs-prototype">verification §4.2 完成形列</a> も整合させる。 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> の「§7.2 不変・未来 anchor 保持」 guidance は本 ADR が <strong>refine</strong> する (supersede ではなく、 完成形定義を γ で確定)。</p>
+
+<h3 id="s2-6-verification">§2.6 verification</h3>
+<p><code>spec-review-temporal</code> の structural 妥当性 (frontmatter + scoped name <code>folio:&lt;name&gt;</code> resolvable + SKILL の agent 参照整合) を <code>tests/scenarios/agent-structure.yaml</code> に追加し決定的に検証 (<a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-016 (a)</a>)。 検出能力は <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-016 (b)</a> の e2e detection (既知 P-4 violation を seed → flag 観察) で被覆。</p>
+
+<h3 id="s2-7-application">§2.7 適用範囲 (WS2)</h3>
+<p>実装物: <code>agents/spec-review-temporal.md</code> 新規 + folio-architect SKILL Phase F の review agent を 3 → 4 + <a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2</a> / <a href="../spec/folio-self-spec.html#s7-1-7phase">§7.1</a> / <a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">§7.6</a> + <a href="../spec/verification.html#s4-2-completion-vs-prototype">verification §4.2</a> amend (spec edit = caller marker 要) + <code>agent-structure.yaml</code> 拡張 + e2e detection。 <strong>実装方式 (PARENT / SPAWN) は本 ADR 承認後に決定</strong>。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>完成形 vs 実装の乖離を解消</strong>: §7.2 anchor を実態 (v1.0 確定セット) に合わせ、 長期の spec rot (永久 aspirational anchor) を防ぐ。</li>
+  <li><strong>over-build 回避</strong>: validate と重複する structure agent、 niche な stakeholder agent を v1.0 から除外 (<a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> §4 の prototype-driven 判断と整合)。</li>
+  <li><strong>P-4 を ceiling 被覆</strong>: temporal agent が <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の 011 agent-only 方針を実体化。 二層モデルが 4 軸で閉じる。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>§7.2 完成形 anchor を改訂する (ADR-0027 の「保持」 stance を更新)。 ただし frozen は ADR 本文であり、 §7.2 は <a href="../spec/constitution.html#p-7">編集可 spec</a>。</li>
+  <li>explorer / architect / stakeholder を v1.0 から外す (将来 opt-in で復帰可、 post-1.0 anchor 保持)。</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>deferred 3 agent は §7.2 に post-1.0 anchor として残す (削除でなく defer)。 完成形の野心は保持しつつ v1.0 scope を確定。</li>
+  <li>folio-architect は SKILL のまま (subagent nesting 制約)。 Phase B/D inline は X4-D から不変。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>4 review agent (temporal 追加) + structure cut + 3 defer (採用)</td><td>価値が重複しない軸のみ build。 二層モデル (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a>) と整合し P-4 を ceiling 被覆 (AskUq γ)</td></tr>
+    <tr><td>§7.2 の 6 review + explorer + architect を全 build</td><td>不採用 — structure は validate 重複、 stakeholder は niche、 explorer/architect は inline で足りる。 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> §4 の over-build 判断と矛盾</td></tr>
+    <tr><td>3 agent 維持 (temporal も defer)</td><td>不採用 — P-4 declarative は folio core principle。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> が 011 を hard gate 化しない以上、 temporal ceiling を欠くと P-4 の品質保証が空く</td></tr>
+    <tr><td>spec-review-structure を build</td><td>不採用 — <code>folio validate</code> link-integrity + readme-index + naming と重複。 deterministic floor で足りる軸に LLM agent を重ねない</td></tr>
+    <tr><td>§7.2 を改訂せず deferred を未来 anchor のまま放置</td><td>不採用 — 完成形 (8 agents) と実装 (4 agent) の乖離が永続化し、 spec が実態を語らない rot を招く。 v1.0 で完成形定義を確定すべき</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 (8 specialist 完成形)</a> + <a href="../spec/folio-self-spec.html#s7-1-7phase">§7.1 (7-Phase、 Phase F 並列数)</a> + <a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">§7.6 (growth path)</a>。 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> (X4-D 3 agent + §7.2 保持 stance = 本 ADR が refine)。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (companion、 二層モデルで structure cut / temporal ceiling を裏付け)。</li>
+  <li>決定経緯: X5 方向性 AskUq で <strong>γ (選択的完成)</strong> を user 選択。 ADR-0027 が未来 anchor として保持した §7.2 完成形を γ 方針で v1.0 確定セットへ剪定 (temporal build / structure cut / explorer・architect・stakeholder defer)。</li>
+  <li>適用 (WS2、 方式は承認後決定): <code>agents/spec-review-temporal.md</code> + SKILL Phase F 3→4 + §7.2/§7.1/§7.6/§4.2 amend + agent-structure.yaml + e2e detection。</li>
+  <li>関連原則: P-12 (Layer 0 一体配布、 SKILL + agents 同梱)、 P-5 (canonical naming = <code>spec-review-temporal</code>)、 P-13 ((a) review の LLM 補完 = deterministic floor と Phase F ceiling の役割分担)、 prototype-driven (<a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> / ADR-0027 §4 の over-build 回避)。</li>
+</ul>
+</section>
+
+</body>
+</html>
