@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5   # node24 ランタイム (v4 = node20 は 2026-06-02 強制移行で deprecation)
 
       # yq は ubuntu-latest に非搭載。 runner.sh + vocabulary gate (mikefarah/yq v4.x) が依存。
       # local 開発環境 (v4.53.2) と同 minor に pin して再現性を確保する。
