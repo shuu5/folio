@@ -504,6 +504,10 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
 <aside class="informative">
 <p>「完成形 vs 試作段階」 の対比は本 §4.2 に集約する MUST (SSoT)。 <a href="folio-self-spec.html#s7-2-specialists">folio-self-spec.html §7.2</a> は完成形 declarative description として保持、 試作段階の現状は <a href="folio-self-spec.html#s7-6-phase-x3-minimal">§7.6</a> に局所化する。 本 §4.2 は両者を verification flow の文脈で対比する。</p>
 </aside>
+
+<aside class="informative">
+<p><strong>X5-γ v1.0 reconcile (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>)</strong>: 上表「完成形」 列は long-term vision。 v1.0 の実体は: <strong>検証対象</strong> = Phase F <strong>4 review agent</strong> (ears/vocabulary/ssot/temporal、 <a href="folio-self-spec.html#s7-2-specialists">§7.2 disposition aside</a>)。 <strong>runner</strong> = 独自 bash runner (<code>tests/runner.sh</code>) を維持 — Inspect AI / Promptfoo 移行は現 folio 規模では over-engineering ゆえ <strong>post-1.0 / optional</strong> に reconcile。 <strong>CI 統合</strong> = GitHub Actions で <code>folio validate</code> + <code>tests/runner.sh</code> を PR ごと auto-run する minimal CI (全 scenario merge gating の軽量版、 WS4)。</p>
+</aside>
 </section>
 
 <!-- ====================================================================

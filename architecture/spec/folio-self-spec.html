@@ -233,7 +233,7 @@ graph TD
 </table>
 
 <aside class="informative">
-<p>本 table は完成形の 7-Phase 宣言 (declarative)。 <strong>X4-D 現状局所化 (ADR-0027、 <a href="#s7-6-phase-x3-minimal">§7.6 growth path</a>)</strong>: Phase <strong>B / D</strong> は X4 では folio-architect が <strong>inline</strong> 実行する (<code>spec-explorer</code> / <code>spec-architect</code> の agent 化は X5+)。 Phase <strong>F</strong> は X4 では <strong>3 agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) を並列 spawn し、 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) は X5+ 据置 (table の 6 並列固定は完成形)。 <a href="#s7-2-specialists">§7.2 完成形 8 agents</a> は改変せず未来 anchor として保持する。</p>
+<p>本 table は完成形の 7-Phase 宣言 (declarative)。 <strong>X5-γ で v1.0 scope 確定 (ADR-0029、 <a href="#s7-6-phase-x3-minimal">§7.6 growth path</a>)</strong>: Phase <strong>B / D</strong> は folio-architect が <strong>inline</strong> 実行する (<code>spec-explorer</code> / <code>spec-architect</code> の agent 化は post-1.0 defer)。 Phase <strong>F</strong> は v1.0 で <strong>4 agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code> / <code>spec-review-temporal</code>) を並列 spawn する。 <code>spec-review-structure</code> は <code>folio validate</code> (link-integrity + readme-index) が機械被覆ゆえ <strong>cut</strong>、 <code>spec-review-stakeholder</code> は <strong>post-1.0 defer</strong> (table / 図の 6 並列は完成形 vision として保持)。 disposition の詳細は <a href="#s7-2-specialists">§7.2</a> 末尾 aside を参照。</p>
 </aside>
 
 <figure class="diagram" data-diagram-type="phase-flow">
@@ -304,6 +304,15 @@ flowchart LR
 </pre>
 <figcaption>図 4. specialist agents 並列 spawn pattern。 Phase B (探索) / Phase D (設計、 optional) / Phase F (品質検証、 6 軸並列固定)。</figcaption>
 </figure>
+
+<aside class="informative">
+<p><strong>X5-γ v1.0 disposition (<a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>)</strong>: 本 §7.2 の 8-agent table は完成形 vision として保持する。 v1.0 で実装するのは Phase F の <strong>4 review agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code> / <code>spec-review-temporal</code>)。</p>
+<ul>
+  <li><code>spec-review-structure</code> = <strong>cut</strong>: directory / naming / cross-ref / heading は <code>folio validate</code> の link-integrity (REQ-CI-010) + readme-index hook + naming convention が機械被覆するため、 LLM agent を重ねない (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement の deterministic floor 側)。</li>
+  <li><code>spec-explorer</code> (Phase B) / <code>spec-architect</code> (Phase D) / <code>spec-review-stakeholder</code> (F軸6) = <strong>post-1.0 defer</strong>: explorer / architect は folio-architect が inline で機能し、 agent 化は実 large-consumer 需要が顕在化した時点。 stakeholder (ISO 42010) は niche。</li>
+  <li>deferred 3 agent は削除でなく将来 opt-in の anchor として §7.2 table に残す。 <code>spec-review-temporal</code> は <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 の REQ-CI-011 declarative-form を担う LLM ceiling。</li>
+</ul>
+</aside>
 
 <h3 id="s7-3-caller-marker">§7.3 Caller Marker</h3>
 
@@ -440,6 +449,10 @@ flowchart LR
 <figcaption>図 7. CI gate pipeline。 7 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。 G7 (json-ld-validation) は 2026-05-23 追加 (REQ-CI-016、 verification framework と integration)。</figcaption>
 </figure>
 
+<aside class="informative">
+<p><strong>gate enforcement 実体 (X5-γ、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement)</strong>: 7 gate は性質に応じ 2 経路で enforce する。 <strong>deterministic floor</strong> = <code>folio validate</code> (機械検査・CI block/warn): REQ-CI-010 link-integrity / 016 json-ld (実装済) + <strong>013 vocabulary</strong> (<code>vocabulary.yaml</code> opt-in、 block) + <strong>015 delta-marker</strong> (block) + <strong>014 EARS-coverage</strong> (warn)。 <strong>LLM ceiling</strong> = Phase F review agent (authoring advisory、 非決定的ゆえ CI hard gate にしない): <strong>REQ-CI-011 declarative-form</strong> → <code>spec-review-temporal</code> / <strong>REQ-CI-012 what-only</strong> → <code>spec-review-ssot</code>。 同一原則を二つの重い機構で守らず、 機械化可能部分を floor、 意味的残余を ceiling に分担する。 図 7 の「EARS coverage は実装段階で fail 化検討」は X5-γ で <strong>warn 維持</strong>に確定 (REQ-CI-014 warn 設計)。</p>
+</aside>
+
 <h3 id="s7-6-phase-x3-minimal">§7.6 Phase X3 Minimal Implementation</h3>
 
 <aside class="informative">
@@ -448,10 +461,10 @@ flowchart LR
 
 <p>Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href="../decisions/ADR-0003-plugin-architecture.html#s2-decision">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は ADR-0003 への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。</p>
 
-<p>段階的成長 path: <strong>1 skill (Phase X3) → 7-Phase SKILL + 2-3 review agent (Phase X4) → 8 agents 完成形 (Phase X5+)</strong> (X4-D で従来「2-3 skill (X4)」を 7-Phase SKILL 昇格 + review agent 込みに精緻化、 <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a>)。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
+<p>段階的成長 path: <strong>1 skill (Phase X3) → 7-Phase SKILL + 3 review agent (Phase X4) → 4 review agent v1.0 (Phase X5-γ) → 8 agents 完成形 vision (post-1.0)</strong> (X4-D で 3 review agent ears/vocabulary/ssot、 <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a>; X5-γ で temporal 追加・<code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut・<code>spec-explorer</code>/<code>spec-architect</code>/<code>spec-review-stakeholder</code> は post-1.0 defer、 <a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>)。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
 
 <aside class="informative">
-<p><strong>X4-D 現状 (ADR-0027)</strong>: <a href="#s7-1-7phase">§7.1</a> の 7-Phase orchestration を <code>folio-architect</code> SKILL に実装し、 Phase F に review agent を <strong>3 個</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) 導入した (<code>agents/&lt;name&gt;.md</code>、 scoped name <code>folio:&lt;name&gt;</code>、 read-only)。 Phase B (<code>spec-explorer</code>) / Phase D (<code>spec-architect</code>) は X4 では folio-architect が inline 実行し、 agent 化は <strong>X5+</strong>。 Phase F 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) も <strong>X5+</strong> 据置。 <a href="#s7-2-specialists">§7.2 完成形 8 agents</a> は未来 anchor として保持する。 検証 contract は <a href="verification.html#s3-6-verification-specific">verification.html REQ-VER-016</a>。</p>
+<p><strong>X4-D 現状 (ADR-0027)</strong>: <a href="#s7-1-7phase">§7.1</a> の 7-Phase orchestration を <code>folio-architect</code> SKILL に実装し、 Phase F に review agent を <strong>3 個</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) 導入した (<code>agents/&lt;name&gt;.md</code>、 scoped name <code>folio:&lt;name&gt;</code>、 read-only)。 Phase B (<code>spec-explorer</code>) / Phase D (<code>spec-architect</code>) は X4 では folio-architect が inline 実行し、 agent 化は <strong>X5+</strong>。 Phase F 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) も当時は <strong>X5+</strong> 据置とした。 <a href="#s7-2-specialists">§7.2 完成形 8 agents</a> は未来 anchor として保持する。 検証 contract は <a href="verification.html#s3-6-verification-specific">verification.html REQ-VER-016</a>。 <strong>X5-γ 更新 (<a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>)</strong>: <code>spec-review-temporal</code> を v1.0 の 4 番目 review agent に昇格、 <code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut、 <code>spec-explorer</code> / <code>spec-architect</code> / <code>spec-review-stakeholder</code> は post-1.0 defer (<a href="#s7-2-specialists">§7.2 末尾 disposition aside</a>)。</p>
 </aside>
 
 <p>本 minimal plugin の実機検証は <a href="verification.html">verification.html</a> (sandbox verification framework) で実施する。 verification scope の段階的対比 (完成形 §7.2 vs 試作段階 §7.6) は <a href="verification.html#s4-2-completion-vs-prototype">verification.html §4.2</a> に集約 (SSoT)。</p>

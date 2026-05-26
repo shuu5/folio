@@ -3,11 +3,11 @@ req_id: "REQ-VER-016"
 ears_pattern: "event-driven"
 kind: "agent-structural"
 description: |
-  Phase F review agents (spec-review-{ears,vocabulary,ssot}) の structural 検証 (REQ-VER-016 (a)):
+  Phase F review agents (spec-review-{ears,vocabulary,ssot,temporal}) の structural 検証 (REQ-VER-016 (a)):
     (1) 各 agent .md frontmatter (name / description / model / tools) が妥当、
     (2) tools が read-only (Read / Grep / Glob のみ、 Edit/Write を持たない)、
     (3) scoped name folio:<name> resolvable (frontmatter name == 宣言 name + SKILL が参照)、
-    (4) folio-architect SKILL が 3 agent すべてを folio:<name> で参照。
+    (4) folio-architect SKILL が 4 agent すべてを folio:<name> で参照。
   LLM review の検出能力 (REQ-VER-016 (b)) は非決定的ゆえ e2e (tests/e2e/runbook.md S-G) で別途検証する。
   本 scenario は file 静的検査のみで live plugin load 非依存・決定的 (cli-fix 同様 golden 不要 = structural assertion)。
 
@@ -22,6 +22,8 @@ agents:
     name: "spec-review-vocabulary"
   - file: "agents/spec-review-ssot.md"
     name: "spec-review-ssot"
+  - file: "agents/spec-review-temporal.md"
+    name: "spec-review-temporal"
 
 expect:
   exit_code: 0                                       # 全 structural check PASS (1 = 構造違反検出)
@@ -29,4 +31,4 @@ expect:
 # === 実装メモ (X4-D) ===
 # ADR-0027 §2.6 (a) structural の HOW = runner.sh の agent-structural handler。 agents/ + skills/ は
 # spec_path (architecture/spec/) 外ゆえ caller-marker 不要、 folio validate scan 対象外 (architecture/ のみ)。
-# GREEN 条件: 3 agent の frontmatter 妥当 + read-only tools + SKILL が folio:<name> を全参照 → exit 0。
+# GREEN 条件: 4 agent の frontmatter 妥当 + read-only tools + SKILL が folio:<name> を全参照 → exit 0。
