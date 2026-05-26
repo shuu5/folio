@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0024">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0024-folio-init-scope.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/constitution.html#p-6" },
+    { "@id": "../spec/constitution.html#p-7" },
+    { "@id": "../spec/constitution.html#p-12" },
+    { "@id": "../spec/rules.html#s2-directory" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0022-x4-0-canonical-layout.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-A、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0024</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>constitution P-6 (link integrity/orphan → seed README), P-7 (3-domain → init が生成), P-12 (Layer 0 一体配布 → init が Layer 1 consume 手段), rules §2 (consumer layout + folio.config.yaml schema), verification §3.6 (REQ-VER-014), ADR-0003 (init を CLI として authorize), ADR-0022 (init が生成する canonical layout)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> は <code>folio</code> CLI の subcommand として <code>init</code> / <code>validate</code> / <code>inventory</code> / <code>prime</code> / <code>fix</code> を WHAT 列挙し、 「引数仕様等の HOW は <code>.claude-plugin/</code> 実装時に確定」 と明記した。 <a href="./ADR-0022-x4-0-canonical-layout.html">ADR-0022</a> + X4-C (<a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>) で canonical layout が確定・実体化した今、 <strong><code>folio init</code> = その canonical layout を consumer (Layer 1) project に scaffold する CLI</strong>として scope を確定する (X4-A)。</p>
+
+<p>init は folio core mission「architecture/ 構造を<strong>作成</strong>し維持する」 の「作成」 半分を担う (validate/fix が「維持」)。 user 承認は本 session の AskUq (標準 seed + ADR-0024 起票) で取得済。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-scaffold">§2.1 生成物 (標準 seed = canonical layout skeleton)</h3>
+<p><code>folio init [&lt;dir&gt;]</code> (省略時 cwd) に以下を生成する (<a href="../spec/rules.html#s2-directory">rules §2</a> consumer layout):</p>
+<pre><code>&lt;consumer&gt;/
+├── folio.config.yaml                  # 生成 (§2.5 defaults)
+├── architecture/
+│   ├── spec/
+│   │   ├── README.html                # cluster entry point (P-6 MUST)
+│   │   ├── constitution.html          # project 固有 starter (folio core 継承宣言 + 固有 placeholder)
+│   │   └── overview.html              # project overview template
+│   ├── decisions/
+│   │   └── README.html                # cluster entry point (P-6 MUST)
+│   └── research/
+│       └── README.html                # cluster entry point (P-6 MUST)
+└── verification/                      # HOW-test dir (.gitkeep)
+</code></pre>
+<p><code>assets/</code> は consumer layout (rules §2) に含まれないため init は生成しない (mermaid 等を使う consumer が任意で追加)。 <code>CLAUDE.md</code> / <code>README.md</code> 等の platform binding file も生成しない (consumer の platform 規約に委ねる、 標準 seed の範囲外、 §4 リッチ案 不採用)。</p>
+
+<h3 id="s2-2-starter-constitution">§2.2 starter constitution は通常 spec schema</h3>
+<p>seed する <code>architecture/spec/constitution.html</code> は<strong>通常の conforming JSON-LD</strong> (<code>@context</code> object + <code>@id</code> + <code>@type</code>) を持つ project 固有 spec として生成する。 これは folio 自身の frozen constitution (FolioConstitution schema、 string <code>@context</code>、 scan 除外 = <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>) とは<strong>別物</strong>: consumer の constitution は Layer 1 の通常 spec で、 inventory/validate の scan 対象に入り得る。 starter は「folio Layer 0 core を継承し、 project 固有原則をここに追記する」 旨の宣言 + placeholder を含む。</p>
+
+<h3 id="s2-3-idempotent">§2.3 idempotency</h3>
+<p>init は <strong>idempotent</strong>: 既存 file は<strong>上書きしない (preserve)</strong>、 欠損している file / dir のみ生成する。 既存 project への再 init や部分的に欠けた layout の補完に安全。 上書きが必要な場合は user が明示削除してから再 init する。</p>
+
+<h3 id="s2-4-validate-clean">§2.4 validate-clean 保証 (品質ゲート)</h3>
+<p>生成された skeleton は <code>folio validate</code> が <strong>clean (exit 0)</strong> である MUST。 すなわち seed file 群は (a) 各 cluster が <code>README.html</code> entry point を持ち orphan を出さない (<a href="../spec/constitution.html#p-6">P-6</a>)、 (b) 全 JSON-LD relation <code>@id</code> が resolve する (link-integrity)、 (c) JSON-LD structural (<code>@context</code> object + <code>@id</code> + <code>@type</code>) を満たす。 <strong><code>folio init &amp;&amp; folio validate</code> が pass</strong> することが init の品質ゲート (REQ-VER-014)。</p>
+
+<h3 id="s2-5-config">§2.5 folio.config.yaml 生成値</h3>
+<p><a href="../spec/rules.html#s2-directory">rules §2</a> schema の default を生成する:</p>
+<pre><code>folio_version: "^0.5"                  # 現 folio major (0.5.x) の semver range
+spec_path: "architecture/spec/"        # canonical default (userConfig で override 可)
+caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
+caller_marker_value: "folio-architect"
+review_model: "opus"                   # optional
+</code></pre>
+
+<h3 id="s2-6-verification">§2.6 検証 (REQ-VER-014)</h3>
+<p>init の conformance は <a href="../spec/verification.html#s3-6-verification-specific">verification §3.6 REQ-VER-014</a> + <code>scenarios/init-scaffold.yaml</code> (cli-golden) で検証する: init を temp root に実行 → (a) exit 0、 (b) 生成 tree の file 集合 + <code>folio.config.yaml</code> 内容を golden 比較、 (c) <code>folio validate --root &lt;tmp&gt;/architecture</code> が clean。 init は tree (複数 file) を生成するため、 既存 cli-golden harness (単一 output_file/stdout) の<strong>拡張が要る可能性があり、 その HOW は SPAWN (feature-dev) が実装時に確定</strong> (harness 拡張 or init の stdout manifest + 後続 validate の組合せ)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>folio core mission の「作成」 半分を実現</strong>: 新規 consumer project が <code>folio init</code> 一発で canonical layout + folio.config.yaml を得る</li>
+  <li><strong>validate-clean 保証で「動く skeleton」</strong>: init 直後に validate が通るため consumer は壊れていない状態から spec を書き始められる</li>
+  <li>canonical layout (ADR-0022) の<strong>裏取り</strong>: init が生成する shape が canonical layout と一致するかで layout 決定を検証できる</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>cli-golden harness が単一 output 前提のため、 tree 検証に harness 拡張が要る可能性 (SPAWN が確定、 §2.6)</li>
+  <li>seed template (starter constitution / overview / cluster README) の JSON-LD + cross-ref を validate-clean に保つ作業が要る (SPAWN)</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>consumer の <code>constitution.html</code> は通常 spec schema (scan 対象) で、 folio 自身の scan 除外 constitution とは別扱い (§2.2)</li>
+  <li>platform binding (CLAUDE.md/README.md) は init scope 外 — consumer が platform 規約で持つ</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>標準 seed (採用): 最小 + starter constitution + overview template</td><td>すぐ spec を書き始められ、 rules §2 consumer layout に最も忠実 (AskUq)</td></tr>
+    <tr><td>最小 seed: dirs + config + cluster README のみ</td><td>不採用 — validate-clean な空箱は得られるが、 constitution/overview を user が一から書く負担。 標準が初動を楽にする (AskUq)</td></tr>
+    <tr><td>リッチ seed: + CLAUDE.md / README.md / sample ADR</td><td>不採用 — platform binding まで生成すると init の責務が広がり上書きリスク増。 platform 規約は consumer の自由 (AskUq)</td></tr>
+    <tr><td>REQ-INIT-* family を新設</td><td>不採用 — CLI subcommand の検証 REQ は REQ-VER-010(inventory)/012(prime)/013(validate) の系列。 init も <strong>REQ-VER-014</strong> として §3.6 に追加し convention 統一</td></tr>
+    <tr><td>非 idempotent (常に上書き)</td><td>不採用 — 既存 project の破壊リスク。 idempotent preserve が安全 (§2.3)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> (init を CLI subcommand として authorize、 HOW は実装時確定)。 <a href="./ADR-0022-x4-0-canonical-layout.html">ADR-0022</a> (init が生成する canonical layout を確定)。</li>
+  <li>決定経緯: 本 session の AskUq — 標準 seed (constitution/overview template 含む) + ADR-0024 起票。 設計 default = idempotent + validate-clean 保証。</li>
+  <li>要件 SSoT: <a href="../spec/verification.html#s3-6-verification-specific">verification §3.6 REQ-VER-014</a> (init の testable 要件 + init-scaffold scenario)。</li>
+  <li>実装 (SPAWN, feature-dev): <code>bin/folio</code> dispatch に <code>init)</code> case + <code>folio_cmd_init</code>、 seed template (starter constitution / overview / cluster README / folio.config.yaml)、 <code>scenarios/init-scaffold.yaml</code> + golden、 生成 skeleton の validate-clean + sandbox GREEN を acceptance とする。</li>
+  <li>関連原則: P-6 (cluster README seed で orphan 回避)、 P-7 (3-domain を init が生成)、 P-12 (Layer 0 一体配布 = init が Layer 1 consume の手段)、 P-5 (validate/init/fix の CLI 命名統一)。</li>
+</ul>
+</section>
+
+</body>
+</html>

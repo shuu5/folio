@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 22 specs · folio 0.5.0-draft
+# 23 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -96,6 +96,11 @@
 - title: ADR-0023 — X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)
 - doc-type: adr · status: accepted
 - summary: forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)
+
+## decisions/ADR-0024-folio-init-scope.html
+- title: ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)
+- doc-type: adr · status: accepted
+- summary: forward (X4-A、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal
