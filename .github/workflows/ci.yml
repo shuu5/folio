@@ -1,0 +1,73 @@
+# folio verification CI — ADR-0028 §2.4 "minimal CI" (deterministic floor の merge gating)。
+#
+# verification.html §4.2「完成形 = 全 scenario PR ごと auto-run + merge gating」の軽量版。
+# 2 段で検証する:
+#   (1) folio validate    = deterministic floor 6-gate (link / jsonld / broken-reverse
+#                           / vocabulary / delta-marker / ears-coverage、 ADR-0020/0025/0028)
+#   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
+#
+# LLM ceiling (Phase F review agent = REQ-CI-011 declarative-form / 012 what-only) は
+# 非決定的ゆえ CI 非搭載 (authoring advisory、 ADR-0028 §2.3)。
+# Inspect AI / Promptfoo 移行は post-1.0 / optional に DEFER (ADR-0028 §2.4)。
+name: folio verification
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # yq は ubuntu-latest に非搭載。 runner.sh + vocabulary gate (mikefarah/yq v4.x) が依存。
+      # local 開発環境 (v4.53.2) と同 minor に pin して再現性を確保する。
+      - name: Install yq (mikefarah v4.x)
+        run: |
+          YQ_VERSION=v4.53.2
+          sudo wget -qO /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Verify toolchain (bash + jq + yq)
+        run: |
+          bash --version | head -1
+          jq --version
+          yq --version
+
+      # deterministic floor。 root 既定 = architecture/ (CWD = repo root 前提)。 exit 1 で merge block。
+      - name: folio validate (deterministic floor — 6 gate)
+        run: .claude-plugin/bin/folio validate
+
+      # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
+      # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
+      #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)
+      - name: sandbox scenarios (tests/runner.sh — 全 scenario)
+        run: |
+          fail=0
+          for s in tests/scenarios/*.yaml; do
+            name=$(basename "$s")
+            echo "::group::sandbox ${name}"
+            if bash tests/runner.sh "$s"; then
+              echo "PASS ${name}"
+            else
+              echo "::error file=${s}::sandbox scenario FAILED: ${name}"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::1 件以上の sandbox scenario が FAIL しました"
+            exit 1
+          fi
+          echo "all sandbox scenarios GREEN"
