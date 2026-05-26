@@ -116,6 +116,10 @@ folio_build_entry() {
     return 1
   fi
 
+  # FolioConstitution schema = 不変 framework anchor、 spec graph scan 除外 (schema-based、 ADR-0023 / ADR-0024 §2.2)。
+  # 名前ではなく @type で識別するため、 consumer の conforming constitution (@type=schema:TechArticle) は scan される。
+  [[ "$(printf '%s' "$block" | jq -r '."@type" // empty' 2>/dev/null)" == "FolioConstitution" ]] && return 1
+
   # MUST fields
   doctype=$(folio_extract_meta "$f" folio-doc-type)
   status=$(folio_extract_meta "$f" folio-status)
@@ -172,7 +176,7 @@ folio_cmd_inventory() {
   out_file="$(dirname "$arch_abs")/inventory.json"
 
   # scan dirs: §4.4.1 order (spec → decisions → research)、 dir 内は LC_ALL=C 安定 sort。
-  # constitution.html は除外 (不変 anchor、 別 schema。 find の ! -name で skip)。
+  # FolioConstitution schema の constitution は build_entry が @type で schema-based に skip (名前非依存、 ADR-0024 §2.2)。
   local dirs=("spec" "decisions" "research") d f entry
   local entries=()
   for d in "${dirs[@]}"; do
@@ -182,7 +186,7 @@ folio_cmd_inventory() {
       [[ -z "$f" ]] && continue
       entry=$(folio_build_entry "$f" "$arch_abs") || continue
       [[ -n "$entry" ]] && entries+=("$entry")
-    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' ! -name 'constitution.html' | LC_ALL=C sort)
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
   local specs_json
@@ -322,7 +326,7 @@ folio_cmd_validate() {
   [[ -d "$root_abs" ]] || { echo "folio validate: root directory not found: ${root} (fail-closed)" >&2; exit 2; }
 
   # --- 横断検査: spec/decisions/research のうち存在する dir のみ (検査 root の最小構成許容) ---
-  # constitution.html は scan 対象外 (inventory と同基準、 find の ! -name で skip、 X4-C / ADR-0023) ---
+  # FolioConstitution schema の constitution は @type で schema-based に skip (inventory と同基準、 名前非依存、 ADR-0023 / ADR-0024 §2.2) ---
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0
   local violations=()
@@ -335,6 +339,8 @@ folio_cmd_validate() {
       local block rel subdir reason
       block=$(folio_extract_head_jsonld "$f")
       [[ -z "$block" ]] && continue          # JSON-LD 無し = scan 対象外 (relations.html §4.4.1 と同基準)
+      # FolioConstitution schema = 不変 anchor、 scan 除外 (inventory build_entry と同基準、 @type で schema-based)
+      [[ "$(printf '%s' "$block" | jq -r '."@type" // empty' 2>/dev/null)" == "FolioConstitution" ]] && continue
       files_checked=$((files_checked + 1))
       rel=$(realpath -m --relative-to="$root_abs" "$f")   # 例 spec/relations.html (決定的・root 相対)
       subdir="${rel%%/*}"
@@ -374,7 +380,7 @@ folio_cmd_validate() {
           fi
         fi
       done < <(printf '%s' "$relmap" | jq -r 'to_entries[] | .key as $k | .value[] | "\($k)\t\(.)"' 2>/dev/null)
-    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' ! -name 'constitution.html' | LC_ALL=C sort)
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---

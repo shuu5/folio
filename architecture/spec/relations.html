@@ -466,7 +466,7 @@
 <ul>
   <li><code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は ADR-0021 で廃止)</li>
   <li>scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの</li>
-  <li><strong>除外</strong>: <code>architecture/spec/constitution.html</code> は scan 対象外 (不変 framework anchor、 <code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 ADR-0023)</li>
+  <li><strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 ADR-0023)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)</li>
 </ul>
 
 <h4 id="s4-4-2-output">§4.4.2 Output path</h4>
