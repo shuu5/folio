@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 23 specs · folio 0.5.0-draft
+# 24 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -101,6 +101,11 @@
 - title: ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)
 - doc-type: adr · status: accepted
 - summary: forward (X4-A、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)
+
+## decisions/ADR-0025-folio-fix-bidirectional.html
+- title: ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)
+- doc-type: adr · status: accepted
+- summary: forward (X4-B、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

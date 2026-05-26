@@ -381,6 +381,20 @@ expect:
   init は tree (複数 file) を生成するため既存 cli-golden harness (単一 output) の拡張が要る可能性があり、 その HOW は実装時に確定する。
   scope 決定は <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> で trace。
 </p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-015</span>:
+  <span class="ears-when">WHEN the <code>folio fix</code> CLI subcommand runs</span>,
+  it <span class="ears-shall">SHALL</span> materialize, for each forward relation declared in any spec
+  (<a href="relations.html#s5-1-pattern">relations §5.1 の 6 dual pair</a>), the corresponding reverse relation on the
+  target spec's <code>&lt;head&gt;</code> JSON-LD (REQ-REL-002)、 idempotent に (既存 reverse は重複追加しない)、 exit 0。
+  併せて <code>folio validate</code> は<strong>第 3 gate「broken-reverse」</strong>を持ち、 forward に対応する reverse が
+  target に欠ける場合 violation を報告する <span class="ears-shall">MUST</span> (<a href="relations.html#s5-3-ears">REQ-REL-004</a>、 exit 1)。
+  <code>folio fix</code> 適用後は <code>folio validate</code> (3-gate) が clean になる (detect↔remediate ペア)。
+  conformance は cli-golden + fixture で検証する: (a) fix が reverse を materialize + exit 0、 (b) fix 後 validate clean、
+  (c) idempotency (再 fix で no-op)、 (d) broken-reverse を seed した fixture に validate が exit 1。 scenario / golden / harness の HOW は実装時に確定。
+  scope 決定は <a href="../decisions/ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> で trace (validate を <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の 2→3 gate に拡張)。
+</p>
 </section>
 
 <!-- ====================================================================

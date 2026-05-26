@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T00:37:40Z",
+  "generatedAt": "2026-05-26T01:34:16Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -435,6 +435,29 @@
           "spec/verification.html#s3-6-verification-specific",
           "decisions/ADR-0003-plugin-architecture.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0025-folio-fix-bidirectional.html",
+      "title": "ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)",
+      "summary": "forward (X4-B、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/relations.html#s5-1-pattern",
+          "spec/relations.html#s5-3-ears",
+          "spec/constitution.html#p-6",
+          "spec/verification.html#s3-6-verification-specific",
+          "decisions/ADR-0003-plugin-architecture.html",
+          "decisions/ADR-0020-validate-scope.html"
         ]
       }
     },

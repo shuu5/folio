@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0025">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0025-folio-fix-bidirectional.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/relations.html#s5-1-pattern" },
+    { "@id": "../spec/relations.html#s5-3-ears" },
+    { "@id": "../spec/constitution.html#p-6" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0020-validate-scope.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-B、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0025</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>relations §5.1 (6 dual pairs), §5.3 (REQ-REL-002/004), constitution P-6 (link integrity), verification §3.6 (REQ-VER-015), ADR-0003 (fix を CLI として authorize), ADR-0020 (validate scope = 本 ADR が broken-reverse gate で拡張)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="../spec/relations.html#s5-1-pattern">relations §5</a> は双方向 dual の 6 対象関係 (forward/reverse pair) と EARS 要件 (REQ-REL-002 reverse auto-materialize / REQ-REL-004 broken-reverse 検出) を既に規範化済。 <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> は <code>fix</code> を CLI subcommand として authorize 済 (HOW は実装時確定)。 X4-B はこの双方向 link の <strong>detect (validate) ↔ remediate (fix)</strong> ペアを実装する。 fix の core mission は folio の「architecture/ 構造を作成し<strong>維持</strong>する」 の「維持」 半分 (validate=検出、 fix=修正)。</p>
+
+<p>user 承認 (AskUq): scope = fix + validate broken-reverse gate の両方、 記録 = ADR-0025 起票。 本 ADR は (a) fix の具体 scope と (b) validate を <a href="./ADR-0020-validate-scope.html">ADR-0020</a> の 2-gate から 3-gate へ拡張する決定を確定する。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-fix">§2.1 folio fix (REQ-REL-002 = reverse auto-materialize)</h3>
+<p><code>folio fix</code> は spec graph 全体を走査し、 <a href="../spec/relations.html#s5-1-pattern">§5.1 の 6 dual pair</a> について forward relation A→B が宣言されていれば、 <strong>target B の JSON-LD <code>&lt;head&gt;</code> に対応する reverse relation B→A を materialize</strong> する:</p>
+<table>
+  <thead><tr><th>forward</th><th>materialize する reverse</th></tr></thead>
+  <tbody>
+    <tr><td><code>dc:replaces</code></td><td><code>dc:isReplacedBy</code></td></tr>
+    <tr><td><code>dc:references</code></td><td><code>dc:isReferencedBy</code></td></tr>
+    <tr><td><code>dc:hasPart</code></td><td><code>dc:isPartOf</code></td></tr>
+    <tr><td><code>folio:depends-on</code></td><td><code>folio:depended-by</code></td></tr>
+    <tr><td><code>folio:extends</code></td><td><code>folio:extended-by</code></td></tr>
+    <tr><td><code>folio:implements</code></td><td><code>folio:implemented-by</code></td></tr>
+  </tbody>
+</table>
+<p>fix は <strong>idempotent</strong> (既存 reverse は重複追加しない)。 reverse の <code>@id</code> は target B から見た source A への相対 path に正規化する。 exit code は 0 = success (materialize 実行 or 既に完備) / 2 = tool error (fail-closed)。 precedent = log4brains <code>Adr.supersedeBy()</code> (§5.2)。</p>
+
+<h3 id="s2-2-gate">§2.2 validate broken-reverse gate (REQ-REL-004、 ADR-0020 拡張)</h3>
+<p><code>folio validate</code> に <strong>第 3 gate「broken-reverse」</strong>を追加する: forward relation A→B が存在するのに target B に reverse B→A が欠けていれば violation を報告 (exit 1)。 これは <a href="./ADR-0020-validate-scope.html">ADR-0020</a> の試作 scope (gate (a) link-integrity + gate (b) jsonld-structural の 2-gate) を <strong>3-gate に拡張</strong>する決定である (ADR-0020 §2.2 が broken-reverse を当初 scope 外としていた点を本 ADR が更新)。 detect (validate gate) ↔ remediate (fix) が対をなし、 <code>folio fix</code> 後に <code>folio validate</code> が clean になる。</p>
+
+<h3 id="s2-3-self-host">§2.3 self-host dogfood + frozen ADR の扱い</h3>
+<p>本 gate を有効化するには folio 自身の spec graph が双方向完備でなければならない。 現状 folio は forward relation を多数持つ (<code>dc:references</code> ~21 file 等) が <strong>reverse は 0 件</strong>。 よって X4-B 実装時に <strong><code>folio fix</code> を folio 自身の graph に適用し全 reverse を materialize</strong> する (self-host dogfood、 fix の実証も兼ねる)。 この materialize は <strong>frozen ADR の JSON-LD <code>&lt;head&gt;</code> にも reverse relation を追加</strong>する (例: ADR-0003 が他 ADR から参照されていれば <code>dc:isReferencedBy</code> を追加)。 これは ADR <strong>本文 (決定内容) の改訂ではなく link-graph metadata の維持</strong>であり、 <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">X4-C</a> で許容された frozen ADR の cross-ref rewrite (P-6 link-integrity 維持) と同性質。 clean な 3-gate validate のため不可避。</p>
+
+<h3 id="s2-4-goldens">§2.4 goldens</h3>
+<p>reverse materialize で inventory relations が約 2 倍 (forward + reverse) に増えるため、 inventory-gen / prime-digest / validate-clean golden を全再生成する。 validate-violations は broken-reverse fixture を追加する場合に更新。</p>
+
+<h3 id="s2-5-verification">§2.5 検証 (REQ-VER-015)</h3>
+<p><a href="../spec/verification.html#s3-6-verification-specific">verification §3.6 REQ-VER-015</a> + cli-golden で検証する: (a) <code>folio fix</code> が broken-reverse を materialize し exit 0、 (b) fix 後に <code>folio validate</code> (3-gate) clean、 (c) idempotency (再 fix で no-op)、 (d) broken-reverse を seed した fixture に対し validate が violation を報告 (exit 1)。 scenario / golden / 検証 harness の具体 HOW は SPAWN (feature-dev) が実装時に確定。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>双方向 navigable な spec graph</strong>: forward だけでなく reverse も完備し、 AI agent / 人間が「この spec を参照しているのは誰か」 を逆引きできる (log4brains pattern)</li>
+  <li><strong>detect↔remediate ペア完成</strong>: validate (broken-reverse 検出) と fix (materialize) が対をなし、 「architecture/ を維持する」 core mission の維持半分を実現</li>
+  <li>folio が自身の graph で fix を実証 (self-host dogfood)</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>大きな diff</strong>: fix が folio の ~21+ target file に reverse を materialize、 frozen ADR の JSON-LD <code>&lt;head&gt;</code> も touch (link maintenance、 §2.3)。 golden は relations ~2x で大きく変わる</li>
+  <li>validate 3-gate 化で検査が重くなる (試作規模では許容)</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>reverse relation は target から source への @id で、 既存 file (source) を指すため新規 broken link は生じない</li>
+  <li>ADR-0020 の validate scope を 2→3 gate に拡張 (本 ADR が更新、 ADR-0020 本文は frozen のまま適用解釈を本 ADR で trace)</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>fix + validate broken-reverse gate 両方 (採用)</td><td>detect↔remediate の完全ペア、 §5 の REQ-REL-002+004 を共に実現 (AskUq)</td></tr>
+    <tr><td>fix のみ (gate なし)</td><td>不採用 — 検出機構がないと reverse 欠落を機械検知できず、 双方向完備を保証できない (AskUq で両方を選択)</td></tr>
+    <tr><td>broken-reverse を hard violation でなく warning に</td><td>不採用 — REQ-REL-004 は Phase X3+ で violation (exit 1) と規定。 gate として CI で fail させ完備を強制</td></tr>
+    <tr><td>frozen ADR を reverse materialize から除外</td><td>不採用 — 除外すると forward→frozen-ADR の reverse が欠け gate が clean にならない。 link metadata の維持は本文改訂でなく X4-C 同様許容 (§2.3)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/relations.html#s5-3-ears">relations §5.3</a> (REQ-REL-002 fix / REQ-REL-004 broken-reverse を既に規範化)。 <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> (fix を CLI authorize)。 <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate 2-gate scope、 本 ADR が 3-gate に拡張)。</li>
+  <li>決定経緯: 本 session の AskUq — scope = fix + validate gate 両方、 記録 = ADR-0025 起票。 relation-state 実測 (folio は forward 多数・reverse 0) で self-host fix の必要を確認。</li>
+  <li>要件 SSoT: <a href="../spec/relations.html#s5-1-pattern">relations §5.1</a> (6 dual pair) + <a href="../spec/verification.html#s3-6-verification-specific">verification §3.6 REQ-VER-015</a> (検証)。</li>
+  <li>実装 (SPAWN, feature-dev): <code>bin/folio</code> に <code>fix)</code> case + <code>folio_cmd_fix</code> (reverse materialize) + validate に broken-reverse gate、 fix を folio graph に適用 (全 reverse materialize)、 3-gate validate clean + golden 全再生成 + scenario (fix / broken-reverse)。</li>
+  <li>関連原則: P-6 (link-integrity、 双方向で強化)、 P-2 (HTML SSoT に reverse を materialize)、 P-5 (validate/init/fix CLI 命名統一)。</li>
+</ul>
+</section>
+
+</body>
+</html>
