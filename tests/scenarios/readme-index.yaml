@@ -24,7 +24,7 @@ description: |
 setup:
   env: {}
   fixtures:
-    # 実体は verification/fixtures/readme-index/ に VCS 管理 (runner は読まないが
+    # 実体は tests/fixtures/readme-index/ に VCS 管理 (runner は読まないが
     # hook が実ディスクから読むため fixture file が存在する必要がある)。
     - "readme-index/cluster-a/README.html"        # listed-spec.html を §2 に掲載
     - "readme-index/no-index-cluster/.gitkeep"     # README.html を持たない cluster
@@ -33,7 +33,7 @@ scenarios:
   - name: "未掲載 .html を index 付き cluster に作成 → notify (staleness 検出)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/orphan.html"
+      file_path: "tests/fixtures/readme-index/cluster-a/orphan.html"
       content: |
         <!DOCTYPE html>
         <html><head><title>orphan</title></head><body></body></html>
@@ -46,7 +46,7 @@ scenarios:
   - name: "掲載済 .html を作成 → allow (README が listed-spec.html を掲載)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/listed-spec.html"
+      file_path: "tests/fixtures/readme-index/cluster-a/listed-spec.html"
       content: |
         <!DOCTYPE html>
         <html><head><title>listed</title></head><body></body></html>
@@ -58,7 +58,7 @@ scenarios:
   - name: "README.html を持たない cluster に .html 作成 → allow (index 不在)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/no-index-cluster/whatever.html"
+      file_path: "tests/fixtures/readme-index/no-index-cluster/whatever.html"
       content: |
         <!DOCTYPE html>
         <html><head><title>no index</title></head><body></body></html>
@@ -70,7 +70,7 @@ scenarios:
   - name: "README.html 自身の Write → allow (self 参照を強制しない)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/README.html"
+      file_path: "tests/fixtures/readme-index/cluster-a/README.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="cluster-readme"></head></html>
@@ -82,7 +82,7 @@ scenarios:
   - name: "非 .html (.md) → allow (対象外)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/notes.md"
+      file_path: "tests/fixtures/readme-index/cluster-a/notes.md"
       content: "some markdown"
     when:
       tool: "Write"
@@ -92,7 +92,7 @@ scenarios:
   - name: "Edit tool は対象外 → allow (試作 minimum scope、 Write のみ gate)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/orphan.html"
+      file_path: "tests/fixtures/readme-index/cluster-a/orphan.html"
       content: ""
     when:
       tool: "Edit"
@@ -102,7 +102,7 @@ scenarios:
   - name: "tool_name 空 (不正 payload) → exit 2 (fail-closed)"
     given:
       env: {}
-      file_path: "verification/fixtures/readme-index/cluster-a/orphan.html"
+      file_path: "tests/fixtures/readme-index/cluster-a/orphan.html"
       content: ""
     when:
       tool: ""

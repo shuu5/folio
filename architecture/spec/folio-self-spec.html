@@ -160,7 +160,7 @@ graph TB
 │   ├── research/                     # exploration (spec 反映前の探索)
 │   └── assets/                       # mermaid.min.js (support、 domain でない)
 │
-├── verification/                     # HOW-test sibling (executable、 P-3/P-11、 ADR-0022)
+├── tests/                     # HOW-test sibling (executable、 P-3/P-11、 ADR-0022)
 │   ├── scenarios/                    # use case 別 YAML
 │   ├── fixtures/  baselines/  e2e/   # テストデータ / golden / 統合検証
 │   └── runner.sh                     # 軽量 runner (bash + yq + jq)
@@ -183,10 +183,10 @@ graph TB
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
 graph TD
   accTitle: folio Repository Layout (Layer 0, canonical self-host)
-  accDescr: folio repo は architecture/ (spec/decisions/research/assets の design-intent 空間) と verification/ (HOW-test sibling) と hooks/ + .claude-plugin/ (HOW harness) と root marker file が並ぶ
+  accDescr: folio repo は architecture/ (spec/decisions/research/assets の design-intent 空間) と tests/ (HOW-test sibling) と hooks/ + .claude-plugin/ (HOW harness) と root marker file が並ぶ
   ROOT["folio/"]
   ROOT --> ARCH["architecture/<br/>(design-intent 空間)"]
-  ROOT --> VER["verification/<br/>(HOW-test sibling)"]
+  ROOT --> VER["tests/<br/>(HOW-test sibling)"]
   ROOT --> HK["hooks/<br/>(hooks.json)"]
   ROOT --> PLUGIN[".claude-plugin/<br/>(plugin harness, HOW)"]
   ROOT --> MD["root marker<br/>(FOLIO.md / README.md /<br/>CLAUDE.md / common.css)"]
@@ -201,7 +201,7 @@ graph TD
   style VER fill:#fefbea,color:#08131a
   style PLUGIN fill:#5ac8b8,color:#08131a
 </pre>
-<figcaption>図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し architecture/{spec,decisions,research} を持つ (consumer と一意)。 verification/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (ADR-0022)。</figcaption>
+<figcaption>図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し architecture/{spec,decisions,research} を持つ (consumer と一意)。 tests/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (ADR-0022)。</figcaption>
 </figure>
 </section>
 

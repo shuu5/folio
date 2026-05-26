@@ -1,5 +1,5 @@
 folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)
-root: verification/fixtures/validate-violations
+root: tests/fixtures/validate-violations
 files checked: 4 · relations checked: 2
   [FAIL] internal link-integrity
   [FAIL] jsonld structural

@@ -130,7 +130,7 @@
   <li>実装: <code>.claude-plugin/scripts/check-jsonld-lint.sh</code> (PostToolUse Write hook、 hooks.json 宣言)</li>
   <li>enforce する REQ: <a href="../spec/rules.html#s10-2">rules.html §10.2 REQ-CI-016</a> (JSON-LD validation gate)</li>
   <li>WHAT 規範: <a href="../spec/relations.html#s3-2-full">relations.html §3.2</a> (object <code>@context</code> + <code>@id</code> + <code>@type</code> pattern)</li>
-  <li>検証: sandbox <a href="../../verification/scenarios/jsonld-lint.yaml">scenarios/jsonld-lint.yaml</a> (12/12 PASS) + e2e <a href="../../verification/e2e/runbook.md">runbook</a> S-B3 (live notify 確認)</li>
+  <li>検証: sandbox <a href="../../tests/scenarios/jsonld-lint.yaml">scenarios/jsonld-lint.yaml</a> (12/12 PASS) + e2e <a href="../../tests/e2e/runbook.md">runbook</a> S-B3 (live notify 確認)</li>
   <li>関連 constitution 原則: P-2 (HTML)、 P-3 (WHAT-only、 本 ADR は mechanism 決定 = why)、 P-11 (HOW 隔離、 script は <code>.claude-plugin/</code>)</li>
   <li>本 ADR は <a href="./ADR-0003-plugin-architecture.html#s3-consequences">ADR-0003 §3 Neutral</a> の「ADR-0004 候補」 および <code>check-jsonld-lint.sh</code> header の「ADR-0004 候補で trace 予定」 を起票確定する (retrospective、 実装 + e2e 検証後)</li>
   <li>defer: 完成形 ajv (JSON Schema) + pyld (semantic) 2 層、 Edit tool 対応、 複数 block 対応</li>

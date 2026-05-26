@@ -682,7 +682,8 @@ folio_cmd_validate() {
 # init helpers — consumer canonical layout を scaffold (REQ-VER-014、 ADR-0024)
 #   生成物 = ADR-0024 §2.1 標準 seed: architecture/{spec,decisions,research} の cluster
 #   README (P-6 entry point) + spec/{constitution,overview}.html starter template +
-#   verification/.gitkeep (P-13 HOW-test dir) + folio.config.yaml (§2.5 defaults)。
+#   folio.config.yaml (§2.5 defaults)。 test dir は scaffold しない (ADR-0026: consumer の (b)
+#   実装適合性 test は stack 慣習 (tests/ 等) に置き folio は規定しない、 P-13(b))。
 #   idempotent (§2.3): 既存 file は preserve (上書き禁止)、 欠損のみ生成。
 #   seed .html は通常 conforming JSON-LD (@context object + @id + @type、 §2.2)、 relation @id は
 #   全 resolve し forward/reverse 双方向完備 (README dc:hasPart ↔ constitution/overview dc:isPartOf、
@@ -1035,9 +1036,7 @@ HTML
 </html>
 HTML
 
-  # --- verification/ (HOW-test dir、 P-13、 ADR-0022) ---
-  folio_init_write "${target}/verification/.gitkeep" "$target" <<'EOF' || rc=1
-EOF
+  # test dir は scaffold しない (ADR-0026: consumer の (b) 実装適合性 test は stack 慣習に置く、 P-13(b))
 
   if [[ "$rc" -ne 0 ]]; then
     echo "folio init: one or more files could not be written (fail-closed)" >&2

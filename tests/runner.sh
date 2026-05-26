@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verification/runner.sh
+# tests/runner.sh
 # Phase X3 試作 sandbox verification runner (bash + yq + jq、 Gap 2 採用)
 #
 # 用法: runner.sh [--accept] <scenario.yaml>

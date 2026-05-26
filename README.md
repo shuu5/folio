@@ -2,7 +2,7 @@
 
 A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy.
 
-**Status**: Phase X4。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `verification/` HOW-test) へ物理移植済。 folio は自身の rules を self-host する。
+**Status**: Phase X4。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `tests/` HOW-test) へ物理移植済。 HOW-test dir は X4-F (ADR-0026) で `verification/` → `tests/` に rename (概念「verification」は spec 名・`folio validate` として存続)。 folio は自身の rules を self-host する。
 
 ## 2-Layer Architecture (at a glance)
 
@@ -18,7 +18,7 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 |---|---|
 | [`architecture/spec/constitution.html`](./architecture/spec/constitution.html) | folio の 13 不変原則 (編集禁止) |
 | [`architecture/`](./architecture/) | design-intent 空間 (spec / decisions / research / assets、 self-host) |
-| [`verification/`](./verification/) | sandbox verification framework (scenarios / fixtures / golden / runner.sh) |
+| [`tests/`](./tests/) | sandbox verification framework (scenarios / fixtures / golden / runner.sh、 X4-F で verification/ から rename) |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions |
 | [`.claude-plugin/`](./.claude-plugin/) + [`hooks/`](./hooks/) | plugin harness (manifest + CLI + hook 宣言 / script) |
 

@@ -86,7 +86,7 @@
 │   ├── decisions/                    # decision (WHY、 ADR project 固有)
 │   └── research/                     # exploration (spec 反映前の探索)
 │
-├── verification/                     # HOW-test (consumer の test 体系: tests/ 等でも可、 P-13、 ADR-0022)
+├── &lt;test dir&gt;                       # HOW-test (実装適合性): consumer の stack 慣習 (tests/ 等)、 folio 非規定 (P-13(b)、 ADR-0026)
 │
 └── &lt;実装本体 dir&gt;                    # HOW-impl (architecture/spec/ に従う)
     ├── (scribe の場合) skills/, agents/, commands/
@@ -94,7 +94,7 @@
     └── ...
 </code></pre>
 
-<p class="informative">folio が govern するのは <code>architecture/</code> の 3 domain (design intent / decision / exploration) + <code>verification/</code> (HOW-test) のみ (<a href="./constitution.html#p-7">P-7</a> + <a href="./constitution.html#p-13">P-13</a>、 <a href="../decisions/ADR-0022-x4-0-canonical-layout.html">ADR-0022</a>)。 一般 documentation (Diátaxis tutorial / how-to / explanation 等) や AI-steering context は consumer の<strong>自由領域</strong>で folio は規定しない (consumer が <code>docs/</code> 等で任意に持つ)。</p>
+<p class="informative">folio が govern するのは <code>architecture/</code> の 3 domain (design intent / decision / exploration) のみ (<a href="./constitution.html#p-7">P-7</a>、 <a href="../decisions/ADR-0022-x4-0-canonical-layout.html">ADR-0022</a>)。 実装適合性 test (HOW-test) は consumer の stack 慣習 (<code>tests/</code> 等) に置き、 folio は location を規定しない (<a href="./constitution.html#p-13">P-13</a> (b)、 <a href="../decisions/ADR-0026-test-placement-model.html">ADR-0026</a>)。 一般 documentation (Diátaxis tutorial / how-to / explanation 等) や AI-steering context は consumer の<strong>自由領域</strong>で folio は規定しない (consumer が <code>docs/</code> 等で任意に持つ)。</p>
 
 <p><strong>folio.config.yaml 構造</strong> (schema 詳細は <a href="folio-self-spec.html#s8-plugin">folio-self-spec.html §8</a>):</p>
 

@@ -128,7 +128,7 @@
   <li>実装: <code>.claude-plugin/scripts/check-caller-marker.sh</code> (PreToolUse Edit|Write|NotebookEdit) + <code>skills/folio-architect/SKILL.md</code> (marker set/unset entry)</li>
   <li>enforce する REQ: <a href="../spec/rules.html#s10-1">rules.html §10.1 REQ-CM-001〜003</a></li>
   <li>WHAT 規範: <a href="../spec/folio-self-spec.html#s7-3-caller-marker">folio-self-spec.html §7.3</a> (caller marker flow)</li>
-  <li>検証: sandbox <a href="../../verification/scenarios/caller-marker.yaml">scenarios/caller-marker.yaml</a> (6/6 PASS) + e2e <a href="../../verification/e2e/runbook.md">runbook</a> S-A / S-B1 / S-E1</li>
+  <li>検証: sandbox <a href="../../tests/scenarios/caller-marker.yaml">scenarios/caller-marker.yaml</a> (6/6 PASS) + e2e <a href="../../tests/e2e/runbook.md">runbook</a> S-A / S-B1 / S-E1</li>
   <li>関連 constitution 原則: P-7 (Content domain exclusivity、 spec author 一元化)、 P-11 (HOW 隔離)</li>
   <li>本 ADR は <a href="./ADR-0003-plugin-architecture.html#s3-consequences">ADR-0003 §3 Neutral</a> の「ADR-0006 候補」 を起票確定する (retrospective、 commit 3bb8cef で hybrid 実装 + e2e 検証後)</li>
   <li>defer: SKILL による marker lifecycle 自動管理 (完成形)</li>

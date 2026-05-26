@@ -50,7 +50,7 @@ scenarios:
   - name: "cluster-readme (.html, spec ではない) を spec_path 外で作成 → allow"
     given:
       env: {}
-      file_path: "verification/README.html"
+      file_path: "tests/README.html"
       content: |
         <!DOCTYPE html>
         <html><head>

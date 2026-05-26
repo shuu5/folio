@@ -130,7 +130,7 @@
   <li>実装: <code>.claude-plugin/scripts/check-path-boundary.sh</code> (PreToolUse Write hook)</li>
   <li>enforce する REQ: <a href="../spec/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-007</a> (verification-specific、 path boundary)</li>
   <li>WHAT 起点: <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> path boundary (本 ADR が「Option Pragmatic」 を正式定義)</li>
-  <li>検証: sandbox <a href="../../verification/scenarios/path-boundary.yaml">scenarios/path-boundary.yaml</a> (11/11 PASS、 絶対 path lock-in 含む) + e2e <a href="../../verification/e2e/runbook.md">runbook</a> S-B2</li>
+  <li>検証: sandbox <a href="../../tests/scenarios/path-boundary.yaml">scenarios/path-boundary.yaml</a> (11/11 PASS、 絶対 path lock-in 含む) + e2e <a href="../../tests/e2e/runbook.md">runbook</a> S-B2</li>
   <li>直交 gate: <a href="./ADR-0006-caller-marker-hook.html">ADR-0006 (caller marker)</a> と 2 axis 防御を構成</li>
   <li>関連 constitution 原則: P-7 (Content domain exclusivity、 spec は spec_path に限局)、 P-11 (HOW 隔離)</li>
   <li>番号: <a href="../spec/README.html#s6-3-adr-candidates">specs/README §6.3</a> で path boundary 用 ADR-0019 として予約済 (ADR-0004〜0012 予約枠外の新規候補)</li>

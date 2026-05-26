@@ -60,7 +60,7 @@
 </header>
 
 <aside class="informative">
-<p>本文書は folio framework の <strong>verification contract 定義</strong>。 folio plugin (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> minimal scope) を sandbox で実機検証する枠組みを集約 SSoT 化する。 具体的検証実体は <code>verification/</code> 配下に隔離 (constitution <a href="./constitution.html#s2-principles">P-11 (HOW 禁止)</a> 整合)。</p>
+<p>本文書は folio framework の <strong>verification contract 定義</strong>。 folio plugin (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> minimal scope) を sandbox で実機検証する枠組みを集約 SSoT 化する。 具体的検証実体は <code>tests/</code> 配下に隔離 (constitution <a href="./constitution.html#s2-principles">P-11 (HOW 禁止)</a> 整合)。 「verification」 は本 contract の<strong>概念名</strong> (P-13 / <code>folio validate</code> / 本 spec) であり、 実体 dir 名 <code>tests/</code> (folio の bash stack 慣習) とは独立する (概念↔dir 分離、 <a href="../decisions/ADR-0026-test-placement-model.html">ADR-0026</a>)。</p>
 <p>本 spec は <a href="../research/plugin-sandbox-verification-research.html">plugin-sandbox-verification-research.html</a> (87 sources、 critique PASS) の §7 推奨設計を normative に昇格させたもの。 採用根拠は <a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a>、 twill experiment-verified との境界は <a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a>。</p>
 </aside>
 
@@ -91,7 +91,7 @@
 </aside>
 
 <aside class="reader-persona" data-persona="AI Agent">
-<p>AI agent (folio-architect SKILL) は spec edit 時に本 spec § 1〜§ 3 を必読する。 verification framework に該当する scenario file (<code>verification/scenarios/</code>) を編集する際は §3 REQ-VER-* の規範を満たすこと。 twill experiment-verified との境界 (<a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a>) を遵守し、 spec 内に HOW (script 内容 / CLI 構文 / 実行結果 snippet) を含めない (P-11)。</p>
+<p>AI agent (folio-architect SKILL) は spec edit 時に本 spec § 1〜§ 3 を必読する。 verification framework に該当する scenario file (<code>tests/scenarios/</code>) を編集する際は §3 REQ-VER-* の規範を満たすこと。 twill experiment-verified との境界 (<a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a>) を遵守し、 spec 内に HOW (script 内容 / CLI 構文 / 実行結果 snippet) を含めない (P-11)。</p>
 </aside>
 </section>
 
@@ -113,7 +113,7 @@
   <tbody>
     <tr>
       <td><strong>sandbox-verified</strong></td>
-      <td>plugin の機能 (use case) が <code>verification/scenarios/</code> 配下の YAML scenario で実機検証され、 期待挙動 (exit code + stderr + baseline) と一致した状態</td>
+      <td>plugin の機能 (use case) が <code>tests/scenarios/</code> 配下の YAML scenario で実機検証され、 期待挙動 (exit code + stderr + baseline) と一致した状態</td>
       <td>folio framework (本 spec)</td>
     </tr>
     <tr>
@@ -154,7 +154,7 @@
 
 <ul>
   <li>spec 内 claim (HOW level) の個別 verified (= experiment-verified、 <a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a>)</li>
-  <li>具体的 implementation 詳細の test (= unit test、 <code>.claude-plugin/scripts/</code> 配下で個別実装)</li>
+  <li>具体的 implementation 詳細の <strong>white-box unit test</strong> (内部関数・分岐の網羅、 <code>.claude-plugin/scripts/</code> 配下で個別実装)。 ⚠ §4.1 Step 1 の <strong>「hook script unit test」</strong> は script の stdin / exit code / stdout の<strong>契約</strong>を実機検証する <strong>black-box 行動検証</strong>であり、 本項 (white-box 内部 test) とは別概念で <strong>in-scope</strong> (用語衝突の整理、 <a href="../decisions/ADR-0026-test-placement-model.html">ADR-0026</a>)</li>
   <li>LLM 出力品質の eval (= AI agent eval、 Phase X4+ の Inspect AI / Promptfoo 統合候補)</li>
 </ul>
 </section>
@@ -174,7 +174,7 @@
 <p class="ears" data-ears-pattern="ubiquitous">
   <span class="ears-id">REQ-VER-001</span>:
   Each verification scenario file <span class="ears-shall">SHALL</span> be a YAML file
-  placed under <code>verification/scenarios/</code> with the structure defined in §3.2.
+  placed under <code>tests/scenarios/</code> with the structure defined in §3.2.
 </p>
 
 <p class="ears" data-ears-pattern="ubiquitous">
@@ -260,8 +260,8 @@ expect:
 <p class="ears" data-ears-pattern="ubiquitous">
   <span class="ears-id">REQ-VER-004</span>:
   baseline file <span class="ears-shall">SHALL</span> follow the TypeScript compiler 2-dir
-  model: <code>verification/baselines/reference/</code> (VCS 管理、 golden)
-  vs <code>verification/baselines/local/</code> (実行生成、 .gitignore)。
+  model: <code>tests/baselines/reference/</code> (VCS 管理、 golden)
+  vs <code>tests/baselines/local/</code> (実行生成、 .gitignore)。
   baseline 更新は明示的 accept workflow (例: <code>runner.sh --accept</code>) を経る MUST。
 </p>
 
@@ -284,7 +284,7 @@ expect:
 
 <h3 id="s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</h3>
 
-<p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file (REQ-VER-009 は <a href="../../verification/e2e/runbook.md">agent-driven runbook</a>) が SSoT 実装。</p>
+<p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file (REQ-VER-009 は <a href="../../tests/e2e/runbook.md">agent-driven runbook</a>) が SSoT 実装。</p>
 
 <p class="ears" data-ears-pattern="unwanted">
   <span class="ears-id">REQ-VER-007</span>:
@@ -312,15 +312,15 @@ expect:
   <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a
   live-loaded session (§4.1 Step 2 worktree integration)</span>,
   an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios
-  (<code>verification/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
+  (<code>tests/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
   so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario
   observations as golden baselines under
-  <code>verification/e2e/baselines/reference/</code>。
+  <code>tests/e2e/baselines/reference/</code>。
   primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、
   PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない
   (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、
   exit code でなく file system state を一次 assertion とする。 実装 =
-  <a href="../../verification/e2e/README.html">verification/e2e/</a> (runbook + golden、
+  <a href="../../tests/e2e/README.html">tests/e2e/</a> (runbook + golden、
   sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
 </p>
 
@@ -384,7 +384,7 @@ expect:
   <span class="ears-id">REQ-VER-014</span>:
   <span class="ears-when">WHEN the <code>folio init [&lt;dir&gt;]</code> CLI subcommand runs</span>,
   it <span class="ears-shall">SHALL</span> scaffold the canonical Layer 1 consumer layout —
-  <code>architecture/{spec,decisions,research}/</code> + <code>verification/</code>、 各 cluster の <code>README.html</code>
+  <code>architecture/{spec,decisions,research}/</code>、 各 cluster の <code>README.html</code>
   (<a href="constitution.html#p-6">P-6</a> entry point)、 <code>architecture/spec/{constitution,overview}.html</code>
   (project starter template、 通常 conforming JSON-LD)、 および <code>folio.config.yaml</code>
   (<a href="rules.html#s2-directory">rules §2</a> schema: folio_version / spec_path / caller_marker_env / caller_marker_value / review_model) —
@@ -443,12 +443,12 @@ expect:
 <aside class="informative">
 <p><strong>Step 2 の試作実装 = agent-driven runbook 方式 (REQ-VER-009)</strong>: 完成形の Step 2 は
 test project + hook 設定で sandbox を構築し API key 注入で自動実行する (上表)。 試作段階では、
-folio plugin を load 済の Claude Code session で <strong>agent 自身が <a href="../../verification/e2e/runbook.md">runbook</a>
+folio plugin を load 済の Claude Code session で <strong>agent 自身が <a href="../../tests/e2e/runbook.md">runbook</a>
 を読んで実 Edit/Write tool を操作し</strong>、 live hook (caller-marker / path-boundary / jsonld-lint /
 readme-index) を発火させて観察する軽量方式を採る。 一次 assertion は exit code でなく
 <strong>file 作成有無</strong> (PreToolUse deny ⇒ 不在 / PostToolUse notify ⇒ 存在)。 これは
 worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X4+。 詳細と golden は
-<a href="../../verification/e2e/README.html">verification/e2e/</a>。</p>
+<a href="../../tests/e2e/README.html">tests/e2e/</a>。</p>
 </aside>
 
 <h3 id="s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</h3>
@@ -470,7 +470,7 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
     <tr>
       <td>runner</td>
       <td>Inspect AI / Promptfoo 統合候補</td>
-      <td>独自 bash runner (<code>verification/runner.sh</code>、 試作)</td>
+      <td>独自 bash runner (<code>tests/runner.sh</code>、 試作)</td>
     </tr>
     <tr>
       <td>CI 統合</td>

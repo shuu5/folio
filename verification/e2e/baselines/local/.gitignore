@@ -1,4 +1,0 @@
-# scratch/verification/e2e/baselines/local/ は再 walk 時の actual 出力 (golden 比較先)
-# .gitignore 自体のみ追跡、 他は ignore
-*
-!.gitignore

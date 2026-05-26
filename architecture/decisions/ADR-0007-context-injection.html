@@ -69,7 +69,7 @@
 <p>SessionStart hook が <code>folio prime</code> を実行し、 その <strong>stdout を agent context に注入</strong>する (Beads pattern、 stdout ベース、 MCP 不使用)。 matcher を省略するため SessionStart は <strong>startup / resume / clear / compact の全 source で発火</strong>し、 session 開始/再開時の初期注入に加え compaction 後 (compact source) の再注入も担う。</p>
 
 <aside class="informative">
-<p><strong>amendment (2026-05-25、 e2e-driven)</strong>: 当初案は SessionStart + PreCompact 両 hook で stdout 注入する設計だったが、 Claude Code docs 上 <strong>PreCompact stdout は context 注入されない</strong> (state 保存用)。 <a href="../../verification/e2e/runbook.md">e2e</a> で SessionStart:startup 注入は <strong>PASS</strong> 確認、 PreCompact 注入は docs と齟齬 (project memory <code>sessionstart-vs-precompact-injection</code>)。 post-compaction 再注入は SessionStart の compact source が担う (compact source の実注入は 2026-05-25 の実 compaction で e2e PASS、 <a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>) ため、 <strong>PreCompact hook を除去</strong> (hooks.json) し SessionStart 単一に簡素化した。</p>
+<p><strong>amendment (2026-05-25、 e2e-driven)</strong>: 当初案は SessionStart + PreCompact 両 hook で stdout 注入する設計だったが、 Claude Code docs 上 <strong>PreCompact stdout は context 注入されない</strong> (state 保存用)。 <a href="../../tests/e2e/runbook.md">e2e</a> で SessionStart:startup 注入は <strong>PASS</strong> 確認、 PreCompact 注入は docs と齟齬 (project memory <code>sessionstart-vs-precompact-injection</code>)。 post-compaction 再注入は SessionStart の compact source が担う (compact source の実注入は 2026-05-25 の実 compaction で e2e PASS、 <a href="../../tests/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>) ため、 <strong>PreCompact hook を除去</strong> (hooks.json) し SessionStart 単一に簡素化した。</p>
 </aside>
 
 <h3 id="s2-2-content">§2.2 注入内容 = Tier 1 inventory digest (compact text)</h3>
@@ -101,7 +101,7 @@
 <ul>
   <li>SessionStart 毎の scan コスト (auto-regen)。 spec 数が増えれば無視できなくなる (完成形で incremental / cache 検討)</li>
   <li>stdout 注入は Claude Code SessionStart の挙動に依存 → <strong>e2e で startup 注入を verify 済 (PASS)</strong> (§2.1 amendment)。 stdout が正典 (additionalContext JSON も可)</li>
-  <li>PreCompact stdout は docs 上 context 注入されないため当初の PreCompact 案は無効 → §2.1 amendment で除去。 post-compaction 再注入 (SessionStart:compact source) は startup に続き 2026-05-25 の実 compaction で e2e PASS (両 source empirical verified、 <a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>)</li>
+  <li>PreCompact stdout は docs 上 context 注入されないため当初の PreCompact 案は無効 → §2.1 amendment で除去。 post-compaction 再注入 (SessionStart:compact source) は startup に続き 2026-05-25 の実 compaction で e2e PASS (両 source empirical verified、 <a href="../../tests/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>)</li>
 </ul>
 
 <h3>Neutral</h3>
@@ -135,12 +135,12 @@
   <li>WHAT 起点: <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> (SessionStart + inject-inventory) — 本 ADR が mechanism / content / staleness を確定</li>
   <li>注入内容の根拠: <a href="../spec/relations.html#s4-2-tier">relations.html §4.2 Tier 1</a> (3-tier progressive disclosure)</li>
   <li>pattern 出典: <a href="../research/plugin-architecture-research.html#s5-2-beads">plugin-architecture-research §5.2 Beads</a> (SessionStart/PreCompact + bd prime stdout、 verified)</li>
-  <li>検証: <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-012</a> (<code>folio prime</code> digest を cli-golden で golden-diff、 capture:stdout、 PASS) + <strong>SessionStart 実注入 e2e = PASS</strong> (startup source = fresh session で Tier 1 digest 注入を確認 S-F、 compact source = 2026-05-25 実 compaction で再注入を確認 S-F-compact、 <a href="../../verification/e2e/runbook.md">e2e runbook</a> + <a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations</a>)</li>
+  <li>検証: <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-012</a> (<code>folio prime</code> digest を cli-golden で golden-diff、 capture:stdout、 PASS) + <strong>SessionStart 実注入 e2e = PASS</strong> (startup source = fresh session で Tier 1 digest 注入を確認 S-F、 compact source = 2026-05-25 実 compaction で再注入を確認 S-F-compact、 <a href="../../tests/e2e/runbook.md">e2e runbook</a> + <a href="../../tests/e2e/baselines/reference/observations-sessionstart.json">observations</a>)</li>
   <li>producer 依存: Track 1 <a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-010</a> (<code>folio inventory</code> → inventory.json)。 prime は consumer</li>
   <li>関連 constitution 原則: P-3 (WHAT-only)、 P-11 (HOW 隔離、 digest layout は §9)、 P-1 (未来 anchor、 完成形 relevance filtering)</li>
   <li>本 ADR は <a href="./ADR-0003-plugin-architecture.html#s3-consequences">ADR-0003 §3 Neutral</a> の「ADR-0007 候補」 を起票確定する (forward decision、 user 承認 2026-05-25、 実装は Track 2)</li>
   <li><strong>amendment 2026-05-25 (e2e-driven)</strong>: PreCompact hook を除去 (§2.1 amendment + §4 案 F)。 PreCompact stdout 非注入の docs 知見は folio project memory <code>sessionstart-vs-precompact-injection</code>。 <a href="./ADR-0003-plugin-architecture.html#s2-1-scope">ADR-0003 §2.1</a> の「SessionStart / PreCompact で inject」 記述は frozen のため触れず、 本 ADR が実機検証後の確定 mechanism (SessionStart 単一、 compact source で post-compaction カバー) を保持する</li>
-  <li><strong>amendment 2026-05-25 (compact-source e2e-verified)</strong>: §2.1 が docs-canonical としていた compact source 再注入を、 本 session の実 /compact で SessionStart:compact が Tier 1 digest を注入することを観察し <strong>e2e-verified</strong> に格上げ (§3 / §4 案 A・F 同期)。 証跡 <a href="../../verification/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>、 境界決定は <a href="./ADR-0017-unit-integration-boundary.html">ADR-0017</a> §2.4 (context injection の integration-only な半分)</li>
+  <li><strong>amendment 2026-05-25 (compact-source e2e-verified)</strong>: §2.1 が docs-canonical としていた compact source 再注入を、 本 session の実 /compact で SessionStart:compact が Tier 1 digest を注入することを観察し <strong>e2e-verified</strong> に格上げ (§3 / §4 案 A・F 同期)。 証跡 <a href="../../tests/e2e/baselines/reference/observations-sessionstart.json">observations S-F-compact</a>、 境界決定は <a href="./ADR-0017-unit-integration-boundary.html">ADR-0017</a> §2.4 (context injection の integration-only な半分)</li>
 </ul>
 </section>
 

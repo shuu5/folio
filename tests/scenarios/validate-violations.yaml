@@ -18,14 +18,14 @@ description: |
   との byte-exact diff で検証 (capture:stdout, compare:text、 REQ-VER-011)。
 
 # --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
-command: ["validate", "--root", "verification/fixtures/validate-violations"]
+command: ["validate", "--root", "tests/fixtures/validate-violations"]
 capture: "stdout"                                        # validate の report を stdout 捕捉
 compare: "text"                                          # plain text byte-exact 比較
 golden: "baselines/reference/validate-violations.golden.txt"  # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
 
 setup:
   fixtures:
-    # 実体は verification/fixtures/validate-violations/spec/ に VCS 管理 (runner の
+    # 実体は tests/fixtures/validate-violations/spec/ に VCS 管理 (runner の
     # cli-golden handler は setup を読まないが、 validate が --root 経由で実ディスクを検査する)。
     # path-boundary hook を避けるため doc-type=fixture + Bash heredoc 作成 (Write tool 非経由)。
     - "validate-violations/spec/target.html"        # clean target (broken-anchor の参照先 #s2-decision)
