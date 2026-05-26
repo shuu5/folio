@@ -22,7 +22,7 @@
 - **`architecture/research/` 配下** — user 要望 + 業界調査の集約 (exploration domain)、 自由形式 HTML。
 - **`tests/` 配下 (repo-root sibling)** — Phase X3 sandbox verification framework (scenarios / fixtures / baselines / e2e / runner.sh)、 ADR-0013 + verification.html (X4-F/ADR-0026 で `verification/` から rename、 spec 名 verification.html は不変)。 executable HOW のため `architecture/` の外 (P-3 / P-11 / P-13)。
 - **`hooks/` 配下 (plugin root 直下)** — Claude Code 公式仕様で hooks/ は plugin root 直下 MUST、 `hooks/hooks.json` で hook 宣言 (Phase 2.5 移動済)。
-- **`.claude-plugin/` 配下** — 試作 plugin の manifest (`plugin.json`) + scripts/ skills/ 等の HOW 実装 (hooks/ は plugin root へ移動済、 P-11 部分隔離)。
+- **`.claude-plugin/` 配下** — 試作 plugin の manifest (`plugin.json`) + scripts/ + bin/ + refs/ の HOW 実装 (hooks/ + skills/ は plugin root = 公式仕様、 P-11 部分隔離)。
 
 ## 4. 作業場所
 
@@ -64,11 +64,11 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 │   ├── plugin.json                         Claude Code 必須 manifest (spec_path = architecture/spec/)
 │   ├── scripts/                            hook script (hooks.json から path 指定で参照)
 │   ├── bin/folio                           CLI (version / inventory / prime / validate、 走査 base = architecture/)
-│   ├── skills/ refs/ static/               試作 placeholder
+│   └── refs/                               試作 placeholder (X4-D specialist agent 用 ref data 予約)
 └── inventory.json                          folio inventory CLI の生成物 (repo-root、 .gitignore)
 ```
 
-`scratch/` は X4-C (ADR-0023) で撤去済。 constitution + rules + folio-self-spec は `architecture/spec/` に flat self-host (P-12 Layer 0 一体配布、 ADR-0022)。 完成形では `.claude-plugin/` 内 skills/ 等を plugin root 直下へ移動する余地が残る (P-11 部分隔離の段階的解消)。
+`scratch/` は X4-C (ADR-0023) で撤去済。 constitution + rules + folio-self-spec は `architecture/spec/` に flat self-host (P-12 Layer 0 一体配布、 ADR-0022)。 `.claude-plugin/` には scripts/ (hook 実装) + bin/folio (CLI) + refs/ (X4-D specialist ref data 予約) が残り、 skills/agents は plugin root に置く (公式仕様)。 X4-F で `.claude-plugin/` 内の空 skills/agents/static placeholder を撤去した (P-11 部分隔離の段階的解消)。
 
 **X4-C (ADR-0023)**: `scratch/{specs→spec,decisions,research,assets}` → `architecture/`、 `scratch/constitution.html` → `architecture/spec/`、 `scratch/verification/` → repo-root `verification/`、 planning doc (x4-plan / amendment-proposal) は `status=superseded` 化して `architecture/research/` 退避。 全クロス参照 rewrite (P-6 link-integrity)、 bin/folio scan base + scripts/plugin.json spec_path 更新、 inventory.json 出力先を repo-root へ。 検証: `folio validate` clean + sandbox 8/8 GREEN。
 
