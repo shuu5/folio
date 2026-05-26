@@ -1,8 +1,11 @@
-folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)
 root: architecture
 files checked: 28 · relations checked: 236
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
+  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)
+  [OK] delta-marker
+  [OK] ears-coverage
 
 clean: 0 violations

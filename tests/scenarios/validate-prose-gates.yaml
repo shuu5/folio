@@ -1,0 +1,43 @@
+schema_version: "0.1"
+req_id: "REQ-CI-013/014/015"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の prose-gate 3 種 (WS1、 ADR-0028 §2.2) が seeded fixtures に対し期待通り
+  検出 / warn し exit 1 を出すことを実証する (validate-clean = clean 側 / validate-violations =
+  link/jsonld/broken-reverse 側 の対):
+    - vocabulary  (REQ-CI-013、 block): vocab-bad.html の prose に forbidden synonym 'spec doc'
+                  (vocabulary.yaml で宣言)。 clean.html は同語を <pre><code> 内のみに持ち
+                  非検出 = code/機械可読ブロック除外を実証 (folio_prose_only)。
+    - delta-marker (REQ-CI-015、 block): delta-bad.html の data-delta-id 'BADFORMAT' (format 違反)
+                  + <del> が data-delta-superseded-by を欠く (解決不能)。
+    - ears-coverage (REQ-CI-014、 warn channel): ears-bad.html の不正 data-ears-pattern 'bogus'
+                  + ears-shall span 欠落。 warn は exit code 非影響 (§10.2 warn 設計) ゆえ
+                  warnings 節に出るが exit は block gate (vocab/delta) により 1。
+  vocabulary は vocabulary.yaml + yq があれば有効、 無ければ [SKIP] (opt-in、 ADR-0028 §2.2)。
+  検査 root override (--root) で fixtures を汚染なく検査 (ADR-0020 §2.3)。 conformance は golden
+  baseline との byte-exact diff (capture:stdout, compare:text、 REQ-VER-011)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
+command: ["validate", "--root", "tests/fixtures/validate-prose-gates"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/validate-prose-gates.golden.txt"
+
+setup:
+  fixtures:
+    # 実体は tests/fixtures/validate-prose-gates/ に VCS 管理 (Bash heredoc 作成、 doc-type=fixture
+    # ゆえ path-boundary hook 非対象)。 validate が --root 経由で実ディスクを検査する。
+    - "validate-prose-gates/vocabulary.yaml"        # P-5 forbidden synonym 宣言 (REQ-CI-013)
+    - "validate-prose-gates/spec/clean.html"        # 無違反 (false-positive 不在の実証、 code block 除外)
+    - "validate-prose-gates/spec/vocab-bad.html"    # vocabulary 違反 (prose に 'spec doc')
+    - "validate-prose-gates/spec/delta-bad.html"    # delta-marker 違反 (bad format + superseded-by 欠落)
+    - "validate-prose-gates/spec/ears-bad.html"     # ears-coverage warn (不正 pattern + shall 欠落)
+
+expect:
+  exit_code: 1                                       # block gate (vocabulary/delta-marker) 検出。 ears は warn のみ
+
+# === 実装メモ (WS1、 ADR-0028) ===
+# vocabulary/delta-marker = block (exit 1)、 ears-coverage = warn (exit 非影響)。 golden は 6-gate
+# status 行 (vocabulary [FAIL] / delta-marker [FAIL] / ears-coverage [WARN]) + warnings 節 (2)
+# + violations 節 (3) を含む。 golden は ./runner.sh --accept で generate → 人間 review → commit。

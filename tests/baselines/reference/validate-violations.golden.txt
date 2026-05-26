@@ -1,9 +1,12 @@
-folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)
 root: tests/fixtures/validate-violations
 files checked: 4 · relations checked: 2
   [FAIL] internal link-integrity
   [FAIL] jsonld structural
   [FAIL] broken-reverse
+  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)
+  [OK] delta-marker
+  [OK] ears-coverage
 
 violations (4):
   spec/bad-jsonld.html [jsonld-structural] @context must be object (new pattern), got string

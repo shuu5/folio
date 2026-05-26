@@ -1,0 +1,18 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)
+root: tests/fixtures/validate-prose-gates
+files checked: 4 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [FAIL] vocabulary
+  [FAIL] delta-marker
+  [WARN] ears-coverage
+
+warnings (2):
+  spec/ears-bad.html [ears-coverage] ears block に ears-shall span が無い
+  spec/ears-bad.html [ears-coverage] 不正な data-ears-pattern: bogus
+
+violations (3):
+  spec/delta-bad.html [delta-marker] <del> 'D-2026-05-26-001' に data-delta-superseded-by が無い
+  spec/delta-bad.html [delta-marker] data-delta-id 'BADFORMAT' が D-YYYY-MM-DD-NNN format でない
+  spec/vocab-bad.html [vocabulary] forbidden synonym 'spec doc' を検出 (P-5: canonical 名を使用)

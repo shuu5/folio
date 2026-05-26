@@ -543,6 +543,74 @@ folio_cmd_fix() {
 }
 
 # ============================================================================
+# prose-gate helpers — body markup の deterministic 検査 (WS1、 ADR-0028 §2.2):
+#   REQ-CI-014 EARS-coverage (warn) / REQ-CI-015 delta-marker (block) /
+#   REQ-CI-013 vocabulary (block、 vocabulary.yaml + yq があれば、 無ければ skip = opt-in)。
+#   全て body (</head> 以降) のみ走査。 rules §5/§6 の <pre><code> 例は escaped (&lt;ins /
+#   &lt;p) ゆえ実要素 (<ins / <p) に非マッチで自然除外 (head JSON-LD 抽出と同じ idiom)。
+# ============================================================================
+
+# </head> 以降の body を stdout に返す。
+folio_extract_body() { awk 'b{print} /<\/head>/{b=1}' "$1"; }
+
+# EARS well-formedness (REQ-CI-014、 warn channel): 実 <p class="ears" ...> block が
+# (1) data-ears-pattern ∈ 5 pattern (2) class="ears-id" (3) class="ears-shall" を持つか。
+# 不備を "rel\t[ears-coverage] ..." 行で stdout (warn = exit code 非影響、 §10.2 warn 設計)。
+folio_check_ears() {
+  local body="$1" rel="$2"
+  printf '%s\n' "$body" | awk -v rel="$rel" '
+    function chk(){
+      if(!inb){return}; inb=0
+      pat=""; if(match(blk,/data-ears-pattern="[^"]*"/)){pat=substr(blk,RSTART,RLENGTH);sub(/^data-ears-pattern="/,"",pat);sub(/"$/,"",pat)}
+      valid=" ubiquitous event-driven state-driven optional unwanted "
+      if(pat==""){print rel"\t[ears-coverage] ears block に data-ears-pattern 属性が無い"}
+      else if(index(valid," "pat" ")==0){print rel"\t[ears-coverage] 不正な data-ears-pattern: "pat}
+      if(blk !~ /class="ears-id"/){print rel"\t[ears-coverage] ears block に ears-id span が無い"}
+      if(blk !~ /class="ears-shall"/){print rel"\t[ears-coverage] ears block に ears-shall span が無い"}
+    }
+    /<p class="ears"/{chk(); inb=1; blk=""}
+    inb{blk=blk $0 "\n"; if(/<\/p>/){chk()}}
+    END{chk()}
+  '
+}
+
+# 実 <ins/del class="delta" ...> 要素を "tag\tdelta_id\tsuperseded_by" 行で stdout
+# (tag=ins|del、 無属性 field は空)。 escaped 例 (&lt;ins) は <ins に非マッチで除外。
+folio_extract_delta_elems() {
+  local body="$1" el tag id sup
+  printf '%s\n' "$body" | grep -oE '<(ins|del) class="delta"[^>]*>' 2>/dev/null | while IFS= read -r el; do
+    tag=$(printf '%s' "$el" | grep -oE '^<(ins|del)' | tr -d '<')
+    id=$(printf '%s' "$el" | grep -oP 'data-delta-id="\K[^"]*' | head -1)
+    sup=$(printf '%s' "$el" | grep -oP 'data-delta-superseded-by="\K[^"]*' | head -1)
+    printf '%s\t%s\t%s\n' "$tag" "$id" "$sup"
+  done
+}
+
+# vocabulary.yaml ($root_abs or その親) の forbidden synonym を 1 行ずつ stdout。
+# vocabulary.yaml 不在 or yq 不在なら return 1 (= vocabulary gate を skip、 opt-in)。
+# schema: terms: [ { canonical: <name>, forbidden: [ <syn>, ... ] } ] (rules §3、 P-5)。
+folio_vocab_forbidden() {
+  local root_abs="$1" cand vf=""
+  for cand in "${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml"; do
+    [[ -f "$cand" ]] && { vf="$cand"; break; }
+  done
+  [[ -z "$vf" ]] && return 1
+  command -v yq >/dev/null 2>&1 || return 1
+  yq -r '.terms[]?.forbidden[]?' "$vf" 2>/dev/null
+}
+
+# body から <pre>/<code>/<script>/<style> と machine-readable aside を除去した prose を stdout。
+# vocabulary 検査が code 例・機械可読ブロック内の forbidden synonym で誤検出しないため。
+folio_prose_only() {
+  printf '%s\n' "$1" | awk '
+    /<(pre|code|script|style)[ >]/{skip++}
+    /<aside class="machine-readable"/{skip++}
+    skip==0{print}
+    /<\/(pre|code|script|style|aside)>/{if(skip>0)skip--}
+  '
+}
+
+# ============================================================================
 # validate helpers — spec 集合の internal link-integrity + jsonld structural +
 # broken-reverse 検査 (REQ-VER-013/015、 ADR-0020 を ADR-0025 で 3-gate に拡張)。
 # jsonld 構造 check は plugin-lib.sh を共用 (§2.4 DRY)、 link-integrity + broken-reverse は
@@ -588,7 +656,10 @@ folio_cmd_validate() {
   # FolioConstitution schema の constitution は @type で schema-based に skip (inventory と同基準、 名前非依存、 ADR-0023 / ADR-0024 §2.2) ---
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
-  local violations=()
+  local vocab_fail=0 delta_fail=0 ears_warn=0
+  local violations=() warnings=() delta_records=() delta_ids=()
+  # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
+  local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
 
   for d in "${dirs[@]}"; do
     local dir_abs="${root_abs}/${d}"
@@ -651,11 +722,56 @@ folio_cmd_validate() {
           fi
         fi
       done < <(printf '%s' "$relmap" | jq -r 'to_entries[] | .key as $k | .value[] | "\($k)\t\(.)"' 2>/dev/null)
+
+      # --- body prose gates (WS1、 ADR-0028 §2.2: ears warn / delta block / vocabulary block) ---
+      local body; body=$(folio_extract_body "$f")
+      # gate (e) EARS-coverage — warn channel (exit code 非影響、 REQ-CI-014)
+      local ew
+      while IFS= read -r ew; do [[ -n "$ew" ]] && { warnings+=("$ew"); ears_warn=1; }; done < <(folio_check_ears "$body" "$rel")
+      # gate (f) delta-marker — 要素を収集 (format + 解決 check は全 file 走査後、 REQ-CI-015)
+      local dtag did dsup
+      while IFS=$'\t' read -r dtag did dsup; do
+        [[ -z "$dtag" ]] && continue
+        delta_records+=("${rel}"$'\t'"${dtag}"$'\t'"${did}"$'\t'"${dsup}")
+        [[ -n "$did" ]] && delta_ids+=("$did")
+      done < <(folio_extract_delta_elems "$body")
+      # gate (d) vocabulary — forbidden synonym 検出 (block、 opt-in、 REQ-CI-013)
+      if [[ -n "$vocab_list" ]]; then
+        local prose syn
+        prose=$(folio_prose_only "$body")
+        while IFS= read -r syn; do
+          [[ -z "$syn" ]] && continue
+          if printf '%s' "$prose" | grep -qF "$syn"; then
+            violations+=("${rel}"$'\t'"[vocabulary] forbidden synonym '${syn}' を検出 (P-5: canonical 名を使用)")
+            vocab_fail=1
+          fi
+        done <<< "$vocab_list"
+      fi
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
+  # --- gate (f) delta-marker resolution (REQ-CI-015、 全 file 走査後に format + 解決 check) ---
+  local idset dr drel dtag2 did2 dsup2
+  idset=" $(printf '%s ' "${delta_ids[@]+"${delta_ids[@]}"}")"
+  for dr in "${delta_records[@]+"${delta_records[@]}"}"; do
+    IFS=$'\t' read -r drel dtag2 did2 dsup2 <<< "$dr"
+    if [[ -z "$did2" ]]; then
+      violations+=("${drel}"$'\t'"[delta-marker] <${dtag2} class=delta> に data-delta-id が無い"); delta_fail=1; continue
+    fi
+    if ! [[ "$did2" =~ ^D-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{3}$ ]]; then
+      violations+=("${drel}"$'\t'"[delta-marker] data-delta-id '${did2}' が D-YYYY-MM-DD-NNN format でない"); delta_fail=1
+    fi
+    if [[ "$dtag2" == "del" ]]; then
+      if [[ -z "$dsup2" ]]; then
+        violations+=("${drel}"$'\t'"[delta-marker] <del> '${did2}' に data-delta-superseded-by が無い"); delta_fail=1
+      elif [[ "$idset" != *" ${dsup2} "* ]]; then
+        violations+=("${drel}"$'\t'"[delta-marker] data-delta-superseded-by '${dsup2}' が既存 delta-id に解決しない"); delta_fail=1
+      fi
+    fi
+  done
+
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -664,8 +780,20 @@ folio_cmd_validate() {
   if [[ "$link_fail" -eq 1 ]]; then printf '  [FAIL] internal link-integrity\n'; else printf '  [OK] internal link-integrity\n'; fi
   if [[ "$struct_fail" -eq 1 ]]; then printf '  [FAIL] jsonld structural\n'; else printf '  [OK] jsonld structural\n'; fi
   if [[ "$revlink_fail" -eq 1 ]]; then printf '  [FAIL] broken-reverse\n'; else printf '  [OK] broken-reverse\n'; fi
+  if [[ -z "$vocab_list" ]]; then printf '  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)\n'
+  elif [[ "$vocab_fail" -eq 1 ]]; then printf '  [FAIL] vocabulary\n'; else printf '  [OK] vocabulary\n'; fi
+  if [[ "$delta_fail" -eq 1 ]]; then printf '  [FAIL] delta-marker\n'; else printf '  [OK] delta-marker\n'; fi
+  if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
-  # clean / violation は最終ブロック + exit code のみ分岐 (gate status は上で共通出力済)
+  # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
+  if [[ ${#warnings[@]} -gt 0 ]]; then
+    printf '\nwarnings (%d):\n' "${#warnings[@]}"
+    printf '%s\n' "${warnings[@]}" | LC_ALL=C sort | while IFS=$'\t' read -r wfile wdetail; do
+      printf '  %s %s\n' "$wfile" "$wdetail"
+    done
+  fi
+
+  # clean / violation は最終ブロック + exit code のみ分岐 (block gate violation のみ exit 1、 warn は不問)
   if [[ ${#violations[@]} -eq 0 ]]; then
     printf '\nclean: 0 violations\n'
     return 0

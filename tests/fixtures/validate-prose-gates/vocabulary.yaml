@@ -1,0 +1,4 @@
+# validate-prose-gates fixture の P-5 vocabulary (REQ-CI-013 検証用)
+terms:
+  - canonical: "spec"
+    forbidden: ["spec doc"]
