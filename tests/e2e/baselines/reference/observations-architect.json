@@ -1,16 +1,16 @@
 {
   "schema": "folio-e2e-observations/v1",
   "req": "REQ-VER-016 (b) (+ ADR-0027 folio-architect 7-Phase + Phase F review agents)",
-  "method": "agent-driven runbook walk (runbook S-G)。 user が /folio-architect を手動起動し 7-Phase orchestration を回す。 Phase F で 3 review agent (folio:spec-review-{ears,vocabulary,ssot}) が並列 spawn され、 seed spec の既知 violation を flag するかを観察する。 LLM 非決定的ゆえ一次 assertion = violation 検出有無 (golden 文言比較ではない)。",
-  "status": "PENDING — live walk は別 fresh session (merge 後) で実施。 本 file は walk 後に observed/result を埋める placeholder。",
+  "method": "agent-driven walk (runbook S-G)。 fresh session (plugin reload 済、 X4-D の 3 agent load 済) で 3 review agent (folio:spec-review-{ears,vocabulary,ssot}) を seed spec に 1 メッセージで並列 spawn し、 各軸の既知 violation を flag するかを観察 (LLM 非決定的ゆえ一次 assertion = 検出有無、 golden 文言比較ではない)。 本 walk は REQ-VER-016(b) の核心 = Phase F の agent 検出能力を direct invocation で実証する。 full /folio-architect 7-Phase orchestration walk (Phase A〜G、 Phase C の AskUserQuestion 対話を含む) は disable-model-invocation ゆえ user 主導で別途実施 (本 walk の scope 外)。",
+  "status": "PASS (detection walk、 2026-05-26)。 3 review agent が seed の既知 violation 3 種を漏れなく flag、 並列 spawn 成功、 read-only 遵守、 軸境界遵守、 誤検出なし。",
   "session": {
-    "date": "TBD (walk 実施時に記録)",
-    "host": "TBD",
-    "branch": "TBD",
-    "cwd": "TBD",
-    "plugin_load": "TBD — X4-D の agents/spec-review-*.md + 7-Phase 昇格 SKILL が load 済の fresh session であること (~/.claude/plugins/folio symlink + plugin reload)。 実装直後の session では未 load ゆえ walk 不可。",
-    "primary_assertion": "seed した既知 violation 3 種 (EARS 欠落 / forbidden synonym / domain 越境) を、 Phase F で並列 spawn された 3 review agent がそれぞれ flag したか (検出有無)。 finding の文言は非決定的ゆえ golden 比較しない。",
-    "note": "structural 検証 (REQ-VER-016 (a)) は live load 非依存で ../../scenarios/agent-structure.yaml (kind: agent-structural) が決定的に PASS 済 (本 e2e は (b) の非決定的 LLM 検出能力のみを被覆)。 folio-architect は disable-model-invocation:true ゆえ user が手動で /folio-architect 起動する。"
+    "date": "2026-05-26",
+    "host": "ipatho-server-2",
+    "branch": "main (aa98418)",
+    "cwd": "/home/shuu5/projects/local-projects/folio",
+    "plugin_load": "fresh cld-spawn session (window e2e-x4d)。 ~/.claude/plugins/folio → repo symlink 経由で X4-D の agents/spec-review-*.md + 7-Phase SKILL が load 済 = folio:spec-review-* が discoverable (notes 参照)。",
+    "primary_assertion": "seed (tests/fixtures/architect-e2e/seed-spec.html) の既知 violation 3 種 (EARS 不備 / forbidden synonym / domain 越境) を、 並列 spawn された 3 review agent がそれぞれ flag したか (検出有無)。 finding 文言は非決定的ゆえ golden 比較しない。",
+    "note": "structural 検証 (REQ-VER-016 (a)) は live load 非依存で ../../scenarios/agent-structure.yaml (kind: agent-structural) が決定的に PASS 済。 本 e2e は (b) の非決定的 LLM 検出能力を被覆。 検証方式は direct 3-agent 並列 invocation (full /folio-architect 7-Phase orchestration walk は user 主導で別途)。"
   },
   "agents_under_test": [
     "folio:spec-review-ears — EARS 5-pattern 網羅 + REQ-ID uniqueness + traceability (read-only)",
@@ -20,12 +20,12 @@
   "observations": [
     {
       "id": "S-G",
-      "name": "folio-architect 7-Phase + Phase F 3-agent review (seed violation を flag するか)",
-      "operation": "marker SET で architecture/spec/e2e-x4d-seed.html を Write (既知 violation 3 種を seed) → /folio-architect 起動 → Phase F まで進め 3 review agent を並列 spawn → findings 観察",
+      "name": "Phase F 3-agent review が seed violation を flag するか (direct 並列 invocation)",
+      "operation": "fresh session で tests/fixtures/architect-e2e/seed-spec.html を読み、 folio:spec-review-{ears,vocabulary,ssot} を 1 メッセージ内 (Agent tool x3) で並列 spawn → 各 agent が担当軸を read-only review → findings 集約・検出有無を判定",
       "seeded_violations": {
-        "ears": "規範要件 <p class=\"ears\"> に data-ears-pattern 属性 or <span class=\"ears-shall\">SHALL</span> を欠落",
-        "vocabulary": "同一 entity を複数呼称で混在 (例 caller marker / caller-marker / marker flag)",
-        "ssot": "spec 本文に WHY rationale / HOW (script snippet) を混入 (P-7 / P-11 越境)"
+        "ears": "§1: <span class=\"ears-shall\">SHALL</span> 欠落 + REQ-ID (REQ-WS-001) 重複",
+        "vocabulary": "§2: 同一 token entity を 4 呼称 (sync token / sync-token / auth token / credential) で混在 (P-5)",
+        "ssot": "§3: WHY rationale ('because … 2026 Q1 ops review') + HOW script (redis-cli bash snippet) 混入 (P-7 / P-11 越境)"
       },
       "expected": {
         "parallel_spawn": true,
@@ -34,20 +34,25 @@
         "ssot_flagged": true
       },
       "observed": {
-        "parallel_spawn": "PENDING",
-        "ears_flagged": "PENDING",
-        "vocabulary_flagged": "PENDING",
-        "ssot_flagged": "PENDING"
+        "parallel_spawn": true,
+        "ears_flagged": true,
+        "vocabulary_flagged": true,
+        "ssot_flagged": true
       },
-      "result": "PENDING",
-      "interpretation": "PENDING — walk 後に記入。 期待: 3 review agent が 1 メッセージで並列 spawn され、 各 agent が担当軸の seed violation を severity 付き finding で flag する (検出有無が一次 assertion)。"
+      "findings": {
+        "ears": "REQ-WS-001 重複 (critical) + 両要件の ears-shall SHALL markup 欠落 (high) を検出。 加えて WHEN 句 span markup 欠落・pattern 種別誤り・trace 不在を補足検出。",
+        "vocabulary": "単一 token entity が sync token / sync-token / auth token / credential の 4 呼称混在 = P-5 違反 (high)、 4 表記すべて列挙。 hyphen 表記ゆれも medium で補足。",
+        "ssot": "§3 の WHY rationale を P-7 越境 (high)、 redis-cli bash script (shebang + CLI 構文 + TTL) を P-11 越境 (high) として検出。 WHY/HOW 両越境を flag。"
+      },
+      "result": "PASS",
+      "interpretation": "3 review agent が 1 メッセージで並列 spawn 成功 (parallel_spawn)、 各 agent が担当軸の期待 violation を severity 付き finding で漏れなく flag (誤検出なし)、 read-only (Read/Grep のみ、 ファイル未編集)、 各 agent は担当外 2 軸を out-of-scope と認識し境界遵守 (Phase F の軸分担が機能)。 REQ-VER-016(b) の agent 検出能力を実証。"
     }
   ],
   "summary": {
     "observation_points": 1,
-    "pass": 0,
+    "pass": 1,
     "fail": 0,
-    "pending": 1,
-    "verdict": "PENDING — REQ-VER-016 (b) の live walk は merge 後の fresh session (plugin reload 済) で実施し本 golden を確定する。 (a) structural は agent-structure.yaml で決定的に被覆済。"
+    "pending": 0,
+    "verdict": "PASS — REQ-VER-016 (b) の agent 検出能力を fresh session で実証 (3 軸 flag + 並列 spawn + read-only + 境界遵守)。 (a) structural は agent-structure.yaml で決定的被覆済。 残: full /folio-architect 7-Phase orchestration walk (Phase A〜G、 user 主導) は別途。"
   }
 }

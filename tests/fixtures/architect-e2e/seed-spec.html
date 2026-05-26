@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent">
+<title>widget-sync spec (X4-D e2e seed — 既知 violation 3 種)</title>
+<link rel="stylesheet" href="../../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./seed-spec.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "widget-sync spec (e2e seed)",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+
+<!-- REQ-VER-016(b) e2e seed。 3 review agent が担当軸の既知 violation を flag するか観察する fixture。
+     正解 (検出すべき箇所):
+       ears:       §1 EARS markup 不備 (SHALL 欠落 + REQ-ID 重複)
+       vocabulary: §2 同一 entity 4 呼称混在 (P-5)
+       ssot:       §3 WHY rationale + HOW script 混入 (P-7 / P-11 越境) -->
+
+<header class="doc-header">
+  <h1>Widget Sync Spec</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft</div>
+</header>
+
+<section id="s1-sync" class="normative">
+<h2>§1. Sync Requirements</h2>
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-WS-001</span>:
+  WHEN a widget changes, the system updates the cache.
+</p>
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-WS-001</span>:
+  WHEN the sync fails, retry the operation.
+</p>
+</section>
+
+<section id="s2-token" class="normative">
+<h2>§2. Token Handling</h2>
+<p>The <strong>sync token</strong> authenticates each request. The <strong>sync-token</strong> is rotated daily by the scheduler. A stale <strong>auth token</strong> is rejected at the edge, and the expired <strong>credential</strong> must then be refreshed by the client.</p>
+</section>
+
+<section id="s3-cache" class="informative">
+<h2>§3. Cache Layer</h2>
+<p>We chose Redis over Memcached <strong>because</strong> our team already operates a Redis cluster and it supports persistence — this decision was driven by the 2026 Q1 ops review.</p>
+<pre><code>#!/usr/bin/env bash
+redis-cli SET "widget:$1" "$2" EX 3600
+</code></pre>
+</section>
+
+</body>
+</html>
