@@ -283,7 +283,93 @@ run_cli_scaffold() {
   return 1
 }
 
-# --- kind dispatch: cli-golden / cli-scaffold は別経路、 省略時 (hook) は以降の既存 flow ---
+# ============================================================================
+# kind: cli-fix handler (REQ-VER-015 + ADR-0025)
+#   fix は spec graph を mutate するため temp copy で検証する (cli-golden の単一 output や
+#   cli-scaffold の tree 生成と別経路)。 fixture tree を temp へ copy し RED→GREEN を実証:
+#     (a) pre-fix  `folio validate --root <tmp>` が broken-reverse で FAIL (exit≠0) = 修正対象あり
+#     (b) `folio fix --root <tmp>` が exit == expect.exit_code (0)
+#     (c) post-fix `folio validate --root <tmp>` clean (exit 0) = reverse materialize 成功
+#     (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
+#   golden 不要 (behavioral assertion = RED→GREEN + idempotent、 HTML 整形の byte-golden は脆く
+#   post-fix validate clean が materialize 正当性の proxy)。 既存 hook / cli-golden / cli-scaffold
+#   経路は kind 分岐で隔離され不変。 temp dir は FIX_TMP (global) に置き dispatcher が後始末する。
+# ============================================================================
+run_cli_fix() {
+  local scenario="$1"
+  local req_id fixture exp_exit
+  req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
+  fixture=$(yq -r '.fixture' "$scenario")                  # SCRIPT_DIR (verification dir) 相対の fixture tree
+  exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
+
+  local -a cmd=()
+  while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
+
+  echo "=== scenario: ${scenario}"
+  echo "    req_id:  ${req_id}"
+  echo "    kind:    cli-fix"
+  echo "    command: folio ${cmd[*]} --root <tmp>"
+  echo ""
+
+  local fixture_abs="${SCRIPT_DIR}/${fixture}"
+  if [[ ! -d "$fixture_abs" ]]; then
+    echo "  [FAIL] ${req_id}: fixture tree not found: ${fixture}" >&2
+    echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1
+  fi
+
+  FIX_TMP=$(mktemp -d) || { echo "  [FAIL] ${req_id}: mktemp failed" >&2; echo ""; echo "Results: 0 passed, 1 failed (total 1)"; return 1; }
+  cp -r "${fixture_abs}/." "$FIX_TMP/"
+  local tmp="$FIX_TMP"
+
+  local ok=true reasons=()
+
+  # (a) pre-fix validate = RED (broken-reverse 等で exit≠0、 fixture が修正対象を seed している前提)
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "$tmp" ) >/dev/null 2>&1
+  local pre_exit=$?
+  if [[ "$pre_exit" -eq 0 ]]; then
+    ok=false; reasons+=("pre-fix validate already clean (fixture should seed a broken-reverse = RED state)")
+  fi
+
+  # (b) fix = exit expect (0)
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
+  local fix_exit=$?
+  if [[ "$fix_exit" != "$exp_exit" ]]; then
+    ok=false; reasons+=("fix exit_code mismatch (expected=${exp_exit}, got=${fix_exit})")
+  fi
+
+  # (c) post-fix validate = GREEN (3-gate clean、 exit 0 = reverse materialize 成功)
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "$tmp" ) >/dev/null
+  local post_exit=$?
+  if [[ "$post_exit" != "0" ]]; then
+    ok=false; reasons+=("post-fix validate not clean (exit ${post_exit}; reverse not materialized?)")
+  fi
+
+  # (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
+  local snap1 snap2 refix_exit
+  snap1=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
+  refix_exit=$?
+  snap2=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+  if [[ "$refix_exit" != "0" ]]; then
+    ok=false; reasons+=("re-fix exit_code != 0 (got=${refix_exit})")
+  fi
+  if [[ "$snap1" != "$snap2" ]]; then
+    ok=false; reasons+=("re-fix mutated files (idempotency violated)")
+  fi
+
+  if $ok; then
+    echo "  [PASS] ${req_id} (RED pre-fix → fix exit ${fix_exit} → GREEN post-fix, idempotent)"
+    echo ""; echo "Results: 1 passed, 0 failed (total 1)"
+    return 0
+  fi
+
+  echo "  [FAIL] ${req_id}" >&2
+  for r in "${reasons[@]}"; do echo "         - $r" >&2; done
+  echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+  return 1
+}
+
+# --- kind dispatch: cli-golden / cli-scaffold / cli-fix は別経路、 省略時 (hook) は以降の既存 flow ---
 KIND=$(yq -r '.kind // "hook"' "$SCENARIO_FILE")
 if [[ "$KIND" == "cli-golden" ]]; then
   run_cli_golden "$SCENARIO_FILE"
@@ -293,6 +379,12 @@ if [[ "$KIND" == "cli-scaffold" ]]; then
   run_cli_scaffold "$SCENARIO_FILE"
   rc=$?
   [[ -n "${SCAFFOLD_TMP:-}" && -d "$SCAFFOLD_TMP" ]] && rm -rf "$SCAFFOLD_TMP"
+  exit $rc
+fi
+if [[ "$KIND" == "cli-fix" ]]; then
+  run_cli_fix "$SCENARIO_FILE"
+  rc=$?
+  [[ -n "${FIX_TMP:-}" && -d "$FIX_TMP" ]] && rm -rf "$FIX_TMP"
   exit $rc
 fi
 

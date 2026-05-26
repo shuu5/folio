@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T01:34:16Z",
+  "generatedAt": "2026-05-26T02:20:14Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -32,6 +32,19 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isPartOf": [
+          "spec/README.html"
+        ],
+        "dc:isReferencedBy": [
+          "decisions/ADR-0003-plugin-architecture.html",
+          "decisions/ADR-0006-caller-marker-hook.html",
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+          "research/constitution-x4-amendment-proposal.html",
+          "research/plugin-sandbox-verification-research.html",
+          "research/x4-plan.html",
+          "spec/verification.html"
+        ],
         "folio:extends": [
           "spec/constitution.html"
         ],
@@ -54,6 +67,23 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isPartOf": [
+          "spec/README.html"
+        ],
+        "dc:isReferencedBy": [
+          "decisions/ADR-0004-jsonld-lint-mechanism.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
+          "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "research/constitution-x4-amendment-proposal.html",
+          "research/plugin-sandbox-verification-research.html",
+          "spec/folio-self-spec.html",
+          "spec/rules.html",
+          "spec/verification.html"
+        ],
+        "folio:depended-by": [
+          "spec/verification.html"
+        ],
         "dc:references": [
           "spec/rules.html#s4-format",
           "spec/constitution.html#s2-principles",
@@ -77,6 +107,26 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isPartOf": [
+          "spec/README.html"
+        ],
+        "dc:isReferencedBy": [
+          "decisions/ADR-0004-jsonld-lint-mechanism.html",
+          "decisions/ADR-0006-caller-marker-hook.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0024-folio-init-scope.html",
+          "research/constitution-x4-amendment-proposal.html",
+          "research/plugin-sandbox-verification-research.html",
+          "spec/folio-self-spec.html",
+          "spec/relations.html",
+          "spec/verification.html"
+        ],
+        "folio:depended-by": [
+          "spec/relations.html",
+          "spec/verification.html"
+        ],
         "folio:extends": [
           "spec/constitution.html"
         ],
@@ -98,6 +148,20 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0004-jsonld-lint-mechanism.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
+          "decisions/ADR-0017-unit-integration-boundary.html",
+          "decisions/ADR-0018-cli-golden-harness.html",
+          "decisions/ADR-0019-path-boundary-pragmatic.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
+          "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "research/constitution-x4-amendment-proposal.html"
+        ],
         "folio:extends": [
           "spec/constitution.html"
         ],
@@ -127,7 +191,11 @@
         "AI Agent",
         "External Reviewer"
       ],
-      "relations": {}
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0021-constitution-x4-amendment.html"
+        ]
+      }
     },
     {
       "@id": "decisions/ADR-0003-plugin-architecture.html",
@@ -142,6 +210,23 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0004-jsonld-lint-mechanism.html",
+          "decisions/ADR-0006-caller-marker-hook.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0018-cli-golden-harness.html",
+          "decisions/ADR-0019-path-boundary-pragmatic.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "research/x4-plan.html"
+        ],
+        "folio:depended-by": [
+          "decisions/ADR-0013-verification-framework.html"
+        ],
         "dc:references": [
           "research/plugin-architecture-research.html",
           "spec/folio-self-spec.html#s7-harness",
@@ -162,6 +247,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0020-validate-scope.html"
+        ],
         "dc:references": [
           "spec/relations.html#s3-2-full",
           "spec/rules.html#s10-2",
@@ -183,6 +271,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0019-path-boundary-pragmatic.html"
+        ],
         "dc:references": [
           "spec/rules.html#s10-1",
           "spec/folio-self-spec.html#s7-3-caller-marker",
@@ -203,6 +294,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0017-unit-integration-boundary.html"
+        ],
         "dc:references": [
           "decisions/ADR-0003-plugin-architecture.html#s2-1-scope",
           "spec/relations.html#s4-2-tier",
@@ -224,6 +318,15 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
+          "decisions/ADR-0017-unit-integration-boundary.html",
+          "decisions/ADR-0018-cli-golden-harness.html",
+          "spec/verification.html"
+        ],
+        "folio:depended-by": [
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html"
+        ],
         "dc:references": [
           "research/plugin-sandbox-verification-research.html",
           "spec/verification.html",
@@ -247,6 +350,10 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0017-unit-integration-boundary.html",
+          "spec/verification.html"
+        ],
         "dc:references": [
           "research/plugin-sandbox-verification-research.html",
           "spec/verification.html",
@@ -294,6 +401,10 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0017-unit-integration-boundary.html",
+          "decisions/ADR-0020-validate-scope.html"
+        ],
         "dc:references": [
           "spec/verification.html#s3-6-verification-specific",
           "spec/verification.html#s3-4-baseline",
@@ -335,6 +446,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0025-folio-fix-bidirectional.html"
+        ],
         "dc:references": [
           "spec/rules.html#s10-2",
           "spec/verification.html#s3-6-verification-specific",
@@ -357,6 +471,10 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html"
+        ],
         "dc:references": [
           "spec/constitution.html#s2-principles",
           "spec/constitution.html#s6-amendment",
@@ -381,6 +499,10 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+          "decisions/ADR-0024-folio-init-scope.html"
+        ],
         "dc:references": [
           "spec/constitution.html#p-7",
           "spec/constitution.html#p-13",
@@ -493,6 +615,11 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
+          "spec/verification.html"
+        ],
         "dc:references": [
           "research/plugin-architecture-research.html",
           "research/spec-graph-management-research.html",
@@ -512,6 +639,9 @@
       "version": "0.4.2-draft",
       "stakeholders": [],
       "relations": {
+        "dc:isReferencedBy": [
+          "research/constitution-x4-amendment-proposal.html"
+        ],
         "dc:references": [
           "spec/folio-self-spec.html",
           "decisions/ADR-0003-plugin-architecture.html",

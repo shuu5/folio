@@ -1,13 +1,18 @@
 schema_version: "0.1"
-req_id: "REQ-VER-013"
+req_id: "REQ-VER-013/015"
 ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
-  folio validate が seeded fixtures に対し 3 種の違反を検出し exit 1 + report を出すことを実証する
-  (ADR-0020 §2.1 / REQ-VER-013、 validate-clean.yaml = clean 側の violation-detection 対):
-    - missing file ref : dc:references @id が実在しない file を指す (specs/missing-ref.html)
-    - broken anchor    : @id の #anchor が target file 内に存在しない (specs/broken-anchor.html)
-    - jsonld structural: @context が object でない (string) (specs/bad-jsonld.html)
+  folio validate (3-gate) が seeded fixtures に対し 4 件の違反を検出し exit 1 + report を出すことを
+  実証する (ADR-0020 §2.1 を ADR-0025 §2.2 で 3-gate 化 / REQ-VER-013/015、 validate-clean.yaml =
+  clean 側の violation-detection 対):
+    - missing file ref : dc:references @id が実在しない file を指す (spec/missing-ref.html、 gate a)
+    - broken anchor    : @id の #anchor が target file 内に存在しない (spec/broken-anchor.html、 gate a)
+    - jsonld structural: @context が object でない (string) (spec/bad-jsonld.html、 gate b)
+    - broken-reverse   : forward dc:references → target.html (scan 対象) に対し target が reverse
+                         dc:isReferencedBy を欠く (spec/broken-anchor.html、 gate c = REQ-REL-004)。
+                         broken-anchor の forward が forward-without-reverse を seed し、 fix
+                         (fix-bidirectional.yaml) の detect↔remediate 対の detect 側を実証する。
   検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation、
   cli-golden harness は command[] のみ渡すため flag で override)。 conformance は golden baseline
   との byte-exact diff で検証 (capture:stdout, compare:text、 REQ-VER-011)。
@@ -31,8 +36,11 @@ setup:
 expect:
   exit_code: 1                                           # violation 検出 (0=clean / 2=tool error)
 
-# === 実装メモ (Track 3 spawn = feature-dev) ===
+# === 実装メモ (Track 3 spawn + X4-B feature-dev) ===
 # validate-clean.yaml (exit 0) と対を成す violation-detection scenario。 fixtures は 4 file:
-# target (clean、 anchor 参照先) + 3 違反 file。 validate --root で fixtures root を検査し、
-# files checked: 4 / relations checked: 2 / violations 3 (両 gate FAIL) を report、 exit 1。
-# golden は spawn が generate → 人間 review → ./runner.sh --accept で commit。
+# target (clean、 anchor 参照先 + broken-anchor の forward target = scan 対象) + 3 違反 file。
+# validate --root で fixtures root を 3-gate 検査し、 files checked: 4 / relations checked: 2 /
+# violations 4 (3 gate すべて FAIL) を report、 exit 1。 broken-anchor.html が link-broken-anchor
+# (gate a) と broken-reverse (gate c) の 2 違反を生む (target.html が dc:isReferencedBy を欠くため、
+# X4-B で gate c 追加後に自然発火 = forward-without-reverse の検出実証)。
+# golden は ./runner.sh --accept で generate → 人間 review → commit。

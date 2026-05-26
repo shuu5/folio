@@ -287,17 +287,276 @@ folio_cmd_prime() {
 }
 
 # ============================================================================
-# validate helpers — spec 集合の internal link-integrity + jsonld structural 検査
-# (REQ-VER-013、 ADR-0020)。 jsonld 構造 check は plugin-lib.sh を共用 (§2.4 DRY)、
-# link-integrity は本 file の resolve/build_relations を検査 root 注入で再利用する。
+# bidirectional helpers — reverse relation の検出 / materialize (fix + validate gate c)
+#   relations.html §5.1 の 6 dual pair (forward → reverse) を共有定義し、 fix
+#   (folio_cmd_fix = REQ-REL-002 remediate) と validate broken-reverse gate
+#   (folio_cmd_validate gate (c) = REQ-REL-004 detect) が同一の scan-target 判定 +
+#   reverse 探索ロジックを使う (detect↔remediate 対称性、 ADR-0025 §2)。
+# ============================================================================
+
+# forward relation key ($1) に対応する reverse key を stdout に返す (§5.1 の 6 dual pair)。
+# 6 pair 以外 (reverse key 自身 / dc:requires / prov:* 等) は空文字 = reverse 対象外。
+folio_reverse_of() {
+  case "$1" in
+    "dc:replaces")      printf 'dc:isReplacedBy' ;;
+    "dc:references")    printf 'dc:isReferencedBy' ;;
+    "dc:hasPart")       printf 'dc:isPartOf' ;;
+    "folio:depends-on") printf 'folio:depended-by' ;;
+    "folio:extends")    printf 'folio:extended-by' ;;
+    "folio:implements") printf 'folio:implemented-by' ;;
+    *)                  printf '' ;;
+  esac
+}
+
+# target ($1=絶対 path, $2=root 相対 path) が spec graph の scan 対象かを判定 (return 0/1)。
+# inventory (folio_build_entry) / validate と完全同一基準: (1) scan dir (spec/decisions/research)
+# 配下、 (2) head JSON-LD を持ち、 (3) parse 可能で、 (4) @type != FolioConstitution。
+# fix/gate は scan 対象にのみ reverse を materialize/要求する (constitution・head 無し research・
+# scan dir 外の target は除外 = forward があっても reverse 不要、 ADR-0025 §2.1 edge case)。
+folio_is_scan_target() {
+  local target_abs="$1" target_rel="$2" tblock
+  case "${target_rel%%/*}" in spec|decisions|research) ;; *) return 1 ;; esac
+  [[ -f "$target_abs" ]] || return 1
+  tblock=$(folio_extract_head_jsonld "$target_abs")
+  [[ -z "$tblock" ]] && return 1
+  printf '%s' "$tblock" | jq -e . >/dev/null 2>&1 || return 1
+  [[ "$(printf '%s' "$tblock" | jq -r '."@type" // empty' 2>/dev/null)" == "FolioConstitution" ]] && return 1
+  return 0
+}
+
+# source A ($1 = root 相対 path) を target B の subdir ($2) 起点で見た相対 @id へ変換し stdout に
+# 返す (B 上に置く reverse link B→A の @id)。 folio_resolve_relpath の逆 — realpath --relative-to で
+# B の dir から A への相対 path を算出、 folio convention (同/子 dir = ./foo、 上位/兄弟 = ../dir/foo)
+# へ正規化。 anchor は付けない (reverse は file 単位)。 $3 = root 絶対 path。
+folio_reverse_relid() {
+  local source_rel="$1" target_subdir="$2" root_abs="$3" relid
+  relid=$(realpath -m --relative-to="${root_abs}/${target_subdir}" "${root_abs}/${source_rel}")
+  case "$relid" in
+    ../*) ;;
+    *)    relid="./${relid}" ;;
+  esac
+  printf '%s' "$relid"
+}
+
+# target B ($1=絶対, $2=subdir) の reverse_key ($3) 配列が source A ($4 = root 相対 path) を指す
+# @id を既に持つか判定 (return 0 = 既存 / 1 = 欠落)。 idempotency (fix) + broken-reverse gate
+# (validate) で共用。 B の reverse @id を folio_resolve_relpath で root 相対へ解決し A と一致比較
+# (./foo vs foo 等の表記揺れと anchor を吸収)。 $5 = root 絶対 path。
+folio_target_has_reverse() {
+  local target_abs="$1" target_subdir="$2" rev_key="$3" source_rel="$4" root_abs="$5"
+  local tblock id resolved
+  tblock=$(folio_extract_head_jsonld "$target_abs")
+  [[ -z "$tblock" ]] && return 1
+  while IFS= read -r id; do
+    [[ -z "$id" ]] && continue
+    resolved=$(folio_resolve_relpath "$id" "$target_subdir" "$root_abs")
+    [[ "${resolved%%#*}" == "$source_rel" ]] && return 0
+  done < <(printf '%s' "$tblock" | jq -r --arg k "$rev_key" '.[$k]? // [] | .[]? | .["@id"] // empty' 2>/dev/null)
+  return 1
+}
+
+# target B ($1=絶対, $2=root 相対 path, $3=root 絶対) の <head> JSON-LD へ owed reverse を
+# materialize する。 stdin = "rev_key\tsource_rel" 行 (この B に owed な reverse、 重複可)。
+# 既存 reverse は重複追加しない (idempotent)。 追加した @id 数を stdout に返す (0=変更なし)。
+# 最小 diff 方針 = 既存行を一切変更せず追加のみ:
+#   - rev_key 不在 → @type 行直後に新 key block を挿入 (key 名 sort、 @id は source sort)
+#   - rev_key 既存 → 当該配列の "[" 行直後に新 element を挿入 (既存末尾 element を変更しない)
+# awk 失敗時は file を破壊せず return 1 (caller が fail-closed)。
+folio_materialize_reverse() {
+  local target_abs="$1" target_rel="$2" root_abs="$3"
+  local target_subdir="${target_rel%%/*}"
+  local owed; owed=$(LC_ALL=C sort -u)
+  [[ -z "$owed" ]] && { printf '0'; return 0; }
+
+  local tblock; tblock=$(folio_extract_head_jsonld "$target_abs")
+  [[ -z "$tblock" ]] && { printf '0'; return 0; }
+
+  local rev_keys; rev_keys=$(printf '%s\n' "$owed" | cut -f1 | LC_ALL=C sort -u)
+  local added=0
+  local -a create_kb=()
+  local append_file; append_file=$(mktemp)
+
+  local rk
+  while IFS= read -r rk; do
+    [[ -z "$rk" ]] && continue
+    local present=0
+    printf '%s' "$tblock" | jq -e --arg k "$rk" 'has($k)' >/dev/null 2>&1 && present=1
+    local -a relids=()
+    local sr relid
+    while IFS= read -r sr; do
+      [[ -z "$sr" ]] && continue
+      folio_target_has_reverse "$target_abs" "$target_subdir" "$rk" "$sr" "$root_abs" && continue
+      relid=$(folio_reverse_relid "$sr" "$target_subdir" "$root_abs")
+      relids+=("$relid")
+    done < <(printf '%s\n' "$owed" | awk -F'\t' -v k="$rk" '$1==k{print $2}' | LC_ALL=C sort -u)
+    [[ ${#relids[@]} -eq 0 ]] && continue
+    added=$((added + ${#relids[@]}))
+    if [[ "$present" -eq 1 ]]; then
+      local r
+      for r in "${relids[@]}"; do
+        printf '%s\t    { "@id": "%s" },\n' "$rk" "$r" >> "$append_file"
+      done
+    else
+      local kb i n=${#relids[@]}
+      kb="  \"${rk}\": ["$'\n'
+      for ((i=0; i<n; i++)); do
+        if [[ $i -lt $((n-1)) ]]; then kb+="    { \"@id\": \"${relids[$i]}\" },"$'\n'
+        else kb+="    { \"@id\": \"${relids[$i]}\" }"$'\n'; fi
+      done
+      kb+="  ]"
+      create_kb+=("$kb")
+    fi
+  done <<< "$rev_keys"
+
+  if [[ "$added" -eq 0 ]]; then rm -f "$append_file"; printf '0'; return 0; fi
+
+  local create_file; create_file=$(mktemp)
+  local type_is_last=0
+  if [[ ${#create_kb[@]} -gt 0 ]]; then
+    [[ "$(printf '%s' "$tblock" | jq -r 'keys_unsorted | last')" == "@type" ]] && type_is_last=1
+    local j m=${#create_kb[@]}
+    for ((j=0; j<m; j++)); do
+      printf '%s' "${create_kb[$j]}" >> "$create_file"
+      if [[ $j -lt $((m-1)) ]]; then printf ',\n' >> "$create_file"
+      elif [[ "$type_is_last" -eq 1 ]]; then printf '\n' >> "$create_file"
+      else printf ',\n' >> "$create_file"; fi
+    done
+  fi
+
+  local out; out=$(mktemp)
+  if awk -v createfile="$create_file" -v appendfile="$append_file" -v typecomma="$type_is_last" '
+    BEGIN {
+      while ((getline l < createfile) > 0) createtext = createtext l "\n";
+      while ((getline l < appendfile) > 0) {
+        t = index(l, "\t"); appmap[substr(l, 1, t-1)] = appmap[substr(l, 1, t-1)] substr(l, t+1) "\n";
+      }
+    }
+    { if (!past_head && /<\/head>/) past_head = 1;
+      if (!past_head && /<script[^>]*type="application\/ld\+json"/) inld = 1; }
+    (inld && !donecreate && /^[[:space:]]*"@type":/) {
+      line = $0;
+      if (typecomma == "1" && createtext != "" && line !~ /,[[:space:]]*$/) sub(/[[:space:]]*$/, ",", line);
+      print line;
+      if (createtext != "") printf "%s", createtext;
+      donecreate = 1; next;
+    }
+    (inld && /^[[:space:]]*"[^"]+":[[:space:]]*\[[[:space:]]*$/) {
+      print;
+      rk = $0; sub(/^[[:space:]]*"/, "", rk); sub(/":.*/, "", rk);
+      if (rk in appmap && !(rk in appdone)) { printf "%s", appmap[rk]; appdone[rk] = 1; }
+      next;
+    }
+    { if (inld && /<\/script>/) inld = 0; print; }
+  ' "$target_abs" > "$out"; then
+    if cmp -s "$out" "$target_abs"; then rm -f "$out"; else mv "$out" "$target_abs"; fi
+    rm -f "$create_file" "$append_file"
+    printf '%d' "$added"
+    return 0
+  else
+    rm -f "$out" "$create_file" "$append_file"
+    echo "folio fix: awk materialize failed on ${target_rel} (fail-closed)" >&2
+    return 1
+  fi
+}
+
+# folio fix: spec graph を走査し forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を
+# target B の <head> JSON-LD に materialize する (REQ-REL-002、 ADR-0025 §2.1)。 idempotent。
+# default root = architecture、 --root <dir> で test isolation (validate と対称)。
+# exit 0 = success (materialize 実行 or 既に完備) / 2 = tool error (fail-closed)。
+folio_cmd_fix() {
+  command -v jq >/dev/null 2>&1 || { echo "folio fix: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
+  command -v realpath >/dev/null 2>&1 || { echo "folio fix: realpath not found in PATH (required, fail-closed)" >&2; exit 2; }
+
+  local root="architecture"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --root) [[ $# -ge 2 ]] || { echo "folio fix: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
+      --root=*) root="${1#--root=}"; shift ;;
+      *) echo "folio fix: unknown argument '$1' (usage: folio fix [--root <dir>])" >&2; exit 2 ;;
+    esac
+  done
+  local root_abs; root_abs=$(realpath -m "$root")
+  [[ -d "$root_abs" ]] || { echo "folio fix: root directory not found: ${root} (fail-closed)" >&2; exit 2; }
+
+  # --- Pass 1: 全 scan-target spec の forward を走査し target ごとの owed reverse を集約 ---
+  #   owed line = "B_rel \t rev_key \t A_rel" (B=target / A=source、 全 root 相対)。
+  #   FolioConstitution / head 無し / scan dir 外の B は folio_is_scan_target で除外 (§2.1 edge case)。
+  local dirs=("spec" "decisions" "research") d f
+  local owed_lines=""
+  for d in "${dirs[@]}"; do
+    local dir_abs="${root_abs}/${d}"
+    [[ -d "$dir_abs" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      local block a_rel a_subdir
+      block=$(folio_extract_head_jsonld "$f")
+      [[ -z "$block" ]] && continue
+      printf '%s' "$block" | jq -e . >/dev/null 2>&1 || continue
+      [[ "$(printf '%s' "$block" | jq -r '."@type" // empty' 2>/dev/null)" == "FolioConstitution" ]] && continue
+      a_rel=$(realpath -m --relative-to="$root_abs" "$f")
+      a_subdir="${a_rel%%/*}"
+      local relmap key resolved rev_key b_rel
+      relmap=$(folio_build_relations "$block" "$a_subdir" "$root_abs")
+      while IFS=$'\t' read -r key resolved; do
+        [[ -z "$key" ]] && continue
+        rev_key=$(folio_reverse_of "$key")
+        [[ -z "$rev_key" ]] && continue
+        case "$resolved" in *:*) continue ;; esac
+        b_rel="${resolved%%#*}"
+        folio_is_scan_target "${root_abs}/${b_rel}" "$b_rel" || continue
+        owed_lines+="${b_rel}"$'\t'"${rev_key}"$'\t'"${a_rel}"$'\n'
+      done < <(printf '%s' "$relmap" | jq -r 'to_entries[] | .key as $k | .value[] | "\($k)\t\(.)"' 2>/dev/null)
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
+  owed_lines=$(printf '%s' "$owed_lines" | LC_ALL=C sort -u)   # (B,rev_key,A) dedup = multi-anchor forward も 1 reverse
+
+  printf 'folio fix — reverse relation materialize (REQ-REL-002, ADR-0025)\n'
+  printf 'root: %s\n' "$root"
+
+  if [[ -z "$owed_lines" ]]; then
+    printf 'already complete: 0 reverse relations materialized (no forward to scan-target found)\n'
+    return 0
+  fi
+
+  # --- Pass 2: target ごとに materialize (sort 済で決定的) ---
+  local materialized=0 touched=0 b
+  while IFS= read -r b; do
+    [[ -z "$b" ]] && continue
+    local target_abs="${root_abs}/${b}" n rc
+    n=$(printf '%s\n' "$owed_lines" | awk -F'\t' -v b="$b" '$1==b{print $2"\t"$3}' \
+        | folio_materialize_reverse "$target_abs" "$b" "$root_abs"); rc=$?
+    [[ "$rc" -ne 0 ]] && { echo "folio fix: materialize failed for ${b} (fail-closed)" >&2; exit 2; }
+    n=${n:-0}
+    if [[ "$n" -gt 0 ]]; then
+      materialized=$((materialized + n)); touched=$((touched + 1))
+      printf '  +%d reverse @id  %s\n' "$n" "$b"
+    fi
+  done < <(printf '%s\n' "$owed_lines" | awk -F'\t' 'NF>=3{print $1}' | LC_ALL=C sort -u)
+
+  if [[ "$materialized" -eq 0 ]]; then
+    printf 'already complete: graph is bidirectional (0 reverse relations added)\n'
+  else
+    printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
+  fi
+  return 0
+}
+
+# ============================================================================
+# validate helpers — spec 集合の internal link-integrity + jsonld structural +
+# broken-reverse 検査 (REQ-VER-013/015、 ADR-0020 を ADR-0025 で 3-gate に拡張)。
+# jsonld 構造 check は plugin-lib.sh を共用 (§2.4 DRY)、 link-integrity + broken-reverse は
+# 本 file の resolve/build_relations + bidirectional helpers を検査 root 注入で再利用する。
 # ============================================================================
 
 # folio validate: spec 集合 (root/{spec,decisions,research} の <head> JSON-LD .html) を
-# 横断し 2 gate を検査する (REQ-VER-013、 ADR-0020 §2.1):
+# 横断し 3 gate を検査する (REQ-VER-013/015、 ADR-0020 §2.1 を ADR-0025 §2.2 で 3-gate 化):
 #   (a) internal link-integrity — JSON-LD relation @id を resolve → target file 存在 +
 #       #anchor は target 内 id 存在 (REQ-CI-010 (b)+(c))
 #   (b) jsonld structural — plugin-lib.sh の folio_jsonld_structural_check を共用
 #       (parse + @context/@id/@type + @context==object、 REQ-CI-016、 ADR-0004 Option B Light)
+#   (c) broken-reverse — forward (§5.1 の 6 dual pair) A→B で B が scan 対象なのに reverse B→A
+#       が欠ける場合 violation (REQ-REL-004、 fix = folio_cmd_fix と detect↔remediate 対)
 # default root = architecture、 --root <dir> で検査 root を override する (test isolation、 §2.3 MUST)。
 # external URL check と prose gate は試作 scope 外 (§2.2、 Phase X4+)。
 # exit 0=clean / 1=violation 検出 / 2=tool error (jq 不在・root 不在等、 fail-closed)。
@@ -328,7 +587,7 @@ folio_cmd_validate() {
   # --- 横断検査: spec/decisions/research のうち存在する dir のみ (検査 root の最小構成許容) ---
   # FolioConstitution schema の constitution は @type で schema-based に skip (inventory と同基準、 名前非依存、 ADR-0023 / ADR-0024 §2.2) ---
   local dirs=("spec" "decisions" "research") d f
-  local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0
+  local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
   local violations=()
 
   for d in "${dirs[@]}"; do
@@ -353,7 +612,7 @@ folio_cmd_validate() {
 
       # gate (a) internal link-integrity — block が parse 可能な時のみ relation 抽出
       printf '%s' "$block" | jq -e . >/dev/null 2>&1 || continue
-      local relmap key resolved pathpart anchor target_abs
+      local relmap key resolved pathpart anchor target_abs rev_key
       relmap=$(folio_build_relations "$block" "$subdir" "$root_abs")
       while IFS=$'\t' read -r key resolved; do
         [[ -z "$key" ]] && continue
@@ -379,19 +638,32 @@ folio_cmd_validate() {
             link_fail=1
           fi
         fi
+
+        # gate (c) broken-reverse — forward (6 dual pair) A→B で B が scan 対象なのに reverse
+        # B→A が欠ける場合 violation (REQ-REL-004、 ADR-0025 §2.2)。 fix (folio_cmd_fix) と同一の
+        # scan-target 判定 + reverse 探索を共用し detect↔remediate が対をなす (fix 後は clean)。
+        # B が非 scan 対象 (constitution / head 無し / scan dir 外 / 不在 file) なら reverse 不要。
+        rev_key=$(folio_reverse_of "$key")
+        if [[ -n "$rev_key" ]] && folio_is_scan_target "$target_abs" "$pathpart"; then
+          if ! folio_target_has_reverse "$target_abs" "${pathpart%%/*}" "$rev_key" "$rel" "$root_abs"; then
+            violations+=("${rel}"$'\t'"[broken-reverse] ${key} -> ${pathpart} (target missing reverse ${rev_key} back to ${rel})")
+            revlink_fail=1
+          fi
+        fi
       done < <(printf '%s' "$relmap" | jq -r 'to_entries[] | .key as $k | .value[] | "\($k)\t\(.)"' 2>/dev/null)
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — internal link-integrity + jsonld structural (ADR-0020)\n'
+  printf 'folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
-  # per-gate status は fail flag から一意に導出 (clean なら両 [OK])。 clean/violation 分岐で
+  # per-gate status は fail flag から一意に導出 (clean なら全 [OK])。 clean/violation 分岐で
   # 重複させず、 「clean ⟹ 全 gate OK」 の不変条件を出力構造に持たせる (review R2 反映)。
   if [[ "$link_fail" -eq 1 ]]; then printf '  [FAIL] internal link-integrity\n'; else printf '  [OK] internal link-integrity\n'; fi
   if [[ "$struct_fail" -eq 1 ]]; then printf '  [FAIL] jsonld structural\n'; else printf '  [OK] jsonld structural\n'; fi
+  if [[ "$revlink_fail" -eq 1 ]]; then printf '  [FAIL] broken-reverse\n'; else printf '  [OK] broken-reverse\n'; fi
 
   # clean / violation は最終ブロック + exit code のみ分岐 (gate status は上で共通出力済)
   if [[ ${#violations[@]} -eq 0 ]]; then
@@ -413,7 +685,9 @@ folio_cmd_validate() {
 #   verification/.gitkeep (P-13 HOW-test dir) + folio.config.yaml (§2.5 defaults)。
 #   idempotent (§2.3): 既存 file は preserve (上書き禁止)、 欠損のみ生成。
 #   seed .html は通常 conforming JSON-LD (@context object + @id + @type、 §2.2)、 relation @id は
-#   全 resolve するため生成 skeleton は folio validate が clean (§2.4 品質ゲート)。
+#   全 resolve し forward/reverse 双方向完備 (README dc:hasPart ↔ constitution/overview dc:isPartOf、
+#   overview folio:extends ↔ constitution folio:extended-by) のため生成 skeleton は folio validate
+#   3-gate が clean かつ folio fix が no-op = 双方向の fixed-point (§2.4 品質ゲート、 ADR-0025)。
 #   exit 0=success / 2=tool error (fail-closed)。 assets/ や CLAUDE.md/README.md は生成しない (§2.1)。
 # ============================================================================
 
@@ -537,7 +811,13 @@ HTML
   "@id": "./constitution.html",
   "@type": "schema:TechArticle",
   "dc:title": "project constitution",
-  "folio:version": "0.1.0-draft"
+  "folio:version": "0.1.0-draft",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "folio:extended-by": [
+    { "@id": "./overview.html" }
+  ]
 }
 </script>
 </head>
@@ -613,6 +893,9 @@ HTML
   "folio:version": "0.1.0-draft",
   "folio:extends": [
     { "@id": "./constitution.html" }
+  ],
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
   ]
 }
 </script>
@@ -782,11 +1065,11 @@ Subcommands:
                            (idempotent: 既存 file preserve、 exit 0=success/2=tool error)
   inventory                inventory.json 生成 (relations.html §4、 cwd=repo root)
   prime                    Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen)
-  validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural 検査
-                           (ADR-0020、 exit 0=clean/1=violation/2=tool error、 --root で検査 root override)
-
-Phase X3 試作で実装予定 (ADR-0003 §2.1):
-  fix                      自動修正 (双方向 link 等)
+  validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural +
+                           broken-reverse 検査 (ADR-0020/0025 3-gate、 exit 0=clean/1=violation/2=tool error、
+                           --root で検査 root override)
+  fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
+                           materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
@@ -805,6 +1088,11 @@ EOF
   validate)
     shift
     folio_cmd_validate "$@"
+    exit $?
+    ;;
+  fix)
+    shift
+    folio_cmd_fix "$@"
     exit $?
     ;;
   *)

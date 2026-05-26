@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>fix fixture — source a (forward folio:depends-on → b)</title>
+<script type="application/ld+json">
+{
+  "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
+  "@id": "./a.html",
+  "@type": "schema:TechArticle",
+  "folio:depends-on": [
+    { "@id": "./b.html" }
+  ]
+}
+</script>
+</head>
+<body><p>fix fixture: a は b に folio:depends-on (forward)。 folio fix は b に reverse folio:depended-by → a を materialize する。</p></body>
+</html>

@@ -18,6 +18,23 @@
   },
   "@id": "./relations.html",
   "@type": "schema:TechArticle",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "dc:isReferencedBy": [
+    { "@id": "../decisions/ADR-0004-jsonld-lint-mechanism.html" },
+    { "@id": "../decisions/ADR-0007-context-injection.html" },
+    { "@id": "../decisions/ADR-0021-constitution-x4-amendment.html" },
+    { "@id": "../decisions/ADR-0025-folio-fix-bidirectional.html" },
+    { "@id": "../research/constitution-x4-amendment-proposal.html" },
+    { "@id": "../research/plugin-sandbox-verification-research.html" },
+    { "@id": "./folio-self-spec.html" },
+    { "@id": "./rules.html" },
+    { "@id": "./verification.html" }
+  ],
+  "folio:depended-by": [
+    { "@id": "./verification.html" }
+  ],
   "dc:title": "folio relations spec",
   "folio:version": "0.5.0-draft",
   "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],

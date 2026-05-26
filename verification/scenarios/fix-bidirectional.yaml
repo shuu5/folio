@@ -1,0 +1,29 @@
+schema_version: "0.1"
+req_id: "REQ-VER-015"
+ears_pattern: "event-driven"
+kind: "cli-fix"
+description: |
+  folio fix が forward-without-reverse な fixture tree に reverse を materialize し、
+  detect↔remediate (validate broken-reverse gate ↔ fix) のペアを実証する (ADR-0025 / REQ-VER-015):
+    (a) pre-fix  folio validate --root <tmp> が broken-reverse で FAIL (RED = 修正対象あり)、
+    (b) folio fix --root <tmp> が exit 0、
+    (c) post-fix folio validate --root <tmp> が 3-gate clean (GREEN = reverse materialize 成功)、
+    (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)。
+  fix は spec graph を mutate するため temp copy で検証する (cli-golden の単一 output / cli-scaffold の
+  tree 生成と別経路 = kind:cli-fix、 runner.sh の cli-fix handler)。 golden 不要 = behavioral
+  (RED→GREEN + idempotent) assertion (HTML 整形の byte-golden は脆く、 validate clean が materialize
+  正当性の proxy)。 fixture = fixtures/fix-bidirectional/spec/{a,b}.html
+  (a が b に folio:depends-on、 b は reverse folio:depended-by を欠く RED state)。
+
+# --- cli-fix scenario (verification.html §3.2 kind 拡張、 REQ-VER-011/015) ---
+command: ["fix"]                                        # target root は harness が fresh temp copy で供給
+fixture: "fixtures/fix-bidirectional"                   # copy 元 fixture tree (SCRIPT_DIR 相対)
+
+expect:
+  exit_code: 0                                          # fix success (2 = tool error, fail-closed)
+
+# === 実装メモ (X4-B spawn = feature-dev) ===
+# REQ-VER-015 (a)(b)(c) を temp copy で behavioral に検証 (RED→GREEN + idempotent)。
+# broken-reverse 検出 (REQ-VER-015 (d)) は validate-violations.yaml が broken-anchor→target で実証。
+# constitution / head 無し target への reverse 不materialize (§2.1 edge case) は self-host dogfood +
+# inventory-gen / validate-clean golden で実証 (folio 自身の graph で constitution 除外を確認)。
