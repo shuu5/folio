@@ -1,6 +1,6 @@
 folio validate — internal link-integrity + jsonld structural + broken-reverse (ADR-0025)
 root: architecture
-files checked: 24 · relations checked: 190
+files checked: 25 · relations checked: 201
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse

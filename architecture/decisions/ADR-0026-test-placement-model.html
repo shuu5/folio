@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0026">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0026-test-placement-model.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/constitution.html#p-13" },
+    { "@id": "../spec/verification.html#s1-contract" },
+    { "@id": "../spec/rules.html#s2-directory" },
+    { "@id": "./ADR-0013-verification-framework.html" },
+    { "@id": "./ADR-0022-x4-0-canonical-layout.html" },
+    { "@id": "./ADR-0024-folio-init-scope.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-F 是正、 user 承認済 (AskUq)、 実装は PARENT 一括)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0026</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>constitution P-13 ((a) spec適合性 / (b) 実装適合性)、 verification §1 (verification 概念の canonical 定義)、 rules §2 (consumer layout、 本 ADR が verification/ 規定を除去)、 ADR-0013 (verification framework、 dir 名の origin)、 ADR-0022 (verification sibling 配置、 本 ADR が tests/ へ revise + consumer 非規定化)、 ADR-0024 (init scaffold、 本 ADR が verification/.gitkeep を除去)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>constitution <a href="../spec/constitution.html#p-13">P-13 (Verification &amp; Traceability)</a> は verification を 2 種に分ける: <strong>(a) spec 適合性</strong> (spec graph の link-integrity / JSON-LD 構造 / 双方向完備 = <code>folio validate</code> が担う framework 提供の<strong>普遍</strong>検証、 専用 dir 不要) と <strong>(b) 実装適合性</strong> (実装が spec を満たすかの test = <strong>project 固有</strong>)。</p>
+
+<p>folio は <a href="./ADR-0013-verification-framework.html">ADR-0013</a> で sandbox verification framework の実体を <code>verification/</code> dir に置き、 <a href="./ADR-0022-x4-0-canonical-layout.html">ADR-0022</a> がこれを <code>architecture/</code> の sibling として canonical layout に組み込んだ。 しかし <code>verification/</code> は<strong>folio 自身 (bash plugin stack) の (b) impl-test dir にすぎない</strong>。 <a href="../spec/rules.html#s2-directory">rules §2</a> / ADR-0022 / <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> (init) はこの <code>verification/</code> を<strong>consumer の canonical layout にも規定</strong>しており、 これは「(b) は project 固有」 という P-13 と矛盾する<strong>過剰規定</strong>である。</p>
+
+<p>実際の stack 慣習: bash は <code>tests/</code> (bats)、 Python は <code>tests/</code> (pytest)、 Rust は <code>tests/</code> (cargo)、 TypeScript は <code>tests/</code> または <code>__tests__/</code> (jest)。 <code>verification/</code> という dir 名はどの stack の慣習でもなく、 folio が独自に導入した逸脱だった。 X4-F はこの test-placement model を P-13 整合へ是正する。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-model">§2.1 test-placement model (P-13 (a)/(b) の dir 帰結)</h3>
+<table>
+  <thead><tr><th>verification の種</th><th>担当</th><th>dir</th></tr></thead>
+  <tbody>
+    <tr><td><strong>(a) spec 適合性</strong></td><td><code>folio validate</code> (framework 提供、 全 consumer 普遍)</td><td><strong>専用 dir なし</strong> (<code>architecture/</code> spec graph を走査)</td></tr>
+    <tr><td><strong>(b) 実装適合性</strong></td><td>各 project の test 体系 (stack 固有)</td><td>各 stack の<strong>慣習 location</strong> (<code>tests/</code> 等)、 <strong>folio 非 mandate</strong></td></tr>
+  </tbody>
+</table>
+<p>spec ↔ test の対応は <strong>REQ-ID</strong> (REQ-VER-* / REQ-CM-* 等、 location 非依存) で結ぶ。 test の物理 location は folio の関心外 (P-13 (b) project 固有)。</p>
+
+<h3 id="s2-2-folio-self">§2.2 folio 自身: verification/ → tests/ rename</h3>
+<p>folio の sandbox verification 実体 dir を <code>verification/</code> から <strong><code>tests/</code></strong> へ rename する (folio の bash stack 慣習 = <code>tests/</code> に整合)。 <strong>「verification」 は概念として存続</strong>する: (i) P-13 の verification 概念、 (ii) <a href="../spec/verification.html#s1-contract">verification.html</a> (folio の検証方法論 contract = sandbox-verified の SSoT)、 (iii) <code>folio validate</code> CLI、 (iv) REQ-VER-* ID は<strong>すべて改名しない</strong>。 rename するのは<strong>dir 名のみ</strong>であり、 概念・contract・spec 名・REQ-ID は dir 名と独立に維持される。</p>
+
+<h3 id="s2-3-consumer">§2.3 consumer: test dir を folio が規定しない</h3>
+<p>folio は consumer の (b) impl-test dir の location を<strong>規定しない</strong> (P-13 (b) 尊重)。 具体:</p>
+<ul>
+  <li><a href="../spec/rules.html#s2-directory">rules §2</a> の consumer canonical layout から <code>verification/</code> を除去し、 「(b) test は consumer の stack 慣習 (<code>tests/</code> 等) に置く、 folio 非規定」 と改訂する。 folio が govern するのは <code>architecture/</code> の 3-domain のみ。</li>
+  <li><code>folio init</code> (<a href="./ADR-0024-folio-init-scope.html">ADR-0024</a>) は test dir を<strong>scaffold しない</strong> (<code>verification/.gitkeep</code> 生成を除去)。 init の seed は <code>architecture/{spec,decisions,research}/</code> + cluster README + <code>architecture/spec/{constitution,overview}.html</code> starter + <code>folio.config.yaml</code> に縮小。 consumer は自 stack の test runner (pytest/cargo/jest 等) が期待する location に test を置く。</li>
+</ul>
+<p>是正後の model: <code>architecture/</code> (design-intent、 folio govern・普遍) + <code>folio validate</code> ((a)、 普遍・dir なし) + <code>&lt;stack test dir&gt;</code> ((b)、 全 stack 慣習、 folio 非 mandate)。 folio 自身は <code>tests/</code> を採るが、 これは bash stack 慣習の de-facto 採用であって consumer への mandate ではない。</p>
+
+<h3 id="s2-4-supersede">§2.4 supersede 範囲 (部分 revise)</h3>
+<p>本 ADR は以下を revise する (<strong>部分</strong>。 各 ADR の他の決定は不変ゆえ <code>dc:replaces</code> でなく <code>dc:references</code> + 本 § で trace):</p>
+<ul>
+  <li><a href="./ADR-0022-x4-0-canonical-layout.html">ADR-0022</a> §2.2「verification 実体配置 = sibling <code>verification/</code>」 → sibling <strong><code>tests/</code></strong> に。 §2.1 の consumer canonical layout への <code>verification/</code> 包含を<strong>非規定</strong>に。 3-domain / sibling 概念 / Diátaxis 除去 / fix 命名は不変。</li>
+  <li><a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> の init scaffold から <code>verification/.gitkeep</code> 生成を除去。 idempotency / validate-clean guarantee / 標準 seed の他要素は不変。</li>
+  <li><a href="./ADR-0013-verification-framework.html">ADR-0013</a> は verification framework の契約 origin として<strong>保持</strong> (dir 名のみ <code>tests/</code> に追従、 framework 自体・契約は不変)。</li>
+</ul>
+
+<h3 id="s2-5-frozen-adr">§2.5 frozen ADR の link maintenance (href-only)</h3>
+<p>rename で移動する実ファイル (<code>verification/e2e/runbook.md</code> / <code>observations-*.json</code> / <code>verification/scenarios/</code> 配下等) への frozen ADR 内 <code>&lt;a href&gt;</code> (ADR-0004 / ADR-0006 / ADR-0007 / ADR-0017 / ADR-0018 / ADR-0019) は <strong>href 属性のみ <code>tests/</code> に rewrite</strong> する (link text は <code>runbook</code> / <code>scenarios/</code> 等で path を含まないため表示不変)。 これは <a href="../spec/constitution.html#p-13">P-6 link-integrity</a> 維持の link maintenance であり、 <a href="./ADR-0022-x4-0-canonical-layout.html">X4-C</a> / <a href="./ADR-0013-verification-framework.html">ADR-0025 §2.3</a> で許容された frozen ADR cross-ref rewrite と同性質 (ADR 本文の決定改訂ではない)。 一方、 <code>verification/</code> layout を<strong>決定した</strong> prose / tree 図 / 見出し (ADR-0013 / ADR-0022 / ADR-0024 等) の dir 名は <strong>historical record として据え置く</strong> (本 ADR が supersede を記録するため、 superseded ADR 本文の書換は ADR 不変性に反する)。</p>
+
+<h3 id="s2-6-goldens">§2.6 goldens + 検証</h3>
+<p>init の <code>verification/.gitkeep</code> 除去で <code>scenarios/init-scaffold.yaml</code> の golden tree を再生成する。 dir rename は spec @id (<code>architecture/</code> 配下) を変えないため inventory relations は不変だが、 sandbox runner / scenario / baseline の path 言及は <code>tests/</code> へ追従する。 REQ-VER-* ID と verification.html spec 名は不変ゆえ <code>inventory.json</code> の spec 集合・relation 構造は本 ADR 起票 (本 § の reverse materialize) を除き変わらない。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>P-13 (b) 整合</strong>: folio が consumer の (b) test location を強制しなくなり、 各 stack が自慣習 (<code>tests/</code> / <code>__tests__/</code> 等) を自由に採れる</li>
+  <li><strong>全 stack uniform</strong>: folio 自身も <code>tests/</code> となり、 bash/Python/TS/Rust 全 project で test dir 慣習が一致、 「<code>verification/</code> vs <code>tests/</code>」 の混乱が消える</li>
+  <li><strong>概念と dir の分離</strong>: 「verification」 を P-13 概念 + verification.html contract + <code>folio validate</code> として保ちつつ、 dir 名は stack 慣習に委ねる明確な model</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>frozen ADR の <code>&lt;a href&gt;</code> を touch する (href-only link maintenance、 §2.5)。 verification.html の REQ-VER-001 / 004 等 normative EARS の dir 言及も改訂</li>
+  <li>spec 名 <code>verification.html</code> と dir 名 <code>tests/</code> の不一致が生じるため、 概念↔dir 対応を spec / CLAUDE.md に明記する必要がある (混乱防止コスト)</li>
+  <li>rename は <code>git mv</code> + runner.sh / scenarios / baselines / e2e / .gitignore / CLAUDE.md / README.md の path 更新を伴う広い diff</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>REQ-VER-* ID・<code>verification.html</code> spec 名・<code>folio validate</code> CLI は不変 (概念/contract は dir 名と独立)</li>
+  <li><code>verification/</code> は executable HOW の sibling という ADR-0022 の位置づけ (P-3 / P-11、 design-intent 空間外) は <code>tests/</code> でも不変</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>verification/ → tests/ rename + consumer 非規定 (採用)</td><td>P-13 (b) 整合、 全 stack uniform、 概念/dir 分離 (AskUq: frozen-ADR href-only / init scaffold なし / PARENT 一括)</td></tr>
+    <tr><td>consumer に <code>tests/.gitkeep</code> を init scaffold</td><td>不採用 — 過剰規定先を <code>verification/</code> から <code>tests/</code> に替えただけで P-13 (b) 非 mandate に反する。 <code>__tests__/</code> 等を使う stack で誤った前提になる (AskUq で「何も作らない」 を選択)</td></tr>
+    <tr><td><code>verification/</code> dir を維持</td><td>不採用 — consumer への過剰規定 (P-13 (b) 矛盾) が継続。 stack 慣習からの逸脱も残る</td></tr>
+    <tr><td><code>verification.html</code> spec 名・REQ-VER-* も改名</td><td>不採用 — 「verification」 は概念 (P-13) / contract / CLI として dir 名と独立に存続すべき。 spec 名・REQ-ID の改名は trace churn が大きく利得なし</td></tr>
+    <tr><td>frozen ADR の prose / tree 図も全て tests/ に rewrite</td><td>不採用 — layout を決定した superseded ADR 本文の書換は ADR 不変性に反する。 「rename の度に全 frozen ADR を書換」 前例は audit trail を毀損 (§2.5、 href-only に限定)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/constitution.html#p-13">constitution P-13</a> ((a) 普遍 spec 適合性 / (b) project 固有 実装適合性)。 <a href="./ADR-0013-verification-framework.html">ADR-0013</a> (verification framework、 <code>verification/</code> dir の origin)。 <a href="./ADR-0022-x4-0-canonical-layout.html">ADR-0022</a> (verification sibling 確定、 本 ADR が dir 名 + consumer 適用を revise)。 <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> (init scaffold、 本 ADR が <code>verification/.gitkeep</code> を除去)。</li>
+  <li>決定経緯: 本 session の設計分析 (X4-F finding = <code>verification/</code> が consumer に過剰規定で P-13 (b) と矛盾) + AskUq (frozen ADR = href-only link maintenance、 init = test dir を scaffold しない、 実行 = PARENT 一括)。</li>
+  <li>適用 (PARENT 一括): <code>git mv verification tests</code> + runner.sh / scenarios / baselines / e2e / .gitignore の path、 <a href="../spec/rules.html#s2-directory">rules §2</a> 改訂 (consumer test 非規定)、 <a href="../spec/verification.html#s1-contract">verification.html</a> の dir 言及 <code>tests/</code> 化 + §2.2 用語整理 (black-box sandbox test [§4.1 in-scope] vs white-box 内部 unit test [§2.2 out-of-scope]) + REQ-VER-014 の init scaffold から <code>verification/</code> 除去、 <code>bin/folio</code> init 修正、 frozen ADR href maintenance (§2.5)、 <code>.claude-plugin/</code> placeholder 掃除、 CLAUDE.md / README.md 更新、 golden 再生成。</li>
+  <li>関連原則: P-13 ((a)/(b) 区別が本 ADR の根拠)、 P-6 (link-integrity、 href maintenance §2.5)、 P-3 / P-11 (verification = executable HOW、 sibling 維持)、 P-5 (validate/init/fix CLI 命名は不変)。</li>
+</ul>
+</section>
+
+</body>
+</html>

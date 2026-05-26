@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T02:20:14Z",
+  "generatedAt": "2026-05-26T05:53:06Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -111,6 +111,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0006-caller-marker-hook.html",
           "decisions/ADR-0020-validate-scope.html",
@@ -149,6 +150,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
           "decisions/ADR-0013-verification-framework.html",
@@ -319,6 +321,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
           "decisions/ADR-0017-unit-integration-boundary.html",
           "decisions/ADR-0018-cli-golden-harness.html",
@@ -500,6 +503,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
           "decisions/ADR-0024-folio-init-scope.html"
         ],
@@ -549,6 +553,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0026-test-placement-model.html"
+        ],
         "dc:references": [
           "spec/constitution.html#p-6",
           "spec/constitution.html#p-7",
@@ -580,6 +587,29 @@
           "spec/verification.html#s3-6-verification-specific",
           "decisions/ADR-0003-plugin-architecture.html",
           "decisions/ADR-0020-validate-scope.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0026-test-placement-model.html",
+      "title": "ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)",
+      "summary": "forward (X4-F 是正、 user 承認済 (AskUq)、 実装は PARENT 一括)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/constitution.html#p-13",
+          "spec/verification.html#s1-contract",
+          "spec/rules.html#s2-directory",
+          "decisions/ADR-0013-verification-framework.html",
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0024-folio-init-scope.html"
         ]
       }
     },
