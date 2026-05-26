@@ -67,7 +67,7 @@
 </section>
 
 <section id="s3-scenarios" class="informative">
-<h2>§3. Scenarios (6 件)</h2>
+<h2>§3. Scenarios (7 件)</h2>
 <table>
   <thead><tr><th>ID</th><th>シナリオ</th><th>marker</th><th>期待観察 (一次 = file 作成有無)</th></tr></thead>
   <tbody>
@@ -77,6 +77,7 @@
     <tr><td><strong>S-D</strong></td><td>CLI: <code>bin/folio version</code> / <code>help</code></td><td>—</td><td>exit 0 + 出力 (skeleton)</td></tr>
     <tr><td><strong>S-E</strong></td><td>marker-ux: 手動 set→edit→unset フロー成立</td><td>SET→UNSET</td><td>set 中は spec 編集可、 unset 後は deny 復帰 (fail-open しない)</td></tr>
     <tr><td><strong>S-F</strong></td><td>SessionStart context injection (Tier 1 digest 注入、 REQ-VER-012 / ADR-0007、 Track 2)</td><td>—</td><td>fresh session の初期 context に digest <strong>注入</strong> (full chain 動作)。 startup (S-F) + compact (S-F-compact、 実 /compact) 両 source = PASS。 golden = <code>observations-sessionstart.json</code></td></tr>
+    <tr><td><strong>S-G</strong></td><td>folio-architect 7-Phase + Phase F 3-agent review (ears/vocabulary/ssot 並列 spawn、 REQ-VER-016 / ADR-0027、 Track X4-D)</td><td>SET→UNSET</td><td>seed spec の既知 violation (EARS 欠落 / forbidden synonym / domain 越境) を 3 review agent が <strong>flag</strong> (検出有無が一次 assertion)。 live walk は plugin reload 後の fresh session。 structural (REQ-VER-016 (a)) は <code>../scenarios/agent-structure.yaml</code> で決定的 PASS。 golden = <code>observations-architect.json</code> (walk 後に確定する placeholder)</td></tr>
   </tbody>
 </table>
 <p>各シナリオの詳細手順と期待観察は <a href="runbook.md">runbook.md</a>、 walk 結果の golden は <a href="baselines/reference/">baselines/reference/</a> を参照。</p>
@@ -88,7 +89,7 @@
   <li>folio plugin が load 済の Claude Code session であること (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)。 未 load の session では hook が発火せず e2e は無意味。</li>
   <li>worktree 内で実行し、 probe file (<code>architecture/spec/e2e-*.html</code> / <code>architecture/random-e2e/</code> 等) は walk 後に全削除すること (working tree を汚さない)。</li>
   <li>marker file <code>.folio/architect-active</code> は <code>.gitignore</code> 済。 walk 完了後は必ず <code>rm -f</code> すること (残留すると sandbox の caller-marker unset→deny scenario が壊れ、 fail-open リスクも残る)。</li>
-  <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の 36/36 PASS を walk 前後で維持すること。</li>
+  <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の 43/43 PASS (11 scenario file) を walk 前後で維持すること。</li>
 </ul>
 </section>
 

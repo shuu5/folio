@@ -1,0 +1,53 @@
+{
+  "schema": "folio-e2e-observations/v1",
+  "req": "REQ-VER-016 (b) (+ ADR-0027 folio-architect 7-Phase + Phase F review agents)",
+  "method": "agent-driven runbook walk (runbook S-G)。 user が /folio-architect を手動起動し 7-Phase orchestration を回す。 Phase F で 3 review agent (folio:spec-review-{ears,vocabulary,ssot}) が並列 spawn され、 seed spec の既知 violation を flag するかを観察する。 LLM 非決定的ゆえ一次 assertion = violation 検出有無 (golden 文言比較ではない)。",
+  "status": "PENDING — live walk は別 fresh session (merge 後) で実施。 本 file は walk 後に observed/result を埋める placeholder。",
+  "session": {
+    "date": "TBD (walk 実施時に記録)",
+    "host": "TBD",
+    "branch": "TBD",
+    "cwd": "TBD",
+    "plugin_load": "TBD — X4-D の agents/spec-review-*.md + 7-Phase 昇格 SKILL が load 済の fresh session であること (~/.claude/plugins/folio symlink + plugin reload)。 実装直後の session では未 load ゆえ walk 不可。",
+    "primary_assertion": "seed した既知 violation 3 種 (EARS 欠落 / forbidden synonym / domain 越境) を、 Phase F で並列 spawn された 3 review agent がそれぞれ flag したか (検出有無)。 finding の文言は非決定的ゆえ golden 比較しない。",
+    "note": "structural 検証 (REQ-VER-016 (a)) は live load 非依存で ../../scenarios/agent-structure.yaml (kind: agent-structural) が決定的に PASS 済 (本 e2e は (b) の非決定的 LLM 検出能力のみを被覆)。 folio-architect は disable-model-invocation:true ゆえ user が手動で /folio-architect 起動する。"
+  },
+  "agents_under_test": [
+    "folio:spec-review-ears — EARS 5-pattern 網羅 + REQ-ID uniqueness + traceability (read-only)",
+    "folio:spec-review-vocabulary — P-5 canonical name 違反 + forbidden synonym (read-only)",
+    "folio:spec-review-ssot — P-7 content domain exclusivity + ADR/research 境界 (read-only)"
+  ],
+  "observations": [
+    {
+      "id": "S-G",
+      "name": "folio-architect 7-Phase + Phase F 3-agent review (seed violation を flag するか)",
+      "operation": "marker SET で architecture/spec/e2e-x4d-seed.html を Write (既知 violation 3 種を seed) → /folio-architect 起動 → Phase F まで進め 3 review agent を並列 spawn → findings 観察",
+      "seeded_violations": {
+        "ears": "規範要件 <p class=\"ears\"> に data-ears-pattern 属性 or <span class=\"ears-shall\">SHALL</span> を欠落",
+        "vocabulary": "同一 entity を複数呼称で混在 (例 caller marker / caller-marker / marker flag)",
+        "ssot": "spec 本文に WHY rationale / HOW (script snippet) を混入 (P-7 / P-11 越境)"
+      },
+      "expected": {
+        "parallel_spawn": true,
+        "ears_flagged": true,
+        "vocabulary_flagged": true,
+        "ssot_flagged": true
+      },
+      "observed": {
+        "parallel_spawn": "PENDING",
+        "ears_flagged": "PENDING",
+        "vocabulary_flagged": "PENDING",
+        "ssot_flagged": "PENDING"
+      },
+      "result": "PENDING",
+      "interpretation": "PENDING — walk 後に記入。 期待: 3 review agent が 1 メッセージで並列 spawn され、 各 agent が担当軸の seed violation を severity 付き finding で flag する (検出有無が一次 assertion)。"
+    }
+  ],
+  "summary": {
+    "observation_points": 1,
+    "pass": 0,
+    "fail": 0,
+    "pending": 1,
+    "verdict": "PENDING — REQ-VER-016 (b) の live walk は merge 後の fresh session (plugin reload 済) で実施し本 golden を確定する。 (a) structural は agent-structure.yaml で決定的に被覆済。"
+  }
+}

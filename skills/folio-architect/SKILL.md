@@ -1,24 +1,68 @@
 ---
 name: folio-architect
-description: folio spec edit の正規 author entry point。architecture/spec/ 配下の spec HTML を編集する前に必ず呼び出し、caller marker を set してから編集し、完了後に unset する。folio-self-spec.html §7.1 Phase E の最小実装。
+description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A〜G を順次実行し、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 3 review agent (folio:spec-review-ears/vocabulary/ssot) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
 disable-model-invocation: true
 ---
 
-# folio-architect SKILL
+# folio-architect SKILL — 7-Phase PR Cycle orchestrator
 
-folio spec edit の**唯一の正規 author entry point**（folio-self-spec.html §7.1 の 7-Phase PR Cycle Phase E に相当する最小実装）。
+folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html §7.1 の **7-Phase PR Cycle (A〜G)** を main-session で順次 orchestrate する。
 
-`architecture/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL 経由で **caller marker file を set** しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
+`architecture/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL の **Phase E** で caller marker を set しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
 
-## marker 機構（hybrid: env OR file）
+> **本 SKILL は SKILL のまま (subagent 化しない)**。Phase F で review agent を並列 spawn する側は main-session でなければならない (subagent は subagent を spawn できない = nesting 制約)。`disable-model-invocation: true` で、Claude が spec 編集を予期して自動起動し marker を即 set/unset する事故を防ぐ。起動は user が明示的に `/folio-architect` で行う。
+
+## 7-Phase 概観
+
+| Phase | name | 必須 | X4-D での実体 |
+|-------|------|------|---------------|
+| A | Discovery | MUST | folio-architect 直接 (todo list + `folio.config.yaml` load) |
+| B | Exploration | MUST | **inline** (Grep/Read で関連 spec/ADR 調査。`spec-explorer` agent 化は X5+) |
+| C | Clarifying | **MUST NOT SKIP** | AskUserQuestion で曖昧点を user に確認 |
+| D | Design | optional | structural change 時のみ inline 設計 (`spec-architect` agent 化は X5+) |
+| E | Implementation | MUST | marker set → Edit → `folio validate` → marker unset |
+| F | Quality Review | **MUST NOT SKIP** | 3 review agent (ears/vocabulary/ssot) を **並列 spawn** → findings 集約 → 高 severity を再 Phase E で修正 |
+| G | Summary | MUST | delta marker check + 変更要約 |
+
+各 phase を **順に** 実行する。Phase C と F は **MUST NOT SKIP**。Phase D は structural change が無ければ skip 可。
+
+---
+
+## Phase A — Discovery (MUST)
+
+1. **todo list を作成**し、本タスクで編集する spec / 達成条件を列挙する。
+2. **`folio.config.yaml` を load** する (consumer project の場合)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = architecture/spec/`、`review_model = opus`) を用いる。
+
+## Phase B — Exploration (MUST、inline)
+
+編集対象に関連する spec / ADR / research を **inline で Grep/Read** して文脈を把握する:
+
+- 編集する spec の現行内容、cross-ref している spec、関連 ADR (decisions/)、未昇格の research。
+- 影響を受ける REQ-ID、用語 (P-5 canonical name)、領域境界 (P-7)。
+
+> `spec-explorer` agent による並列探索は完成形 (§7.2)。X4-D では folio-architect が inline で実行する (agent 化は **X5+**)。
+
+## Phase C — Clarifying Questions (MUST NOT SKIP)
+
+Phase B で判明した曖昧点・設計分岐・scope 境界を **AskUserQuestion で user に確認**する。silently choosing は禁止 (constitution P-8 AI dialog accountability)。確認不要なほど自明な場合でも、解釈が分岐しうる点は明示的に提示する。
+
+## Phase D — Design (optional、structural change 時のみ)
+
+directory 構成・新規 spec file・REQ 体系の追加など **structural change を伴う場合のみ**、inline で設計を起こす (minimal / clean / pragmatic の trade-off を簡潔に提示)。本文の追記・修正だけなら skip 可。
+
+> `spec-architect` agent による 3 案並列設計は完成形 (§7.2)。X4-D では inline (agent 化は **X5+**、optional)。
+
+## Phase E — Implementation (MUST)
+
+spec 編集の中核。**caller marker lifecycle** に従う (旧最小版 SKILL の手順を内包):
+
+### marker 機構 (hybrid: env OR file)
 
 caller-marker hook (`.claude-plugin/scripts/check-caller-marker.sh`) は次のどちらかで spec 編集を allow する:
-- env var `FOLIO_ARCHITECT_CONTEXT=folio-architect`（cld 起動時に set する方式。session 開始後は変更不可）
-- marker file `.folio/architect-active` の存在（本 SKILL が mid-session で touch/rm する方式）
+- env var `FOLIO_ARCHITECT_CONTEXT=folio-architect` (cld 起動時 set。session 開始後は変更不可)
+- marker file `.folio/architect-active` の存在 (本 SKILL が mid-session で touch/rm する方式)
 
-env は実行中の hook に伝播しないため、**session 内での正規 spec 編集には file marker を使う**。`.folio/` は `.gitignore` 済。
-
-## 手順（MUST）
+env は実行中の hook に伝播しないため、**session 内での正規 spec 編集には file marker を使う**。`.folio/` は `.gitignore` 済。marker file path は env `FOLIO_MARKER_FILE` で override 可 (hook と整合、default `.folio/architect-active`)。
 
 ### Step 1: marker を set
 
@@ -30,46 +74,87 @@ mkdir -p .folio && touch .folio/architect-active
 
 ### Step 2: spec を編集
 
-通常の Edit / Write tool で `architecture/spec/` 配下の spec HTML を編集する。編集内容は本 SKILL 呼び出し時の指示（または進行中タスク）に従う。
+通常の Edit / Write tool で `architecture/spec/` 配下の spec HTML を編集する。
 
-- path-boundary / jsonld-lint hook は別途有効なので、新規 spec は spec_path 配下に置き、JSON-LD は object 形式 `@context` にすること。
-- README index に未掲載の新 spec は readme-index hook が notify する → cluster README の §2 inventory にも追記する。
+- path-boundary / jsonld-lint / readme-index hook は別途有効。新規 spec は `spec_path` 配下に置き、JSON-LD は object 形式 `@context` にする。
+- README index に未掲載の新 spec は readme-index hook が notify する → cluster README の inventory にも追記する。
 
-### Step 3: marker を unset（MUST、エラー時も優先実行）
+### Step 3: 機械検証 (`folio validate`)
+
+```bash
+.claude-plugin/bin/folio validate
+```
+
+3-gate (internal link-integrity + jsonld structural + broken-reverse) が **clean (exit 0)** であることを確認する。double-link が崩れたら `.claude-plugin/bin/folio fix` で reverse を materialize してから再 validate する。
+
+### Step 4: marker を unset (MUST、エラー時も優先実行)
 
 ```bash
 rm -f .folio/architect-active
 ```
 
-spec 編集が完了したら**必ず**削除する。これを怠ると marker が残留し、以後の非意図的な spec 編集が通過してしまう（fail-open リスク）。エラーや中断時も cleanup を優先する。
+spec 編集が完了したら**必ず**削除する。怠ると marker が残留し、以後の非意図的 spec 編集が通過する (fail-open リスク)。**エラー・中断時も cleanup を最優先**する。
 
-## セルフチェック
+### セルフチェック
 
 ```bash
-# marker 状態確認
 test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (spec 編集は deny される)"
 ```
 
 - [ ] Step 1 で marker を set したか
-- [ ] spec 編集が `architecture/spec/` 配下に収まっているか（spec_path 外は path-boundary が deny）
-- [ ] Step 3 で marker を削除したか
+- [ ] 編集が `architecture/spec/` 配下に収まっているか (spec_path 外は path-boundary が deny)
+- [ ] Step 3 で `folio validate` が clean か
+- [ ] Step 4 で marker を削除したか
 
-## stale marker の cleanup
+### stale marker の cleanup
 
-異常終了等で `.folio/architect-active` が残留した場合、明示的に削除する:
+異常終了等で `.folio/architect-active` が残留した場合、明示的に削除する: `rm -f .folio/architect-active`。
 
-```bash
-rm -f .folio/architect-active
-```
+## Phase F — Quality Review (MUST NOT SKIP)
+
+`folio validate` の機械 gate が検査**しない** folio 固有の 3 品質軸を、LLM review agent で並列検証する。
+
+### 3 review agent を 1 メッセージで並列 spawn
+
+**Agent tool を使い、以下の 3 つの subagent を 1 つのメッセージ内で同時に (並列に) 起動する** (3 つの Agent tool 呼び出しを同一 response にまとめる = 並列実行):
+
+| scoped name | 軸 | 検査内容 |
+|-------------|----|---------| 
+| `folio:spec-review-ears` | EARS | EARS 5-pattern 網羅 + REQ-ID uniqueness + traceability |
+| `folio:spec-review-vocabulary` | vocabulary | P-5 canonical name 違反 + forbidden synonym |
+| `folio:spec-review-ssot` | SSoT | P-7 content domain exclusivity + ADR/research 境界 |
+
+各 agent には **Phase E で編集した spec file の path 群** と「担当軸を review し構造化 findings (severity / location / rule / fix) を返せ」という指示を渡す。3 agent は read-only (自ら Edit しない) ため、並列で安全に走る。model は `review_model` (default opus)。
+
+> 完成形 (§7.2) の Phase F は 6 軸 (vocabulary / structure / ssot / temporal / ears / stakeholder) 並列固定。X4-D では **3 軸 (ears / vocabulary / ssot)** を実装する (残 3 軸 structure/temporal/stakeholder は **X5+**。structure の cross-ref は `folio validate` link-integrity が既に cover)。
+
+### findings 集約 → 修正適用 (再 Phase E)
+
+1. 3 agent の findings を集約し、severity (critical → low) で整列・重複統合する。
+2. **critical / high severity の指摘は folio-architect が修正を適用**する = **Phase E を再実行** (marker set → Edit → `folio validate` → unset)。
+3. medium / low は user に提示し、適用するか記録に留めるか判断する。
+4. 修正適用後は再度 Phase F を回しても良い (findings が収束するまで)。ただし無限ループを避け、収束しない軸は G で残課題として報告する。
+
+## Phase G — Summary (MUST)
+
+1. **delta marker check** (rules.html §5): 規範要件の改訂は `<ins class="delta" data-delta-id="D-YYYY-MM-DD-NNN">` / `<del class="delta" ...>` で inline trace されているか確認する (該当する変更がある場合)。
+2. **変更要約**: 編集した spec / 追加・変更した REQ-ID / Phase F で適用した修正 / 残課題を要約する。
+3. marker が unset 済 (`.folio/architect-active` 不在) であることを最終確認する。
+
+---
 
 ## 制約・注記
 
-- 本 SKILL は `disable-model-invocation: true`。user が明示的に `/folio-architect` で起動する（Claude が spec 編集を予期して自動起動し、marker を即 set/unset してしまう事故を防ぐ）。
-- これは Phase X3 試作の**最小版**。完成形は folio-self-spec.html §7.1 の full 7-Phase PR Cycle（spec-explorer / spec-architect / 6 review specialist 連携）。
-- marker file path は env `FOLIO_MARKER_FILE` で override 可（hook と整合、default `.folio/architect-active`）。
+- 本 SKILL は `disable-model-invocation: true`。user が明示的に `/folio-architect` で起動する。
+- folio-architect は **SKILL のまま (subagent 化しない)**。Phase F の 3 agent を spawn する orchestrator は main-session 必須 (nesting 制約)。
+- review agent は **read-only** (`tools: Read, Grep, Glob`)。spec への Edit は folio-architect が Phase E/F で一元的に行う (caller-marker hook の author 一元性)。
+- これは Phase X4-D 実装。完成形は §7.1 full 7-Phase + §7.2 の 8 specialist agent (spec-explorer / spec-architect / 6 review 軸)。X4-D は 7-Phase orchestration + 3 review agent (ears/vocabulary/ssot) を実装する。
 
 ## 参照
 
-- folio-self-spec.html §7.1（7-Phase PR Cycle）/ §7.3（caller marker flow）/ §7.4（5-Layer Defense）
-- rules.html §10.1（REQ-CM-001〜003）
-- .claude-plugin/scripts/check-caller-marker.sh（hybrid enforcement logic）
+- folio-self-spec.html §7.1 (7-Phase PR Cycle) / §7.2 (8 specialist 完成形) / §7.3 (caller marker flow) / §7.4 (5-Layer Defense) / §7.6 (growth path)
+- ADR-0027 (X4-D folio-architect 7-Phase 昇格 + review agents 3 個)
+- rules.html §6 (EARS) / §5 (delta marker) / §10.1 (REQ-CM-001〜003 caller marker)
+- verification.html §3.6 REQ-VER-016 (Phase F review agent の検証 contract)
+- agents/spec-review-{ears,vocabulary,ssot}.md (Phase F で spawn する review agent)
+- .claude-plugin/scripts/check-caller-marker.sh (hybrid enforcement logic)

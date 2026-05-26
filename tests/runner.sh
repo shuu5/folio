@@ -369,7 +369,118 @@ run_cli_fix() {
   return 1
 }
 
-# --- kind dispatch: cli-golden / cli-scaffold / cli-fix は別経路、 省略時 (hook) は以降の既存 flow ---
+# ============================================================================
+# kind: agent-structural handler (REQ-VER-016 (a) + ADR-0027)
+#   Phase F review agent (spec-review-{ears,vocabulary,ssot}) の structural 検証。 LLM review の
+#   検出能力 (REQ-VER-016 (b)) は非決定的で sandbox 不能ゆえ e2e (tests/e2e/runbook.md S-G) に委ね、
+#   本経路は静的に検証可能な構造のみを決定的に assert する (cli-fix と同様 golden 不要 =
+#   behavioral/structural assertion)。 file 静的検査のみで live plugin load 非依存。 検査:
+#     (1) 各 agent .md が存在し frontmatter (name/description/model/tools) が妥当
+#     (2) tools が read-only (Read/Grep/Glob のみ、 Edit/Write 等を持たない)
+#     (3) scoped name folio:<name> resolvable = frontmatter name == 宣言 name かつ
+#         plugin manifest .name を prefix とする folio:<name> を SKILL が参照
+#     (4) SKILL の agent 参照整合 (3 agent すべてを folio:<name> で参照)
+#   既存 hook / cli-* 経路は kind 分岐で隔離され不変。 golden / temp dir 不要 (純静的)。
+# ============================================================================
+run_agent_structural() {
+  local scenario="$1"
+  local req_id manifest skill plugin_name skill_abs manifest_abs
+  req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
+  manifest=$(yq -r '.plugin_manifest // ".claude-plugin/plugin.json"' "$scenario")
+  skill=$(yq -r '.skill' "$scenario")
+
+  echo "=== scenario: ${scenario}"
+  echo "    req_id:  ${req_id}"
+  echo "    kind:    agent-structural"
+  echo ""
+
+  manifest_abs="${REPO_ROOT}/${manifest}"
+  skill_abs="${REPO_ROOT}/${skill}"
+
+  local ok=true reasons=()
+
+  # plugin manifest から scoped name prefix (plugin .name、 例 "folio") を得る
+  if [[ ! -f "$manifest_abs" ]]; then
+    ok=false; reasons+=("plugin_manifest not found: ${manifest}"); plugin_name=""
+  else
+    plugin_name=$(jq -r '.name // ""' "$manifest_abs" 2>/dev/null)
+    [[ -z "$plugin_name" ]] && { ok=false; reasons+=("plugin_manifest has no .name"); }
+  fi
+  [[ -f "$skill_abs" ]] || { ok=false; reasons+=("skill not found: ${skill}"); }
+
+  local n i
+  n=$(yq -r '.agents | length' "$scenario")
+  for ((i=0; i<n; i++)); do
+    local af aname af_abs fm fname fdesc fmodel tools_norm scoped raw t
+    local -a _toks
+    af=$(yq -r ".agents[$i].file" "$scenario")
+    aname=$(yq -r ".agents[$i].name" "$scenario")
+    af_abs="${REPO_ROOT}/${af}"
+
+    if [[ ! -f "$af_abs" ]]; then
+      ok=false; reasons+=("${af}: agent file not found"); continue
+    fi
+
+    # frontmatter (最初の 2 本の --- の間) を抽出 → yq で parse
+    fm=$(awk '/^---[[:space:]]*$/{c++; if(c==2) exit; next} c==1{print}' "$af_abs")
+    if [[ -z "$fm" ]] || ! printf '%s' "$fm" | yq -e . >/dev/null 2>&1; then
+      ok=false; reasons+=("${af}: frontmatter missing or not valid YAML"); continue
+    fi
+
+    fname=$(printf '%s' "$fm" | yq -r '.name // ""')
+    fdesc=$(printf '%s' "$fm" | yq -r '.description // ""')
+    fmodel=$(printf '%s' "$fm" | yq -r '.model // ""')
+    # tools は string ("Read, Grep, Glob") / seq ([Read,Grep,Glob]) 両形を comma 区切りへ正規化
+    if [[ "$(printf '%s' "$fm" | yq -r '.tools | tag' 2>/dev/null)" == "!!seq" ]]; then
+      tools_norm=$(printf '%s' "$fm" | yq -r '.tools | join(",")')
+    else
+      tools_norm=$(printf '%s' "$fm" | yq -r '.tools // ""')
+    fi
+
+    # (1) name 妥当 + 宣言 name と一致
+    [[ -z "$fname" ]] && { ok=false; reasons+=("${af}: frontmatter .name empty"); }
+    [[ -n "$fname" && "$fname" != "$aname" ]] && { ok=false; reasons+=("${af}: name '${fname}' != declared '${aname}'"); }
+    # description 妥当
+    [[ -z "$fdesc" ]] && { ok=false; reasons+=("${af}: frontmatter .description empty"); }
+    # model 妥当 (有効な model 識別子 or inherit)
+    case "$fmodel" in
+      opus|sonnet|haiku|inherit) ;;
+      *) ok=false; reasons+=("${af}: model '${fmodel}' invalid (opus|sonnet|haiku|inherit)") ;;
+    esac
+    # (2) tools read-only (Read/Grep/Glob のみ。 空 = 全 tool 継承 = read-only でない)
+    if [[ -z "$tools_norm" ]]; then
+      ok=false; reasons+=("${af}: tools empty (read-only set required, must not inherit all tools)")
+    else
+      IFS=',' read -ra _toks <<< "$tools_norm"
+      for raw in "${_toks[@]}"; do
+        t="${raw//[[:space:]]/}"
+        [[ -z "$t" ]] && continue
+        case " Read Grep Glob " in
+          *" $t "*) ;;
+          *) ok=false; reasons+=("${af}: tool '${t}' not read-only (allowed: Read, Grep, Glob)") ;;
+        esac
+      done
+    fi
+    # (3)(4) scoped name folio:<name> を SKILL が参照 (resolvable)
+    if [[ -n "$plugin_name" && -n "$fname" && -f "$skill_abs" ]]; then
+      scoped="${plugin_name}:${fname}"
+      grep -qF "$scoped" "$skill_abs" || { ok=false; reasons+=("${af}: SKILL does not reference scoped name '${scoped}'"); }
+    fi
+  done
+
+  if $ok; then
+    echo "  [PASS] ${req_id} (${n} agents: frontmatter valid, read-only tools, folio:<name> referenced by SKILL)"
+    echo ""; echo "Results: 1 passed, 0 failed (total 1)"
+    return 0
+  fi
+
+  echo "  [FAIL] ${req_id}" >&2
+  for r in "${reasons[@]}"; do echo "         - $r" >&2; done
+  echo ""; echo "Results: 0 passed, 1 failed (total 1)"
+  return 1
+}
+
+# --- kind dispatch: cli-golden / cli-scaffold / cli-fix / agent-structural は別経路、 省略時 (hook) は以降の既存 flow ---
 KIND=$(yq -r '.kind // "hook"' "$SCENARIO_FILE")
 if [[ "$KIND" == "cli-golden" ]]; then
   run_cli_golden "$SCENARIO_FILE"
@@ -386,6 +497,10 @@ if [[ "$KIND" == "cli-fix" ]]; then
   rc=$?
   [[ -n "${FIX_TMP:-}" && -d "$FIX_TMP" ]] && rm -rf "$FIX_TMP"
   exit $rc
+fi
+if [[ "$KIND" == "agent-structural" ]]; then
+  run_agent_structural "$SCENARIO_FILE"
+  exit $?
 fi
 
 # --- (kind: hook) scenario file → hook script の mapping (試作: 単純 basename mapping) ---

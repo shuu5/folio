@@ -411,6 +411,24 @@ expect:
   (c) idempotency (再 fix で no-op)、 (d) broken-reverse を seed した fixture に validate が exit 1。 scenario / golden / harness の HOW は実装時に確定。
   scope 決定は <a href="../decisions/ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> で trace (validate を <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の 2→3 gate に拡張)。
 </p>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-VER-016</span>:
+  <span class="ears-when">WHEN the <a href="folio-self-spec.html#s7-1-7phase"><code>folio-architect</code> SKILL</a> executes Phase F (Quality Review)</span>,
+  it <span class="ears-shall">SHALL</span> spawn the Phase F review agents in parallel
+  (<a href="folio-self-spec.html#s7-2-specialists"><code>spec-review-{ears,vocabulary,ssot}</code></a> = X4-D の 3 軸、 残 3 軸 structure/temporal/stakeholder は X5+)
+  and aggregate their structured findings (severity / location / 違反 rule / 修正提案)。
+  検証は 2 経路: (a) <strong>structural</strong> — 各 review agent の <code>agents/&lt;name&gt;.md</code> frontmatter
+  (<code>name</code> / <code>description</code> / <code>model</code> / read-only <code>tools</code>) が妥当で、 scoped name
+  <code>folio:&lt;name&gt;</code> が resolvable (frontmatter <code>name</code> 一致 + folio-architect SKILL が当該 scoped name を参照) であること
+  (決定的、 sandbox 可)。 (b) <strong>e2e</strong> — 既知 violation (EARS 欠落 / forbidden synonym / domain 越境) を seed した spec に
+  <code>/folio-architect</code> を invoke し、 3 review agent が該当 violation を flag することを観察する
+  (<a href="#s3-6-verification-specific">REQ-VER-009</a> 型 agent-driven runbook)。 LLM agent は非決定的ゆえ golden 比較でなく
+  <strong>「検出有無」 を一次 assertion</strong> とする。 conformance: (a) は <code>scenarios/agent-structure.yaml</code>
+  (<code>kind: agent-structural</code>、 file 静的検査・決定的・exit 0)、 (b) は <a href="../../tests/e2e/runbook.md">tests/e2e/ runbook S-G</a>
+  (live walk は plugin reload を要すため別 fresh session)。 review agent は read-only (Edit は folio-architect が集約後に適用、
+  caller-marker author 一元性)。 scope 決定は <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> で trace。
+</p>
 </section>
 
 <!-- ====================================================================

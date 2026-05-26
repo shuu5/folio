@@ -230,6 +230,10 @@ graph TD
   </tbody>
 </table>
 
+<aside class="informative">
+<p>本 table は完成形の 7-Phase 宣言 (declarative)。 <strong>X4-D 現状局所化 (ADR-0027、 <a href="#s7-6-phase-x3-minimal">§7.6 growth path</a>)</strong>: Phase <strong>B / D</strong> は X4 では folio-architect が <strong>inline</strong> 実行する (<code>spec-explorer</code> / <code>spec-architect</code> の agent 化は X5+)。 Phase <strong>F</strong> は X4 では <strong>3 agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) を並列 spawn し、 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) は X5+ 据置 (table の 6 並列固定は完成形)。 <a href="#s7-2-specialists">§7.2 完成形 8 agents</a> は改変せず未来 anchor として保持する。</p>
+</aside>
+
 <figure class="diagram" data-diagram-type="phase-flow">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
@@ -442,7 +446,11 @@ flowchart LR
 
 <p>Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href="../decisions/ADR-0003-plugin-architecture.html#s2-decision">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は ADR-0003 への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。</p>
 
-<p>段階的成長 path: <strong>1 skill (Phase X3) → 2-3 skill (Phase X4) → 8 agents 完成形 (Phase X5+)</strong>。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
+<p>段階的成長 path: <strong>1 skill (Phase X3) → 7-Phase SKILL + 2-3 review agent (Phase X4) → 8 agents 完成形 (Phase X5+)</strong> (X4-D で従来「2-3 skill (X4)」を 7-Phase SKILL 昇格 + review agent 込みに精緻化、 <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a>)。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
+
+<aside class="informative">
+<p><strong>X4-D 現状 (ADR-0027)</strong>: <a href="#s7-1-7phase">§7.1</a> の 7-Phase orchestration を <code>folio-architect</code> SKILL に実装し、 Phase F に review agent を <strong>3 個</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) 導入した (<code>agents/&lt;name&gt;.md</code>、 scoped name <code>folio:&lt;name&gt;</code>、 read-only)。 Phase B (<code>spec-explorer</code>) / Phase D (<code>spec-architect</code>) は X4 では folio-architect が inline 実行し、 agent 化は <strong>X5+</strong>。 Phase F 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) も <strong>X5+</strong> 据置。 <a href="#s7-2-specialists">§7.2 完成形 8 agents</a> は未来 anchor として保持する。 検証 contract は <a href="verification.html#s3-6-verification-specific">verification.html REQ-VER-016</a>。</p>
+</aside>
 
 <p>本 minimal plugin の実機検証は <a href="verification.html">verification.html</a> (sandbox verification framework) で実施する。 verification scope の段階的対比 (完成形 §7.2 vs 試作段階 §7.6) は <a href="verification.html#s4-2-completion-vs-prototype">verification.html §4.2</a> に集約 (SSoT)。</p>
 </section>
