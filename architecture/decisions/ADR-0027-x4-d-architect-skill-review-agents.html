@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0027">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0027-x4-d-architect-skill-review-agents.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/folio-self-spec.html#s7-1-7phase" },
+    { "@id": "../spec/folio-self-spec.html#s7-2-specialists" },
+    { "@id": "../spec/folio-self-spec.html#s7-6-phase-x3-minimal" },
+    { "@id": "../spec/verification.html#s3-6-verification-specific" },
+    { "@id": "../spec/rules.html#s10-1" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0006-caller-marker-hook.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0027</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>folio-self-spec §7.1 (7-Phase PR cycle)、 §7.2 (8 specialist 完成形)、 §7.6 (growth path、 本 ADR が amend)、 verification §3.6 (REQ-VER-016 追加)、 rules §10.1 (caller marker)、 ADR-0003 (plugin minimal scope = 段階成長の起点)、 ADR-0006 (caller marker hook、 Phase E lifecycle)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>現状の <code>folio-architect</code> SKILL (<code>skills/folio-architect/SKILL.md</code>) は <a href="../spec/folio-self-spec.html#s7-1-7phase">§7.1 7-Phase PR Cycle</a> の <strong>Phase E (Implementation) のみ</strong>を実装した最小版 (caller marker set → 編集 → unset、 <code>disable-model-invocation: true</code>)。 完成形の 7-Phase (A Discovery 〜 G Summary) + <a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 8 specialist agents</a> は未実装。</p>
+
+<p><a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">§7.6 growth path</a> は <strong>1 skill (X3) → 2-3 skill (X4) → 8 agents 完成形 (X5+)</strong> と段階を規定する (試作駆動: 巨大計画を一括せず増分検証)。 X4-D はこの path に沿って folio-architect を完成形へ前進させる。 8 agents 一括 build は X5+ scope ゆえ不採用とし、 <strong>orchestration pattern (SKILL → specialist subagent) を 2-3 agent で早期 validate</strong> する。</p>
+
+<p>user 承認 (AskUq): (1) agent 起点 = <strong>2-3 review agent を X4 で実装</strong> (skills-only 不採用、 §7.6 を amend)、 (2) specialist = <strong>ears + vocabulary + ssot</strong> (<code>folio validate</code> CLI が機械検査できない folio 固有 3 軸)。</p>
+
+<p>Claude Code 公式 docs (plugins / sub-agents) で機構を確認: plugin agent は <code>agents/&lt;name&gt;.md</code> (plugin root)、 scoped name <code>folio:&lt;name&gt;</code>、 SKILL は Agent tool で subagent を並列 spawn 可。 ただし <strong>subagent は subagent を spawn できない (nesting 不可)</strong> ため、 specialist を spawn する orchestrator は <strong>main-session で動く SKILL</strong> でなければならない (folio-architect を SKILL のまま保つ根拠)。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-scope">§2.1 X4-D scope (incremental)</h3>
+<p>folio-architect SKILL を <strong>7-Phase orchestration (A〜G)</strong> に昇格し、 <strong>Phase F に review agent を 3 個</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) 実装する。 以下は <strong>X5+ に据置</strong>: <code>spec-explorer</code> (Phase B)、 <code>spec-architect</code> (Phase D)、 <code>spec-review-{structure,temporal,stakeholder}</code> (Phase F 残 3 軸)。 Phase B/D は X4 では folio-architect が inline 実行する (agent spawn は X5+)。</p>
+
+<h3 id="s2-2-agent-mechanism">§2.2 agent 実現機構 (Claude Code 公式仕様)</h3>
+<ul>
+  <li>review agent = <code>agents/&lt;name&gt;.md</code> (<strong>plugin root 直下</strong>、 <code>.claude-plugin/</code> ではない)。 scoped name = <code>folio:spec-review-ears</code> 等。</li>
+  <li>frontmatter: <code>name</code> / <code>description</code> (auto-delegation を抑制する具体記述) / <code>model</code> (<code>folio.config.yaml</code> の <code>review_model</code> = opus、 または inherit) / <code>tools: Read, Grep, Glob</code> (<strong>read-only</strong>、 review のみで Edit/Write を持たない)。 plugin agent は hooks/mcpServers/permissionMode 非対応。</li>
+  <li><strong>folio-architect は SKILL (main-session orchestrator) のまま</strong>。 subagent 化しない (subagent は subagent を spawn できない nesting 制約ゆえ、 Phase F の 3 agent を spawn する側は SKILL 必須)。</li>
+</ul>
+
+<h3 id="s2-3-orchestration">§2.3 7-Phase orchestration (folio-architect SKILL)</h3>
+<table>
+  <thead><tr><th>Phase</th><th>X4-D での挙動</th></tr></thead>
+  <tbody>
+    <tr><td>A Discovery</td><td>todo list + <code>folio.config.yaml</code> load (folio-architect 直接)</td></tr>
+    <tr><td>B Exploration</td><td><strong>inline</strong> (folio-architect が関連 spec/ADR を Grep/Read。 <code>spec-explorer</code> agent 化は X5+)</td></tr>
+    <tr><td>C Clarifying</td><td><strong>MUST NOT SKIP</strong>。 AskUserQuestion で曖昧点を user に確認</td></tr>
+    <tr><td>D Design</td><td>structural change 時のみ inline で設計 (<code>spec-architect</code> agent 化は X5+、 optional)</td></tr>
+    <tr><td>E Implementation</td><td>既存最小 SKILL を内包: marker set (<code>.folio/architect-active</code>) → Edit → <code>folio validate</code> 機械検証 → marker unset (MUST、 エラー時も優先)</td></tr>
+    <tr><td>F Quality Review</td><td><strong>MUST NOT SKIP</strong>。 3 review agent (ears/vocabulary/ssot) を <strong>並列 spawn</strong> → findings を集約 → 高 severity を folio-architect が修正適用 (再 Phase E)</td></tr>
+    <tr><td>G Summary</td><td>delta marker (<a href="../spec/rules.html#s5-delta">rules §5</a>) check + 変更要約 (folio-architect 直接)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-4-review-contract">§2.4 review agent contract</h3>
+<p>各 review agent は変更された spec file 群を受け取り、 担当軸を review し、 <strong>構造化 findings</strong> (severity / location / 違反 rule / 修正提案) を返す。 read-only (自ら Edit せず、 folio-architect が Phase F 後に修正を適用)。 軸:</p>
+<ul>
+  <li><code>spec-review-ears</code>: EARS 5-pattern 網羅 + REQ-ID uniqueness + traceability (<a href="../spec/rules.html#s6-ears">rules §6</a>)</li>
+  <li><code>spec-review-vocabulary</code>: P-5 canonical name 違反 + forbidden synonym detection</li>
+  <li><code>spec-review-ssot</code>: P-7 content domain exclusivity + ADR / research 境界</li>
+</ul>
+
+<h3 id="s2-5-growth-amend">§2.5 §7.6 growth path amendment</h3>
+<p><a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec §7.6</a> の growth path を <strong>「1 skill (X3) → 7-Phase SKILL + 2-3 review agent (X4) → 8 agents 完成形 (X5+)」</strong>に amend する (従来「2-3 skill (X4)」を agent 込みに精緻化)。 §7.1 table は Phase B/D を「X4 inline、 agent 化 X5+」、 Phase F を「X4 = 3 agent (ears/vocab/ssot)、 残 3 軸 X5+」と現状局所化する (§7.2 完成形 8 agents は未来 anchor として保持)。</p>
+
+<h3 id="s2-6-verification">§2.6 verification (REQ-VER-016)</h3>
+<p><a href="../spec/verification.html#s3-6-verification-specific">verification.html §3.6</a> に REQ-VER-016 を追加: (a) <strong>structural</strong> — 各 agent <code>.md</code> の frontmatter 妥当性 + scoped name <code>folio:&lt;name&gt;</code> resolvable + SKILL の agent 参照整合 (決定的、 sandbox 可)。 (b) <strong>e2e</strong> — <code>/folio-architect</code> を既知 violation (EARS 欠落 / forbidden synonym / domain 越境) を seed した spec に invoke → 3 review agent が該当 violation を flag することを観察 (<a href="../spec/verification.html#s3-6-verification-specific">REQ-VER-009</a> 型 agent-driven runbook)。 LLM agent は非決定的ゆえ golden 比較でなく <strong>「検出有無」 を一次 assertion</strong> とする。</p>
+
+<h3 id="s2-7-application">§2.7 適用範囲</h3>
+<p>実装物: folio-architect SKILL.md の 7-Phase 化 + <code>agents/spec-review-{ears,vocabulary,ssot}.md</code> 3 個 + folio-self-spec §7.6/§7.1 amend + verification.html REQ-VER-016 + e2e runbook (<code>tests/e2e/</code>) + structural 検証。 <strong>実装方式 (PARENT 一括 / SPAWN feature-dev) は本 ADR 承認後に決定</strong>。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>orchestration pattern を早期 validate</strong>: SKILL → specialist subagent 並列 spawn → findings 集約 の architecture を 3 agent で実証し、 X5+ full 8 agents build を de-risk</li>
+  <li><strong>review 品質ゲート</strong>: <code>folio validate</code> (機械: link/jsonld/broken-reverse) を補完する LLM 3 軸 (EARS 網羅 / P-5 vocabulary / P-7 SSoT)。 mechanical check 不能な folio 固有品質を Phase F で enforce</li>
+  <li>folio-architect が spec edit の full 7-Phase author になり、 chicken-and-egg (folio が自身の spec を正規手順で編集) を完全解消</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>LLM review agent は<strong>非決定的</strong>で golden-diff 不能 → 検証は structural + e2e (検出有無) に依存 (sandbox の決定的 assertion から外れる軸)</li>
+  <li>§7.6 staging を前倒し amend (8 agents = X5+ は維持するが X4 に agent を導入)</li>
+  <li>SKILL が Phase-E-only から 7-Phase へ大幅拡張</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>folio-architect は SKILL のまま (subagent 化しない) = nesting 制約と整合。 残り 5 agent (explorer/architect + review 3 軸) は X5+ 据置で §7.2 完成形 anchor は不変</li>
+  <li>review agent は read-only (Edit は folio-architect が集約後に実施) = caller-marker hook の author 一元性を保つ</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>7-Phase SKILL + 3 review agent (ears/vocab/ssot) (採用)</td><td>orchestration pattern を早期 validate + folio 固有の非機械的 3 軸を品質ゲート化 (AskUq)</td></tr>
+    <tr><td>skills-only (厳密 §7.6、 review inline、 agent は X5+ 全送り)</td><td>不採用 — SKILL → subagent orchestration pattern が未検証のまま X5+ full build に突入し risk 大 (AskUq で agent 起点を選択)</td></tr>
+    <tr><td>full 8 agents 一括 (ADR-0027 で X5+ を前倒し)</td><td>不採用 — 6 LLM review agent + explorer + architect の一括 build は over-build かつ未検証。 §7.6 試作駆動に反する</td></tr>
+    <tr><td>1 統合 spec-reviewer (6 軸を 1 agent)</td><td>不採用 — 並列 specialist の focus (1 軸 = fresh context) を失い、 context-window 圧迫。 完成形 §7.2 の 6 並列固定と乖離</td></tr>
+    <tr><td>explorer + ears + structure</td><td>不採用 — structure の cross-ref は <code>folio validate</code> link-integrity が既に cover。 ears/vocabulary/ssot が最も LLM-distinctive かつ folio core principle 直結</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/folio-self-spec.html#s7-1-7phase">§7.1 7-Phase</a> + <a href="../spec/folio-self-spec.html#s7-2-specialists">§7.2 8 specialist (完成形 anchor)</a> + <a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">§7.6 growth path (本 ADR が amend)</a>。 <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> (plugin minimal scope = 段階成長の起点)。 <a href="./ADR-0006-caller-marker-hook.html">ADR-0006</a> (caller marker = Phase E lifecycle の基盤)。</li>
+  <li>決定経緯: 本 session の AskUq (agent 起点 = 2-3 review agent を X4 で、 specialist = ears/vocabulary/ssot)。 spec §7.6 staging (X4=skill / agents=X5+) と resume-plan (full 8 agents) の矛盾を surface し incremental に確定。</li>
+  <li>機構確認: Claude Code 公式 docs (<a href="https://code.claude.com/docs/en/plugins.md">plugins</a> / <a href="https://code.claude.com/docs/en/sub-agents.md">sub-agents</a>) — plugin agents/ format、 folio:&lt;name&gt; scoped、 SKILL の並列 spawn、 subagent nesting 不可 (folio-architect = SKILL 維持の根拠)。</li>
+  <li>適用 (実装、 方式は承認後決定): folio-architect SKILL 7-Phase 化 + <code>agents/spec-review-{ears,vocabulary,ssot}.md</code> + folio-self-spec §7.6/§7.1 amend + verification.html REQ-VER-016 + e2e runbook + structural 検証。</li>
+  <li>関連原則: P-12 (Layer 0 一体配布、 SKILL + agents を plugin 同梱)、 P-5 (canonical naming、 agent 名 spec-review-*)、 P-13 ((a) spec 適合性 review の LLM 補完、 <code>folio validate</code> と Phase F の役割分担)。</li>
+</ul>
+</section>
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 25 specs · folio 0.5.0-draft
+# 26 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -111,6 +111,11 @@
 - title: ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)
 - doc-type: adr · status: accepted
 - summary: forward (X4-F 是正、 user 承認済 (AskUq)、 実装は PARENT 一括)
+
+## decisions/ADR-0027-x4-d-architect-skill-review-agents.html
+- title: ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)
+- doc-type: adr · status: accepted
+- summary: forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

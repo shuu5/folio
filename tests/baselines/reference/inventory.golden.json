@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T05:53:06Z",
+  "generatedAt": "2026-05-26T07:06:10Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -36,6 +36,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0003-plugin-architecture.html",
           "decisions/ADR-0006-caller-marker-hook.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html",
@@ -111,6 +112,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0006-caller-marker-hook.html",
@@ -150,6 +152,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
@@ -213,6 +216,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0006-caller-marker-hook.html",
           "decisions/ADR-0007-context-injection.html",
@@ -274,6 +278,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0019-path-boundary-pragmatic.html"
         ],
         "dc:references": [
@@ -610,6 +615,30 @@
           "decisions/ADR-0013-verification-framework.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html",
           "decisions/ADR-0024-folio-init-scope.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+      "title": "ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)",
+      "summary": "forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/folio-self-spec.html#s7-1-7phase",
+          "spec/folio-self-spec.html#s7-2-specialists",
+          "spec/folio-self-spec.html#s7-6-phase-x3-minimal",
+          "spec/verification.html#s3-6-verification-specific",
+          "spec/rules.html#s10-1",
+          "decisions/ADR-0003-plugin-architecture.html",
+          "decisions/ADR-0006-caller-marker-hook.html"
         ]
       }
     },
