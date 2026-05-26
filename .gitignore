@@ -15,6 +15,10 @@ inventory.json
 .claude-session/
 .mailbox/
 
-# spawn 先 git worktree (session:spawn cld-spawn = worktrees/、 native claude --worktree = .claude/worktrees/)
+# spawn 先 git worktree
+#   cc-session:spawn (現行) = .worktrees/ (隠しdir、 skill が対象 repo .gitignore に自動追記)
+#   旧 session:spawn = worktrees/ (撤去済、 再生成防止に保持)
+#   native claude --worktree = .claude/worktrees/
+.worktrees/
 worktrees/
 .claude/worktrees/
