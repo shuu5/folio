@@ -22,14 +22,20 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions |
 | [`.claude-plugin/`](./.claude-plugin/) + [`hooks/`](./hooks/) | plugin harness (manifest + CLI + hook 宣言 / script) |
 
-## Local preview (tailnet)
+## View
 
-`python3 -m http.server 8000` is served on `ipatho-server-2`:
+**Published spec site (canonical)**: <https://shuu5.github.io/folio/> — GitHub Pages, always available.
 
-- <http://ipatho-server-2.taild4e917.ts.net:8000/architecture/spec/constitution.html>
-- <http://ipatho-server-2.taild4e917.ts.net:8000/architecture/>
+- [Architecture](https://shuu5.github.io/folio/architecture/) · [Constitution](https://shuu5.github.io/folio/architecture/spec/constitution.html) · [ADR index](https://shuu5.github.io/folio/architecture/decisions/README.html)
 
-(Reachable only from tailnet-joined devices.)
+**Local preview** (offline / pre-publish): serve the repo root, then open `/architecture/`:
+
+```bash
+# repo root から (specs の ../../common.css 等を解決するため root 配信が必須)
+python3 -m http.server 8000 --bind 127.0.0.1            # localhost のみ
+# tailnet 経由で見る場合は tailscale IP を bind:
+# python3 -m http.server 8000 --bind "$(tailscale ip -4)"
+```
 
 ## Distinction from twill
 

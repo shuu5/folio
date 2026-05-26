@@ -1,0 +1,38 @@
+# folio spec site — GitHub Pages deploy (OSS public)。
+# repo root を静的サイトとして配信する (specs は ../../common.css 等の相対 path ゆえ root 配信で解決)。
+# 閲覧 = ローカル python http.server の恒久・universal 版 (host 非依存、 常時稼働)。
+name: Deploy spec site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Pages deploy は直列。 進行中の deploy はキャンセルせず完了させる。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact (repo root = 静的 spec site)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
