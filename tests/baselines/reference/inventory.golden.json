@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T13:37:33Z",
+  "generatedAt": "2026-05-26T14:59:09Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -36,6 +36,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
@@ -74,6 +75,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
           "decisions/ADR-0021-constitution-x4-amendment.html",
@@ -155,6 +157,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
@@ -669,6 +672,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0029-phase-f-agent-set.html"
         ],
         "dc:references": [
@@ -694,6 +698,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0030-v1-stability-criteria.html"
+        ],
         "dc:references": [
           "spec/folio-self-spec.html#s7-2-specialists",
           "spec/folio-self-spec.html#s7-1-7phase",
@@ -702,6 +709,28 @@
           "spec/verification.html#s3-6-verification-specific",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0028-prose-gate-mechanization.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0030-v1-stability-criteria.html",
+      "title": "ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)",
+      "summary": "forward (X5-γ WS5 入口、 user 承認待ち = 承認で accepted → bump 実行)",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/folio-self-spec.html#s7-6-phase-x3-minimal",
+          "spec/verification.html#s4-2-completion-vs-prototype",
+          "spec/relations.html#s2-folio-vocab",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0029-phase-f-agent-set.html"
         ]
       }
     },

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0030">
+<meta name="folio-adr-date" content="2026-05-26">
+<title>ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0030-v1-stability-criteria.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/folio-self-spec.html#s7-6-phase-x3-minimal" },
+    { "@id": "../spec/verification.html#s4-2-completion-vs-prototype" },
+    { "@id": "../spec/relations.html#s2-folio-vocab" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0029-phase-f-agent-set.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X5-γ WS5 入口、 user 承認待ち = 承認で accepted → bump 実行)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0030</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-05-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>constitution §5 (Versioning Policy = strict-SemVer 移行点)、 §6 (Amendment = P-10)、 folio-self-spec §7.6 (growth path → 4-agent v1.0)、 verification §4.2 (完成形 vs 試作 = v1.0 reconcile)、 relations §2 (folio: namespace URI = v1.0 解決可能化予定)、 ADR-0028 (二層 enforcement = criterion C floor)、 ADR-0029 (Phase F 4-agent = criterion C ceiling)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>X5-γ (選択的完成) で <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement) + <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> (Phase F 4-agent) を起票し、 WS1 (prose-gate 機械化 = <code>folio validate</code> 6-gate) / WS2 (temporal agent + §7.2 改訂) / WS4 (minimal CI) を実装した。 残るは WS3 (full orchestration walk 検証) と <strong>version formalization</strong> (-draft 除去 → 1.0.0) である。</p>
+
+<p>folio は現在 <code>0.5.0-draft</code>。 <a href="../spec/constitution.html#s5-versioning">constitution §5</a> は <strong>「1.0.0 未満は development phase、 1.0.0 以降は strict SemVer」</strong>と規定する。 すなわち v1.0.0 宣言は strict-SemVer への commitment であり、 安易な bump は許されない — 明示的で検査可能な <strong>stability criteria</strong> が前提となる。</p>
+
+<p>さらに version meta 調査で 2 つの実態が判明した: (1) <code>.claude-plugin/bin/folio</code> の <code>VERSION</code> 定数が <code>0.4.2-draft</code> + ラベル "(Phase X3 試作)" で <strong>stale</strong> (canonical な framework version は <code>plugin.json</code> の <code>0.5.0-draft</code>、 <code>inventory</code>/<code>prime</code> はこれを読む)。 (2) 各 spec の <code>folio-version</code> meta は authoring 時点の framework version = <strong>provenance ゆえ不均一</strong> (実測 0.1.0×3 / 0.4.1×2 / 0.4.2×13 / 0.5.0×17)。 ゆえに「全 spec version meta を一括 bump」 は <a href="../spec/constitution.html#s6-amendment">P-10</a> (constitution immutability) + frozen-ADR provenance (<a href="./ADR-0026-test-placement-model.html">既存 ADR 本文不変</a>) を破壊する。</p>
+
+<p>本 ADR は (a) v1.0 昇格の <strong>stability criteria</strong>、 (b) version bump の <strong>正確な scope</strong>、 (c) 1.0.0 以降の <strong>strict-SemVer breaking 定義</strong>、 (d) <strong>post-1.0 deferrals</strong> を規範化する。 <strong>status = proposed (user 承認待ち)</strong>; 承認で <code>accepted</code> へ flip し WS5 (bump) を実行する。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-criteria">§2.1 v1.0 stability criteria (7 gate)</h3>
+<p>folio が <code>1.0.0</code> (= -draft 除去 + strict-SemVer 移行) を宣言できる条件を以下 7 criterion に確定する。 全充足が必要条件。</p>
+<table>
+  <thead><tr><th>#</th><th>criterion</th><th>根拠</th><th>現状</th></tr></thead>
+  <tbody>
+    <tr><td>A</td><td>constitution 凍結 (P-1〜P-13 確定、 pending amendment なし)</td><td><a href="../spec/constitution.html#s6-amendment">§6</a> / P-10</td><td>✓ (最終 amendment = ADR-0021 X4)</td></tr>
+    <tr><td>B</td><td>spec graph self-consistent (<code>folio validate</code> が folio 自身の <code>architecture/</code> で clean)</td><td>self-host dogfood (<a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)</td><td>✓ (6-gate clean、 28/236)</td></tr>
+    <tr><td>C</td><td>二層 enforcement 完備 (deterministic floor 全 gate + LLM ceiling 全軸 present)</td><td><a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a></td><td>✓ (floor REQ-CI-010/013/014/015/016 + ceiling 011/012 + Phase F 4-agent)</td></tr>
+    <tr><td>D</td><td>verification GREEN (sandbox 100% + e2e full orchestration walk PASS)</td><td><a href="../spec/verification.html#s4-2-completion-vs-prototype">verification §4.2</a></td><td><strong>部分 — sandbox ✓ (12/12) / orchestration walk = WS3 未</strong></td></tr>
+    <tr><td>E</td><td>CI gating active (minimal CI が validate + sandbox を PR ごと auto-run)</td><td><a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028 §2.4</a> (WS4)</td><td>✓ (.github/workflows/ci.yml、 green)</td></tr>
+    <tr><td>F</td><td>CLI surface 凍結 (version/help/init/inventory/prime/validate/fix の command set + 出力 contract が golden-locked)</td><td><a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a></td><td>✓ (cli-golden harness)</td></tr>
+    <tr><td>G</td><td>consumer contract 安定 (<code>folio init</code> scaffold + <a href="../spec/rules.html">rules.html</a> Layer 1 universal + folio.config.yaml schema)</td><td><a href="./ADR-0024-folio-init-scope.html">ADR-0024</a></td><td>✓</td></tr>
+  </tbody>
+</table>
+<p><strong>結論</strong>: A/B/C/E/F/G は充足済。 残 gate は <strong>D の orchestration walk (WS3)</strong> のみ — <strong>WS3 PASS が v1.0 宣言の最終 gate</strong> である。</p>
+
+<h3 id="s2-2-bump-scope">§2.2 version bump scope (1.0.0 昇格時)</h3>
+<p>1.0.0 昇格時に bump する対象を以下に <strong>限定</strong>する。</p>
+<ul>
+  <li><strong>living spec (編集可、 <a href="../spec/constitution.html#s5-versioning">spec domain</a>)</strong>: <code>folio-self-spec</code> / <code>rules</code> / <code>relations</code> / <code>verification</code> + <code>spec</code>/<code>decisions</code>/<code>research</code> の各 <code>README</code> = 計 7 本の <code>folio-version</code> meta を <code>1.0.0</code> へ。 加えて <code>folio-self-spec</code> の <code>folio-status</code> を <code>draft</code> → <strong><code>stable</code></strong> (他 living spec の status は draft→active を個別判断)。</li>
+  <li><strong><code>plugin.json</code></strong>: <code>version</code> を <code>1.0.0</code> へ (canonical = <code>inventory</code>/<code>prime</code> の出所)。</li>
+  <li><strong><code>.claude-plugin/bin/folio</code></strong>: <code>VERSION</code> 定数を <code>1.0.0</code> へ + ラベル "(Phase X3 試作)" を除去 (現状 <code>0.4.2-draft</code> stale の是正)。</li>
+  <li><strong>bump しない</strong>: <strong>frozen ADR の <code>folio-version</code> meta は authoring-time provenance ゆえ据置</strong> (本文不変 = historical record、 -draft 残存が正)。 reverse link metadata の維持 (<a href="./ADR-0025-folio-fix-bidirectional.html">folio fix</a>) は本文不変ゆえ別 (継続可)。</li>
+  <li><strong><code>constitution.html</code></strong>: version meta の bump は <a href="../spec/constitution.html#s6-amendment">P-10 amendment</a> 扱い (user 承認 MUST) — §2.5 参照。</li>
+</ul>
+<p>「28 spec version meta 一括 bump」 は本 ADR で<strong>明示的に棄却</strong>する (frozen-ADR provenance + P-10 immutability の破壊)。</p>
+
+<h3 id="s2-3-semver">§2.3 strict-SemVer commitment (1.0.0 以降)</h3>
+<p><a href="../spec/constitution.html#s5-versioning">constitution §5</a> に従い 1.0.0 以降は strict SemVer。 folio の breaking 定義 (consumer が依存する surface = CLI 契約 + <a href="../spec/rules.html">rules</a> MUST + config schema) を明確化する:</p>
+<table>
+  <thead><tr><th>bump</th><th>folio framework での意味</th></tr></thead>
+  <tbody>
+    <tr><td>MAJOR</td><td>CLI subcommand の削除/非互換変更、 gate の追加 or warn→block 昇格、 <code>folio.config.yaml</code> schema 非互換変更、 <a href="../spec/rules.html">rules</a> の MUST 要件 追加/変更、 constitution 原則の追加/削除 (constitution §5 と整合)</td></tr>
+    <tr><td>MINOR</td><td>新 gate (warn)、 新 review agent、 新 CLI subcommand、 後方互換な spec 拡張</td></tr>
+    <tr><td>PATCH</td><td>bug fix、 typo、 cross-ref 補正、 内部実装改善 (contract 不変)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s2-4-defer">§2.4 post-1.0 deferrals (v1.0 scope の境界)</h3>
+<p>v1.0 から明示的に除外し post-1.0 opt-in とする (削除でなく defer、 anchor は spec に保持):</p>
+<ul>
+  <li>8-agent 完成形の残り: <code>spec-explorer</code> / <code>spec-architect</code> / <code>spec-review-stakeholder</code> (<a href="./ADR-0029-phase-f-agent-set.html">ADR-0029 §2.4</a>)。</li>
+  <li>Inspect AI / Promptfoo 移行 (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028 §2.4</a>、 現 bash runner で十分)。</li>
+  <li><code>folio:</code> namespace URI (<code>https://folio.dev/spec/v1/</code>) の解決可能化 (<a href="../spec/relations.html#s2-folio-vocab">relations §2</a>、 hosting 要 — placeholder 維持で v1.0 は機能する)。</li>
+  <li>consumer 向け richer tooling (multi-repo 横断、 CI template 配布 等)。</li>
+</ul>
+
+<h3 id="s2-5-constitution-version">§2.5 constitution version の扱い</h3>
+<p>framework version (<code>plugin.json</code>) と constitution version (<code>constitution.html</code> の <code>folio-version</code>) は<strong>別 trace</strong>である。 constitution は最終 amendment (ADR-0021、 X4) 時点の <code>0.5.0-draft</code> を保持しており、 framework が 1.0.0 になっても constitution 文言が不変なら version meta は <a href="../spec/constitution.html#s6-amendment">P-10 amendment</a> なしに bump しない (constitution §5 は constitution 自身の改訂 policy)。 framework 1.0.0 リリースに合わせて constitution を「1.0.0 として凍結」する場合は別途 P-10 amendment (user 承認) を起票する。 <strong>本 ADR は constitution を touch しない</strong> (<a href="../spec/constitution.html#s6-amendment">編集禁止</a>)。</p>
+
+<h3 id="s2-6-application">§2.6 適用範囲 (WS5、 承認後)</h3>
+<p>status を <code>proposed</code> → <code>accepted</code> へ flip 後に実施: §2.2 の bump 対象を編集 (living spec = caller marker 要 / <code>plugin.json</code> + <code>bin/folio</code> = marker 不要) + <code>folio-self-spec</code> status draft→stable + cli-golden 再生成 (<code>runner.sh --accept</code>、 version 文字列変化) + <a href="./ADR-0030-v1-stability-criteria.html">本 ADR</a> + decisions/README §3 の status 更新。 <strong>実装方式 (PARENT / SPAWN)・実施時点 (criterion D = WS3 PASS 後) は承認後に確定</strong>。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>v1.0 昇格を検査可能な criteria に gate 化</strong>: 恣意的 bump を防ぎ、 strict-SemVer commitment の前提を明示。</li>
+  <li><strong>provenance 保全</strong>: frozen-ADR の authoring-time version + constitution immutability を守り、 「一括 bump」 の罠を回避。</li>
+  <li><strong>consumer に互換性保証 contract を提供</strong>: §2.3 で breaking 定義を明文化し、 1.0.0 以降の依存安全性を担保。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li>v1.0 宣言が <strong>WS3 (orchestration walk)</strong> に依存 (最終 gate が残る — user 主導の fresh session 起動が必要)。</li>
+  <li><code>bin/folio</code> version の stale (<code>0.4.2-draft</code> + "Phase X3 試作") は WS5 まで残る (<code>folio version</code> 出力のみ。 <code>inventory</code>/<code>prime</code> は正しい <code>0.5.0-draft</code>)。</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>post-1.0 deferrals は anchor として spec に残す (完成形の野心を保持しつつ v1.0 scope を bounded 化)。</li>
+  <li>constitution version は framework version と独立 trace (§2.5)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>明示的 7-criteria + scoped bump + strict-SemVer 定義 (採用)</td><td>v1.0 を検査可能に gate 化し provenance を保全。 constitution §5 の strict-SemVer 移行に整合</td></tr>
+    <tr><td>X4/X5 を即 1.0.0 宣言 (β = X4 を v1.0)</td><td>不採用 — criterion D (orchestration walk) 未検証で strict-SemVer commitment が早計。 X5 方向性 AskUq でも β は不採用</td></tr>
+    <tr><td>28 spec version meta を一括 bump</td><td>不採用 — frozen-ADR provenance + constitution <a href="../spec/constitution.html#s6-amendment">P-10</a> immutability を破壊。 version meta は authoring-time の historical record</td></tr>
+    <tr><td>-draft を無期限維持</td><td>不採用 — framework が安定しても consumer に stable signal を出せず、 self-host dogfood (folio が自身を canonical layout で運用) の意義を損なう</td></tr>
+    <tr><td><code>bin/folio</code> version を今すぐ <code>0.5.0</code> へ暫定 bump</td><td>不採用 — version formalization は本 ADR で 1.0.0 へ一括が筋。 暫定 bump は二度手間 + cli-golden 再生成を 2 回招く</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="../spec/constitution.html#s5-versioning">constitution §5 (Versioning Policy)</a> + <a href="../spec/folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec §7.6 (growth path → 4-agent v1.0)</a> + <a href="../spec/verification.html#s4-2-completion-vs-prototype">verification §4.2 (完成形 vs 試作)</a> + <a href="../spec/relations.html#s2-folio-vocab">relations §2 (folio: namespace URI)</a>。</li>
+  <li>充足済 criteria: A (ADR-0021)、 B (self-host validate)、 C (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> + <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> + WS1/2)、 E (WS4)、 F (<a href="./ADR-0018-cli-golden-harness.html">ADR-0018</a>)、 G (<a href="./ADR-0024-folio-init-scope.html">ADR-0024</a>)。 残: D の orchestration walk (WS3)。</li>
+  <li>決定経緯: X5-γ core (ADR-0028/0029 + WS1/2/4) 完遂後、 version formalization の正確な scope を確定する必要から起票。 version meta 調査で「一括 bump」 の provenance 破壊リスクを発見し scope を living spec 7 + plugin.json + bin/folio に限定。</li>
+  <li>適用 (WS5、 承認後): §2.6 参照 (実施時点 = criterion D / WS3 PASS 後、 方式は承認後決定)。</li>
+  <li>関連原則: P-2 (HTML)、 P-6 (link-integrity = bump で壊さない)、 P-7 (spec domain = living spec のみ bump)、 P-10 (constitution amendment = user 承認)、 P-12 (Layer 0 一体配布 = plugin.json + bin/folio 同期)。</li>
+  <li>status: <strong>proposed</strong> (user 承認待ち)。 承認で <code>accepted</code> → WS5 実行。</li>
+</ul>
+</section>
+
+</body>
+</html>

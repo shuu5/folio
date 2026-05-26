@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 28 specs · folio 0.5.0-draft
+# 29 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -126,6 +126,11 @@
 - title: ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂
 - doc-type: adr · status: accepted
 - summary: forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実 amend は WS2)
+
+## decisions/ADR-0030-v1-stability-criteria.html
+- title: ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)
+- doc-type: adr · status: proposed
+- summary: forward (X5-γ WS5 入口、 user 承認待ち = 承認で accepted → bump 実行)
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal
