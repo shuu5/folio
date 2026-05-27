@@ -808,16 +808,17 @@ folio_cmd_validate() {
 
 # ============================================================================
 # init helpers — consumer canonical layout を scaffold (REQ-VER-014、 ADR-0024)
-#   生成物 = ADR-0024 §2.1 標準 seed: architecture/{spec,decisions,research} の cluster
-#   README (P-6 entry point) + spec/{constitution,overview}.html starter template +
-#   folio.config.yaml (§2.5 defaults)。 test dir は scaffold しない (ADR-0026: consumer の (b)
-#   実装適合性 test は stack 慣習 (tests/ 等) に置き folio は規定しない、 P-13(b))。
+#   生成物 = 純粋な構造のみ (ADR-0031 が ADR-0024 §2.1 seed を revise): architecture/{spec,
+#   decisions,research} の cluster README (P-6 entry point) + folio.config.yaml (§2.5 defaults)。
+#   spec/{constitution,overview}.html の本文 (実体) は seed しない — folio-architect の greenfield
+#   onboarding grilling が中身を引き出した時のみ lazy-materialize する (folio-self-spec §7.1、 ADR-0031)。
+#   spec/README は実在 file のみ dc:hasPart 宣言する (生成直後は part 無し)。 空 placeholder を残さず
+#   whisper の hollow-constitution を構造的に排除。 test dir は scaffold しない (ADR-0026: consumer の
+#   (b) 実装適合性 test は stack 慣習 (tests/ 等) に置き folio は規定しない、 P-13(b))。
 #   idempotent (§2.3): 既存 file は preserve (上書き禁止)、 欠損のみ生成。
-#   seed .html は通常 conforming JSON-LD (@context object + @id + @type、 §2.2)、 relation @id は
-#   全 resolve し forward/reverse 双方向完備 (README dc:hasPart ↔ constitution/overview dc:isPartOf、
-#   overview folio:extends ↔ constitution folio:extended-by) のため生成 skeleton は folio validate
-#   3-gate が clean かつ folio fix が no-op = 双方向の fixed-point (§2.4 品質ゲート、 ADR-0025)。
-#   exit 0=success / 2=tool error (fail-closed)。 assets/ や CLAUDE.md/README.md は生成しない (§2.1)。
+#   生成 skeleton (3 cluster README + config) は全 conforming JSON-LD かつ relation 0 のため folio
+#   validate が clean (exit 0)。 exit 0=success / 2=tool error (fail-closed)。 assets/ や CLAUDE.md/
+#   README.md は生成しない (§2.1)。
 # ============================================================================
 
 # 1 seed file を idempotent に生成。 $1 = 生成先絶対 path、 $2 = 報告用 relative base (target dir)。
@@ -881,11 +882,7 @@ YAML
   "@id": "./README.html",
   "@type": "schema:TechArticle",
   "dc:title": "spec cluster index",
-  "folio:version": "0.1.0-draft",
-  "dc:hasPart": [
-    { "@id": "./constitution.html" },
-    { "@id": "./overview.html" }
-  ]
+  "folio:version": "0.1.0-draft"
 }
 </script>
 </head>
@@ -907,158 +904,8 @@ YAML
 
 <section id="s2-contents" class="informative">
 <h2>§2. Contents</h2>
-<ul>
-  <li><a href="constitution.html"><code>constitution.html</code></a> — この project の constitution (folio Layer 0 core を継承し、 project 固有の不変原則を定義)</li>
-  <li><a href="overview.html"><code>overview.html</code></a> — project architecture の overview</li>
-</ul>
-<p>新しい spec を追加したら本 index に追記してください。</p>
-</section>
-
-</body>
-</html>
-HTML
-
-  folio_init_write "${arch}/spec/constitution.html" "$target" <<'HTML' || rc=1
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="folio-doc-type" content="constitution">
-<meta name="folio-layer" content="project">
-<meta name="folio-version" content="0.1.0-draft">
-<meta name="folio-status" content="draft">
-<meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>project constitution (starter)</title>
-<link rel="stylesheet" href="../../common.css">
-<script type="application/ld+json">
-{
-  "@context": {
-    "dc": "http://purl.org/dc/terms/",
-    "schema": "https://schema.org/",
-    "folio": "https://folio.dev/spec/v1/"
-  },
-  "@id": "./constitution.html",
-  "@type": "schema:TechArticle",
-  "dc:title": "project constitution",
-  "folio:version": "0.1.0-draft",
-  "dc:isPartOf": [
-    { "@id": "./README.html" }
-  ],
-  "folio:extended-by": [
-    { "@id": "./overview.html" }
-  ]
-}
-</script>
-</head>
-<body>
-
-<header class="doc-header">
-  <h1>project constitution (starter)</h1>
-  <div class="meta">v0.1.0-draft &middot; status: draft &middot; この project の不変原則 (folio Layer 0 core 継承 + project 固有)</div>
-</header>
-
-<aside class="informative">
-<p>本文書は IETF <a href="https://datatracker.ietf.org/doc/html/rfc2119">RFC 2119</a> / <a href="https://datatracker.ietf.org/doc/html/rfc8174">RFC 8174</a> / <a href="https://datatracker.ietf.org/doc/html/bcp14">BCP 14</a> の MUST / SHOULD / MAY 解釈規約に従う。</p>
-</aside>
-
-<aside class="machine-readable" aria-hidden="true">
-  <dl>
-    <dt>id</dt><dd>constitution</dd>
-    <dt>doc-type</dt><dd>constitution</dd>
-    <dt>status</dt><dd>draft</dd>
-    <dt>stakeholders</dt><dd>Developer, AI Agent</dd>
-    <dt>version</dt><dd>0.1.0-draft</dd>
-  </dl>
-</aside>
-
-<section id="s1-inheritance" class="informative">
-<h2>§1. folio Layer 0 core の継承</h2>
-<p>本 project は <a href="https://folio.dev/">folio</a> framework の Layer 0 core 原則 (declarative WHAT / link-integrity / single source of truth 等) を継承します。 本 constitution は、 それらを前提に <strong>この project 固有の不変原則</strong>を追記する場所です。</p>
-</section>
-
-<section id="s2-principles" class="normative">
-<h2>§2. Project-Specific Principles</h2>
-<p>以下にこの project 固有の不変原則を定義してください (placeholder)。</p>
-
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">P-1</span>:
-  The project <span class="ears-shall">SHALL</span> &lt;ここに最初の不変原則を記述&gt;.
-</p>
-
-<p><em>(原則を追加するたびに P-2, P-3, ... と連番で追記します。)</em></p>
-</section>
-
-<section id="s3-amendment" class="informative">
-<h2>§3. Amendment</h2>
-<p>本 constitution の改訂は <code>architecture/decisions/</code> の ADR で trace し、 version を bump してください。</p>
-</section>
-
-</body>
-</html>
-HTML
-
-  folio_init_write "${arch}/spec/overview.html" "$target" <<'HTML' || rc=1
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="folio-doc-type" content="spec">
-<meta name="folio-layer" content="project">
-<meta name="folio-version" content="0.1.0-draft">
-<meta name="folio-status" content="draft">
-<meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>project overview (starter)</title>
-<link rel="stylesheet" href="../../common.css">
-<script type="application/ld+json">
-{
-  "@context": {
-    "dc": "http://purl.org/dc/terms/",
-    "schema": "https://schema.org/",
-    "folio": "https://folio.dev/spec/v1/"
-  },
-  "@id": "./overview.html",
-  "@type": "schema:TechArticle",
-  "dc:title": "project overview",
-  "folio:version": "0.1.0-draft",
-  "folio:extends": [
-    { "@id": "./constitution.html" }
-  ],
-  "dc:isPartOf": [
-    { "@id": "./README.html" }
-  ]
-}
-</script>
-</head>
-<body>
-
-<header class="doc-header">
-  <h1>project overview (starter)</h1>
-  <div class="meta">v0.1.0-draft &middot; status: draft &middot; project architecture の俯瞰</div>
-</header>
-
-<aside class="machine-readable" aria-hidden="true">
-  <dl>
-    <dt>id</dt><dd>overview</dd>
-    <dt>doc-type</dt><dd>spec</dd>
-    <dt>status</dt><dd>draft</dd>
-    <dt>stakeholders</dt><dd>Developer, AI Agent</dd>
-    <dt>version</dt><dd>0.1.0-draft</dd>
-  </dl>
-</aside>
-
-<section id="s1-purpose" class="informative">
-<h2>§1. Purpose</h2>
-<p>本文書はこの project の architecture を俯瞰する overview です。 system の目的・主要コンポーネント・設計方針の入口として、 詳細 spec への導線を提供します。</p>
-</section>
-
-<section id="s2-context" class="informative">
-<h2>§2. System Context</h2>
-<p><em>(この system が何を解決し、 誰が・何と相互作用するかを記述してください。)</em></p>
-</section>
-
-<section id="s3-building-blocks" class="informative">
-<h2>§3. Building Blocks</h2>
-<p><em>(主要コンポーネントと責務を記述してください。 詳細は個別 spec file に分割します。)</em></p>
+<p>この cluster はまだ spec を含みません。 spec は <code>folio-architect</code> の onboarding grilling (greenfield) が中身を引き出した時点で lazy に作成されます — 通常はまず <code>constitution.html</code> (この project 固有の不変原則) と <code>overview.html</code> (architecture の俯瞰) が authored されます。 空の placeholder は意図的に置きません (hollow-spec 防止)。</p>
+<p>spec を追加したら、 本 README の <code>dc:hasPart</code> と本 §2 に<strong>実在 file のみ</strong>追記してください。</p>
 </section>
 
 </body>

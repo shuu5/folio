@@ -388,18 +388,19 @@ expect:
 <p class="ears" data-ears-pattern="event-driven">
   <span class="ears-id">REQ-VER-014</span>:
   <span class="ears-when">WHEN the <code>folio init [&lt;dir&gt;]</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> scaffold the canonical Layer 1 consumer layout —
+  it <span class="ears-shall">SHALL</span> scaffold the canonical Layer 1 consumer layout の<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">純粋な構造のみ</ins> —
   <code>architecture/{spec,decisions,research}/</code>、 各 cluster の <code>README.html</code>
-  (<a href="constitution.html#p-6">P-6</a> entry point)、 <code>architecture/spec/{constitution,overview}.html</code>
-  (project starter template、 通常 conforming JSON-LD)、 および <code>folio.config.yaml</code>
+  (<a href="constitution.html#p-6">P-6</a> entry point<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">、 index は<strong>実在 file のみ</strong> <code>dc:hasPart</code> 宣言</ins>)、 <del class="delta" data-delta-id="D-2026-05-27-002" data-delta-superseded-by="D-2026-05-27-001"><code>architecture/spec/{constitution,overview}.html</code>
+  (project starter template、 通常 conforming JSON-LD)、 および </del><code>folio.config.yaml</code>
   (<a href="rules.html#s2-directory">rules §2</a> schema: folio_version / spec_path / caller_marker_env / caller_marker_value / review_model) —
-  そして既存 file は <strong>preserve (idempotent、 上書きしない)</strong>。 生成された skeleton は <code>folio validate</code> が
+  そして既存 file は <strong>preserve (idempotent、 上書きしない)</strong>。
+  <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27"><code>constitution</code> / <code>overview</code> の<strong>本文 (実体) は seed しない</strong> — folio-architect の greenfield onboarding grilling が引き出した中身を Phase E で lazy-materialize する (<a href="folio-self-spec.html#s7-1-7phase">§7.1</a>、 <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> が <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> の seed 挙動を revise)。 これで空 placeholder が "done" に残る hollow-spec を構造的に排除する。</ins> 生成された skeleton は <code>folio validate</code> が
   <strong>clean (exit 0)</strong> である <span class="ears-shall">MUST</span> (P-6 orphan + link-integrity + jsonld structural を満たす seed)。
   exit code は <strong>0 = success / 2 = tool error</strong> (fail-closed)。
   conformance は <code>scenarios/init-scaffold.yaml</code> (cli-golden) で検証する: init を temp root に実行 → exit 0 +
   生成 tree の file 集合 + <code>folio.config.yaml</code> の golden 比較 + <code>folio validate --root &lt;tmp&gt;/architecture</code> clean。
   init は tree (複数 file) を生成するため既存 cli-golden harness (単一 output) の拡張が要る可能性があり、 その HOW は実装時に確定する。
-  scope 決定は <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> で trace。
+  scope 決定は <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">(seed 挙動は <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> で revise)</ins> で trace。
 </p>
 
 <p class="ears" data-ears-pattern="event-driven">

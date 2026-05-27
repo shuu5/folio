@@ -1,0 +1,42 @@
+{
+  "schema": "folio-e2e-observations/0.1",
+  "req": "criterion H (ADR-0032) — folio-architect の greenfield onboarding が非 hollow constitution を産むか。 ADR-0031 §2.2/§2.3 (adoption-aware Phase A + grilling Phase C + lazy materialize)。",
+  "method": "agent-driven runbook walk (S-K)、 非決定的 (LLM grilling 出力)。 S-G と同様、 revised folio-architect SKILL + refs/grilling-protocol.md の load を要すため plugin reload 後の fresh session で実施する。 一次 assertion = semantic = 産出 constitution が非 hollow (空 placeholder でない) か否か (golden 文言比較せず)。",
+  "status": "PENDING (placeholder)。 Slice 1 (ADR-0031) で手順 + 期待 observation を定義。 決定論部分 (init lazy 出力 = 空 placeholder を生成しない) は scenarios/init-scaffold.yaml が live load 非依存で PASS 済 (criterion H の deterministic floor)。 semantic ceiling = 本 S-K の live walk は merge + plugin reload 後の別 fresh session で実走し本 file を埋める。",
+  "session": {
+    "date": null,
+    "host": null,
+    "branch": null,
+    "note": "未 walk。 revised SKILL/protocol が load された fresh session で /folio-architect を greenfield temp project に対し起動して実施する。 本 worktree で SKILL を編集した直後の session では SKILL 未 reload ゆえ観察不可 (S-G と同じ制約)。"
+  },
+  "deterministic_floor": {
+    "scenario": "scenarios/init-scaffold.yaml (cli-scaffold, REQ-VER-014)",
+    "status": "PASS",
+    "covers": "init が構造のみ (config + 3 cluster README) を生成し、 constitution/overview を seed しない (空 placeholder を残さない) ことを golden 比較 + validate clean で決定的に検証。 hollow-constitution が構造的に発生しないことの floor。"
+  },
+  "observations": [
+    {
+      "id": "S-K",
+      "name": "greenfield onboarding walk (空 project で非 hollow constitution を産むか)",
+      "operation": "TMP=$(mktemp -d) (folio 未導入); fresh cld session を $TMP で spawn → /folio-architect 起動 → 「folio を導入し最初の design-intent spec を整備せよ」→ Phase A greenfield 検出 → folio init (構造) → Phase C onboarding grill → Phase E で constitution/overview を lazy-materialize",
+      "expected": {
+        "phase_a_detects_greenfield": true,
+        "branches_to_onboarding": true,
+        "phase_c_grills_one_at_a_time": true,
+        "constitution_non_hollow": true,
+        "no_empty_placeholder": "P-1: SHALL <ここに記述> 等の placeholder を残さない (原則が無ければ constitution.html を作らない、 も合格)",
+        "validate_clean_each_step": true,
+        "vocabulary_persisted_inline": "grill 中の用語が vocabulary.yaml に persist (Slice 2 の vocabulary enrich 後に顕著)"
+      },
+      "observed": null,
+      "result": "PENDING"
+    }
+  ],
+  "summary": {
+    "scenarios": 1,
+    "pass": 0,
+    "fail": 0,
+    "pending": 1,
+    "verdict": "PENDING — 手順定義済。 deterministic floor (init lazy) は init-scaffold.yaml で PASS。 semantic walk は reloaded session で実走予定。"
+  }
+}

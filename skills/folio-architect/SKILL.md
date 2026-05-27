@@ -1,6 +1,6 @@
 ---
 name: folio-architect
-description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A〜G を順次実行し、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 4 review agent (folio:spec-review-ears/vocabulary/ssot/temporal) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
+description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A で adoption-state を検出し greenfield (onboarding grilling → constitution/overview を lazy materialize) / maintenance に分岐、Phase C で refs/grilling-protocol.md に沿い gap-driven に grill、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 4 review agent (folio:spec-review-ears/vocabulary/ssot/temporal) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
 disable-model-invocation: true
 ---
 
@@ -16,9 +16,9 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 
 | Phase | name | 必須 | X4-D での実体 |
 |-------|------|------|---------------|
-| A | Discovery | MUST | folio-architect 直接 (todo list + `folio.config.yaml` load) |
+| A | Discovery | MUST | adoption-state 検出 → greenfield onboarding / maintenance 分岐 (+ todo list + `folio.config.yaml` load) |
 | B | Exploration | MUST | **inline** (Grep/Read で関連 spec/ADR 調査。`spec-explorer` agent 化は X5+) |
-| C | Clarifying | **MUST NOT SKIP** | AskUserQuestion で曖昧点を user に確認 |
+| C | Clarifying / Grilling | **MUST NOT SKIP** | `refs/grilling-protocol.md` に沿い gap-driven に 1 問ずつ grill + persist-as-you-go |
 | D | Design | optional | structural change 時のみ inline 設計 (`spec-architect` agent 化は X5+) |
 | E | Implementation | MUST | marker set → Edit → `folio validate` → marker unset |
 | F | Quality Review | **MUST NOT SKIP** | 4 review agent (ears/vocabulary/ssot/temporal) を **並列 spawn** → findings 集約 → 高 severity を再 Phase E で修正 |
@@ -28,10 +28,16 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 
 ---
 
-## Phase A — Discovery (MUST)
+## Phase A — Discovery (MUST、adoption-aware)
 
 1. **todo list を作成**し、本タスクで編集する spec / 達成条件を列挙する。
-2. **`folio.config.yaml` を load** する (consumer project の場合)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = architecture/spec/`、`review_model = opus`) を用いる。
+2. **`folio.config.yaml` を load** する (あれば)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = architecture/spec/`、`review_model = opus`) を用いる。
+3. **adoption-state を検出**して分岐する (ADR-0031 §2.3)。判定は **design-intent spec の実体の有無**による:
+   - **greenfield** (`spec_path` に実体ある spec が無い — `constitution.html` 不在 / cluster README skeleton のみ) → **onboarding grilling 分岐**。構造 (config + cluster README) が未生成なら先に `folio init` を実行する (CLI なので caller-marker 不要、構造のみ決定論生成)。次いで Phase C で onboarding grill を行い、引き出した実体から constitution / overview を **Phase E で lazy-materialize** する (中身がある時のみ。空 placeholder は書かない)。
+   - **established** (実体 spec あり) → **maintenance 分岐**。通常の spec 編集 (Phase B 探索 → Phase C で変更の未解決点を grill)。
+   - `folio.config.yaml` の存在は構造 scaffold 済を示すが established を意味しない (`folio init` は実体に先立ち config を作る)。
+
+> grilling の具体規律は **`refs/grilling-protocol.md`** (folio 自前 / spec-aware / gap-driven / persist-as-you-go、MIT-attr) を Phase A/C で参照する。
 
 ## Phase B — Exploration (MUST、inline)
 
@@ -42,9 +48,14 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 
 > `spec-explorer` agent による並列探索は完成形 (§7.2)。X4-D では folio-architect が inline で実行する (agent 化は **X5+**)。
 
-## Phase C — Clarifying Questions (MUST NOT SKIP)
+## Phase C — Clarifying / Grilling (MUST NOT SKIP)
 
-Phase B で判明した曖昧点・設計分岐・scope 境界を **AskUserQuestion で user に確認**する。silently choosing は禁止 (constitution P-8 AI dialog accountability)。確認不要なほど自明な場合でも、解釈が分岐しうる点は明示的に提示する。
+Phase B で判明した未解決点を、**`refs/grilling-protocol.md`** に沿って **1 問ずつ user に grill** する (AskUserQuestion、各問に推奨回答付き)。silently choosing は禁止 (constitution P-8 AI dialog accountability)。
+
+- **gap-driven**: 既存 spec / `vocabulary.yaml` / ADR / 会話 context から settled を認識し、**未解決論点だけ**を尋ねる (解決済みは再尋問しない)。codebase / spec を読めば分かることは読んで確かめる。
+- **spec-aware**: 概念 → canonical name 提案 (P-5)、要件 → EARS scenario で境界 stress-test、hard-to-reverse かつ surprising かつ real-trade-off な決定 → ADR を offer (sparingly、§10.3。新 ADR 起票は user 承認 MUST)。
+- **persist-as-you-go**: grilling 中に決まった軽い anchor (`vocabulary.yaml` の用語 / ADR — caller-marker 非 gate) を **inline 永続化**する。重い spec は Phase E で materialize。settled を artifact に宿すことで folio-architect は何度でも安全に再起動できる (`grill-me` 先行・反復が非冗長 = read-persist ループからの創発)。
+- **greenfield onboarding** の場合は protocol の onboarding 論点 (不変原則 / system context / building blocks / domain 用語) を grill し、Phase E で**非 hollow** な constitution / overview を materialize する。
 
 ## Phase D — Design (optional、structural change 時のみ)
 
@@ -154,8 +165,9 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 ## 参照
 
 - folio-self-spec.html §7.1 (7-Phase PR Cycle) / §7.2 (8 specialist 完成形) / §7.3 (caller marker flow) / §7.4 (5-Layer Defense) / §7.6 (growth path)
-- ADR-0027 (X4-D folio-architect 7-Phase 昇格 + review agents 3 個) / ADR-0029 (X5-γ Phase F = 4 review agent: temporal 追加・structure cut・explorer/architect/stakeholder defer) / ADR-0028 (二層 enforcement: REQ-CI-011 を temporal agent ceiling に委譲)
+- ADR-0027 (X4-D folio-architect 7-Phase 昇格 + review agents 3 個) / ADR-0029 (X5-γ Phase F = 4 review agent: temporal 追加・structure cut・explorer/architect/stakeholder defer) / ADR-0028 (二層 enforcement: REQ-CI-011 を temporal agent ceiling に委譲) / ADR-0031 (mattpocock authoring 吸収: adoption-aware Phase A + grilling Phase C + init lazy)
 - rules.html §6 (EARS) / §5 (delta marker) / §10.1 (REQ-CM-001〜003 caller marker)
 - verification.html §3.6 REQ-VER-016 (Phase F review agent の検証 contract)
 - agents/spec-review-{ears,vocabulary,ssot,temporal}.md (Phase F で spawn する review agent)
+- refs/grilling-protocol.md (Phase A/C grilling 規律: spec-aware / gap-driven / persist-as-you-go、mattpocock grill-me/grill-with-docs 由来 MIT-attr)
 - .claude-plugin/scripts/check-caller-marker.sh (hybrid enforcement logic)

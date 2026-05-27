@@ -1,20 +1,20 @@
 {
   "schema": "folio-e2e-observations/0.1",
   "req": "REQ-VER-009 傘下の CLI lifecycle (REQ-VER-010 inventory / 012 prime / 013 validate / 014 init / 015 fix)",
-  "method": "agent-driven runbook walk (verification.html §4.1 Step 2 worktree integration)、 CLI lifecycle 統合 (S-H〜S-J)。 bash-CLI ゆえ hook/agent load 非依存 = session 非依存ゆえ、 本 walk は PARENT session (main 5345b4f) で直接実走した (S-F SessionStart 注入 / S-G agent spawn の fresh-session 要件と異なり、 CLI は session に依存せず同一挙動)。 一次 assertion = exit code + chained state (file 作成有無でなく、 init→validate clean / validate RED→fix→validate GREEN / inventory 件数・prime digest 形式)。 sandbox cli-golden (REQ-VER-011) が isolated fixture の byte 比較なのに対し、 本 e2e は実 disk 上の temp consumer project / live repo で lifecycle を chain する統合検証。",
-  "status": "PASS (CLI lifecycle walk、 2026-05-26)。 init→validate が fresh consumer project で clean、 detect↔remediate (validate↔fix) が live で閉じ冪等、 inventory/prime が live repo で期待出力。 3 scenario / 全 assertion PASS。",
+  "method": "agent-driven runbook walk (verification.html §4.1 Step 2 worktree integration)、 CLI lifecycle 統合 (S-H〜S-J)。 bash-CLI ゆえ hook/agent load 非依存 = session 非依存ゆえ、 本 walk は PARENT session で直接実走した。 一次 assertion = exit code + chained state。 sandbox cli-golden (REQ-VER-011) が isolated fixture の byte 比較なのに対し、 本 e2e は実 disk 上の temp consumer project / live repo で lifecycle を chain する統合検証。",
+  "status": "PASS (CLI lifecycle walk re-run、 2026-05-28、 ADR-0031 lazy init 後)。 init→validate が fresh consumer project で clean (構造のみ 4 file)、 detect↔remediate (validate↔fix) が live で閉じ冪等、 inventory/prime が live repo で期待出力。 3 scenario / 全 assertion PASS。",
   "session": {
-    "date": "2026-05-26",
+    "date": "2026-05-28",
     "host": "ipatho-server-2",
-    "branch": "main (5345b4f、 walk 時点)",
+    "branch": "main (Slice 1 = ADR-0031 onboarding-fix walk 時点)",
     "cwd": "/home/shuu5/projects/local-projects/folio",
     "cli_load": "bin/folio は bash CLI ゆえ plugin load/session freshness 非依存。 `bash .claude-plugin/bin/folio <subcmd>` を直接実行 (走査 base = cwd 相対 architecture/、 --root で override)。",
     "primary_assertion": "exit code + chained state。 init exit 0 + scaffold tree、 validate exit 0/1 + gate 結果、 fix exit 0 + reverse materialize、 inventory exit 0 + 件数、 prime exit 0 + Tier 1 digest 形式。",
-    "note": "S-H/S-I は temp consumer project (mktemp -d、 walk 後 rm -rf)、 S-J は live repo (read-only、 inventory.json は gitignored 生成物)。 S-I の spec mutation は bash sed (Edit/Write tool だと path-boundary hook が folio-doc-type=spec を gate しうるため。 hook は bash 非対象 = 正規 fixture mutation 経路)。"
+    "note": "ADR-0031 で init が lazy 化 (構造のみ生成、 constitution/overview seed 廃止) されたため S-H の file 集合 (6→4) / validate files checked (5→3) を更新。 S-I は lazy init が spec を生成しないため、 detect↔remediate fixture として最小 spec alpha/beta を bash heredoc (複数行 JSON-LD) で作成して walk。 S-I の spec mutation は bash (Edit/Write tool だと path-boundary hook が gate しうる、 hook は bash 非対象)。 finding: folio fix は単一行 JSON-LD に対し materialize を false-success report する (実 folio spec は常に複数行ゆえ実害なし、 Slice 1 scope 外)。"
   },
   "cli_under_test": [
-    "folio init <dir> — consumer canonical layout scaffold (REQ-VER-014、 idempotent)",
-    "folio validate [--root] — 3-gate (link-integrity / jsonld structural / broken-reverse) (REQ-VER-013/015)",
+    "folio init <dir> — consumer canonical layout の構造のみ scaffold (REQ-VER-014、 ADR-0031 lazy、 idempotent)",
+    "folio validate [--root] — 3-gate (link-integrity / jsonld structural / broken-reverse) + prose gates (REQ-VER-013/015)",
     "folio fix [--root] — reverse relation materialize (REQ-VER-015 / ADR-0025、 idempotent)",
     "folio inventory — inventory.json 生成 (REQ-VER-010)",
     "folio prime — Tier 1 digest stdout (REQ-VER-012)"
@@ -22,32 +22,33 @@
   "observations": [
     {
       "id": "S-H",
-      "name": "CLI lifecycle: init → validate (fresh consumer project が out-of-the-box clean か)",
+      "name": "CLI lifecycle: init → validate (lazy init = 構造のみ、 fresh consumer project が out-of-the-box clean か)",
       "operation": "TMP=$(mktemp -d); folio init $TMP → tree 観察 → folio validate --root $TMP/architecture",
       "expected": {
         "init_exit": 0,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/spec/constitution.html", "architecture/spec/overview.html", "architecture/decisions/README.html", "architecture/research/README.html"],
+        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html"],
         "validate_exit": 0,
         "validate_clean": true
       },
       "observed": {
         "init_exit": 0,
         "init_message": "folio init: scaffolding consumer canonical layout ... done (existing files preserved, missing files created)",
-        "init_files_created": 6,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/spec/constitution.html", "architecture/spec/overview.html", "architecture/decisions/README.html", "architecture/research/README.html"],
+        "init_files_created": 4,
+        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html"],
+        "lazy_note": "constitution.html / overview.html は seed されない (ADR-0031 §2.3): 実体は folio-architect の greenfield onboarding grilling が引き出した時に Phase E で lazy-materialize。 spec/README は実在 file のみ dc:hasPart (生成直後は part 0)。",
         "config_yaml": "folio_version: ^0.5 / spec_path: architecture/spec/ / caller_marker_env: FOLIO_ARCHITECT_CONTEXT / caller_marker_value: folio-architect / review_model: opus",
         "validate_exit": 0,
-        "validate_summary": "files checked: 5 · relations checked: 6",
-        "validate_gates": { "link-integrity": "OK", "jsonld-structural": "OK", "broken-reverse": "OK" },
+        "validate_summary": "files checked: 3 · relations checked: 0",
+        "validate_gates": { "link-integrity": "OK", "jsonld-structural": "OK", "broken-reverse": "OK", "delta-marker": "OK", "ears-coverage": "OK" },
         "validate_result": "clean: 0 violations"
       },
       "result": "PASS",
-      "interpretation": "folio init が consumer canonical layout (6 file) を exit 0 で scaffold し、 生成 skeleton が folio validate で out-of-the-box clean (3-gate OK)。 REQ-VER-014『生成 skeleton は validate clean』を live temp project で実証。 consumer の constitution.html は通常 conforming JSON-LD ゆえ scan 対象 (files checked: 5 = 全 .html、 folio 自身の FolioConstitution scan 除外とは別物)。"
+      "interpretation": "lazy init が consumer canonical layout の純粋構造 (4 file = config + 3 cluster README) を exit 0 で scaffold し、 生成 skeleton (relations 0) が folio validate で out-of-the-box clean。 空 placeholder constitution を生成しないため whisper の hollow-constitution failure が構造的に発生しない (criterion H の deterministic floor)。 REQ-VER-014 (ADR-0031 revise 後) を live temp project で実証。"
     },
     {
       "id": "S-I",
       "name": "CLI lifecycle: detect ↔ remediate (validate↔fix の往復が live で閉じ冪等か)",
-      "operation": "S-H の $TMP 上で: overview.html に forward dc:references→constitution を sed 注入 (reverse 欠落) → validate (RED) → fix → validate (clean) → fix再 (no-op)",
+      "operation": "S-H の $TMP の spec/ に最小 spec 2 本 (alpha→beta forward、 reverse 欠落) を bash heredoc で作成 → validate (RED) → fix → validate (clean) → fix再 (no-op)",
       "expected": {
         "validate_red_exit": 1,
         "broken_reverse_detected": true,
@@ -57,21 +58,20 @@
         "fix_idempotent": true
       },
       "observed": {
-        "inject": "overview.html JSON-LD に \"dc:references\": [ { \"@id\": \"./constitution.html\" } ] を sed 注入 (dc:isReferencedBy は付けず)",
+        "fixture": "alpha.html (object JSON-LD、 複数行、 dc:references → ./beta.html) + beta.html (relation 無し)。 lazy init は spec を生成しないため fixture を自前作成 (onboarding が spec を materialize した状態の bash 代替)。",
         "validate_red_exit": 1,
-        "validate_red_summary": "files checked: 5 · relations checked: 7 · [FAIL] broken-reverse",
-        "violation_report": "spec/overview.html [broken-reverse] dc:references -> spec/constitution.html (target missing reverse dc:isReferencedBy back to spec/overview.html)",
+        "validate_red_summary": "files checked: 5 · relations checked: 1 · [FAIL] broken-reverse",
+        "violation_report": "spec/alpha.html [broken-reverse] dc:references -> spec/beta.html (target missing reverse dc:isReferencedBy back to spec/alpha.html)",
         "fix_exit": 0,
-        "fix_message": "+1 reverse @id  spec/constitution.html / materialized 1 reverse @id(s) across 1 file(s)",
-        "reverse_materialized": "constitution.html に dc:isReferencedBy: [ { @id: ./overview.html } ] が追加",
+        "fix_message": "+1 reverse @id  spec/beta.html / materialized 1 reverse @id(s) across 1 file(s)",
+        "reverse_materialized": "beta.html に \"dc:isReferencedBy\": [ { \"@id\": \"./alpha.html\" } ] が追加",
         "validate_green_exit": 0,
-        "validate_green_summary": "files checked: 5 · relations checked: 8 · clean: 0 violations",
+        "validate_green_summary": "files checked: 5 · relations checked: 2 · clean: 0 violations",
         "fix_again_exit": 0,
-        "fix_again_message": "already complete: graph is bidirectional (0 reverse relations added)",
-        "validate_after_refix_exit": 0
+        "fix_again_message": "already complete: graph is bidirectional (0 reverse relations added)"
       },
       "result": "PASS",
-      "interpretation": "validate が broken-reverse を exit 1 + 具体 report で検出 → fix が reverse を exit 0 で materialize → validate 再走 clean (exit 0) → fix 再走 no-op (冪等) という detect↔remediate ペアが live consumer project 上で完全に閉じた。 REQ-VER-015 / ADR-0025 の双方向 link maintain を sandbox fixture でなく実 disk lifecycle chain で実証。"
+      "interpretation": "validate が broken-reverse を exit 1 + 具体 report で検出 → fix が reverse を exit 0 で materialize → validate 再走 clean (relations 1→2) → fix 再走 no-op (冪等) という detect↔remediate ペアが live consumer project 上で完全に閉じた。 REQ-VER-015 / ADR-0025 を実 disk lifecycle chain で実証。 lazy init 化後も (init が spec を seed せずとも) link 維持機構は spec を自前 author した consumer で機能する。"
     },
     {
       "id": "S-J",
@@ -79,21 +79,21 @@
       "operation": "live repo で folio inventory → folio prime (真の exit は prime >/dev/null で別取り)",
       "expected": {
         "inventory_exit": 0,
-        "spec_count": 26,
+        "spec_count": 31,
         "prime_exit": 0,
         "digest_format_ok": true
       },
       "observed": {
         "inventory_exit": 0,
-        "inventory_message": "folio inventory: wrote inventory.json (26 specs)",
-        "inventory_json_specs_length": 26,
+        "inventory_message": "folio inventory: wrote inventory.json (31 specs)",
+        "inventory_json_specs_length": 31,
         "inventory_json_folioVersion": "0.5.0-draft",
         "prime_exit": 0,
         "prime_exit_note": "prime | head は SIGPIPE で exit 141 になるため、 真値は prime >/dev/null; echo $? で取得 = 0",
-        "prime_digest_head": "# folio inventory digest — Tier 1 (progressive disclosure) / # 26 specs · folio 0.5.0-draft / ## <path> + title + doc-type·status + summary (per-spec)"
+        "prime_digest_head": "# folio inventory digest — Tier 1 (progressive disclosure) / # 31 specs · folio 0.5.0-draft / # Tier 1 = @id + title + doc-type/status + summary ..."
       },
       "result": "PASS",
-      "interpretation": "inventory が live repo を走査して 26 specs の inventory.json を exit 0 で生成、 prime が Tier 1 digest を exit 0 で stdout 出力。 S-F (SessionStart 経由の context 注入) に対し本 S-J は CLI 直接呼び出しを被覆。 REQ-VER-010/012 を live repo で実証。"
+      "interpretation": "inventory が live repo を走査して 31 specs の inventory.json を exit 0 で生成、 prime が Tier 1 digest を exit 0 で stdout 出力。 spec graph 成長 (26→31、 ADR 起票・spec 改訂による) を反映。 REQ-VER-010/012 を live repo で実証。"
     }
   ],
   "summary": {
@@ -101,6 +101,6 @@
     "observation_points": 3,
     "pass": 3,
     "fail": 0,
-    "verdict": "PASS — folio CLI が『ひとまとまりの道具』として end-to-end で動いた。 init→validate (fresh project clean)、 detect↔remediate (validate↔fix live + 冪等)、 inventory/prime (live repo digest) のすべてが期待通り。 X4 (試作卒業) の CLI 統合検証を完了。 sandbox cli-golden (決定的 unit) + 本 e2e (live 統合) の 2 層で CLI 被覆。"
+    "verdict": "PASS — folio CLI が『ひとまとまりの道具』として end-to-end で動いた (ADR-0031 lazy init 後の re-walk)。 init→validate (構造のみ 4 file で fresh project clean)、 detect↔remediate (validate↔fix live + 冪等)、 inventory/prime (live repo digest) のすべてが期待通り。 sandbox cli-golden (決定的 unit) + 本 e2e (live 統合) の 2 層で CLI 被覆。"
   }
 }

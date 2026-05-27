@@ -20,9 +20,11 @@ validate_root: "architecture"                           # 生成 tree 内の val
 expect:
   exit_code: 0                                          # init success (2 = tool error, fail-closed)
 
-# === 実装メモ (X4-A spawn = feature-dev) ===
-# ADR-0024 §2.1 標準 seed = architecture/{spec,decisions,research} cluster README (P-6) +
-# spec/{constitution,overview}.html starter (通常 conforming JSON-LD、 §2.2) +
-# folio.config.yaml (§2.5)。 test dir は scaffold しない (ADR-0026: consumer の (b) test は stack 慣習、
-# folio 非規定)。 golden は ./runner.sh --accept scenarios/init-scaffold.yaml で generate →
-# 人間 review → commit。 GREEN 条件: manifest == golden かつ init/validate/再init すべて exit 0。
+# === 実装メモ ===
+# 構造のみ seed (ADR-0031 が ADR-0024 §2.1 を revise): architecture/{spec,decisions,research}
+# cluster README (P-6) + folio.config.yaml (§2.5)。 spec/{constitution,overview}.html の本文 (実体) は
+# seed しない — folio-architect の greenfield onboarding grilling が lazy-materialize する
+# (folio-self-spec §7.1)。 spec/README は実在 file のみ hasPart 宣言 (生成直後は part 0)。
+# test dir は scaffold しない (ADR-0026: consumer の (b) test は stack 慣習、 folio 非規定)。
+# golden は ./runner.sh --accept scenarios/init-scaffold.yaml で generate → 人間 review → commit。
+# GREEN 条件: manifest == golden かつ init/validate/再init すべて exit 0。

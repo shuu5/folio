@@ -1,8 +1,6 @@
 architecture/decisions/README.html
 architecture/research/README.html
 architecture/spec/README.html
-architecture/spec/constitution.html
-architecture/spec/overview.html
 folio.config.yaml
 --- folio.config.yaml ---
 folio_version: "^0.5"

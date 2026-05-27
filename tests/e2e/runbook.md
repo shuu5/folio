@@ -2,7 +2,7 @@
 
 folio plugin を **ひとまとまりの道具** として実シナリオで使い、想定通り動くかを観察する手順書。
 verification.html §4.1 Step 2 (worktree integration) / REQ-VER-009 の試作実装。
-S-A〜S-E は Track 0 の Edit/Write walk。S-F は Track 2 追加 (SessionStart context injection、REQ-VER-012 / ADR-0007、fresh-session 起動観察)。S-G は Track X4-D 追加 (folio-architect 7-Phase + Phase F 3-agent review、REQ-VER-016 / ADR-0027、plugin reload 後の fresh session で walk)。S-H〜S-J は Track X4-E 追加 (CLI lifecycle 統合 = init→validate / edit→fix→validate / inventory・prime、REQ-VER-009 傘下 = init:014 / validate:013 / fix:015 / inventory:010 / prime:012、bash-CLI ゆえ hook/agent load 非依存 = **session 非依存で本 session でも walk 可**)。
+S-A〜S-E は Track 0 の Edit/Write walk。S-F は Track 2 追加 (SessionStart context injection、REQ-VER-012 / ADR-0007、fresh-session 起動観察)。S-G は Track X4-D 追加 (folio-architect 7-Phase + Phase F 3-agent review、REQ-VER-016 / ADR-0027、plugin reload 後の fresh session で walk)。S-H〜S-J は Track X4-E 追加 (CLI lifecycle 統合 = init→validate / edit→fix→validate / inventory・prime、REQ-VER-009 傘下 = init:014 / validate:013 / fix:015 / inventory:010 / prime:012、bash-CLI ゆえ hook/agent load 非依存 = **session 非依存で本 session でも walk 可**)。 S-K は Slice 1 (ADR-0031) 追加 (greenfield onboarding walk = 空 project で非 hollow constitution を産むかの semantic 検証 / criterion H、 S-G 同様 plugin reload 後の fresh session 要)。
 
 agent (あなた) がこの runbook を読み、**実際の Edit/Write tool で操作** して live load 済 plugin の
 hook を発火させ、観察を記録する。sandbox 単体テスト (`../scenarios/` + `runner.sh`) とは別物
@@ -34,7 +34,7 @@ RED→fix→validate GREEN / inventory 件数・prime digest 形式)。これは
 - folio plugin が load 済の session (`~/.claude/plugins/folio` symlink + cld auto discovery)。
 - worktree 内で実行。probe file は walk 後に**全削除**。
 - marker file `.folio/architect-active` は `.gitignore` 済。walk 後は必ず `rm -f`。
-- walk 前後で sandbox 43/43 PASS を維持 (`rm -f .folio/architect-active` 後に runner 実行、11 scenario file)。
+- walk 前後で sandbox 44/44 PASS を維持 (`rm -f .folio/architect-active` 後に runner 実行、12 scenario file)。
 
 ## marker 機構 (caller-marker hook)
 
@@ -221,11 +221,13 @@ PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除
 2. `bash .claude-plugin/bin/folio init "$TMP"` → exit code + scaffold tree を観察。
 3. `bash .claude-plugin/bin/folio validate --root "$TMP/architecture"` → exit code + 3-gate 結果を観察。
 
-**期待観察**:
-- init **exit 0** + `folio.config.yaml` + `architecture/spec/{README,constitution,overview}.html` +
-  `architecture/{decisions,research}/README.html` (計 6 file) を create + 「existing files preserved」message。
-- validate **exit 0 clean** (files checked: 5、3-gate すべて OK)。consumer の `constitution.html` は通常
-  conforming JSON-LD ゆえ scan 対象 (folio 自身の `FolioConstitution` schema scan 除外とは別物 = consumer starter は普通の spec)。
+**期待観察** (ADR-0031 lazy init 後):
+- init **exit 0** + `folio.config.yaml` + `architecture/spec/README.html` +
+  `architecture/{decisions,research}/README.html` (計 **4 file = 構造のみ**) を create + 「existing files preserved」message。
+  constitution / overview は **seed されない** (実体は folio-architect の greenfield onboarding grilling が
+  引き出した時に Phase E で lazy-materialize。空 placeholder を残さない)。spec/README は実在 file のみ `dc:hasPart` 宣言 (生成直後は part 0)。
+- validate **exit 0 clean** (files checked: **3** = 3 cluster README、relations 0、3-gate すべて OK)。
+  hollow-constitution が構造的に発生しない (whisper failure の根治)。
 
 **後始末**: `rm -rf "$TMP"`。golden = `baselines/reference/observations-cli.json`。
 
@@ -238,20 +240,24 @@ PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除
 実証する (REQ-VER-015 / ADR-0025)。sandbox `fix-bidirectional.yaml` の fixture 検証に対し、本 S-I は S-H の
 temp project 上で edit→validate→fix→validate を **chain** する統合 walk。
 
-**前提**: S-H の temp project を clean 状態から再利用。spec mutation は **bash で行う** (Edit/Write tool だと
-path-boundary hook が `folio-doc-type=spec` を gate しうる。hook は bash を対象としない = 正規の fixture mutation 経路)。
+**前提**: S-H の temp project を再利用。lazy init は spec を生成しない (構造のみ) ため、detect↔remediate を
+試す **最小 spec 2 本を bash で作成**してから walk する (onboarding grilling が spec を materialize した状態を
+bash で代替再現)。spec 作成・mutation は **bash で行う** (Edit/Write tool だと path-boundary hook が
+`folio-doc-type=spec` を gate しうる。hook は bash を対象としない = 正規の fixture 経路)。
 
-**操作** (すべて bash、S-H の `$TMP` 上):
-1. `overview.html` の JSON-LD に forward `dc:references → ./constitution.html` を sed 注入 (reverse `dc:isReferencedBy` は付けない)。
+**操作** (すべて bash、S-H の `$TMP/architecture/spec/` 上):
+1. bash heredoc で最小 spec 2 本を `spec/` に作成: `alpha.html` (object JSON-LD、forward `dc:references → ./beta.html`、
+   reverse は付けない) + `beta.html` (object JSON-LD、relation 無し)。validate は root 配下全 .html を scan するため
+   README hasPart 登録は broken-reverse 検証に不要 (throwaway probe spec)。
 2. `folio validate --root "$TMP/architecture"` → broken-reverse RED。
 3. `folio fix --root "$TMP/architecture"` → reverse materialize。
 4. `folio validate` 再走 → clean。
 5. `folio fix` 再走 → 冪等 no-op。
 
 **期待観察**:
-- (2) validate **exit 1** + `[FAIL] broken-reverse` + report (`spec/overview.html [broken-reverse] dc:references ->
-  spec/constitution.html (target missing reverse dc:isReferencedBy ...)`)、relations checked +1。
-- (3) fix **exit 0** + `+1 reverse @id spec/constitution.html` + constitution.html に `dc:isReferencedBy → ./overview.html` materialize。
+- (2) validate **exit 1** + `[FAIL] broken-reverse` + report (`spec/alpha.html [broken-reverse] dc:references ->
+  spec/beta.html (target missing reverse dc:isReferencedBy ...)`)。
+- (3) fix **exit 0** + `+1 reverse @id spec/beta.html` + beta.html に `dc:isReferencedBy → ./alpha.html` materialize。
 - (4) validate **exit 0 clean** (3-gate OK、relations checked に reverse +1)。
 - (5) fix **exit 0** + 「already complete: graph is bidirectional (0 reverse relations added)」、再 validate exit 0 (冪等性)。
 
@@ -282,13 +288,51 @@ Tier 1 digest を stdout に出すことを実証する (REQ-VER-010 / REQ-VER-0
 
 ---
 
+## S-K — greenfield onboarding walk (★Slice 1: 空 project で非 hollow constitution を産むか / criterion H / ADR-0031)
+
+**目的**: folio 初導入 (greenfield) の consumer project で `/folio-architect` を起動すると、Phase A が adoption-state を
+greenfield と検出し、Phase C で onboarding grilling を行い、引き出した実体から **非 hollow な constitution / overview を
+Phase E で lazy-materialize** することを実証する。whisper failure (空 placeholder constitution が "done" に残る) が
+**構造的に起きない**ことの semantic 検証 = criterion H (ADR-0032)。S-G と同種の agent-driven・非決定的 walk。
+
+**前提** (S-G と同様):
+- **revised folio-architect SKILL + `refs/grilling-protocol.md` が load 済**であること。本 worktree で SKILL を
+  編集した直後の session では未 load → **plugin reload 後の fresh session 必須**。
+- folio-architect は `disable-model-invocation: true` ゆえ **user が手動で `/folio-architect` 起動**する。
+
+**操作**:
+1. `TMP=$(mktemp -d)` で空の greenfield consumer project root を作る (folio 未導入)。
+2. その cwd で fresh cld session を spawn し、`/folio-architect` を起動して「この project に folio を導入し、
+   最初の design-intent spec を整備せよ」と指示する。
+3. Phase A が greenfield を検出 (`constitution.html` 不在) → `folio init` で構造生成 → Phase C で onboarding grill
+   (1 問ずつ、推奨回答付き、gap-driven) → 引き出した実体から Phase E で constitution / overview を materialize、を観察。
+
+**期待観察** (一次 = 非 hollow 判定、semantic ゆえ golden 文言比較せず):
+- Phase A が **greenfield と検出**し onboarding 分岐に入る (maintenance 編集を試みない)。
+- Phase C で grilling protocol に沿った **1 問ずつ**の対話 (不変原則 / system context / building blocks / domain 用語) が行われる。
+- 産出された `constitution.html` が **非 hollow** = `P-1: SHALL <ここに記述>` 等の placeholder ではなく、grill で
+  引き出した **実体ある原則**を含む (原則が無い project なら constitution.html を作らない、も合格)。
+- 各段階で `folio validate` clean を維持 (空 placeholder を残さない)。
+- grilling 中に決まった用語が `vocabulary.yaml` に persist される (persist-as-you-go、Slice 2 で vocabulary enrich 後はより顕著)。
+
+**注**: 実 live walk は **plugin reload (revised SKILL + grilling-protocol.md の load) を要すため別 fresh session (merge 後)** で
+実施する。本 runbook 整備時点では手順 + 期待 observation を定義し、golden observation
+(`baselines/reference/observations-onboarding.json`) は walk 後に埋める **placeholder**。決定論部分 (init lazy 出力 =
+空 placeholder を生成しない) は `../scenarios/init-scaffold.yaml` が live load 非依存で PASS 済 (criterion H の
+deterministic floor。semantic ceiling = 本 S-K)。
+
+**後始末**: `rm -rf "$TMP"` + spawn window kill。golden = `baselines/reference/observations-onboarding.json`。
+
+---
+
 ## 完了チェックリスト
 
 - [ ] 5 シナリオ (S-A〜S-E) を実際に walk し観察を記録した
 - [ ] 各観察を `baselines/reference/observations.json` に golden として記録した
 - [ ] (X4-D) S-G を **plugin reload 後の fresh session** で walk し `baselines/reference/observations-architect.json` を埋めた
 - [ ] (X4-E) S-H〜S-J を **本 session で walk** (bash-CLI = session 非依存) し `baselines/reference/observations-cli.json` を埋めた
+- [ ] (Slice 1) S-K を **plugin reload 後の fresh session** で walk し `baselines/reference/observations-onboarding.json` を埋めた (非 hollow constitution = criterion H、ADR-0031)
 - [ ] probe file を全削除した (`architecture/spec/e2e-*.html` / `architecture/random-e2e/` / `architecture/spec/e2e-x4d-seed.html`、README.md 復元)
-- [ ] temp consumer project を全削除した (`rm -rf /tmp/folio-e2e-consumer-*`、S-H/S-I)
+- [ ] temp consumer project を全削除した (`rm -rf /tmp/folio-e2e-consumer-*`、S-H/S-I/S-K)
 - [ ] marker file を unset した (`rm -f .folio/architect-active`)
-- [ ] sandbox 43/43 PASS を維持した (11 scenario file、marker cleanup 後に runner 実行)
+- [ ] sandbox 44/44 PASS を維持した (12 scenario file、marker cleanup 後に runner 実行)
