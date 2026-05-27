@@ -120,6 +120,8 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <li>config: <code>folio.config.yaml</code> (consumer project root、 P-2 YAML 例外)。</li>
   <li>entry point: 各 cluster は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。</li>
 </ul>
+
+<p id="s3-vocab-schema"><strong><code>vocabulary.yaml</code> の schema</strong> (<a href="constitution.html#p-5">P-5</a> canonical naming SSoT): <code>terms:</code> の配列で、 各 entry は <code>canonical</code> (正準名、 MUST) と <code>forbidden</code> (禁止 synonym の配列 — vocabulary gate REQ-CI-013 が prose 内検出に使う) を持つ。 <ins class="delta" data-delta-id="D-2026-05-28-001" data-delta-date="2026-05-28">加えて各 entry は optional に <code>definition</code> (1 行定義)、 <code>relationships</code> (他 canonical 名との関係を述べる配列)、 <code>flagged_ambiguities</code> (grilling で surface した未解決の曖昧点の配列) を持ってよい。 これらは glossary を <code>folio-architect</code> grilling (<a href="folio-self-spec.html#s7-1-7phase">Phase C</a>) と <code>spec-review-vocabulary</code> agent の grounding として豊かにする (<a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.4)。 <strong>後方互換</strong>: vocabulary gate は <code>forbidden</code> のみ読むため、 optional field の有無は既存の gate 挙動に影響しない。</ins></p>
 </section>
 
 <section id="s4-format" class="normative">
@@ -294,6 +296,22 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   JSON は SHOULD NOT 使用) は <a href="verification.html#s3-ears">verification.html §3 REQ-VER-003</a>
   を参照。
 </p>
+</section>
+
+<section id="s10-3" class="normative">
+<h3>§10.3 ADR Worthiness</h3>
+
+<aside class="informative">
+  <p>本 §10.3 は「いつ ADR を書くか」 の判定基準 (worthiness) を normative に集約する (<a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.5、 mattpocock grill-with-docs の "offer ADRs sparingly" を folio 化)。 <code>folio-architect</code> の grilling (<a href="folio-self-spec.html#s7-1-7phase">Phase C</a>) 中に decision が surface した際の offer 基準であり、 ADR の起票手順・user 承認 gate は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> に従う (P-7: 手順は重複させない)。</p>
+</aside>
+
+<p class="ears" data-ears-pattern="event-driven">
+  <span class="ears-id">REQ-ADR-001</span>:
+  <span class="ears-when">WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives</span>,
+  <code>folio-architect</code> <span class="ears-shall">SHALL</span> offer to record it as an ADR in <code>architecture/decisions/</code> (起票自体は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> の user 承認に従う)。
+</p>
+
+<p>3 条件が<strong>すべて真の時のみ</strong> ADR を offer する (sparingly)。 いずれか 1 つでも偽なら ADR にしない — 可逆な決定 / context 無しで自明な決定 / trade-off の無い決定は spec 本文 (WHAT) や <code>vocabulary.yaml</code> に吸収し、 重厚な ADR (HTML+JSON-LD、 user 承認) を濫造しない。 folio の高コスト ADR と高い 3 条件 bar は相互補強する (少数精鋭に絞る価値が高い)。</p>
 </section>
 
 </section>

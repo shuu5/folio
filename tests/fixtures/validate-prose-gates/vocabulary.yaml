@@ -1,4 +1,11 @@
-# validate-prose-gates fixture の P-5 vocabulary (REQ-CI-013 検証用)
+# validate-prose-gates fixture の P-5 vocabulary (REQ-CI-013 検証用)。
+# optional field (definition/relationships/flagged_ambiguities) も含み、 vocabulary gate が
+# forbidden のみ読む後方互換を実証する (ADR-0031 §2.4 enrich、 rules §3 schema)。
 terms:
   - canonical: "spec"
     forbidden: ["spec doc"]
+    definition: "design-intent を記述する HTML+JSON-LD 文書"
+    relationships:
+      - "constitution は spec の一種 (project の不変原則を定義)"
+    flagged_ambiguities:
+      - "「spec」 と 「specification」 の使い分け (現 canonical = spec)"
