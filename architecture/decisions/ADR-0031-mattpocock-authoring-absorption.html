@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0031">
 <meta name="folio-adr-date" content="2026-05-27">
@@ -37,14 +37,14 @@
 
 <header class="doc-header">
   <h1>ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; proposed (user 承認待ち)。 実装は v1.x (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 v1.0 bump 後)。 v1.0 criteria は不変</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; accepted (user 承認済 2026-05-27)。 実装は v1.x (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 v1.0 bump 後)。 v1.0 criteria は不変</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0031</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-05-27</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>folio-self-spec §7.1 (folio-architect 7-Phase = grilling/adoption-aware の改訂対象)、 ADR-0024 (folio init scope = init seed → lazy materialize に revise)、 ADR-0026 (test-placement = code-cross-reference の実装適合性境界)、 ADR-0027 (X4-D folio-architect SKILL = adoption-aware + grilling Phase C へ revise)、 ADR-0030 (v1.0 criteria = 本 ADR は post-1.0 / v1.x、 criteria 不変)、 constitution P-2/P-3/P-5/P-7、 ADR-0028 (二層 enforcement = grilling は ceiling 側 authoring)</dd>
@@ -176,7 +176,7 @@
   <li>改訂予定 spec (v1.x、 WS5 後): <a href="../spec/folio-self-spec.html#s7-1-7phase">folio-self-spec §7.1</a> (folio-architect 7-Phase = adoption-aware Phase A + grilling Phase C)、 <a href="../spec/rules.html">rules.html</a> §10.3 (ADR Worthiness 新設)、 vocabulary.yaml schema enrich。</li>
   <li>関連原則: P-2 (HTML = 重い spec)、 P-3 (WHAT/構造 vs 実体 = lazy 境界)、 P-5 (canonical name = glossary)、 P-7 (SSoT = vocabulary.yaml 単一)、 および <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> (実装適合性境界)、 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement = grilling は ceiling 側 authoring)。</li>
   <li>sequencing: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 (v1.0 bump) → 本 ADR 実装 (v1.x)。 v1.0 criteria 不変。</li>
-  <li>status: <strong>proposed</strong> (user 承認待ち)。 承認で accepted へ flip。</li>
+  <li>status: <strong>accepted</strong> (user 承認済 2026-05-27)。 実装は WS5 (v1.0 bump) 後 = v1.x (task #84)。</li>
 </ul>
 </section>
 
