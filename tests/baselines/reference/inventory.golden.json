@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-27T07:38:40Z",
+  "generatedAt": "2026-05-27T13:31:49Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -158,6 +158,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0032-v1-goal-refinement-defer.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html",
@@ -732,6 +733,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0032-v1-goal-refinement-defer.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html"
         ],
         "dc:references": [
@@ -746,7 +748,32 @@
     {
       "@id": "decisions/ADR-0031-mattpocock-authoring-absorption.html",
       "title": "ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)",
-      "summary": "proposed (user 承認待ち)。 実装は v1.x (",
+      "summary": "accepted (user 承認済 2026-05-27)。 実装は v1.x (",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0032-v1-goal-refinement-defer.html"
+        ],
+        "dc:references": [
+          "spec/folio-self-spec.html#s7-1-7phase",
+          "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0026-test-placement-model.html",
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+          "decisions/ADR-0030-v1-stability-criteria.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0032-v1-goal-refinement-defer.html",
+      "title": "ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)",
+      "summary": "proposed (user 承認待ち)。",
       "doc-type": "adr",
       "status": "proposed",
       "version": "0.5.0-draft",
@@ -757,11 +784,9 @@
       ],
       "relations": {
         "dc:references": [
-          "spec/folio-self-spec.html#s7-1-7phase",
-          "decisions/ADR-0024-folio-init-scope.html",
-          "decisions/ADR-0026-test-placement-model.html",
-          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
-          "decisions/ADR-0030-v1-stability-criteria.html"
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+          "spec/verification.html#s4-2-completion-vs-prototype"
         ]
       }
     },
