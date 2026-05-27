@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0030">
 <meta name="folio-adr-date" content="2026-05-26">
@@ -37,14 +37,14 @@
 
 <header class="doc-header">
   <h1>ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X5-γ WS5 入口、 user 承認待ち = 承認で accepted → bump 実行)</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; accepted (user 承認済 2026-05-27)。 §2.2 bump は criterion D (WS3 / 実 consumer adoption) PASS 後 = WS5</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0030</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-05-26</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>constitution §5 (Versioning Policy = strict-SemVer 移行点)、 §6 (Amendment = P-10)、 folio-self-spec §7.6 (growth path → 4-agent v1.0)、 verification §4.2 (完成形 vs 試作 = v1.0 reconcile)、 relations §2 (folio: namespace URI = v1.0 解決可能化予定)、 ADR-0028 (二層 enforcement = criterion C floor)、 ADR-0029 (Phase F 4-agent = criterion C ceiling)</dd>
@@ -162,7 +162,7 @@
   <li>決定経緯: X5-γ core (ADR-0028/0029 + WS1/2/4) 完遂後、 version formalization の正確な scope を確定する必要から起票。 version meta 調査で「一括 bump」 の provenance 破壊リスクを発見し scope を living spec 7 + plugin.json + bin/folio に限定。</li>
   <li>適用 (WS5、 承認後): §2.6 参照 (実施時点 = criterion D / WS3 PASS 後、 方式は承認後決定)。</li>
   <li>関連原則: P-2 (HTML)、 P-6 (link-integrity = bump で壊さない)、 P-7 (spec domain = living spec のみ bump)、 P-10 (constitution amendment = user 承認)、 P-12 (Layer 0 一体配布 = plugin.json + bin/folio 同期)。</li>
-  <li>status: <strong>proposed</strong> (user 承認待ち)。 承認で <code>accepted</code> → WS5 実行。</li>
+  <li>status: <strong>accepted</strong> (user 承認済 2026-05-27)。 §2.2 bump は criterion D (WS3 / 実 consumer adoption walk) PASS 後 = WS5。</li>
 </ul>
 </section>
 

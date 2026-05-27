@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-26T14:59:09Z",
+  "generatedAt": "2026-05-27T02:06:02Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -715,9 +715,9 @@
     {
       "@id": "decisions/ADR-0030-v1-stability-criteria.html",
       "title": "ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)",
-      "summary": "forward (X5-γ WS5 入口、 user 承認待ち = 承認で accepted → bump 実行)",
+      "summary": "accepted (user 承認済 2026-05-27)。 §2.2 bump は criterion D (WS3 / 実 consumer adoption) PASS 後 = WS5",
       "doc-type": "adr",
-      "status": "proposed",
+      "status": "accepted",
       "version": "0.5.0-draft",
       "stakeholders": [
         "Developer",
