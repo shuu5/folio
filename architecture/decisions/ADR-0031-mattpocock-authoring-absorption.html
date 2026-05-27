@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0031">
+<meta name="folio-adr-date" content="2026-05-27">
+<title>ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0031-mattpocock-authoring-absorption.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/folio-self-spec.html#s7-1-7phase" },
+    { "@id": "./ADR-0024-folio-init-scope.html" },
+    { "@id": "./ADR-0026-test-placement-model.html" },
+    { "@id": "./ADR-0027-x4-d-architect-skill-review-agents.html" },
+    { "@id": "./ADR-0030-v1-stability-criteria.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; proposed (user 承認待ち)。 実装は v1.x (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 v1.0 bump 後)。 v1.0 criteria は不変</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0031</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-05-27</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>folio-self-spec §7.1 (folio-architect 7-Phase = grilling/adoption-aware の改訂対象)、 ADR-0024 (folio init scope = init seed → lazy materialize に revise)、 ADR-0026 (test-placement = code-cross-reference の実装適合性境界)、 ADR-0027 (X4-D folio-architect SKILL = adoption-aware + grilling Phase C へ revise)、 ADR-0030 (v1.0 criteria = 本 ADR は post-1.0 / v1.x、 criteria 不変)、 constitution P-2/P-3/P-5/P-7、 ADR-0028 (二層 enforcement = grilling は ceiling 側 authoring)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio は public OSS (MIT) 化 + v1.0 stability criteria 確定 (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> accepted) まで到達した。 並行して <strong>folio の初の実 consumer adoption</strong> (whisper project に <code>folio-architect</code> で folio 導入) を全ログ精読でレビューしたところ、 <code>folio-architect</code> の <strong>adoption-state ギャップ</strong>が実証された: SKILL は「既存 spec の編集」前提で枠付けされており、 greenfield (folio 未導入 / 新規 project) の経路が無い。 結果、 init の最終判断を人間が迫られ、 <code>constitution.html</code> は <strong>空 placeholder のまま "done" に到達</strong>した (<code>folio validate</code> は構造妥当 = clean だが中身が空虚)。 「validate clean ≠ 完成」 を露わにした failure である。</p>
+
+<p>その処方を探す中で Matt Pocock の skill 群 (<code>github.com/mattpocock/skills</code>、 MIT) を調査した。 中核は <strong>grill-me / grill-with-docs</strong> = 「実装前に AI と執拗に 1 問ずつ対話して設計を詰める」 pattern。 これは folio 固有でなく<strong>ほぼ全ての project 開発文脈で真</strong>な普遍的 upstream 活動である。 grill-with-docs は加えて (a) ubiquitous-language glossary (CONTEXT.md) の inline 更新、 (b) ADR-sparingly (3 条件)、 (c) code-cross-reference (spec-vs-code)、 (d) lazy 作成 (空 scaffold 禁止) を反射的に行う。</p>
+
+<p>本 ADR は、 この authoring pattern を folio に吸収する設計を記録する。 <strong>scope = protocol/振る舞いの吸収のみ</strong> (folio の機械検証 artifact 核 = <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> deterministic floor は不変)。 <strong>timing = post-1.0 (v1.x roadmap)</strong>: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> の v1.0 criteria / bump scope は不変で、 本設計は今確定し実装は WS5 (v1.0 bump) 後に stage する。 設計は <code>/grill-me</code> による 1 問ずつの対話 (2026-05-27) で 8+1 論点を解決して確定した。 <strong>status = proposed (user 承認待ち)</strong>; 承認で <code>accepted</code> へ flip する。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-scope">§2.1 吸収 scope と sequencing</h3>
+<ul>
+  <li><strong>protocol-only</strong>: 吸収するのは著述の<em>振る舞い</em> (grill 流 elicitation / ADR-sparingly / lazy materialize / code-cross-reference / glossary 規律) のみ。 folio の重厚な HTML+JSON-LD 機械検証グラフ核は不変。 folio の存在意義 = 機械強制可能な design-intent グラフ (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> deterministic floor) であり、 これは外部 skill を直接使うのでは得られない folio 固有資産ゆえ守る。</li>
+  <li><strong>v1.x roadmap</strong>: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> の v1.0 criteria (A〜G) と bump scope は<strong>改訂しない</strong>。 criterion D (orchestration walk / 実 consumer adoption) はほぼ充足済で v1.0 は近い。 本吸収を v1.0 に載せると「1.0 を動く標的にしない」 という ADR-0030 の目的そのものと矛盾するため、 <strong>WS5 (v1.0 bump) 先行 → 本 ADR 実装は post-1.0</strong> とする。</li>
+</ul>
+
+<h3 id="s2-2-grilling">§2.2 grilling protocol (folio 自前 / spec-aware / gap-driven / persist-as-you-go)</h3>
+<ul>
+  <li><strong>folio 自前所有</strong>: folio は任意 consumer に配布される plugin ゆえ、 外部 skill が install 済みである前提 (delegate) は脆い。 folio は grill-with-docs 由来の grilling protocol を <strong><code>refs/</code> に MIT-attribution 付きで内包</strong>し、 <code>folio-architect</code> SKILL が参照する (<a href="../spec/rules.html">rules</a> 由来の write-a-skill 規律: SKILL 本体 &lt;100 行 + refs/ で深さ)。</li>
+  <li><strong>spec-aware</strong>: 汎用 grill-me と異なり、 folio の grilling は EARS / constitution 原則 / vocabulary を知り、 質問をそれらに紐づける (例: 概念が出たら canonical name を提案、 要件が出たら EARS scenario で境界を stress-test)。</li>
+  <li><strong>gap-driven</strong>: grilling は<strong>未解決論点だけ</strong>を尋ねる。 「codebase で分かることは聞くな」 を 「既に settle 済みのことは聞くな」 へ拡張する。 "relentless" は<em>未解決論点の徹底</em>にかかり、 解決済みの再尋問ではない。 既存 spec / enriched vocabulary.yaml / ADR / 会話 context から settled 状態を認識し、 残り gap のみ grill する。</li>
+  <li><strong>persist-as-you-go</strong>: grilling 中に決まった<em>軽い anchor</em> (vocabulary.yaml の用語 / ADR) を inline 永続化する (これらは caller-marker 非 gate ゆえ会話中に自由追記可)。 <em>重い spec</em> (architecture/spec/ の HTML) は Phase E で marker→edit→validate により materialize する。 settled 状態を artifact に宿すことで、 後続の起動が再尋問にならない。</li>
+  <li><strong>idempotent / repeatable (創発)</strong>: 上記より <code>folio-architect</code> は何度でも安全に再起動でき、 各 run は persist 済み artifact から settled を認識し gap だけ grill する。 <code>grill-me</code> 先行も複数回反復も非冗長。 これは明示的「再実行モード」ではなく read-persist ループから<strong>創発する性質</strong> (mattpocock が standalone <code>ubiquitous-language</code> skill の明示 re-run ロジックを deprecate し grill-with-docs の創発的 repeatability へ移行したのと同型)。 反復ごとに Phase E/F の materialize+review コストは生じるが、 これは変更単位の品質 gate であり<em>冗長</em>ではない。</li>
+</ul>
+
+<h3 id="s2-3-topology">§2.3 skill topology — folio-init は分離せず folio-architect に統合</h3>
+<ul>
+  <li><strong>別 <code>folio-init</code> SKILL は作らない</strong>。 whisper の失敗は本質的に <em>routing / adoption-state</em> 問題であり、 mattpocock はそれを「1 つの適応的 skill が探索して足りないものを lazy 作成」 で解いている。 folio も同型に: <code>folio-architect</code> の <strong>Phase A (Discovery) を adoption-state 検出に拡張</strong>する — <code>folio.config.yaml</code> 不在 → greenfield → onboarding grill 分岐 (depth-elicit + constitution 原則 / overview を grill して lazy-write) / 在 → maintenance grill 分岐。</li>
+  <li><strong><code>folio init</code> CLI は構造 scaffold のみに narrowing</strong> (<a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> の seed 挙動を revise): dir / <code>folio.config.yaml</code> / README index skeleton という<strong>純粋な構造 (P-3 WHAT)</strong> だけを決定論的に生成し、 <code>constitution</code> 原則 / <code>overview</code> 本文の <strong>seed placeholder 出力は廃止</strong>する。 実体は grilling で引き出した中身がある時のみ書く (lazy)。 README index も実在ファイルのみ <code>hasPart</code> 宣言し、 各段階で <code>folio validate</code> clean を維持する。 これで whisper の空 constitution (placeholder が "done" に残る) を<strong>構造的に不可能</strong>にする。</li>
+  <li>folio/mattpocock の境界を folio 自身の <strong>構造 (P-3) vs 実体</strong>の境界に重ねる: 構造は決定論 (CLI)、 実体は lazy (grilling)。</li>
+</ul>
+
+<h3 id="s2-4-glossary">§2.4 ubiquitous-language — vocabulary.yaml を enrich</h3>
+<ul>
+  <li>現 <code>vocabulary.yaml</code> schema は <code>terms: [{ canonical, forbidden: [...] }]</code> = forbidden-synonym ブロックリストのみで、 mattpocock CONTEXT.md より薄い (definition / relationships / 曖昧フラグ欠落)。 これに <strong>optional な <code>definition</code> / <code>relationships</code> / <code>flagged_ambiguities</code> フィールドを追加</strong>する (後方互換 — <code>folio validate</code> の vocabulary gate は <code>forbidden</code> のみ読むため既存挙動不変)。</li>
+  <li>新 markdown (CONTEXT.md) は足さない。 単一 YAML SSoT が machine gate (REQ-CI-013) と人間/agent grounding を兼ねる。 config ゆえ caller-marker 非 gate = <strong>grilling 中に inline 追記可能</strong> (grill-with-docs の「glossary を inline 更新、 batch するな」 の核に整合)。 重い HTML glossary spec は marker→validate の儀式が要り inline 更新に不向きゆえ採らない。</li>
+  <li>これにより <code>spec-review-vocabulary</code> agent (P-5 canonical naming review) が実定義を grounding として得る。</li>
+</ul>
+
+<h3 id="s2-5-adr-worthiness">§2.5 ADR-worthiness — rules.html §10.3 に正規化</h3>
+<ul>
+  <li>mattpocock の 3 条件 (<strong>hard-to-reverse / surprising-without-context / real-trade-off、 全て真の時のみ ADR</strong>) を <a href="../spec/rules.html">rules.html</a> の <strong>§10 Mandatory Actions に §10.3 (ADR Worthiness) として新設</strong>し normative SSoT とする。 rules は consumer が継承する universal authoring rule ゆえ、 whisper の「いつ ADR を書くか分からない (decisions/ 空)」 を<strong>構造的に解消</strong>する。 decisions/README §5 はこれを参照する (P-7 重複回避)。</li>
+  <li>folio の重厚 ADR (HTML+JSON-LD、 高コスト) と 3 条件は<strong>相互補強</strong>: 高コストゆえ少数精鋭に絞る価値が mattpocock 以上に高い。 folio の「新 ADR = user 承認 MUST」 とも整合 (3 条件 = grilling 中に agent が ADR を<em>offer</em> する基準、 承認 = offer 受諾)。</li>
+</ul>
+
+<h3 id="s2-6-code-xref">§2.6 code-cross-reference — Phase B の authoring technique のみ</h3>
+<ul>
+  <li>grill-with-docs の code-cross-reference (spec の主張と code の食い違いを指摘) は一見 spec-vs-code = <strong>実装適合性</strong>だが、 <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> が「(a) spec 適合性 = <code>folio validate</code> (普遍提供) / (b) 実装適合性 = 各 stack 慣習、 folio 非 mandate」 と境界を引いている。</li>
+  <li>ゆえに <strong>gate / 新 review agent は作らない</strong> (ADR-0026 境界を守る)。 代わりに <code>folio-architect</code> の <strong>Phase B (Exploration) を拡張</strong>し、 consumer code も読んで spec の問いを grounding し、 spec-vs-現実の食い違いを Phase C grilling で surface する。 code は spec を研ぐ<em>証拠</em>として使うのであって test する gate ではない (出力は良い spec であり pass する test ではない)。</li>
+</ul>
+
+<h3 id="s2-7-mapping">§2.7 grill-with-docs 反射 → folio phase への落とし込み + 意識的 scope 外</h3>
+<table>
+  <thead><tr><th>grill-with-docs 反射</th><th>folio への翻訳</th></tr></thead>
+  <tbody>
+    <tr><td>challenge against glossary / sharpen fuzzy language</td><td>enriched vocabulary.yaml を参照 → Phase C grilling + Phase F <code>spec-review-vocabulary</code></td></tr>
+    <tr><td>discuss concrete scenarios</td><td>Phase C grilling 技法 (EARS scenario と接続)</td></tr>
+    <tr><td>cross-reference with code</td><td>Phase B 拡張 (§2.6、 gate 化しない)</td></tr>
+    <tr><td>update CONTEXT.md inline</td><td>grilling 中に vocabulary.yaml / ADR を inline persist (§2.2 persist-as-you-go)</td></tr>
+    <tr><td>offer ADRs sparingly</td><td>rules.html §10.3 (§2.5)</td></tr>
+    <tr><td>lazy file creation</td><td>folio init = 構造のみ / 実体は grill 後 lazy-write (§2.3)</td></tr>
+  </tbody>
+</table>
+<p><strong>意識的 scope 外</strong>: mattpocock の engineering workflow skills (<code>to-prd</code> / <code>to-issues</code> / <code>triage</code> / <code>tdd</code> / <code>diagnose</code> / <code>zoom-out</code> 等) は <em>consumer の SDLC</em> 関心であり folio の design-intent mandate の外ゆえ吸収しない。 folio 関連成分は grill-with-docs (grilling + glossary + ADR-sparingly + code-xref + lazy) に集約される。</p>
+
+<h3 id="s2-8-application">§2.8 supersession / revision と適用時点</h3>
+<ul>
+  <li><strong>revise (supersede ではない)</strong>: 本 ADR は <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> の init seed 挙動 (§2.3) と <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> の folio-architect scope (adoption-aware + grilling Phase C + Phase B code-xref) を部分改訂する。 両 ADR は accepted のまま (大筋の決定は存続)、 <strong>frozen ADR 本文は不変</strong> — 改訂は本 ADR の prose + reverse-link metadata (<a href="./ADR-0025-folio-fix-bidirectional.html">folio fix</a> の dc:isReferencedBy) で trace する (<a href="./ADR-0026-test-placement-model.html">ADR-0026</a> が ADR-0022/0024 を revise した先例と同型)。</li>
+  <li><strong>v1.x 実装項目</strong>: (1) grilling protocol を refs/ に著述 + folio-architect SKILL が参照、 (2) folio-architect Phase A を adoption-aware に拡張、 (3) <code>folio init</code> CLI の seed placeholder 廃止 (構造のみ)、 (4) vocabulary.yaml schema enrich、 (5) rules.html §10.3 新設、 (6) Phase B code-cross-reference 拡張。 各々に verification (sandbox scenario / e2e) を伴う。</li>
+  <li><strong>適用時点</strong>: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 (v1.0 bump) <strong>完了後</strong>。 実装方式 (PARENT / SPAWN) は承認後に確定。 各 spec 編集 (rules.html §10.3 等、 architecture/spec/ 配下) は caller marker 要 (folio-architect 経由)。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>whisper の hollow-spec failure を根治</strong>: lazy materialize (空 scaffold 禁止) + grilling (中身を引き出す) で「構造妥当だが空虚」 を構造的に排除。</li>
+  <li><strong>adoption-state routing を構造解消</strong>: folio-architect が greenfield / existing を自動検出 → 人間が init 判断を迫られない。 単一適応 skill で surface 削減。</li>
+  <li><strong>ubiquitous language が実体化</strong>: vocabulary.yaml が定義を持つ真の glossary になり、 review agent の grounding が向上。</li>
+  <li><strong>ADR-worthiness の判断基準を consumer に提供</strong>: rules §10.3 で「いつ書くか」 が継承される。</li>
+  <li><strong>普遍的 upstream 活動との合成が綺麗</strong>: gap-driven + persist-as-you-go により grill-me 先行・反復が非冗長。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>v1.0 は現行 init (seed placeholder あり) のまま出荷</strong>され、 lazy-substance 化 (§2.3) は v1.x。 すなわち whisper を生んだ init 挙動は 1.0 に残り、 1.x で是正 (§2.1 sequencing の帰結)。</li>
+  <li>grilling protocol の著述 + Phase A/B 拡張は新規実装コスト。</li>
+  <li><strong>cross-session の ephemeral grilling は依然再 grill しうる</strong>: 別 session で <code>grill-me</code> 等が何も persist しなければ settled 状態が残らない。 persist-as-you-go で緩和されるが消去はされない (mattpocock と同じ限界)。</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>folio は grill protocol を自前所有 (MIT-attribution) — 外部 skill 非依存。</li>
+  <li>SDLC workflow skills (§2.7) は意識的に scope 外 — folio の minimal mandate を保持。</li>
+  <li>folio-architect の repeatability は read-persist ループからの創発 — 明示的 re-run モードは持たない。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>論点 / 案</th><th>採否</th></tr></thead>
+  <tbody>
+    <tr><td>protocol-only 吸収・核不変 (採用)</td><td>folio の機械検証グラフ核 = 固有資産を守りつつ著述を人間的に。 「artifact 軽量化」 「哲学から再検討」 は不採用 (核を溶かすと folio の存在意義を失う)</td></tr>
+    <tr><td>1.0 先行 → 吸収は 1.x (採用)</td><td>v1.0 を動く標的にしない (ADR-0030 の目的)。 「吸収を 1.0 前提に (ADR-0030 改訂)」 「判断保留」 は不採用</td></tr>
+    <tr><td>grilling を folio 自前所有 (採用)</td><td>配布 plugin ゆえ外部 skill 依存 (delegate) は脆い。 spec-aware に folio 化</td></tr>
+    <tr><td>folio-init 分離撤回・architect 統合 (採用)</td><td>whisper の routing gap を単一適応 skill で解消 (mattpocock の lazy-adaptive と整合)。 「別 skill 分離維持 (前 lock)」 「1 skill 2 mode 明示引数」 は不採用 (前者は routing 別途要 / 後者は人間判断が残る)</td></tr>
+    <tr><td>glossary = vocabulary.yaml を enrich (採用)</td><td>単一 SSoT + config ゆえ grilling 中 inline 追記可。 「HTML glossary SSoT + yaml projection」 は P-2 最適だが inline 更新が重く不採用、 「discipline のみ」 は定義を永続化せず不採用</td></tr>
+    <tr><td>code-cross-reference = Phase B technique のみ (採用)</td><td>ADR-0026 の実装適合性境界を守る。 「spec-review-drift agent 新設」 は境界侵犯リスクで不採用、 「scope 外」 は grill-with-docs の価値を捨てるため不採用</td></tr>
+    <tr><td>合成 = gap-driven + persist-as-you-go (採用)</td><td>mattpocock 自身が durable artifact-reading で解いており忠実。 「明示 design-brief 入力」 「folio-grill 別 skill 分離」 は不採用 (前者は brief 形式規定要 / 後者は skill 再 2 本化)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点: folio 初の実 consumer adoption (whisper) で <code>folio-architect</code> の adoption-state ギャップ + 空 constitution failure を実証 → mattpocock grill-me / grill-with-docs 調査 (doobidoo 3eb9160f / 5a8f6e53、 repo <code>mattpocock-skills</code> MIT)。</li>
+  <li>決定経緯: <code>/grill-me</code> 対話 (2026-05-27、 1 問ずつ + 推奨回答) で 8+1 論点を解決 — 吸収 scope / v1.0 関係 / grill 自前所有 / init lazy / glossary enrich / ADR-worthiness / code-xref 境界 / skill 統合 / 合成 (gap-driven + persist-as-you-go + 創発 repeatability)。</li>
+  <li>revise 対象: <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> (init seed → lazy)、 <a href="./ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> (architect scope → adoption-aware + grilling + Phase B code-xref)。 frozen 本文不変、 supersede でなく partial revise (§2.8)。</li>
+  <li>改訂予定 spec (v1.x、 WS5 後): <a href="../spec/folio-self-spec.html#s7-1-7phase">folio-self-spec §7.1</a> (folio-architect 7-Phase = adoption-aware Phase A + grilling Phase C)、 <a href="../spec/rules.html">rules.html</a> §10.3 (ADR Worthiness 新設)、 vocabulary.yaml schema enrich。</li>
+  <li>関連原則: P-2 (HTML = 重い spec)、 P-3 (WHAT/構造 vs 実体 = lazy 境界)、 P-5 (canonical name = glossary)、 P-7 (SSoT = vocabulary.yaml 単一)、 および <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> (実装適合性境界)、 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement = grilling は ceiling 側 authoring)。</li>
+  <li>sequencing: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> WS5 (v1.0 bump) → 本 ADR 実装 (v1.x)。 v1.0 criteria 不変。</li>
+  <li>status: <strong>proposed</strong> (user 承認待ち)。 承認で accepted へ flip。</li>
+</ul>
+</section>
+
+</body>
+</html>

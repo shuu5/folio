@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-27T02:06:02Z",
+  "generatedAt": "2026-05-27T07:38:40Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -36,6 +36,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html",
@@ -568,6 +569,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0026-test-placement-model.html"
         ],
         "dc:references": [
@@ -620,6 +622,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html"
+        ],
         "dc:references": [
           "spec/constitution.html#p-13",
           "spec/verification.html#s1-contract",
@@ -644,6 +649,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html"
         ],
@@ -725,12 +731,37 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html"
+        ],
         "dc:references": [
           "spec/folio-self-spec.html#s7-6-phase-x3-minimal",
           "spec/verification.html#s4-2-completion-vs-prototype",
           "spec/relations.html#s2-folio-vocab",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+      "title": "ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)",
+      "summary": "proposed (user 承認待ち)。 実装は v1.x (",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/folio-self-spec.html#s7-1-7phase",
+          "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0026-test-placement-model.html",
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+          "decisions/ADR-0030-v1-stability-criteria.html"
         ]
       }
     },
