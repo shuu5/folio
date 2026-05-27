@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0032">
 <meta name="folio-adr-date" content="2026-05-27">
@@ -35,14 +35,14 @@
 
 <header class="doc-header">
   <h1>ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; proposed (user 承認待ち)。 <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.6 timing + <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.1 sequencing を partial-revise (本文 frozen)</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; accepted (user 承認済 2026-05-27)。 <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.6 timing + <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.1 sequencing を partial-revise (本文 frozen)</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0032</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-05-27</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0030 (v1.0 criteria = §2.1 に criterion H 追加 / §2.6 timing を defer に revise、 A〜G・§2.2・§2.3・§2.5 は不変)、 ADR-0031 (mattpocock 吸収 = §2.1/§2.8 を post-1.0/v1.x → 0.x/pre-1.0 に resequence)、 constitution §5 (0.x = strict-SemVer 約束なし / 1.0.0 = commitment)、 verification §4.2 (完成形 vs 試作 = authoring 品質軸)</dd>
@@ -140,7 +140,7 @@
   <li>revise 対象: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.6 timing + criterion D 十分性 (criteria A〜G・§2.2・§2.3・§2.5 は不変)、 <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.1/§2.8 sequencing (post-1.0 → 0.x、 設計内容は不変)。 両 ADR とも status accepted 維持、 本文 frozen、 reverse-link metadata + 本 ADR prose で trace。</li>
   <li>新 path: 0.x 継続 → task #84 (ADR-0031 6 項目を 0.x 実装) → criteria A〜G + H 充足 + user「実用」 判断 → 1.0.0 宣言 (bump scope = ADR-0030 §2.2)。</li>
   <li>関連原則: P-2 (HTML)、 P-6 (link-integrity)、 P-10 (constitution 不可触)、 および <a href="../spec/constitution.html#s5-versioning">constitution §5</a> (0.x = 約束なし / 1.0.0 = strict-SemVer commitment、 不可逆)。</li>
-  <li>status: <strong>proposed</strong> (user 承認待ち)。 承認で accepted へ flip。</li>
+  <li>status: <strong>accepted</strong> (user 承認済 2026-05-27)。 次の主作業 = task #84 (ADR-0031 を 0.x 実装)。</li>
 </ul>
 </section>
 
