@@ -17,7 +17,7 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 | Phase | name | 必須 | X4-D での実体 |
 |-------|------|------|---------------|
 | A | Discovery | MUST | adoption-state 検出 → greenfield onboarding / maintenance 分岐 (+ todo list + `folio.config.yaml` load) |
-| B | Exploration | MUST | **inline** (Grep/Read で関連 spec/ADR 調査。`spec-explorer` agent 化は X5+) |
+| B | Exploration | MUST | **inline** (関連 spec/ADR + established では consumer code も Grep/Read で grounding、ADR-0031 §2.6。`spec-explorer` agent 化は X5+) |
 | C | Clarifying / Grilling | **MUST NOT SKIP** | `refs/grilling-protocol.md` に沿い gap-driven に 1 問ずつ grill + persist-as-you-go |
 | D | Design | optional | structural change 時のみ inline 設計 (`spec-architect` agent 化は X5+) |
 | E | Implementation | MUST | marker set → Edit → `folio validate` → marker unset |
@@ -45,6 +45,7 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 
 - 編集する spec の現行内容、cross-ref している spec、関連 ADR (decisions/)、未昇格の research。
 - 影響を受ける REQ-ID、用語 (P-5 canonical name)、領域境界 (P-7)。
+- **code-cross-reference** (established project、ADR-0031 §2.6): consumer code も読み、spec の主張と実装現実の食い違いを把握する。食い違いは Phase C grilling で surface して spec を研ぐ。code は spec を**研ぐ証拠**であって test する gate ではない (出力は良い spec であり pass する test ではない) — gate / 新 review agent は作らない (ADR-0026 実装適合性境界を遵守)。
 
 > `spec-explorer` agent による並列探索は完成形 (§7.2)。X4-D では folio-architect が inline で実行する (agent 化は **X5+**)。
 
