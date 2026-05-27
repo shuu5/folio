@@ -139,8 +139,8 @@
 
 ## decisions/ADR-0032-v1-goal-refinement-defer.html
 - title: ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)
-- doc-type: adr · status: proposed
-- summary: proposed (user 承認待ち)。
+- doc-type: adr · status: accepted
+- summary: accepted (user 承認済 2026-05-27)。
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

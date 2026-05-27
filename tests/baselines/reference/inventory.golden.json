@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-27T13:31:49Z",
+  "generatedAt": "2026-05-27T14:21:06Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -773,9 +773,9 @@
     {
       "@id": "decisions/ADR-0032-v1-goal-refinement-defer.html",
       "title": "ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)",
-      "summary": "proposed (user 承認待ち)。",
+      "summary": "accepted (user 承認済 2026-05-27)。",
       "doc-type": "adr",
-      "status": "proposed",
+      "status": "accepted",
       "version": "0.5.0-draft",
       "stakeholders": [
         "Developer",
