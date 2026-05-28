@@ -26,6 +26,10 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 
 各 phase を **順に** 実行する。Phase C と F は **MUST NOT SKIP**。Phase D は structural change が無ければ skip 可。
 
+## folio CLI の解決 (consumer / self-host 両対応)
+
+本 SKILL は folio CLI を `~/.claude/plugins/folio/.claude-plugin/bin/folio` で呼ぶ。consumer project でも folio self-host (cwd = repo) でも同じ bin に解決する (plugin install が symlink で repo bin を指す canonical layout)。これが見つからない場合は `command -v folio` を fallback とし、どちらも無ければ consumer に install を案内して abort (fail-closed)。以降、各 phase で folio CLI を呼ぶときはこの canonical path を使用する (bare `folio` や repo-relative `.claude-plugin/bin/folio` は consumer cwd で解決しないため禁止)。
+
 ---
 
 ## Phase A — Discovery (MUST、adoption-aware)
@@ -33,7 +37,7 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 1. **todo list を作成**し、本タスクで編集する spec / 達成条件を列挙する。
 2. **`folio.config.yaml` を load** する (あれば)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = architecture/spec/`、`review_model = opus`) を用いる。
 3. **adoption-state を検出**して分岐する (ADR-0031 §2.3)。判定は **design-intent spec の実体の有無**による:
-   - **greenfield** (`spec_path` に実体ある spec が無い — `constitution.html` 不在 / cluster README skeleton のみ) → **onboarding grilling 分岐**。構造 (config + cluster README) が未生成なら先に `folio init` を実行する (CLI なので caller-marker 不要、構造のみ決定論生成)。次いで Phase C で onboarding grill を行い、引き出した実体から constitution / overview を **Phase E で lazy-materialize** する (中身がある時のみ。空 placeholder は書かない)。
+   - **greenfield** (`spec_path` に実体ある spec が無い — `constitution.html` 不在 / cluster README skeleton のみ) → **onboarding grilling 分岐**。構造 (config + cluster README) が未生成なら先に `~/.claude/plugins/folio/.claude-plugin/bin/folio init` を実行する (CLI なので caller-marker 不要、構造のみ決定論生成、canonical path は §「folio CLI の解決」)。次いで Phase C で onboarding grill を行い、引き出した実体から constitution / overview を **Phase E で lazy-materialize** する (中身がある時のみ。空 placeholder は書かない)。
    - **established** (実体 spec あり) → **maintenance 分岐**。通常の spec 編集 (Phase B 探索 → Phase C で変更の未解決点を grill)。
    - `folio.config.yaml` の存在は構造 scaffold 済を示すが established を意味しない (`folio init` は実体に先立ち config を作る)。
 
@@ -94,10 +98,10 @@ mkdir -p .folio && touch .folio/architect-active
 ### Step 3: 機械検証 (`folio validate`)
 
 ```bash
-.claude-plugin/bin/folio validate
+~/.claude/plugins/folio/.claude-plugin/bin/folio validate
 ```
 
-3-gate (internal link-integrity + jsonld structural + broken-reverse) が **clean (exit 0)** であることを確認する。double-link が崩れたら `.claude-plugin/bin/folio fix` で reverse を materialize してから再 validate する。
+3-gate (internal link-integrity + jsonld structural + broken-reverse) が **clean (exit 0)** であることを確認する。double-link が崩れたら `~/.claude/plugins/folio/.claude-plugin/bin/folio fix` で reverse を materialize してから再 validate する。
 
 ### Step 4: marker を unset (MUST、エラー時も優先実行)
 
