@@ -1,13 +1,17 @@
 {
   "schema": "folio-e2e-observations/0.1",
   "req": "criterion H (ADR-0032) — folio-architect の greenfield onboarding が非 hollow constitution を産むか。 ADR-0031 §2.2/§2.3 (adoption-aware Phase A + grilling Phase C + lazy materialize)。",
-  "method": "agent-driven runbook walk (S-K)、 非決定的 (LLM grilling 出力)。 S-G と同様、 revised folio-architect SKILL + refs/grilling-protocol.md の load を要すため plugin reload 後の fresh session で実施する。 一次 assertion = semantic = 産出 constitution が非 hollow (空 placeholder でない) か否か (golden 文言比較せず)。",
-  "status": "PENDING (placeholder)。 Slice 1 (ADR-0031) で手順 + 期待 observation を定義。 決定論部分 (init lazy 出力 = 空 placeholder を生成しない) は scenarios/init-scaffold.yaml が live load 非依存で PASS 済 (criterion H の deterministic floor)。 semantic ceiling = 本 S-K の live walk は merge + plugin reload 後の別 fresh session で実走し本 file を埋める。",
+  "method": "agent-driven runbook walk (S-K)、 非決定的 (LLM grilling 出力)。 revised folio-architect SKILL + refs/grilling-protocol.md を load した fresh session (cld-spawn 経由) で実施。 一次 assertion = semantic = 産出 constitution が非 hollow (空 placeholder でない) か否か (golden 文言比較せず)。",
+  "status": "PASS — criterion H semantic ceiling 確認済 (2026-05-28、 main 3d4f6c5)。 deterministic floor (init-scaffold.yaml) + semantic ceiling (本 S-K) で criterion H 充足、 #77 (1.0.0) の semantic gate 解消。",
   "session": {
-    "date": null,
-    "host": null,
-    "branch": null,
-    "note": "未 walk。 revised SKILL/protocol が load された fresh session で /folio-architect を greenfield temp project に対し起動して実施する。 本 worktree で SKILL を編集した直後の session では SKILL 未 reload ゆえ観察不可 (S-G と同じ制約)。"
+    "date": "2026-05-28",
+    "host": "ipatho-server-2",
+    "branch": "main",
+    "head": "3d4f6c5",
+    "spawn_window": "folio-sk",
+    "consumer_tmp": "/tmp/folio-e2e-consumer-sk-ixCkOE (walk 完了後に rm -rf)",
+    "jsonl_log_summary": "352 entries / 79 user × 160 assistant turn (~/.claude/projects/-tmp-folio-e2e-consumer-sk-ixCkOE/bd1eadb5-2a25-4ef9-9f1a-f1ac9e9c4275.jsonl)",
+    "topic": "URL 短縮サービス (user が E2E 検証用と表明、 architect が 3 案提示 → user が選択 = P-8 dialog accountability 自己適用、 user が以後 domain fork に回答)"
   },
   "deterministic_floor": {
     "scenario": "scenarios/init-scaffold.yaml (cli-scaffold, REQ-VER-014)",
@@ -18,7 +22,7 @@
     {
       "id": "S-K",
       "name": "greenfield onboarding walk (空 project で非 hollow constitution を産むか)",
-      "operation": "TMP=$(mktemp -d) (folio 未導入); fresh cld session を $TMP で spawn → /folio-architect 起動 → 「folio を導入し最初の design-intent spec を整備せよ」→ Phase A greenfield 検出 → folio init (構造) → Phase C onboarding grill → Phase E で constitution/overview を lazy-materialize",
+      "operation": "TMP=/tmp/folio-e2e-consumer-sk-ixCkOE (folio 未導入、 空); fresh cld を cld-spawn --cd $TMP --window-name folio-sk で起動 → /folio-architect injection → Phase A greenfield 検出 (constitution.html 不在) → folio init で構造生成 → Phase C onboarding grill → Phase E で constitution/overview を lazy-materialize → Phase F で 4-agent review → vocabulary に feedback 反映",
       "expected": {
         "phase_a_detects_greenfield": true,
         "branches_to_onboarding": true,
@@ -28,15 +32,62 @@
         "validate_clean_each_step": true,
         "vocabulary_persisted_inline": "grill 中の用語が vocabulary.yaml に persist (Slice 2 の vocabulary enrich 後に顕著)"
       },
-      "observed": null,
-      "result": "PENDING"
+      "observed": {
+        "phase_a_detects_greenfield": "PASS (constitution.html 不在を検出して onboarding 分岐へ、 folio init を実行し folio.config.yaml + spec/decisions/research 3 cluster README を生成)",
+        "branches_to_onboarding": "PASS (maintenance 編集を試みず、 grill 第一問は 'このプロジェクトは何ですか？')",
+        "phase_c_grills_one_at_a_time": "PASS (assistant が '1 問ずつ（推奨回答付き）尋ね' '黙って 1 つに決めず' を明示して protocol 遵守、 推奨回答 keyword 出現 5 件、 gap-driven が 'ドメイン慣習で settled な部分は前提として確定、 設計分岐だけを 1 問ずつ grill' として実装)",
+        "constitution_non_hollow": "PASS (project 固有原則 2 件: P-1 binding 不変・非再利用 / P-2 enumeration 不可能性、 RFC 2119/8174 序文 + §3 folio Layer 0 継承 + §4 Versioning、 URL 短縮サービス domain に即した実体ある内容、 placeholder 一切なし)",
+        "no_empty_placeholder": "PASS ('P-1: SHALL <ここに記述>' 形式の placeholder 皆無、 実体ある principle に詳細記述、 P-2 から ADR-0001 への trace 完備)",
+        "validate_clean_each_step": "PASS (walk 後の 6-gate clean: link-integrity / jsonld / broken-reverse / vocabulary [OK 実検査] / delta-marker / ears-coverage、 files=6 / relations=12)",
+        "vocabulary_persisted_inline": "PASS (vocabulary.yaml 11 terms with Slice 2 enriched schema: definition + forbidden + relationships + flagged_ambiguities; 末尾コメント 'Phase F review (X4-D) の feedback により redirect / binding / live / 未存在 / random code を追補' が Phase F 実行を実証、 inline persist (rules §3 schema を確認してから書く) を assistant 自身が明示)"
+      },
+      "result": "PASS",
+      "additional_observations": {
+        "overview_quality": "system context (API client / resolver client 2 種 caller) + 5 building blocks (code generator / binding store / resolver / creation API / deletion API) + EARS 5 pattern 完全網羅 8 REQ (ubiquitous 2 / event-driven 1 / state-driven 2 / unwanted 1 / optional 2)、 rules §6 EARS markup (data-ears-pattern / ears-shall / ears-when 等) 正準準拠、 constitution P-1/P-2 への trace 明記",
+        "adr_worthiness_applied": "ADR-0001 (random base62 採用) が §10.3 3 条件 (hard-to-reverse / surprising / real trade-off) を §1 で明示 list 化して justification、 §3 Alternatives Considered で 2 案 (sequential counter / hybrid sequential+random) 評価、 §4 Consequences で birthday paradox (62^7 ≈ 3.5 × 10^12) 計算まで含む textbook-quality、 status=accepted で dc:isReferencedBy が constitution + overview 両方を逆引き",
+        "phase_f_review_executed": "vocabulary.yaml コメントが 'Phase F review (X4-D) の feedback により redirect / binding / live / 未存在 / random code を追補' と明記 = 4-agent review (ears/vocabulary/ssot/temporal) 実行 + feedback 反映の間接 evidence",
+        "produced_files": [
+          "folio.config.yaml (159B、 init 生成、 folio_version=^0.5 + spec_path=architecture/spec/ + caller_marker_* + review_model=opus)",
+          "architecture/spec/README.html (2313B、 init lazy + Phase E で実 part 反映)",
+          "architecture/decisions/README.html (1864B、 init 生成)",
+          "architecture/research/README.html (1541B、 init 生成)",
+          "architecture/spec/constitution.html (4054B、 Phase E materialize、 project 固有 P-1/P-2)",
+          "architecture/spec/overview.html (8013B、 Phase E materialize、 8 REQ × EARS 5-pattern)",
+          "architecture/decisions/ADR-0001-random-base62.html (5085B、 Phase C 中に worthiness 判定 → 起票)",
+          "vocabulary.yaml (5753B、 persist-as-you-go、 11 terms × enriched schema)"
+        ]
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-1",
+      "title": "folio-architect が grill 初手で英語に flip した",
+      "detail": "global CLAUDE.md は日本語応答指示があり SKILL.md / grilling-protocol.md prose も 49-60% 日本語だが、 全 section header が英語 + 重い英語技術用語の散在 + skill 冒頭に応答言語の明示指示なし、 で skill context 内で global の言語指示が上書きされた。 user の 2 turn 目 '日本語で応答して' で復旧、 以降は日本語で進行。 産出物 (constitution / overview / ADR / vocabulary) は全て日本語で clean。",
+      "task": "#91",
+      "memory": "skill-instruction-language-controls-response",
+      "severity": "medium (onboarding UX、 criterion H 本体とは直交)"
+    },
+    {
+      "id": "F-2",
+      "title": "consumer project で folio CLI が解決できない (CLI-resolution gap)",
+      "detail": "folio は PATH 外、 SKILL.md は self-host 前提で bare 'folio init' (Phase A) と repo-relative '.claude-plugin/bin/folio' (Step 3) を使う。 greenfield consumer cwd には .claude-plugin/ 無 + PATH 無で双方解決不能。 本 walk では kickoff prompt で絶対パス /home/shuu5/.claude/plugins/folio/.claude-plugin/bin/folio を外部供給して回避。 hint 無しでは walk 開始時点で詰まる。",
+      "task": "#90",
+      "severity": "high (consumer の最初の操作が解決不能、 onboarding 体験の core)"
+    },
+    {
+      "id": "F-3",
+      "title": "folio inventory --root が --root を無視し呼出 cwd の inventory.json を上書き",
+      "detail": "folio inventory --root /tmp/.../architecture を実行すると scan は cwd の architecture/ (folio repo 31 specs) で実施され、 output も cwd 直下の inventory.json に書かれる (--root 未反映)。 validate/fix は --root 対応済なので inventory のみ非対称。 inventory.json は .gitignore で git 上は無害だが UX 問題 + consumer onboarding で混乱を生む。",
+      "task": "#92",
+      "severity": "medium (実害小、 但し consumer-facing 一貫性欠落)"
     }
   ],
   "summary": {
     "scenarios": 1,
-    "pass": 0,
+    "pass": 1,
     "fail": 0,
-    "pending": 1,
-    "verdict": "PENDING — 手順定義済。 deterministic floor (init lazy) は init-scaffold.yaml で PASS。 semantic walk は reloaded session で実走予定。"
+    "pending": 0,
+    "verdict": "PASS — criterion H semantic ceiling 確認。 産出 constitution は非 hollow (project 固有原則 2 件、 RFC 2119 序文)、 overview は EARS 5-pattern 完全網羅 8 REQ、 ADR-0001 が §10.3 worthiness 明示適用 (textbook-quality)、 vocabulary.yaml 11 enriched terms、 validate 6-gate clean、 Phase F 実行 evidence あり。 deterministic floor + semantic ceiling 両方達成で criterion H 充足 = #77 (1.0.0) の semantic gate 解消。 副次 finding 3 件 (F-1 言語 flip / F-2 CLI-resolution / F-3 inventory --root) は #90/#91/#92 に独立 task 化、 いずれも criterion H 本体とは直交する onboarding UX / consistency 課題。"
   }
 }
