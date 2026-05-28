@@ -163,12 +163,24 @@ folio_build_entry() {
 folio_cmd_inventory() {
   command -v jq >/dev/null 2>&1 || { echo "folio inventory: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  local plugin_json=".claude-plugin/plugin.json"
-  [[ -f "$plugin_json" ]] || { echo "folio inventory: ${plugin_json} not found — run at repo root" >&2; exit 1; }
+  # --- arg parse: --root <dir> (default architecture、 validate/fix と対称、 #92) ---
+  local root="architecture"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --root) [[ $# -ge 2 ]] || { echo "folio inventory: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
+      --root=*) root="${1#--root=}"; shift ;;
+      *) echo "folio inventory: unknown argument '$1' (usage: folio inventory [--root <dir>])" >&2; exit 2 ;;
+    esac
+  done
+
+  # plugin.json は実行中の bin/folio の隣にある (cwd 依存を排除、 #92)。
+  local script_dir; script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local plugin_json="${script_dir}/../plugin.json"
+  [[ -f "$plugin_json" ]] || { echo "folio inventory: plugin manifest が無い (${plugin_json}、 install 破損疑い)" >&2; exit 1; }
 
   local arch_abs
-  arch_abs=$(realpath -m architecture)
-  [[ -d "$arch_abs" ]] || { echo "folio inventory: architecture/ not found — run at repo root" >&2; exit 1; }
+  arch_abs=$(realpath -m "$root")
+  [[ -d "$arch_abs" ]] || { echo "folio inventory: scan root not found: ${root} (--root で指定するか cwd/architecture を用意)" >&2; exit 1; }
 
   local folio_version generated_at out_file
   folio_version=$(jq -r '.version // "unknown"' "$plugin_json")
@@ -181,7 +193,7 @@ folio_cmd_inventory() {
   local entries=()
   for d in "${dirs[@]}"; do
     local dir_abs="${arch_abs}/${d}"
-    [[ -d "$dir_abs" ]] || { echo "folio inventory: scan dir missing: architecture/${d} (fatal)" >&2; exit 1; }   # §4.4.3 fs access error
+    [[ -d "$dir_abs" ]] || { echo "folio inventory: scan dir missing: ${root}/${d} (fatal)" >&2; exit 1; }   # §4.4.3 fs access error
     while IFS= read -r f; do
       [[ -z "$f" ]] && continue
       entry=$(folio_build_entry "$f" "$arch_abs") || continue
@@ -1046,7 +1058,8 @@ Subcommands:
   help, --help             本ヘルプ
   init [<dir>]             consumer canonical layout を scaffold (省略時 cwd、 ADR-0024)
                            (idempotent: 既存 file preserve、 exit 0=success/2=tool error)
-  inventory                inventory.json 生成 (relations.html §4、 cwd=repo root)
+  inventory [--root <dir>] inventory.json 生成 (relations.html §4、 default cwd/architecture、
+                           --root で scan/output root を override = validate/fix と対称)
   prime                    Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen)
   validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural +
                            broken-reverse 検査 (ADR-0020/0025 3-gate、 exit 0=clean/1=violation/2=tool error、
@@ -1063,7 +1076,8 @@ EOF
     exit $?
     ;;
   inventory)
-    folio_cmd_inventory
+    shift
+    folio_cmd_inventory "$@"
     ;;
   prime)
     folio_cmd_prime
