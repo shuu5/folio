@@ -1,5 +1,7 @@
 # folio grilling protocol
 
+> **応答言語**: 本 protocol に基づく grill (質問・推奨回答・要約・user とのやりとり) は **user の使用言語** (default = global CLAUDE.md = 日本語) で行う。folio canonical 用語 (`Phase A/C` / `EARS` / `vocabulary` / `ADR-XXX` / `P-N` / `gap-driven` / `persist-as-you-go` 等) は英語のまま維持し、 記述と対話は user の言語に合わせる。
+
 folio-architect の **Phase A (adoption-state 検出 + greenfield onboarding)** と **Phase C (Clarifying)** が参照する、spec-aware な 1 問ずつの elicitation 規律。「実装前に対話で要件を詰める」普遍的上流活動を folio の design-intent 著述に内在化する (ADR-0031)。
 
 <!-- Adapted from mattpocock grill-me + grill-with-docs (github.com/mattpocock/skills, MIT License, (c) Matt Pocock). folio 化 (spec-aware / gap-driven / persist-as-you-go) は ADR-0031 §2.2 による。 -->

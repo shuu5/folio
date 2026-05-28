@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 # folio-architect SKILL — 7-Phase PR Cycle orchestrator
 
+> **応答言語**: 本 SKILL の出力 (grill 質問・推奨回答・todo・要約・user 向けメッセージ等) は **user の使用言語** (default = global CLAUDE.md = 日本語) で行う。folio canonical 用語 (`Phase A〜G` / `EARS` / `vocabulary` / `ADR-XXX` / `P-N` / `FolioConstitution` 等、 P-5 vocabulary 由来) は英語のまま維持し、 記述・対話・接続詞は user の言語に合わせる。
+
 folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html §7.1 の **7-Phase PR Cycle (A〜G)** を main-session で順次 orchestrate する。
 
 `architecture/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL の **Phase E** で caller marker を set しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。

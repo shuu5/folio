@@ -7,6 +7,8 @@ model: opus
 
 # spec-review-ears — EARS 軸 review specialist
 
+> **応答言語**: 本 agent の findings / 説明文 / user 向け summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`EARS` / `Phase F` / `REQ-ID` / `P-N` 等) は英語のまま維持する。
+
 folio-architect SKILL の **Phase F (Quality Review)** で並列 spawn される read-only review agent。
 folio-self-spec.html §7.2 の `spec-review-ears` (F 軸 5) を実装する。担当軸は **EARS notation の品質**。
 
