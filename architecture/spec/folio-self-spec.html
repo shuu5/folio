@@ -310,9 +310,9 @@ flowchart LR
     R5["review-ears"]
     R6["review-stakeholder"]
   end
-  style PB fill:#e6f6f2
-  style PD fill:#fefbea
-  style PF fill:#fdf3f3
+  style PB fill:#e6f6f2,color:#08131a
+  style PD fill:#fefbea,color:#08131a
+  style PF fill:#fdf3f3,color:#08131a
 </pre>
 <figcaption>図 4. specialist agents 並列 spawn pattern。 Phase B (探索) / Phase D (設計、 optional) / Phase F (品質検証、 6 軸並列固定)。</figcaption>
 </figure>
@@ -423,8 +423,8 @@ flowchart LR
     L1 --> L2 --> L3 --> L4 --> L5
   end
   AX --> DEF
-  style AX fill:#fefbea
-  style DEF fill:#e6f6f2
+  style AX fill:#fefbea,color:#08131a
+  style DEF fill:#e6f6f2,color:#08131a
 </pre>
 <figcaption>図 6. 3 axis × 5 層防御 pipeline。 5 層全てを通過した時のみ AI Agent は folio (Layer 0) or consumer (Layer 1) の spec を編集できる (P-12 違反防止)。</figcaption>
 </figure>
@@ -558,7 +558,7 @@ flowchart TB
   PJ --> HK
   HK -.-> PRE["PreToolUse hook<br/>(caller marker enforce、 §7.3)"]
   HK -.-> POST["PostToolUse hook<br/>(spec validate、 §7.5)"]
-  style CP fill:#fefbea
+  style CP fill:#fefbea,color:#08131a
   style PJ fill:#2a4d6e,color:#ffffff
   style PRE fill:#5ac8b8,color:#08131a
   style POST fill:#5ac8b8,color:#08131a

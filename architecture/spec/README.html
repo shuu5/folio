@@ -117,6 +117,8 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'flowchart': {'curve': 'basis'}}}%%
 graph TD
+  accTitle: spec/ cluster dependency graph
+  accDescr: spec/ 配下 4 file (rules / folio-self-spec / relations / verification) と constitution.html の依存関係を示す graph TD。 実線 = strong dependency (depends-on / hasPart)、 点線 = soft reference (extends / references)。
   CONST["constitution.html<br/>(spec/ 内、 不変・scan 対象外)"]:::frozen
   RULES["rules.html<br/>(Layer 1 universal rules)"]:::active
   FSS["folio-self-spec.html<br/>(folio Layer 0 self-spec)"]:::active
