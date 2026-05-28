@@ -23,5 +23,11 @@ FOLIO="${SCRIPT_DIR}/../bin/folio"
 
 [[ -x "$FOLIO" ]] || { echo "inject-inventory: folio CLI not found/executable at ${FOLIO}" >&2; exit 1; }
 
+# architecture/ が無い cwd (folio install 直後 / folio init 前 / folio 非対応 project) では
+# prime は scan root not found で error。 SessionStart hook 経路は consumer onboarding の noise
+# を避けるため silent skip (exit 0、 stdout 空) で振る舞う (#93)。 prime の error は CLI を
+# 直接実行した場合のみ surface する (CLI 利用者には明示的 fail-closed のままが正しい)。
+[[ -d architecture ]] || exit 0
+
 # stdout = digest (= 注入される context)、 exit code は folio prime に委譲。
 exec "$FOLIO" prime
