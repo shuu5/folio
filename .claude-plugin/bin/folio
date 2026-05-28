@@ -448,7 +448,16 @@ folio_materialize_reverse() {
     }
     { if (inld && /<\/script>/) inld = 0; print; }
   ' "$target_abs" > "$out"; then
-    if cmp -s "$out" "$target_abs"; then rm -f "$out"; else mv "$out" "$target_abs"; fi
+    # added>0 は L411 早期 return で保証済。 awk 後に out==target (byte-identical) =
+    # 挿入 anchor (行頭 "@type": / 行末 "key": [) が無く無書き込み = 単一行 JSON-LD 等。
+    # 旧実装は無書き込みでも added を返し false-success (folio fix が "materialized N" と報告して
+    # 実書込み 0、 #89)。 multi-line に整形すれば挿入可能ゆえ fail-closed (既存 awk-fail と同じ return 1)。
+    if cmp -s "$out" "$target_abs"; then
+      rm -f "$out" "$create_file" "$append_file"
+      echo "folio fix: ${target_rel} の <head> JSON-LD に reverse を挿入できなかった (${added} 件予定、 行頭 \"@type\": / 行末 \"key\": [ の挿入 anchor 不在 — 単一行 JSON-LD 等)。 multi-line に整形して再実行 (fail-closed、 #89)" >&2
+      return 1
+    fi
+    mv "$out" "$target_abs"
     rm -f "$create_file" "$append_file"
     printf '%d' "$added"
     return 0

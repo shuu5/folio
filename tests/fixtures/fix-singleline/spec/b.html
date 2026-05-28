@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>fix singleline fixture — target b (reverse 欠落 + JSON-LD 単一行 = fix の挿入 anchor 不在)</title>
+<script type="application/ld+json">
+{"@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"}, "@id": "./b.html", "@type": "schema:TechArticle"}
+</script>
+</head>
+<body><p>fix singleline fixture: b は a からの folio:depends-on の reverse (folio:depended-by) を欠き、 かつ JSON-LD が単一行。 fix は行頭 "@type": / 行末 "key": [ を見つけられず無書き込み → 旧実装は "materialized 1" と誤報告 (false-success)、 新実装は fail-closed (exit 2、 #89)。</p></body>
+</html>

@@ -330,35 +330,62 @@ run_cli_fix() {
     ok=false; reasons+=("pre-fix validate already clean (fixture should seed a broken-reverse = RED state)")
   fi
 
-  # (b) fix = exit expect (0)
-  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
-  local fix_exit=$?
-  if [[ "$fix_exit" != "$exp_exit" ]]; then
-    ok=false; reasons+=("fix exit_code mismatch (expected=${exp_exit}, got=${fix_exit})")
-  fi
-
-  # (c) post-fix validate = GREEN (3-gate clean、 exit 0 = reverse materialize 成功)
-  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "$tmp" ) >/dev/null
-  local post_exit=$?
-  if [[ "$post_exit" != "0" ]]; then
-    ok=false; reasons+=("post-fix validate not clean (exit ${post_exit}; reverse not materialized?)")
-  fi
-
-  # (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
-  local snap1 snap2 refix_exit
-  snap1=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
-  ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
-  refix_exit=$?
-  snap2=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
-  if [[ "$refix_exit" != "0" ]]; then
-    ok=false; reasons+=("re-fix exit_code != 0 (got=${refix_exit})")
-  fi
-  if [[ "$snap1" != "$snap2" ]]; then
-    ok=false; reasons+=("re-fix mutated files (idempotency violated)")
+  local fix_exit
+  if [[ "$exp_exit" == "0" ]]; then
+    # ---- happy path: RED → fix(0) → GREEN → idempotent (REQ-VER-015、 既存) ----
+    # (b) fix = exit 0
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
+    fix_exit=$?
+    if [[ "$fix_exit" != "$exp_exit" ]]; then
+      ok=false; reasons+=("fix exit_code mismatch (expected=${exp_exit}, got=${fix_exit})")
+    fi
+    # (c) post-fix validate = GREEN (3-gate clean、 exit 0 = reverse materialize 成功)
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "$tmp" ) >/dev/null
+    local post_exit=$?
+    if [[ "$post_exit" != "0" ]]; then
+      ok=false; reasons+=("post-fix validate not clean (exit ${post_exit}; reverse not materialized?)")
+    fi
+    # (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
+    local snap1 snap2 refix_exit
+    snap1=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null
+    refix_exit=$?
+    snap2=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+    if [[ "$refix_exit" != "0" ]]; then
+      ok=false; reasons+=("re-fix exit_code != 0 (got=${refix_exit})")
+    fi
+    if [[ "$snap1" != "$snap2" ]]; then
+      ok=false; reasons+=("re-fix mutated files (idempotency violated)")
+    fi
+  else
+    # ---- fail-closed path (#89): RED → fix(exp_exit≠0) → tree 不変 → still-RED ----
+    #   単一行 JSON-LD 等で行ベース挿入 anchor が無いとき fix は false-success せず fail-closed する。
+    #   一次 assertion = fix が exp_exit で落ち、 かつ tree を 1 byte も変えない (no false-success)。
+    local snap_before snap_after
+    snap_before=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" "${cmd[@]}" --root "$tmp" ) >/dev/null 2>&1
+    fix_exit=$?
+    snap_after=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )
+    if [[ "$fix_exit" != "$exp_exit" ]]; then
+      ok=false; reasons+=("fix exit_code mismatch (expected fail-closed=${exp_exit}, got=${fix_exit})")
+    fi
+    if [[ "$snap_before" != "$snap_after" ]]; then
+      ok=false; reasons+=("fail-closed fix mutated tree (must write nothing on no-op = no false-success)")
+    fi
+    # (post) validate は依然 RED (reverse 未materialize)
+    ( cd "$REPO_ROOT" && "${PLUGIN_ROOT}/bin/folio" validate --root "$tmp" ) >/dev/null 2>&1
+    local post_exit=$?
+    if [[ "$post_exit" -eq 0 ]]; then
+      ok=false; reasons+=("post-fail-closed validate unexpectedly clean (reverse should remain unmaterialized)")
+    fi
   fi
 
   if $ok; then
-    echo "  [PASS] ${req_id} (RED pre-fix → fix exit ${fix_exit} → GREEN post-fix, idempotent)"
+    if [[ "$exp_exit" == "0" ]]; then
+      echo "  [PASS] ${req_id} (RED pre-fix → fix exit ${fix_exit} → GREEN post-fix, idempotent)"
+    else
+      echo "  [PASS] ${req_id} (RED pre-fix → fix fail-closed exit ${fix_exit}, tree unchanged, still-RED = no false-success)"
+    fi
     echo ""; echo "Results: 1 passed, 0 failed (total 1)"
     return 0
   fi

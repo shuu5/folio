@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-VER-015"
+ears_pattern: "unwanted"
+kind: "cli-fix"
+description: |
+  folio fix が <head> JSON-LD を単一行で持つ target に reverse を materialize しようとして、
+  行ベース挿入 anchor (行頭 "@type": / 行末 "key": [) を見つけられないとき、 false-success せず
+  fail-closed する (#89 robustness、 ADR-0025 / REQ-VER-015 の unwanted-behaviour 補完):
+    (a) pre-fix  folio validate --root <tmp> が broken-reverse で FAIL (RED = 修正対象あり)、
+    (b) folio fix --root <tmp> が exit 2 (fail-closed、 awk 無書き込みを検出して return 1)、
+    (c) fix は tree を 1 byte も変えない (旧実装は "materialized 1" と報告しつつ実書込み 0 = false-success)、
+    (d) post-fix validate も依然 RED (reverse 未materialize)。
+  fixture = fixtures/fix-singleline/spec/{a,b}.html (a→b folio:depends-on / b reverse 欠落、 両者
+  とも JSON-LD が単一行)。 multi-line に整形すれば fix 可能なので fail-closed = 設計上の正しい挙動。
+  cli-fix handler の fail-closed mode (expect.exit_code != 0) で検証する。
+
+# --- cli-fix scenario (fail-closed mode、 REQ-VER-015 unwanted 補完) ---
+command: ["fix"]                                        # target root は harness が fresh temp copy で供給
+fixture: "fixtures/fix-singleline"                      # copy 元 fixture tree (SCRIPT_DIR 相対、 単一行 JSON-LD)
+
+expect:
+  exit_code: 2                                          # fail-closed (false-success を避ける、 2 = tool error)
+
+# === 実装メモ (#89) ===
+# folio_materialize_reverse は added (挿入意図数) を awk 実行前にカウントするが、 単一行 JSON-LD は
+# 行頭 "@type": / 行末 "key": [ の挿入 anchor を欠き awk が無書き込み (out==target)。 旧実装は
+# identical を success 扱いして added を返し false-success (folio fix が "materialized N" と誤報告)。
+# 修正後は added>0 かつ out==target を「挿入失敗」と判定し fail-closed (return 1 → folio_cmd_fix exit 2)。
+# folio 実 spec / folio init 生成物は全て multi-line ゆえ self-host fix に regression なし
+# (fix-bidirectional.yaml = multi-line happy-path が GREEN を維持)。 単一行 JSON-LD の正規化挿入は
+# 非目標 (multi-line 整形 → 再 fix が回避策、 行ベース挿入の robustness のみ本 scenario の scope)。
