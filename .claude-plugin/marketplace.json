@@ -1,0 +1,14 @@
+{
+  "name": "folio",
+  "owner": {
+    "name": "shuu5",
+    "url": "https://github.com/shuu5"
+  },
+  "plugins": [
+    {
+      "name": "folio",
+      "source": "./",
+      "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness (HTML + JSON-LD machine-validated specs、 7-Phase grilling-based authoring orchestration)."
+    }
+  ]
+}

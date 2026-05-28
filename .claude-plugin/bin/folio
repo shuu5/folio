@@ -280,18 +280,30 @@ folio_prime_emit_digest() {
 folio_cmd_prime() {
   command -v jq >/dev/null 2>&1 || { echo "folio prime: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  local plugin_json=".claude-plugin/plugin.json"
-  [[ -f "$plugin_json" ]] || { echo "folio prime: ${plugin_json} not found — run at repo root" >&2; exit 1; }
+  # --- arg parse: --root <dir> (default architecture、 validate/fix/inventory と対称) ---
+  local root="architecture"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --root) [[ $# -ge 2 ]] || { echo "folio prime: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
+      --root=*) root="${1#--root=}"; shift ;;
+      *) echo "folio prime: unknown argument '$1' (usage: folio prime [--root <dir>])" >&2; exit 2 ;;
+    esac
+  done
+
+  # plugin.json は実行中の bin/folio の隣にある (cwd 依存排除、 #92 と対称)。
+  local script_dir; script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local plugin_json="${script_dir}/../plugin.json"
+  [[ -f "$plugin_json" ]] || { echo "folio prime: plugin manifest が無い (${plugin_json}、 install 破損疑い)" >&2; exit 1; }
 
   local arch_abs
-  arch_abs=$(realpath -m architecture)
-  [[ -d "$arch_abs" ]] || { echo "folio prime: architecture/ not found — run at repo root" >&2; exit 1; }
+  arch_abs=$(realpath -m "$root")
+  [[ -d "$arch_abs" ]] || { echo "folio prime: scan root not found: ${root} (--root で指定するか cwd/architecture を用意)" >&2; exit 1; }
 
   local inv="$(dirname "$arch_abs")/inventory.json"
 
-  # §2.4 staleness = auto-regen (folio inventory は stderr に "wrote ..." を出す = stdout 非汚染)
+  # §2.4 staleness = auto-regen。 --root を inventory に forward する (対称、 stale-regen が --root 起源の inv を上書きしない)。
   if folio_prime_needs_regen "$inv" "$arch_abs"; then
-    folio_cmd_inventory
+    folio_cmd_inventory --root "$root"
   fi
   [[ -f "$inv" ]] || { echo "folio prime: inventory.json unavailable after regen attempt" >&2; exit 1; }
 
@@ -1060,7 +1072,8 @@ Subcommands:
                            (idempotent: 既存 file preserve、 exit 0=success/2=tool error)
   inventory [--root <dir>] inventory.json 生成 (relations.html §4、 default cwd/architecture、
                            --root で scan/output root を override = validate/fix と対称)
-  prime                    Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen)
+  prime [--root <dir>]     Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen、
+                           --root で scan/inventory.json 場所を override = inventory と対称)
   validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural +
                            broken-reverse 検査 (ADR-0020/0025 3-gate、 exit 0=clean/1=violation/2=tool error、
                            --root で検査 root override)
@@ -1080,7 +1093,8 @@ EOF
     folio_cmd_inventory "$@"
     ;;
   prime)
-    folio_cmd_prime
+    shift
+    folio_cmd_prime "$@"
     ;;
   validate)
     shift

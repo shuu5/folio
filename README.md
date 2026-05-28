@@ -4,6 +4,29 @@ A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Cod
 
 **Status**: Phase X5-γ (選択的完成)。 現行 `v0.5.0-draft`、 v1.0 昇格基準は [ADR-0030](./architecture/decisions/ADR-0030-v1-stability-criteria.html) (proposed) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `tests/` HOW-test) へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に rename、 概念「verification」は spec 名・`folio validate` として存続)。 folio は自身の rules を self-host する。
 
+## Install
+
+**Prerequisites**: `bash` + `jq` + `yq` ([mikefarah v4.x](https://github.com/mikefarah/yq)) + GNU `realpath` (Linux 標準)。 **Supported**: **Linux canonical** (sandbox + CI 共に ubuntu-latest で検証)。 macOS / Windows は post-1.0 で fix 予定の best-effort 状態。
+
+Claude Code 内で:
+
+```
+/plugin marketplace add shuu5/folio
+/plugin install folio@folio
+```
+
+reload 後、`~/.claude/plugins/folio/` に install され、 `/folio-architect` SKILL と canonical CLI path (`~/.claude/plugins/folio/.claude-plugin/bin/folio`) が available になります。
+
+**First run** — greenfield consumer project:
+
+```
+mkdir my-project && cd my-project
+# Claude Code を起動して:
+/folio-architect この project に folio を導入し、 最初の design-intent spec を整備せよ
+```
+
+adoption-aware Phase A が greenfield 検出 → `folio init` で構造生成 → onboarding grill (1 問ずつ + 推奨回答) で実体を引き出し → Phase E で非 hollow な constitution / overview を materialize → Phase F で 4-agent quality review ([ADR-0031](./architecture/decisions/ADR-0031-mattpocock-authoring-absorption.html) protocol-only authoring 吸収)。
+
 ## 2-Layer Architecture (at a glance)
 
 ```
