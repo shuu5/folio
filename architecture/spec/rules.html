@@ -173,6 +173,32 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h3>§4.4 <code>section.normative</code> / <code>section.informative</code> Wrappers</h3>
 
 <p>MUST/SHALL を含む section は <code>&lt;section class="normative"&gt;</code> で wrap、 説明・rationale のみの section は <code>&lt;section class="informative"&gt;</code> で wrap する。 common.css が視覚的境界を表現する。</p>
+
+<h3 id="s4-5-visual">§4.5 Visual Richness Patterns (HTML 活用 guidance)</h3>
+
+<p>folio spec は HTML を表現基体としており、 plain text を超える <strong>visual richness</strong> を活用できる。 domain の構造を反映する visual element を <em>selective</em> に採用し、 装飾でなく WHAT 表現の精度を高める手段として用いる (<a href="./constitution.html#p-3">P-3</a> WHAT-only 整合)。 spec author (人間および <code>folio-architect</code>) は domain を grill した後、 visual cue 候補を user に推奨答えとして提示してから採用する (<a href="./constitution.html#p-8">P-8</a> silently choosing 禁止)。</p>
+
+<table>
+  <thead>
+    <tr><th>domain pattern</th><th>推奨 element</th><th>用途例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>lifecycle / 状態遷移</td><td>mermaid <code>stateDiagram-v2</code></td><td>binding live/tombstone/expired/未存在、 issue draft/active/done</td></tr>
+    <tr><td>caller-system 対話 / 操作 sequence</td><td>mermaid <code>sequenceDiagram</code></td><td>API client → service の request/response、 multi-component 連携</td></tr>
+    <tr><td>decision flow / 分岐</td><td>mermaid <code>flowchart</code></td><td>adoption-state 検出、 ADR alternatives 選択木</td></tr>
+    <tr><td>component 関係 / 継承</td><td>mermaid <code>classDiagram</code></td><td>architecture layer 関係、 base/derived 関係</td></tr>
+    <tr><td>data model / entity 関係</td><td>mermaid <code>erDiagram</code></td><td>binding ← short-code × target-URL 等の entity 関係</td></tr>
+    <tr><td>traceability matrix</td><td><code>&lt;table&gt;</code></td><td>REQ-ID × constitution 原則 × component 実装</td></tr>
+    <tr><td>alternative comparison</td><td><code>&lt;table&gt;</code></td><td>ADR §3 採用/不採用 candidates × criteria</td></tr>
+    <tr><td>state transition matrix</td><td><code>&lt;table&gt;</code></td><td>遷移元 × 遷移先 × トリガー (stateDiagram と併用可)</td></tr>
+    <tr><td>progressive disclosure</td><td><code>&lt;details&gt;</code> + <code>&lt;summary&gt;</code></td><td>optional / advanced 内容、 長い enumeration の折りたたみ</td></tr>
+    <tr><td>structured definition</td><td><code>&lt;dl&gt;</code> + <code>&lt;dt&gt;/&lt;dd&gt;</code></td><td>用語 / 原則 / component の definition</td></tr>
+  </tbody>
+</table>
+
+<aside class="informative">
+<p><strong>留意</strong>: (a) visual richness は <strong>domain 構造を反映する手段</strong>で装飾ではない — 状態を持たない domain に stateDiagram は不要、 「使わない」も正しい設計判断。 (b) diagram label / table header / state 名は <code>vocabulary.yaml</code> の canonical name を使う (<a href="./constitution.html#p-5">P-5</a>)。 (c) 大きすぎる図 (&gt; 20 node) は <strong>分割</strong>または <code>&lt;details&gt;</code> で hide する。 (d) mermaid loader 未 load 時でも <code>&lt;pre class="mermaid"&gt;</code> の raw syntax は人間に読める形のままにする (graceful degradation)。 (e) <code>folio-architect</code> による grill 中の声かけ手順は <a href="../../skills/folio-architect/refs/grilling-protocol.md"><code>refs/grilling-protocol.md</code> <code>## 視覚表現レパートリー</code></a> 参照。</p>
+</aside>
 </section>
 
 <section id="s5-delta" class="normative">

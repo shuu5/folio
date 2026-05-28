@@ -123,6 +123,7 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 - [ ] 編集が `architecture/spec/` 配下に収まっているか (spec_path 外は path-boundary が deny)
 - [ ] Step 3 で `folio validate` が clean か
 - [ ] Step 4 で marker を削除したか
+- [ ] domain の構造を反映する **HTML 視覚要素** (mermaid stateDiagram / sequenceDiagram / flowchart / classDiagram / erDiagram、 `<table>` / `<details>` / `<dl>` 等) を selective に採用したか (canonical list は [rules.html §4.5](../../architecture/spec/rules.html#s4-5-visual)、 grill 時の声かけは [refs/grilling-protocol.md `## 視覚表現レパートリー`](./refs/grilling-protocol.md))。 plain text に止まらず folio の HTML 表現メリットを活用する。
 
 ### stale marker の cleanup
 
