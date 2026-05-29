@@ -1,0 +1,19 @@
+schema_version: "0.1"
+req_id: "REQ-VER-017"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  正しい xref (resolvable href + 現 essence に一致する data-tooltip) を持つ opt-in fixture corpus に対し
+  folio validate が xref 4 gate すべて clean (resolve / uniqueness / tooltip-consistency = OK、
+  completeness = opt-in doc あり OK) で exit 0 + clean report を出すことを実証する
+  (ADR-0034 §2.6、 REQ-VER-017、 xref-validate-violations.yaml = violation 側の対)。
+  fixture sample は folio fix で canonical wrap 済 (3 xref: P-5 / REQ-VER-001 / ADR-0033)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/017) ---
+command: ["validate", "--root", "tests/fixtures/xref-validate-clean"]
+capture: "stdout"                                       # validate の report を stdout 捕捉
+compare: "text"                                         # plain text byte-exact 比較
+golden: "baselines/reference/xref-validate-clean.golden.txt"
+
+expect:
+  exit_code: 0                                          # clean (xref 4 gate すべて pass)

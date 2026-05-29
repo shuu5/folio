@@ -1,0 +1,19 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
+root: tests/fixtures/xref-validate-violations
+files checked: 4 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [FAIL] xref-resolve
+  [OK] xref-uniqueness
+  [FAIL] xref-tooltip-consistency
+  [FAIL] xref-completeness
+  [OK] ears-coverage
+
+violations (3):
+  spec/broken.html [xref-broken] class=xref -> spec/verification.html#req-ver-999 (xref anchor id not found in target)
+  spec/orphan.html [xref-orphan-mention] P-5 prose で言及されるが resolvable xref が無い (completeness、 fix で wrap)
+  spec/stale.html [xref-stale-tooltip] REQ-VER-001 data-tooltip drifted from current essence (fix で再生成)

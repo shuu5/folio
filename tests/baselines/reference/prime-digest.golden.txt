@@ -166,3 +166,70 @@
 - title: folio Phase X4 分解 + 着手計画
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
+
+# object-graph index — 64 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
+ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
+ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
+ADR-0003 [decision] decisions/ADR-0003-plugin-architecture.html
+ADR-0004 [decision] decisions/ADR-0004-jsonld-lint-mechanism.html
+ADR-0006 [decision] decisions/ADR-0006-caller-marker-hook.html
+ADR-0007 [decision] decisions/ADR-0007-context-injection.html
+ADR-0013 [decision] decisions/ADR-0013-verification-framework.html
+ADR-0015 [decision] decisions/ADR-0015-sandbox-vs-experiment-verified.html
+ADR-0017 [decision] decisions/ADR-0017-unit-integration-boundary.html
+ADR-0018 [decision] decisions/ADR-0018-cli-golden-harness.html
+ADR-0019 [decision] decisions/ADR-0019-path-boundary-pragmatic.html
+ADR-0020 [decision] decisions/ADR-0020-validate-scope.html
+ADR-0021 [decision] decisions/ADR-0021-constitution-x4-amendment.html
+ADR-0022 [decision] decisions/ADR-0022-x4-0-canonical-layout.html
+ADR-0023 [decision] decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html
+ADR-0024 [decision] decisions/ADR-0024-folio-init-scope.html
+ADR-0025 [decision] decisions/ADR-0025-folio-fix-bidirectional.html
+ADR-0026 [decision] decisions/ADR-0026-test-placement-model.html
+ADR-0027 [decision] decisions/ADR-0027-x4-d-architect-skill-review-agents.html
+ADR-0028 [decision] decisions/ADR-0028-prose-gate-mechanization.html
+ADR-0029 [decision] decisions/ADR-0029-phase-f-agent-set.html
+ADR-0030 [decision] decisions/ADR-0030-v1-stability-criteria.html
+ADR-0031 [decision] decisions/ADR-0031-mattpocock-authoring-absorption.html
+ADR-0032 [decision] decisions/ADR-0032-v1-goal-refinement-defer.html
+ADR-0033 [decision] decisions/ADR-0033-dual-audience-hub.html
+ADR-0034 [decision] decisions/ADR-0034-object-term-xref-system.html
+P-1 [principle] spec/constitution.html#p-1
+P-10 [principle] spec/constitution.html#p-10
+P-11 [principle] spec/constitution.html#p-11
+P-12 [principle] spec/constitution.html#p-12
+P-13 [principle] spec/constitution.html#p-13
+P-2 [principle] spec/constitution.html#p-2
+P-3 [principle] spec/constitution.html#p-3
+P-4 [principle] spec/constitution.html#p-4
+P-5 [principle] spec/constitution.html#p-5
+P-6 [principle] spec/constitution.html#p-6
+P-7 [principle] spec/constitution.html#p-7
+P-8 [principle] spec/constitution.html#p-8
+P-9 [principle] spec/constitution.html#p-9
+REQ-REL-001 [requirement] spec/relations.html#req-rel-001
+REQ-REL-002 [requirement] spec/relations.html#req-rel-002
+REQ-REL-003 [requirement] spec/relations.html#req-rel-003
+REQ-REL-004 [requirement] spec/relations.html#req-rel-004
+REQ-VER-001 [requirement] spec/verification.html#req-ver-001
+REQ-VER-002 [requirement] spec/verification.html#req-ver-002
+REQ-VER-003 [requirement] spec/verification.html#req-ver-003
+REQ-VER-004 [requirement] spec/verification.html#req-ver-004
+REQ-VER-006 [requirement] spec/verification.html#req-ver-006
+REQ-VER-007 [requirement] spec/verification.html#req-ver-007
+REQ-VER-008 [requirement] spec/verification.html#req-ver-008
+REQ-VER-009 [requirement] spec/verification.html#req-ver-009
+REQ-VER-010 [requirement] spec/verification.html#req-ver-010
+REQ-VER-011 [requirement] spec/verification.html#req-ver-011
+REQ-VER-012 [requirement] spec/verification.html#req-ver-012
+REQ-VER-013 [requirement] spec/verification.html#req-ver-013
+REQ-VER-014 [requirement] spec/verification.html#req-ver-014
+REQ-VER-015 [requirement] spec/verification.html#req-ver-015
+REQ-VER-016 [requirement] spec/verification.html#req-ver-016
+REQ-VER-017 [requirement] spec/verification.html#req-ver-017
+REQ-VER-018 [requirement] spec/verification.html#req-ver-018
+REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
+REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
+REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
+REQ-XREF-004 [requirement] spec/rules.html#req-xref-004

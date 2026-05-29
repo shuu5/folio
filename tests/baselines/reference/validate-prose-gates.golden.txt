@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience (ADR-0020/0025/0028/0033)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
 root: tests/fixtures/validate-prose-gates
 files checked: 4 · relations checked: 0
   [OK] internal link-integrity
@@ -7,6 +7,10 @@ files checked: 4 · relations checked: 0
   [FAIL] vocabulary
   [FAIL] delta-marker
   [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
   [WARN] ears-coverage
 
 warnings (2):

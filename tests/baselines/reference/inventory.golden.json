@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-29T16:00:15Z",
+  "generatedAt": "2026-05-29T17:32:17Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -922,5 +922,394 @@
         ]
       }
     }
-  ]
+  ],
+  "objectGraph": {
+    "nodes": [
+      {
+        "id": "ADR-0001",
+        "class": "decision",
+        "ssot": "decisions/ADR-0001-architecture-rules-split.html",
+        "essence": "folio v0.4.1-draft → v0.4.2-draft (PATCH bump)"
+      },
+      {
+        "id": "ADR-0002",
+        "class": "decision",
+        "ssot": "decisions/ADR-0002-scratch-layout.html",
+        "essence": "folio v0.4.2-draft"
+      },
+      {
+        "id": "ADR-0003",
+        "class": "decision",
+        "ssot": "decisions/ADR-0003-plugin-architecture.html",
+        "essence": "folio v0.4.2-draft"
+      },
+      {
+        "id": "ADR-0004",
+        "class": "decision",
+        "ssot": "decisions/ADR-0004-jsonld-lint-mechanism.html",
+        "essence": "retrospective (実装 + e2e 検証済)"
+      },
+      {
+        "id": "ADR-0006",
+        "class": "decision",
+        "ssot": "decisions/ADR-0006-caller-marker-hook.html",
+        "essence": "retrospective (実装 + e2e 検証済)"
+      },
+      {
+        "id": "ADR-0007",
+        "class": "decision",
+        "ssot": "decisions/ADR-0007-context-injection.html",
+        "essence": "forward (user 承認済、 実装は Track 2 spawn)"
+      },
+      {
+        "id": "ADR-0013",
+        "class": "decision",
+        "ssot": "decisions/ADR-0013-verification-framework.html",
+        "essence": "folio v0.4.2-draft"
+      },
+      {
+        "id": "ADR-0015",
+        "class": "decision",
+        "ssot": "decisions/ADR-0015-sandbox-vs-experiment-verified.html",
+        "essence": "folio v0.4.2-draft"
+      },
+      {
+        "id": "ADR-0017",
+        "class": "decision",
+        "ssot": "decisions/ADR-0017-unit-integration-boundary.html",
+        "essence": "retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)"
+      },
+      {
+        "id": "ADR-0018",
+        "class": "decision",
+        "ssot": "decisions/ADR-0018-cli-golden-harness.html",
+        "essence": "retrospective (Track 1 実装 + GREEN 検証済)"
+      },
+      {
+        "id": "ADR-0019",
+        "class": "decision",
+        "ssot": "decisions/ADR-0019-path-boundary-pragmatic.html",
+        "essence": "retrospective (実装 + e2e 検証済)"
+      },
+      {
+        "id": "ADR-0020",
+        "class": "decision",
+        "ssot": "decisions/ADR-0020-validate-scope.html",
+        "essence": "forward (Track 3、 user 承認済、 実装は spawn)"
+      },
+      {
+        "id": "ADR-0021",
+        "class": "decision",
+        "ssot": "decisions/ADR-0021-constitution-x4-amendment.html",
+        "essence": "forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)"
+      },
+      {
+        "id": "ADR-0022",
+        "class": "decision",
+        "ssot": "decisions/ADR-0022-x4-0-canonical-layout.html",
+        "essence": "forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)"
+      },
+      {
+        "id": "ADR-0023",
+        "class": "decision",
+        "ssot": "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+        "essence": "forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)"
+      },
+      {
+        "id": "ADR-0024",
+        "class": "decision",
+        "ssot": "decisions/ADR-0024-folio-init-scope.html",
+        "essence": "forward (X4-A、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)"
+      },
+      {
+        "id": "ADR-0025",
+        "class": "decision",
+        "ssot": "decisions/ADR-0025-folio-fix-bidirectional.html",
+        "essence": "forward (X4-B、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)"
+      },
+      {
+        "id": "ADR-0026",
+        "class": "decision",
+        "ssot": "decisions/ADR-0026-test-placement-model.html",
+        "essence": "forward (X4-F 是正、 user 承認済 (AskUq)、 実装は PARENT 一括)"
+      },
+      {
+        "id": "ADR-0027",
+        "class": "decision",
+        "ssot": "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+        "essence": "forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)"
+      },
+      {
+        "id": "ADR-0028",
+        "class": "decision",
+        "ssot": "decisions/ADR-0028-prose-gate-mechanization.html",
+        "essence": "forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実装は本 ADR 承認後)"
+      },
+      {
+        "id": "ADR-0029",
+        "class": "decision",
+        "ssot": "decisions/ADR-0029-phase-f-agent-set.html",
+        "essence": "forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実 amend は WS2)"
+      },
+      {
+        "id": "ADR-0030",
+        "class": "decision",
+        "ssot": "decisions/ADR-0030-v1-stability-criteria.html",
+        "essence": "accepted (user 承認済 2026-05-27)。 §2.2 bump は criterion D (WS3 / 実 consumer adoption) PASS 後 = WS5"
+      },
+      {
+        "id": "ADR-0031",
+        "class": "decision",
+        "ssot": "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+        "essence": "accepted (user 承認済 2026-05-27)。 実装は v1.x ("
+      },
+      {
+        "id": "ADR-0032",
+        "class": "decision",
+        "ssot": "decisions/ADR-0032-v1-goal-refinement-defer.html",
+        "essence": "accepted (user 承認済 2026-05-27)。"
+      },
+      {
+        "id": "ADR-0033",
+        "class": "decision",
+        "ssot": "decisions/ADR-0033-dual-audience-hub.html",
+        "essence": "dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。"
+      },
+      {
+        "id": "ADR-0034",
+        "class": "decision",
+        "ssot": "decisions/ADR-0034-object-term-xref-system.html",
+        "essence": "architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。"
+      },
+      {
+        "id": "P-1",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-1",
+        "essence": "spec は未来理想の anchor である"
+      },
+      {
+        "id": "P-10",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-10",
+        "essence": "Constitution 自身への変更前 user 確認"
+      },
+      {
+        "id": "P-11",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-11",
+        "essence": "design-intent 文書に HOW を書かない"
+      },
+      {
+        "id": "P-12",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-12",
+        "essence": "Layer 0 = rules + plugin harness 一体配布"
+      },
+      {
+        "id": "P-13",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-13",
+        "essence": "Verification &amp; Traceability"
+      },
+      {
+        "id": "P-2",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-2",
+        "essence": "format は HTML + common.css のみ"
+      },
+      {
+        "id": "P-3",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-3",
+        "essence": "WHAT-only"
+      },
+      {
+        "id": "P-4",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-4",
+        "essence": "Declarative form"
+      },
+      {
+        "id": "P-5",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-5",
+        "essence": "1 entity = 1 canonical name"
+      },
+      {
+        "id": "P-6",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-6",
+        "essence": "Link integrity"
+      },
+      {
+        "id": "P-7",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-7",
+        "essence": "Content domain exclusivity"
+      },
+      {
+        "id": "P-8",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-8",
+        "essence": "AI dialog accountability"
+      },
+      {
+        "id": "P-9",
+        "class": "principle",
+        "ssot": "spec/constitution.html#p-9",
+        "essence": "Layer 1 consumer 固有 config 変更前 user 確認"
+      },
+      {
+        "id": "REQ-REL-001",
+        "class": "requirement",
+        "ssot": "spec/relations.html#req-rel-001",
+        "essence": "各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を &lt;head&gt; JSON-LD に宣言する (関係が存在する場合)。"
+      },
+      {
+        "id": "REQ-REL-002",
+        "class": "requirement",
+        "ssot": "spec/relations.html#req-rel-002",
+        "essence": "Phase X3+ tooling が active で forward relation が宣言されると、 対応する reverse relation (dc:isReplacedBy 等) を target spec に auto-materialize する。"
+      },
+      {
+        "id": "REQ-REL-003",
+        "class": "requirement",
+        "ssot": "spec/relations.html#req-rel-003",
+        "essence": "Phase X2 (現在) では reverse relation は X3 tooling 着地まで手動で記述する (SHOULD)。"
+      },
+      {
+        "id": "REQ-REL-004",
+        "class": "requirement",
+        "ssot": "spec/relations.html#req-rel-004",
+        "essence": "forward relation が対応 reverse を欠くと、 link-check tooling が broken-reverse violation を報告する (Phase X3+)。"
+      },
+      {
+        "id": "REQ-VER-001",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-001",
+        "essence": "検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。"
+      },
+      {
+        "id": "REQ-VER-002",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-002",
+        "essence": "各 scenario は canonical な req_id を 1 つ参照する (rules §10 / relations §5.3、 または verification 固有の REQ-VER-*)。"
+      },
+      {
+        "id": "REQ-VER-003",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-003",
+        "essence": "scenario の assertion 主軸は exit_code とする。"
+      },
+      {
+        "id": "REQ-VER-004",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-004",
+        "essence": "golden baseline は TypeScript compiler 流 2-dir model (reference/ = VCS golden / local/ = 実行生成・gitignore)。 更新は明示的 accept workflow (--accept) を経る。"
+      },
+      {
+        "id": "REQ-VER-006",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-006",
+        "essence": "scenario assertion は permissionDecision JSON を主軸にすべきでない (upstream bug 既知ゆえ、 §3.3 の exit_code 中心と対)。"
+      },
+      {
+        "id": "REQ-VER-007",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-007",
+        "essence": "spec_path 外への spec (.html) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。"
+      },
+      {
+        "id": "REQ-VER-008",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-008",
+        "essence": "cluster の README.html index に未掲載の新規 .html 作成は、 PostToolUse README-index hook が notify する (exit 2、 file は作成済の staleness 通知)。"
+      },
+      {
+        "id": "REQ-VER-009",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-009",
+        "essence": "live-load した session で plugin を統合検証するとき、 agent が e2e runbook を実 Edit/Write で歩いて live hook を発火させ、 観察を golden baseline に記録する。 一次 assertion = file 作成有無 (deny ⇒ 不在 / notify ⇒ 存在)。"
+      },
+      {
+        "id": "REQ-VER-010",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-010",
+        "essence": "folio inventory は relations §4.1 schema 準拠の inventory.json を生成する (§4.4.1 の dir を走査、 cli-golden diff で検証、 非決定的 generatedAt は除外)。"
+      },
+      {
+        "id": "REQ-VER-011",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-011",
+        "essence": "kind: cli-golden の scenario は、 harness が bin/folio を repo root で実行し output と golden を jq 正規化して byte-exact 比較 + exit_code 一致を assert する (CLI 検証の SSoT、 hook 経路と別)。"
+      },
+      {
+        "id": "REQ-VER-012",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-012",
+        "essence": "folio prime は Tier 1 inventory digest (per-spec @id/title/summary/doc-type/status) を stdout に出力する (inventory.json stale なら自動再生成、 実 context 注入は SessionStart e2e で検証)。"
+      },
+      {
+        "id": "REQ-VER-013",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-013",
+        "essence": "folio validate は spec 集合を走査し (a) internal link-integrity + (b) jsonld structural の 2 gate を検査する (exit 0=clean / 1=violation / 2=tool error、 --root で検査 root override 可、 prose gate は試作 scope 外)。"
+      },
+      {
+        "id": "REQ-VER-014",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-014",
+        "essence": "folio init は canonical Layer 1 consumer layout (構造のみ) を scaffold する — architecture/{spec,decisions,research}/ + 各 README.html + folio.config.yaml。 既存 file は preserve (idempotent)、 constitution/overview 本文は seed せず lazy-materialize、 生成 skeleton は folio validate clean。"
+      },
+      {
+        "id": "REQ-VER-015",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-015",
+        "essence": "folio fix は各 forward relation に対応する reverse relation を target に materialize する (idempotent、 exit 0)。 併せて folio validate は第 3 gate broken-reverse を持ち、 fix 適用後は 3-gate clean になる (detect↔remediate 対)。"
+      },
+      {
+        "id": "REQ-VER-016",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-016",
+        "essence": "folio-architect SKILL の Phase F は review agent (spec-review-{ears,vocabulary,ssot}) を並列 spawn し structured findings を集約する。 検証は structural (agent .md frontmatter + scoped name resolvable) + e2e (seeded violation の flag 観察) の 2 経路。"
+      },
+      {
+        "id": "REQ-VER-017",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-017",
+        "essence": "folio validate は object xref の 4 gate を追加検査する: resolve-integrity / uniqueness / tooltip-consistency (universal) + completeness (opt-in、 orphan-mention)。 正しい xref を持つ opt-in fixture は exit 0、 broken-xref / stale-tooltip / orphan-mention は exit 1 + report (rules §9 / ADR-0034 §2.6)。"
+      },
+      {
+        "id": "REQ-VER-018",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-018",
+        "essence": "folio fix は opt-in doc の prose 内 canonical token 初出を &lt;a class=\"xref\" href data-tooltip&gt; に wrap する (option F materialize、 href + essence は §9.1/§9.2 contract、 idempotent)。 RED (orphan-mention) → fix → GREEN (completeness clean)。"
+      },
+      {
+        "id": "REQ-XREF-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-xref-001",
+        "essence": "defined-object への inline 参照は &lt;a class=\"xref\" href data-tooltip&gt; 形を用い、 href は §9.1 registry に従い object の SSoT 定義 site に解決する。"
+      },
+      {
+        "id": "REQ-XREF-002",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-xref-002",
+        "essence": "xref-completeness に opt-in した spec (folio-xref-completeness=enabled) は、 prose の canonical token 言及ごとに resolvable xref を最低 1 つ持つ (orphan-mention 禁止、 conditional-normative)。"
+      },
+      {
+        "id": "REQ-XREF-003",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-xref-003",
+        "essence": "各 xref は click で定義へ飛ぶ baseline link を保ち、 data-tooltip に定義 essence (plain-text、 §9.2 contract) を持つ (no-JS CSS-only tooltip)。"
+      },
+      {
+        "id": "REQ-XREF-004",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-xref-004",
+        "essence": "各 canonical object ID は architecture 全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。"
+      }
+    ],
+    "edges": []
+  }
 }

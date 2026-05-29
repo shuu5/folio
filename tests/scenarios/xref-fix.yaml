@@ -1,0 +1,22 @@
+schema_version: "0.1"
+req_id: "REQ-VER-018"
+ears_pattern: "event-driven"
+kind: "cli-fix"
+description: |
+  folio fix が opt-in doc (folio-xref-completeness=enabled) の prose 内 canonical token 初出を
+  <a class="xref" href data-tooltip> に wrap する (ADR-0034 §2.5 option F materialize、 REQ-VER-018)。
+  cli-fix harness で RED→GREEN+idempotent を behavioral 検証する (golden 不要、 HTML byte-golden は脆く
+  post-fix validate clean が wrap 正当性の proxy):
+    (a) pre-fix  validate が orphan-mention (completeness gate) で RED (exit≠0) = 修正対象あり
+    (b) fix      が exit 0 で bare token (P-5 / REQ-VER-001 / ADR-0033) を xref wrap
+    (c) post-fix validate clean (exit 0) = completeness 充足 = wrap + tooltip materialize 成功
+    (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (既存 xref を持つ token は skip = no-op)
+  fixture = opt-in sample + SSoT stub (constitution P-5 / verification REQ-VER-001 spec-row / ADR-0033)。
+  非 opt-in doc では fix は no-op = real corpus 不変 (keystone)。 scope は ADR-0034 §2.5 で trace。
+
+# --- cli-fix scenario (fixture tree を temp copy し RED→fix→GREEN→idempotent、 runner.sh run_cli_fix) ---
+fixture: "fixtures/xref-fix"            # SCRIPT_DIR (tests) 相対の fixture tree
+command: ["fix"]                        # bin/folio に渡す引数列 (--root <tmp> は harness が付与)
+
+expect:
+  exit_code: 0                          # happy path (RED → fix 0 → GREEN → idempotent)

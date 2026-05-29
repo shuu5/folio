@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-VER-017"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  xref 4 gate の violation を seed した fixture に対し folio validate が exit 1 + report を出すことを実証する
+  (ADR-0034 §2.6、 REQ-VER-017、 xref-validate-clean.yaml = clean 側の violation-detection 対)。 3 違反 =
+  1 fixture file 1 type:
+    - orphan-mention (completeness): orphan.html が opt-in だが P-5 を bare 言及 (xref 0)
+    - broken-xref (resolve)        : broken.html の xref が存在しない anchor (#req-ver-999) を指す
+    - stale-tooltip (consistency)  : stale.html の data-tooltip が現 essence と drift (#req-ver-001)
+  resolve / tooltip-consistency は universal (opt-in 不要)、 completeness は opt-in doc のみ。 uniqueness は
+  重複なしで OK。 検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/017) ---
+command: ["validate", "--root", "tests/fixtures/xref-validate-violations"]
+capture: "stdout"                                       # validate の report を stdout 捕捉
+compare: "text"                                         # plain text byte-exact 比較
+golden: "baselines/reference/xref-validate-violations.golden.txt"
+
+setup:
+  fixtures:
+    # 実体は tests/fixtures/xref-validate-violations/spec/ に VCS 管理 (Bash heredoc 作成、 Write tool 非経由)。
+    - "xref-validate-violations/spec/constitution.html"  # P-5 resolve/essence ターゲット (FolioConstitution = scan 除外)
+    - "xref-validate-violations/spec/verification.html"  # REQ-VER-001 resolve/essence ターゲット (spec-row)
+    - "xref-validate-violations/spec/orphan.html"        # orphan-mention (opt-in, P-5 bare)
+    - "xref-validate-violations/spec/broken.html"        # broken-xref (resolve fail, #req-ver-999)
+    - "xref-validate-violations/spec/stale.html"         # stale-tooltip (data-tooltip drift)
+
+expect:
+  exit_code: 1                                          # violation 検出

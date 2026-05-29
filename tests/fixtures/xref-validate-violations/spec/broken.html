@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<title>xref violation — broken resolve</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./broken.html", "@type": "schema:TechArticle", "dc:title": "broken fixture" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. broken</h2>
+<p>存在しない id を指す xref: <a class="xref" href="./verification.html#req-ver-999" data-tooltip="存在しない">REQ-VER-999</a> (resolve violation)。</p>
+</section>
+</body>
+</html>

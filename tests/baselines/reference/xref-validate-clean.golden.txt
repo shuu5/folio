@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
-root: architecture
-files checked: 33 · relations checked: 292
+root: tests/fixtures/xref-validate-clean
+files checked: 3 · relations checked: 0
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -10,7 +10,7 @@ files checked: 33 · relations checked: 292
   [OK] xref-resolve
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
-  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [OK] xref-completeness
   [OK] ears-coverage
 
 clean: 0 violations
