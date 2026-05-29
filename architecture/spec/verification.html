@@ -64,7 +64,28 @@
   <div class="meta">v0.5.0-draft &middot; status: draft &middot; sandbox verification framework spec (機能単位 use case verification の SSoT)</div>
 </header>
 
-<aside class="informative">
+<dl class="doc-meta">
+  <div><dt>Status</dt><dd><span class="badge badge--draft">draft</span></dd></div>
+  <div><dt>Doc-Type</dt><dd>spec</dd></div>
+  <div><dt>Version</dt><dd>0.5.0-draft</dd></div>
+  <div><dt>Layer</dt><dd>core (Layer 0)</dd></div>
+  <div><dt>Stakeholders</dt><dd>Developer · AI Agent · External Reviewer</dd></div>
+  <div><dt>Depends-on</dt><dd><a href="rules.html">rules</a> · <a href="relations.html">relations</a></dd></div>
+</dl>
+
+<nav class="toc">
+  <ul>
+    <li><a href="#s0-reader-guide">§0 Reader's Guide</a></li>
+    <li><a href="#s1-contract">§1 Verification Contract Definition</a></li>
+    <li><a href="#s2-scope">§2 Verification Scope</a></li>
+    <li><a href="#s3-ears">§3 EARS Requirements (REQ-VER-001〜016)</a></li>
+    <li><a href="#s4-implementation">§4 Implementation Phase</a></li>
+    <li><a href="#s5-open-questions">§5 Open Questions / ADR</a></li>
+    <li><a href="#s6-references">§6 References</a></li>
+  </ul>
+</nav>
+
+<aside class="callout callout--note">
 <p>本文書は folio framework の <strong>verification contract 定義</strong>。 folio plugin (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> minimal scope) を sandbox で実機検証する枠組みを集約 SSoT 化する。 具体的検証実体は <code>tests/</code> 配下に隔離 (constitution <a href="./constitution.html#s2-principles">P-11 (HOW 禁止)</a> 整合)。 「verification」 は本 contract の<strong>概念名</strong> (P-13 / <code>folio validate</code> / 本 spec) であり、 実体 dir 名 <code>tests/</code> (folio の bash stack 慣習) とは独立する (概念↔dir 分離、 <a href="../decisions/ADR-0026-test-placement-model.html">ADR-0026</a>)。</p>
 <p>本 spec は <a href="../research/plugin-sandbox-verification-research.html">plugin-sandbox-verification-research.html</a> (87 sources、 critique PASS) の §7 推奨設計を normative に昇格させたもの。 採用根拠は <a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a>、 twill experiment-verified との境界は <a href="../decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015</a>。</p>
 </aside>
@@ -454,8 +475,8 @@ expect:
   </tbody>
 </table>
 
-<aside class="informative">
-<p><strong>具体的実装例 (informative)</strong>: 各 Step の代表的 implementation (echo + pipe 構文、 git worktree path、 Docker Compose + Squid proxy 等) は <a href="../research/plugin-sandbox-verification-research.html#s6-3-3step">research §6.3</a> を参照。 これらは informative reference (HOW)、 spec MUST ではない (P-11 整合、 具体 binding は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離)。</p>
+<aside class="callout callout--example">
+<p>各 Step の代表的 implementation (echo + pipe 構文、 git worktree path、 Docker Compose + Squid proxy 等) は <a href="../research/plugin-sandbox-verification-research.html#s6-3-3step">research §6.3</a> を参照。 これらは informative reference (HOW)、 spec MUST ではない (P-11 整合、 具体 binding は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離)。</p>
 </aside>
 
 <p class="ears" data-ears-pattern="ubiquitous">
@@ -508,7 +529,7 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
 <p>「完成形 vs 試作段階」 の対比は本 §4.2 に集約する MUST (SSoT)。 <a href="folio-self-spec.html#s7-2-specialists">folio-self-spec.html §7.2</a> は完成形 declarative description として保持、 試作段階の現状は <a href="folio-self-spec.html#s7-6-phase-x3-minimal">§7.6</a> に局所化する。 本 §4.2 は両者を verification flow の文脈で対比する。</p>
 </aside>
 
-<aside class="informative">
+<aside class="callout callout--important">
 <p><strong>X5-γ v1.0 reconcile (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>)</strong>: 上表「完成形」 列は long-term vision。 v1.0 の実体は: <strong>検証対象</strong> = Phase F <strong>4 review agent</strong> (ears/vocabulary/ssot/temporal、 <a href="folio-self-spec.html#s7-2-specialists">§7.2 disposition aside</a>)。 <strong>runner</strong> = 独自 bash runner (<code>tests/runner.sh</code>) を維持 — Inspect AI / Promptfoo 移行は現 folio 規模では over-engineering ゆえ <strong>post-1.0 / optional</strong> に reconcile。 <strong>CI 統合</strong> = GitHub Actions で <code>folio validate</code> + <code>tests/runner.sh</code> を PR ごと auto-run する minimal CI (全 scenario merge gating の軽量版、 WS4)。</p>
 </aside>
 </section>
