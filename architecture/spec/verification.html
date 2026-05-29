@@ -234,89 +234,34 @@ flowchart TB
 <figcaption>図 1. folio verification model。 scenario YAML を <code>runner.sh</code> が hook mock (<code>kind:hook</code>) / CLI golden (<code>kind:cli-golden</code>) で実行し、 <code>exit_code</code> / file-state / golden diff で assert する。 各 assertion の規範は §3.3 / §3.4 / REQ-VER-009/011。</figcaption>
 </figure>
 
-<div class="req-dashboard">
-  <div class="req-dashboard__group">
-    <h4>format &amp; assertion (§3.1–3.5)</h4>
-    <div class="req-dashboard__chips">
-      <a class="req-chip req-chip--ubiquitous" href="#req-ver-001">VER-001</a>
-      <a class="req-chip req-chip--ubiquitous" href="#req-ver-002">VER-002</a>
-      <a class="req-chip req-chip--ubiquitous" href="#req-ver-003">VER-003</a>
-      <span class="req-chip req-chip--ubiquitous">VER-004</span>
-      <span class="req-chip req-chip--ubiquitous">VER-005</span>
-      <span class="req-chip req-chip--ubiquitous">VER-006</span>
-    </div>
-  </div>
-  <div class="req-dashboard__group">
-    <h4>hooks (§3.6)</h4>
-    <div class="req-dashboard__chips">
-      <a class="req-chip req-chip--unwanted" href="#req-ver-007">VER-007</a>
-      <span class="req-chip req-chip--unwanted">VER-008</span>
-      <a class="req-chip req-chip--event" href="#req-ver-009">VER-009</a>
-    </div>
-  </div>
-  <div class="req-dashboard__group">
-    <h4>CLI subcommands (§3.6)</h4>
-    <div class="req-dashboard__chips">
-      <span class="req-chip req-chip--event">VER-010</span>
-      <span class="req-chip req-chip--event">VER-011</span>
-      <span class="req-chip req-chip--event">VER-012</span>
-      <span class="req-chip req-chip--event">VER-013</span>
-      <span class="req-chip req-chip--event">VER-014</span>
-      <span class="req-chip req-chip--event">VER-015</span>
-    </div>
-  </div>
-  <div class="req-dashboard__group">
-    <h4>Phase F (§3.6)</h4>
-    <div class="req-dashboard__chips">
-      <span class="req-chip req-chip--event">VER-016</span>
-    </div>
-  </div>
-  <div class="req-dashboard__legend">
-    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
-    <span class="req__ears req__ears--unwanted">Unwanted</span>
-    <span class="req__ears req__ears--event">Event-Driven</span>
-  </div>
-</div>
+<aside class="informative">
+<p>以下、 各 REQ-VER-* は <a href="rules.html#s7-2-canonical-pattern">compact 1 行 (<code>.spec-row</code>)</a> で提示する: <strong>badge + EARS pattern + essence (human 要約)</strong> が常時可視、 行をクリックすると machine canonical normative (EARS 文) が開く (最小読量で「何があるか」を一望)。 全 REQ の derives / scenario / verified 被覆は <a href="#s3-7-coverage-rtm">§3.7 coverage RTM</a> に一覧し、 <strong>scenario 列が空 = link は valid だが未検証 = <code>folio validate</code> が捕らない gap</strong> を可視化する。</p>
+</aside>
 
 <h3 id="s3-1-scenario-format">§3.1 scenario format (YAML、 1 REQ = 1 scenario)</h3>
 
-<section class="req" id="req-ver-001" data-audience="human">
-  <div class="req__card">
-    <span class="badge badge--req">REQ-VER-001</span>
-    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
-  </div>
-  <p class="req__essence">検証 scenario は <code>tests/scenarios/</code> 配下の YAML ファイル (構造は §3.2 で定義)。</p>
-  <details class="req__machine" data-audience="machine">
-    <summary>normative (machine)</summary>
-    <div class="req__normative">
-      <p class="ears" data-ears-pattern="ubiquitous">
-        <span class="ears-id">REQ-VER-001</span>:
-        Each verification scenario file <span class="ears-shall">SHALL</span> be a YAML file
-        placed under <code>tests/scenarios/</code> with the structure defined in §3.2.
-      </p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-001</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">検証 scenario は <code>tests/scenarios/</code> 配下の YAML ファイル (構造は §3.2 で定義)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-001</span>: Each verification scenario file <span class="ears-shall">SHALL</span> be a YAML file placed under <code>tests/scenarios/</code> with the structure defined in §3.2.</p>
     </div>
   </details>
-</section>
-
-<section class="req" id="req-ver-002" data-audience="human">
-  <div class="req__card">
-    <span class="badge badge--req">REQ-VER-002</span>
-    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
-  </div>
-  <p class="req__essence">各 scenario は canonical な <code>req_id</code> を 1 つ参照する (<a href="rules.html#s10-mandatory">rules §10</a> / <a href="relations.html#s5-3-ears">relations §5.3</a>、 または verification 固有の REQ-VER-*)。</p>
-  <details class="req__machine" data-audience="machine">
-    <summary>normative (machine)</summary>
-    <div class="req__normative">
-      <p class="ears" data-ears-pattern="ubiquitous">
-        <span class="ears-id">REQ-VER-002</span>:
-        Each scenario <span class="ears-shall">SHALL</span> reference one canonical
-        <code>req_id</code> from <a href="rules.html#s10-mandatory">rules.html §10</a>
-        (REQ-CM-* / REQ-CI-*) or <a href="relations.html#s5-3-ears">relations.html §5.3</a>
-        (REQ-REL-*), or be a verification-specific REQ-VER-* defined in this §3.
-      </p>
+  <details class="spec-row" id="req-ver-002" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-002</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">各 scenario は canonical な <code>req_id</code> を 1 つ参照する (<a href="rules.html#s10-mandatory">rules §10</a> / <a href="relations.html#s5-3-ears">relations §5.3</a>、 または verification 固有の REQ-VER-*)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-002</span>: Each scenario <span class="ears-shall">SHALL</span> reference one canonical <code>req_id</code> from <a href="rules.html#s10-mandatory">rules.html §10</a> (REQ-CM-* / REQ-CI-*) or <a href="relations.html#s5-3-ears">relations.html §5.3</a> (REQ-REL-*), or be a verification-specific REQ-VER-* defined in this §3.</p>
     </div>
   </details>
-</section>
+</div>
 
 <h3 id="s3-2-yaml-schema">§3.2 YAML schema</h3>
 
@@ -374,41 +319,43 @@ expect:
 
 <h3 id="s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</h3>
 
-<section class="req" id="req-ver-003" data-audience="human">
-  <div class="req__card">
-    <span class="badge badge--req">REQ-VER-003</span>
-    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
-  </div>
-  <p class="req__essence">scenario の assertion 主軸は <code>exit_code</code> とする。</p>
-  <details class="req__machine" data-audience="machine">
-    <summary>normative (machine)</summary>
-    <div class="req__normative">
-      <p class="ears" data-ears-pattern="ubiquitous">
-        <span class="ears-id">REQ-VER-003</span>:
-        Each scenario <code>expect</code> block <span class="ears-shall">SHALL</span>
-        specify <code>exit_code</code> as the primary assertion.
-      </p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-003" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-003</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">scenario の assertion 主軸は <code>exit_code</code> とする。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-003</span>: Each scenario <code>expect</code> block <span class="ears-shall">SHALL</span> specify <code>exit_code</code> as the primary assertion.</p>
     </div>
   </details>
-</section>
-
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-006</span>:
-  Scenario assertion <span class="ears-shall">SHOULD NOT</span> rely on
-  <code>permissionDecision</code> JSON output as primary, due to known upstream bugs
-  (Issue #37210 / #33106 / #39344 / #18312、 すべて Closed/not planned 状態
-   ―― 詳細は <a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>)。
-</p>
+  <details class="spec-row" id="req-ver-006" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-006</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">scenario assertion は <code>permissionDecision</code> JSON を主軸に<strong>すべきでない</strong> (upstream bug 既知ゆえ、 §3.3 の <code>exit_code</code> 中心と対)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-006</span>: Scenario assertion <span class="ears-shall">SHOULD NOT</span> rely on <code>permissionDecision</code> JSON output as primary, due to known upstream bugs (Issue #37210 / #33106 / #39344 / #18312、 すべて Closed/not planned 状態 ―― 詳細は <a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>)。</p>
+    </div>
+  </details>
+</div>
 
 <h3 id="s3-4-baseline">§3.4 golden baseline 管理</h3>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-004</span>:
-  baseline file <span class="ears-shall">SHALL</span> follow the TypeScript compiler 2-dir
-  model: <code>tests/baselines/reference/</code> (VCS 管理、 golden)
-  vs <code>tests/baselines/local/</code> (実行生成、 .gitignore)。
-  baseline 更新は明示的 accept workflow (例: <code>runner.sh --accept</code>) を経る MUST。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-004" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-004</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">golden baseline は TypeScript compiler 流 2-dir model (<code>reference/</code> = VCS golden / <code>local/</code> = 実行生成・gitignore)。 更新は明示的 accept workflow (<code>--accept</code>) を経る。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-004</span>: baseline file <span class="ears-shall">SHALL</span> follow the TypeScript compiler 2-dir model: <code>tests/baselines/reference/</code> (VCS 管理、 golden) vs <code>tests/baselines/local/</code> (実行生成、 .gitignore)。 baseline 更新は明示的 accept workflow (例: <code>runner.sh --accept</code>) を経る MUST。</p>
+    </div>
+  </details>
+</div>
 
 <h3 id="s3-5-ears-mapping">§3.5 EARS → Gherkin 1:1 mapping</h3>
 
@@ -431,173 +378,138 @@ expect:
 
 <p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file (REQ-VER-009 は <a href="../../tests/e2e/runbook.md">agent-driven runbook</a>) が SSoT 実装。</p>
 
-<section class="req" id="req-ver-007" data-audience="human">
-  <div class="req__card">
-    <span class="badge badge--req">REQ-VER-007</span>
-    <span class="req__ears req__ears--unwanted">Unwanted</span>
-  </div>
-  <p class="req__essence"><code>spec_path</code> 外への spec (<code>.html</code>) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。</p>
-  <details class="req__machine" data-audience="machine">
-    <summary>normative (machine)</summary>
-    <div class="req__normative">
-      <p class="ears" data-ears-pattern="unwanted">
-        <span class="ears-id">REQ-VER-007</span>:
-        IF a Write tool creates a <code>.html</code> file carrying
-        <code>&lt;meta name="folio-doc-type" content="spec"&gt;</code> outside the configured
-        <code>spec_path</code>, THEN the PreToolUse path-boundary hook
-        <span class="ears-shall">SHALL</span> deny (exit 2)。
-        scenario: <code>scenarios/path-boundary.yaml</code> (ADR-0003 §2.1 Option Pragmatic、
-        絶対 path 配下も第 2 branch <code>*"/$2"*</code> で gate)。
-      </p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-007" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-007</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence"><code>spec_path</code> 外への spec (<code>.html</code>) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-VER-007</span>: IF a Write tool creates a <code>.html</code> file carrying <code>&lt;meta name="folio-doc-type" content="spec"&gt;</code> outside the configured <code>spec_path</code>, THEN the PreToolUse path-boundary hook <span class="ears-shall">SHALL</span> deny (exit 2)。 scenario: <code>scenarios/path-boundary.yaml</code> (ADR-0003 §2.1 Option Pragmatic、 絶対 path 配下も第 2 branch <code>*"/$2"*</code> で gate)。</p>
     </div>
   </details>
-</section>
-
-<p class="ears" data-ears-pattern="unwanted">
-  <span class="ears-id">REQ-VER-008</span>:
-  IF a Write tool creates a <code>.html</code> file under a cluster directory that
-  contains a <code>README.html</code> index, and the new file is not listed in that
-  index, THEN the PostToolUse README-index hook <span class="ears-shall">SHALL</span>
-  notify (exit 2、 PostToolUse のため file は作成済)。
-  scenario: <code>scenarios/readme-index.yaml</code>。 これは check 型 staleness 通知で、
-  ADR-0003 §2.1「README update」の試作 slice。 ADR literal は「自動更新 (mutate)」だが
-  試作は check 型を採用 (divergence trace = specs/README.html §6.2)。
-</p>
-
-<section class="req" id="req-ver-009" data-audience="human">
-  <div class="req__card">
-    <span class="badge badge--req">REQ-VER-009</span>
-    <span class="req__ears req__ears--event">Event-Driven</span>
-  </div>
-  <p class="req__essence">live-load した session で plugin を統合検証するとき、 agent が <a href="../../tests/e2e/runbook.md">e2e runbook</a> を実 Edit/Write で歩いて live hook を発火させ、 観察を golden baseline に記録する。 一次 assertion = <strong>file 作成有無</strong> (deny ⇒ 不在 / notify ⇒ 存在)。</p>
-  <details class="req__machine" data-audience="machine">
-    <summary>normative (machine)</summary>
-    <div class="req__normative">
-      <p class="ears" data-ears-pattern="event-driven">
-        <span class="ears-id">REQ-VER-009</span>:
-        <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a
-        live-loaded session (§4.1 Step 2 worktree integration)</span>,
-        an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios
-        (<code>tests/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
-        so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario
-        observations as golden baselines under
-        <code>tests/e2e/baselines/reference/</code>。
-        primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、
-        PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない
-        (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、
-        exit code でなく file system state を一次 assertion とする。 実装 =
-        <a href="../../tests/e2e/README.html">tests/e2e/</a> (runbook + golden、
-        sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
-      </p>
+  <details class="spec-row" id="req-ver-008" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-008</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">cluster の <code>README.html</code> index に未掲載の新規 <code>.html</code> 作成は、 PostToolUse README-index hook が notify する (exit 2、 file は作成済の staleness 通知)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-VER-008</span>: IF a Write tool creates a <code>.html</code> file under a cluster directory that contains a <code>README.html</code> index, and the new file is not listed in that index, THEN the PostToolUse README-index hook <span class="ears-shall">SHALL</span> notify (exit 2、 PostToolUse のため file は作成済)。 scenario: <code>scenarios/readme-index.yaml</code>。 これは check 型 staleness 通知で、 ADR-0003 §2.1「README update」の試作 slice。 ADR literal は「自動更新 (mutate)」だが 試作は check 型を採用 (divergence trace = specs/README.html §6.2)。</p>
     </div>
   </details>
-</section>
+  <details class="spec-row" id="req-ver-009" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-009</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">live-load した session で plugin を統合検証するとき、 agent が <a href="../../tests/e2e/runbook.md">e2e runbook</a> を実 Edit/Write で歩いて live hook を発火させ、 観察を golden baseline に記録する。 一次 assertion = <strong>file 作成有無</strong> (deny ⇒ 不在 / notify ⇒ 存在)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-009</span>: <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a live-loaded session (§4.1 Step 2 worktree integration)</span>, an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios (<code>tests/e2e/runbook.md</code>) by issuing real Edit/Write tool calls so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario observations as golden baselines under <code>tests/e2e/baselines/reference/</code>。 primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、 PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、 exit code でなく file system state を一次 assertion とする。 実装 = <a href="../../tests/e2e/README.html">tests/e2e/</a> (runbook + golden、 sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-010" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-010</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio inventory</code> は <a href="relations.html#s4-1-structure">relations §4.1 schema</a> 準拠の <code>inventory.json</code> を生成する (§4.4.1 の dir を走査、 cli-golden diff で検証、 非決定的 <code>generatedAt</code> は除外)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-010</span>: <span class="ears-when">WHEN the <code>folio inventory</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> produce an <code>inventory.json</code> conforming to the <a href="relations.html#s4-1-structure">relations.html §4.1 schema</a> (required fields <code>$schema</code> / <code>generatedAt</code> / <code>folioVersion</code> / <code>specs[]</code>), scanning the directories defined in <a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a>。 conformance は §3.4 golden baseline との <code>kind: cli-golden</code> diff で検証する (非決定的 <code>generatedAt</code> は <code>normalize.exclude_paths</code> で除外)。 scenario: <code>scenarios/inventory-gen.yaml</code> (REQ-VER-011 harness が実行)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-011" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-011</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>kind: cli-golden</code> の scenario は、 harness が <code>bin/folio</code> を repo root で実行し output と golden を <code>jq</code> 正規化して byte-exact 比較 + <code>exit_code</code> 一致を assert する (CLI 検証の SSoT、 hook 経路と別)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-011</span>: <span class="ears-when">WHEN a scenario carries <code>kind: cli-golden</code></span>, the verification harness <span class="ears-shall">SHALL</span> (1) run <code>bin/folio</code> with the scenario <code>command</code> at repo root, (2) normalize both the produced <code>output_file</code> and the <code>golden</code> via <code>jq -S</code> with <code>normalize.exclude_paths</code> deleted, and (3) assert byte-exact equality of the normalized JSON plus <code>exit_code</code> match。 golden 更新は明示的 accept workflow (<code>--accept</code>、 §3.4 REQ-VER-004) を経る MUST。 これは hook scenario (<code>kind: hook</code>) の exit-code 中心 assertion (REQ-VER-003) とは 別の assertion 経路を成す (CLI subcommand 検証の SSoT、 <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> で trace)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-012" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-012</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio prime</code> は Tier 1 inventory digest (per-spec <code>@id</code>/<code>title</code>/<code>summary</code>/<code>doc-type</code>/<code>status</code>) を stdout に出力する (<code>inventory.json</code> stale なら自動再生成、 実 context 注入は SessionStart e2e で検証)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-012</span>: <span class="ears-when">WHEN the <code>folio prime</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> emit a Tier 1 inventory digest (per-spec <code>@id</code> / <code>title</code> / <code>summary</code> / <code>doc-type</code> / <code>status</code>、 <a href="relations.html#s4-2-tier">relations.html §4.2 Tier 1</a>) to stdout as agent-readable text, auto-regenerating <code>inventory.json</code> if missing or stale (<a href="../decisions/ADR-0007-context-injection.html">ADR-0007 §2.4</a>)。 conformance は §3.4 golden baseline との <code>kind: cli-golden</code> (<code>capture: stdout</code> + <code>compare: text</code>) diff で検証する。 scenario: <code>scenarios/prime-digest.yaml</code>。 SessionStart hook による実 context 注入 (ADR-0007 §2.1、 matcher 省略で全 source 発火) は e2e (REQ-VER-009 型) で検証 = <strong>SessionStart:startup 注入 PASS</strong> (fresh session で Tier 1 digest が context に注入されることを確認)。 PreCompact は ADR-0007 amend (2026-05-25) で除去 (stdout 非注入)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-013" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-013</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio validate</code> は spec 集合を走査し <strong>(a) internal link-integrity + (b) jsonld structural</strong> の 2 gate を検査する (exit 0=clean / 1=violation / 2=tool error、 <code>--root</code> で検査 root override 可、 prose gate は試作 scope 外)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-013</span>: <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> scan the spec set (<a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a> と同一 = <code>architecture/{spec,decisions,research}</code> の <code>&lt;head&gt;</code> JSON-LD <code>.html</code>) and check two gates: (a) <strong>internal link-integrity</strong> — each JSON-LD relation <code>@id</code> resolves to an existing target file, and any <code>#anchor</code> resolves to an existing <code>id</code> in that target (<a href="rules.html#s10-2">REQ-CI-010</a> の (b)+(c)); (b) <strong>jsonld structural</strong> — parse + required <code>@context</code>/<code>@id</code>/<code>@type</code> + <code>@context</code> == object (<a href="rules.html#s10-2">REQ-CI-016</a>、 <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> Option B Light)。 exit code は <strong>0 = clean / 1 = violation 検出 / 2 = tool error</strong> (jq 不在等、 fail-closed)、 違反は human-readable report を stdout 出力する。 検査 root の override (test isolation) を提供する <span class="ears-shall">MUST</span>。 external URL check と prose gate (REQ-CI-011〜015) は 試作 scope 外 (Phase X4+、 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020 §2.2</a>)。 conformance: clean 集合は <code>scenarios/validate-clean.yaml</code> (cli-golden、 capture:stdout、 exit 0)、 violation 検出 (missing file ref / broken anchor / jsonld 構造違反の 3 種) は実装時に <code>scenarios/validate-violations.yaml</code> + seeded fixtures で 実証する <span class="ears-shall">MUST</span> (exit 1 + report)。 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-014" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-014</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio init</code> は canonical Layer 1 consumer layout (構造のみ) を scaffold する — <code>architecture/{spec,decisions,research}/</code> + 各 <code>README.html</code> + <code>folio.config.yaml</code>。 既存 file は preserve (idempotent)、 constitution/overview 本文は seed せず lazy-materialize、 生成 skeleton は <code>folio validate</code> clean。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-014</span>: <span class="ears-when">WHEN the <code>folio init [&lt;dir&gt;]</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> scaffold the canonical Layer 1 consumer layout の<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">純粋な構造のみ</ins> — <code>architecture/{spec,decisions,research}/</code>、 各 cluster の <code>README.html</code> (<a href="constitution.html#p-6">P-6</a> entry point<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">、 index は<strong>実在 file のみ</strong> <code>dc:hasPart</code> 宣言</ins>)、 <del class="delta" data-delta-id="D-2026-05-27-002" data-delta-superseded-by="D-2026-05-27-001"><code>architecture/spec/{constitution,overview}.html</code> (project starter template、 通常 conforming JSON-LD)、 および </del><code>folio.config.yaml</code> (<a href="rules.html#s2-directory">rules §2</a> schema: folio_version / spec_path / caller_marker_env / caller_marker_value / review_model) — そして既存 file は <strong>preserve (idempotent、 上書きしない)</strong>。 <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27"><code>constitution</code> / <code>overview</code> の<strong>本文 (実体) は seed しない</strong> — folio-architect の greenfield onboarding grilling が引き出した中身を Phase E で lazy-materialize する (<a href="folio-self-spec.html#s7-1-7phase">§7.1</a>、 <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> が <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> の seed 挙動を revise)。 これで空 placeholder が "done" に残る hollow-spec を構造的に排除する。</ins> 生成された skeleton は <code>folio validate</code> が <strong>clean (exit 0)</strong> である <span class="ears-shall">MUST</span> (P-6 orphan + link-integrity + jsonld structural を満たす seed)。 exit code は <strong>0 = success / 2 = tool error</strong> (fail-closed)。 conformance は <code>scenarios/init-scaffold.yaml</code> (cli-golden) で検証する: init を temp root に実行 → exit 0 + 生成 tree の file 集合 + <code>folio.config.yaml</code> の golden 比較 + <code>folio validate --root &lt;tmp&gt;/architecture</code> clean。 init は tree (複数 file) を生成するため既存 cli-golden harness (単一 output) の拡張が要る可能性があり、 その HOW は実装時に確定する。 scope 決定は <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">(seed 挙動は <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> で revise)</ins> で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-015" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-015</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio fix</code> は各 forward relation に対応する reverse relation を target に materialize する (idempotent、 exit 0)。 併せて <code>folio validate</code> は第 3 gate broken-reverse を持ち、 fix 適用後は 3-gate clean になる (detect↔remediate 対)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-015</span>: <span class="ears-when">WHEN the <code>folio fix</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> materialize, for each forward relation declared in any spec (<a href="relations.html#s5-1-pattern">relations §5.1 の 6 dual pair</a>), the corresponding reverse relation on the target spec's <code>&lt;head&gt;</code> JSON-LD (REQ-REL-002)、 idempotent に (既存 reverse は重複追加しない)、 exit 0。 併せて <code>folio validate</code> は<strong>第 3 gate「broken-reverse」</strong>を持ち、 forward に対応する reverse が target に欠ける場合 violation を報告する <span class="ears-shall">MUST</span> (<a href="relations.html#s5-3-ears">REQ-REL-004</a>、 exit 1)。 <code>folio fix</code> 適用後は <code>folio validate</code> (3-gate) が clean になる (detect↔remediate ペア)。 conformance は cli-golden + fixture で検証する: (a) fix が reverse を materialize + exit 0、 (b) fix 後 validate clean、 (c) idempotency (再 fix で no-op)、 (d) broken-reverse を seed した fixture に validate が exit 1。 scenario / golden / harness の HOW は実装時に確定。 scope 決定は <a href="../decisions/ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> で trace (validate を <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の 2→3 gate に拡張)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-016" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-016</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio-architect</code> SKILL の Phase F は review agent (<code>spec-review-{ears,vocabulary,ssot}</code>) を並列 spawn し structured findings を集約する。 検証は structural (agent <code>.md</code> frontmatter + scoped name resolvable) + e2e (seeded violation の flag 観察) の 2 経路。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-016</span>: <span class="ears-when">WHEN the <a href="folio-self-spec.html#s7-1-7phase"><code>folio-architect</code> SKILL</a> executes Phase F (Quality Review)</span>, it <span class="ears-shall">SHALL</span> spawn the Phase F review agents in parallel (<a href="folio-self-spec.html#s7-2-specialists"><code>spec-review-{ears,vocabulary,ssot}</code></a> = X4-D の 3 軸、 残 3 軸 structure/temporal/stakeholder は X5+) and aggregate their structured findings (severity / location / 違反 rule / 修正提案)。 検証は 2 経路: (a) <strong>structural</strong> — 各 review agent の <code>agents/&lt;name&gt;.md</code> frontmatter (<code>name</code> / <code>description</code> / <code>model</code> / read-only <code>tools</code>) が妥当で、 scoped name <code>folio:&lt;name&gt;</code> が resolvable (frontmatter <code>name</code> 一致 + folio-architect SKILL が当該 scoped name を参照) であること (決定的、 sandbox 可)。 (b) <strong>e2e</strong> — 既知 violation (EARS 欠落 / forbidden synonym / domain 越境) を seed した spec に <code>/folio-architect</code> を invoke し、 3 review agent が該当 violation を flag することを観察する (<a href="#s3-6-verification-specific">REQ-VER-009</a> 型 agent-driven runbook)。 LLM agent は非決定的ゆえ golden 比較でなく <strong>「検出有無」 を一次 assertion</strong> とする。 conformance: (a) は <code>scenarios/agent-structure.yaml</code> (<code>kind: agent-structural</code>、 file 静的検査・決定的・exit 0)、 (b) は <a href="../../tests/e2e/runbook.md">tests/e2e/ runbook S-G</a> (live walk は plugin reload を要すため別 fresh session)。 review agent は read-only (Edit は folio-architect が集約後に適用、 caller-marker author 一元性)。 scope 決定は <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> で trace。</p>
+    </div>
+  </details>
+</div>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-010</span>:
-  <span class="ears-when">WHEN the <code>folio inventory</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> produce an <code>inventory.json</code> conforming to the
-  <a href="relations.html#s4-1-structure">relations.html §4.1 schema</a> (required fields
-  <code>$schema</code> / <code>generatedAt</code> / <code>folioVersion</code> / <code>specs[]</code>),
-  scanning the directories defined in <a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a>。
-  conformance は §3.4 golden baseline との <code>kind: cli-golden</code> diff で検証する
-  (非決定的 <code>generatedAt</code> は <code>normalize.exclude_paths</code> で除外)。
-  scenario: <code>scenarios/inventory-gen.yaml</code> (REQ-VER-011 harness が実行)。
-</p>
+<h3 id="s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</h3>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-011</span>:
-  <span class="ears-when">WHEN a scenario carries <code>kind: cli-golden</code></span>,
-  the verification harness <span class="ears-shall">SHALL</span> (1) run <code>bin/folio</code> with the
-  scenario <code>command</code> at repo root, (2) normalize both the produced <code>output_file</code>
-  and the <code>golden</code> via <code>jq -S</code> with <code>normalize.exclude_paths</code> deleted,
-  and (3) assert byte-exact equality of the normalized JSON plus <code>exit_code</code> match。
-  golden 更新は明示的 accept workflow (<code>--accept</code>、 §3.4 REQ-VER-004) を経る MUST。
-  これは hook scenario (<code>kind: hook</code>) の exit-code 中心 assertion (REQ-VER-003) とは
-  別の assertion 経路を成す (CLI subcommand 検証の SSoT、 <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> で trace)。
-</p>
+<p>§3 の各 REQ-VER-* を <strong>derives-from (派生元原則 / ADR) × scenario (検証 file) × verified</strong> で一覧する (trace matrix は <a href="constitution.html#p-13">P-13</a> ゆえ普遍、 verified/scenario 列は verification mapping を持つ本 spec の opt-in、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033 §2.6</a>)。 <code>folio validate</code> は link しか検査しないため、 <strong>scenario 列が空 = link は valid だが未検証 = validate が捕らない gap</strong> をこの列だけが一目で surface する。</p>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-012</span>:
-  <span class="ears-when">WHEN the <code>folio prime</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> emit a Tier 1 inventory digest (per-spec
-  <code>@id</code> / <code>title</code> / <code>summary</code> / <code>doc-type</code> / <code>status</code>、
-  <a href="relations.html#s4-2-tier">relations.html §4.2 Tier 1</a>) to stdout as agent-readable text,
-  auto-regenerating <code>inventory.json</code> if missing or stale
-  (<a href="../decisions/ADR-0007-context-injection.html">ADR-0007 §2.4</a>)。
-  conformance は §3.4 golden baseline との <code>kind: cli-golden</code> (<code>capture: stdout</code> +
-  <code>compare: text</code>) diff で検証する。 scenario: <code>scenarios/prime-digest.yaml</code>。
-  SessionStart hook による実 context 注入 (ADR-0007 §2.1、 matcher 省略で全 source 発火) は e2e
-  (REQ-VER-009 型) で検証 = <strong>SessionStart:startup 注入 PASS</strong> (fresh session で Tier 1
-  digest が context に注入されることを確認)。 PreCompact は ADR-0007 amend (2026-05-25) で除去 (stdout 非注入)。
-</p>
+<table>
+  <caption>verification-framework requirement coverage matrix (§3 の REQ-VER-*。 VER-005 は §4 のため除外)</caption>
+  <thead><tr><th>REQ</th><th>EARS</th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge badge--req">VER-001</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0013 / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-002</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>rules §10 / relations §5.3</td><td>(全 scenario)</td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-003</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0017 (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-004</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0018 / §3.4</td><td>(cli-golden 共通基盤)</td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-006</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>research §2.6</td><td class="cov-gap">— (未検証 gap)</td><td class="cov-gap">✗</td></tr>
+    <tr><td><span class="badge badge--req">VER-007</span></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0019 / P-3</td><td><code>path-boundary.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-008</span></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0003 §2.1</td><td><code>readme-index.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-009</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0017</td><td><code>e2e/runbook.md</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-010</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>relations §4.1</td><td><code>inventory-gen.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-011</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0018</td><td>(全 cli-golden)</td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-012</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0007</td><td><code>prime-digest.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-013</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0020</td><td><code>validate-clean</code> / <code>-violations.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-014</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0024 / 0031</td><td><code>init-scaffold.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-015</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0025</td><td><code>fix-bidirectional.yaml</code></td><td>✓</td></tr>
+    <tr><td><span class="badge badge--req">VER-016</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0027 / 0029</td><td><code>agent-structure.yaml</code> (+ e2e S-G)</td><td>✓</td></tr>
+  </tbody>
+</table>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-013</span>:
-  <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> scan the spec set (<a href="relations.html#s4-4-1-scan">relations.html §4.4.1</a>
-  と同一 = <code>architecture/{spec,decisions,research}</code> の <code>&lt;head&gt;</code> JSON-LD <code>.html</code>) and check two gates:
-  (a) <strong>internal link-integrity</strong> — each JSON-LD relation <code>@id</code> resolves to an existing target file,
-  and any <code>#anchor</code> resolves to an existing <code>id</code> in that target (<a href="rules.html#s10-2">REQ-CI-010</a> の (b)+(c));
-  (b) <strong>jsonld structural</strong> — parse + required <code>@context</code>/<code>@id</code>/<code>@type</code> +
-  <code>@context</code> == object (<a href="rules.html#s10-2">REQ-CI-016</a>、 <a href="../decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004</a> Option B Light)。
-  exit code は <strong>0 = clean / 1 = violation 検出 / 2 = tool error</strong> (jq 不在等、 fail-closed)、 違反は human-readable report を stdout 出力する。
-  検査 root の override (test isolation) を提供する <span class="ears-shall">MUST</span>。 external URL check と prose gate (REQ-CI-011〜015) は
-  試作 scope 外 (Phase X4+、 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020 §2.2</a>)。
-  conformance: clean 集合は <code>scenarios/validate-clean.yaml</code> (cli-golden、 capture:stdout、 exit 0)、 violation 検出
-  (missing file ref / broken anchor / jsonld 構造違反の 3 種) は実装時に <code>scenarios/validate-violations.yaml</code> + seeded fixtures で
-  実証する <span class="ears-shall">MUST</span> (exit 1 + report)。 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> で trace。
-</p>
-
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-014</span>:
-  <span class="ears-when">WHEN the <code>folio init [&lt;dir&gt;]</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> scaffold the canonical Layer 1 consumer layout の<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">純粋な構造のみ</ins> —
-  <code>architecture/{spec,decisions,research}/</code>、 各 cluster の <code>README.html</code>
-  (<a href="constitution.html#p-6">P-6</a> entry point<ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">、 index は<strong>実在 file のみ</strong> <code>dc:hasPart</code> 宣言</ins>)、 <del class="delta" data-delta-id="D-2026-05-27-002" data-delta-superseded-by="D-2026-05-27-001"><code>architecture/spec/{constitution,overview}.html</code>
-  (project starter template、 通常 conforming JSON-LD)、 および </del><code>folio.config.yaml</code>
-  (<a href="rules.html#s2-directory">rules §2</a> schema: folio_version / spec_path / caller_marker_env / caller_marker_value / review_model) —
-  そして既存 file は <strong>preserve (idempotent、 上書きしない)</strong>。
-  <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27"><code>constitution</code> / <code>overview</code> の<strong>本文 (実体) は seed しない</strong> — folio-architect の greenfield onboarding grilling が引き出した中身を Phase E で lazy-materialize する (<a href="folio-self-spec.html#s7-1-7phase">§7.1</a>、 <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> が <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> の seed 挙動を revise)。 これで空 placeholder が "done" に残る hollow-spec を構造的に排除する。</ins> 生成された skeleton は <code>folio validate</code> が
-  <strong>clean (exit 0)</strong> である <span class="ears-shall">MUST</span> (P-6 orphan + link-integrity + jsonld structural を満たす seed)。
-  exit code は <strong>0 = success / 2 = tool error</strong> (fail-closed)。
-  conformance は <code>scenarios/init-scaffold.yaml</code> (cli-golden) で検証する: init を temp root に実行 → exit 0 +
-  生成 tree の file 集合 + <code>folio.config.yaml</code> の golden 比較 + <code>folio validate --root &lt;tmp&gt;/architecture</code> clean。
-  init は tree (複数 file) を生成するため既存 cli-golden harness (単一 output) の拡張が要る可能性があり、 その HOW は実装時に確定する。
-  scope 決定は <a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024</a> <ins class="delta" data-delta-id="D-2026-05-27-001" data-delta-date="2026-05-27">(seed 挙動は <a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> で revise)</ins> で trace。
-</p>
-
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-015</span>:
-  <span class="ears-when">WHEN the <code>folio fix</code> CLI subcommand runs</span>,
-  it <span class="ears-shall">SHALL</span> materialize, for each forward relation declared in any spec
-  (<a href="relations.html#s5-1-pattern">relations §5.1 の 6 dual pair</a>), the corresponding reverse relation on the
-  target spec's <code>&lt;head&gt;</code> JSON-LD (REQ-REL-002)、 idempotent に (既存 reverse は重複追加しない)、 exit 0。
-  併せて <code>folio validate</code> は<strong>第 3 gate「broken-reverse」</strong>を持ち、 forward に対応する reverse が
-  target に欠ける場合 violation を報告する <span class="ears-shall">MUST</span> (<a href="relations.html#s5-3-ears">REQ-REL-004</a>、 exit 1)。
-  <code>folio fix</code> 適用後は <code>folio validate</code> (3-gate) が clean になる (detect↔remediate ペア)。
-  conformance は cli-golden + fixture で検証する: (a) fix が reverse を materialize + exit 0、 (b) fix 後 validate clean、
-  (c) idempotency (再 fix で no-op)、 (d) broken-reverse を seed した fixture に validate が exit 1。 scenario / golden / harness の HOW は実装時に確定。
-  scope 決定は <a href="../decisions/ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> で trace (validate を <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の 2→3 gate に拡張)。
-</p>
-
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-016</span>:
-  <span class="ears-when">WHEN the <a href="folio-self-spec.html#s7-1-7phase"><code>folio-architect</code> SKILL</a> executes Phase F (Quality Review)</span>,
-  it <span class="ears-shall">SHALL</span> spawn the Phase F review agents in parallel
-  (<a href="folio-self-spec.html#s7-2-specialists"><code>spec-review-{ears,vocabulary,ssot}</code></a> = X4-D の 3 軸、 残 3 軸 structure/temporal/stakeholder は X5+)
-  and aggregate their structured findings (severity / location / 違反 rule / 修正提案)。
-  検証は 2 経路: (a) <strong>structural</strong> — 各 review agent の <code>agents/&lt;name&gt;.md</code> frontmatter
-  (<code>name</code> / <code>description</code> / <code>model</code> / read-only <code>tools</code>) が妥当で、 scoped name
-  <code>folio:&lt;name&gt;</code> が resolvable (frontmatter <code>name</code> 一致 + folio-architect SKILL が当該 scoped name を参照) であること
-  (決定的、 sandbox 可)。 (b) <strong>e2e</strong> — 既知 violation (EARS 欠落 / forbidden synonym / domain 越境) を seed した spec に
-  <code>/folio-architect</code> を invoke し、 3 review agent が該当 violation を flag することを観察する
-  (<a href="#s3-6-verification-specific">REQ-VER-009</a> 型 agent-driven runbook)。 LLM agent は非決定的ゆえ golden 比較でなく
-  <strong>「検出有無」 を一次 assertion</strong> とする。 conformance: (a) は <code>scenarios/agent-structure.yaml</code>
-  (<code>kind: agent-structural</code>、 file 静的検査・決定的・exit 0)、 (b) は <a href="../../tests/e2e/runbook.md">tests/e2e/ runbook S-G</a>
-  (live walk は plugin reload を要すため別 fresh session)。 review agent は read-only (Edit は folio-architect が集約後に適用、
-  caller-marker author 一元性)。 scope 決定は <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a> で trace。
-</p>
+<aside class="informative">
+<p><span class="badge badge--req">VER-006</span> は「<code>permissionDecision</code> を主軸にしない」 という SHOULD NOT 設計指針で、 これを直接 assert する scenario を持たない = <strong>link は valid だが未検証の gap</strong>。 <code>folio validate</code> は捕らず、 RTM の scenario 列だけがこの gap を surface する (= coverage RTM の具体的効用)。</p>
+</aside>
 </section>
 
 <!-- ====================================================================

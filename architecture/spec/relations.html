@@ -542,32 +542,48 @@
 
 <h3 id="s5-3-ears">§5.3 EARS 規範要件</h3>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-REL-001</span>:
-  Each spec <span class="ears-shall">SHALL</span> declare applicable forward relations
-  (e.g., <code>dc:replaces</code>, <code>dc:references</code>, <code>folio:depends-on</code>)
-  in its <code>&lt;head&gt;</code> JSON-LD block when such relations exist.
-</p>
-
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-REL-002</span>:
-  WHEN Phase X3+ tooling is active and a forward relation is declared in any spec,
-  the system <span class="ears-shall">SHALL</span> auto-materialize the corresponding
-  reverse relation (e.g., <code>dc:isReplacedBy</code>) on the target spec.
-</p>
-
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-REL-003</span>:
-  In Phase X2 (current), reverse relations <span class="ears-shall">SHOULD</span>
-  be written manually until X3 tooling lands.
-</p>
-
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-REL-004</span>:
-  WHEN a forward relation lacks its corresponding reverse relation in Phase X3+,
-  the link-check tooling <span class="ears-shall">SHALL</span> report a broken-reverse
-  violation (具体的な CLI 構文・実装機構は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7 系</a> に集約)。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-rel-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-REL-001</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">各 spec は該当する forward relation (<code>dc:replaces</code> / <code>dc:references</code> / <code>folio:depends-on</code> 等) を <code>&lt;head&gt;</code> JSON-LD に宣言する (関係が存在する場合)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-REL-001</span>: Each spec <span class="ears-shall">SHALL</span> declare applicable forward relations (e.g., <code>dc:replaces</code>, <code>dc:references</code>, <code>folio:depends-on</code>) in its <code>&lt;head&gt;</code> JSON-LD block when such relations exist.</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-rel-002" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-REL-002</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">Phase X3+ tooling が active で forward relation が宣言されると、 対応する reverse relation (<code>dc:isReplacedBy</code> 等) を target spec に auto-materialize する。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-REL-002</span>: WHEN Phase X3+ tooling is active and a forward relation is declared in any spec, the system <span class="ears-shall">SHALL</span> auto-materialize the corresponding reverse relation (e.g., <code>dc:isReplacedBy</code>) on the target spec.</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-rel-003" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-REL-003</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">Phase X2 (現在) では reverse relation は X3 tooling 着地まで手動で記述する (SHOULD)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-REL-003</span>: In Phase X2 (current), reverse relations <span class="ears-shall">SHOULD</span> be written manually until X3 tooling lands.</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-rel-004" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-REL-004</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">forward relation が対応 reverse を欠くと、 link-check tooling が broken-reverse violation を報告する (Phase X3+)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-REL-004</span>: WHEN a forward relation lacks its corresponding reverse relation in Phase X3+, the link-check tooling <span class="ears-shall">SHALL</span> report a broken-reverse violation (具体的な CLI 構文・実装機構は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7 系</a> に集約)。</p>
+    </div>
+  </details>
+</div>
 </section>
 
 <!-- ====================================================================
