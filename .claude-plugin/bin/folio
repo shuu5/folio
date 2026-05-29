@@ -643,6 +643,76 @@ folio_prose_only() {
   '
 }
 
+# dual-audience structural 検査 (REQ-DA-STRUCT-1..5、 ADR-0033 §2.4 / rules.html §7 の floor)。
+# co-author dual-audience card (<section class="req" ... data-audience="human"> ... </section>) を
+# 走査し、 machine 対応部の存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) /
+# machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を deterministic に検査する。
+# 不備を "rel\t[dual-audience] ..." 行で stdout (block gate = exit code 影響)。 意味的 fidelity
+# (essence が normative を忠実要約か) は ceiling = spec-review-fidelity agent が別途 LLM 検査する。
+# -3 のみ prose (pre/code/aside 除去) を走査し、 ADR 等 prose 内の <code>data-audience=...</code>
+# 例示への誤検出を避ける (vocabulary gate と同 idiom)。 -1/-2/-4/-5 は実 <section class="req">
+# block を走査するため escaped 例 (&lt;section) には反応しない。 -5 は CSS class 短縮形
+# (req__ears--event/state) を canonical (event-driven/state-driven) に正規化して比較する。
+folio_check_dual_audience() {
+  local body="$1" rel="$2"
+  # -3: data-audience 値域 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)。 prose_only で code 例示を除外。
+  local prose; prose=$(folio_prose_only "$body")
+  printf '%s\n' "$prose" | grep -oE 'data-audience="[^"]*"' 2>/dev/null \
+    | sed -e 's/^data-audience="//' -e 's/"$//' | LC_ALL=C sort -u | while IFS= read -r val; do
+    [[ -z "$val" ]] && continue
+    case "$val" in
+      machine|human) ;;
+      *) printf '%s\t[dual-audience] data-audience 値 "%s" が不正 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)\n' "$rel" "$val" ;;
+    esac
+  done
+  # -1/-2/-4/-5: 実 dual-audience card (<section class="req"...> ... </section>) を block 走査。
+  printf '%s\n' "$body" | awk -v rel="$rel" '
+    function chk(   secid, badgeid, earsid, hp, mp, nhp, seg, mtag, idu, bu, eu) {
+      if (!inb) return
+      inb = 0
+      secid = ""
+      if (match(blk, /id="[^"]*"/)) { secid = substr(blk, RSTART+4, RLENGTH-5) }
+      badgeid = ""
+      if (match(blk, /badge--req"[^>]*>[^<]*/)) { seg = substr(blk, RSTART, RLENGTH); sub(/^badge--req"[^>]*>/, "", seg); badgeid = seg }
+      earsid = ""
+      if (match(blk, /class="ears-id">[^<]*/)) { seg = substr(blk, RSTART, RLENGTH); sub(/^class="ears-id">/, "", seg); earsid = seg }
+      gsub(/^[ \t]+|[ \t]+$/, "", badgeid); gsub(/^[ \t]+|[ \t]+$/, "", earsid)
+      # -1: machine 対応部の存在 (孤立 human の検出)
+      if (blk !~ /data-audience="machine"/) {
+        print rel "\t[dual-audience] " (secid != "" ? secid : "(human card)") " に machine 対応部 (data-audience=\"machine\") が無い (孤立 human、 REQ-DA-STRUCT-1)"
+      }
+      # -2: requirement-id 整合 (case 正規化、 section id <-> badge <-> machine ears-id)
+      idu = toupper(secid); bu = toupper(badgeid); eu = toupper(earsid)
+      if (secid != "" && badgeid != "" && idu != bu) {
+        print rel "\t[dual-audience] requirement-id 不一致: section id \"" secid "\" <-> badge \"" badgeid "\" (REQ-DA-STRUCT-2)"
+      }
+      if (secid != "" && earsid != "" && idu != eu) {
+        print rel "\t[dual-audience] requirement-id 不一致: section id \"" secid "\" <-> machine ears-id \"" earsid "\" (REQ-DA-STRUCT-2)"
+      }
+      # -4: machine 部 (data-audience="machine" を持つ要素) に aria-hidden 不在
+      if (match(blk, /<[^>]*data-audience="machine"[^>]*>/)) {
+        mtag = substr(blk, RSTART, RLENGTH)
+        if (mtag ~ /aria-hidden/) {
+          print rel "\t[dual-audience] machine 部に aria-hidden が付いている (AI/AT から不可視化、 REQ-DA-STRUCT-4)"
+        }
+      }
+      # -5: EARS-pattern 整合 (human badge req__ears--<p> <-> machine data-ears-pattern、 短縮形正規化)
+      hp = ""
+      if (match(blk, /req__ears--[a-z-]+/)) { hp = substr(blk, RSTART+11, RLENGTH-11) }
+      mp = ""
+      if (match(blk, /data-ears-pattern="[^"]*"/)) { mp = substr(blk, RSTART+19, RLENGTH-20) }
+      nhp = hp
+      if (hp == "event") nhp = "event-driven"; else if (hp == "state") nhp = "state-driven"
+      if (hp != "" && mp != "" && nhp != mp) {
+        print rel "\t[dual-audience] EARS-pattern 不一致: human badge \"" hp "\" <-> machine data-ears-pattern \"" mp "\" (REQ-DA-STRUCT-5)"
+      }
+    }
+    /<section class="req"[ >]/ { chk(); inb = 1; blk = "" }
+    inb { blk = blk $0 "\n"; if (/<\/section>/) chk() }
+    END { chk() }
+  '
+}
+
 # ============================================================================
 # validate helpers — spec 集合の internal link-integrity + jsonld structural +
 # broken-reverse 検査 (REQ-VER-013/015、 ADR-0020 を ADR-0025 で 3-gate に拡張)。
@@ -689,7 +759,7 @@ folio_cmd_validate() {
   # FolioConstitution schema の constitution は @type で schema-based に skip (inventory と同基準、 名前非依存、 ADR-0023 / ADR-0024 §2.2) ---
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
-  local vocab_fail=0 delta_fail=0 ears_warn=0
+  local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
   local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
@@ -780,6 +850,9 @@ folio_cmd_validate() {
           fi
         done <<< "$vocab_list"
       fi
+      # gate (g) dual-audience structural — block (REQ-DA-STRUCT-1..5、 ADR-0033、 rules §7 floor)
+      local dav
+      while IFS= read -r dav; do [[ -n "$dav" ]] && { violations+=("$dav"); da_fail=1; }; done < <(folio_check_dual_audience "$body" "$rel")
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
@@ -804,7 +877,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience (ADR-0020/0025/0028/0033)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -816,6 +889,7 @@ folio_cmd_validate() {
   if [[ -z "$vocab_list" ]]; then printf '  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)\n'
   elif [[ "$vocab_fail" -eq 1 ]]; then printf '  [FAIL] vocabulary\n'; else printf '  [OK] vocabulary\n'; fi
   if [[ "$delta_fail" -eq 1 ]]; then printf '  [FAIL] delta-marker\n'; else printf '  [OK] delta-marker\n'; fi
+  if [[ "$da_fail" -eq 1 ]]; then printf '  [FAIL] dual-audience-structural\n'; else printf '  [OK] dual-audience-structural\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)

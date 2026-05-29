@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="fixture">
+<title>validate fixture — dual-audience structural violations (REQ-DA-STRUCT-1..5)</title>
+<script type="application/ld+json">
+{
+  "@context": {"dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/"},
+  "@id": "./da-violations.html",
+  "@type": "schema:TechArticle"
+}
+</script>
+</head>
+<body>
+<p>dual-audience floor (REQ-DA-STRUCT-1..5) の検出を実証する fixture。 各 card は 1 違反のみを孤立させる。</p>
+
+<!-- REQ-DA-STRUCT-1: 孤立 human (machine 対応部なし) -->
+<section class="req" id="req-da-901" data-audience="human">
+  <div class="req__card"><span class="badge badge--req">REQ-DA-901</span><span class="req__ears req__ears--ubiquitous">Ubiquitous</span></div>
+  <p class="req__essence">machine 対応部が無い孤立 human card (REQ-DA-STRUCT-1 違反)。</p>
+</section>
+
+<!-- REQ-DA-STRUCT-2: requirement-id 不一致 (section 902 vs badge 999) -->
+<section class="req" id="req-da-902" data-audience="human">
+  <div class="req__card"><span class="badge badge--req">REQ-DA-999</span><span class="req__ears req__ears--ubiquitous">Ubiquitous</span></div>
+  <p class="req__essence">section id と badge id が不一致 (REQ-DA-STRUCT-2 違反)。</p>
+  <details class="req__machine" data-audience="machine"><summary>normative (machine)</summary>
+    <div class="req__normative"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-902</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+</section>
+
+<!-- REQ-DA-STRUCT-3: data-audience 値域違反 (reviewer) -->
+<section class="req" id="req-da-903" data-audience="reviewer">
+  <div class="req__card"><span class="badge badge--req">REQ-DA-903</span><span class="req__ears req__ears--ubiquitous">Ubiquitous</span></div>
+  <p class="req__essence">data-audience に machine|human 以外の値 reviewer (REQ-DA-STRUCT-3 違反)。</p>
+  <details class="req__machine" data-audience="machine"><summary>normative (machine)</summary>
+    <div class="req__normative"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-903</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+</section>
+
+<!-- REQ-DA-STRUCT-4: machine 部に aria-hidden -->
+<section class="req" id="req-da-904" data-audience="human">
+  <div class="req__card"><span class="badge badge--req">REQ-DA-904</span><span class="req__ears req__ears--ubiquitous">Ubiquitous</span></div>
+  <p class="req__essence">machine 部に aria-hidden が付き AI/AT から不可視化 (REQ-DA-STRUCT-4 違反)。</p>
+  <details class="req__machine" data-audience="machine" aria-hidden="true"><summary>normative (machine)</summary>
+    <div class="req__normative"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-904</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+</section>
+
+<!-- REQ-DA-STRUCT-5: EARS-pattern 不一致 (human ubiquitous vs machine event-driven) -->
+<section class="req" id="req-da-905" data-audience="human">
+  <div class="req__card"><span class="badge badge--req">REQ-DA-905</span><span class="req__ears req__ears--ubiquitous">Ubiquitous</span></div>
+  <p class="req__essence">human badge (ubiquitous) と machine data-ears-pattern (event-driven) 不一致 (REQ-DA-STRUCT-5 違反)。</p>
+  <details class="req__machine" data-audience="machine"><summary>normative (machine)</summary>
+    <div class="req__normative"><p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-DA-905</span>: <span class="ears-when">WHEN x occurs</span>, the system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+</section>
+
+</body>
+</html>

@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage (ADR-0020/0025/0028)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience (ADR-0020/0025/0028/0033)
 root: architecture
 files checked: 32 · relations checked: 276
   [OK] internal link-integrity
@@ -6,6 +6,7 @@ files checked: 32 · relations checked: 276
   [OK] broken-reverse
   [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)
   [OK] delta-marker
+  [OK] dual-audience-structural
   [OK] ears-coverage
 
 clean: 0 violations
