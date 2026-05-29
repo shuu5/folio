@@ -194,6 +194,11 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     <tr><td>state transition matrix</td><td><code>&lt;table&gt;</code></td><td>遷移元 × 遷移先 × トリガー (stateDiagram と併用可)</td></tr>
     <tr><td>progressive disclosure</td><td><code>&lt;details&gt;</code> + <code>&lt;summary&gt;</code></td><td>optional / advanced 内容、 長い enumeration の折りたたみ</td></tr>
     <tr><td>structured definition</td><td><code>&lt;dl&gt;</code> + <code>&lt;dt&gt;/&lt;dd&gt;</code></td><td>用語 / 原則 / component の definition</td></tr>
+    <tr><td>dual-audience requirement (machine SSoT + human essence)</td><td><code>&lt;section class="req" data-audience&gt;</code> + <code>&lt;details&gt;</code> fold</td><td>規範要件を machine normative + human 要約で co-author (<a href="#s7-dual-audience">§7</a>)</td></tr>
+    <tr><td>concept flow (per-section「どう動くか」)</td><td>mermaid <code>flowchart</code></td><td>section 単位 1 枚の概念図 (dual-audience human view)</td></tr>
+    <tr><td>compact requirement list (「何があるか」)</td><td>純 CSS list (1 行 1 REQ)</td><td>最小読量で REQ 一覧を提示 (dual-audience human view)</td></tr>
+    <tr><td>coverage RTM (traceability)</td><td><code>&lt;table&gt;</code> (REQ × derives × scenario × verified)</td><td>trace / coverage 主題の section、 空 mapping = gap 可視化</td></tr>
+    <tr><td>EARS keyword 色 badge</td><td><code>&lt;span class="req__ears--&lt;p&gt;"&gt;</code></td><td>EARS pattern の視覚識別 (色 mapping は folio 独自設計)</td></tr>
   </tbody>
 </table>
 
@@ -252,6 +257,122 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </code></pre>
 
 <p>specialist agent <code>spec-review-ears</code> (<a href="folio-self-spec.html#s7-2-specialists">folio-self-spec.html §7.2</a>) が pattern 完全性 + ID uniqueness を CI で検証する。</p>
+</section>
+
+<section id="s7-dual-audience" class="normative">
+<h2>§7. Dual-Audience Markup (data-audience taxonomy)</h2>
+
+<aside class="informative">
+  <p>本 §7 は spec を <strong>machine (精密 normative = canonical SSoT) と human (essence + graphical = 派生 view)</strong> の双方に向けて 1 HTML artifact に co-author する <strong>dual-audience pattern</strong> の markup 規約を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a>、 <a href="./constitution.html#p-2">P-2</a> HTML)。 採用は<strong>任意 (opt-in)</strong> だが、 <strong>採用する spec は本 §7 の safety invariant (REQ-DA-STRUCT-1〜5) を遵守する MUST</strong> = conditional-normative。 consistency は<strong>機械的導出でなく enforcement</strong> で担保する (1-DOM co-author は prior art 無しの novelty、 ADR-0033 §2.4): floor = <code>folio validate</code> の dual-audience 構造検査 (本 §7.3 の REQ-DA-STRUCT)、 ceiling = Phase F の <code>spec-review-fidelity</code> agent (意味的 fidelity)。</p>
+</aside>
+
+<h3 id="s7-1-taxonomy">§7.1 data-audience taxonomy</h3>
+<ul>
+  <li><strong><code>data-audience</code></strong> = closed 2 値 core (<code>machine</code> | <code>human</code>)、 canonical。 AI 抽出 (<code>[data-audience="machine"]</code>) の決定性と floor 検査の単純化のため 2 値固定。</li>
+  <li>synonym (<code>data-reader</code> / <code>data-for</code> 等) は <a href="./constitution.html#p-5">P-5</a> (1 entity = 1 canonical name) により<strong>禁止</strong>。</li>
+  <li>継承 (cascade) は<strong>無い</strong> = 明示付与のみ (fold 境界と 1:1 対応させ曖昧さを排除)。</li>
+</ul>
+
+<h3 id="s7-2-canonical-pattern">§7.2 Canonical markup pattern</h3>
+<p>dual-audience の 1 requirement は次の構造を採る。 human card (派生 view、 既定表示) を上に、 machine normative (canonical SSoT) を <code>&lt;details&gt;</code> 視覚 fold で併記する。 <strong>machine 部は DOM に常在</strong> (AI / accessibility-tree / find-in-page に可視) し、 視覚的初期表示のみ畳む。 <strong><code>aria-hidden</code> を machine 部に付けない</strong> (accessibility-tree から消すと Playwright 等 AI からも不可視となり「AI は読める」目的に反する、 ADR-0033 §2.2 verified)。</p>
+
+<pre><code>&lt;section class="req" id="req-xxx-001" data-audience="human"&gt;
+  &lt;div class="req__card"&gt;
+    &lt;span class="badge badge--req"&gt;REQ-XXX-001&lt;/span&gt;
+    &lt;span class="req__ears req__ears--event"&gt;Event-Driven&lt;/span&gt;   &lt;!-- EARS badge (§6) --&gt;
+  &lt;/div&gt;
+  &lt;p class="req__essence"&gt;…(human 要約 = machine normative の正確な要約)…&lt;/p&gt;
+  &lt;details class="req__machine" data-audience="machine"&gt;          &lt;!-- canonical SSoT、 DOM 常在、 no aria-hidden --&gt;
+    &lt;summary&gt;normative (machine)&lt;/summary&gt;
+    &lt;div class="req__normative"&gt;
+      &lt;p class="ears" data-ears-pattern="event-driven"&gt;
+        &lt;span class="ears-id"&gt;REQ-XXX-001&lt;/span&gt;:
+        &lt;span class="ears-when"&gt;WHEN …&lt;/span&gt;, the system &lt;span class="ears-shall"&gt;SHALL&lt;/span&gt; ….
+      &lt;/p&gt;
+    &lt;/div&gt;
+  &lt;/details&gt;
+&lt;/section&gt;
+</code></pre>
+
+<p>規約: (a) section <code>id</code> (小文字) ・ <code>.badge--req</code> text ・ machine <code>.ears-id</code> text は同一 requirement-id (大小文字正規化で一致)。 (b) human badge の CSS class suffix (<code>req__ears--&lt;p&gt;</code>) は EARS pattern key を用いる (2 語 pattern は <code>common.css</code> の短縮形 <code>event</code> / <code>state</code> = canonical <code>event-driven</code> / <code>state-driven</code> の alias)。 (c) machine normative の pattern は <code>data-ears-pattern</code> (full form = SSoT)。 (d) reference 実装 = <a href="verification.html#s3-1-scenario-format">verification.html §3</a> の dual-audience card。</p>
+
+<h3 id="s7-3-floor">§7.3 Dual-Audience Safety Invariants (conditional-normative floor)</h3>
+<p>dual-audience pattern を採用する spec は次の構造 invariant を満たす MUST。 これらは <code>folio validate</code> の dual-audience gate (deterministic floor、 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> scope 拡張) が機械検査する。 意味的 fidelity (essence が normative を忠実要約か) は floor の対象外で、 ceiling = <code>spec-review-fidelity</code> agent が担う (二層 enforcement、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4)。</p>
+
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-STRUCT-1</span>:
+  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+  each <code>[data-audience="human"]</code> requirement card <span class="ears-shall">SHALL</span>
+  contain a <code>[data-audience="machine"]</code> descendant (派生元の存在保証、 孤立 human の排除)。
+</p>
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-STRUCT-2</span>:
+  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+  the requirement-id <span class="ears-shall">SHALL</span> be consistent (case-normalized) across the
+  section <code>id</code>, the <code>.badge--req</code> text, and the machine <code>.ears-id</code> text。
+</p>
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-STRUCT-3</span>:
+  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+  every <code>data-audience</code> value <span class="ears-shall">SHALL</span> be one of
+  <code>machine</code> or <code>human</code> only (no synonym、 <a href="./constitution.html#p-5">P-5</a>)。
+</p>
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-STRUCT-4</span>:
+  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+  the machine part (<code>[data-audience="machine"]</code>) <span class="ears-shall">SHALL NOT</span>
+  carry <code>aria-hidden</code> (AI / accessibility-tree からの normative 不可視化を防ぐ)。
+</p>
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-STRUCT-5</span>:
+  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+  the human EARS badge (<code>req__ears--&lt;p&gt;</code>) <span class="ears-shall">SHALL</span> agree with
+  the machine <code>data-ears-pattern</code> (短縮形 alias を正規化して比較)。
+</p>
+
+<aside class="informative">
+  <p><strong>REQ-DA-STRUCT-5 の解釈 (ADR-0033 literal からの refinement)</strong>: <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4 は REQ-DA-STRUCT-5 を「JSON-LD <code>status</code> と human badge の status 一致」と記すが、 現 canonical pattern (<a href="verification.html#s3-1-scenario-format">verification.html §3</a>) は <strong>per-card JSON-LD / per-card status を持たない</strong> (status は doc-level)。 per-card で意味を持つ整合 key は <strong>EARS-pattern</strong> であるため、 floor は -5 を <strong>EARS-pattern 整合</strong>として実装する。 ADR literal の「status 一致」は <strong>per-card JSON-LD を導入する Option A' (ADR-0033 §2.3 roadmap) 採用時の future check</strong> として保留する。 同様に -2 も per-card JSON-LD <code>@id</code> でなく section <code>id</code> / badge / ears-id text の整合として実装する (実 pattern 準拠)。</p>
+</aside>
+
+<h3 id="s7-4-human-view">§7.4 Human view guidance (Hybrid)</h3>
+<p>human 向け graphical view の構成要素 (concept flowchart / compact REQ list / coverage RTM / EARS keyword 色 badge / <code>&lt;details&gt;</code> fold) は <a href="#s4-5-visual">§4.5</a> の visual richness menu に dual-audience 用 row として集約する。 これらは<strong>強制しない guidance</strong> (author・<code>folio-architect</code> 判断、 <a href="./constitution.html#p-8">P-8</a> silently choosing 禁止)。 普遍性は tiered: dual-audience core (data-audience + fold + essence) と trace RTM は普遍、 concept 図 / compact list は適用可能な section、 coverage 列 (verified/scenario) は verification mapping を持つ spec の opt-in (ADR-0033 §2.6)。</p>
+</section>
+
+<section id="s8-js-governance" class="normative">
+<h2>§8. JavaScript Governance (read-only enhancement only)</h2>
+
+<aside class="informative">
+  <p>本 §8 は spec HTML 内の JavaScript の使用範囲を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.8)。 原則は <strong>JS = render / view の read-only enhancement に限り content の SSoT にしない</strong> (ReSpec / Bikeshed 共通原則の folio 版)。 canonical artifact は常に static HTML。 採用は任意だが、 JS を含む spec は本 §8 を遵守する MUST。 現 wave の CSS-only 骨格は本 ruleset と無矛盾 (JS 不要)。</p>
+</aside>
+
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-JS-1</span>:
+  <span class="ears-where">WHERE a spec includes JavaScript</span>,
+  the JavaScript <span class="ears-shall">SHALL</span> be limited to read-only view enhancement derived
+  from static DOM content, and <span class="ears-shall">SHALL NOT</span> hold the SSoT of any normative
+  content (定義 / 要件 / MUST)。
+</p>
+<p class="ears" data-ears-pattern="optional">
+  <span class="ears-id">REQ-DA-JS-2</span>:
+  <span class="ears-where">WHERE a spec includes JavaScript</span>,
+  the spec <span class="ears-shall">SHALL</span> remain fully readable with JavaScript disabled
+  (progressive enhancement), <span class="ears-shall">SHALL</span> vendor its libraries (no runtime CDN),
+  and <span class="ears-shall">SHALL NOT</span> use ES modules with <code>fetch()</code>
+  (file:// で null origin CORS により破綻、 verified)。
+</p>
+
+<table>
+  <thead><tr><th>区分</th><th>具体</th></tr></thead>
+  <tbody>
+    <tr><td><strong>ALLOW</strong></td><td>static DOM content から派生する view enhancement (TOC 補完 / mermaid render / cross-ref tooltip / dark-light toggle / <code>beforeprint</code> で <code>&lt;details&gt;</code> 一括 open)。 mermaid は vendored render として ALLOW。</td></tr>
+    <tr><td><strong>PROHIBIT</strong></td><td>JS のみに存在する normative / <code>fetch</code> ロード content の SSoT 化 / CDN 実行時取得 script による content 生成 / ES modules + <code>fetch()</code> (file:// 破綻)。</td></tr>
+    <tr><td><strong>REQUIRE</strong></td><td><code>noscript</code> でも full content が読める / library は vendoring (CDN 不可) / single-file classic <code>&lt;script&gt;</code> か inline / inline data は <code>&lt;script type="application/json"&gt;</code> 同梱 / CSP は meta tag + hash (<code>'sha256-…'</code>、 nonce は static で不可)。</td></tr>
+  </tbody>
+</table>
+
+<aside class="informative">
+  <p><strong>file:// + GitHub Pages 両対応</strong>: 上記 ruleset は file:// も HTTP も動く。 HTTP-only 機能を入れる場合は明示ラベル + file:// で graceful degradation。 <strong>W3 TODO</strong>: file:// での <code>&lt;meta&gt;</code> CSP の実挙動はブラウザ依存の可能性 → prototype 実検証 REQUIRED (ADR-0033 §3)。 <strong>EARS keyword 色 badge は folio 独自設計</strong> (prior art 無し、 明示)。</p>
+</aside>
 </section>
 
 <section id="s10-mandatory" class="normative">
