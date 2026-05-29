@@ -208,15 +208,22 @@ folio_cmd_inventory() {
     specs_json="[]"
   fi
 
+  # object-graph projection (ADR-0034 §2.7、 既存 projection を object-level に additive 拡張)。
+  # node = canonical object (principle/requirement/decision) + essence、 edge = in-band xref 集計。
+  # 決定的 (sort + timestamp 非含有) ゆえ golden 安定。 既存 field ($schema/generatedAt/folioVersion/specs) は不変。
+  local objectgraph_json; objectgraph_json=$(folio_xref_build_objectgraph "$arch_abs")
+
   jq -n \
     --arg schema "https://folio.dev/inventory/v1.json" \
     --arg gen "$generated_at" \
     --arg ver "$folio_version" \
     --argjson specs "$specs_json" \
-    '{"$schema": $schema, generatedAt: $gen, folioVersion: $ver, specs: $specs}' \
+    --argjson og "$objectgraph_json" \
+    '{"$schema": $schema, generatedAt: $gen, folioVersion: $ver, specs: $specs, objectGraph: $og}' \
     > "$out_file"
 
-  echo "folio inventory: wrote inventory.json (${#entries[@]} specs)" >&2
+  local og_n; og_n=$(printf '%s' "$objectgraph_json" | jq '.nodes | length')
+  echo "folio inventory: wrote inventory.json (${#entries[@]} specs, ${og_n} object-graph nodes)" >&2
 }
 
 # ============================================================================
@@ -272,6 +279,17 @@ folio_prime_emit_digest() {
   printf '# Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.\n'
   printf '\n'
   printf '%s\n' "$body"
+
+  # object-graph index (ADR-0034 §2.7 compact object-index、 in-context AI navigation 用)。 各 node 1 行
+  # (id + class + SSoT-location)。 essence は inventory.json objectGraph.nodes[].essence に格納。 順序は
+  # id+ssot で決定的 (byte-exact 安定)。 objectGraph 不在の旧 inventory は 0 行 (// [] で後方互換)。
+  local og_count og_body
+  og_count=$(jq '(.objectGraph.nodes // []) | length' "$inv")
+  og_body=$(jq -r '(.objectGraph.nodes // []) | sort_by(.id, .ssot) | .[] | "\(.id) [\(.class)] \(.ssot)"' "$inv")
+  printf '\n'
+  printf '# object-graph index — %s canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)\n' "$og_count"
+  printf '# <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。\n'
+  [[ -n "$og_body" ]] && printf '%s\n' "$og_body"
 }
 
 # folio prime: Tier 1 inventory digest を stdout 出力 (ADR-0007 §2.1〜2.4)。
@@ -544,33 +562,50 @@ folio_cmd_fix() {
 
   owed_lines=$(printf '%s' "$owed_lines" | LC_ALL=C sort -u)   # (B,rev_key,A) dedup = multi-anchor forward も 1 reverse
 
-  printf 'folio fix — reverse relation materialize (REQ-REL-002, ADR-0025)\n'
+  printf 'folio fix — reverse relation materialize + xref auto-wrap (REQ-REL-002 / ADR-0025 / ADR-0034 §2.5)\n'
   printf 'root: %s\n' "$root"
 
-  if [[ -z "$owed_lines" ]]; then
-    printf 'already complete: 0 reverse relations materialized (no forward to scan-target found)\n'
-    return 0
+  # --- Pass 2: reverse relation materialize (owed があれば target ごとに、 sort 済で決定的) ---
+  local materialized=0 touched=0 b
+  if [[ -n "$owed_lines" ]]; then
+    while IFS= read -r b; do
+      [[ -z "$b" ]] && continue
+      local target_abs="${root_abs}/${b}" n rc
+      n=$(printf '%s\n' "$owed_lines" | awk -F'\t' -v b="$b" '$1==b{print $2"\t"$3}' \
+          | folio_materialize_reverse "$target_abs" "$b" "$root_abs"); rc=$?
+      [[ "$rc" -ne 0 ]] && { echo "folio fix: materialize failed for ${b} (fail-closed)" >&2; exit 2; }
+      n=${n:-0}
+      if [[ "$n" -gt 0 ]]; then
+        materialized=$((materialized + n)); touched=$((touched + 1))
+        printf '  +%d reverse @id  %s\n' "$n" "$b"
+      fi
+    done < <(printf '%s\n' "$owed_lines" | awk -F'\t' 'NF>=3{print $1}' | LC_ALL=C sort -u)
   fi
 
-  # --- Pass 2: target ごとに materialize (sort 済で決定的) ---
-  local materialized=0 touched=0 b
-  while IFS= read -r b; do
-    [[ -z "$b" ]] && continue
-    local target_abs="${root_abs}/${b}" n rc
-    n=$(printf '%s\n' "$owed_lines" | awk -F'\t' -v b="$b" '$1==b{print $2"\t"$3}' \
-        | folio_materialize_reverse "$target_abs" "$b" "$root_abs"); rc=$?
-    [[ "$rc" -ne 0 ]] && { echo "folio fix: materialize failed for ${b} (fail-closed)" >&2; exit 2; }
-    n=${n:-0}
-    if [[ "$n" -gt 0 ]]; then
-      materialized=$((materialized + n)); touched=$((touched + 1))
-      printf '  +%d reverse @id  %s\n' "$n" "$b"
-    fi
-  done < <(printf '%s\n' "$owed_lines" | awk -F'\t' 'NF>=3{print $1}' | LC_ALL=C sort -u)
+  # --- Pass 3: xref auto-materialize (opt-in doc の prose bare token を <a class="xref"> へ wrap、 ADR-0034 §2.5
+  #     option F = 「裸 token → xref 自動 wrap + data-tooltip を定義 essence から生成」)。 wrap_doc が
+  #     opt-in (folio-xref-completeness=enabled) 以外は no-op ゆえ、 Slice 1 の real corpus では無作用。 idempotent。 ---
+  local xref_wrapped=0 xref_touched=0 xd xf xfrel xn
+  for xd in "${dirs[@]}"; do
+    local xdir_abs="${root_abs}/${xd}"
+    [[ -d "$xdir_abs" ]] || continue
+    while IFS= read -r xf; do
+      [[ -z "$xf" ]] && continue
+      xfrel=$(realpath -m --relative-to="$root_abs" "$xf")
+      xn=$(folio_xref_wrap_doc "$xf" "$xfrel" "$root_abs"); xn=${xn:-0}
+      if [[ "$xn" -gt 0 ]]; then
+        xref_wrapped=$((xref_wrapped + xn)); xref_touched=$((xref_touched + 1))
+        printf '  +%d xref       %s\n' "$xn" "$xfrel"
+      fi
+    done < <(find "$xdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
 
-  if [[ "$materialized" -eq 0 ]]; then
-    printf 'already complete: graph is bidirectional (0 reverse relations added)\n'
+  # --- report (reverse + xref のいずれも 0 なら already-complete) ---
+  if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 ]]; then
+    printf 'already complete: graph is bidirectional + opt-in xref materialized (0 changes)\n'
   else
-    printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
+    [[ "$materialized" -gt 0 ]] && printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
+    [[ "$xref_wrapped" -gt 0 ]] && printf 'materialized %d xref(s) across %d file(s)\n' "$xref_wrapped" "$xref_touched"
   fi
   return 0
 }
@@ -725,6 +760,328 @@ folio_check_dual_audience() {
 }
 
 # ============================================================================
+# xref helpers — object cross-reference の横断機構 (ADR-0034 §2.2〜§2.7)。
+#   defined-object (principle P-N / requirement REQ-* / decision ADR-NNNN) の
+#   class 判定 + prefix→SSoT-doc registry + per-class essence 抽出 + relative href +
+#   prose 内 bare-mention 走査を 1 箇所に集約し、 fix (auto-materialize) / validate
+#   (4 gate) / inventory・prime (object-graph) の全機能がこの helper 群を共用する
+#   (1 entity = 1 機構、 §6 横断機構)。 essence は定義 site の既存内容を再利用し
+#   (P-7 重複禁止)、 必ず plain-text 化 + attribute escape する。
+# ============================================================================
+
+# canonical token ($1) の class を stdout に返す (principle|requirement|decision、 不該当は空)。
+# 採用 token 形は 2-segment REQ (REQ-[A-Z]+-[0-9]+) まで (§2.5、 3-segment は Slice 2a)。
+folio_xref_class() {
+  case "$1" in
+    P-[0-9]*)   [[ "$1" =~ ^P-[0-9]+$ ]] && printf 'principle' ;;
+    REQ-[A-Z]*) [[ "$1" =~ ^REQ-[A-Z]+-[0-9]+$ ]] && printf 'requirement' ;;
+    ADR-[0-9]*) [[ "$1" =~ ^ADR-[0-9][0-9][0-9][0-9]$ ]] && printf 'decision' ;;
+  esac
+}
+
+# token ($1) の定義 site anchor を stdout に返す (principle/requirement = 小文字 id、 decision = 空 = file 自体が target)。
+folio_xref_anchor() {
+  case "$(folio_xref_class "$1")" in
+    principle|requirement) printf '%s' "$1" | tr '[:upper:]' '[:lower:]' ;;
+    *) printf '' ;;
+  esac
+}
+
+# token ($1) の SSoT doc を root ($2) 相対 path で stdout に返す (§2.2 registry、 不該当は空)。
+# decision は decisions/ADR-NNNN-*.html を glob 解決 (実在時のみ非空)。
+folio_xref_ssot() {
+  local token="$1" root_abs="$2" n match
+  case "$(folio_xref_class "$token")" in
+    principle) printf 'spec/constitution.html' ;;
+    requirement)
+      case "$token" in
+        REQ-VER-*) printf 'spec/verification.html' ;;
+        REQ-REL-*) printf 'spec/relations.html' ;;
+        REQ-CI-*|REQ-DA-*|REQ-CM-*|REQ-ADR-*|REQ-XREF-*) printf 'spec/rules.html' ;;
+      esac ;;
+    decision)
+      n="${token#ADR-}"
+      # head へ pipe しない (set -u 下で find|sort|head の $() が空を返す shell quirk 回避)。
+      match=$(find "${root_abs}/decisions" -maxdepth 1 -type f -name "ADR-${n}-*.html" 2>/dev/null | LC_ALL=C sort)
+      match="${match%%$'\n'*}"
+      [[ -n "$match" ]] && realpath -m --relative-to="$root_abs" "$match" ;;
+  esac
+}
+
+# stdin の HTML 断片を plain-text 化して stdout (内部タグ strip + whitespace collapse + trim)。
+folio_xref_plain() {
+  sed -e 's/<[^>]*>//g' | tr '\n\t' '  ' | sed -e 's/  */ /g' -e 's/^ *//' -e 's/ *$//'
+}
+
+# token ($1) の定義 essence を plain-text で stdout に返す (§6 contract、 既存内容を再利用)。
+#   principle  = constitution <dt id="p-N"><strong>P-N: TITLE</strong> の TITLE 部
+#   requirement= spec-row <span class="essence"> / verbose card <p class="req__essence"> の text
+#   decision   = folio_extract_summary (.meta 末尾セグメント)
+# 解決不能 (registry 不該当 / file 不在 / essence 不在) は空文字。
+folio_xref_essence() {
+  local token="$1" root_abs="$2" ssot file cls lid
+  cls=$(folio_xref_class "$token")
+  ssot=$(folio_xref_ssot "$token" "$root_abs")
+  [[ -z "$ssot" ]] && return 0
+  file="${root_abs}/${ssot}"
+  [[ -f "$file" ]] || return 0
+  case "$cls" in
+    principle)
+      lid=$(printf '%s' "$token" | tr '[:upper:]' '[:lower:]')
+      awk -v id="$lid" '
+        index($0,"id=\"" id "\"")>0 {
+          if(match($0,/<strong>[^<]*<\/strong>/)){ print substr($0,RSTART+8,RLENGTH-17); exit }
+        }' "$file" | sed -E 's/^[A-Z]+-[0-9]+:[[:space:]]*//' | folio_xref_plain
+      ;;
+    requirement)
+      lid=$(printf '%s' "$token" | tr '[:upper:]' '[:lower:]')
+      awk -v id="$lid" '
+        index($0,"id=\"" id "\"")>0 && /<(details|section)/ && !cap { cap=1; ct=($0 ~ /<details/)?"</details>":"</section>"; buf="" }
+        cap { buf=buf $0 "\n"; if(index($0,ct)>0 && !fin){ fin=1 } }
+        fin {
+          pos=0; endtag=""
+          if(match(buf,/class="essence">/)){ pos=RSTART+RLENGTH; endtag="</span>" }
+          else if(match(buf,/class="req__essence">/)){ pos=RSTART+RLENGTH; endtag="</p>" }
+          if(pos>0){ rest=substr(buf,pos); if(match(rest,endtag)){ print substr(rest,1,RSTART-1) } else { print rest } }
+          exit
+        }' "$file" | folio_xref_plain
+      ;;
+    decision)
+      folio_extract_summary "$file" | folio_xref_plain
+      ;;
+  esac
+}
+
+# token ($1) の data-tooltip 属性値 (escaped essence) を stdout に返す。 fix (書込) と
+# validate tooltip-consistency (検査) が同一関数を呼ぶことで drift 以外の不一致を排除する。
+folio_xref_tooltip_text() {
+  folio_xref_essence "$1" "$2" | sed -e 's/"/\&quot;/g'
+}
+
+# referencing doc ($2 = root 相対 path) から token ($1) の SSoT への relative href を stdout。
+# folio_reverse_relid (source=ssot, target_subdir=doc の subdir) を流用し ./foo / ../dir/foo へ正規化。
+folio_xref_href() {
+  local token="$1" file_rel="$2" root_abs="$3" ssot relid anchor
+  ssot=$(folio_xref_ssot "$token" "$root_abs")
+  [[ -z "$ssot" ]] && return 1
+  relid=$(folio_reverse_relid "$ssot" "${file_rel%%/*}" "$root_abs")
+  anchor=$(folio_xref_anchor "$token")
+  [[ -n "$anchor" ]] && relid="${relid}#${anchor}"
+  printf '%s' "$relid"
+}
+
+# xref href ($1) から canonical token を逆算 (anchor=#p-N/#req-... → 大文字化、 ADR file → ADR-NNNN)。
+folio_xref_canon_from_href() {
+  local href="$1" anchor base
+  if [[ "$href" == *"#"* ]]; then
+    anchor="${href#*#}"
+    case "$anchor" in
+      p-[0-9]*|req-*) printf '%s' "$anchor" | tr '[:lower:]' '[:upper:]' ;;
+    esac
+  else
+    base=$(basename "$href")
+    [[ "$base" =~ ^(ADR-[0-9][0-9][0-9][0-9])- ]] && printf '%s' "${BASH_REMATCH[1]}"
+  fi
+}
+
+# file ($1) の <a class="xref"> が指す token 集合 (distinct) を stdout (canon_from_href 経由)。
+folio_xref_present_tokens() {
+  local file="$1" h tk
+  folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null \
+    | grep -oP 'href="\K[^"]*' 2>/dev/null | while IFS= read -r h; do
+        tk=$(folio_xref_canon_from_href "$h"); [[ -n "$tk" ]] && printf '%s\n' "$tk"
+      done | LC_ALL=C sort -u
+}
+
+# file ($1) の prose 内 bare-mention token (distinct) を stdout に返す (完全性 / fix 候補の共通源)。
+# 除外: code/script/style/machine-readable aside (folio_prose_only) / 見出し h2/h3 / 既存 <a>...</a> 内 /
+# 自己定義 token (この doc が id 付き定義 site を持つ object = 自己参照)。 token 形は §2.5 の 3 class。
+folio_xref_scan_prose_tokens() {
+  local file="$1" body selfdefs
+  body=$(folio_extract_body "$file")
+  selfdefs=$(folio_prose_only "$body" | grep -oP '\sid="\K(p-[0-9]+|req-[a-z]+-[0-9]+)(?=")' 2>/dev/null \
+    | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
+  folio_prose_only "$body" | grep -vP '<h[23][ >]' 2>/dev/null | awk '
+    { line=$0; out=""
+      while(length(line)>0){
+        if(ina){ q=index(line,"</a>"); if(q==0){ line="" } else { line=substr(line,q+4); ina=0 } }
+        else { p=index(line,"<a "); if(p==0){ out=out line; line="" } else { out=out substr(line,1,p-1); line=substr(line,p+3); ina=1 } } }
+      print out }' \
+    | grep -oP '(?<![-0-9A-Za-z])(P-[0-9]+|REQ-[A-Z]+-[0-9]+|ADR-[0-9]{4})(?![-0-9A-Za-z])' 2>/dev/null \
+    | LC_ALL=C sort -u | while IFS= read -r tk; do
+        [[ -z "$tk" ]] && continue
+        printf '%s\n' "$selfdefs" | grep -qxF "$tk" && continue
+        printf '%s\n' "$tk"
+      done
+}
+
+# file ($1=絶対, $2=root 相対, $3=root 絶対) の opt-in doc の prose 内 bare token 初出を
+# <a class="xref" href data-tooltip> に wrap する (§2.5 option F materialize)。 wrap 数を stdout。
+# opt-in signal = <meta name="folio-xref-completeness" content="enabled"> (無ければ no-op = 0)。
+# 既存 xref を持つ token は skip (completeness 充足済・idempotent)、 解決不能 token も skip。
+# awk は mask (tag/<a> 領域を space 化) で語境界 + tag/anchor 内除外を判定し初出のみ置換。
+folio_xref_wrap_doc() {
+  local file="$1" file_rel="$2" root_abs="$3"
+  [[ "$(folio_extract_meta "$file" folio-xref-completeness)" == "enabled" ]] || { printf '0'; return 0; }
+
+  local present mapfile tk href tip cand=0
+  present=$(folio_xref_present_tokens "$file")
+  mapfile=$(mktemp)
+  while IFS= read -r tk; do
+    [[ -z "$tk" ]] && continue
+    printf '%s\n' "$present" | grep -qxF "$tk" && continue
+    href=$(folio_xref_href "$tk" "$file_rel" "$root_abs") || continue
+    [[ -z "$href" ]] && continue
+    tip=$(folio_xref_tooltip_text "$tk" "$root_abs")
+    [[ -z "$tip" ]] && continue
+    printf '%s\t%s\t%s\n' "$tk" "$href" "$tip" >> "$mapfile"
+    cand=$((cand + 1))
+  done < <(folio_xref_scan_prose_tokens "$file")
+  if [[ "$cand" -eq 0 ]]; then rm -f "$mapfile"; printf '0'; return 0; fi
+
+  local before after out
+  before=$(grep -o 'class="xref"' "$file" 2>/dev/null | wc -l)   # occurrence 数 (同一行複数 xref に対応、 grep -c は行数で誤る)
+  out=$(mktemp)
+  awk -v mapfile="$mapfile" '
+    BEGIN{ nt=0
+      while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=3){ nt++; toks[nt]=a[1]; href[a[1]]=a[2]; tip[a[1]]=a[3]; wrapped[a[1]]=0 } }
+      ANC=0; skip=0 }
+    function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
+    function build_mask(s,   i,c,mk){
+      mk=""
+      for(i=1;i<=length(s);i++){
+        c=substr(s,i,1)
+        if(ANC){ mk=mk " "; if(c==">" && substr(s,i-3,4)=="</a>") ANC=0; continue }
+        if(intag){ mk=mk " "; if(c==">") intag=0; continue }
+        if(c=="<"){ if(substr(s,i,3)=="<a " || substr(s,i,3)=="<a>"){ ANC=1 } else { intag=1 } mk=mk " "; continue }
+        mk=mk c
+      }
+      return mk
+    }
+    { line=$0
+      openskip = (line ~ /<(pre|code|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
+      if(openskip) skip++
+      wrappable = (skip==0) && (line !~ /<h[23][ >]/)
+      anc_in=ANC; intag=0
+      if(wrappable){
+        for(ti=1; ti<=nt; ti++){
+          tk=toks[ti]; if(wrapped[tk]) continue
+          ANC=anc_in; intag=0; mk=build_mask(line)
+          start=1
+          while(1){
+            sub_mk=substr(mk,start); p=index(sub_mk,tk); if(p==0) break
+            p=p+start-1
+            before=(p>1)?substr(mk,p-1,1):""
+            after=substr(mk,p+length(tk),1)
+            if((before=="" || !isword(before)) && (after=="" || !isword(after))){
+              anc="<a class=\"xref\" href=\"" href[tk] "\" data-tooltip=\"" tip[tk] "\">" tk "</a>"
+              line=substr(line,1,p-1) anc substr(line,p+length(tk))
+              wrapped[tk]=1; break
+            }
+            start=p+length(tk)
+          }
+        }
+      }
+      ANC=anc_in; intag=0; build_mask(line)   # 最終 line で ANC を次行へ正しく carry
+      if(line ~ /<\/(pre|code|script|style|aside)>/){ if(skip>0) skip-- }
+      print line
+    }
+  ' "$file" > "$out"
+
+  if cmp -s "$out" "$file"; then rm -f "$out" "$mapfile"; printf '0'; return 0; fi
+  mv "$out" "$file"
+  after=$(grep -o 'class="xref"' "$file" 2>/dev/null | wc -l)
+  rm -f "$mapfile"
+  printf '%d' "$((after - before))"
+}
+
+# corpus ($1=root 絶対) を走査し canonical id (p-N / req-...) が 2 site 以上で定義される
+# = uniqueness violation を "(corpus)\t[xref-uniqueness] ..." 行で stdout (§2.6)。 prose_only で
+# code 例 (rules §7.2 の id="req-xxx-001" 等) を除外し誤検出を防ぐ。 重複なしは無出力。
+folio_xref_uniqueness_check() {
+  local root_abs="$1" d f rel tmp cid count files up
+  tmp=$(mktemp)
+  for d in spec decisions research; do
+    local dir_abs="${root_abs}/${d}"
+    [[ -d "$dir_abs" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      rel=$(realpath -m --relative-to="$root_abs" "$f")
+      folio_prose_only "$(folio_extract_body "$f")" | grep -oP '\sid="\K(p-[0-9]+|req-[a-z]+-[0-9]+)(?=")' 2>/dev/null \
+        | while IFS= read -r cid; do [[ -n "$cid" ]] && printf '%s\t%s\n' "$cid" "$rel"; done
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done > "$tmp"
+  while IFS= read -r cid; do
+    [[ -z "$cid" ]] && continue
+    count=$(awk -F'\t' -v c="$cid" '$1==c{n++} END{print n+0}' "$tmp")
+    if [[ "$count" -ge 2 ]]; then
+      files=$(awk -F'\t' -v c="$cid" '$1==c{print $2}' "$tmp" | LC_ALL=C sort -u | tr '\n' ' ' | sed 's/ *$//')
+      up=$(printf '%s' "$cid" | tr '[:lower:]' '[:upper:]')
+      printf '%s\t[xref-uniqueness] %s が複数の SSoT 定義 site を持つ (%s、 ADR-0034 §2.6)\n' "(corpus)" "$up" "$files"
+    fi
+  done < <(cut -f1 "$tmp" | LC_ALL=C sort -u)
+  rm -f "$tmp"
+}
+
+# corpus ($1=root 絶対) の object-graph (nodes + edges) を JSON で stdout に返す (§2.7 projection)。
+#   nodes = canonical object (principle: constitution / requirement: id 付き spec-row・card /
+#           decision: ADR file)、 各 {id, class, ssot, essence}。 essence は §6 helper を再利用。
+#   edges = in-band <a class="xref"> 集計 {from(doc), to(token)}。 Slice 1 corpus は概ね空。
+# 決定的: nodes は id+ssot で sort、 edges は from+to で sort+unique、 timestamp 非含有。
+folio_xref_build_objectgraph() {
+  local root_abs="$1" d f rel subdir body nodes_tsv edges_tsv
+  nodes_tsv=$(mktemp); edges_tsv=$(mktemp)
+
+  # principle nodes (constitution は spec graph scan 外だが canonical object)
+  local consti="${root_abs}/spec/constitution.html" pid ptok pess
+  if [[ -f "$consti" ]]; then
+    while IFS= read -r pid; do
+      [[ -z "$pid" ]] && continue
+      ptok=$(printf '%s' "$pid" | tr '[:lower:]' '[:upper:]')
+      pess=$(folio_xref_essence "$ptok" "$root_abs")
+      printf '%s\t%s\t%s\t%s\n' "$ptok" "principle" "spec/constitution.html#${pid}" "$pess" >> "$nodes_tsv"
+    done < <(folio_prose_only "$(folio_extract_body "$consti")" | grep -oP '\sid="\K(p-[0-9]+)(?=")' 2>/dev/null | LC_ALL=C sort -u)
+  fi
+
+  for d in spec decisions research; do
+    local dir_abs="${root_abs}/${d}"
+    [[ -d "$dir_abs" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      rel=$(realpath -m --relative-to="$root_abs" "$f"); subdir="${rel%%/*}"
+      body=$(folio_extract_body "$f")
+      local rid rtok ress
+      while IFS= read -r rid; do
+        [[ -z "$rid" ]] && continue
+        rtok=$(printf '%s' "$rid" | tr '[:lower:]' '[:upper:]')
+        ress=$(folio_xref_essence "$rtok" "$root_abs")
+        printf '%s\t%s\t%s\t%s\n' "$rtok" "requirement" "${rel}#${rid}" "$ress" >> "$nodes_tsv"
+      done < <(folio_prose_only "$body" | grep -oP '\sid="\K(req-[a-z]+-[0-9]+)(?=")' 2>/dev/null | LC_ALL=C sort -u)
+      if [[ "$subdir" == "decisions" ]]; then
+        local adrid aess
+        adrid=$(basename "$f" | grep -oP '^ADR-[0-9]{4}')
+        if [[ -n "$adrid" ]]; then
+          aess=$(folio_extract_summary "$f" | folio_xref_plain)
+          printf '%s\t%s\t%s\t%s\n' "$adrid" "decision" "$rel" "$aess" >> "$nodes_tsv"
+        fi
+      fi
+      local eh etok
+      while IFS= read -r eh; do
+        [[ -z "$eh" ]] && continue
+        etok=$(folio_xref_canon_from_href "$eh"); [[ -z "$etok" ]] && continue
+        printf '%s\t%s\n' "$rel" "$etok" >> "$edges_tsv"
+      done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null | grep -oP 'href="\K[^"]*' 2>/dev/null)
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
+  local nodes_json edges_json
+  nodes_json=$(jq -R -s 'split("\n")|map(select(length>0)|split("\t")|{id:.[0],class:.[1],ssot:.[2],essence:.[3]})|sort_by(.id,.ssot)' "$nodes_tsv")
+  edges_json=$(jq -R -s 'split("\n")|map(select(length>0)|split("\t")|{from:.[0],to:.[1]})|unique|sort_by(.from,.to)' "$edges_tsv")
+  rm -f "$nodes_tsv" "$edges_tsv"
+  jq -n --argjson nodes "$nodes_json" --argjson edges "$edges_json" '{nodes:$nodes,edges:$edges}'
+}
+
+# ============================================================================
 # validate helpers — spec 集合の internal link-integrity + jsonld structural +
 # broken-reverse 検査 (REQ-VER-013/015、 ADR-0020 を ADR-0025 で 3-gate に拡張)。
 # jsonld 構造 check は plugin-lib.sh を共用 (§2.4 DRY)、 link-integrity + broken-reverse は
@@ -771,6 +1128,8 @@ folio_cmd_validate() {
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0
+  # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
+  local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
   local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
@@ -864,8 +1223,63 @@ folio_cmd_validate() {
       # gate (g) dual-audience structural — block (REQ-DA-STRUCT-1..5、 ADR-0033、 rules §7 floor)
       local dav
       while IFS= read -r dav; do [[ -n "$dav" ]] && { violations+=("$dav"); da_fail=1; }; done < <(folio_check_dual_audience "$body" "$rel")
+
+      # --- xref gates (ADR-0034 §2.6): resolve/tooltip = universal、 completeness = opt-in meta ---
+      # gate (h) xref resolve-integrity — body の <a class="xref" href> が定義 site に解決するか。
+      # Slice 1 の real corpus は xref link を概ね持たないため検査対象ゼロで clean (dogfood は Slice 2b)。
+      local xhref xres xpath xanchor xtarget
+      while IFS= read -r xhref; do
+        [[ -z "$xhref" ]] && continue
+        case "$xhref" in *:*) continue ;; esac    # external (xref では稀) は試作 scope 外 skip
+        xres=$(folio_resolve_relpath "$xhref" "$subdir" "$root_abs")
+        if [[ "$xres" == *"#"* ]]; then xpath="${xres%%#*}"; xanchor="${xres#*#}"; else xpath="$xres"; xanchor=""; fi
+        xtarget="${root_abs}/${xpath}"
+        if [[ ! -f "$xtarget" ]]; then
+          violations+=("${rel}"$'\t'"[xref-broken] class=xref -> ${xpath} (xref target file not found)"); xref_resolve_fail=1
+        elif [[ -n "$xanchor" ]] && ! grep -qF "id=\"${xanchor}\"" "$xtarget" && ! grep -qF "id='${xanchor}'" "$xtarget"; then
+          violations+=("${rel}"$'\t'"[xref-broken] class=xref -> ${xpath}#${xanchor} (xref anchor id not found in target)"); xref_resolve_fail=1
+        fi
+      done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null | grep -oP 'href="\K[^"]*' 2>/dev/null)
+
+      # gate (i) xref tooltip-consistency — cached data-tooltip が定義の現 essence と一致するか
+      # (drift 検出、 fix 再生成 = §2.4 no-JS 複製の managed staleness)。 fix と同一 folio_xref_tooltip_text。
+      local xtag xh xtip xtok xexp
+      while IFS= read -r xtag; do
+        [[ -z "$xtag" ]] && continue
+        printf '%s' "$xtag" | grep -q 'data-tooltip=' || continue
+        xh=$(printf '%s' "$xtag" | grep -oP 'href="\K[^"]*')
+        xtip=$(printf '%s' "$xtag" | grep -oP 'data-tooltip="\K[^"]*')
+        xtok=$(folio_xref_canon_from_href "$xh"); [[ -z "$xtok" ]] && continue
+        xexp=$(folio_xref_tooltip_text "$xtok" "$root_abs")
+        [[ -z "$xexp" ]] && continue   # 解決不能 token (essence 空) は resolve gate の責務、 tooltip では二重報告しない
+        if [[ "$xtip" != "$xexp" ]]; then
+          violations+=("${rel}"$'\t'"[xref-stale-tooltip] ${xtok} data-tooltip drifted from current essence (fix で再生成)"); xref_tooltip_fail=1
+        fi
+      done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null)
+
+      # gate (j) xref completeness — orphan-mention (opt-in: folio-xref-completeness=enabled の doc のみ)。
+      # Slice 1 では誰も opt-in しないため real corpus で no-op (KEYSTONE invariant、 ADR-0034 §2.5/§2.6)。
+      if [[ "$(folio_extract_meta "$f" folio-xref-completeness)" == "enabled" ]]; then
+        xref_complete_seen=1
+        local present_t bare_t
+        present_t=$(folio_xref_present_tokens "$f")
+        while IFS= read -r bare_t; do
+          [[ -z "$bare_t" ]] && continue
+          printf '%s\n' "$present_t" | grep -qxF "$bare_t" && continue
+          violations+=("${rel}"$'\t'"[xref-orphan-mention] ${bare_t} prose で言及されるが resolvable xref が無い (completeness、 fix で wrap)"); xref_complete_fail=1
+        done < <(folio_xref_scan_prose_tokens "$f")
+      fi
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
+
+  # --- gate (k) xref uniqueness — canonical id が corpus 全体で 2 site 以上定義されていないか (ADR-0034 §2.6) ---
+  # prose_only で code 例 (rules §7.2 の id="req-xxx-001" 等) を除外し誤検出を防ぐ。 重複は normalization
+  # (Slice 2a) 前の real corpus には無いため clean。 重複が見つかった場合のみ block する設計。
+  local uline
+  while IFS= read -r uline; do
+    [[ -z "$uline" ]] && continue
+    violations+=("$uline"); xref_uniq_fail=1
+  done < <(folio_xref_uniqueness_check "$root_abs")
 
   # --- gate (f) delta-marker resolution (REQ-CI-015、 全 file 走査後に format + 解決 check) ---
   local idset dr drel dtag2 did2 dsup2
@@ -888,7 +1302,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience (ADR-0020/0025/0028/0033)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -901,6 +1315,11 @@ folio_cmd_validate() {
   elif [[ "$vocab_fail" -eq 1 ]]; then printf '  [FAIL] vocabulary\n'; else printf '  [OK] vocabulary\n'; fi
   if [[ "$delta_fail" -eq 1 ]]; then printf '  [FAIL] delta-marker\n'; else printf '  [OK] delta-marker\n'; fi
   if [[ "$da_fail" -eq 1 ]]; then printf '  [FAIL] dual-audience-structural\n'; else printf '  [OK] dual-audience-structural\n'; fi
+  if [[ "$xref_resolve_fail" -eq 1 ]]; then printf '  [FAIL] xref-resolve\n'; else printf '  [OK] xref-resolve\n'; fi
+  if [[ "$xref_uniq_fail" -eq 1 ]]; then printf '  [FAIL] xref-uniqueness\n'; else printf '  [OK] xref-uniqueness\n'; fi
+  if [[ "$xref_tooltip_fail" -eq 1 ]]; then printf '  [FAIL] xref-tooltip-consistency\n'; else printf '  [OK] xref-tooltip-consistency\n'; fi
+  if [[ "$xref_complete_seen" -eq 0 ]]; then printf '  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)\n'
+  elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
