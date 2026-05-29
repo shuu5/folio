@@ -782,3 +782,44 @@ a.req-chip:hover { border-color: var(--folio-border-strong); text-decoration: no
   border-top: 1px solid var(--folio-border-default);
   padding-top: 0.6rem;
 }
+
+/* --- compact spec list (linter/checklist 風 dual-audience、 1 行 1 REQ、
+ *     最小読量 = 視覚密度最高の human view)。 summary = badge + EARS pattern badge
+ *     + essence (human 要約、 常時可視)、 クリック展開で .spec-normative (machine
+ *     canonical SSoT、 data-audience="machine")。 verbose な section.req card の
+ *     compact 第 2 form (rules §7.2 form 2、 ADR-0033 §2.5 Hybrid の ② compact list)。
+ *     純 CSS (JS 非依存、 §8 progressive enhancement)、 token のみで dark mode 自動対応。 */
+.spec-list {
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+  overflow: hidden;
+  background: var(--folio-surface-normal);
+  box-shadow: var(--folio-elev-1);
+  margin: 1.25rem 0;
+}
+.spec-row { border-bottom: 1px solid var(--folio-border-default); padding: 0; }
+.spec-row:last-child { border-bottom: none; }
+.spec-row > summary {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 0.6rem 1rem;
+  cursor: pointer;
+  list-style: none;
+  letter-spacing: normal;
+}
+.spec-row > summary::-webkit-details-marker { display: none; }
+.spec-row > summary::before { content: "\25B8"; color: var(--folio-text-tertiary); font-size: 0.8em; }   /* ▸ */
+.spec-row[open] > summary::before { content: "\25BE"; }                                                  /* ▾ */
+.spec-row > summary .essence { flex: 1 1 18rem; letter-spacing: normal; }
+.spec-row .spec-normative { padding: 0 1rem 0.75rem 2.4rem; font-size: var(--folio-text-base); }
+.spec-row .spec-normative .ears { margin: 0; }
+.spec-row[open] { background: var(--folio-bg-secondary); }
+
+/* --- coverage RTM (requirement traceability matrix) の gap マーカー。
+ *     scenario / verified 列が空 = link は valid だが未検証 = validate が捕らない
+ *     gap を danger 色で一目可視化する (ADR-0033 §2.5 の ③ coverage RTM の効用)。
+ *     base の <table> styling を継承し、 gap cell のみ本 class で強調。 inline style
+ *     を使わず token 経由ゆえ dark mode で contrast 維持 (--folio-danger swap)。 */
+td.cov-gap { color: var(--folio-danger); font-weight: 700; }
