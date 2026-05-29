@@ -56,6 +56,13 @@
   ]
 }
 </script>
+<script src="../assets/mermaid.min.js" defer></script>
+<style>
+figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
+figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
+pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
+pre.mermaid[data-processed="true"] { visibility: visible; }
+</style>
 </head>
 <body>
 
@@ -195,21 +202,120 @@
 <p>本 §3 は verification framework の規範要件を EARS notation で集約する。 各 REQ-VER-* は <a href="rules.html#s6-ears">rules.html §6 EARS Notation</a> に従う。 scenario YAML file への 1:1 mapping は <a href="https://conductofcode.io/post/easy-approach-to-requirements-syntax-and-the-segue-to-behavior-driven-development/">EARS → Gherkin BDD 変換 pattern</a> で導出される。</p>
 </aside>
 
+<figure class="diagram" data-diagram-type="verification-model">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
+flowchart TB
+  accTitle: folio verification model
+  accDescr: scenario YAML を runner が読み、 hook mock payload (kind:hook) または CLI golden (kind:cli-golden) で実行し、 exit_code / file-state / golden-diff のいずれかで assert する流れ。
+  SC["scenario YAML<br/>tests/scenarios/"]
+  RUN["runner.sh"]
+  HK["hook mock<br/>kind: hook"]
+  CL["CLI golden<br/>kind: cli-golden"]
+  EX["assert<br/>exit_code"]
+  FS["assert<br/>file-state (e2e)"]
+  GD["assert<br/>golden diff"]
+  SC --> RUN
+  RUN --> HK
+  RUN --> CL
+  HK --> EX
+  HK --> FS
+  CL --> GD
+  classDef src fill:#e6f6f2,stroke:#1e7b65,color:#08131a;
+  classDef run fill:#2a4d6e,stroke:#08131a,color:#ffffff;
+  classDef br fill:#fefbea,stroke:#916626,color:#08131a;
+  classDef as fill:#fdf3f3,stroke:#b22323,color:#08131a;
+  class SC src;
+  class RUN run;
+  class HK,CL br;
+  class EX,FS,GD as;
+</pre>
+<figcaption>図 1. folio verification model。 scenario YAML を <code>runner.sh</code> が hook mock (<code>kind:hook</code>) / CLI golden (<code>kind:cli-golden</code>) で実行し、 <code>exit_code</code> / file-state / golden diff で assert する。 各 assertion の規範は §3.3 / §3.4 / REQ-VER-009/011。</figcaption>
+</figure>
+
+<div class="req-dashboard">
+  <div class="req-dashboard__group">
+    <h4>format &amp; assertion (§3.1–3.5)</h4>
+    <div class="req-dashboard__chips">
+      <a class="req-chip req-chip--ubiquitous" href="#req-ver-001">VER-001</a>
+      <a class="req-chip req-chip--ubiquitous" href="#req-ver-002">VER-002</a>
+      <a class="req-chip req-chip--ubiquitous" href="#req-ver-003">VER-003</a>
+      <span class="req-chip req-chip--ubiquitous">VER-004</span>
+      <span class="req-chip req-chip--ubiquitous">VER-005</span>
+      <span class="req-chip req-chip--ubiquitous">VER-006</span>
+    </div>
+  </div>
+  <div class="req-dashboard__group">
+    <h4>hooks (§3.6)</h4>
+    <div class="req-dashboard__chips">
+      <a class="req-chip req-chip--unwanted" href="#req-ver-007">VER-007</a>
+      <span class="req-chip req-chip--unwanted">VER-008</span>
+      <a class="req-chip req-chip--event" href="#req-ver-009">VER-009</a>
+    </div>
+  </div>
+  <div class="req-dashboard__group">
+    <h4>CLI subcommands (§3.6)</h4>
+    <div class="req-dashboard__chips">
+      <span class="req-chip req-chip--event">VER-010</span>
+      <span class="req-chip req-chip--event">VER-011</span>
+      <span class="req-chip req-chip--event">VER-012</span>
+      <span class="req-chip req-chip--event">VER-013</span>
+      <span class="req-chip req-chip--event">VER-014</span>
+      <span class="req-chip req-chip--event">VER-015</span>
+    </div>
+  </div>
+  <div class="req-dashboard__group">
+    <h4>Phase F (§3.6)</h4>
+    <div class="req-dashboard__chips">
+      <span class="req-chip req-chip--event">VER-016</span>
+    </div>
+  </div>
+  <div class="req-dashboard__legend">
+    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
+    <span class="req__ears req__ears--unwanted">Unwanted</span>
+    <span class="req__ears req__ears--event">Event-Driven</span>
+  </div>
+</div>
+
 <h3 id="s3-1-scenario-format">§3.1 scenario format (YAML、 1 REQ = 1 scenario)</h3>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-001</span>:
-  Each verification scenario file <span class="ears-shall">SHALL</span> be a YAML file
-  placed under <code>tests/scenarios/</code> with the structure defined in §3.2.
-</p>
+<section class="req" id="req-ver-001" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-VER-001</span>
+    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
+  </div>
+  <p class="req__essence">検証 scenario は <code>tests/scenarios/</code> 配下の YAML ファイル (構造は §3.2 で定義)。</p>
+  <details class="req__machine" data-audience="machine">
+    <summary>normative (machine)</summary>
+    <div class="req__normative">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-VER-001</span>:
+        Each verification scenario file <span class="ears-shall">SHALL</span> be a YAML file
+        placed under <code>tests/scenarios/</code> with the structure defined in §3.2.
+      </p>
+    </div>
+  </details>
+</section>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-002</span>:
-  Each scenario <span class="ears-shall">SHALL</span> reference one canonical
-  <code>req_id</code> from <a href="rules.html#s10-mandatory">rules.html §10</a>
-  (REQ-CM-* / REQ-CI-*) or <a href="relations.html#s5-3-ears">relations.html §5.3</a>
-  (REQ-REL-*), or be a verification-specific REQ-VER-* defined in this §3.
-</p>
+<section class="req" id="req-ver-002" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-VER-002</span>
+    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
+  </div>
+  <p class="req__essence">各 scenario は canonical な <code>req_id</code> を 1 つ参照する (<a href="rules.html#s10-mandatory">rules §10</a> / <a href="relations.html#s5-3-ears">relations §5.3</a>、 または verification 固有の REQ-VER-*)。</p>
+  <details class="req__machine" data-audience="machine">
+    <summary>normative (machine)</summary>
+    <div class="req__normative">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-VER-002</span>:
+        Each scenario <span class="ears-shall">SHALL</span> reference one canonical
+        <code>req_id</code> from <a href="rules.html#s10-mandatory">rules.html §10</a>
+        (REQ-CM-* / REQ-CI-*) or <a href="relations.html#s5-3-ears">relations.html §5.3</a>
+        (REQ-REL-*), or be a verification-specific REQ-VER-* defined in this §3.
+      </p>
+    </div>
+  </details>
+</section>
 
 <h3 id="s3-2-yaml-schema">§3.2 YAML schema</h3>
 
@@ -267,11 +373,23 @@ expect:
 
 <h3 id="s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</h3>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-003</span>:
-  Each scenario <code>expect</code> block <span class="ears-shall">SHALL</span>
-  specify <code>exit_code</code> as the primary assertion.
-</p>
+<section class="req" id="req-ver-003" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-VER-003</span>
+    <span class="req__ears req__ears--ubiquitous">Ubiquitous</span>
+  </div>
+  <p class="req__essence">scenario の assertion 主軸は <code>exit_code</code> とする。</p>
+  <details class="req__machine" data-audience="machine">
+    <summary>normative (machine)</summary>
+    <div class="req__normative">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-VER-003</span>:
+        Each scenario <code>expect</code> block <span class="ears-shall">SHALL</span>
+        specify <code>exit_code</code> as the primary assertion.
+      </p>
+    </div>
+  </details>
+</section>
 
 <p class="ears" data-ears-pattern="ubiquitous">
   <span class="ears-id">REQ-VER-006</span>:
@@ -312,15 +430,27 @@ expect:
 
 <p>以下は <a href="rules.html#s10-mandatory">rules.html §10</a> / <a href="relations.html#s5-3-ears">relations.html §5.3</a> に canonical REQ を持たない、 試作 plugin の検証専用 REQ (§3.1 REQ-VER-002 の verification-specific 条項に従う)。 対応 scenario file (REQ-VER-009 は <a href="../../tests/e2e/runbook.md">agent-driven runbook</a>) が SSoT 実装。</p>
 
-<p class="ears" data-ears-pattern="unwanted">
-  <span class="ears-id">REQ-VER-007</span>:
-  IF a Write tool creates a <code>.html</code> file carrying
-  <code>&lt;meta name="folio-doc-type" content="spec"&gt;</code> outside the configured
-  <code>spec_path</code>, THEN the PreToolUse path-boundary hook
-  <span class="ears-shall">SHALL</span> deny (exit 2)。
-  scenario: <code>scenarios/path-boundary.yaml</code> (ADR-0003 §2.1 Option Pragmatic、
-  絶対 path 配下も第 2 branch <code>*"/$2"*</code> で gate)。
-</p>
+<section class="req" id="req-ver-007" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-VER-007</span>
+    <span class="req__ears req__ears--unwanted">Unwanted</span>
+  </div>
+  <p class="req__essence"><code>spec_path</code> 外への spec (<code>.html</code>) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。</p>
+  <details class="req__machine" data-audience="machine">
+    <summary>normative (machine)</summary>
+    <div class="req__normative">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-VER-007</span>:
+        IF a Write tool creates a <code>.html</code> file carrying
+        <code>&lt;meta name="folio-doc-type" content="spec"&gt;</code> outside the configured
+        <code>spec_path</code>, THEN the PreToolUse path-boundary hook
+        <span class="ears-shall">SHALL</span> deny (exit 2)。
+        scenario: <code>scenarios/path-boundary.yaml</code> (ADR-0003 §2.1 Option Pragmatic、
+        絶対 path 配下も第 2 branch <code>*"/$2"*</code> で gate)。
+      </p>
+    </div>
+  </details>
+</section>
 
 <p class="ears" data-ears-pattern="unwanted">
   <span class="ears-id">REQ-VER-008</span>:
@@ -333,22 +463,34 @@ expect:
   試作は check 型を採用 (divergence trace = specs/README.html §6.2)。
 </p>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-VER-009</span>:
-  <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a
-  live-loaded session (§4.1 Step 2 worktree integration)</span>,
-  an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios
-  (<code>tests/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
-  so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario
-  observations as golden baselines under
-  <code>tests/e2e/baselines/reference/</code>。
-  primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、
-  PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない
-  (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、
-  exit code でなく file system state を一次 assertion とする。 実装 =
-  <a href="../../tests/e2e/README.html">tests/e2e/</a> (runbook + golden、
-  sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
-</p>
+<section class="req" id="req-ver-009" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-VER-009</span>
+    <span class="req__ears req__ears--event">Event-Driven</span>
+  </div>
+  <p class="req__essence">live-load した session で plugin を統合検証するとき、 agent が <a href="../../tests/e2e/runbook.md">e2e runbook</a> を実 Edit/Write で歩いて live hook を発火させ、 観察を golden baseline に記録する。 一次 assertion = <strong>file 作成有無</strong> (deny ⇒ 不在 / notify ⇒ 存在)。</p>
+  <details class="req__machine" data-audience="machine">
+    <summary>normative (machine)</summary>
+    <div class="req__normative">
+      <p class="ears" data-ears-pattern="event-driven">
+        <span class="ears-id">REQ-VER-009</span>:
+        <span class="ears-when">WHEN the folio plugin is verified as an integrated tool in a
+        live-loaded session (§4.1 Step 2 worktree integration)</span>,
+        an agent <span class="ears-shall">SHALL</span> walk the e2e runbook scenarios
+        (<code>tests/e2e/runbook.md</code>) by issuing real Edit/Write tool calls
+        so the live hooks fire, and <span class="ears-shall">SHALL</span> record per-scenario
+        observations as golden baselines under
+        <code>tests/e2e/baselines/reference/</code>。
+        primary assertion = <strong>file 作成有無</strong> (PreToolUse deny ⇒ file 不在、
+        PostToolUse notify ⇒ file 存在 + 通知)。 deny は transcript に確実には現れない
+        (<a href="../research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a>) ため、
+        exit code でなく file system state を一次 assertion とする。 実装 =
+        <a href="../../tests/e2e/README.html">tests/e2e/</a> (runbook + golden、
+        sandbox 単体テストの mock payload 検証 (REQ-VER-001〜008) とは別 layer の統合検証)。
+      </p>
+    </div>
+  </details>
+</section>
 
 <p class="ears" data-ears-pattern="event-driven">
   <span class="ears-id">REQ-VER-010</span>:
@@ -594,5 +736,23 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
 </ul>
 </section>
 
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'antiscript',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#2a4d6e',
+        primaryTextColor: '#ffffff',
+        lineColor: '#2a4d6e',
+        secondaryColor: '#5ac8b8',
+        tertiaryColor: '#f5f8fa'
+      }
+    });
+  }
+});
+</script>
 </body>
 </html>

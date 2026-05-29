@@ -664,3 +664,121 @@ section.informative > h2:first-of-type::after { content: "Informative"; color: v
 
 /* --- table zebra striping (neutral, dark mode 両対応) --------------- */
 tbody tr:nth-child(even) { background: rgba(127, 127, 127, 0.045); }
+
+/* ========================================================================
+ * dual-audience requirement unit (ADR-0033 Option B prototype)
+ *   human essence (可視・派生 view) + machine normative (folded・canonical SSoT)
+ *   を 1 unit に co-author。 aria-hidden は使わない (accessibility-tree AI 可読性、
+ *   research M3)。 fold は <details> による視覚 progressive disclosure のみ。
+ * ====================================================================== */
+
+section.req {
+  border: 1px solid var(--folio-border-default);
+  border-left: 4px solid var(--folio-brand);
+  border-radius: var(--folio-radius-card);
+  background: var(--folio-surface-normal);
+  padding: 0.875rem 1.25rem;
+  margin: 1.25rem 0;
+  box-shadow: var(--folio-elev-1);
+}
+.req__card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+.req__essence {
+  margin: 0.6rem 0 0;
+  font-size: var(--folio-text-article);
+  line-height: 1.7;
+  letter-spacing: normal;
+}
+
+/* EARS keyword badge (human card、 pattern を一目で色識別。 ReSpec rfc2119 強調手法を
+ * EARS に適用、 色割当は folio 独自設計 = ADR-0033 明示) */
+.req__ears {
+  display: inline-block;
+  padding: 1px 9px;
+  border-radius: 999px;
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  font-feature-settings: "palt";
+}
+.req__ears--ubiquitous { background: rgba(127, 127, 127, 0.12); color: var(--folio-text-secondary); border-color: var(--folio-border-default); }
+.req__ears--event      { background: rgba(42, 77, 110, 0.12);  color: var(--folio-brand);   border-color: rgba(42, 77, 110, 0.30); }
+.req__ears--state      { background: rgba(30, 123, 101, 0.12); color: var(--folio-success); border-color: rgba(30, 123, 101, 0.30); }
+.req__ears--unwanted   { background: rgba(145, 102, 38, 0.14); color: var(--folio-caution); border-color: rgba(145, 102, 38, 0.30); }
+.req__ears--optional   { background: rgba(120, 60, 140, 0.14); color: #8c4ba6;               border-color: rgba(120, 60, 140, 0.30); }
+
+/* machine-normative fold (canonical SSoT、 視覚的に de-emphasize) */
+details.req__machine {
+  margin-top: 0.75rem;
+  border-top: 1px dashed var(--folio-border-default);
+  padding-top: 0.5rem;
+}
+details.req__machine > summary {
+  cursor: pointer;
+  font-size: var(--folio-text-caption);
+  font-family: var(--folio-font-mono);
+  color: var(--folio-text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+details.req__machine > summary::before { content: "\2699  "; }            /* ⚙ */
+details.req__machine[open] > summary { color: var(--folio-text-secondary); margin-bottom: 0.5rem; }
+.req__normative { font-size: var(--folio-text-base); }
+.req__normative .ears { margin: 0.5rem 0 0; }
+
+/* --- requirement dashboard (at-a-glance human overview) ------------- */
+.req-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--folio-surface-normal);
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+  box-shadow: var(--folio-elev-1);
+}
+.req-dashboard__group h4 {
+  margin: 0 0 0.5rem;
+  font-size: var(--folio-text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--folio-text-tertiary);
+}
+.req-dashboard__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.req-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--folio-radius-inline);
+  font-family: var(--folio-font-mono);
+  font-size: 0.72em;
+  font-weight: 600;
+  border: 1px solid var(--folio-border-default);
+  border-left: 3px solid var(--folio-text-tertiary);
+  background: var(--folio-bg-secondary);
+  color: var(--folio-text-primary);
+  text-decoration: none;
+  letter-spacing: normal;
+}
+a.req-chip:hover { border-color: var(--folio-border-strong); text-decoration: none; }
+.req-chip--ubiquitous { border-left-color: var(--folio-text-tertiary); }
+.req-chip--event      { border-left-color: var(--folio-brand); }
+.req-chip--unwanted   { border-left-color: var(--folio-caution); }
+.req-chip--state      { border-left-color: var(--folio-success); }
+.req-dashboard__legend {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  border-top: 1px solid var(--folio-border-default);
+  padding-top: 0.6rem;
+}
