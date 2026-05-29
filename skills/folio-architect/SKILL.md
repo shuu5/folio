@@ -1,6 +1,6 @@
 ---
 name: folio-architect
-description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A で adoption-state を検出し greenfield (onboarding grilling → constitution/overview を lazy materialize) / maintenance に分岐、Phase C で refs/grilling-protocol.md に沿い gap-driven に grill、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 4 review agent (folio:spec-review-ears/vocabulary/ssot/temporal) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
+description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A で adoption-state を検出し greenfield (onboarding grilling → constitution/overview を lazy materialize) / maintenance に分岐、Phase C で refs/grilling-protocol.md に沿い gap-driven に grill、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 5 review agent (folio:spec-review-ears/vocabulary/ssot/temporal/fidelity) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
 disable-model-invocation: true
 ---
 
@@ -23,7 +23,7 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 | C | Clarifying / Grilling | **MUST NOT SKIP** | `refs/grilling-protocol.md` に沿い gap-driven に 1 問ずつ grill + persist-as-you-go |
 | D | Design | optional | structural change 時のみ inline 設計 (`spec-architect` agent 化は X5+) |
 | E | Implementation | MUST | marker set → Edit → `folio validate` → marker unset |
-| F | Quality Review | **MUST NOT SKIP** | 4 review agent (ears/vocabulary/ssot/temporal) を **並列 spawn** → findings 集約 → 高 severity を再 Phase E で修正 |
+| F | Quality Review | **MUST NOT SKIP** | 5 review agent (ears/vocabulary/ssot/temporal/fidelity) を **並列 spawn** → findings 集約 → 高 severity を再 Phase E で修正 |
 | G | Summary | MUST | delta marker check + 変更要約 |
 
 各 phase を **順に** 実行する。Phase C と F は **MUST NOT SKIP**。Phase D は structural change が無ければ skip 可。
@@ -132,11 +132,11 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 
 ## Phase F — Quality Review (MUST NOT SKIP)
 
-`folio validate` の機械 gate が検査**しない** folio 固有の 3 品質軸を、LLM review agent で並列検証する。
+`folio validate` の機械 gate が検査**しない** folio 固有の 5 品質軸を、LLM review agent で並列検証する。
 
-### 3 review agent を 1 メッセージで並列 spawn
+### 5 review agent を 1 メッセージで並列 spawn
 
-**Agent tool を使い、以下の 3 つの subagent を 1 つのメッセージ内で同時に (並列に) 起動する** (3 つの Agent tool 呼び出しを同一 response にまとめる = 並列実行):
+**Agent tool を使い、以下の 5 つの subagent を 1 つのメッセージ内で同時に (並列に) 起動する** (5 つの Agent tool 呼び出しを同一 response にまとめる = 並列実行):
 
 | scoped name | 軸 | 検査内容 |
 |-------------|----|---------| 
@@ -144,10 +144,11 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 | `folio:spec-review-vocabulary` | vocabulary | P-5 canonical name 違反 + forbidden synonym |
 | `folio:spec-review-ssot` | SSoT | P-7 content domain exclusivity + ADR/research 境界 |
 | `folio:spec-review-temporal` | temporal | P-4 declarative form + wave-specific narrative 検出 (REQ-CI-011 の LLM ceiling、 ADR-0028 §2.3) |
+| `folio:spec-review-fidelity` | fidelity | dual-audience の human essence ↔ machine normative 意味的 fidelity + EARS pattern semantic 一致 (ADR-0033 §2.4 ceiling = floor `REQ-DA-STRUCT` の意味層補完) |
 
-各 agent には **Phase E で編集した spec file の path 群** と「担当軸を review し構造化 findings (severity / location / rule / fix) を返せ」という指示を渡す。3 agent は read-only (自ら Edit しない) ため、並列で安全に走る。model は `review_model` (default opus)。
+各 agent には **Phase E で編集した spec file の path 群** と「担当軸を review し構造化 findings (severity / location / rule / fix) を返せ」という指示を渡す。5 agent は read-only (自ら Edit しない) ため、並列で安全に走る。model は `review_model` (default opus)。`spec-review-fidelity` は dual-audience card (`data-audience`) を持つ spec でのみ実質的に働き、 無い spec では clean を返す。
 
-> 完成形 §7.2 は当初 Phase F 6 軸構想だったが、X5-γ (ADR-0029) で **v1.0 = 4 軸 (ears / vocabulary / ssot / temporal)** に確定。`spec-review-structure` は `folio validate` (link-integrity + readme-index) が機械被覆ゆえ **cut**、`spec-review-stakeholder` と Phase B/D の `spec-explorer` / `spec-architect` (inline で機能) は **post-1.0 defer**。temporal は REQ-CI-011 declarative-form の LLM ceiling (ADR-0028 §2.3)。
+> 完成形 §7.2 は当初 Phase F 6 軸構想だったが、X5-γ (ADR-0029) で **v1.0 = 4 軸 (ears / vocabulary / ssot / temporal)** に確定し、ADR-0033 で dual-audience 用の **fidelity 軸を追加して v1.0 = 5 軸** とした。`spec-review-structure` は `folio validate` (link-integrity + readme-index) が機械被覆ゆえ **cut**、`spec-review-stakeholder` と Phase B/D の `spec-explorer` / `spec-architect` (inline で機能) は **post-1.0 defer**。temporal は REQ-CI-011 declarative-form の LLM ceiling (ADR-0028 §2.3)、fidelity は dual-audience floor `REQ-DA-STRUCT` の LLM ceiling (ADR-0033 §2.4)。
 
 ### findings 集約 → 修正適用 (再 Phase E)
 
@@ -167,16 +168,16 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 ## 制約・注記
 
 - 本 SKILL は `disable-model-invocation: true`。user が明示的に `/folio-architect` で起動する。
-- folio-architect は **SKILL のまま (subagent 化しない)**。Phase F の 3 agent を spawn する orchestrator は main-session 必須 (nesting 制約)。
+- folio-architect は **SKILL のまま (subagent 化しない)**。Phase F の 5 agent を spawn する orchestrator は main-session 必須 (nesting 制約)。
 - review agent は **read-only** (`tools: Read, Grep, Glob`)。spec への Edit は folio-architect が Phase E/F で一元的に行う (caller-marker hook の author 一元性)。
-- 7-Phase orchestration + Phase F review agent を実装。X4-D で 3 軸 (ears/vocabulary/ssot)、X5-γ (ADR-0029) で temporal を追加し **v1.0 = 4 review agent**。完成形 §7.2 の残 (spec-explorer / spec-architect / spec-review-stakeholder) は post-1.0 defer、spec-review-structure は `folio validate` 被覆ゆえ cut。
+- 7-Phase orchestration + Phase F review agent を実装。X4-D で 3 軸 (ears/vocabulary/ssot)、X5-γ (ADR-0029) で temporal を追加し v1.0 = 4 review agent、ADR-0033 で dual-audience 用の fidelity を追加し **v1.0 = 5 review agent**。完成形 §7.2 の残 (spec-explorer / spec-architect / spec-review-stakeholder) は post-1.0 defer、spec-review-structure は `folio validate` 被覆ゆえ cut。
 
 ## 参照
 
 - folio-self-spec.html §7.1 (7-Phase PR Cycle) / §7.2 (8 specialist 完成形) / §7.3 (caller marker flow) / §7.4 (5-Layer Defense) / §7.6 (growth path)
-- ADR-0027 (X4-D folio-architect 7-Phase 昇格 + review agents 3 個) / ADR-0029 (X5-γ Phase F = 4 review agent: temporal 追加・structure cut・explorer/architect/stakeholder defer) / ADR-0028 (二層 enforcement: REQ-CI-011 を temporal agent ceiling に委譲) / ADR-0031 (mattpocock authoring 吸収: adoption-aware Phase A + grilling Phase C + init lazy)
+- ADR-0027 (X4-D folio-architect 7-Phase 昇格 + review agents 3 個) / ADR-0029 (X5-γ Phase F = 4 review agent: temporal 追加・structure cut・explorer/architect/stakeholder defer) / ADR-0028 (二層 enforcement: REQ-CI-011 を temporal agent ceiling に委譲) / ADR-0031 (mattpocock authoring 吸収: adoption-aware Phase A + grilling Phase C + init lazy) / ADR-0033 (dual-audience HTML hub: Phase F に fidelity 追加 = floor REQ-DA-STRUCT の LLM ceiling)
 - rules.html §6 (EARS) / §5 (delta marker) / §10.1 (REQ-CM-001〜003 caller marker)
 - verification.html §3.6 REQ-VER-016 (Phase F review agent の検証 contract)
-- agents/spec-review-{ears,vocabulary,ssot,temporal}.md (Phase F で spawn する review agent)
+- agents/spec-review-{ears,vocabulary,ssot,temporal,fidelity}.md (Phase F で spawn する review agent)
 - refs/grilling-protocol.md (Phase A/C grilling 規律: spec-aware / gap-driven / persist-as-you-go、mattpocock grill-me/grill-with-docs 由来 MIT-attr)
 - .claude-plugin/scripts/check-caller-marker.sh (hybrid enforcement logic)
