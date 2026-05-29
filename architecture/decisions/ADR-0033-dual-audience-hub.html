@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0033">
+<meta name="folio-adr-date" content="2026-05-29">
+<title>ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0033-dual-audience-hub.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0029-phase-f-agent-set.html" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" },
+    { "@id": "../spec/folio-self-spec.html" },
+    { "@id": "../spec/relations.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-29 &middot; folio v0.5.0-draft &middot; dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> floor + ceiling 拡張 / <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> Phase F に fidelity 追加 (実装は SPAWN)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0033</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-29</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0028 (二層 enforcement = floor を REQ-DA-STRUCT-* で、 ceiling を fidelity 軸で拡張)、 ADR-0029 (Phase F agent セット = spec-review-fidelity を追加)、 ADR-0020 (validate scope = REQ-DA-STRUCT-* gate 追加)、 rules.html (data-audience taxonomy + a11y + dual-audience conditional-normative + 視覚 guidance + JS governance)、 verification.html (prototype §3 + coverage RTM)、 folio-self-spec.html (dual-audience core + JS governance)、 relations.html (machine SSoT = JSON-LD inline 保持)、 constitution P-2/P-3/P-7/P-12/P-13 (不変原則)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio の spec は <a href="../spec/constitution.html#p-2">P-2</a> により HTML で記述する。 現状の audience 非対称は <strong>machine に Tier 1 digest (<code>folio prime</code> 派生要約)・human に全文</strong>であり、 human 視点では「構造妥当だが字ばかりで読む気がしない」 = 認知負荷が高い。 mermaid 等の図は markdown でも扱えるため、 <strong>HTML プレゼンの固有価値は「同一ソース内で audience 別に提示を切り替えられる」点</strong>にある、 という問いから本 ADR は出発する。</p>
+
+<p>HTML プレゼンの prior art 調査 (80 sources、 critic PASS 8.3/10) で<strong>金脈</strong>を得た: <strong>DITA conditional processing (<code>@audience</code> profiling) と literate programming (Knuth WEB の tangle/weave) は double-SSoT 問題を完全に同一の原理で解いている</strong> — 「単一ソースを一度だけ authoring し、 各 audience view は filtering / 機械変換で<strong>生成 (derived)</strong> する。 view は独立に<strong>維持 (maintained) しない</strong>」。 これにより divergence は規律でなく<strong>構造的必然</strong>として消える。 Knuth 原典 (The Computer Journal 1984, DOI 10.1093/comjnl/27.2.97): <em>"if this were defined in a separate source document, then inconsistencies would be almost impossible to prevent"</em>。 DITA (OASIS): <em>"There is only one source. Deliverables are derived, not maintained"</em>。</p>
+
+<p>folio が grill で選んだ構造は <strong><code>data-audience</code> taxonomy + <code>&lt;details&gt;</code> fold で両 audience を 1 HTML artifact に co-author</strong> (no-build で AI が source HTML を直読) である。 方向性 (machine normative = SSoT / human essence = 派生 view) は prior art と一致するが、 <strong>1 DOM に両 audience を同居させ human essence を手書き co-author する構造は prior art に存在しない novelty</strong> (調査 H3 で Sphinx / AsciiDoc / DocBook / Antora / MkDocs / DITA を比較、 全て build-time の分離成果物)。 co-author は DITA/LP が回避した "independent maintenance → divergence" の罠に自ら踏み込む。</p>
+
+<p>→ <strong>本 ADR の中心命題</strong>: folio の <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement (validate floor + Phase F review agent ceiling) は、 DITA/LP が「機械的導出」でタダで得る consistency を、 co-author モデルで失う代わりに<strong>「強制」で取り戻す代替機構</strong>である。 LLM ceiling (fidelity review) は装飾でなく<strong>構造の要 (load-bearing)</strong>。 本 ADR は dual-audience HTML hub の SSoT モデル・構造・enforcement・human view・普遍性・normative 範囲・JS governance を決定する。 grill (7 問) で各論点を解決済。 <strong>status = accepted (user 承認済 2026-05-29)</strong>。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-ssot">§2.1 SSoT モデル = 単一ソース + progressive disclosure</h3>
+<p>dual-audience spec は<strong>単一 HTML ソース</strong>とし、 progressive disclosure で audience 別に提示する。 <strong>machine 精密 normative = canonical SSoT</strong>、 <strong>human essence + graphical = 派生 view (非規範)</strong>。 human view は machine normative の<strong>要約</strong>であって別物の paraphrase ではない。 machine SSoT は <a href="../spec/relations.html">relations.html</a> 系の <code>&lt;script type="application/ld+json"&gt;</code> (JSON-LD inline) に保持し、 これが将来 Option A' (§2.3) で「human view を生成する元データ」になる。</p>
+
+<h3 id="s2-2-structure">§2.2 構造 = data-audience taxonomy + &lt;details&gt; fold (no aria-hidden)</h3>
+<ul>
+  <li><strong><code>data-audience</code></strong> = closed 2 値 core (<code>machine</code> | <code>human</code>)。 AI 抽出 (<code>[data-audience="machine"]</code>) の決定性と floor 検査の単純化のため 2 値固定。 synonym (<code>data-reader</code> / <code>data-for</code> 等) は <a href="../spec/constitution.html#p-5">P-5</a> (1 entity = 1 canonical name) により禁止。 継承 (cascade) なし = 明示付与のみ (fold 境界と 1:1)。</li>
+  <li><strong><code>&lt;details&gt;</code> 視覚 fold</strong>: machine 部は DOM に<strong>常在</strong> (AI / accessibility-tree / find-in-page に可視) し、 視覚的初期表示のみ畳む。 <code>folio prime</code> が machine 部を抽出注入する = 「AI は AI 用部分だけを読む」。</li>
+  <li><strong><code>aria-hidden</code> を machine 部に付けない</strong>: <code>aria-hidden="true"</code> は accessibility tree から除去するため、 Playwright 等 accessibility-tree ベース AI agent からも不可視となり「AI は読める」目的に反する (調査 verified)。 find-in-page (Chrome/Edge) は閉じた <code>&lt;details&gt;</code> を自動展開するため、 fold は検索からの隠蔽ではない。</li>
+  <li><strong>注 (metadata aside との区別)</strong>: ADR 等の <code>&lt;aside class="machine-readable" aria-hidden="true"&gt;</code> は meta tag + JSON-LD + 可視 header に既出の<strong>冗長な metadata 複製</strong>であり、 dual-audience の <code>data-audience="machine"</code> が保持する<strong>canonical normative SSoT</strong>とは別物。 後者にのみ aria-hidden 禁止が適用される (本 ADR 自身の aside は前者ゆえ template 踏襲)。</li>
+</ul>
+
+<h3 id="s2-3-option-b">§2.3 Option B (co-author + enforce) 採用 / Option A' (derive-into-DOM) は roadmap</h3>
+<p>現 grill 結論を <strong>Option B = co-author + enforce</strong> として明示採用する: human essence を <code>data-audience="human"</code> に手書き、 machine normative を <code>data-audience="machine"</code> に併記、 consistency は <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> floor + ceiling で強制。 利点 = no-build (<a href="../spec/constitution.html#p-13">P-13</a> 整合)・1 artifact・AI 直読・実装単純。 代償 = consistency が構造的でなく強制依存 (LLM ceiling が load-bearing)、 prior art 無し。</p>
+<p><strong>Option A' = derive-into-DOM</strong> (machine SSoT から human view を build-time 生成し同一 DOM に埋込、 Bikeshed / ReSpec snapshot モデル) を<strong>中長期 roadmap</strong>として残す。 consistency が機械的導出で構造的にタダになる利点があるが、 <strong>build step が <a href="../spec/constitution.html#p-13">P-13</a> (no-mandate-build 志向) と緊張</strong>する。 <code>folio prime</code> が既に digest を生成している事実は Option A' への自然な拡張点であり、 移行は後続 ADR で評価する。</p>
+
+<h3 id="s2-4-enforcement">§2.4 consistency = 二層 enforcement (ADR-0028 拡張)</h3>
+<p>co-author の consistency を、 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の deterministic floor + LLM ceiling モデルで担保する。</p>
+<ul>
+  <li><strong>floor = <code>folio validate</code> 構造検査</strong> (<a href="./ADR-0020-validate-scope.html">ADR-0020</a> scope 拡張): <code>REQ-DA-STRUCT-1</code> 各 <code>[data-audience="human"]</code> に対応 machine が存在 / <code>-2</code> machine の JSON-LD <code>@id</code> が human card と一致 / <code>-3</code> <code>data-audience</code> 値が <code>machine</code>|<code>human</code> のみ / <code>-4</code> machine 部に aria-hidden 不在 / <code>-5</code> JSON-LD <code>status</code> と human badge の status 一致。 floor は<strong>構造的対応と機械可読 key の一致のみ</strong>判定 (意味の一致は判定しない)。</li>
+  <li><strong>ceiling = Phase F review agent</strong> (<a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> セット拡張): 新 agent <code>spec-review-fidelity</code> が、 各 requirement の human essence が machine normative の<strong>正確な要約か</strong> (脱落・誇張・矛盾なし)、 EARS pattern badge が normative keyword と一致するかを read-only で LLM 検査する。 これが「機械的導出の代役」の中核。</li>
+</ul>
+
+<h3 id="s2-5-human-view">§2.5 human view = Hybrid (concept flowchart + compact list + coverage RTM)</h3>
+<p>human 向け graphical view は次の 3 要素の Hybrid とする: <strong>① concept flowchart</strong> (section 単位 1 枚、 mermaid、 「どう動くか」)、 <strong>② compact list</strong> (純 CSS、 1 行 1 REQ、 最小読量、 「何があるか」)、 <strong>③ coverage RTM</strong> (requirement × derives × scenario × verified の traceability matrix、 空 mapping = gap を可視化、 trace / coverage が主題の section にのみ)。</p>
+
+<h3 id="s2-6-tiered">§2.6 普遍性 = tiered</h3>
+<p>dual-audience の各要素は一律普遍でなく<strong>段階適用</strong>する: dual-audience core (<code>data-audience</code> + fold + essence) は<strong>普遍</strong> / concept flowchart・compact list は<strong>適用可能な section</strong> / trace RTM (REQ → derives P-N/rule) は <a href="../spec/constitution.html#p-13">P-13</a> ゆえ<strong>普遍</strong> / coverage 列 (verified/scenario) は verification mapping を持つ spec の<strong>opt-in</strong>。</p>
+
+<h3 id="s2-7-minimal-normative">§2.7 normative = minimal + rich guidance</h3>
+<p>規範範囲は最小に保つ: <strong>a11y (<a href="../spec/rules.html">rules</a> §4.6 WCAG 等) は MUST</strong>。 <strong>dual-audience safety invariant</strong> (data-audience taxonomy / aria-hidden 禁止 / machine = canonical) は<strong>conditional-normative</strong> (pattern を使うなら MUST、 使わない自由は残す)。 concept 図 / compact list / coverage RTM / EARS badge / fold の使い所は<strong>guidance menu</strong> (author・<code>folio-architect</code> 判断、 強制しない)。</p>
+
+<h3 id="s2-8-js-governance">§2.8 JS governance = read-only enhancement のみ</h3>
+<p>JS は <strong>render/view の read-only enhancement に限り、 content の SSoT にしない</strong> (ReSpec/Bikeshed が共通に守る原則)。 canonical artifact は static HTML。</p>
+<ul>
+  <li><strong>ALLOW</strong>: static DOM content から派生する view enhancement (TOC 補完 / mermaid render / cross-ref tooltip / dark-light toggle / <code>beforeprint</code> で details 一括 open)。</li>
+  <li><strong>PROHIBIT</strong>: JS のみに存在する normative / <code>fetch</code> ロード content の SSoT 化 / CDN 実行時取得 script による content 生成 / <strong>ES modules + <code>fetch()</code></strong> (file:// で null origin CORS により破綻、 verified)。</li>
+  <li><strong>REQUIRE</strong>: noscript でも full content が読める (progressive enhancement) / JS library は vendoring (CDN 不可) / single-file classic <code>&lt;script&gt;</code> か inline / inline data は <code>&lt;script type="application/json"&gt;</code> 同梱。</li>
+  <li>現 wave の CSS-only 骨格は本 ruleset と無矛盾 (JS 不要)。 mermaid は vendored render として ALLOW。 <strong>EARS keyword 色 badge は folio 独自設計</strong> (prior art 無し、 明示)。</li>
+</ul>
+
+<h3 id="s2-9-application">§2.9 適用 (実装 scope)</h3>
+<ul>
+  <li><a href="../spec/rules.html">rules.html</a> に data-audience taxonomy 規約 (新設) + dual-audience conditional-normative + 視覚 guidance menu (§4.5 拡張) + JS governance minimum rule を追加 (a11y §4.6 は不変)。</li>
+  <li><a href="../spec/folio-self-spec.html">folio-self-spec.html</a> に dual-audience core + JS governance を記述。</li>
+  <li><code>bin/folio validate</code> に floor <code>REQ-DA-STRUCT-1..5</code> を gate 追加 (<a href="./ADR-0020-validate-scope.html">ADR-0020</a> scope 拡張)。</li>
+  <li>ceiling agent <code>spec-review-fidelity</code> を新設し <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> Phase F セットに追加 (<code>folio-architect</code> SKILL Phase F に統合)。</li>
+  <li><a href="../spec/verification.html">verification.html</a> §3 を clean Hybrid 化 (compact list + coverage RTM)、 prototype の dual-audience card を踏襲。 <a href="../spec/relations.html">relations.html</a> 等 living spec へ core を propagation。</li>
+  <li>本 ADR は <strong>constitution を touch しない</strong> (<a href="../spec/constitution.html#s6-amendment">P-10</a>)。 実装は 2 段階 SPAWN (規範+enforcement → 適用層) で行い、 PARENT が review + golden 再生成 + merge する。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>human↔AI hub の成立</strong>: human は cognition-friendly な要約 (graphical) を主体に読み、 AI は machine normative だけを構造的に読む。 「AI が指示を読み間違えず、 human が意図を読み取りやすい」 両立。</li>
+  <li><strong>double-SSoT を構造 + enforcement で回避</strong>: machine = 唯一の SSoT、 human = 派生。 floor (構造) + ceiling (意味) が divergence を検出する。</li>
+  <li><strong>no-build を維持</strong> (<a href="../spec/constitution.html#p-13">P-13</a> 整合)。 既存の vendored mermaid / CSS-only 資産と無矛盾。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>consistency が enforcement 依存</strong>: prior art の機械的導出と違い構造的保証がなく、 LLM ceiling (<code>spec-review-fidelity</code>) が load-bearing。 ceiling が機能しないと human/machine が乖離しうる。</li>
+  <li><strong>coverage RTM の hand-author drift</strong>: 手書き維持は status flip と同型の drift リスク。 floor <code>REQ-DA-STRUCT-5</code> (status 一致) + 将来 CLI 生成 (Option A' 部分適用) が緩和策。</li>
+  <li><strong>prior art 無し</strong>: 1-DOM co-author は novelty ゆえ前例の保証がない。</li>
+</ul>
+<h3>Neutral / TODO</h3>
+<ul>
+  <li>Option A' (derive-into-DOM) を roadmap に保持。 <code>folio prime</code> の digest 生成が自然な拡張点。</li>
+  <li><strong>W3 TODO</strong>: file:// での <code>&lt;meta&gt;</code> CSP の実挙動はブラウザ依存の可能性 → prototype で実検証 REQUIRED。</li>
+  <li>本 ADR は <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §10.3 の ADR-worthiness 3 条件 (hard-to-reverse: spec 構造 + enforcement / surprising: co-author novelty / real-trade-off: Option B vs A') を満たす = dogfood。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採否</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Option B: co-author + enforce (採用)</strong></td><td>採用 — human essence を手書き co-author、 consistency を ADR-0028 floor+ceiling で強制。 no-build・1 artifact・AI 直読を優先し、 enforcement = 機械的導出の代役と frame。 LLM ceiling fidelity review を必須化</td></tr>
+    <tr><td>Option A': derive-into-DOM (build-time 生成)</td><td>roadmap 保留 — machine SSoT から human view を build-time 生成し同一 DOM に埋込 (Bikeshed/ReSpec snapshot)。 consistency が構造的にタダだが build step が <a href="../spec/constitution.html#p-13">P-13</a> と緊張。 中長期に <code>folio prime</code> 拡張として評価</td></tr>
+    <tr><td>build-time 分離成果物 (DITA-OT / Sphinx / DocBook 正規)</td><td>不採用 — audience 別に分離した成果物は no-build・1-artifact・AI source 直読と非整合。 単一ソース原則のみ借用</td></tr>
+    <tr><td>aria-hidden で machine 部を隠蔽</td><td>不採用 — accessibility-tree ベース AI から不可視化し「AI は読める」目的に反する (verified)。 <code>&lt;details&gt;</code> 視覚 fold で代替</td></tr>
+    <tr><td>graphical を JS で実装 (現 wave)</td><td>不採用 (現 wave) — CSS-only 骨格を先行。 JS は governance ruleset (§2.8) 確立後に read-only enhancement として別 wave</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点: 1.0.0 pre-flight の HTML quality 改善 (<a href="./ADR-0029-phase-f-agent-set.html">Phase F</a> 系の延長) で「字ばかりで読む気がしない」 課題が表面化 → 「HTML プレゼンの固有価値」 を grill (3 ラウンド) + research (80 sources, critic PASS 8.3/10) で探索し、 dual-audience hub 設計を確定。</li>
+  <li>金脈: DITA <code>@audience</code> / literate programming が double-SSoT を「単一ソース + 機械的導出 (view は派生・維持しない)」 で構造保証 → folio の 1-DOM co-author は novelty ゆえ <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> enforcement が導出の代役。</li>
+  <li>拡張対象: <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate に REQ-DA-STRUCT-* gate)、 <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> (Phase F に spec-review-fidelity)、 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement の dual-audience 具体化)。 いずれも本文 frozen、 reverse-link + 本 ADR prose で trace。</li>
+  <li>実装 path: 2 段階 SPAWN — ① <a href="../spec/rules.html">rules</a>/<a href="../spec/folio-self-spec.html">folio-self-spec</a> 規範 + validate floor + fidelity agent + SKILL Phase F → PARENT review → ② <a href="../spec/verification.html">verification</a> clean Hybrid + <a href="../spec/relations.html">relations</a> propagation。 検証 = <code>folio validate</code> clean + sandbox GREEN + playwright (light/dark) + spec-review-fidelity PASS。</li>
+  <li>関連原則: <a href="../spec/constitution.html#p-2">P-2</a> (HTML)、 <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離)、 <a href="../spec/constitution.html#p-7">P-7</a> (3-domain)、 <a href="../spec/constitution.html#p-12">P-12</a> (Layer 0 一体配布)、 <a href="../spec/constitution.html#p-13">P-13</a> (test 配置非規定 / no-mandate-build)。</li>
+  <li>status: <strong>accepted</strong> (user 承認済 2026-05-29)。 次の作業 = 2 段階 SPAWN による実装 (#103)。</li>
+</ul>
+</section>
+
+</body>
+</html>

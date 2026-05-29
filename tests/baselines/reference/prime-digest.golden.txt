@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 31 specs · folio 0.5.0-draft
+# 32 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -141,6 +141,11 @@
 - title: ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)
 - doc-type: adr · status: accepted
 - summary: accepted (user 承認済 2026-05-27)。
+
+## decisions/ADR-0033-dual-audience-hub.html
+- title: ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)
+- doc-type: adr · status: accepted
+- summary: dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

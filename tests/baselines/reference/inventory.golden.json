@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-27T14:21:06Z",
+  "generatedAt": "2026-05-29T03:46:28Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -36,6 +36,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -76,6 +77,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
@@ -117,6 +119,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0026-test-placement-model.html",
@@ -158,6 +161,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -465,6 +469,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0025-folio-fix-bidirectional.html"
         ],
@@ -679,6 +684,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0029-phase-f-agent-set.html"
         ],
@@ -706,6 +712,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html"
         ],
         "dc:references": [
@@ -787,6 +794,30 @@
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "spec/verification.html#s4-2-completion-vs-prototype"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0033-dual-audience-hub.html",
+      "title": "ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)",
+      "summary": "dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0029-phase-f-agent-set.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "spec/rules.html",
+          "spec/verification.html",
+          "spec/folio-self-spec.html",
+          "spec/relations.html"
         ]
       }
     },
