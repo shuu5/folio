@@ -397,6 +397,103 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </aside>
 </section>
 
+<section id="s9-xref" class="normative">
+<h2>§9. Object Cross-Reference (in-band xref + no-JS hover tooltip)</h2>
+
+<aside class="informative">
+  <p>本 §9 は architecture 内の <strong>defined-object</strong> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) への <strong>in-band cross-reference</strong> markup 規約と、 その <strong>no-JS hover tooltip</strong> + <strong>完全性 enforcement</strong> を定める (<a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a>、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> dual-audience hub の object 参照網への拡張)。 architecture は <strong>hybrid</strong> = canonical 定義は各 object の in-band HTML 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph、 <a href="#s10-2">REQ-CI</a> 系の deterministic floor) を<strong>生成</strong>する (DB-as-SSoT 却下、 <a href="./constitution.html#p-2">P-2</a> HTML / <a href="./constitution.html#p-13">P-13</a> no-build と整合)。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (<a href="verification.html#s3-ears">REQ-VER-017/018</a>) が担う。 採用は <strong>opt-in/conditional-normative</strong> (REQ-XREF-002) — completeness gate を有効化した spec のみ orphan-mention を block する。</p>
+</aside>
+
+<h3 id="s9-1-markup">§9.1 markup 規約 + prefix→SSoT-doc registry</h3>
+<p>defined-object への inline 参照は <strong>untyped な xref</strong> とする (typed/directional relation は file-level JSON-LD = <a href="relations.html#s5-1-pattern">relations §5</a> に留め object-level は roadmap、 untyped ゆえ <code>folio fix</code> の auto-materialize が成立する)。 markup form:</p>
+
+<pre><code>&lt;a class="xref" href="&lt;referencing-doc → SSoT-doc の相対 path&gt;#&lt;id&gt;" data-tooltip="&lt;essence&gt;"&gt;TOKEN&lt;/a&gt;</code></pre>
+
+<p><code>href</code> は referencing doc から下記 registry の SSoT-doc への相対 path + <code>#&lt;id&gt;</code> (canonical ID を小文字化した定義 site の <code>id</code>)。 decision (ADR) は file 自体が定義 site のため anchor 無し (file への相対 path)。 <code>data-tooltip</code> は §9.2 essence 抽出 contract が生成する定義 essence (<code>folio fix</code> がコピー)。 <strong>rule (§) は doc 跨ぎで一意な canonical token を持たない</strong> (「§7.3」は曖昧) ため <strong>explicit xref tier</strong> = resolve 検査 + tooltip + graph edge は得るが裸言及の auto-gap 検出はしない (auto-materialize 対象外)。</p>
+
+<table>
+  <caption>prefix → SSoT-doc registry (ADR-0034 §2.2、 object-identity model)</caption>
+  <thead><tr><th>prefix</th><th>class</th><th>SSoT doc</th><th>定義 site / anchor</th></tr></thead>
+  <tbody>
+    <tr><td><code>P-N</code></td><td>principle</td><td><a href="./constitution.html">constitution.html</a></td><td><code>&lt;dt id="p-N"&gt;</code></td></tr>
+    <tr><td><code>REQ-VER-*</code></td><td>requirement</td><td><a href="verification.html">verification.html</a></td><td><code>id="req-ver-NNN"</code></td></tr>
+    <tr><td><code>REQ-REL-*</code></td><td>requirement</td><td><a href="relations.html">relations.html</a></td><td><code>id="req-rel-NNN"</code></td></tr>
+    <tr><td><code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-XREF-*</code></td><td>requirement</td><td>rules.html (本 file)</td><td><code>id="req-…"</code></td></tr>
+    <tr><td><code>ADR-NNNN</code></td><td>decision</td><td><a href="../decisions/">decisions/ADR-NNNN-*.html</a></td><td>file 自体 (anchor 無し)</td></tr>
+    <tr><td>rule §</td><td>rule</td><td>rules.html</td><td><code>&lt;h2 id="…"&gt;</code> (explicit-tier)</td></tr>
+  </tbody>
+</table>
+
+<p class="informative"><strong>marking 正規化</strong>: 上記 resolve の前提は「全 object が id 付き SSoT 要素を持つ」 こと。 現 rules.html の <code>REQ-CI-*</code> / <code>REQ-DA-STRUCT-*</code> 等は table / EARS-list で id 付き定義要素を欠く場合があり、 これらを統一 markup へ正規化する作業は後続 wave で行う (本 §9 新設の <code>REQ-XREF-*</code> は id 付き spec-row で定義し先行整合する)。</p>
+
+<h3 id="s9-2-essence">§9.2 essence 抽出 contract (tooltip text の生成元)</h3>
+<p><code>data-tooltip</code> 生成 (<code>folio fix</code>) と tooltip-consistency 検査 (<code>folio validate</code>) と将来の glossary が依存する<strong>横断機構</strong>。 essence は<strong>定義 site の既存内容を再利用</strong>し (新たに書き起こさない = <a href="./constitution.html#p-7">P-7</a> 重複禁止)、 必ず <strong>plain-text 化</strong> (内部タグ strip) + <strong>attribute escape</strong> する。</p>
+
+<table>
+  <caption>per-class essence 抽出 contract (ADR-0034 §6)</caption>
+  <thead><tr><th>class</th><th>定義 site</th><th>essence の元</th></tr></thead>
+  <tbody>
+    <tr><td><code>REQ-*</code></td><td>spec-row <code>&lt;details class="spec-row" id="req-…"&gt;</code> (または verbose card <code>&lt;section class="req"&gt;</code>)</td><td><code>&lt;summary&gt;</code> 内 <code>.essence</code> (または <code>.req__essence</code>) の text</td></tr>
+    <tr><td><code>P-N</code></td><td>constitution <code>&lt;dt id="p-N"&gt;</code></td><td><code>&lt;strong&gt;</code> text から <code>"P-N: "</code> prefix を除いた title 部</td></tr>
+    <tr><td><code>ADR-NNNN</code></td><td>decisions/ADR-NNNN-*.html</td><td><code>&lt;header&gt;</code> <code>.meta</code> div の末尾 <code>&middot;</code> セグメント (summary)</td></tr>
+    <tr><td>rule (§)</td><td>rules.html <code>&lt;h2 id="…"&gt;</code></td><td>見出し text (explicit-tier、 auto-wrap なし)</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-3-tooltip-css">§9.3 tooltip CSS governance (no-JS、 §8 整合)</h3>
+<p>tooltip は <strong>human のみの可読性 enhancement</strong> (AI は <code>href</code>/graph を辿るため不要)。 規約は <a href="#s8-js-governance">§8 JS governance</a> と整合する:</p>
+<ul>
+  <li><strong>no-JS CSS-only</strong>: <code>[data-tooltip]</code> に対し <code>:hover</code> + <code>:focus-visible</code> で擬似要素 box を表示 (<code>common.css</code>、 既存 surface/border/text token で light/dark 両対応)。 JS に依存しない (<a href="#s8-js-governance">REQ-DA-JS-2</a> progressive enhancement)。</li>
+  <li><strong>baseline = 動くリンク</strong>: tooltip 抜きでも xref は click で定義へ飛ぶ working link (既存 <code>:target</code> flash で着地点強調)。 tooltip は load-bearing でない上載せ。</li>
+  <li><strong>viewport-clip 許容</strong>: viewport 端での tooltip box の切れは <strong>no-JS の限界として許容</strong>する (essence 1 行で実害小)。 smart positioning は JS roadmap。</li>
+  <li><strong>JS rich tooltip は前方互換 roadmap</strong>: no-JS markup (<code>href</code> + <code>data-tooltip</code>) は将来 JS (同属性を読む rich/cross-doc preview) と前方互換で非破壊に重ねられる (<a href="#s8-js-governance">§8</a> 準拠、 1.0.0 core 非搭載)。</li>
+</ul>
+
+<h3 id="s9-4-requirements">§9.4 Cross-reference requirements (REQ-XREF-*)</h3>
+<div class="spec-list">
+  <details class="spec-row" id="req-xref-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-XREF-001</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">defined-object への inline 参照は <code>&lt;a class="xref" href data-tooltip&gt;</code> 形を用い、 <code>href</code> は §9.1 registry に従い object の SSoT 定義 site に解決する。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-XREF-001</span>: An inline reference to a defined-object (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code>) <span class="ears-shall">SHALL</span> use the <code>&lt;a class="xref" href data-tooltip&gt;</code> form, whose <code>href</code> resolves to the object&apos;s SSoT definition site per the §9.1 prefix→SSoT-doc registry.</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-xref-002" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-XREF-002</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">xref-completeness に opt-in した spec (<code>folio-xref-completeness=enabled</code>) は、 prose の canonical token 言及ごとに resolvable xref を最低 1 つ持つ (orphan-mention 禁止、 conditional-normative)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional"><span class="ears-where">WHERE a spec opts into xref-completeness (<code>folio-xref-completeness=enabled</code>)</span>, <span class="ears-id">REQ-XREF-002</span>: every prose mention of an auto-materializable canonical object token <span class="ears-shall">SHALL</span> carry at least one resolvable xref to that object (orphan-mention forbidden、 <code>folio fix</code> が初出を wrap して充足する)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-xref-003" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-XREF-003</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">各 xref は click で定義へ飛ぶ baseline link を保ち、 <code>data-tooltip</code> に定義 essence (plain-text、 §9.2 contract) を持つ (no-JS CSS-only tooltip)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-XREF-003</span>: Each xref <span class="ears-shall">SHALL</span> remain a working baseline link (click → definition) and <span class="ears-shall">SHALL</span> carry, in <code>data-tooltip</code>, the plain-text essence of the object&apos;s definition per the §9.2 essence-extraction contract, rendered as a no-JS CSS-only tooltip.</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-xref-004" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-XREF-004</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">各 canonical object ID は architecture 全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-XREF-004</span>: Each canonical object ID <span class="ears-shall">SHALL</span> be defined exactly once as an id-bearing SSoT element across architecture, and <span class="ears-shall">SHALL NOT</span> be renumbered or reused (ID immutability)。</p>
+    </div>
+  </details>
+</div>
+</section>
+
 <section id="s10-mandatory" class="normative">
 <h2>§10. Mandatory Actions for Layer 1 Consumer</h2>
 

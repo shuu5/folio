@@ -264,6 +264,10 @@ flowchart TB
 
 <h3 id="s3-3-js">§3.3 JavaScript governance</h3>
 <p>folio spec の JS は <strong>read-only view enhancement のみ</strong> (content SSoT は static HTML) とする規約に従う (<a href="rules.html#s8-js-governance">rules.html §8</a>: ALLOW / PROHIBIT / REQUIRE)。 vendored mermaid render は ALLOW、 ES modules + <code>fetch()</code> は file:// 破綻ゆえ PROHIBIT。 現 wave の CSS-only 骨格は本規約と無矛盾。</p>
+
+<h3 id="s3-4-xref">§3.4 Object cross-reference (self-application)</h3>
+<p>folio 自身の architecture は <a href="rules.html#s9-xref">rules.html §9</a> の <strong>object cross-reference system</strong> を self-apply する (<a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a>、 §3 dual-audience hub の object 参照網への拡張)。 defined-object (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) の canonical 定義は各 object の in-band 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph) を<strong>生成</strong>する hybrid (DB-as-SSoT 却下)。 <strong>human↔AI hub</strong>: human は xref を hover して定義 essence を即見 (no-JS tooltip)、 AI は <code>href</code> と <code>inventory.json</code> の <code>objectGraph</code> projection を構造的に辿る。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (resolve / uniqueness / tooltip-consistency / completeness) が担う (<a href="verification.html#s3-ears">REQ-VER-017/018</a>)。</p>
+<p>completeness は <strong>opt-in/conditional-normative</strong> (<a href="rules.html#s9-4-requirements">REQ-XREF-002</a>) — <code>folio-xref-completeness=enabled</code> を宣言した doc のみ orphan-mention を block する。 <strong>本 §3.4 は採用の宣言に留め、 living spec への xref 一括適用 (dogfood) と completeness opt-in の活性化は後続 wave で行う</strong> (現時点で opt-in 済 spec は無く、 real corpus の <code>folio validate</code> は clean を維持する)。 dual-audience の core propagation (§3.1) と同じく、 機構と規範を先に landable な土台として確立し、 適用は incremental に進める。</p>
 </section>
 
 <section id="s7-harness" class="normative">
