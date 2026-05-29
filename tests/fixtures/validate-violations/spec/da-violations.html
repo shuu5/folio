@@ -13,7 +13,7 @@
 </script>
 </head>
 <body>
-<p>dual-audience floor (REQ-DA-STRUCT-1..5) の検出を実証する fixture。 各 card は 1 違反のみを孤立させる。</p>
+<p>dual-audience floor (REQ-DA-STRUCT-1..5) の検出を実証する fixture。 各 card は 1 違反のみを孤立させる。 901-905 = verbose <code>section.req</code> form、 911-915 = compact <code>details.spec-row</code> form。 両 form が floor の data-audience-keyed 走査で同一に被覆されることを実証する (ADR-0033 §2.5 / rules §7.2 2-form)。</p>
 
 <!-- REQ-DA-STRUCT-1: 孤立 human (machine 対応部なし) -->
 <section class="req" id="req-da-901" data-audience="human">
@@ -56,6 +56,41 @@
     <div class="req__normative"><p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-DA-905</span>: <span class="ears-when">WHEN x occurs</span>, the system <span class="ears-shall">SHALL</span> hold.</p></div>
   </details>
 </section>
+
+<!-- ============================================================ compact details.spec-row form (911-915) -->
+<!-- floor が data-audience-keyed ゆえ verbose section.req と同一に被覆することを実証する。
+     machine 対応部は details.spec-row では <div class="spec-normative" data-audience="machine"> (nested details でない)。 -->
+
+<div class="spec-list">
+  <!-- REQ-DA-STRUCT-1: 孤立 human (spec-row、 machine 対応部なし) -->
+  <details class="spec-row" id="req-da-911" data-audience="human">
+    <summary><span class="badge badge--req">REQ-DA-911</span><span class="req__ears req__ears--ubiquitous">Ubiq.</span><span class="essence">spec-row form の孤立 human (machine 対応部なし、 REQ-DA-STRUCT-1 違反)。</span></summary>
+  </details>
+
+  <!-- REQ-DA-STRUCT-2: requirement-id 不一致 (spec-row id 912 vs badge 998) -->
+  <details class="spec-row" id="req-da-912" data-audience="human">
+    <summary><span class="badge badge--req">REQ-DA-998</span><span class="req__ears req__ears--ubiquitous">Ubiq.</span><span class="essence">spec-row form の id 不一致 (REQ-DA-STRUCT-2 違反)。</span></summary>
+    <div class="spec-normative" data-audience="machine"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-912</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+
+  <!-- REQ-DA-STRUCT-3: data-audience 値域違反 (spec-row、 bot) -->
+  <details class="spec-row" id="req-da-913" data-audience="bot">
+    <summary><span class="badge badge--req">REQ-DA-913</span><span class="req__ears req__ears--ubiquitous">Ubiq.</span><span class="essence">spec-row form の data-audience 値域違反 bot (REQ-DA-STRUCT-3 違反)。</span></summary>
+    <div class="spec-normative" data-audience="machine"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-913</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+
+  <!-- REQ-DA-STRUCT-4: machine 部 (spec-normative) に aria-hidden -->
+  <details class="spec-row" id="req-da-914" data-audience="human">
+    <summary><span class="badge badge--req">REQ-DA-914</span><span class="req__ears req__ears--ubiquitous">Ubiq.</span><span class="essence">spec-row form の machine 部 aria-hidden (REQ-DA-STRUCT-4 違反)。</span></summary>
+    <div class="spec-normative" data-audience="machine" aria-hidden="true"><p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-DA-914</span>: The system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+
+  <!-- REQ-DA-STRUCT-5: EARS-pattern 不一致 (spec-row、 human ubiquitous vs machine event-driven) -->
+  <details class="spec-row" id="req-da-915" data-audience="human">
+    <summary><span class="badge badge--req">REQ-DA-915</span><span class="req__ears req__ears--ubiquitous">Ubiq.</span><span class="essence">spec-row form の EARS-pattern 不一致 (REQ-DA-STRUCT-5 違反)。</span></summary>
+    <div class="spec-normative" data-audience="machine"><p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-DA-915</span>: <span class="ears-when">WHEN x occurs</span>, the system <span class="ears-shall">SHALL</span> hold.</p></div>
+  </details>
+</div>
 
 </body>
 </html>

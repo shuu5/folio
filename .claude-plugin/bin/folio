@@ -644,14 +644,17 @@ folio_prose_only() {
 }
 
 # dual-audience structural 検査 (REQ-DA-STRUCT-1..5、 ADR-0033 §2.4 / rules.html §7 の floor)。
-# co-author dual-audience card (<section class="req" ... data-audience="human"> ... </section>) を
-# 走査し、 machine 対応部の存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) /
+# co-author dual-audience requirement container (data-audience="human" を担う
+# <section class="req">...</section> verbose card と <details class="spec-row">...</details>
+# compact row の両 form、 ADR-0033 §2.5 / rules §7.2 2-form) を走査し、
+# machine 対応部の存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) /
 # machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を deterministic に検査する。
 # 不備を "rel\t[dual-audience] ..." 行で stdout (block gate = exit code 影響)。 意味的 fidelity
 # (essence が normative を忠実要約か) は ceiling = spec-review-fidelity agent が別途 LLM 検査する。
 # -3 のみ prose (pre/code/aside 除去) を走査し、 ADR 等 prose 内の <code>data-audience=...</code>
-# 例示への誤検出を避ける (vocabulary gate と同 idiom)。 -1/-2/-4/-5 は実 <section class="req">
-# block を走査するため escaped 例 (&lt;section) には反応しない。 -5 は CSS class 短縮形
+# 例示への誤検出を避ける (vocabulary gate と同 idiom)。 -1/-2/-4/-5 は data-audience="human"
+# を持つ実 container block (section.req / details.spec-row) を走査するため escaped 例
+# (&lt;section / &lt;details) には反応しない。 -5 は CSS class 短縮形
 # (req__ears--event/state) を canonical (event-driven/state-driven) に正規化して比較する。
 folio_check_dual_audience() {
   local body="$1" rel="$2"
@@ -684,10 +687,10 @@ folio_check_dual_audience() {
       # -2: requirement-id 整合 (case 正規化、 section id <-> badge <-> machine ears-id)
       idu = toupper(secid); bu = toupper(badgeid); eu = toupper(earsid)
       if (secid != "" && badgeid != "" && idu != bu) {
-        print rel "\t[dual-audience] requirement-id 不一致: section id \"" secid "\" <-> badge \"" badgeid "\" (REQ-DA-STRUCT-2)"
+        print rel "\t[dual-audience] requirement-id 不一致: container id \"" secid "\" <-> badge \"" badgeid "\" (REQ-DA-STRUCT-2)"
       }
       if (secid != "" && earsid != "" && idu != eu) {
-        print rel "\t[dual-audience] requirement-id 不一致: section id \"" secid "\" <-> machine ears-id \"" earsid "\" (REQ-DA-STRUCT-2)"
+        print rel "\t[dual-audience] requirement-id 不一致: container id \"" secid "\" <-> machine ears-id \"" earsid "\" (REQ-DA-STRUCT-2)"
       }
       # -4: machine 部 (data-audience="machine" を持つ要素) に aria-hidden 不在
       if (match(blk, /<[^>]*data-audience="machine"[^>]*>/)) {
@@ -707,8 +710,16 @@ folio_check_dual_audience() {
         print rel "\t[dual-audience] EARS-pattern 不一致: human badge \"" hp "\" <-> machine data-ears-pattern \"" mp "\" (REQ-DA-STRUCT-5)"
       }
     }
-    /<section class="req"[ >]/ { chk(); inb = 1; blk = "" }
-    inb { blk = blk $0 "\n"; if (/<\/section>/) chk() }
+    # block 起点 = data-audience="human" を担う requirement container。 container class
+    # でなく data-audience semantic で key するため verbose card (section.req) も
+    # compact row (details.spec-row) も一律被覆する (ADR-0033 §2.5 / rules §7.2 2-form)。
+    # closetag を起点 tag で出し分け、 section.req 内 nested </details> (req__machine) を
+    # 誤って block 終端とせず既存被覆を保つ (回帰防止)。
+    /<(section|details)[^>]*data-audience="human"/ {
+      chk(); inb = 1; blk = ""
+      closetag = ($0 ~ /<details[^>]*data-audience="human"/) ? "</details>" : "</section>"
+    }
+    inb { blk = blk $0 "\n"; if (index($0, closetag)) chk() }
     END { chk() }
   '
 }

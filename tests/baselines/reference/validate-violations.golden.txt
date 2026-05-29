@@ -9,13 +9,18 @@ files checked: 5 · relations checked: 2
   [FAIL] dual-audience-structural
   [OK] ears-coverage
 
-violations (9):
+violations (14):
   spec/bad-jsonld.html [jsonld-structural] @context must be object (new pattern), got string
   spec/broken-anchor.html [broken-reverse] dc:references -> spec/target.html (target missing reverse dc:isReferencedBy back to spec/broken-anchor.html)
   spec/broken-anchor.html [link-broken-anchor] dc:references -> spec/target.html#s9-nonexistent (anchor id not found in target)
   spec/da-violations.html [dual-audience] EARS-pattern 不一致: human badge "ubiquitous" <-> machine data-ears-pattern "event-driven" (REQ-DA-STRUCT-5)
+  spec/da-violations.html [dual-audience] EARS-pattern 不一致: human badge "ubiquitous" <-> machine data-ears-pattern "event-driven" (REQ-DA-STRUCT-5)
+  spec/da-violations.html [dual-audience] data-audience 値 "bot" が不正 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)
   spec/da-violations.html [dual-audience] data-audience 値 "reviewer" が不正 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)
   spec/da-violations.html [dual-audience] machine 部に aria-hidden が付いている (AI/AT から不可視化、 REQ-DA-STRUCT-4)
+  spec/da-violations.html [dual-audience] machine 部に aria-hidden が付いている (AI/AT から不可視化、 REQ-DA-STRUCT-4)
   spec/da-violations.html [dual-audience] req-da-901 に machine 対応部 (data-audience="machine") が無い (孤立 human、 REQ-DA-STRUCT-1)
-  spec/da-violations.html [dual-audience] requirement-id 不一致: section id "req-da-902" <-> badge "REQ-DA-999" (REQ-DA-STRUCT-2)
+  spec/da-violations.html [dual-audience] req-da-911 に machine 対応部 (data-audience="machine") が無い (孤立 human、 REQ-DA-STRUCT-1)
+  spec/da-violations.html [dual-audience] requirement-id 不一致: container id "req-da-902" <-> badge "REQ-DA-999" (REQ-DA-STRUCT-2)
+  spec/da-violations.html [dual-audience] requirement-id 不一致: container id "req-da-912" <-> badge "REQ-DA-998" (REQ-DA-STRUCT-2)
   spec/missing-ref.html [link-missing-file] dc:references -> spec/nonexistent.html (target file not found)

@@ -3,7 +3,7 @@ req_id: "REQ-VER-013/015"
 ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
-  folio validate が seeded fixtures に対し 9 件の違反を検出し exit 1 + report を出すことを
+  folio validate が seeded fixtures に対し 14 件の違反を検出し exit 1 + report を出すことを
   実証する (ADR-0020 §2.1 を ADR-0025 §2.2 で 3-gate 化、 ADR-0033 で dual-audience gate 追加 /
   REQ-VER-013/015 + REQ-DA-STRUCT-1..5、 validate-clean.yaml = clean 側の violation-detection 対):
     - missing file ref : dc:references @id が実在しない file を指す (spec/missing-ref.html、 gate a)
@@ -13,9 +13,11 @@ description: |
                          dc:isReferencedBy を欠く (spec/broken-anchor.html、 gate c = REQ-REL-004)。
                          broken-anchor の forward が forward-without-reverse を seed し、 fix
                          (fix-bidirectional.yaml) の detect↔remediate 対の detect 側を実証する。
-    - dual-audience    : co-author card の floor 違反 5 種を 1 card 1 違反で孤立 (spec/da-violations.html、
-                         gate g = REQ-DA-STRUCT-1..5、 ADR-0033)。 孤立 human (-1) / id 不一致 (-2) /
-                         data-audience 値域 (-3) / machine 部 aria-hidden (-4) / EARS-pattern 不一致 (-5)。
+    - dual-audience    : co-author card の floor 違反 5 種を 1 card 1 違反で孤立し、 verbose
+                         section.req (901-905) と compact details.spec-row (911-915) の両 form で実証
+                         (spec/da-violations.html、 gate g = REQ-DA-STRUCT-1..5、 ADR-0033 §2.5)。 孤立
+                         human (-1) / id 不一致 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden
+                         (-4) / EARS-pattern 不一致 (-5) を 2 form それぞれで生む = 10 dual-audience 違反。
   検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation、
   cli-golden harness は command[] のみ渡すため flag で override)。 conformance は golden baseline
   との byte-exact diff で検証 (capture:stdout, compare:text、 REQ-VER-011)。
@@ -44,8 +46,9 @@ expect:
 # validate-clean.yaml (exit 0) と対を成す violation-detection scenario。 fixtures は 5 file:
 # target (clean、 anchor 参照先 + broken-anchor の forward target = scan 対象) + 4 違反 file。
 # validate --root で fixtures root を検査し、 files checked: 5 / relations checked: 2 /
-# violations 9 (link/jsonld/broken-reverse/dual-audience の 4 gate FAIL) を report、 exit 1。 broken-anchor.html が
+# violations 14 (link/jsonld/broken-reverse/dual-audience の 4 gate FAIL) を report、 exit 1。 broken-anchor.html が
 # link-broken-anchor (gate a) と broken-reverse (gate c) の 2 違反を生む (target.html が dc:isReferencedBy を欠くため、
 # X4-B で gate c 追加後に自然発火 = forward-without-reverse の検出実証)。 da-violations.html が dual-audience
-# floor (gate g、 REQ-DA-STRUCT-1..5) の 5 違反を 1 card 1 違反で生む (ADR-0033、 Spawn-1)。
+# floor (gate g、 REQ-DA-STRUCT-1..5) の違反を section.req (901-905) + details.spec-row (911-915) の両 form で
+# 1 card 1 違反 = 計 10 違反生む (ADR-0033 §2.5、 Spawn-1 floor を Spawn-2 で data-audience-keyed 2-form 被覆に generalize)。
 # golden は ./runner.sh --accept で generate → 人間 review → commit。
