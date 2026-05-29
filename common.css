@@ -823,3 +823,11 @@ a.req-chip:hover { border-color: var(--folio-border-strong); text-decoration: no
  *     base の <table> styling を継承し、 gap cell のみ本 class で強調。 inline style
  *     を使わず token 経由ゆえ dark mode で contrast 維持 (--folio-danger swap)。 */
 td.cov-gap { color: var(--folio-danger); font-weight: 700; }
+
+/* --- coverage RTM の REQ → 該当 spec-row への deep-link。 RTM の REQ badge を anchor で
+ *     wrap し、 click で compact list の該当 REQ へ jump する (既存 :target flash が着地点を
+ *     強調、 essence が即可視・詳細 fold は 1-click)。 下線を消し badge の見た目を保持、
+ *     hover/focus で clickable を示唆 (token 経由ゆえ dark mode contrast 維持)。 */
+a.cov-req { text-decoration: none; }
+a.cov-req:hover .badge--req,
+a.cov-req:focus-visible .badge--req { outline: 2px solid var(--folio-brand); outline-offset: 1px; filter: brightness(1.08); }

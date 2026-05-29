@@ -489,21 +489,21 @@ expect:
   <caption>verification-framework requirement coverage matrix (§3 の REQ-VER-*。 VER-005 は §4 のため除外)</caption>
   <thead><tr><th>REQ</th><th>EARS</th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead>
   <tbody>
-    <tr><td><span class="badge badge--req">VER-001</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0013 / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-002</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>rules §10 / relations §5.3</td><td>(全 scenario)</td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-003</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0017 (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-004</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0018 / §3.4</td><td>(cli-golden 共通基盤)</td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-006</span></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>research §2.6</td><td class="cov-gap">— (未検証 gap)</td><td class="cov-gap">✗</td></tr>
-    <tr><td><span class="badge badge--req">VER-007</span></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0019 / P-3</td><td><code>path-boundary.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-008</span></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0003 §2.1</td><td><code>readme-index.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-009</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0017</td><td><code>e2e/runbook.md</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-010</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>relations §4.1</td><td><code>inventory-gen.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-011</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0018</td><td>(全 cli-golden)</td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-012</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0007</td><td><code>prime-digest.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-013</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0020</td><td><code>validate-clean</code> / <code>-violations.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-014</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0024 / 0031</td><td><code>init-scaffold.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-015</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0025</td><td><code>fix-bidirectional.yaml</code></td><td>✓</td></tr>
-    <tr><td><span class="badge badge--req">VER-016</span></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0027 / 0029</td><td><code>agent-structure.yaml</code> (+ e2e S-G)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-001"><span class="badge badge--req">VER-001</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0013 / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-002"><span class="badge badge--req">VER-002</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>rules §10 / relations §5.3</td><td>(全 scenario)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-003"><span class="badge badge--req">VER-003</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0017 (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-004"><span class="badge badge--req">VER-004</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0018 / §3.4</td><td>(cli-golden 共通基盤)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-006"><span class="badge badge--req">VER-006</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>research §2.6</td><td class="cov-gap">— (未検証 gap)</td><td class="cov-gap">✗</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-007"><span class="badge badge--req">VER-007</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0019 / P-3</td><td><code>path-boundary.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-008"><span class="badge badge--req">VER-008</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0003 §2.1</td><td><code>readme-index.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-009"><span class="badge badge--req">VER-009</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0017</td><td><code>e2e/runbook.md</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-010"><span class="badge badge--req">VER-010</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>relations §4.1</td><td><code>inventory-gen.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-011"><span class="badge badge--req">VER-011</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0018</td><td>(全 cli-golden)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-012"><span class="badge badge--req">VER-012</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0007</td><td><code>prime-digest.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-013"><span class="badge badge--req">VER-013</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0020</td><td><code>validate-clean</code> / <code>-violations.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-014"><span class="badge badge--req">VER-014</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0024 / 0031</td><td><code>init-scaffold.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-015"><span class="badge badge--req">VER-015</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0025</td><td><code>fix-bidirectional.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-016"><span class="badge badge--req">VER-016</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>ADR-0027 / 0029</td><td><code>agent-structure.yaml</code> (+ e2e S-G)</td><td>✓</td></tr>
   </tbody>
 </table>
 
