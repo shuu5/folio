@@ -831,3 +831,61 @@ td.cov-gap { color: var(--folio-danger); font-weight: 700; }
 a.cov-req { text-decoration: none; }
 a.cov-req:hover .badge--req,
 a.cov-req:focus-visible .badge--req { outline: 2px solid var(--folio-brand); outline-offset: 1px; filter: brightness(1.08); }
+
+/* ========================================================================
+ * Object cross-reference (ADR-0034、 in-band untyped xref + no-JS hover tooltip)
+ *   defined-object (principle P-N / requirement REQ-* / decision ADR-NNNN) への
+ *   inline 参照。 baseline は常に動く link (click → 定義 + 既存 :target flash)、
+ *   その上に CSS-only tooltip を載せる (JS 非依存、 §8 progressive enhancement、
+ *   text は data-tooltip 属性から供給 = folio fix が定義 essence を materialize)。
+ *   token (P-5 等) は本文に馴染ませ dotted underline で「定義へのリンク」を示唆、
+ *   既存 link 色 token を再利用ゆえ dark mode は token swap で自動両対応。
+ *   viewport 端の clip は no-JS の限界として許容 (essence 1 行で実害小、 smart
+ *   positioning は JS roadmap、 rules §9 tooltip CSS governance に明記)。
+ * ====================================================================== */
+a.xref {
+  color: var(--folio-brand);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+}
+a.xref:hover { text-decoration-style: solid; text-decoration-thickness: 2px; }
+
+/* CSS-only tooltip: :hover + :focus-visible で擬似要素 box を表示 (data-tooltip 属性供給)。
+ * 既存 surface/border/text/elevation token のみ使用 = light/dark 両対応。 */
+a.xref[data-tooltip] { position: relative; }
+a.xref[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 50;
+  width: max-content;
+  max-width: min(28rem, 80vw);
+  padding: 0.5rem 0.75rem;
+  background: var(--folio-surface-normal);
+  color: var(--folio-text-primary);
+  border: 1px solid var(--folio-border-strong);
+  border-radius: var(--folio-radius-card);
+  box-shadow: var(--folio-elev-4);
+  font-family: var(--folio-font-sans);
+  font-size: var(--folio-text-small);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: normal;
+  font-feature-settings: normal;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease-out;
+  pointer-events: none;
+}
+a.xref[data-tooltip]:hover::after,
+a.xref[data-tooltip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
