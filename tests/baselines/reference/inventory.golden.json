@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-29T03:46:28Z",
+  "generatedAt": "2026-05-29T16:00:15Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -36,6 +36,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
@@ -77,6 +78,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
@@ -119,6 +121,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
@@ -469,6 +472,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0025-folio-fix-bidirectional.html"
@@ -603,6 +607,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0028-prose-gate-mechanization.html"
         ],
         "dc:references": [
@@ -740,6 +745,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html"
         ],
@@ -766,6 +772,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html"
         ],
         "dc:references": [
@@ -810,6 +817,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0034-object-term-xref-system.html"
+        ],
         "dc:references": [
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "decisions/ADR-0029-phase-f-agent-set.html",
@@ -818,6 +828,31 @@
           "spec/verification.html",
           "spec/folio-self-spec.html",
           "spec/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0034-object-term-xref-system.html",
+      "title": "ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)",
+      "summary": "architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+          "spec/rules.html",
+          "spec/relations.html",
+          "spec/folio-self-spec.html"
         ]
       }
     },

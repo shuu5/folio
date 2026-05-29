@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0034">
+<meta name="folio-adr-date" content="2026-05-30">
+<title>ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0034-object-term-xref-system.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "./ADR-0030-v1-stability-criteria.html" },
+    { "@id": "./ADR-0025-folio-fix-bidirectional.html" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "./ADR-0031-mattpocock-authoring-absorption.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/relations.html" },
+    { "@id": "../spec/folio-self-spec.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-05-30 &middot; folio v0.5.0-draft &middot; architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の延長 (tooltip = dual-audience essence 再利用) / <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張 (実装は SPAWN)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0034</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-05-30</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0033 (dual-audience hub = tooltip text に human essence を再利用、 同じ in-band SSoT + 生成 projection の hybrid 系譜)、 ADR-0025 (folio fix broken-reverse materialize = option F「裸 token → xref 自動 wrap」の precedent)、 ADR-0020 (validate scope = uniqueness/resolve/completeness/tooltip-consistency gate を追加)、 ADR-0031 (vocabulary.yaml glossary enrich = glossary SSoT、 ADR-worthiness dogfood)、 ADR-0030 (v1.0 criteria = 本 feature が 1.0.0 を gate)、 rules.html (xref markup + completeness rule + tooltip CSS governance)、 relations.html (inventory §4 schema を object-level graph へ拡張)、 folio-self-spec.html (self-application)、 verification.html (REQ 定義 site)、 constitution P-2/P-3/P-5/P-7/P-13 (不変原則、 本 ADR は touch しない)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio の architecture 内には <strong>defined-object</strong> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) と <strong>glossary 用語</strong> (SSoT / dual-audience / EARS 等) が多数存在する。 現状これらは<strong>一意 canonical 定義を持つが、 他所からの参照は手動 <code>&lt;a href&gt;</code> に依存し穴が空く</strong> (例: principle への手動 cross-ref が 39 件あるが、 残る言及はリンクされていない)。 user / AI が「ある object の最も詳しい定義」へ確実に辿れず、 human は用語の意味を毎回想起できず、 AI は normative 読解時に参照先を構造的に辿れない。 単に手で link を張るだけでは<strong>作業に穴ができ長期的に劣化する</strong> — これを<strong>穴を作らない system として組み込む</strong>のが本 ADR の課題である。</p>
+
+<p>本課題の維持性の核心は <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (dual-audience) と<strong>同型の金脈</strong>にある: 「<strong>導出 (derive) = 構造的に穴なし</strong>」 vs 「<strong>手動 = 穴</strong>」。 この選択を裏打ち/補正するため <code>/deep-research</code> (multi-agent web research、 106 agent、 24 source fetch、 25 claim を 3-vote 敵対的検証 → 23 確認/2 棄却) で外部知識を調査した (in-band 埋込 / 外部 DB / 非 DB index / hybrid の 4 architecture、 ReqIF・ISO 29148・ISO 704 等 RE 標準、 Sphinx/rustdoc/SCIP の完全性検出、 beads/Dolt の DB-backed AI 知識基盤)。</p>
+
+<p>研究の結論は<strong>明確に hybrid</strong> (4 goal — 長期安定 / 再現性 / human 見やすい / AI 使いやすい@大規模 — すべてで 1 位): <strong>canonical 定義は git-tracked flat HTML に in-band SSoT として残し、 そこから read-only な structured projection (完全性 lint + AI-graph) を生成する。 DB に canonical state を置かない</strong>。 主要 verified 根拠:</p>
+<ul>
+  <li><strong>DB-as-SSoT の決定的反証</strong> (3-0): beads では flat file (<code>.beads/issues.jsonl</code>) は<em>明示的に SSoT でなく</em>、 authoritative な Dolt DB は <strong>gitignore</strong> され sync も git でなく Dolt remote 経由。 → <strong>DB 採用は git-diff 可能な canonical file を「lossy export」に降格させる</strong> = folio の「要件定義書 = git-tracked portable artifact」前提と矛盾、 最高 migration risk。</li>
+  <li><strong>非 DB で RDF 級 traversal が届く</strong> (3-0): 全 JSON-LD は valid JSON かつ data model は labeled directed graph ≈ RDF。 flat file が DB 無しで graph traversal を達成 → DB は不要。</li>
+  <li><strong>MCP が access 層を平準化</strong> (3-0): MCP の Tools/Resources/dynamic-discovery で flat file でも DB でも同じく agent-friendly にできる → 「AI に使いやすい = DB が要る」は誤り。 query を Tools、 schema を Resources で出すのが確実。</li>
+  <li><strong>RE 標準が folio の既存 model を追認</strong>: ReqIF は参照を <em>first-class typed object</em> (directional source/target + typed) とし、 全要素に <em>globally-unique・lifetime-immutable ID</em> を要求 (= folio の typed relation + <code>P-*/REQ-*/ADR-*</code> ID と同型)。 ReqIF が query store でなく <strong>flat interchange format</strong> である事実自体が「portability の正解は DB でなく flat」を裏づける。 ISO 704 は<strong>定義を concept に束ね term は designation</strong> (= folio の <code>vocabulary.yaml</code> の canonical/forbidden/definition と同型)。 ISO 29148 は要件の completeness/consistency/verifiability を規範化 (folio の no-gaps 目標を追認)。</li>
+  <li><strong>in-band 完全性検出は実証済 family</strong> (SCIP 3-0、 area-4 medium): Sphinx nitpicky / rustdoc <code>broken_intra_doc_links</code> / SCIP の「broken-link で fail」= 必要な機械的完全性機構。 SCIP は<strong>human-readable な string ID で索引</strong>するため生成 index が人間可読かつ AI 可辿。 → folio の <code>validate</code> + <code>fix</code> は同じ実証済 family で novel risk でない。</li>
+</ul>
+
+<p>重要な<strong>棄却 claim</strong> (0-3): 「JSON-LD <code>@context</code> が term ごとに単一 canonical IRI を保証する」は<strong>棄却</strong>された。 → <strong>「1 object = 1 canonical SSoT」は format から仮定できず、 authoring 規律 + completeness/uniqueness lint で enforce する MUST</strong>。 これは folio の enforce-not-assume 哲学 (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement) と完全に整合し、 本 ADR の validate gate を正当化する。</p>
+
+<p>→ <strong>本 ADR の中心命題</strong>: defined-object/term の cross-reference を <strong>in-band SSoT + 生成 projection の hybrid</strong> で構成し、 維持は <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> の materialize pattern を拡張した <code>folio fix</code> auto-wrap で「穴を埋め」、 完全性は <code>folio validate</code> で機械保証する。 <strong>DB-as-SSoT は却下</strong> (研究が最高 risk かつ不要と判定)。 本 feature は user 提案により 1.0.0 前に追加すべき機能であり、 <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> の 1.0.0 timing を gate する。 grill (13 問) で各論点を解決済。 <strong>status = proposed (user 承認待ち)</strong>。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-architecture">§2.1 architecture = hybrid (in-band SSoT + 生成 projection)、 DB-as-SSoT 却下、 constitution 不変</h3>
+<p>cross-reference の canonical 定義は<strong>各 object の in-band HTML 要素 (その <code>id</code>) を SSoT</strong> とする。 そこから <strong>read-only な structured projection</strong> (完全性 lint + AI-graph) を<strong>生成</strong>する — projection は派生・disposable・再生成可能で SSoT でない。 <strong>外部 DB に canonical state を置かない</strong> (DB-as-SSoT 却下、 §4)。 大規模 query 用の MCP server は projection 上の read-only 公開として <strong>roadmap</strong> に置く (Pole-2 scale 対応、 §2.7)。 本構成は <a href="../spec/constitution.html#p-2">P-2</a> (HTML) / <a href="../spec/constitution.html#p-13">P-13</a> (no-mandate-build) と整合するため <strong>constitution を touch しない</strong> (<a href="../spec/constitution.html#s6-amendment">P-10</a>)。</p>
+
+<h3 id="s2-2-identity">§2.2 object-identity model (ReqIF 整合)</h3>
+<ul>
+  <li><strong>core referenceable class</strong> = <strong>principle (<code>P-N</code>) / requirement (<code>REQ-*</code>) / decision (<code>ADR-NNNN</code>) / rule (§ section)</strong> の 4 つ (既に de-facto ID 有り)。 EARS keyword・doc-type は語彙的ゆえ glossary (Class B、 §2.8) が扱う。</li>
+  <li><strong>ID 不変性</strong> (ReqIF Identifiable): 一度割り当てた object ID は <strong>renumber / reuse しない</strong> (architecture rule に昇格)。 folio は既に principle で実践済 (constitution「番号は append」) → 全 class に一般化。</li>
+  <li><strong>prefix → SSoT-doc registry</strong>: <code>P-*</code>→constitution / <code>REQ-VER-*</code>→verification / <code>REQ-REL-*</code>→relations / <code>REQ-CI-*</code>・<code>REQ-DA-*</code>→rules / <code>ADR-*</code>→decisions / rule §→rules。</li>
+  <li><strong>SSoT-definition site 規約</strong>: 「canonical ID を小文字化した <code>id</code> を持つ要素が、 その prefix の SSoT doc 内にある = 定義 site」。 他所の <code>&lt;a href="…#id"&gt;</code> は reference site。 新規 attribute 不要 (既存 <code>id</code> + registry で lint が定義/参照を判別)。 REQ の定義 site は <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の dual-audience card であり、 その human essence が tooltip text になる。</li>
+  <li><strong>marking 正規化</strong>: 上記成立には全 object が id 付き SSoT 要素を持つ MUST。 現 <a href="../spec/rules.html">rules.html</a> の <code>REQ-CI-*</code>/<code>REQ-DA-*</code> 等は table/EARS-list で id 付き定義要素を欠く可能性 → これらを統一 markup に正規化する作業を含む。</li>
+</ul>
+
+<h3 id="s2-3-reference">§2.3 reference model = untyped inline xref (typed は file-level + roadmap)</h3>
+<p>inline 参照は <strong>untyped な xref</strong> (<code>&lt;a class="xref" href="…#id" data-tooltip="essence"&gt;</code>) とする。 「定義へのリンク」の用途 (読みやすさ + nav + 完全性検査) に十分で、 結果として生じる "X mentions Y" edge が AI graph を満たす。 <strong>typed/directional relation</strong> ("refines"/"verifies"/"supersedes" 等、 ReqIF SpecRelation 相当) は<strong>既存の file-level JSON-LD</strong> (<a href="../spec/relations.html">relations.html</a> の <code>dc:references</code>/<code>folio:depends-on</code>) <strong>+ coverage RTM に留め、 object-level 拡張は roadmap</strong> とする (全 mention への型強制はしない)。 untyped である事が §2.5 の auto-materialize を可能にする (型を機械選択できないと auto-wrap が破綻するため)。</p>
+
+<h3 id="s2-4-tooltip">§2.4 tooltip = no-JS CSS-only (fix 生成 text + 動くリンク baseline)、 JS は roadmap</h3>
+<p>tooltip は <strong>human のみの読みやすさ enhancement</strong> (AI は href/graph を辿るため tooltip 不要)。 baseline は常に<strong>動く xref リンク</strong> (click → 定義 + 既存 <code>:target</code> flash、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の RTM deep-link pattern)。 その上に <strong>no-JS CSS-only tooltip</strong> (<code>:hover</code> + <code>:focus-visible</code> で styled box) を載せ、 text は <code>folio fix</code> が定義 essence からコピーした <code>data-tooltip</code> 属性から供給する。 <strong>JS (tippy 系の rich/interactive/cross-doc preview tooltip) は <a href="./ADR-0033-dual-audience-hub.html#s2-8-js-governance">§8 JS governance</a> 準拠の roadmap</strong> とし、 1.0.0 core には入れない (user の JS 慎重 + archival pristine を保つ)。 no-JS markup (<code>href</code> + <code>data-tooltip</code>) は将来 JS と<strong>前方互換</strong> (同属性を読んで rich 表示、 非破壊で重ねられる)。</p>
+
+<h3 id="s2-5-materialize">§2.5 維持 = folio fix materialize (option F) + completeness scoping</h3>
+<p>維持モデルは <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> の broken-reverse materialize の精密な再利用とする: <strong>著者は prose に裸で <code>P-5</code>/<code>REQ-VER-001</code>/<code>ADR-0033</code> と書く → <code>folio validate</code> が「リンクされていない object-token」を検出 → <code>folio fix</code> が <code>&lt;a class="xref"&gt;</code> に自動 wrap + <code>data-tooltip</code> を定義 essence から生成</strong>。 build step 不要 (<a href="../spec/constitution.html#p-13">P-13</a> 整合)、 手動の手間ゼロ。 scoping:</p>
+<ul>
+  <li><strong>完全性ルール</strong> = "orphan-mention 禁止": ある doc が prose で canonical object の ID トークンに言及していたら、 当該 object への resolvable xref を<strong>最低 1 つ</strong>持つ MUST。 <code>fix</code> は<strong>初出を wrap</strong> (全 occurrence でなく — AI graph は edge 1 本で足り、 human も 1 doc 1 入口で読みやすい)。</li>
+  <li><strong>auto-materialize 対象 = token 形が一意な class</strong> (<code>P-N</code>/<code>REQ-*</code>/<code>ADR-NNNN</code>、 regex で確実に拾える)。 <strong>rule (§) は canonical token を持たない</strong> (「§7.3」は doc 跨ぎで曖昧) ため <strong>explicit xref tier</strong> (resolve 検査 + tooltip + graph edge は得るが裸言及の auto-gap 検出はしない)。</li>
+  <li><strong>誤検出の除外</strong> (既存 <code>folio_prose_only</code> 流用): 自身の定義要素内 / code・machine block (<code>&lt;pre&gt;</code>/<code>&lt;code&gt;</code>/JSON-LD/dual-audience machine) / 見出し (<code>&lt;h2&gt;</code>/<code>&lt;h3&gt;</code>) / 既に <code>&lt;a&gt;</code> 内 — は wrap しない。</li>
+</ul>
+
+<h3 id="s2-6-validate">§2.6 enforcement = folio validate に 4 gate 追加 (ADR-0020 scope 拡張)</h3>
+<p><a href="./ADR-0020-validate-scope.html">ADR-0020</a> の validate scope を拡張し、 deterministic floor として 4 gate を追加する (棄却された JSON-LD 保証の代わりに lint で enforce):</p>
+<ul>
+  <li><strong>uniqueness</strong>: 各 canonical ID は architecture 全体で id 付き SSoT 要素として<strong>ちょうど 1 回</strong>定義される。</li>
+  <li><strong>resolve-integrity</strong>: 各 <code>xref</code> (canonical-ID 形の <code>href</code> target) が既存の定義 site に解決する (broken xref 検出)。</li>
+  <li><strong>completeness</strong>: §2.5 の orphan-mention 検出 (doc が token に言及 &amp; xref 0 本 = block、 auto-materialize 対象 class のみ)。</li>
+  <li><strong>tooltip-consistency</strong>: cached <code>data-tooltip</code> が定義の現 essence と一致 (drift 検出、 <code>fix</code> 再生成)。</li>
+</ul>
+
+<h3 id="s2-7-projection">§2.7 AI-graph = inventory.json 拡張 + prime index、 鮮度 governance</h3>
+<p>AI-graph は新フォーマットを作らず <strong>既存 projection を object/term-level に拡張</strong>する: in-band の個々の <code>&lt;a class="xref"&gt;</code> リンクが edge の SSoT、 <code>inventory.json</code> (<a href="../spec/relations.html#s4-inventory">relations §4 schema</a>) を node (canonical object: id/class/SSoT-location/essence) + edge (xref 集計) で拡張、 <code>folio prime</code> に compact object-index を追加 (in-context AI 用)。 <strong>鮮度</strong>: projection (inventory/prime) は gitignore・再生成ゆえ VCS に stale が残らない; in-HTML の <code>data-tooltip</code> コピーは §2.6 の tooltip-consistency gate + <code>fix</code> 再生成で managed (既存 golden 規律と同型)。 <strong>MCP server over projection は roadmap</strong> (大規模 query = Pole-2、 1.0.0 は inventory/prime の in-context graph まで)。</p>
+
+<h3 id="s2-8-glossary">§2.8 glossary (Class B) = vocabulary.yaml SSoT + explicit-mark best-effort</h3>
+<p>glossary 用語 (Class B) は<strong>best-effort tier</strong> として defined-object (Class A) の no-gaps とは別扱いとする (自然語の全 occurrence 検出は NLP 難問、 棄却 claim と同じく term 完全性は約束しない)。</p>
+<ul>
+  <li><strong>SSoT = <code>vocabulary.yaml</code></strong> の <code>definition</code> field (<a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.4 enrich、 ISO 704 concept model: canonical = 主 designation / forbidden = 別 designation / definition = concept 定義)。 HTML glossary view は vocabulary.yaml からの<strong>生成 projection</strong> (二重化回避、 <a href="../spec/constitution.html#p-7">P-7</a>)。</li>
+  <li><strong>folio 自身の <code>vocabulary.yaml</code> を新規作成</strong> (現状 fixture のみ) — folio canonical 用語 + 定義を載せ、 dogfood + glossary SSoT とする。</li>
+  <li><strong>tooltip = explicit-marking のみ</strong> (<code>&lt;dfn&gt;</code> or <code>&lt;span class="term" data-term="…"&gt;</code> で mark した箇所だけ、 Class A と同じ CSS tooltip 機構を再利用)。 <strong>auto-detect / gap-lint しない</strong>。</li>
+</ul>
+
+<h3 id="s2-9-scope">§2.9 1.0.0 scope + 適用</h3>
+<p><strong>1.0.0 MVP</strong>: (1) object-identity 形式化 + rules.html marking 正規化、 (2) in-band untyped xref markup、 (3) no-JS CSS-only tooltip + 動くリンク baseline、 (4) <code>folio fix</code> auto-materialize、 (5) <code>folio validate</code> 4 gate、 (6) inventory.json object-graph 拡張 + prime index、 (7) <strong>全既存 spec への dogfood 適用</strong> (~60-80 object を接続、 「実用に耐える」検証)、 (8) glossary 機構 (folio <code>vocabulary.yaml</code> 新規 + explicit-mark tooltip + starter population)、 (9) 本 ADR + <a href="../spec/rules.html">rules</a> §amend + <a href="../spec/folio-self-spec.html">folio-self-spec</a>/<a href="../spec/relations.html">relations</a> 反映。</p>
+<p><strong>roadmap (1.x、 非破壊で後付け)</strong>: MCP server over projection / JS rich tooltip / typed object-level relation / <code>RULE-*</code> token scheme / glossary 全 population / 生成 HTML glossary view。</p>
+<p>実装は <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> 同様 <strong>多段 SPAWN</strong> (規範+enforcement → 適用層+dogfood) で行い、 PARENT が <code>validate</code> clean + sandbox GREEN + playwright + review + golden 再生成 + ff-merge する。 spec 編集 (architecture/spec/) は caller-marker dance で gate される。 本 ADR は <strong>constitution を touch しない</strong>。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>object-level の human↔AI hub</strong>: human は hover で定義 essence を即見 (click 不要 = 可読性)、 AI は xref/graph を構造的に辿る。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の dual-audience hub を object 参照網へ拡張。</li>
+  <li><strong>Class A は穴を機械保証</strong>: 一意 token + completeness gate + fix auto-materialize で「手動の穴」も「derive の build 緊張」も両方回避する第三の道。 user の core 要望を満たす。</li>
+  <li><strong>既存機構の拡張で収まる</strong>: in-band JSON-LD / inventory/prime projection / fix materialize / validate gate / vocabulary.yaml / dual-audience essence をすべて再利用 → <strong>constitution amendment 不要</strong>、 低 migration risk。</li>
+  <li><strong>Pole-2 (大規模 query) を放棄しない</strong>: MCP-over-projection roadmap で、 DB を SSoT にせず query-time traversal を将来満たせる。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>tooltip コピーの drift</strong>: no-JS ゆえ essence を各 xref に複製 → 定義変更で古化。 silent でなく tooltip-consistency gate + fix 再生成で managed だが、 fix/validate を回す運用義務が生じる。</li>
+  <li><strong>rule は explicit-tier</strong>: canonical token を持たないため auto-gap 検出の対象外 (resolve + tooltip + edge は得る)。 4 class 中 rule のみ二級。</li>
+  <li><strong>glossary は best-effort</strong>: term の完全性は約束しない (NLP 難問)。 Class A の no-gaps とは tier が異なる。</li>
+  <li><strong>marking 正規化コスト</strong>: 既存 spec の object marking 不一致 (rules の REQ-CI/REQ-DA 等) を統一する作業 + 全 spec dogfood の規模 (dual-audience と同等かやや大)。</li>
+</ul>
+<h3>Neutral / TODO</h3>
+<ul>
+  <li>MCP server / JS rich tooltip / typed object-relation / RULE-* token / glossary 全 population を roadmap に保持 (いずれも非破壊後付け)。</li>
+  <li><strong>研究 open question</strong>: (a) projection 鮮度の最終 governance (regen-on-commit hook の要否) は実装で確定、 (b) flat-file + in-memory graph が DB を要する scale 閾値は未定量 (MCP roadmap の起動条件)、 (c) ISO 704 concept model → vocabulary.yaml + ReqIF-ID の精密 mapping は glossary 実装時に設計。</li>
+  <li>本 ADR は <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §10.3 の ADR-worthiness 3 条件 (hard-to-reverse: architecture + enforcement / surprising: DB 却下と fix-materialize の選択 / real-trade-off: hybrid vs DB-as-SSoT vs in-band-only) を満たす = dogfood。 本 feature は <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> の 1.0.0 timing を gate する。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採否</th></tr></thead>
+  <tbody>
+    <tr><td><strong>hybrid: in-band SSoT + 生成 projection (採用)</strong></td><td>採用 — 研究ランクで 4 goal すべて 1 位。 canonical 定義を flat HTML に残し projection を生成。 既存機構の拡張で constitution 不変、 低 migration risk、 MCP roadmap で Pole-2 も確保</td></tr>
+    <tr><td>external-DB as SSoT (beads/Dolt 型)</td><td><strong>却下</strong> — 研究の決定的反証: DB を authoritative にすると git-diff 可能な canonical file が gitignored「lossy export」に降格し、 sync が git でなく DB remote 経由になる (beads ARCHITECTURE.md verified)。 「要件定義書 = git-tracked portable artifact」前提と矛盾、 最高 migration risk、 かつ flat JSON-LD で RDF 級 traversal が届くため<strong>不要</strong>。 user の「constitution を変えてでも DB を」の問いへの研究の答え = 「変える必要は無い・変えると最高 risk」</td></tr>
+    <tr><td>non-DB-index 単独 (projection のみ、 in-band link 無し)</td><td>不採用 — index だけでは human の in-text 参照 (tooltip/nav) が成立せず、 SSoT と index の対応も弱い。 in-band link を SSoT に、 index を projection に、 の hybrid が優位</td></tr>
+    <tr><td>in-band 手動リンクのみ (projection/lint 無し)</td><td>不採用 — まさに現状で「穴ができる」。 完全性の機械保証が無く長期劣化する (user が明示的に拒否)</td></tr>
+    <tr><td>typed/directional relation を全 inline mention に強制</td><td>不採用 (core) — authoring 負担増 + 型を機械選択できず auto-materialize が破綻 (= 手動の穴が復活)。 typed relation は file-level + roadmap に留める</td></tr>
+    <tr><td>JS rich tooltip を 1.0.0 core に</td><td>不採用 (core) — folio 初 JS + cross-doc は file:// fetch 破綻 + AI 無関係。 no-JS markup は JS と前方互換ゆえ roadmap で非破壊後付け可。 §8 governance 準拠で 1.x に</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (dual-audience) SHIP 後、 user が「v1.0.0 前に追加すべき機能」として architecture 全体の term/object cross-reference + hover-tooltip system を提案。 「手動リンクは穴 → system で穴を作らない」が核心要望。</li>
+  <li>金脈: 維持性は dual-audience と同型 (「導出=穴なし」vs「手動=穴」)。 <code>/deep-research</code> (106 agent、 24 source、 23/25 claim 確認) で in-band/DB/非DB-index/hybrid を 4 goal で比較 → hybrid が全 1 位、 DB-as-SSoT 却下、 「単一 canonical は format で保証不可 = lint で enforce」 (棄却 claim) を確認。</li>
+  <li>拡張対象: <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate に 4 gate)、 <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> (fix materialize を xref auto-wrap へ)、 <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> (vocabulary.yaml glossary SSoT)、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (tooltip = human essence 再利用、 同じ hybrid 系譜)。 いずれも本文 frozen、 reverse-link + 本 ADR prose で trace。</li>
+  <li>設計確定: grill 13 問 (scope/taxonomy → architecture → identity → reference → tooltip → completeness → glossary → AI-graph → 1.0.0 scope) で各枝を解決。</li>
+  <li>実装 path: 多段 SPAWN — ① 規範 (<a href="../spec/rules.html">rules</a> xref markup + completeness rule + tooltip CSS、 <a href="../spec/folio-self-spec.html">folio-self-spec</a> self-application) + enforcement (<code>bin/folio</code> の fix auto-materialize + validate 4 gate + inventory/prime 拡張) → PARENT review → ② 適用層 (全 spec dogfood + marking 正規化 + glossary 機構)。 検証 = <code>folio validate</code> clean + sandbox GREEN + playwright (tooltip light/dark) + golden 再生成。</li>
+  <li>関連原則: <a href="../spec/constitution.html#p-2">P-2</a> (HTML)、 <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離)、 <a href="../spec/constitution.html#p-5">P-5</a> (1 entity 1 canonical name = identity 基盤)、 <a href="../spec/constitution.html#p-7">P-7</a> (3-domain 重複禁止)、 <a href="../spec/constitution.html#p-13">P-13</a> (no-mandate-build)。 本 ADR は constitution を touch しない。</li>
+  <li>status: <strong>accepted</strong> (user 承認済 2026-05-30)。 起票時に README index + reverse-link materialize + golden 再生成を実施済、 続いて多段 SPAWN 実装 (#106)。 本 feature が 1.0.0 を gate (#77)。</li>
+</ul>
+</section>
+
+</body>
+</html>
