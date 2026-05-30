@@ -7,6 +7,7 @@
 <meta name="folio-version" content="0.5.0-draft">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-xref-completeness" content="enabled">
 <title>folio — self-spec (v0.5.0-draft)</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
@@ -208,7 +209,7 @@ graph TD
   style VER fill:#fefbea,color:#08131a
   style PLUGIN fill:#5ac8b8,color:#08131a
 </pre>
-<figcaption>図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し architecture/{spec,decisions,research} を持つ (consumer と一意)。 tests/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (ADR-0022)。</figcaption>
+<figcaption>図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し architecture/{spec,decisions,research} を持つ (consumer と一意)。 tests/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (<a class="xref" href="../decisions/ADR-0022-x4-0-canonical-layout.html" data-tooltip="forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)">ADR-0022</a>)。</figcaption>
 </figure>
 </section>
 
@@ -227,7 +228,7 @@ graph TD
   <thead><tr><th></th><th>floor (deterministic)</th><th>ceiling (LLM)</th></tr></thead>
   <tbody>
     <tr><td>機構</td><td><code>folio validate</code> dual-audience gate</td><td>Phase F <code>spec-review-fidelity</code> agent</td></tr>
-    <tr><td>判定</td><td>構造的対応 + 機械可読 key 一致 (REQ-DA-STRUCT-1〜5)</td><td>意味的 fidelity (essence が normative を忠実要約か + pattern semantic)</td></tr>
+    <tr><td>判定</td><td>構造的対応 + 機械可読 key 一致 (<a class="xref" href="./rules.html#req-da-struct-1" data-tooltip="dual-audience を採用する spec の各 [data-audience=&quot;human&quot;] requirement container は [data-audience=&quot;machine&quot;] 子孫を持つ MUST (孤立 human の排除)。">REQ-DA-STRUCT-1</a>〜5)</td><td>意味的 fidelity (essence が normative を忠実要約か + pattern semantic)</td></tr>
     <tr><td>捕捉</td><td>孤立 human / id 不一致 / 値域 / aria-hidden / EARS-pattern declared 不一致</td><td>要約の脱落・誇張・矛盾・pattern 取り違え</td></tr>
     <tr><td>起動</td><td><code>folio validate</code> (CI block)・普遍</td><td>spec 編集時 (folio-architect Phase F)</td></tr>
   </tbody>
@@ -267,7 +268,7 @@ flowchart TB
 
 <h3 id="s3-4-xref">§3.4 Object cross-reference (self-application)</h3>
 <p>folio 自身の architecture は <a href="rules.html#s9-xref">rules.html §9</a> の <strong>object cross-reference system</strong> を self-apply する (<a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a>、 §3 dual-audience hub の object 参照網への拡張)。 defined-object (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) の canonical 定義は各 object の in-band 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph) を<strong>生成</strong>する hybrid (DB-as-SSoT 却下)。 <strong>human↔AI hub</strong>: human は xref を hover して定義 essence を即見 (no-JS tooltip)、 AI は <code>href</code> と <code>inventory.json</code> の <code>objectGraph</code> projection を構造的に辿る。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (resolve / uniqueness / tooltip-consistency / completeness) が担う (<a href="verification.html#s3-ears">REQ-VER-017/018</a>)。</p>
-<p>completeness は <strong>opt-in/conditional-normative</strong> (<a href="rules.html#s9-4-requirements">REQ-XREF-002</a>) — <code>folio-xref-completeness=enabled</code> を宣言した doc のみ orphan-mention を block する。 <strong>本 §3.4 は採用の宣言に留め、 living spec への xref 一括適用 (dogfood) と completeness opt-in の活性化は後続 wave で行う</strong> (現時点で opt-in 済 spec は無く、 real corpus の <code>folio validate</code> は clean を維持する)。 dual-audience の core propagation (§3.1) と同じく、 機構と規範を先に landable な土台として確立し、 適用は incremental に進める。</p>
+<p>completeness は <strong>opt-in/conditional-normative</strong> (<a href="rules.html#s9-4-requirements">REQ-XREF-002</a>) — <code>folio-xref-completeness=enabled</code> を宣言した doc のみ orphan-mention を block する。 <strong>folio 自身の全 living spec (verification / rules / relations / folio-self-spec / README) が completeness opt-in を宣言し、 prose 内の裸 canonical token は <code>folio fix</code> で xref へ materialize 済 — folio が xref system を self-host (dogfood) する</strong>。 real corpus の <code>folio validate</code> は completeness gate を含め clean。 opt-in 対象は body 改訂可能な living spec に限り、 <code>constitution.html</code> (P-10 不可触) と frozen ADR は定義 site として read-only に essence を供出するのみ (言及側 living spec の prose だけが wrap される)。 dual-audience の core propagation (§3.1) と同じく、 機構と規範を landable な土台として確立した上で living spec への適用を完了した。</p>
 </section>
 
 <section id="s7-harness" class="normative">
@@ -390,7 +391,7 @@ flowchart LR
 
 <h3 id="s7-3-caller-marker">§7.3 Caller Marker</h3>
 
-<p>spec edit を行う AI agent が caller marker を set / unset すべき MUST 要件は <a href="rules.html#s10-1" class="normative-ref">rules.html §10.1</a> (REQ-CM-001〜003) に規定する。 本 §7.3 は PreToolUse hook による enforcement flow chart (下図) を <em>informative</em> に解説する。</p>
+<p>spec edit を行う AI agent が caller marker を set / unset すべき MUST 要件は <a href="rules.html#s10-1" class="normative-ref">rules.html §10.1</a> (<a class="xref" href="./rules.html#req-cm-001" data-tooltip="AI agent が spec_path 配下の file に write を試みる時、 system は caller marker env var が宣言値に set されているか検証する MUST。">REQ-CM-001</a>〜003) に規定する。 本 §7.3 は PreToolUse hook による enforcement flow chart (下図) を <em>informative</em> に解説する。</p>
 
 <p>caller marker は AI agent が現在 spec edit 中であることを宣言する。 <code>.claude-plugin/hooks/</code> の PreToolUse hook が env var を check し、 未 set または異なる値の場合は spec 配下 file の編集を block する。</p>
 
@@ -488,7 +489,7 @@ flowchart LR
   style AX fill:#fefbea,color:#08131a
   style DEF fill:#e6f6f2,color:#08131a
 </pre>
-<figcaption>図 7. 3 axis × 5 層防御 pipeline。 5 層全てを通過した時のみ AI Agent は folio (Layer 0) or consumer (Layer 1) の spec を編集できる (P-12 違反防止)。</figcaption>
+<figcaption>図 7. 3 axis × 5 層防御 pipeline。 5 層全てを通過した時のみ AI Agent は folio (Layer 0) or consumer (Layer 1) の spec を編集できる (<a class="xref" href="./constitution.html#p-12" data-tooltip="Layer 0 = rules + plugin harness 一体配布">P-12</a> 違反防止)。</figcaption>
 </figure>
 
 <h3 id="s7-5-ci-gate">§7.5 CI Gate Specification</h3>
@@ -520,7 +521,7 @@ flowchart LR
   style OK fill:#5ac8b8,color:#08131a
   style BL fill:#fdf3f3,color:#08131a
 </pre>
-<figcaption>図 8. CI gate pipeline。 7 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。 G7 (json-ld-validation) は 2026-05-23 追加 (REQ-CI-016、 verification framework と integration)。</figcaption>
+<figcaption>図 8. CI gate pipeline。 7 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。 G7 (json-ld-validation) は 2026-05-23 追加 (<a class="xref" href="./rules.html#req-ci-016" data-tooltip="Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。">REQ-CI-016</a>、 verification framework と integration)。</figcaption>
 </figure>
 
 <aside class="informative">
@@ -533,7 +534,7 @@ flowchart LR
 <p>本 §7.6 は試作段階 (Phase X3) における plugin minimal scope を記述する。 <a href="#s7-2-specialists">§7.2 (完成形 8 specialist agents)</a> は未来 anchor として保持し、 現状の試作 scope を本 §7.6 に局所化する。 採用根拠は <a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a>、 実機検証 framework は <a href="verification.html">verification.html</a>。</p>
 </aside>
 
-<p>Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href="../decisions/ADR-0003-plugin-architecture.html#s2-decision">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は ADR-0003 への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。</p>
+<p>Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href="../decisions/ADR-0003-plugin-architecture.html#s2-decision">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は <a class="xref" href="../decisions/ADR-0003-plugin-architecture.html" data-tooltip="folio v0.4.2-draft">ADR-0003</a> への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。</p>
 
 <p>段階的成長 path: <strong>1 skill (Phase X3) → 7-Phase SKILL + 3 review agent (Phase X4) → 5 review agent v1.0 (Phase X5-γ + ADR-0033) → 9 agents 完成形 vision (post-1.0)</strong> (X4-D で 3 review agent ears/vocabulary/ssot、 <a href="../decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027</a>; X5-γ で temporal 追加・<code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut・<code>spec-explorer</code>/<code>spec-architect</code>/<code>spec-review-stakeholder</code> は post-1.0 defer、 <a href="../decisions/ADR-0029-phase-f-agent-set.html">ADR-0029</a>; dual-audience <code>spec-review-fidelity</code> ceiling 追加、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a>)。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href="#s9-bindings">§9 Bindings</a> に隔離。</p>
 
@@ -632,7 +633,7 @@ flowchart TB
 <section id="s9-bindings" class="informative">
 <h2>§9. Bindings (platform-specific HOW の分離)</h2>
 
-<p>constitution P-3 / P-11 (WHAT-only + HOW 禁止) を遵守するため、 platform 固有の HOW (env var の具体値、 hook script 名、 specific binary path、 OS-specific command 等) は本書 §1〜§8 の本文ではなく、 以下の binding location に分離する:</p>
+<p>constitution <a class="xref" href="./constitution.html#p-3" data-tooltip="WHAT-only">P-3</a> / <a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> (WHAT-only + HOW 禁止) を遵守するため、 platform 固有の HOW (env var の具体値、 hook script 名、 specific binary path、 OS-specific command 等) は本書 §1〜§8 の本文ではなく、 以下の binding location に分離する:</p>
 
 <table>
   <thead><tr><th>HOW 領域</th><th>binding location</th><th>備考</th></tr></thead>
@@ -660,7 +661,7 @@ flowchart TB
     <tr>
       <td>Claude Code 固有 primitives (Skill / Hook / Agent 命名規約)</td>
       <td><code>CLAUDE.md</code> (folio repo root) + 各 consumer project の <code>CLAUDE.md</code></td>
-      <td>P-2 の Markdown 例外として CLAUDE.md は HOW root 許容 (P-11 例外として明示)</td>
+      <td><a class="xref" href="./constitution.html#p-2" data-tooltip="format は HTML + common.css のみ">P-2</a> の Markdown 例外として CLAUDE.md は HOW root 許容 (P-11 例外として明示)</td>
     </tr>
   </tbody>
 </table>
