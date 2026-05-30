@@ -219,7 +219,7 @@
 <h2>§2. folio Custom Vocabulary</h2>
 
 <aside class="informative">
-  <p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し constitution P-10 に準じた user 承認を経る MUST。</p>
+  <p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し constitution <a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a> に準じた user 承認を経る MUST。</p>
 </aside>
 
 <h3 id="s2-1-vocab-table">§2.1 folio 独自語彙 (規範定義)</h3>
@@ -479,15 +479,15 @@
 <h3 id="s4-4-input-output">§4.4 Input / Output Behavior</h3>
 
 <aside class="informative">
-<p>本 §4.4 は <code>folio inventory</code> CLI (<a href="folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離 (P-11)。</p>
+<p>本 §4.4 は <code>folio inventory</code> CLI (<a href="folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離 (<a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a>)。</p>
 </aside>
 
 <h4 id="s4-4-1-scan">§4.4.1 Scan target directories</h4>
 
 <ul>
-  <li><code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は ADR-0021 で廃止)</li>
+  <li><code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は <a class="xref" href="../decisions/ADR-0021-constitution-x4-amendment.html" data-tooltip="forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)">ADR-0021</a> で廃止)</li>
   <li>scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの</li>
-  <li><strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 ADR-0023)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)</li>
+  <li><strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 <a class="xref" href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html" data-tooltip="forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)">ADR-0023</a>)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)</li>
 </ul>
 
 <h4 id="s4-4-2-output">§4.4.2 Output path</h4>

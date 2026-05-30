@@ -667,14 +667,17 @@ folio_vocab_forbidden() {
   yq -r '.terms[]?.forbidden[]?' "$vf" 2>/dev/null
 }
 
-# body から <pre>/<code>/<script>/<style> と machine-readable aside を除去した prose を stdout。
-# vocabulary 検査が code 例・機械可読ブロック内の forbidden synonym で誤検出しないため。
+# body から <pre>/<script>/<style>/machine-readable aside (block) を行除去し、 inline
+# <code>...</code> は span 単位で除去した prose を stdout (#112: line-granular → span-granular。
+# inline code を含む行の code 外 prose token も拾えるようにする)。 vocabulary / dual-audience-3 /
+# xref scan が code 例・機械可読ブロック内の文字列で誤検出しないため。 block (<pre> 内の <code> 含む)
+# は従来通り行ごと除去 (skip カウンタ)、 inline <code> のみ gsub で span 除去。
 folio_prose_only() {
   printf '%s\n' "$1" | awk '
-    /<(pre|code|script|style)[ >]/{skip++}
+    /<(pre|script|style)[ >]/{skip++}
     /<aside class="machine-readable"/{skip++}
-    skip==0{print}
-    /<\/(pre|code|script|style|aside)>/{if(skip>0)skip--}
+    skip==0{ line=$0; gsub(/<code[ >][^<]*<\/code>/, " ", line); print line }
+    /<\/(pre|script|style|aside)>/{if(skip>0)skip--}
   '
 }
 
@@ -920,7 +923,7 @@ folio_xref_scan_prose_tokens() {
 # <a class="xref" href data-tooltip> に wrap する (§2.5 option F materialize)。 wrap 数を stdout。
 # opt-in signal = <meta name="folio-xref-completeness" content="enabled"> (無ければ no-op = 0)。
 # 既存 xref を持つ token は skip (completeness 充足済・idempotent)、 解決不能 token も skip。
-# awk は mask (tag/<a> 領域を space 化) で語境界 + tag/anchor 内除外を判定し初出のみ置換。
+# awk は mask (tag/<a>/inline-<code> 領域を space 化) で語境界 + tag/anchor/code 内除外を判定し初出のみ置換。
 folio_xref_wrap_doc() {
   local file="$1" file_rel="$2" root_abs="$3"
   [[ "$(folio_extract_meta "$file" folio-xref-completeness)" == "enabled" ]] || { printf '0'; return 0; }
@@ -948,19 +951,25 @@ folio_xref_wrap_doc() {
       while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=3){ nt++; toks[nt]=a[1]; href[a[1]]=a[2]; tip[a[1]]=a[3]; wrapped[a[1]]=0 } }
       ANC=0; skip=0 }
     function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
-    function build_mask(s,   i,c,mk){
-      mk=""
+    function build_mask(s,   i,c,mk,incode){
+      mk=""; incode=0   # incode は build_mask local (行内 reset) = inline <code> 専用。 block <pre><code> は skip が担当
       for(i=1;i<=length(s);i++){
         c=substr(s,i,1)
         if(ANC){ mk=mk " "; if(c==">" && substr(s,i-3,4)=="</a>") ANC=0; continue }
+        if(incode){ mk=mk " "; if(c==">" && substr(s,i-6,7)=="</code>") incode=0; continue }
         if(intag){ mk=mk " "; if(c==">") intag=0; continue }
-        if(c=="<"){ if(substr(s,i,3)=="<a " || substr(s,i,3)=="<a>"){ ANC=1 } else { intag=1 } mk=mk " "; continue }
+        if(c=="<"){
+          if(substr(s,i,3)=="<a " || substr(s,i,3)=="<a>"){ ANC=1 }
+          else if(substr(s,i,5)=="<code" && (substr(s,i+5,1)==" " || substr(s,i+5,1)==">")){ incode=1 }
+          else { intag=1 }
+          mk=mk " "; continue
+        }
         mk=mk c
       }
       return mk
     }
     { line=$0
-      openskip = (line ~ /<(pre|code|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
+      openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
       wrappable = (skip==0) && (line !~ /<h[23][ >]/)
       anc_in=ANC; intag=0
@@ -984,7 +993,7 @@ folio_xref_wrap_doc() {
         }
       }
       ANC=anc_in; intag=0; build_mask(line)   # 最終 line で ANC を次行へ正しく carry
-      if(line ~ /<\/(pre|code|script|style|aside)>/){ if(skip>0) skip-- }
+      if(line ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
       print line
     }
   ' "$file" > "$out"

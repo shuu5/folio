@@ -119,7 +119,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <ul>
   <li>全 HTML file 名: <code>kebab-case.html</code> (例: <code>spec-taxonomy.html</code>)。 snake_case / camelCase 禁止。</li>
   <li>ADR: <code>ADR-NNNN-&lt;slug&gt;.html</code> (4 桁 ID)。</li>
-  <li>vocabulary (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or architecture/、 P-2 YAML 例外)。</li>
+  <li>vocabulary (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or architecture/、 <a class="xref" href="./constitution.html#p-2" data-tooltip="format は HTML + common.css のみ">P-2</a> YAML 例外)。</li>
   <li>config: <code>folio.config.yaml</code> (consumer project root、 P-2 YAML 例外)。</li>
   <li>entry point: 各 cluster は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。</li>
 </ul>
@@ -265,7 +265,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h2>§7. Dual-Audience Markup (data-audience taxonomy)</h2>
 
 <aside class="informative">
-  <p>本 §7 は spec を <strong>machine (精密 normative = canonical SSoT) と human (essence + graphical = 派生 view)</strong> の双方に向けて 1 HTML artifact に co-author する <strong>dual-audience pattern</strong> の markup 規約を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a>、 <a href="./constitution.html#p-2">P-2</a> HTML)。 採用は<strong>任意 (opt-in)</strong> だが、 <strong>採用する spec は本 §7 の safety invariant (REQ-DA-STRUCT-1〜5) を遵守する MUST</strong> = conditional-normative。 consistency は<strong>機械的導出でなく enforcement</strong> で担保する (1-DOM co-author は prior art 無しの novelty、 ADR-0033 §2.4): floor = <code>folio validate</code> の dual-audience 構造検査 (本 §7.3 の REQ-DA-STRUCT)、 ceiling = Phase F の <code>spec-review-fidelity</code> agent (意味的 fidelity)。</p>
+  <p>本 §7 は spec を <strong>machine (精密 normative = canonical SSoT) と human (essence + graphical = 派生 view)</strong> の双方に向けて 1 HTML artifact に co-author する <strong>dual-audience pattern</strong> の markup 規約を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a>、 <a href="./constitution.html#p-2">P-2</a> HTML)。 採用は<strong>任意 (opt-in)</strong> だが、 <strong>採用する spec は本 §7 の safety invariant (REQ-DA-STRUCT-1〜5) を遵守する MUST</strong> = conditional-normative。 consistency は<strong>機械的導出でなく enforcement</strong> で担保する (1-DOM co-author は prior art 無しの novelty、 <a class="xref" href="../decisions/ADR-0033-dual-audience-hub.html" data-tooltip="dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。">ADR-0033</a> §2.4): floor = <code>folio validate</code> の dual-audience 構造検査 (本 §7.3 の REQ-DA-STRUCT)、 ceiling = Phase F の <code>spec-review-fidelity</code> agent (意味的 fidelity)。</p>
 </aside>
 
 <h3 id="s7-1-taxonomy">§7.1 data-audience taxonomy</h3>
@@ -785,7 +785,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h3>§10.3 ADR Worthiness</h3>
 
 <aside class="informative">
-  <p>本 §10.3 は「いつ ADR を書くか」 の判定基準 (worthiness) を normative に集約する (<a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.5、 mattpocock grill-with-docs の "offer ADRs sparingly" を folio 化)。 <code>folio-architect</code> の grilling (<a href="folio-self-spec.html#s7-1-7phase">Phase C</a>) 中に decision が surface した際の offer 基準であり、 ADR の起票手順・user 承認 gate は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> に従う (P-7: 手順は重複させない)。</p>
+  <p>本 §10.3 は「いつ ADR を書くか」 の判定基準 (worthiness) を normative に集約する (<a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.5、 mattpocock grill-with-docs の "offer ADRs sparingly" を folio 化)。 <code>folio-architect</code> の grilling (<a href="folio-self-spec.html#s7-1-7phase">Phase C</a>) 中に decision が surface した際の offer 基準であり、 ADR の起票手順・user 承認 gate は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> に従う (<a class="xref" href="./constitution.html#p-7" data-tooltip="Content domain exclusivity">P-7</a>: 手順は重複させない)。</p>
 </aside>
 
 <div class="spec-list">

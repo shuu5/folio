@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-30T11:02:31Z",
+  "generatedAt": "2026-05-30T14:04:24Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1449,7 +1449,19 @@
       },
       {
         "from": "spec/README.html",
+        "to": "P-10"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "P-11"
+      },
+      {
+        "from": "spec/README.html",
         "to": "REQ-CI-010"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-CI-016"
       },
       {
         "from": "spec/README.html",
@@ -1458,6 +1470,10 @@
       {
         "from": "spec/README.html",
         "to": "REQ-VER-001"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-VER-006"
       },
       {
         "from": "spec/README.html",
@@ -1477,6 +1493,26 @@
       },
       {
         "from": "spec/folio-self-spec.html",
+        "to": "ADR-0023"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "ADR-0027"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "ADR-0029"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "ADR-0033"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-10"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
         "to": "P-11"
       },
       {
@@ -1493,6 +1529,38 @@
       },
       {
         "from": "spec/folio-self-spec.html",
+        "to": "P-4"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-5"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-7"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-001"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-010"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-011"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-012"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-014"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
         "to": "REQ-CI-016"
       },
       {
@@ -1504,8 +1572,28 @@
         "to": "REQ-DA-STRUCT-1"
       },
       {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-VER-001"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "ADR-0021"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "ADR-0023"
+      },
+      {
         "from": "spec/relations.html",
         "to": "P-1"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-10"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-11"
       },
       {
         "from": "spec/relations.html",
@@ -1525,6 +1613,10 @@
       },
       {
         "from": "spec/rules.html",
+        "to": "ADR-0033"
+      },
+      {
+        "from": "spec/rules.html",
         "to": "ADR-0034"
       },
       {
@@ -1538,6 +1630,10 @@
       {
         "from": "spec/rules.html",
         "to": "P-12"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-2"
       },
       {
         "from": "spec/rules.html",
@@ -1556,6 +1652,22 @@
         "to": "P-6"
       },
       {
+        "from": "spec/rules.html",
+        "to": "P-7"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0003"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0007"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0013"
+      },
+      {
         "from": "spec/verification.html",
         "to": "ADR-0017"
       },
@@ -1565,7 +1677,35 @@
       },
       {
         "from": "spec/verification.html",
+        "to": "ADR-0019"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0020"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0024"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0025"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0027"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0034"
+      },
+      {
+        "from": "spec/verification.html",
         "to": "P-11"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-13"
       },
       {
         "from": "spec/verification.html",
@@ -1577,11 +1717,23 @@
       },
       {
         "from": "spec/verification.html",
+        "to": "P-6"
+      },
+      {
+        "from": "spec/verification.html",
         "to": "P-7"
       },
       {
         "from": "spec/verification.html",
         "to": "REQ-CI-010"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-CI-011"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-REL-002"
       }
     ]
   }

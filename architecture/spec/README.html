@@ -178,7 +178,7 @@ graph TD
   <tbody>
     <tr>
       <td>2026-05-24</td>
-      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で P-11 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
+      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で <a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
       <td>commit 1b18ddb、 spawn 検証 × 3 (folio-test-090218 / -b093240 / -c094741) で 真因確定 + Option A/B/C 比較 → Option C 採用</td>
     </tr>
     <tr>
@@ -188,7 +188,7 @@ graph TD
     </tr>
     <tr>
       <td>2026-05-23</td>
-      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 REQ-CI-016 (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
+      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 <a class="xref" href="./rules.html#req-ci-016" data-tooltip="Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。">REQ-CI-016</a> (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
       <td>research/plugin-architecture-research.html + research/plugin-sandbox-verification-research.html 結論の規範化</td>
     </tr>
     <tr>
@@ -250,7 +250,7 @@ graph TD
   <tbody>
     <tr>
       <td>Gap 1 (#39344 fix)</td><td>LOW (一部解消)</td>
-      <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認。 <strong>Phase 2.5 実機検証で PostToolUse blocking error は機能 (commit 1b18ddb)</strong>、 exit 2 + stderr 経路は信頼可能と判明 (REQ-VER-006 SHOULD NOT は維持で問題なし)</td>
+      <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認。 <strong>Phase 2.5 実機検証で PostToolUse blocking error は機能 (commit 1b18ddb)</strong>、 exit 2 + stderr 経路は信頼可能と判明 (<a class="xref" href="./verification.html#req-ver-006" data-tooltip="scenario assertion は permissionDecision JSON を主軸にすべきでない (upstream bug 既知ゆえ、 §3.3 の exit_code 中心と対)。">REQ-VER-006</a> SHOULD NOT は維持で問題なし)</td>
       <td>upstream fix 公式アナウンス時に full 解消 (現状で実用上影響なし)</td>
     </tr>
     <tr>
@@ -300,7 +300,7 @@ graph TD
     </tr>
     <tr>
       <td>ADR-0003 §2.1 script 命名 drift</td><td>MEDIUM</td>
-      <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (P-10) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
+      <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (<a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a>) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
       <td><a class="xref" href="../decisions/ADR-0004-jsonld-lint-mechanism.html" data-tooltip="retrospective (実装 + e2e 検証済)">ADR-0004</a> 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
     </tr>
     <tr>
