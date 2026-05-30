@@ -7,6 +7,7 @@
 <meta name="folio-version" content="0.5.0-draft">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-xref-completeness" content="enabled">
 <title>folio — verification (v0.5.0-draft)</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
@@ -136,7 +137,7 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
 <h2>§1. Verification Contract Definition</h2>
 
 <aside class="informative">
-<p>本 §1 は folio における「verification」 の canonical 定義を提供する。 他 spec / ADR / research は本 §1 への cross-ref で「verification」 を参照する MUST (P-5: 1 entity = 1 canonical)。</p>
+<p>本 §1 は folio における「verification」 の canonical 定義を提供する。 他 spec / ADR / research は本 §1 への cross-ref で「verification」 を参照する MUST (<a class="xref" href="./constitution.html#p-5" data-tooltip="1 entity = 1 canonical name">P-5</a>: 1 entity = 1 canonical)。</p>
 </aside>
 
 <h3 id="s1-1-concepts">§1.1 3 concept</h3>
@@ -181,7 +182,7 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
 <ul>
   <li><strong>plugin behavior</strong>: folio plugin (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> minimal scope = 1 skill + 4 hook + 6 script + 1 CLI) の各 component が期待挙動を示すか</li>
   <li><strong>spec 整合性</strong>: spec 間の cross-ref / JSON-LD schema 準拠 / EARS pattern 完全性</li>
-  <li><strong>CI gate</strong>: <a href="rules.html#s10-2">rules.html §10.2</a> REQ-CI-010〜016 の各 gate が想定通り fail/pass する</li>
+  <li><strong>CI gate</strong>: <a href="rules.html#s10-2">rules.html §10.2</a> <a class="xref" href="./rules.html#req-ci-010" data-tooltip="link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。">REQ-CI-010</a>〜016 の各 gate が想定通り fail/pass する</li>
 </ul>
 
 <h3 id="s2-2-out-of-scope">§2.2 scope 外</h3>
@@ -511,8 +512,8 @@ expect:
   <tbody>
     <tr><td><a class="cov-req" href="#req-ver-001"><span class="badge badge--req">VER-001</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0013 / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-002"><span class="badge badge--req">VER-002</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>rules §10 / relations §5.3</td><td>(全 scenario)</td><td>✓</td></tr>
-    <tr><td><a class="cov-req" href="#req-ver-003"><span class="badge badge--req">VER-003</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0017 (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
-    <tr><td><a class="cov-req" href="#req-ver-004"><span class="badge badge--req">VER-004</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>ADR-0018 / §3.4</td><td>(cli-golden 共通基盤)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-003"><span class="badge badge--req">VER-003</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a class="xref" href="../decisions/ADR-0017-unit-integration-boundary.html" data-tooltip="retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)">ADR-0017</a> (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-004"><span class="badge badge--req">VER-004</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a class="xref" href="../decisions/ADR-0018-cli-golden-harness.html" data-tooltip="retrospective (Track 1 実装 + GREEN 検証済)">ADR-0018</a> / §3.4</td><td>(cli-golden 共通基盤)</td><td>✓</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-006"><span class="badge badge--req">VER-006</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>research §2.6</td><td class="cov-gap">— (未検証 gap)</td><td class="cov-gap">✗</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-007"><span class="badge badge--req">VER-007</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0019 / P-3</td><td><code>path-boundary.yaml</code></td><td>✓</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-008"><span class="badge badge--req">VER-008</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0003 §2.1</td><td><code>readme-index.yaml</code></td><td>✓</td></tr>
@@ -553,14 +554,21 @@ expect:
 </table>
 
 <aside class="callout callout--example">
-<p>各 Step の代表的 implementation (echo + pipe 構文、 git worktree path、 Docker Compose + Squid proxy 等) は <a href="../research/plugin-sandbox-verification-research.html#s6-3-3step">research §6.3</a> を参照。 これらは informative reference (HOW)、 spec MUST ではない (P-11 整合、 具体 binding は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離)。</p>
+<p>各 Step の代表的 implementation (echo + pipe 構文、 git worktree path、 Docker Compose + Squid proxy 等) は <a href="../research/plugin-sandbox-verification-research.html#s6-3-3step">research §6.3</a> を参照。 これらは informative reference (HOW)、 spec MUST ではない (<a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> 整合、 具体 binding は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離)。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-VER-005</span>:
-  Phase X3 着手時点で Step 1 (hook script unit test) を <span class="ears-shall">MUST</span> 実装する。
-  Step 2 / Step 3 は段階追加 (SHOULD / MAY)。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-005" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-005</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">Phase X3 着手時に Step 1 (hook script unit test) を実装する (Step 2/3 は SHOULD/MAY で段階追加)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-005</span>: Phase X3 着手時点で Step 1 (hook script unit test) を <span class="ears-shall">MUST</span> 実装する。 Step 2 / Step 3 は段階追加 (SHOULD / MAY)。</p>
+    </div>
+  </details>
+</div>
 
 <aside class="informative">
 <p><strong>Step 2 の試作実装 = agent-driven runbook 方式 (REQ-VER-009)</strong>: 完成形の Step 2 は
@@ -637,8 +645,8 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
 <table>
   <thead><tr><th>ADR ID 候補</th><th>title</th><th>resolution 条件</th></tr></thead>
   <tbody>
-    <tr><td>ADR-0014</td><td>EARS REQ → scenario 導出規範</td><td>本 §3.5 で実質規範化済、 別 ADR 不要と判断 (本 commit で見送り)</td></tr>
-    <tr><td>ADR-0016</td><td>exit code 中心 assertion 規範</td><td>Gap 1 (Issue #39344 fix) 確認後</td></tr>
+    <tr><td><code>ADR-0014</code></td><td>EARS REQ → scenario 導出規範</td><td>本 §3.5 で実質規範化済、 別 ADR 不要と判断 (本 commit で見送り)</td></tr>
+    <tr><td><code>ADR-0016</code></td><td>exit code 中心 assertion 規範</td><td>Gap 1 (Issue #39344 fix) 確認後</td></tr>
     <tr><td>ADR-0017</td><td>hook unit test vs integration test 境界</td><td><strong>起票済</strong> 2026-05-25 (Track 1/2 後 retrospective、 <a href="../decisions/ADR-0017-unit-integration-boundary.html">ADR-0017</a> / decisions/README §3)</td></tr>
     <tr><td>ADR-0018</td><td>golden baseline 管理 (2-dir model + accept workflow)</td><td><strong>起票済</strong> 2026-05-25 (Track 1 実装後 retrospective、 <a href="../decisions/ADR-0018-cli-golden-harness.html">ADR-0018</a> / decisions/README §3)</td></tr>
   </tbody>
@@ -660,7 +668,7 @@ worktree integration の最小実現で、 container 隔離 (Step 3) は Phase X
 <h2>§6. References</h2>
 
 <ul>
-  <li><a href="./constitution.html">constitution.html</a> — 不変原則 (本 spec は P-3 WHAT-only、 P-7 Content domain exclusivity、 P-11 HOW 禁止 に従う)</li>
+  <li><a href="./constitution.html">constitution.html</a> — 不変原則 (本 spec は <a class="xref" href="./constitution.html#p-3" data-tooltip="WHAT-only">P-3</a> WHAT-only、 <a class="xref" href="./constitution.html#p-7" data-tooltip="Content domain exclusivity">P-7</a> Content domain exclusivity、 P-11 HOW 禁止 に従う)</li>
   <li><a href="rules.html">rules.html</a> — Layer 1 universal rules (本 spec の REQ-VER-* は §6 EARS Notation pattern に従う)</li>
   <li><a href="folio-self-spec.html">folio-self-spec.html</a> — folio Layer 0 self-spec (本 spec が検証対象とする plugin 構成の SSoT)</li>
   <li><a href="relations.html">relations.html</a> — spec 関係性 (本 spec の JSON-LD head は §3.2 pattern 準拠)</li>
