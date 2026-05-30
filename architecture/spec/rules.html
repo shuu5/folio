@@ -486,7 +486,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     <tr><td><code>P-N</code></td><td>principle</td><td><a href="./constitution.html">constitution.html</a></td><td><code>&lt;dt id="p-N"&gt;</code></td></tr>
     <tr><td><code>REQ-VER-*</code></td><td>requirement</td><td><a href="verification.html">verification.html</a></td><td><code>id="req-ver-NNN"</code></td></tr>
     <tr><td><code>REQ-REL-*</code></td><td>requirement</td><td><a href="relations.html">relations.html</a></td><td><code>id="req-rel-NNN"</code></td></tr>
-    <tr><td><code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-XREF-*</code></td><td>requirement</td><td>rules.html (本 file)</td><td><code>id="req-…"</code></td></tr>
+    <tr><td><code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-XREF-*</code> / <code>REQ-GLOSS-*</code></td><td>requirement</td><td>rules.html (本 file)</td><td><code>id="req-…"</code></td></tr>
     <tr><td><code>ADR-NNNN</code></td><td>decision</td><td><a href="../decisions/">decisions/ADR-NNNN-*.html</a></td><td>file 自体 (anchor 無し)</td></tr>
     <tr><td>rule §</td><td>rule</td><td>rules.html</td><td><code>&lt;h2 id="…"&gt;</code> (explicit-tier)</td></tr>
   </tbody>
@@ -557,6 +557,26 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     </summary>
     <div class="spec-normative" data-audience="machine">
       <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-XREF-004</span>: Each canonical object ID <span class="ears-shall">SHALL</span> be defined exactly once as an id-bearing SSoT element across architecture, and <span class="ears-shall">SHALL NOT</span> be renumbered or reused (ID immutability)。</p>
+    </div>
+  </details>
+</div>
+
+<h3 id="s9-5-glossary">§9.5 Glossary terms (Class B、 vocabulary.yaml SSoT + explicit-mark tooltip)</h3>
+<p>glossary 用語 (Class B) は defined-object (Class A) の no-gaps とは別の <strong>best-effort tier</strong> である (自然語の全 occurrence 検出は NLP 難問ゆえ term 完全性は約束しない、 <a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8)。 用語の <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span> は <code>vocabulary.yaml</code> の <code>definition</code> field (<a href="#s3-vocab-schema">§3 schema</a>、 ISO 704 concept model: canonical = 主 designation / definition = concept 定義)。 HTML 上の glossary view は vocabulary.yaml からの生成 projection とし、 定義を二重化しない (<a href="constitution.html#p-7">P-7</a>)。</p>
+<ul>
+  <li><strong>explicit-mark のみ</strong>: tooltip を出す用語は <code>&lt;span class="term" data-term="&lt;canonical&gt;"&gt;表示語&lt;/span&gt;</code> で明示 mark する。 auto-detect / gap-lint はしない (best-effort tier ゆえ「全言及を mark せよ」 は課さない)。</li>
+  <li><strong>data-tooltip は生成</strong>: <code>folio fix</code> が marked term の <code>data-tooltip</code> を <code>vocabulary.yaml</code> の <code>definition</code> から materialize する (定義は vocabulary.yaml に SSoT、 HTML へ重複させない)。 Class A xref と同じ no-JS CSS tooltip 機構 (<a href="#s9-3-tooltip-css">§9.3</a>) を <span class="term" data-term="dogfood" data-tooltip="folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。">dogfood</span> して共用する。</li>
+  <li><strong>整合は enforce</strong>: marked term の resolve (<code>data-term</code> → canonical) と consistency (<code>data-tooltip</code> → <code>definition</code>) は <code>folio validate</code> の glossary gate が block enforce する (§9.4 と同じく本節は marking 規約 = WHAT を定め、 gate 挙動の正本は <a href="verification.html#req-ver-019">verification REQ-VER-019</a> に一元化)。 best-effort tier ゆえ未 mark の言及は gap-lint しない。</li>
+</ul>
+<div class="spec-list">
+  <details class="spec-row" id="req-gloss-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-GLOSS-001</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">glossary 用語の hover tooltip は <code>&lt;span class="term" data-term="&lt;canonical&gt;"&gt;</code> で explicit-mark し、 <code>data-term</code> は <code>vocabulary.yaml</code> の <code>canonical</code> に解決し、 <code>data-tooltip</code> は その <code>definition</code> と一致する (Class B best-effort、 未 mark 言及は gap-lint しない)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional"><span class="ears-where">WHERE a glossary term is given a hover tooltip</span>, <span class="ears-id">REQ-GLOSS-001</span>: the term <span class="ears-shall">SHALL</span> be explicitly marked as <code>&lt;span class="term" data-term="&lt;canonical&gt;"&gt;</code> whose <code>data-term</code> resolves to a <code>canonical</code> entry in <code>vocabulary.yaml</code> and whose <code>data-tooltip</code> holds that entry&apos;s <code>definition</code> rendered as an HTML-attribute-escaped value (the canonical escaping of <code>&amp;</code> / <code>&lt;</code> / <code>&gt;</code> / <code>&quot;</code>, applied identically by <code>folio fix</code> on write and <code>folio validate</code> on check); unmarked term mentions <span class="ears-shall">SHALL NOT</span> be gap-linted (Class B best-effort tier、 <a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8)。</p>
     </div>
   </details>
 </div>

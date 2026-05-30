@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-30T14:04:24Z",
+  "generatedAt": "2026-05-30T14:51:30Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1274,6 +1274,12 @@
         "essence": "human EARS badge (req__ears--&lt;p&gt;) は machine data-ears-pattern と整合する MUST (短縮形 alias を正規化して比較)。"
       },
       {
+        "id": "REQ-GLOSS-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-gloss-001",
+        "essence": ""
+      },
+      {
         "id": "REQ-REL-001",
         "class": "requirement",
         "ssot": "spec/relations.html#req-rel-001",
@@ -1404,6 +1410,12 @@
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-018",
         "essence": "folio fix は opt-in doc の prose 内 canonical token 初出を &lt;a class=\"xref\" href data-tooltip&gt; に wrap する (option F materialize、 href + essence は §9.1/§9.2 contract、 idempotent)。 RED (orphan-mention) → fix → GREEN (completeness clean)。"
+      },
+      {
+        "id": "REQ-VER-019",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-019",
+        "essence": "folio validate は glossary gate を追加検査する: marked term (&lt;span class=\"term\" data-term&gt;) の data-term が vocabulary.yaml に解決し (resolve)、 data-tooltip が definition と一致する (consistency)。 folio fix は marked term の tooltip を definition から materialize する (best-effort、 gap-lint なし、 rules §9.5 / ADR-0034 §2.8)。"
       },
       {
         "id": "REQ-XREF-001",

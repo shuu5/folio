@@ -1,0 +1,4 @@
+# glossary-validate fixture vocabulary (REQ-VER-019 gate 検証用)。 definition を持つゆえ glossary gate が活性化。
+terms:
+  - canonical: "Alpha"
+    definition: "the alpha term definition (glossary gate fixture)"

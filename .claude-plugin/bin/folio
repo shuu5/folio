@@ -600,12 +600,31 @@ folio_cmd_fix() {
     done < <(find "$xdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
-  # --- report (reverse + xref のいずれも 0 なら already-complete) ---
-  if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 ]]; then
-    printf 'already complete: graph is bidirectional + opt-in xref materialized (0 changes)\n'
+  # --- Pass 4: glossary term tooltip materialize (<span class="term" data-term> に vocabulary.yaml の
+  #     definition を data-tooltip として埋める、 ADR-0034 §2.8 explicit-mark、 idempotent) ---
+  # glossary populate は living spec/research のみ走査する (frozen decisions/ ADR 本文を書き換えない、 CLAUDE.md §2 / P-6)
+  local gloss_pop=0 gloss_touched=0 gd gf gn
+  local gloss_dirs=("spec" "research")
+  for gd in "${gloss_dirs[@]}"; do
+    local gdir_abs="${root_abs}/${gd}"
+    [[ -d "$gdir_abs" ]] || continue
+    while IFS= read -r gf; do
+      [[ -z "$gf" ]] && continue
+      gn=$(folio_glossary_populate_doc "$gf" "$root_abs"); gn=${gn:-0}
+      if [[ "$gn" -gt 0 ]]; then
+        gloss_pop=$((gloss_pop + gn)); gloss_touched=$((gloss_touched + 1))
+        printf '  +%d glossary   %s\n' "$gn" "$(realpath -m --relative-to="$root_abs" "$gf")"
+      fi
+    done < <(find "$gdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
+  # --- report (reverse + xref + glossary のいずれも 0 なら already-complete) ---
+  if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 && "$gloss_pop" -eq 0 ]]; then
+    printf 'already complete: graph is bidirectional + opt-in xref materialized + glossary tooltips populated (0 changes)\n'
   else
     [[ "$materialized" -gt 0 ]] && printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
     [[ "$xref_wrapped" -gt 0 ]] && printf 'materialized %d xref(s) across %d file(s)\n' "$xref_wrapped" "$xref_touched"
+    [[ "$gloss_pop" -gt 0 ]] && printf 'materialized %d glossary tooltip(s) across %d file(s)\n' "$gloss_pop" "$gloss_touched"
   fi
   return 0
 }
@@ -1005,6 +1024,83 @@ folio_xref_wrap_doc() {
   printf '%d' "$((after - before))"
 }
 
+# vocabulary.yaml ($root_abs or その親) の definition を持つ term を canonical\t escaped-definition で
+# 1 行ずつ stdout (glossary tooltip の生成元 = SSoT、 ADR-0034 §2.8)。 yq→JSON 後 jq -r '(.[0], .[1])'
+# で canonical/definition を交互行に raw 出力し bash で pair 読みする (yq/jq の @tsv は " を CSV-quote-wrap・
+# backslash/tab を C-escape して tooltip を壊すため回避)。 attribute escape (& < > ") は下記 sed で行う。
+# definition は単一行前提 (rules §3 schema)。 vocabulary.yaml / yq / jq / definition 不在は無出力
+# (= glossary gate skip)。
+folio_glossary_map() {
+  local root_abs="$1" cand vf=""
+  for cand in "${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml"; do
+    [[ -f "$cand" ]] && { vf="$cand"; break; }
+  done
+  [[ -z "$vf" ]] && return 1
+  command -v yq >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  local c def line state=0
+  yq -o=json -I=0 '[.terms[] | select(.definition) | [.canonical, .definition]]' "$vf" 2>/dev/null \
+    | jq -r '.[] | (.[0], .[1])' 2>/dev/null \
+    | while IFS= read -r line; do
+        if [[ "$state" -eq 0 ]]; then c="$line"; state=1; continue; fi
+        def="$line"; state=0
+        [[ -z "$c" || -z "$def" ]] && continue
+        # HTML attribute escape (& < > ")。 bash patsub_replacement (5.2+) では ${v//pat/&...} の & が
+        # マッチ文字列に化けるため sed の \& で literal & を保証する。 & を最初に処理 (後続が導入する
+        # &lt;/&gt;/&quot; の & は再 escape しない)。 fix(書込)と gate(検査)が同一 escape ゆえ consistency 不変。
+        def=$(printf '%s' "$def" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g')
+        printf '%s\t%s\n' "$c" "$def"
+      done
+}
+
+# file ($1) 内の <span class="term" data-term="X"> に vocabulary.yaml の definition を
+# data-tooltip として materialize する (ADR-0034 §2.8 glossary、 explicit-mark のみ・auto-detect しない)。
+# 更新数を stdout (idempotent: 既に一致なら 0)。 vocabulary.yaml / yq / definition 無しは no-op (0)。
+folio_glossary_populate_doc() {
+  local file="$1" root_abs="$2"
+  local mapfile; mapfile=$(mktemp)
+  folio_glossary_map "$root_abs" > "$mapfile" 2>/dev/null
+  if [[ ! -s "$mapfile" ]]; then rm -f "$mapfile"; printf '0'; return 0; fi
+  local out cf; out=$(mktemp); cf=$(mktemp)
+  awk -v mapfile="$mapfile" -v cf="$cf" '
+    BEGIN{ while((getline l < mapfile)>0){ n=split(l,a,"\t"); if(n>=2) def[a[1]]=a[2] }; changed=0; skip=0 }
+    { line=$0
+      # block skip (pre/script/style/machine-readable aside) — code 例内の term を materialize しない (#112 / xref / vocabulary と同 idiom)
+      if(($0 ~ /<(pre|script|style)[ >]/) || ($0 ~ /<aside class="machine-readable"/)) skip++
+      if(skip==0){
+        res=""
+        while(1){
+          p=index(line,"<span")
+          if(p==0){ res=res line; break }
+          seg=substr(line,p); gt=index(seg,">")
+          if(gt==0){ res=res line; break }
+          tag=substr(seg,1,gt)
+          if(tag ~ /class="term"/ && match(tag,/data-term="[^"]*"/)){
+            term=substr(tag,RSTART+11,RLENGTH-12)
+            if(term in def){
+              t2=tag; sub(/ data-tooltip="[^"]*"/,"",t2)
+              t2=substr(t2,1,length(t2)-1) " data-tooltip=\"" def[term] "\">"
+              if(t2!=tag) changed++
+              tag=t2
+            }
+          }
+          res=res substr(line,1,p-1) tag
+          line=substr(seg,gt+1)
+        }
+        print res
+      } else {
+        print $0
+      }
+      if($0 ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
+    }
+    END{ print changed+0 > cf }
+  ' "$file" > "$out"
+  local changed; changed=$(cat "$cf" 2>/dev/null)
+  if cmp -s "$out" "$file"; then rm -f "$out" "$mapfile" "$cf"; printf '0'; return 0; fi
+  mv "$out" "$file"; rm -f "$mapfile" "$cf"
+  printf '%d' "${changed:-0}"
+}
+
 # corpus ($1=root 絶対) を走査し canonical id (p-N / req-...) が 2 site 以上で定義される
 # = uniqueness violation を "(corpus)\t[xref-uniqueness] ..." 行で stdout (§2.6)。 prose_only で
 # code 例 (rules §7.2 の id="req-xxx-001" 等) を除外し誤検出を防ぐ。 重複なしは無出力。
@@ -1140,9 +1236,12 @@ folio_cmd_validate() {
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
+  local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
   local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
+  # glossary definition map (opt-in: vocabulary.yaml definition + yq、 無ければ空 = gate skip)
+  local glossary_map; glossary_map=$(folio_glossary_map "$root_abs") || glossary_map=""
 
   for d in "${dirs[@]}"; do
     local dir_abs="${root_abs}/${d}"
@@ -1279,6 +1378,25 @@ folio_cmd_validate() {
           violations+=("${rel}"$'\t'"[xref-orphan-mention] ${bare_t} prose で言及されるが resolvable xref が無い (completeness、 fix で wrap)"); xref_complete_fail=1
         done < <(folio_xref_scan_prose_tokens "$f")
       fi
+
+      # --- gate (l) glossary — marked term の resolve + tooltip-consistency (block、 opt-in: vocabulary.yaml definition、 ADR-0034 §2.8)。
+      #     best-effort tier ゆえ「全 term 言及を mark せよ」 の gap-lint はしない (explicit-mark のみ検査)。 ---
+      if [[ -n "$glossary_map" && ( "$subdir" == "spec" || "$subdir" == "research" ) ]]; then   # fix(populate) と対称に living spec/research のみ検査 (frozen decisions/ は fix で remediate 不可 = stuck-RED ゆえ除外、 detect↔remediate 不変条件 REQ-VER-015 を保つ)
+        local gtag gterm gtip gdef
+        while IFS= read -r gtag; do
+          [[ -z "$gtag" ]] && continue
+          gterm=$(printf '%s' "$gtag" | grep -oP 'data-term="\K[^"]*'); [[ -z "$gterm" ]] && continue
+          gdef=$(printf '%s\n' "$glossary_map" | awk -F'\t' -v t="$gterm" '$1==t{print $2; exit}')
+          if [[ -z "$gdef" ]]; then
+            violations+=("${rel}"$'\t'"[glossary-unresolved] term '${gterm}' が vocabulary.yaml に definition を持たない (data-term、 §2.8 resolve)"); glossary_fail=1
+            continue
+          fi
+          gtip=$(printf '%s' "$gtag" | grep -oP 'data-tooltip="\K[^"]*')
+          if [[ "$gtip" != "$gdef" ]]; then
+            violations+=("${rel}"$'\t'"[glossary-stale-tooltip] term '${gterm}' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)"); glossary_fail=1
+          fi
+        done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
+      fi
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
@@ -1321,7 +1439,7 @@ folio_cmd_validate() {
   if [[ "$link_fail" -eq 1 ]]; then printf '  [FAIL] internal link-integrity\n'; else printf '  [OK] internal link-integrity\n'; fi
   if [[ "$struct_fail" -eq 1 ]]; then printf '  [FAIL] jsonld structural\n'; else printf '  [OK] jsonld structural\n'; fi
   if [[ "$revlink_fail" -eq 1 ]]; then printf '  [FAIL] broken-reverse\n'; else printf '  [OK] broken-reverse\n'; fi
-  if [[ -z "$vocab_list" ]]; then printf '  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)\n'
+  if [[ -z "$vocab_list" ]]; then printf '  [SKIP] vocabulary (forbidden synonym 無し = opt-in)\n'
   elif [[ "$vocab_fail" -eq 1 ]]; then printf '  [FAIL] vocabulary\n'; else printf '  [OK] vocabulary\n'; fi
   if [[ "$delta_fail" -eq 1 ]]; then printf '  [FAIL] delta-marker\n'; else printf '  [OK] delta-marker\n'; fi
   if [[ "$da_fail" -eq 1 ]]; then printf '  [FAIL] dual-audience-structural\n'; else printf '  [OK] dual-audience-structural\n'; fi
@@ -1330,6 +1448,8 @@ folio_cmd_validate() {
   if [[ "$xref_tooltip_fail" -eq 1 ]]; then printf '  [FAIL] xref-tooltip-consistency\n'; else printf '  [OK] xref-tooltip-consistency\n'; fi
   if [[ "$xref_complete_seen" -eq 0 ]]; then printf '  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)\n'
   elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi
+  if [[ -z "$glossary_map" ]]; then printf '  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)\n'
+  elif [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'; else printf '  [OK] glossary\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)

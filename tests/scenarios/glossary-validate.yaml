@@ -1,0 +1,26 @@
+schema_version: "0.1"
+req_id: "REQ-VER-019"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  glossary gate (ADR-0034 §2.8、 REQ-VER-019) の violation を seed した fixture に対し folio validate が
+  exit 1 + report を出すことを実証する。 2 違反 (1 fixture file):
+    - glossary-unresolved   : data-term="Beta" が vocabulary.yaml に definition を持たない (resolve fail)
+    - glossary-stale-tooltip: data-term="Alpha" の data-tooltip が definition と drift (consistency fail)
+  resolved+consistent な clean 側は real corpus の glossary dogfood が keystone で担保する (additive)。
+  vocabulary.yaml (definition 持ち) が gate を活性化、 forbidden 無しゆえ vocabulary gate は [SKIP]。
+  検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/019) ---
+command: ["validate", "--root", "tests/fixtures/glossary-validate"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/glossary-validate.golden.txt"
+
+setup:
+  fixtures:
+    - "glossary-validate/vocabulary.yaml"   # Alpha の definition (gate 活性化)
+    - "glossary-validate/spec/t.html"        # unresolved (Beta) + stale-tooltip (Alpha) を seed
+
+expect:
+  exit_code: 1                              # glossary gate violation 検出

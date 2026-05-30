@@ -11,6 +11,7 @@ files checked: 4 · relations checked: 0
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [OK] glossary
   [WARN] ears-coverage
 
 warnings (2):

@@ -855,8 +855,16 @@ a.xref:hover { text-decoration-style: solid; text-decoration-thickness: 2px; }
 
 /* CSS-only tooltip: :hover + :focus-visible で擬似要素 box を表示 (data-tooltip 属性供給)。
  * 既存 surface/border/text/elevation token のみ使用 = light/dark 両対応。 */
-a.xref[data-tooltip] { position: relative; }
-a.xref[data-tooltip]::after {
+/* Glossary term (ADR-0034 §2.8、 explicit-mark <span class="term" data-term>)。 Class A xref と同じ
+ * no-JS tooltip box を共用する (data-tooltip = vocabulary.yaml definition、 folio fix が materialize)。
+ * term は「定義へのリンク」でなく用語マーカーゆえ help cursor + 控えめな dotted underline (secondary)。 */
+.term {
+  border-bottom: 1px dotted var(--folio-text-secondary);
+  cursor: help;
+}
+a.xref[data-tooltip], .term[data-tooltip] { position: relative; }
+a.xref[data-tooltip]::after,
+.term[data-tooltip]::after {
   content: attr(data-tooltip);
   position: absolute;
   left: 0;
@@ -885,7 +893,9 @@ a.xref[data-tooltip]::after {
   pointer-events: none;
 }
 a.xref[data-tooltip]:hover::after,
-a.xref[data-tooltip]:focus-visible::after {
+a.xref[data-tooltip]:focus-visible::after,
+.term[data-tooltip]:hover::after,
+.term[data-tooltip]:focus-visible::after {
   opacity: 1;
   visibility: visible;
 }

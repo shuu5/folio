@@ -1,0 +1,19 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
+root: tests/fixtures/glossary-validate
+files checked: 1 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [FAIL] glossary
+  [OK] ears-coverage
+
+violations (2):
+  spec/t.html [glossary-stale-tooltip] term 'Alpha' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)
+  spec/t.html [glossary-unresolved] term 'Beta' が vocabulary.yaml に definition を持たない (data-term、 §2.8 resolve)

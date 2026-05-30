@@ -1,0 +1,37 @@
+# folio canonical vocabulary (glossary SSoT) — ADR-0034 §2.8 / rules §3 schema (P-5)。
+# terms[].canonical = 正準名 (MUST)。 terms[].definition = 1 行 concept 定義 (glossary tooltip の SSoT、
+#   ADR-0031 §2.4 enrich、 ISO 704 concept model)。 HTML 上の <span class="term" data-term="<canonical>">
+#   を folio fix が data-tooltip = definition で materialize し、 folio validate の glossary gate が
+#   resolve + tooltip-consistency を検査する (best-effort tier、 explicit-mark のみ、 gap-lint しない)。
+# forbidden は意図的に載せない (vocabulary gate REQ-CI-013 の誤検出 risk を避ける = #110 D2)。
+#   forbidden enrichment (vocabulary 規律の活性化) は別 task。
+# starter population ゆえ網羅でない (全 population は ADR-0034 §2.9 roadmap)。
+# definition は単一行 (rules §3 schema)。 tooltip 機構は改行を扱わず、 HTML 特殊文字 (& < > ") は
+# folio fix が attribute-escape して data-tooltip に格納する。
+terms:
+  - canonical: "SSoT"
+    definition: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。"
+  - canonical: "dual-audience"
+    definition: "1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。"
+  - canonical: "data-audience"
+    definition: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。"
+  - canonical: "EARS"
+    definition: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。"
+  - canonical: "essence"
+    definition: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。"
+  - canonical: "dogfood"
+    definition: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。"
+  - canonical: "floor"
+    definition: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。"
+  - canonical: "ceiling"
+    definition: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。"
+  - canonical: "xref"
+    definition: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。"
+  - canonical: "defined-object"
+    definition: "一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。"
+  - canonical: "canonical name"
+    definition: "1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。"
+  - canonical: "progressive disclosure"
+    definition: "情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。"
+  - canonical: "caller-marker"
+    definition: "spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。"

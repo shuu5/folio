@@ -4,13 +4,14 @@ files checked: 5 · relations checked: 2
   [FAIL] internal link-integrity
   [FAIL] jsonld structural
   [FAIL] broken-reverse
-  [SKIP] vocabulary (vocabulary.yaml 無し = opt-in)
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
   [OK] delta-marker
   [FAIL] dual-audience-structural
   [OK] xref-resolve
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [OK] ears-coverage
 
 violations (14):
