@@ -7,6 +7,7 @@
 <meta name="folio-version" content="0.5.0-draft">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-xref-completeness" content="enabled">
 <title>folio — rules (v0.5.0-draft)</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
@@ -61,7 +62,7 @@
 </header>
 
 <aside class="informative">
-<p>本文書は <a href="./constitution.html">constitution.html</a> の不変原則 (P-1〜P-12) を <em>実装する</em> rules 集である。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。 folio framework 自身の architecture spec は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
+<p>本文書は <a href="./constitution.html">constitution.html</a> の不変原則 (<a class="xref" href="./constitution.html#p-1" data-tooltip="spec は未来理想の anchor である">P-1</a>〜<a class="xref" href="./constitution.html#p-12" data-tooltip="Layer 0 = rules + plugin harness 一体配布">P-12</a>) を <em>実装する</em> rules 集である。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。 folio framework 自身の architecture spec は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
 </aside>
 
 <section id="s0-reader-guide" class="informative">
@@ -479,7 +480,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <p><code>href</code> は referencing doc から下記 registry の SSoT-doc への相対 path + <code>#&lt;id&gt;</code> (canonical ID を小文字化した定義 site の <code>id</code>)。 decision (ADR) は file 自体が定義 site のため anchor 無し (file への相対 path)。 <code>data-tooltip</code> は §9.2 essence 抽出 contract が生成する定義 essence (<code>folio fix</code> がコピー)。 <strong>rule (§) は doc 跨ぎで一意な canonical token を持たない</strong> (「§7.3」は曖昧) ため <strong>explicit xref tier</strong> = resolve 検査 + tooltip + graph edge は得るが裸言及の auto-gap 検出はしない (auto-materialize 対象外)。</p>
 
 <table>
-  <caption>prefix → SSoT-doc registry (ADR-0034 §2.2、 object-identity model)</caption>
+  <caption>prefix → SSoT-doc registry (<a class="xref" href="../decisions/ADR-0034-object-term-xref-system.html" data-tooltip="architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。">ADR-0034</a> §2.2、 object-identity model)</caption>
   <thead><tr><th>prefix</th><th>class</th><th>SSoT doc</th><th>定義 site / anchor</th></tr></thead>
   <tbody>
     <tr><td><code>P-N</code></td><td>principle</td><td><a href="./constitution.html">constitution.html</a></td><td><code>&lt;dt id="p-N"&gt;</code></td></tr>
@@ -648,7 +649,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   </details>
 </div>
 
-<p><small>REQ-CI-002 〜 REQ-CI-009 は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 7 gate は REQ-CI-010 〜 REQ-CI-016 を採用。</small></p>
+<p><small><code>REQ-CI-002</code> 〜 <code>REQ-CI-009</code> は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 7 gate は <code>REQ-CI-010</code> 〜 <code>REQ-CI-016</code> を採用。</small></p>
 
 <table>
   <caption>7 gate overview (REQ-ID は下記の id 付き spec-row への deep-link、 SSoT は spec-row)</caption>
@@ -656,10 +657,10 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     <tr><th>REQ-ID</th><th>gate</th><th>結果</th><th>根拠</th></tr>
   </thead>
   <tbody>
-    <tr><td><a class="cov-req" href="#req-ci-010"><span class="badge badge--req">REQ-CI-010</span></a></td><td>link-integrity gate</td><td>fail = merge block</td><td>P-6</td></tr>
-    <tr><td><a class="cov-req" href="#req-ci-011"><span class="badge badge--req">REQ-CI-011</span></a></td><td>declarative-form gate</td><td>fail = merge block</td><td>P-4</td></tr>
-    <tr><td><a class="cov-req" href="#req-ci-012"><span class="badge badge--req">REQ-CI-012</span></a></td><td>what-only gate</td><td>fail = merge block</td><td>P-3 / P-11</td></tr>
-    <tr><td><a class="cov-req" href="#req-ci-013"><span class="badge badge--req">REQ-CI-013</span></a></td><td>vocabulary gate</td><td>fail = merge block</td><td>P-5</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-010"><span class="badge badge--req">REQ-CI-010</span></a></td><td>link-integrity gate</td><td>fail = merge block</td><td><a class="xref" href="./constitution.html#p-6" data-tooltip="Link integrity">P-6</a></td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-011"><span class="badge badge--req">REQ-CI-011</span></a></td><td>declarative-form gate</td><td>fail = merge block</td><td><a class="xref" href="./constitution.html#p-4" data-tooltip="Declarative form">P-4</a></td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-012"><span class="badge badge--req">REQ-CI-012</span></a></td><td>what-only gate</td><td>fail = merge block</td><td><a class="xref" href="./constitution.html#p-3" data-tooltip="WHAT-only">P-3</a> / <a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a></td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-013"><span class="badge badge--req">REQ-CI-013</span></a></td><td>vocabulary gate</td><td>fail = merge block</td><td><a class="xref" href="./constitution.html#p-5" data-tooltip="1 entity = 1 canonical name">P-5</a></td></tr>
     <tr><td><a class="cov-req" href="#req-ci-014"><span class="badge badge--req">REQ-CI-014</span></a></td><td>EARS coverage gate</td><td>warn (merge 許可)</td><td>§6</td></tr>
     <tr><td><a class="cov-req" href="#req-ci-015"><span class="badge badge--req">REQ-CI-015</span></a></td><td>delta marker consistency gate</td><td>fail = merge block</td><td>§5</td></tr>
     <tr><td><a class="cov-req" href="#req-ci-016"><span class="badge badge--req">REQ-CI-016</span></a></td><td>json-ld-validation gate</td><td>fail = merge block</td><td><a href="relations.html#s3-jsonld">relations §3</a></td></tr>
