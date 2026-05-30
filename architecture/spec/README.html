@@ -6,6 +6,7 @@
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
 <meta name="folio-status" content="active">
+<meta name="folio-xref-completeness" content="enabled">
 <title>folio — architecture/spec/ (framework spec index)</title>
 <link rel="stylesheet" href="../../common.css">
 <script src="../assets/mermaid.min.js" defer></script>
@@ -91,7 +92,7 @@ pre.mermaid[data-processed="true"] { visibility: visible; }
     </tr>
     <tr>
       <td><a href="verification.html"><code>verification.html</code></a></td>
-      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 REQ-VER-001〜008)</td>
+      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜008)</td>
       <td>draft (v0.1.0)</td>
       <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
       <td>—</td>
@@ -192,7 +193,7 @@ graph TD
     </tr>
     <tr>
       <td>2026-05-22</td>
-      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (REQ-CI-010 詳細化)、 relations.html §5 normative 化 + EARS REQ-REL-001/002/003、 §4.2 3-tier mapping 具体例追加</td>
+      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (<a class="xref" href="./rules.html#req-ci-010" data-tooltip="link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。">REQ-CI-010</a> 詳細化)、 relations.html §5 normative 化 + EARS <a class="xref" href="./relations.html#req-rel-001" data-tooltip="各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を &lt;head&gt; JSON-LD に宣言する (関係が存在する場合)。">REQ-REL-001</a>/002/003、 §4.2 3-tier mapping 具体例追加</td>
       <td>本 commit</td>
     </tr>
     <tr>
@@ -232,7 +233,7 @@ graph TD
     <tr>
       <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> / <a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
       <td>ADR-0001 は旧 <code>@context</code> 文字列形式だったが <strong>2026-05-25 に構造準拠化</strong> (folio validate が検出 → machine-readable block のみ object 化 + <code>@id</code> 追加、 commit 147674b、 user ratify 済)。 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015 等) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
-      <td>ADR-0001 は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/prime golden 不変)。 ADR-0002 は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
+      <td><a class="xref" href="../decisions/ADR-0001-architecture-rules-split.html" data-tooltip="folio v0.4.1-draft → v0.4.2-draft (PATCH bump)">ADR-0001</a> は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/prime golden 不変)。 <a class="xref" href="../decisions/ADR-0002-scratch-layout.html" data-tooltip="folio v0.4.2-draft">ADR-0002</a> は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
     </tr>
   </tbody>
 </table>
@@ -258,8 +259,8 @@ graph TD
       <td>解消済 (Stage 2a、 commit 54c57b3)</td>
     </tr>
     <tr>
-      <td>verification §3 REQ-VER-007/008 昇格</td><td>✓ 完遂</td>
-      <td>REQ-VER-007 (path boundary) + REQ-VER-008 (README index staleness) を <a href="verification.html#s3-6-verification-specific">verification.html §3.6</a> に EARS 文として正式追加 (Stage 2a / D-4)。 ADR-0003 §2.1 は frozen のため update せず、 divergence は本 §6.2 で trace</td>
+      <td>verification §3 <a class="xref" href="./verification.html#req-ver-007" data-tooltip="spec_path 外への spec (.html) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。">REQ-VER-007</a>/008 昇格</td><td>✓ 完遂</td>
+      <td>REQ-VER-007 (path boundary) + <a class="xref" href="./verification.html#req-ver-008" data-tooltip="cluster の README.html index に未掲載の新規 .html 作成は、 PostToolUse README-index hook が notify する (exit 2、 file は作成済の staleness 通知)。">REQ-VER-008</a> (README index staleness) を <a href="verification.html#s3-6-verification-specific">verification.html §3.6</a> に EARS 文として正式追加 (Stage 2a / D-4)。 <a class="xref" href="../decisions/ADR-0003-plugin-architecture.html" data-tooltip="folio v0.4.2-draft">ADR-0003</a> §2.1 は frozen のため update せず、 divergence は本 §6.2 で trace</td>
       <td>解消済 (Stage 2a、 commit 54c57b3)</td>
     </tr>
     <tr>
@@ -300,7 +301,7 @@ graph TD
     <tr>
       <td>ADR-0003 §2.1 script 命名 drift</td><td>MEDIUM</td>
       <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (P-10) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
-      <td>ADR-0004 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
+      <td><a class="xref" href="../decisions/ADR-0004-jsonld-lint-mechanism.html" data-tooltip="retrospective (実装 + e2e 検証済)">ADR-0004</a> 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
     </tr>
     <tr>
       <td>PostToolUse README update (check 型、 Step 4 完遂)</td><td>✓ 完遂</td>
@@ -352,9 +353,9 @@ graph TD
 
 <p><strong>起票候補</strong> (未起票、 user 承認 MUST):</p>
 <ul>
-  <li>ADR-0008 3 層防御原則 (全体設計まとまった時点)</li>
-  <li>ADR-0014 — <strong>見送り</strong> (verification §3.5 で実質規範化済)</li>
-  <li>ADR-0016 exit code 中心 assertion (Gap 1 解消後)</li>
+  <li><code>ADR-0008</code> 3 層防御原則 (全体設計まとまった時点)</li>
+  <li><code>ADR-0014</code> — <strong>見送り</strong> (verification §3.5 で実質規範化済)</li>
+  <li><code>ADR-0016</code> exit code 中心 assertion (Gap 1 解消後)</li>
 </ul>
 </section>
 
