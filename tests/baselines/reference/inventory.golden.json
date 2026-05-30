@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-30T01:14:08Z",
+  "generatedAt": "2026-05-30T11:02:31Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1322,6 +1322,12 @@
         "essence": "golden baseline は TypeScript compiler 流 2-dir model (reference/ = VCS golden / local/ = 実行生成・gitignore)。 更新は明示的 accept workflow (--accept) を経る。"
       },
       {
+        "id": "REQ-VER-005",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-005",
+        "essence": "Phase X3 着手時に Step 1 (hook script unit test) を実装する (Step 2/3 は SHOULD/MAY で段階追加)。"
+      },
+      {
         "id": "REQ-VER-006",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-006",
@@ -1424,6 +1430,159 @@
         "essence": "各 canonical object ID は architecture 全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。"
       }
     ],
-    "edges": []
+    "edges": [
+      {
+        "from": "spec/README.html",
+        "to": "ADR-0001"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "ADR-0002"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "ADR-0003"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "ADR-0004"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-CI-010"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-REL-001"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-VER-001"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-VER-007"
+      },
+      {
+        "from": "spec/README.html",
+        "to": "REQ-VER-008"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "ADR-0003"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "ADR-0022"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-11"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-12"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-2"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "P-3"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CI-016"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-CM-001"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
+        "to": "REQ-DA-STRUCT-1"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-1"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-12"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-13"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-2"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "P-7"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "ADR-0034"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-1"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-11"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-12"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-3"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-4"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-5"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-6"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0017"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0018"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-11"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-3"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-5"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-7"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-CI-010"
+      }
+    ]
   }
 }
