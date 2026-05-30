@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-29T17:32:17Z",
+  "generatedAt": "2026-05-30T01:14:08Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1158,6 +1158,120 @@
         "class": "principle",
         "ssot": "spec/constitution.html#p-9",
         "essence": "Layer 1 consumer 固有 config 変更前 user 確認"
+      },
+      {
+        "id": "REQ-ADR-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-adr-001",
+        "essence": "authoring 中に surface した決定が (a) 不可逆 ・ (b) rationale 無しでは意外 ・ (c) viable な代替間の真の trade-off の 3 条件すべてを満たす時、 folio-architect は ADR として記録するよう offer する MUST。"
+      },
+      {
+        "id": "REQ-CI-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-001",
+        "essence": "Layer 1 consumer CI workflow は merge を許可する前に下記 7 gate すべてを enforce する MUST。"
+      },
+      {
+        "id": "REQ-CI-010",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-010",
+        "essence": "link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。"
+      },
+      {
+        "id": "REQ-CI-011",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-011",
+        "essence": "declarative-form gate が非宣言的構文を検出したら CI は merge を block する MUST (P-4)。"
+      },
+      {
+        "id": "REQ-CI-012",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-012",
+        "essence": "what-only gate が WHAT spec への WHY / HOW content 混入を検出したら CI は merge を block する MUST (P-3 / P-11)。"
+      },
+      {
+        "id": "REQ-CI-013",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-013",
+        "essence": "vocabulary gate が canonical 用語の禁止 synonym を検出したら CI は merge を block する MUST (P-5)。"
+      },
+      {
+        "id": "REQ-CI-014",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-014",
+        "essence": "EARS-coverage gate が well-formed EARS pattern を欠く requirement を検出したら CI は warning を出すが merge は許可する (§6)。"
+      },
+      {
+        "id": "REQ-CI-015",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-015",
+        "essence": "delta-marker consistency gate が未解決または不正な delta marker を検出したら CI は merge を block する MUST (§5)。"
+      },
+      {
+        "id": "REQ-CI-016",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-016",
+        "essence": "Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。"
+      },
+      {
+        "id": "REQ-CM-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-cm-001",
+        "essence": "AI agent が spec_path 配下の file に write を試みる時、 system は caller marker env var が宣言値に set されているか検証する MUST。"
+      },
+      {
+        "id": "REQ-CM-002",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-cm-002",
+        "essence": "AI agent は spec Edit/Write tool call の前に caller marker env var (folio.config.yaml で宣言) を set し、 完了後即 unset する MUST。"
+      },
+      {
+        "id": "REQ-CM-003",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-cm-003",
+        "essence": "caller marker env var が不在または予期しない値なら、 PreToolUse hook は permissionDecision: deny を返す MUST。"
+      },
+      {
+        "id": "REQ-DA-JS-1",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-js-1",
+        "essence": "JS は static DOM 由来の read-only view enhancement に限り、 normative content (定義 / 要件 / MUST) の SSoT にしない MUST。"
+      },
+      {
+        "id": "REQ-DA-JS-2",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-js-2",
+        "essence": "JS 無効でも完全に読める MUST (progressive enhancement) ・ library は vendoring (runtime CDN 不可) ・ ES modules + fetch() は不使用 (file:// 破綻)。"
+      },
+      {
+        "id": "REQ-DA-STRUCT-1",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-struct-1",
+        "essence": "dual-audience を採用する spec の各 [data-audience=\"human\"] requirement container は [data-audience=\"machine\"] 子孫を持つ MUST (孤立 human の排除)。"
+      },
+      {
+        "id": "REQ-DA-STRUCT-2",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-struct-2",
+        "essence": "requirement-id は container id ・ .badge--req text ・ machine .ears-id text 間で case 正規化して一致する MUST。"
+      },
+      {
+        "id": "REQ-DA-STRUCT-3",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-struct-3",
+        "essence": "全 data-audience 値は machine か human のみ (synonym 禁止、 P-5)。"
+      },
+      {
+        "id": "REQ-DA-STRUCT-4",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-struct-4",
+        "essence": "machine 部 ([data-audience=\"machine\"]) は aria-hidden を持たない MUST NOT (AI / accessibility-tree からの normative 不可視化を防ぐ)。"
+      },
+      {
+        "id": "REQ-DA-STRUCT-5",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-da-struct-5",
+        "essence": "human EARS badge (req__ears--&lt;p&gt;) は machine data-ears-pattern と整合する MUST (短縮形 alias を正規化して比較)。"
       },
       {
         "id": "REQ-REL-001",
