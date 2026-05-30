@@ -321,36 +321,83 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h3 id="s7-3-floor">§7.3 Dual-Audience Safety Invariants (conditional-normative floor)</h3>
 <p>dual-audience pattern を採用する spec は次の構造 invariant を満たす MUST。 これらは <code>folio validate</code> の dual-audience gate (deterministic floor、 <a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> scope 拡張) が機械検査する。 検査は <a href="#s7-2-canonical-pattern">§7.2</a> の verbose card (<code>section.req</code>) と compact spec-row (<code>details.spec-row</code>) の両 form を <code>data-audience="human"</code> semantic で一律被覆する (container class 非依存)。 意味的 fidelity (essence が normative を忠実要約か) は floor の対象外で、 ceiling = <code>spec-review-fidelity</code> agent が担う (二層 enforcement、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4)。</p>
 
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-STRUCT-1</span>:
-  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
-  each <code>[data-audience="human"]</code> requirement container (verbose card または compact spec-row) <span class="ears-shall">SHALL</span>
-  contain a <code>[data-audience="machine"]</code> descendant (派生元の存在保証、 孤立 human の排除)。
-</p>
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-STRUCT-2</span>:
-  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
-  the requirement-id <span class="ears-shall">SHALL</span> be consistent (case-normalized) across the
-  requirement container <code>id</code> (<code>section</code> / <code>details</code>), the <code>.badge--req</code> text, and the machine <code>.ears-id</code> text。
-</p>
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-STRUCT-3</span>:
-  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
-  every <code>data-audience</code> value <span class="ears-shall">SHALL</span> be one of
-  <code>machine</code> or <code>human</code> only (no synonym、 <a href="./constitution.html#p-5">P-5</a>)。
-</p>
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-STRUCT-4</span>:
-  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
-  the machine part (<code>[data-audience="machine"]</code>) <span class="ears-shall">SHALL NOT</span>
-  carry <code>aria-hidden</code> (AI / accessibility-tree からの normative 不可視化を防ぐ)。
-</p>
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-STRUCT-5</span>:
-  <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
-  the human EARS badge (<code>req__ears--&lt;p&gt;</code>) <span class="ears-shall">SHALL</span> agree with
-  the machine <code>data-ears-pattern</code> (短縮形 alias を正規化して比較)。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-da-struct-1" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-STRUCT-1</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">dual-audience を採用する spec の各 <code>[data-audience="human"]</code> requirement container は <code>[data-audience="machine"]</code> 子孫を持つ MUST (孤立 human の排除)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-STRUCT-1</span>:
+        <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+        each <code>[data-audience="human"]</code> requirement container (verbose card または compact spec-row) <span class="ears-shall">SHALL</span>
+        contain a <code>[data-audience="machine"]</code> descendant (派生元の存在保証、 孤立 human の排除)。
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-da-struct-2" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-STRUCT-2</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">requirement-id は container <code>id</code> ・ <code>.badge--req</code> text ・ machine <code>.ears-id</code> text 間で case 正規化して一致する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-STRUCT-2</span>:
+        <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+        the requirement-id <span class="ears-shall">SHALL</span> be consistent (case-normalized) across the
+        requirement container <code>id</code> (<code>section</code> / <code>details</code>), the <code>.badge--req</code> text, and the machine <code>.ears-id</code> text。
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-da-struct-3" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-STRUCT-3</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">全 <code>data-audience</code> 値は <code>machine</code> か <code>human</code> のみ (synonym 禁止、 <a href="./constitution.html#p-5">P-5</a>)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-STRUCT-3</span>:
+        <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+        every <code>data-audience</code> value <span class="ears-shall">SHALL</span> be one of
+        <code>machine</code> or <code>human</code> only (no synonym、 <a href="./constitution.html#p-5">P-5</a>)。
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-da-struct-4" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-STRUCT-4</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">machine 部 (<code>[data-audience="machine"]</code>) は <code>aria-hidden</code> を持たない MUST NOT (AI / accessibility-tree からの normative 不可視化を防ぐ)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-STRUCT-4</span>:
+        <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+        the machine part (<code>[data-audience="machine"]</code>) <span class="ears-shall">SHALL NOT</span>
+        carry <code>aria-hidden</code> (AI / accessibility-tree からの normative 不可視化を防ぐ)。
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-da-struct-5" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-STRUCT-5</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">human EARS badge (<code>req__ears--&lt;p&gt;</code>) は machine <code>data-ears-pattern</code> と整合する MUST (短縮形 alias を正規化して比較)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-STRUCT-5</span>:
+        <span class="ears-where">WHERE a spec adopts the dual-audience pattern</span>,
+        the human EARS badge (<code>req__ears--&lt;p&gt;</code>) <span class="ears-shall">SHALL</span> agree with
+        the machine <code>data-ears-pattern</code> (短縮形 alias を正規化して比較)。
+      </p>
+    </div>
+  </details>
+</div>
 
 <aside class="informative">
   <p><strong>REQ-DA-STRUCT-5 の解釈 (ADR-0033 literal からの refinement)</strong>: <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4 は REQ-DA-STRUCT-5 を「JSON-LD <code>status</code> と human badge の status 一致」と記すが、 現 canonical pattern (<a href="verification.html#s3-1-scenario-format">verification.html §3</a>) は <strong>per-card JSON-LD / per-card status を持たない</strong> (status は doc-level)。 per-card で意味を持つ整合 key は <strong>EARS-pattern</strong> であるため、 floor は -5 を <strong>EARS-pattern 整合</strong>として実装する。 ADR literal の「status 一致」は <strong>per-card JSON-LD を導入する Option A' (ADR-0033 §2.3 roadmap) 採用時の future check</strong> として保留する。 同様に -2 も per-card JSON-LD <code>@id</code> でなく requirement container <code>id</code> (<code>section</code> / <code>details</code>) / badge / ears-id text の整合として実装する (実 pattern 準拠)。</p>
@@ -367,21 +414,41 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <p>本 §8 は spec HTML 内の JavaScript の使用範囲を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.8)。 原則は <strong>JS = render / view の read-only enhancement に限り content の SSoT にしない</strong> (ReSpec / Bikeshed 共通原則の folio 版)。 canonical artifact は常に static HTML。 採用は任意だが、 JS を含む spec は本 §8 を遵守する MUST。 現 wave の CSS-only 骨格は本 ruleset と無矛盾 (JS 不要)。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-JS-1</span>:
-  <span class="ears-where">WHERE a spec includes JavaScript</span>,
-  the JavaScript <span class="ears-shall">SHALL</span> be limited to read-only view enhancement derived
-  from static DOM content, and <span class="ears-shall">SHALL NOT</span> hold the SSoT of any normative
-  content (定義 / 要件 / MUST)。
-</p>
-<p class="ears" data-ears-pattern="optional">
-  <span class="ears-id">REQ-DA-JS-2</span>:
-  <span class="ears-where">WHERE a spec includes JavaScript</span>,
-  the spec <span class="ears-shall">SHALL</span> remain fully readable with JavaScript disabled
-  (progressive enhancement), <span class="ears-shall">SHALL</span> vendor its libraries (no runtime CDN),
-  and <span class="ears-shall">SHALL NOT</span> use ES modules with <code>fetch()</code>
-  (file:// で null origin CORS により破綻、 verified)。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-da-js-1" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-JS-1</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">JS は static DOM 由来の read-only view enhancement に限り、 normative content (定義 / 要件 / MUST) の SSoT にしない MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-JS-1</span>:
+        <span class="ears-where">WHERE a spec includes JavaScript</span>,
+        the JavaScript <span class="ears-shall">SHALL</span> be limited to read-only view enhancement derived
+        from static DOM content, and <span class="ears-shall">SHALL NOT</span> hold the SSoT of any normative
+        content (定義 / 要件 / MUST)。
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-da-js-2" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-DA-JS-2</span>
+      <span class="req__ears req__ears--optional">Opt.</span>
+      <span class="essence">JS 無効でも完全に読める MUST (progressive enhancement) ・ library は vendoring (runtime CDN 不可) ・ ES modules + <code>fetch()</code> は不使用 (file:// 破綻)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="optional">
+        <span class="ears-id">REQ-DA-JS-2</span>:
+        <span class="ears-where">WHERE a spec includes JavaScript</span>,
+        the spec <span class="ears-shall">SHALL</span> remain fully readable with JavaScript disabled
+        (progressive enhancement), <span class="ears-shall">SHALL</span> vendor its libraries (no runtime CDN),
+        and <span class="ears-shall">SHALL NOT</span> use ES modules with <code>fetch()</code>
+        (file:// で null origin CORS により破綻、 verified)。
+      </p>
+    </div>
+  </details>
+</div>
 
 <table>
   <thead><tr><th>区分</th><th>具体</th></tr></thead>
@@ -424,7 +491,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   </tbody>
 </table>
 
-<p class="informative"><strong>marking 正規化</strong>: 上記 resolve の前提は「全 object が id 付き SSoT 要素を持つ」 こと。 現 rules.html の <code>REQ-CI-*</code> / <code>REQ-DA-STRUCT-*</code> 等は table / EARS-list で id 付き定義要素を欠く場合があり、 これらを統一 markup へ正規化する作業は後続 wave で行う (本 §9 新設の <code>REQ-XREF-*</code> は id 付き spec-row で定義し先行整合する)。</p>
+<p class="informative"><strong>marking 正規化</strong>: 上記 resolve の前提は「全 object が id 付き SSoT 要素を持つ」 こと。 rules.html の全 canonical object (<code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-ADR-*</code> / <code>REQ-XREF-*</code>) は <a href="#s7-2-canonical-pattern">§7.2</a> form 2 の id 付き spec-row を SSoT 定義 site として持ち、 この前提を満たす (旧 EARS-list / 概要 table 形は spec-row へ正規化し、 <a href="#s10-2">§10.2</a> の table は spec-row への cov-link に転換)。</p>
 
 <h3 id="s9-2-essence">§9.2 essence 抽出 contract (tooltip text の生成元)</h3>
 <p><code>data-tooltip</code> 生成 (<code>folio fix</code>) と tooltip-consistency 検査 (<code>folio validate</code>) と将来の glossary が依存する<strong>横断機構</strong>。 essence は<strong>定義 site の既存内容を再利用</strong>し (新たに書き起こさない = <a href="./constitution.html#p-7">P-7</a> 重複禁止)、 必ず <strong>plain-text 化</strong> (内部タグ strip) + <strong>attribute escape</strong> する。</p>
@@ -506,26 +573,53 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <p>本 §10.1 は IETF RFC 2119 / RFC 8174 / BCP 14 に定義される MUST に従う規範要件。 enforcement の hook flow chart は <a href="folio-self-spec.html#s7-3-caller-marker">folio-self-spec.html §7.3</a> を参照。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-CM-001</span>:
-  <span class="ears-when">WHEN AI agent attempts to write to any file under <code>spec_path</code></span>,
-  the system <span class="ears-shall">SHALL</span> verify that the caller marker
-  environment variable is set to the declared value.
-</p>
-
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-CM-002</span>:
-  The AI agent <span class="ears-shall">SHALL</span> set the caller marker env var
-  (declared in <code>folio.config.yaml</code>) before invoking any spec Edit/Write tool call,
-  and <span class="ears-shall">SHALL</span> unset it immediately upon completion.
-</p>
-
-<p class="ears" data-ears-pattern="unwanted">
-  <span class="ears-id">REQ-CM-003</span>:
-  IF the caller marker env var is absent or holds an unexpected value,
-  THEN the PreToolUse hook <span class="ears-shall">SHALL</span> return
-  <code>permissionDecision: deny</code>.
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-cm-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CM-001</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">AI agent が <code>spec_path</code> 配下の file に write を試みる時、 system は caller marker env var が宣言値に set されているか検証する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven">
+        <span class="ears-id">REQ-CM-001</span>:
+        <span class="ears-when">WHEN AI agent attempts to write to any file under <code>spec_path</code></span>,
+        the system <span class="ears-shall">SHALL</span> verify that the caller marker
+        environment variable is set to the declared value.
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-cm-002" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CM-002</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">AI agent は spec Edit/Write tool call の前に caller marker env var (<code>folio.config.yaml</code> で宣言) を set し、 完了後即 unset する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-CM-002</span>:
+        The AI agent <span class="ears-shall">SHALL</span> set the caller marker env var
+        (declared in <code>folio.config.yaml</code>) before invoking any spec Edit/Write tool call,
+        and <span class="ears-shall">SHALL</span> unset it immediately upon completion.
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-cm-003" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CM-003</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">caller marker env var が不在または予期しない値なら、 PreToolUse hook は <code>permissionDecision: deny</code> を返す MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CM-003</span>:
+        IF the caller marker env var is absent or holds an unexpected value,
+        THEN the PreToolUse hook <span class="ears-shall">SHALL</span> return
+        <code>permissionDecision: deny</code>.
+      </p>
+    </div>
+  </details>
+</div>
 
 <p>env var の具体名・値は <code>folio.config.yaml</code> で declare し、 binding 詳細は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に集約する。</p>
 </section>
@@ -537,26 +631,38 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <p>本 §10.2 は規範要件 (RFC 2119 MUST)。 各 gate の script 実装は <a href="folio-self-spec.html#s7-5-ci-gate">folio-self-spec.html §7.5</a>、 binding location は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> を参照。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-CI-001</span>:
-  The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
-  enforce all seven gates defined below before permitting merge.
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ci-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-001</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">Layer 1 consumer CI workflow は merge を許可する前に下記 7 gate すべてを enforce する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-CI-001</span>:
+        The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
+        enforce all seven gates defined below before permitting merge.
+      </p>
+    </div>
+  </details>
+</div>
 
 <p><small>REQ-CI-002 〜 REQ-CI-009 は将来拡張のため予約 (例: 新規 gate 追加 / sub-requirement)。 現状の 7 gate は REQ-CI-010 〜 REQ-CI-016 を採用。</small></p>
 
 <table>
+  <caption>7 gate overview (REQ-ID は下記の id 付き spec-row への deep-link、 SSoT は spec-row)</caption>
   <thead>
     <tr><th>REQ-ID</th><th>gate</th><th>結果</th><th>根拠</th></tr>
   </thead>
   <tbody>
-    <tr><td>REQ-CI-010</td><td>link-integrity gate</td><td>fail = merge block</td><td>P-6</td></tr>
-    <tr><td>REQ-CI-011</td><td>declarative-form gate</td><td>fail = merge block</td><td>P-4</td></tr>
-    <tr><td>REQ-CI-012</td><td>what-only gate</td><td>fail = merge block</td><td>P-3 / P-11</td></tr>
-    <tr><td>REQ-CI-013</td><td>vocabulary gate</td><td>fail = merge block</td><td>P-5</td></tr>
-    <tr><td>REQ-CI-014</td><td>EARS coverage gate</td><td>warn (merge 許可)</td><td>§6</td></tr>
-    <tr><td>REQ-CI-015</td><td>delta marker consistency gate</td><td>fail = merge block</td><td>§5</td></tr>
-    <tr><td>REQ-CI-016</td><td>json-ld-validation gate</td><td>fail = merge block</td><td><a href="relations.html#s3-jsonld">relations §3</a></td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-010"><span class="badge badge--req">REQ-CI-010</span></a></td><td>link-integrity gate</td><td>fail = merge block</td><td>P-6</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-011"><span class="badge badge--req">REQ-CI-011</span></a></td><td>declarative-form gate</td><td>fail = merge block</td><td>P-4</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-012"><span class="badge badge--req">REQ-CI-012</span></a></td><td>what-only gate</td><td>fail = merge block</td><td>P-3 / P-11</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-013"><span class="badge badge--req">REQ-CI-013</span></a></td><td>vocabulary gate</td><td>fail = merge block</td><td>P-5</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-014"><span class="badge badge--req">REQ-CI-014</span></a></td><td>EARS coverage gate</td><td>warn (merge 許可)</td><td>§6</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-015"><span class="badge badge--req">REQ-CI-015</span></a></td><td>delta marker consistency gate</td><td>fail = merge block</td><td>§5</td></tr>
+    <tr><td><a class="cov-req" href="#req-ci-016"><span class="badge badge--req">REQ-CI-016</span></a></td><td>json-ld-validation gate</td><td>fail = merge block</td><td><a href="relations.html#s3-jsonld">relations §3</a></td></tr>
   </tbody>
 </table>
 
@@ -568,15 +674,110 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <p><strong>gate enforcement 実体 (X5-γ、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement)</strong>: 各 gate は性質に応じ 2 層で enforce する。 <strong>deterministic floor</strong> (<code>folio validate</code>、 CI block/warn): REQ-CI-010 / 016 (実装済) + REQ-CI-013 vocabulary (<code>vocabulary.yaml</code> opt-in、 block) + REQ-CI-015 delta-marker (block) + REQ-CI-014 EARS-coverage (warn)。 <strong>LLM ceiling</strong> (Phase F review agent、 authoring advisory、 CI hard gate にしない): REQ-CI-011 declarative-form (<code>spec-review-temporal</code>) + REQ-CI-012 what-only (<code>spec-review-ssot</code>)。 011/012 は意味的判定ゆえ決定的 gate に向かず、 review agent が authoring 時に担保する。 本 §10.2 table の 7 gate 宣言は規範として不変、 enforcement 実体のみを本 aside が確定する。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="ubiquitous">
-  <span class="ears-id">REQ-CI-016</span>:
-  The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
-  verify that every spec file&apos;s <code>&lt;head&gt;</code> JSON-LD block
-  conforms to the schema defined in <a href="relations.html#s3-jsonld">relations.html §3</a>.
-  Detailed assertion strategy (exit code + stderr 中心、 <code>permissionDecision: deny</code>
-  JSON は SHOULD NOT 使用) は <a href="verification.html#s3-ears">verification.html §3 REQ-VER-003</a>
-  を参照。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-ci-010" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-010</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-010</span>:
+        IF the link-integrity gate finds a broken reference (external URL, anchor fragment, or internal file-system reference),
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> block the merge (P-6).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-011" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-011</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">declarative-form gate が非宣言的構文を検出したら CI は merge を block する MUST (P-4)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-011</span>:
+        IF the declarative-form gate finds a non-declarative construct,
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> block the merge (P-4).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-012" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-012</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">what-only gate が WHAT spec への WHY / HOW content 混入を検出したら CI は merge を block する MUST (P-3 / P-11)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-012</span>:
+        IF the what-only gate finds WHY or HOW content in a WHAT spec,
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> block the merge (P-3 / P-11).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-013" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-013</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">vocabulary gate が canonical 用語の禁止 synonym を検出したら CI は merge を block する MUST (P-5)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-013</span>:
+        IF the vocabulary gate finds a forbidden synonym for a canonical term,
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> block the merge (P-5).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-014" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-014</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">EARS-coverage gate が well-formed EARS pattern を欠く requirement を検出したら CI は warning を出すが merge は許可する (§6)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-014</span>:
+        IF the EARS-coverage gate finds a requirement lacking a well-formed EARS pattern,
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> emit a warning while still permitting the merge (§6).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-015" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-015</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">delta-marker consistency gate が未解決または不正な delta marker を検出したら CI は merge を block する MUST (§5)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted">
+        <span class="ears-id">REQ-CI-015</span>:
+        IF the delta-marker consistency gate finds an unresolved or malformed delta marker,
+        THEN the Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span> block the merge (§5).
+      </p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ci-016" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-CI-016</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">Layer 1 consumer CI workflow は全 spec file の <code>&lt;head&gt;</code> JSON-LD block が relations §3 schema に適合するか検証する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous">
+        <span class="ears-id">REQ-CI-016</span>:
+        The Layer 1 consumer CI workflow <span class="ears-shall">SHALL</span>
+        verify that every spec file&apos;s <code>&lt;head&gt;</code> JSON-LD block
+        conforms to the schema defined in <a href="relations.html#s3-jsonld">relations.html §3</a>.
+        Detailed assertion strategy (exit code + stderr 中心、 <code>permissionDecision: deny</code>
+        JSON は SHOULD NOT 使用) は <a href="verification.html#s3-ears">verification.html §3 REQ-VER-003</a>
+        を参照。
+      </p>
+    </div>
+  </details>
+</div>
 </section>
 
 <section id="s10-3" class="normative">
@@ -586,11 +787,22 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <p>本 §10.3 は「いつ ADR を書くか」 の判定基準 (worthiness) を normative に集約する (<a href="../decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.5、 mattpocock grill-with-docs の "offer ADRs sparingly" を folio 化)。 <code>folio-architect</code> の grilling (<a href="folio-self-spec.html#s7-1-7phase">Phase C</a>) 中に decision が surface した際の offer 基準であり、 ADR の起票手順・user 承認 gate は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> に従う (P-7: 手順は重複させない)。</p>
 </aside>
 
-<p class="ears" data-ears-pattern="event-driven">
-  <span class="ears-id">REQ-ADR-001</span>:
-  <span class="ears-when">WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives</span>,
-  <code>folio-architect</code> <span class="ears-shall">SHALL</span> offer to record it as an ADR in <code>architecture/decisions/</code> (起票自体は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> の user 承認に従う)。
-</p>
+<div class="spec-list">
+  <details class="spec-row" id="req-adr-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-ADR-001</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">authoring 中に surface した決定が (a) 不可逆 ・ (b) rationale 無しでは意外 ・ (c) viable な代替間の真の trade-off の 3 条件すべてを満たす時、 <code>folio-architect</code> は ADR として記録するよう offer する MUST。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven">
+        <span class="ears-id">REQ-ADR-001</span>:
+        <span class="ears-when">WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives</span>,
+        <code>folio-architect</code> <span class="ears-shall">SHALL</span> offer to record it as an ADR in <code>architecture/decisions/</code> (起票自体は <a href="../decisions/README.html#s5-amendment">decisions/README §5</a> の user 承認に従う)。
+      </p>
+    </div>
+  </details>
+</div>
 
 <p>3 条件が<strong>すべて真の時のみ</strong> ADR を offer する (sparingly)。 いずれか 1 つでも偽なら ADR にしない — 可逆な決定 / context 無しで自明な決定 / trade-off の無い決定は spec 本文 (WHAT) や <code>vocabulary.yaml</code> に吸収し、 重厚な ADR (HTML+JSON-LD、 user 承認) を濫造しない。 folio の高コスト ADR と高い 3 条件 bar は相互補強する (少数精鋭に絞る価値が高い)。</p>
 </section>
