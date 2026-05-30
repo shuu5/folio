@@ -770,11 +770,12 @@ folio_check_dual_audience() {
 # ============================================================================
 
 # canonical token ($1) の class を stdout に返す (principle|requirement|decision、 不該当は空)。
-# 採用 token 形は 2-segment REQ (REQ-[A-Z]+-[0-9]+) まで (§2.5、 3-segment は Slice 2a)。
+# 採用 token 形は multi-segment REQ (REQ(-[A-Z]+)+-[0-9]+、 §2.5 + Slice 2a)。 REQ-DA-STRUCT-N /
+# REQ-DA-JS-N の 3+ segment を 2-segment REQ-VER-NNN 等と一律に拾う (greedy だが末尾 -[0-9]+ で正しく分割)。
 folio_xref_class() {
   case "$1" in
     P-[0-9]*)   [[ "$1" =~ ^P-[0-9]+$ ]] && printf 'principle' ;;
-    REQ-[A-Z]*) [[ "$1" =~ ^REQ-[A-Z]+-[0-9]+$ ]] && printf 'requirement' ;;
+    REQ-[A-Z]*) [[ "$1" =~ ^REQ(-[A-Z]+)+-[0-9]+$ ]] && printf 'requirement' ;;
     ADR-[0-9]*) [[ "$1" =~ ^ADR-[0-9][0-9][0-9][0-9]$ ]] && printf 'decision' ;;
   esac
 }
@@ -899,7 +900,7 @@ folio_xref_present_tokens() {
 folio_xref_scan_prose_tokens() {
   local file="$1" body selfdefs
   body=$(folio_extract_body "$file")
-  selfdefs=$(folio_prose_only "$body" | grep -oP '\sid="\K(p-[0-9]+|req-[a-z]+-[0-9]+)(?=")' 2>/dev/null \
+  selfdefs=$(folio_prose_only "$body" | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null \
     | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
   folio_prose_only "$body" | grep -vP '<h[23][ >]' 2>/dev/null | awk '
     { line=$0; out=""
@@ -907,7 +908,7 @@ folio_xref_scan_prose_tokens() {
         if(ina){ q=index(line,"</a>"); if(q==0){ line="" } else { line=substr(line,q+4); ina=0 } }
         else { p=index(line,"<a "); if(p==0){ out=out line; line="" } else { out=out substr(line,1,p-1); line=substr(line,p+3); ina=1 } } }
       print out }' \
-    | grep -oP '(?<![-0-9A-Za-z])(P-[0-9]+|REQ-[A-Z]+-[0-9]+|ADR-[0-9]{4})(?![-0-9A-Za-z])' 2>/dev/null \
+    | grep -oP '(?<![-0-9A-Za-z])(P-[0-9]+|REQ(-[A-Z]+)+-[0-9]+|ADR-[0-9]{4})(?![-0-9A-Za-z])' 2>/dev/null \
     | LC_ALL=C sort -u | while IFS= read -r tk; do
         [[ -z "$tk" ]] && continue
         printf '%s\n' "$selfdefs" | grep -qxF "$tk" && continue
@@ -1007,7 +1008,7 @@ folio_xref_uniqueness_check() {
     while IFS= read -r f; do
       [[ -z "$f" ]] && continue
       rel=$(realpath -m --relative-to="$root_abs" "$f")
-      folio_prose_only "$(folio_extract_body "$f")" | grep -oP '\sid="\K(p-[0-9]+|req-[a-z]+-[0-9]+)(?=")' 2>/dev/null \
+      folio_prose_only "$(folio_extract_body "$f")" | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null \
         | while IFS= read -r cid; do [[ -n "$cid" ]] && printf '%s\t%s\n' "$cid" "$rel"; done
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done > "$tmp"
@@ -1056,7 +1057,7 @@ folio_xref_build_objectgraph() {
         rtok=$(printf '%s' "$rid" | tr '[:lower:]' '[:upper:]')
         ress=$(folio_xref_essence "$rtok" "$root_abs")
         printf '%s\t%s\t%s\t%s\n' "$rtok" "requirement" "${rel}#${rid}" "$ress" >> "$nodes_tsv"
-      done < <(folio_prose_only "$body" | grep -oP '\sid="\K(req-[a-z]+-[0-9]+)(?=")' 2>/dev/null | LC_ALL=C sort -u)
+      done < <(folio_prose_only "$body" | grep -oP '\sid="\K(req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null | LC_ALL=C sort -u)
       if [[ "$subdir" == "decisions" ]]; then
         local adrid aess
         adrid=$(basename "$f" | grep -oP '^ADR-[0-9]{4}')
