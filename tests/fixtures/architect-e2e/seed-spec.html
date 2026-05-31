@@ -7,7 +7,7 @@
 <meta name="folio-version" content="0.1.0-draft">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>widget-sync spec (X4-D e2e seed — 既知 violation 3 種)</title>
+<title>widget-sync spec (X4-D e2e seed — 既知 violation 5 種)</title>
 <link rel="stylesheet" href="../../../common.css">
 <script type="application/ld+json">
 {
@@ -25,11 +25,13 @@
 </head>
 <body>
 
-<!-- REQ-VER-016(b) e2e seed。 3 review agent が担当軸の既知 violation を flag するか観察する fixture。
+<!-- REQ-VER-016(b) e2e seed。 5 review agent が担当軸の既知 violation を flag するか観察する fixture。
      正解 (検出すべき箇所):
        ears:       §1 EARS markup 不備 (SHALL 欠落 + REQ-ID 重複)
        vocabulary: §2 同一 entity 4 呼称混在 (P-5)
-       ssot:       §3 WHY rationale + HOW script 混入 (P-7 / P-11 越境) -->
+       ssot:       §3 WHY rationale + HOW script 混入 (P-7 / P-11 越境)
+       temporal:   §4 wave-specific past-tense narrative (P-4 declarative 違反)
+       fidelity:   §5 dual-audience card の essence が machine normative と矛盾 (構造 floor は PASS) -->
 
 <header class="doc-header">
   <h1>Widget Sync Spec</h1>
@@ -59,6 +61,25 @@
 <pre><code>#!/usr/bin/env bash
 redis-cli SET "widget:$1" "$2" EX 3600
 </code></pre>
+</section>
+
+<section id="s4-rollout" class="normative">
+<h2>§4. Rollout Notes</h2>
+<p>Spawn-2 で本 section を追加した。 2026-05-20 の sprint review で retry 上限を 3 回に決定し、 前回の session では指数 backoff を見送った。 今回の wave では cache TTL を 1 時間へ引き下げている。</p>
+<p class="ears" data-ears-pattern="ubiquitous">
+  <span class="ears-id">REQ-WS-010</span>:
+  the system <span class="ears-shall">SHALL</span> cap sync retries at three attempts.
+</p>
+</section>
+
+<section class="req" id="req-ws-020" data-audience="human">
+<h2>§5. Conflict Resolution</h2>
+<span class="badge badge--req">REQ-WS-020</span>
+<span class="req__ears req__ears--event">Event</span>
+<p class="req__essence">競合時は常に server 側の値を採用し、 client の変更は破棄する (last-write-wins は使わない)。</p>
+<details class="req__machine" data-audience="machine"><summary>normative (machine)</summary>
+<p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-WS-020</span>: <span class="ears-when">WHEN two widget updates conflict</span>, the system <span class="ears-shall">SHALL</span> resolve the conflict by last-write-wins, keeping whichever update has the most recent timestamp.</p>
+</details>
 </section>
 
 </body>

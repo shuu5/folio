@@ -178,32 +178,36 @@ PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除
 
 ---
 
-## S-G — folio-architect 7-Phase + Phase F 3-agent review (★X4-D: ADR-0027 / REQ-VER-016 (b))
+## S-G — folio-architect 7-Phase + Phase F 5-agent review (★X4-D: ADR-0027 / ADR-0029 / ADR-0033 / REQ-VER-016 (b))
 
-**目的**: `/folio-architect` 起動で 7-Phase orchestration が回り、**Phase F で 3 review agent (`folio:spec-review-ears` / `folio:spec-review-vocabulary` / `folio:spec-review-ssot`) が並列 spawn** され、seed した既知 violation を flag することを観察する (REQ-VER-016 (b) e2e、非決定的ゆえ一次 assertion = **検出有無**)。S-A〜S-F (hook 発火) とは別 method = **SKILL orchestration + subagent 並列 spawn の観察**。
+**目的**: `/folio-architect` 起動で 7-Phase orchestration が回り、**Phase F で 5 review agent (`folio:spec-review-ears` / `folio:spec-review-vocabulary` / `folio:spec-review-ssot` / `folio:spec-review-temporal` / `folio:spec-review-fidelity`) が並列 spawn** され、seed した既知 violation を flag することを観察する (REQ-VER-016 (b) e2e、非決定的ゆえ一次 assertion = **検出有無**)。S-A〜S-F (hook 発火) とは別 method = **SKILL orchestration + subagent 並列 spawn の観察**。
 
 **前提**:
-- folio plugin が load 済で、**X4-D の 3 agent (`agents/spec-review-*.md`) + 7-Phase 昇格 SKILL が load されている**こと。agent/SKILL を追加・編集した直後の session では未 load ゆえ → **plugin reload 後の fresh session 必須** (本 worktree で実装した直後の session では観察不可)。
+- folio plugin が load 済で、**Phase F の 5 agent (`agents/spec-review-*.md`) + 7-Phase 昇格 SKILL が load されている**こと。agent/SKILL を追加・編集した直後の session では未 load ゆえ → full `/folio-architect` orchestration walk は **plugin reload 後の fresh session** で実施する。なお detection-capability subset (REQ-VER-016 (b) 核心 = 5 agent を seed に直接並列 invoke し検出有無を観る) は、5 agent が既に load 済の session であれば **Agent tool / workflow agentType で direct invocation 可能** (本観察の 2026-06-01 re-walk はこの direct 方式で実施)。
 - folio-architect は `disable-model-invocation: true` ゆえ **user が手動で `/folio-architect` 起動**する (agent 自動起動不可)。
 
-**操作**:
-1. marker SET (`mkdir -p .folio && touch .folio/architect-active`) で seed spec `architecture/spec/e2e-x4d-seed.html` を Write。**既知 violation 3 種**を仕込む:
-   - **EARS 欠落** (ears 軸): 規範要件 `<p class="ears">` を置くが `data-ears-pattern` 属性 or `<span class="ears-shall">SHALL</span>` を欠落させる。
-   - **forbidden synonym** (vocabulary 軸): 同一 entity を複数呼称で混在 (例 同じ marker を "caller marker" / "caller-marker" / "marker flag" と書き分ける)。
-   - **domain 越境** (ssot 軸): spec 本文に WHY rationale (「〜と決めた経緯」) や HOW (具体 script snippet / CLI 構文) を混入 (P-7 / P-11 違反)。
-2. `/folio-architect` を起動し「`architecture/spec/e2e-x4d-seed.html` を review せよ」と指示 → Phase F まで進ませる。
-3. Phase F で 3 review agent が **1 メッセージで並列 spawn** され、構造化 findings (severity / location / 違反 rule / 修正提案) を返すのを観察。
+**操作** (detection walk = direct invocation 版):
+1. seed spec `tests/fixtures/architect-e2e/seed-spec.html` に **既知 violation 5 種**を仕込む (VCS 管理 fixture、 doc-type=spec ゆえ Bash heredoc で作成/更新):
+   - **EARS 欠落** (ears 軸): 規範要件 `<p class="ears">` で `<span class="ears-shall">SHALL</span>` / `ears-when` markup 欠落 + REQ-ID 重複。
+   - **forbidden synonym** (vocabulary 軸): 同一 entity を複数呼称で混在 (例 "sync token" / "sync-token" / "auth token" / "credential")。
+   - **domain 越境** (ssot 軸): spec 本文に WHY rationale (決定経緯) + HOW (具体 script / CLI 構文) を混入 (P-7 / P-11 違反)。
+   - **wave-narrative** (temporal 軸): 過去形の経緯叙述・sprint/日付固有の物語で normative を時限化 (P-4 declarative 違反)。
+   - **essence-normative 矛盾** (fidelity 軸): dual-audience card で human essence が machine normative と矛盾する要約 (構造 floor は PASS、 ceiling のみ捕捉)。
+2. full 版は `/folio-architect` を起動し「seed を review せよ」と指示 → Phase F まで進ませる。direct 版は 5 agent を 1 message / 1 workflow で並列 spawn し seed を review させる。
+3. Phase F で 5 review agent が **並列 spawn** され、構造化 findings (severity / location / 違反 rule / 修正提案) を返すのを観察。
 
 **期待観察** (一次 = 検出有無):
-- `folio:spec-review-ears` が **EARS 欠落**を finding (severity 付き) で flag。
+- `folio:spec-review-ears` が **EARS 欠落 + REQ-ID 重複**を finding (severity 付き) で flag。
 - `folio:spec-review-vocabulary` が **forbidden synonym** を flag。
-- `folio:spec-review-ssot` が **domain 越境**を flag。
-- 3 agent が並列 (同一 response で同時) に spawn される。
-- LLM 非決定的ゆえ finding 文言は golden 比較せず、**該当 violation 3 種それぞれが少なくとも 1 つの agent に検出されたか否か**を assertion とする (REQ-VER-016 (b))。
+- `folio:spec-review-ssot` が **domain 越境 (WHY/HOW)** を flag。
+- `folio:spec-review-temporal` が **wave-narrative (P-4 違反)** を flag。
+- `folio:spec-review-fidelity` が **essence-normative 矛盾** を flag。
+- 5 agent が並列に spawn され、全 agent が read-only (ファイル未編集) + 担当外軸を out-of-scope と認識し境界遵守。
+- LLM 非決定的ゆえ finding 文言は golden 比較せず、**該当 violation 5 種それぞれが少なくとも 1 つの agent に検出されたか否か**を assertion とする (REQ-VER-016 (b))。
 
-**注**: 実 live walk は **plugin reload (3 agent + 昇格 SKILL の load) を要すため別 fresh session (merge 後)** で実施する。本 runbook 整備時点では手順 + 期待 observation を定義し、golden observation (`baselines/reference/observations-architect.json`) は walk 後に埋める **placeholder**。structural 検証 (REQ-VER-016 (a)) は live load 非依存で `../scenarios/agent-structure.yaml` (`kind: agent-structural`) が決定的に PASS 済。
+**実施状況**: detection walk (direct 5-agent invocation) は **2026-06-01 に実施済** (#118、 workflow wf_95efd803、 5 軸全 flag + read-only + 境界遵守、 `baselines/reference/observations-architect.json` に記録)。structural 検証 (REQ-VER-016 (a)) は live load 非依存で `../scenarios/agent-structure.yaml` (`kind: agent-structural`) が 5 agent を決定的 PASS 済。残: full `/folio-architect` 7-Phase orchestration walk (Phase A〜G、 Phase C の AskUserQuestion 対話含む) は **user 主導で別 fresh session**。
 
-**後始末**: `rm -f .folio/architect-active architecture/spec/e2e-x4d-seed.html`。golden = `baselines/reference/observations-architect.json`。
+**後始末**: seed fixture (`tests/fixtures/architect-e2e/seed-spec.html`) は VCS 管理ゆえ削除不要。golden = `baselines/reference/observations-architect.json`。
 
 ---
 

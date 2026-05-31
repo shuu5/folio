@@ -1,51 +1,65 @@
 {
   "schema": "folio-e2e-observations/v1",
-  "req": "REQ-VER-016 (b) (+ ADR-0027 folio-architect 7-Phase + Phase F review agents)",
-  "method": "agent-driven walk (runbook S-G)。 fresh session (plugin reload 済、 X4-D の 3 agent load 済) で 3 review agent (folio:spec-review-{ears,vocabulary,ssot}) を seed spec に 1 メッセージで並列 spawn し、 各軸の既知 violation を flag するかを観察 (LLM 非決定的ゆえ一次 assertion = 検出有無、 golden 文言比較ではない)。 本 walk は REQ-VER-016(b) の核心 = Phase F の agent 検出能力を direct invocation で実証する。 full /folio-architect 7-Phase orchestration walk (Phase A〜G、 Phase C の AskUserQuestion 対話を含む) は disable-model-invocation ゆえ user 主導で別途実施 (本 walk の scope 外)。",
-  "status": "PASS (detection walk、 2026-05-26)。 3 review agent が seed の既知 violation 3 種を漏れなく flag、 並列 spawn 成功、 read-only 遵守、 軸境界遵守、 誤検出なし。",
+  "req": "REQ-VER-016 (b) (+ ADR-0027 folio-architect 7-Phase + Phase F review agents、 ADR-0029 4-agent set + ADR-0033 fidelity agent)",
+  "method": "agent-driven detection walk (runbook S-G)。 Phase F の現行 5 review agent (folio:spec-review-{ears,vocabulary,ssot,temporal,fidelity}) を seed spec に 1 workflow で並列 spawn し、 各軸の既知 violation を flag するかを観察 (LLM 非決定的ゆえ一次 assertion = 検出有無、 golden 文言比較ではない)。 本 walk は REQ-VER-016(b) の核心 = Phase F の agent 検出能力を direct parallel invocation で実証する。 full /folio-architect 7-Phase orchestration walk (Phase A〜G、 Phase C の AskUserQuestion 対話を含む) は disable-model-invocation ゆえ user 主導で別途実施 (本 walk の scope 外)。",
+  "status": "PASS (5-agent detection re-walk、 2026-06-01、 main 6f069bb)。 5 review agent が seed の既知 violation 5 種 (ears / vocabulary / ssot / temporal / fidelity) を漏れなく flag、 並列 spawn 成功、 read-only 遵守、 軸境界遵守、 誤検出なし。 ADR-0029 temporal + ADR-0033 fidelity の追加で 3→5 agent に成長した Phase F set を最新構成で被覆。",
   "session": {
-    "date": "2026-05-26",
+    "date": "2026-06-01",
     "host": "ipatho-server-2",
-    "branch": "main (aa98418)",
+    "branch": "main (6f069bb)",
     "cwd": "/home/shuu5/projects/local-projects/folio",
-    "plugin_load": "fresh cld-spawn session (window e2e-x4d)。 ~/.claude/plugins/folio → repo symlink 経由で X4-D の agents/spec-review-*.md + 7-Phase SKILL が load 済 = folio:spec-review-* が discoverable (notes 参照)。",
-    "primary_assertion": "seed (tests/fixtures/architect-e2e/seed-spec.html) の既知 violation 3 種 (EARS 不備 / forbidden synonym / domain 越境) を、 並列 spawn された 3 review agent がそれぞれ flag したか (検出有無)。 finding 文言は非決定的ゆえ golden 比較しない。",
-    "note": "structural 検証 (REQ-VER-016 (a)) は live load 非依存で ../../scenarios/agent-structure.yaml (kind: agent-structural) が決定的に PASS 済。 本 e2e は (b) の非決定的 LLM 検出能力を被覆。 検証方式は direct 3-agent 並列 invocation (full /folio-architect 7-Phase orchestration walk は user 主導で別途)。"
+    "plugin_load": "PARENT session に folio plugin の agents/spec-review-*.md 5 本が load 済 (folio:spec-review-* が discoverable)。 同 session 内で #117 ceiling (wf_555a00f7) も 5 agent を spec edit review に live 起動済 = agent set の稼働は二重に実証。 本 walk は workflow (wf_95efd803) で 5 agent を agentType 指定 並列 spawn。",
+    "primary_assertion": "seed (tests/fixtures/architect-e2e/seed-spec.html、 5 軸 violation に拡張) の既知 violation 5 種を、 並列 spawn された 5 review agent がそれぞれ自軸で flag したか (検出有無)。 finding 文言は非決定的ゆえ golden 比較しない。 各 agent には答えを与えず自然 review させ、 planted violation が findings に現れるかで判定。",
+    "rewalk_rationale": "前回 walk (observations-architect@2026-05-26) は 3 agent (ears/vocabulary/ssot) のみで、 ADR-0029 で追加された temporal、 ADR-0033 で追加された fidelity の e2e 検出証跡が不在だった。 本 re-walk は seed を 5 軸 violation に拡張し (§4 temporal wave-narrative / §5 fidelity essence-normative 矛盾 を追加)、 5 agent 全てが自軸を検出することを実証。 #118。",
+    "note": "structural 検証 (REQ-VER-016 (a)) は live load 非依存で scenarios/agent-structure.yaml (kind: agent-structural) が 5 agent 全ての frontmatter + scoped name resolvable を決定的に PASS 済。 本 e2e は (b) の非決定的 LLM 検出能力を 5 軸で被覆。"
   },
   "agents_under_test": [
     "folio:spec-review-ears — EARS 5-pattern 網羅 + REQ-ID uniqueness + traceability (read-only)",
     "folio:spec-review-vocabulary — P-5 canonical name 違反 + forbidden synonym (read-only)",
-    "folio:spec-review-ssot — P-7 content domain exclusivity + ADR/research 境界 (read-only)"
+    "folio:spec-review-ssot — P-7 content domain exclusivity + ADR/research 境界 + P-11 HOW 禁止 (read-only)",
+    "folio:spec-review-temporal — P-4 declarative form + wave-specific narrative 排除 (read-only、 ADR-0029)",
+    "folio:spec-review-fidelity — dual-audience human essence ↔ machine normative の fidelity (read-only、 ADR-0033)"
   ],
   "observations": [
     {
       "id": "S-G",
-      "name": "Phase F 3-agent review が seed violation を flag するか (direct 並列 invocation)",
-      "operation": "fresh session で tests/fixtures/architect-e2e/seed-spec.html を読み、 folio:spec-review-{ears,vocabulary,ssot} を 1 メッセージ内 (Agent tool x3) で並列 spawn → 各 agent が担当軸を read-only review → findings 集約・検出有無を判定",
+      "name": "Phase F 5-agent review が seed violation を各軸で flag するか (direct 並列 invocation)",
+      "operation": "seed-spec.html (5 軸 violation) を 5 agent (folio:spec-review-{ears,vocabulary,ssot,temporal,fidelity}) に 1 workflow で並列 spawn → 各 agent が担当軸を read-only review → findings 集約・検出有無を判定",
       "seeded_violations": {
-        "ears": "§1: <span class=\"ears-shall\">SHALL</span> 欠落 + REQ-ID (REQ-WS-001) 重複",
+        "ears": "§1: REQ-WS-001 重複 (line 44/48) + 両要件の ears-shall/ears-when markup 欠落",
         "vocabulary": "§2: 同一 token entity を 4 呼称 (sync token / sync-token / auth token / credential) で混在 (P-5)",
-        "ssot": "§3: WHY rationale ('because … 2026 Q1 ops review') + HOW script (redis-cli bash snippet) 混入 (P-7 / P-11 越境)"
+        "ssot": "§3: WHY rationale ('because … 2026 Q1 ops review') + HOW script (redis-cli bash) 混入 (P-7 / P-11 越境)",
+        "temporal": "§4: wave-specific past-tense narrative ('Spawn-2 で追加した' / '2026-05-20 の sprint' / '前回の session' / '今回の wave') が REQ-WS-010 を時限化 (P-4 declarative 違反)",
+        "fidelity": "§5: dual-audience card REQ-WS-020 の essence ('server 側を常に採用、 last-write-wins は使わない') が machine normative ('SHALL resolve by last-write-wins, most recent timestamp') と正面矛盾 (構造 floor は PASS、 ceiling のみ捕捉)"
       },
       "expected": {
         "parallel_spawn": true,
         "ears_flagged": true,
         "vocabulary_flagged": true,
-        "ssot_flagged": true
+        "ssot_flagged": true,
+        "temporal_flagged": true,
+        "fidelity_flagged": true,
+        "all_read_only": true
       },
       "observed": {
         "parallel_spawn": true,
         "ears_flagged": true,
         "vocabulary_flagged": true,
-        "ssot_flagged": true
+        "ssot_flagged": true,
+        "temporal_flagged": true,
+        "fidelity_flagged": true,
+        "all_read_only": true,
+        "findings_count": { "ears": 3, "vocabulary": 2, "ssot": 2, "temporal": 4, "fidelity": 2 }
       },
       "findings": {
-        "ears": "REQ-WS-001 重複 (critical) + 両要件の ears-shall SHALL markup 欠落 (high) を検出。 加えて WHEN 句 span markup 欠落・pattern 種別誤り・trace 不在を補足検出。",
-        "vocabulary": "単一 token entity が sync token / sync-token / auth token / credential の 4 呼称混在 = P-5 違反 (high)、 4 表記すべて列挙。 hyphen 表記ゆれも medium で補足。",
-        "ssot": "§3 の WHY rationale を P-7 越境 (high)、 redis-cli bash script (shebang + CLI 構文 + TTL) を P-11 越境 (high) として検出。 WHY/HOW 両越境を flag。"
+        "ears": "REQ-WS-001 重複 (critical) + §1 両要件の ears-shall (SHALL keyword) / ears-when markup 欠落で EARS template 不適合 (high×2) を検出。 §4/§5 の conforming な EARS markup は誤検出せず、 §2 vocab / §5 fidelity を out-of-scope と認識し軸境界遵守。",
+        "vocabulary": "§2 の単一 token entity が sync token / sync-token / auth token / credential の 4 呼称混在 = P-5 違反 (high)、 4 表記すべて列挙。 title-case vs slug の表記ゆれを low で補足。",
+        "ssot": "§3 の WHY rationale (Redis 選定理由 + 代替案 Memcached 比較) を P-7 越境 (high)、 redis-cli bash script (shebang + CLI 構文 + TTL 引数) を P-11 越境 (high) として検出。 WHY/HOW 両越境を flag。",
+        "temporal": "§4 の wave/日付固有 narrative が REQ-WS-010 を sprint 時点に時限化 (critical)、 'Spawn-2 で追加した' / '前回の session' の過去形作業ログ (high)、 '今回の wave...引き下げている' の wave 固有時点依存 (medium)、 §3 の '2026 Q1 ops review' dated narrative (low) を検出。 declarative form 破壊を漏れなく flag。",
+        "fidelity": "§5 essence ('server 側固定採用 + last-write-wins 不使用') が machine normative (last-write-wins / most-recent-timestamp) と二重矛盾 (規範戦略の直接否定 + server-authoritative への drift) = critical 'human view が SSoT と正反対の動作を誤学習' を検出。 構造項目 (id/badge/ears-id 整合・aria-hidden 不在・pattern semantic) は floor 被覆ゆえ out-of-scope と認識し意味層に専念。"
       },
       "result": "PASS",
-      "interpretation": "3 review agent が 1 メッセージで並列 spawn 成功 (parallel_spawn)、 各 agent が担当軸の期待 violation を severity 付き finding で漏れなく flag (誤検出なし)、 read-only (Read/Grep のみ、 ファイル未編集)、 各 agent は担当外 2 軸を out-of-scope と認識し境界遵守 (Phase F の軸分担が機能)。 REQ-VER-016(b) の agent 検出能力を実証。"
+      "interpretation": "5 review agent が 1 workflow で並列 spawn 成功 (parallel_spawn)、 各 agent が担当軸の planted violation を severity 付き finding で漏れなく flag (誤検出なし)、 全 agent read-only (Read/Grep のみ、 ファイル未編集)、 各 agent は担当外の軸を out-of-scope と認識し境界遵守 (Phase F の軸分担が 5 軸でも機能)。 とくに新規 2 agent (temporal = ADR-0029 / fidelity = ADR-0033) が自軸の violation を確実に検出 = 拡張 Phase F set の検出能力を実証。 REQ-VER-016(b) を最新 5-agent 構成で被覆。"
     }
   ],
   "summary": {
@@ -53,6 +67,6 @@
     "pass": 1,
     "fail": 0,
     "pending": 0,
-    "verdict": "PASS — REQ-VER-016 (b) の agent 検出能力を fresh session で実証 (3 軸 flag + 並列 spawn + read-only + 境界遵守)。 (a) structural は agent-structure.yaml で決定的被覆済。 残: full /folio-architect 7-Phase orchestration walk (Phase A〜G、 user 主導) は別途。"
+    "verdict": "PASS — REQ-VER-016 (b) の agent 検出能力を現行 5-agent 構成で実証 (5 軸 flag + 並列 spawn + read-only + 境界遵守)。 ADR-0029 temporal + ADR-0033 fidelity の追加分を含む Phase F set 全体が seed violation を漏れなく検出。 (a) structural は agent-structure.yaml で 5 agent 決定的被覆済。 同 session の #117 ceiling (wf_555a00f7) でも 5 agent が実 spec edit を live review し稼働を二重実証。 残: full /folio-architect 7-Phase orchestration walk (Phase A〜G、 user 主導) は別途。 #118 の architect 部分 = closed。"
   }
 }

@@ -73,5 +73,11 @@
     "pass": 2,
     "fail": 0,
     "verdict": "SessionStart context injection が startup (S-F) + compact (S-F-compact) 両 source で実 session 動作を実証 (Tier 1 digest 注入 PASS×2)。 Track 2 の signature 機能をライブ被覆。 compact source は 2026-05-25 の実 /compact で検証し ADR-0007 §2.1 を docs-canonical → e2e-verified に格上げ (ADR-0017 §2.4 の integration-only 半分)。 PreCompact hook は stdout 非注入で除去済 (live session の stale 登録は次 reload で収束)。"
+  },
+  "revalidation_2026_06_01": {
+    "date": "2026-06-01",
+    "trigger": "in-session SessionStart:compact (本 continued session の起動時に実発火)",
+    "observed": "本 session 起動時の SessionStart:compact hook が inject-inventory.sh → folio prime stdout を context に注入。 注入実体は『# 33 specs · folio 0.5.0-draft』+ Tier 1 digest に加え『# object-graph index — 86 canonical objects (ADR-0034)』section (id [class] ssot-location の一覧) を含む (256 行)。 ※86 は #117 (REQ-VER-020 追加) 前の session-start 時点値、 現在は 87。",
+    "interpretation": "SessionStart 注入機構 (inject-inventory.sh = exec folio prime) は xref SHIP で不変だが、 注入 payload が xref AI-graph projection (object-graph index) を運ぶようになった。 旧 observation (2026-05-25、 15 specs・object-graph 無し) から、 xref の AI-graph が SessionStart 経路で実際に agent context へ到達することを live (本 session) で確認。 mechanism は not stale (script 不変)、 payload 成長を被覆。 #118。"
   }
 }
