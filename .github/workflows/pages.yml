@@ -1,6 +1,9 @@
 # folio spec site — GitHub Pages deploy (OSS public)。
 # repo root を静的サイトとして配信する (specs は ../../common.css 等の相対 path ゆえ root 配信で解決)。
 # 閲覧 = ローカル python http.server の恒久・universal 版 (host 非依存、 常時稼働)。
+#
+# 公開範囲: artifact = checkout 済の tracked tree のみ (untracked な作業状態は CI に存在しない)。
+# ゆえに作業状態 (.claude-session/ 等) は .gitignore 必須 — commit されない限り path:. でも public-leak しない。
 name: Deploy spec site to GitHub Pages
 
 on:

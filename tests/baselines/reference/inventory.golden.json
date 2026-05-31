@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-30T14:51:30Z",
+  "generatedAt": "2026-05-31T22:17:53Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1418,6 +1418,12 @@
         "essence": "folio validate は glossary gate を追加検査する: marked term (&lt;span class=\"term\" data-term&gt;) の data-term が vocabulary.yaml に解決し (resolve)、 data-tooltip が definition と一致する (consistency)。 folio fix は marked term の tooltip を definition から materialize する (best-effort、 gap-lint なし、 rules §9.5 / ADR-0034 §2.8)。"
       },
       {
+        "id": "REQ-VER-020",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-020",
+        "essence": "folio validate は dual-audience-structural gate を検査する: data-audience=\"human\" requirement container (verbose section.req + compact details.spec-row の両 form) の machine 対応部存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を強制し、 違反は exit 1。 意味的 fidelity は floor 対象外 = ceiling (spec-review-fidelity agent)。"
+      },
+      {
         "id": "REQ-XREF-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-xref-001",
@@ -1706,6 +1712,10 @@
       {
         "from": "spec/verification.html",
         "to": "ADR-0027"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0033"
       },
       {
         "from": "spec/verification.html",
