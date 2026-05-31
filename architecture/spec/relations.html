@@ -10,6 +10,7 @@
 <meta name="folio-xref-completeness" content="enabled">
 <title>folio — relations (v0.5.0-draft)</title>
 <link rel="stylesheet" href="../../common.css">
+<script src="../assets/mermaid.min.js" defer></script>
 <script type="application/ld+json">
 {
   "@context": {
@@ -94,6 +95,18 @@
 <aside class="reader-persona" data-persona="AI Agent">
   <p>AI agent (spec edit を行う Claude Code 等) は、 spec 編集前に本 spec § 1〜§ 3 を必読する。 編集対象 spec の <code>&lt;head&gt;</code> JSON-LD を更新する際は §1〜§2 の語彙のみを使い、 独自命名を導入しない (MUST)。 不足する関係性は §5 経由で folio amendment ADR として提案する。</p>
 </aside>
+<figure class="diagram" data-diagram-type="relations-pipeline">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
+flowchart LR
+  accTitle: in-band relation から AI 消費までの data pipeline
+  accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ。
+  HEAD["各 spec の head JSON-LD<br/>in-band relation (§3)"]
+  HEAD -->|"folio inventory<br/>が architecture/ を scan"| INV["inventory.json<br/>3-tier index (§4)"]
+  INV -->|"folio prime"| DIG["Tier 1 digest<br/>(per-spec entry、§4.2)"]
+  DIG -->|"SessionStart hook 注入"| AI(["AI agent の初期 context"])
+</pre>
+</figure>
 </section>
 
 <!-- ====================================================================
@@ -536,6 +549,23 @@
   </tbody>
 </table>
 
+<figure class="diagram" data-diagram-type="relation-lifecycle">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
+flowchart LR
+  accTitle: 双方向 relation の detect-remediate lifecycle
+  accDescr: spec A が forward relation (dc:references → spec B) を head JSON-LD に宣言する。 Phase X3+ tooling 着地後は、 folio fix が target spec B に対応 reverse relation を auto-materialize し、 folio validate の broken-reverse gate が欠落 reverse を violation として報告する。 結果として relation graph は双方向に保たれる。
+  DECL["spec A: forward 宣言<br/>dc:references → spec B<br/>(REQ-REL-001)"]
+  DECL --> GATE{"folio validate<br/>broken-reverse gate<br/>(REQ-REL-004、 Phase X3+)"}
+  GATE -->|"reverse 欠落"| VIO["broken-reverse<br/>violation 報告"]
+  VIO --> FIX["folio fix<br/>(REQ-REL-002、 Phase X3+)"]
+  GATE -->|"reverse 有り"| OK["clean"]
+  FIX --> MAT["spec B に dc:isReferencedBy → spec A<br/>を materialize"]
+  MAT --> BIDI(["relation graph 双方向<br/>(bidirectional)"])
+  OK --> BIDI
+</pre>
+</figure>
+
 <h3 id="s5-2-precedent">§5.2 Precedent (log4brains pattern)</h3>
 
 <aside class="informative">
@@ -606,5 +636,23 @@
 </ul>
 </section>
 
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.mermaid) {
+    mermaid.initialize({
+      startOnLoad: true,
+      securityLevel: 'antiscript',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#2a4d6e',
+        primaryTextColor: '#ffffff',
+        lineColor: '#2a4d6e',
+        secondaryColor: '#5ac8b8',
+        tertiaryColor: '#f5f8fa'
+      }
+    });
+  }
+});
+</script>
 </body>
 </html>
