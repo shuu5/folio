@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-xref-completeness" content="enabled">
+<title>xref mask codeblock canary (opt-in、 #116 mask-01/02)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./sample.html", "@type": "schema:TechArticle", "dc:title": "xref mask codeblock canary" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. code 例内の token は xref-completeness で mask される</h2>
+<p>JSON-LD の例: <code>{ "@id": "x < REQ-VER-001 ref" }</code> のように生 lt を含めて書く。</p>
+<p>コマンドの例: <code>folio validate &&
+echo ADR-0033 を参照</code> を実行する。</p>
+<p>本 doc は P-5 に従い、 設計判断 ADR-0033 を踏まえて canonical naming を守る。</p>
+</section>
+</body>
+</html>

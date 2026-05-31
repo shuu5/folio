@@ -333,10 +333,10 @@
 <p><code>@id</code> および参照値 (<code>{ "@id": "..." }</code>) は以下の規則で記述する MUST。</p>
 
 <ol>
-  <li><strong>自己参照 (self)</strong>: <code>"@id": "./<self-filename>"</code> 形式で、 file 名のみ記述。 例: <code>"./relations.html"</code>。</li>
-  <li><strong>同一 dir 内 spec</strong>: <code>"@id": "./<filename>"</code>。 例: <code>"./rules.html"</code>。</li>
-  <li><strong>上位 dir spec</strong>: <code>"@id": "../<path>"</code>。 例: <code>"./constitution.html"</code>。</li>
-  <li><strong>section anchor</strong>: <code>"@id": "<path>#<section-id>"</code>。 例: <code>"./rules.html#s4-format"</code>。</li>
+  <li><strong>自己参照 (self)</strong>: <code>"@id": "./&lt;self-filename&gt;"</code> 形式で、 file 名のみ記述。 例: <code>"./relations.html"</code>。</li>
+  <li><strong>同一 dir 内 spec</strong>: <code>"@id": "./&lt;filename&gt;"</code>。 例: <code>"./rules.html"</code>。</li>
+  <li><strong>上位 dir spec</strong>: <code>"@id": "../&lt;path&gt;"</code>。 例: <code>"./constitution.html"</code>。</li>
+  <li><strong>section anchor</strong>: <code>"@id": "&lt;path&gt;#&lt;section-id&gt;"</code>。 例: <code>"./rules.html#s4-format"</code>。</li>
   <li><strong>絶対 URL 禁止</strong>: <code>architecture/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の vocabulary URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。</li>
 </ol>
 

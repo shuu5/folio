@@ -297,10 +297,12 @@ run_cli_scaffold() {
 # ============================================================================
 run_cli_fix() {
   local scenario="$1"
-  local req_id fixture exp_exit
+  local req_id fixture exp_exit post_fix_require
   req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
   fixture=$(yq -r '.fixture' "$scenario")                  # SCRIPT_DIR (verification dir) 相対の fixture tree
   exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
+  post_fix_require=$(yq -r '.post_fix_require // ""' "$scenario")   # (任意) post-fix tree に grep -F で残るべきリテラル
+                                                           # (mask-01 injection 等 validate 不可視な code 破壊を behavioral に捕捉、 #116)
 
   local -a cmd=()
   while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
@@ -344,6 +346,13 @@ run_cli_fix() {
     local post_exit=$?
     if [[ "$post_exit" != "0" ]]; then
       ok=false; reasons+=("post-fix validate not clean (exit ${post_exit}; reverse not materialized?)")
+    fi
+    # (e) post_fix_require: 指定リテラルが post-fix tree に grep -F で残る (validate 不可視な code 破壊
+    #     = mask-01 injection 等を behavioral に捕捉。 code 行が wrap で破壊されるとリテラルが消えて FAIL)
+    if [[ -n "$post_fix_require" ]]; then
+      if ! grep -rqF -- "$post_fix_require" "$tmp"; then
+        ok=false; reasons+=("post_fix_require not found in post-fix tree: '${post_fix_require}' (code 例が fix で破壊された可能性 = mask-01 injection)")
+      fi
     fi
     # (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
     local snap1 snap2 refix_exit

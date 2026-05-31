@@ -1,0 +1,30 @@
+schema_version: "0.1"
+req_id: "REQ-VER-018"
+ears_pattern: "event-driven"
+kind: "cli-fix"
+description: |
+  #116 masking hole 第2層の回帰 canary。 inline <code> 内の Class-A token が detect (folio_prose_only)
+  と remediate (build_mask) の両側で mask され、 fix が code 例を破壊せず・gate が code 内 token を
+  orphan 誤検出しないことを固定する。 fixture sample.html §1:
+    (1) mask-02 stuck-RED canary = 生 < を含む inline code 内の REQ-VER-001 (code のみ)。 detect が生 < で
+        mask を破ると REQ-VER-001 を prose mention として leak するが build_mask は char-state で mask する
+        ため fix が wrap できず orphan stuck → post-fix validate (c) が RED。 修正後は detect も mask し clean。
+    (2) mask-01 injection canary = 複数行 inline code 2 行目の ADR-0033 (prose にも出現)。 build_mask の
+        incode が per-line に regress すると prose より先に出る code 内 ADR-0033 を wrap し code 例
+        (echo ADR-0033 を参照) を破壊する。 injection は validate 不可視 (code 内へ wrap されても present 扱い
+        で緑) ゆえ、 post_fix_require で code 行リテラルの保全を直接 grep -F assert する (本 fixture の主眼)。
+    (3) control = prose の P-5 + ADR-0033 (pre-fix RED を駆動し fix が prose 側を wrap)。
+  cli-fix harness で (a) pre-fix RED (b) fix exit 0 (c) post-fix validate clean (d) idempotent +
+  (e) post_fix_require: code 行が無傷で残る を assert。 detect regress→(c) RED / build_mask regress→(e) fail。
+  ADR-0034 §2.5 (code-exclusion invariant) / REQ-VER-015 (detect↔remediate parity、 inline-code scope) / REQ-VER-017/018。
+  注: detect↔remediate parity は本修正で inline <code> 次元のみ達成。 HTML コメント・tag 属性内 token の
+  parity は #119 で回収 (corpus latent)。
+
+# --- cli-fix scenario (fixture tree を temp copy し RED→fix→GREEN→idempotent、 runner.sh run_cli_fix) ---
+fixture: "fixtures/xref-mask-codeblock"
+command: ["fix"]
+# post-fix tree に必ず残るべきリテラル (mask-01 injection が起きると code 行が破壊され grep -F が失敗する)
+post_fix_require: "echo ADR-0033 を参照"
+
+expect:
+  exit_code: 0

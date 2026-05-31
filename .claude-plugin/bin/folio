@@ -687,15 +687,29 @@ folio_vocab_forbidden() {
 }
 
 # body から <pre>/<script>/<style>/machine-readable aside (block) を行除去し、 inline
-# <code>...</code> は span 単位で除去した prose を stdout (#112: line-granular → span-granular。
-# inline code を含む行の code 外 prose token も拾えるようにする)。 vocabulary / dual-audience-3 /
-# xref scan が code 例・機械可読ブロック内の文字列で誤検出しないため。 block (<pre> 内の <code> 含む)
-# は従来通り行ごと除去 (skip カウンタ)、 inline <code> のみ gsub で span 除去。
+# <code>...</code> は span 単位で除去した prose を stdout (#112/#116: line-granular gsub →
+# char-state mask。 inline code を含む行の code 外 prose token も拾いつつ、 複数行に跨る inline
+# <code> (incode を行間 carry = mask-01) と code 内の生 < (char-state ゆえ旧 [^<]* に依存しない
+# = mask-02) も正しく mask する)。 vocabulary / dual-audience-3 / xref scan / glossary が code 例・
+# 機械可読ブロック内の文字列で誤検出しないため。 block (<pre> 内の <code> 含む) は行ごと除去 (skip
+# カウンタ)、 inline <code> は build_mask と同型の char-state machine で span 除去 (detect↔remediate
+# 対称、 REQ-VER-015)。
 folio_prose_only() {
   printf '%s\n' "$1" | awk '
+    function mask_inline_code(s,   i,c,n,out){
+      n=length(s); out=""
+      for(i=1;i<=n;i++){
+        c=substr(s,i,1)
+        if(incode){ out=out " "; if(c==">" && substr(s,i-6,7)=="</code>") incode=0; continue }
+        if(c=="<" && substr(s,i,5)=="<code" && (substr(s,i+5,1)==" " || substr(s,i+5,1)==">")){ incode=1; out=out " "; continue }
+        out=out c
+      }
+      return out
+    }
+    BEGIN{ skip=0; incode=0 }
     /<(pre|script|style)[ >]/{skip++}
     /<aside class="machine-readable"/{skip++}
-    skip==0{ line=$0; gsub(/<code[ >][^<]*<\/code>/, " ", line); print line }
+    skip==0{ print mask_inline_code($0) }
     /<\/(pre|script|style|aside)>/{if(skip>0)skip--}
   '
 }
@@ -968,10 +982,10 @@ folio_xref_wrap_doc() {
   awk -v mapfile="$mapfile" '
     BEGIN{ nt=0
       while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=3){ nt++; toks[nt]=a[1]; href[a[1]]=a[2]; tip[a[1]]=a[3]; wrapped[a[1]]=0 } }
-      ANC=0; skip=0 }
+      ANC=0; skip=0; incode=0 }
     function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
-    function build_mask(s,   i,c,mk,incode){
-      mk=""; incode=0   # incode は build_mask local (行内 reset) = inline <code> 専用。 block <pre><code> は skip が担当
+    function build_mask(s,   i,c,mk){
+      mk=""   # incode は global (ANC と同様 行間 carry) = 複数行に跨る inline <code> を mask (mask-01)。 block <pre><code> は skip が担当
       for(i=1;i<=length(s);i++){
         c=substr(s,i,1)
         if(ANC){ mk=mk " "; if(c==">" && substr(s,i-3,4)=="</a>") ANC=0; continue }
@@ -991,11 +1005,11 @@ folio_xref_wrap_doc() {
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
       wrappable = (skip==0) && (line !~ /<h[23][ >]/)
-      anc_in=ANC; intag=0
+      anc_in=ANC; incode_in=incode; intag=0
       if(wrappable){
         for(ti=1; ti<=nt; ti++){
           tk=toks[ti]; if(wrapped[tk]) continue
-          ANC=anc_in; intag=0; mk=build_mask(line)
+          ANC=anc_in; incode=incode_in; intag=0; mk=build_mask(line)
           start=1
           while(1){
             sub_mk=substr(mk,start); p=index(sub_mk,tk); if(p==0) break
@@ -1011,7 +1025,7 @@ folio_xref_wrap_doc() {
           }
         }
       }
-      ANC=anc_in; intag=0; build_mask(line)   # 最終 line で ANC を次行へ正しく carry
+      ANC=anc_in; incode=incode_in; intag=0; build_mask(line)   # 最終 line で ANC/incode を次行へ carry
       if(line ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
       print line
     }
@@ -1028,8 +1042,9 @@ folio_xref_wrap_doc() {
 # 1 行ずつ stdout (glossary tooltip の生成元 = SSoT、 ADR-0034 §2.8)。 yq→JSON 後 jq -r '(.[0], .[1])'
 # で canonical/definition を交互行に raw 出力し bash で pair 読みする (yq/jq の @tsv は " を CSV-quote-wrap・
 # backslash/tab を C-escape して tooltip を壊すため回避)。 attribute escape (& < > ") は下記 sed で行う。
-# definition は単一行前提 (rules §3 schema)。 vocabulary.yaml / yq / jq / definition 不在は無出力
-# (= glossary gate skip)。
+# definition の tab/改行は jq gsub で space に正規化 (TSV/交互行 transport の delimiter desync を防ぐ、
+# #116 gloss-tab; rules §3 は単一行 schema だが robustness で defensive)。 vocabulary.yaml / yq / jq /
+# definition 不在は無出力 (= glossary gate skip)。
 folio_glossary_map() {
   local root_abs="$1" cand vf=""
   for cand in "${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml"; do
@@ -1040,7 +1055,7 @@ folio_glossary_map() {
   command -v jq >/dev/null 2>&1 || return 1
   local c def line state=0
   yq -o=json -I=0 '[.terms[] | select(.definition) | [.canonical, .definition]]' "$vf" 2>/dev/null \
-    | jq -r '.[] | (.[0], .[1])' 2>/dev/null \
+    | jq -r '.[] | ((.[0]|gsub("[\t\n]+";" ")), (.[1]|gsub("[\t\n]+";" ")))' 2>/dev/null \
     | while IFS= read -r line; do
         if [[ "$state" -eq 0 ]]; then c="$line"; state=1; continue; fi
         def="$line"; state=0
