@@ -110,19 +110,19 @@
 
 <figure class="diagram">
 <pre class="mermaid">
-%%{init: {'theme': 'base', 'flowchart': {'curve': 'basis'}}}%%
+%%{init: {'theme': 'base'}}%%
 graph TD
   accTitle: spec/ cluster dependency graph
   accDescr: spec/ 配下 4 file (rules / folio-self-spec / relations / verification) と constitution.html の依存関係を示す graph TD。 実線 = strong dependency (depends-on / hasPart)、 点線 = soft reference (extends / references)。
-  CONST["constitution.html<br/>(spec/ 内、 不変・scan 対象外)"]:::frozen
-  RULES["rules.html<br/>(Layer 1 universal rules)"]:::active
-  FSS["folio-self-spec.html<br/>(folio Layer 0 self-spec)"]:::active
-  REL["relations.html<br/>(関係性管理 spec)"]:::active
-  README["README.html<br/>(spec/ index)"]:::index
+  CONST["constitution.html<br/>frozen"]:::frozen
+  RULES["rules.html<br/>Layer 1 rules"]:::active
+  FSS["folio-self-spec.html<br/>Layer 0 self-spec"]:::active
+  REL["relations.html<br/>relations spec"]:::active
+  README["README.html<br/>spec index"]:::index
 
   RULES -.->|extends| CONST
   FSS -.->|extends| CONST
-  VER["verification.html<br/>(sandbox verification framework)"]:::active
+  VER["verification.html<br/>sandbox"]:::active
   FSS -->|"references §10"| RULES
   REL -->|depends-on| RULES
   REL -.->|"references §2"| CONST
@@ -134,11 +134,11 @@ graph TD
   README -->|hasPart| FSS
   README -->|hasPart| REL
 
-  classDef frozen fill:#fff3e0,stroke:#e65100,stroke-width:2px
-  classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-  classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px
+  classDef frozen fill:#fff3e0,stroke:#e65100,stroke-width:2px,color:#333333
+  classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#333333
+  classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#333333
 </pre>
-<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (frozen・scan 対象外)、 spec/ 配下 3 file は draft (active editing)。</figcaption>
+<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (frozen・scan 対象外)、 spec/ 配下 4 file (rules / folio-self-spec / relations / verification) は draft (active editing)。</figcaption>
 </figure>
 </section>
 
@@ -354,16 +354,14 @@ graph TD
 </section>
 
 <script>
-document.addEventListener('DOMContentLoaded', async () => {
+window.addEventListener('DOMContentLoaded', async () => {
   if (!window.mermaid) return;
   mermaid.initialize({
     startOnLoad: false,
+    securityLevel: 'antiscript',
     theme: 'base',
-    flowchart: { useMaxWidth: false },
-    themeVariables: {
-      fontFamily: 'inherit',
-      fontSize: '14px'
-    }
+    // brand themeVariables は省略 — §3 図は light classDef fill ゆえ primaryTextColor:'#ffffff' を継承すると text contrast 不足になる (他 living spec は dark fill で brand palette 使用)
+    flowchart: { useMaxWidth: false, curve: 'basis' }
   });
   try { await mermaid.run(); } catch (e) {}
   /* 横スクロールが発生した図のみ keyboard-focusable 化 (WCAG 2.2 SC 2.1.1、 rules §4.6) */
