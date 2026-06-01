@@ -1,35 +1,135 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<!-- folio:generated source=folio-build do-not-edit -->
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>folio architecture — index</title>
+<meta name="folio-doc-type" content="nav-index">
+<meta name="folio-generated" content="folio-build">
+<meta name="folio-status" content="active">
+<title>architecture — index</title>
 <link rel="stylesheet" href="../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./index.html",
+  "@type": "schema:CollectionPage",
+  "dc:title": "architecture index"
+}
+</script>
 </head>
 <body>
+
 <header class="doc-header">
-  <h1>folio architecture</h1>
-  <p>folio 自身の design-intent 空間 (P-7 3-domain、 self-host)。 各 cluster の README.html が索引。</p>
+  <h1>architecture — index</h1>
+  <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
 </header>
 
-<main>
-<h2>Clusters</h2>
-<ul>
-  <li><a href="spec/README.html">spec/</a> — constitution (13 不変原則) / rules / folio-self-spec / relations / verification</li>
-  <li><a href="decisions/README.html">decisions/</a> — ADR cluster (ADR-0001 〜 ADR-0030)</li>
-  <li><a href="research/README.html">research/</a> — exploration (要望 + 業界調査)</li>
-</ul>
+<aside class="informative">
+  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は下記 curated region に置きます。</p>
+</aside>
 
+<!-- folio:nav-curated -->
+<section class="curated">
+<h2>はじめに</h2>
+<p>folio 自身の design-intent 空間 (P-7 3-domain、 self-host)。 cluster 一覧と各 doc は下記、 各 cluster の README.html が索引。 この index は <code>folio build</code> が graph から生成し、 この curated region のみ手で編集する。</p>
 <h2>Key documents</h2>
 <ul>
-  <li><a href="spec/constitution.html">constitution.html</a> — 不変 13 原則 (編集禁止)</li>
+  <li><a href="spec/constitution.html">constitution.html</a> — 不変 13 原則 (編集禁止、 graph 走査外ゆえ手 pin)</li>
   <li><a href="spec/folio-self-spec.html">folio-self-spec.html</a> — Layer 0 architecture spec</li>
-  <li><a href="spec/rules.html">rules.html</a> — Layer 1 consumer 向け universal rules (markup / naming / EARS / Mandatory Actions)</li>
+  <li><a href="spec/rules.html">rules.html</a> — Layer 1 consumer 向け universal rules</li>
   <li><a href="spec/verification.html">verification.html</a> — sandbox verification framework spec</li>
-  <li><a href="decisions/ADR-0030-v1-stability-criteria.html">ADR-0030</a> — v1.0 stability criteria (proposed)</li>
 </ul>
-
 <p><a href="../">&larr; folio home</a></p>
-</main>
+</section>
+<!-- /folio:nav-curated -->
+<section id="cluster-spec" class="nav-cluster">
+<h2>spec — design intent (WHAT)</h2>
+<details open>
+<summary>active <span class="nav-count">(1)</span></summary>
+<ul>
+  <li><a href="spec/README.html">folio framework spec index</a> <span class="nav-meta">cluster-readme</span></li>
+</ul>
+</details>
+<details open>
+<summary>draft <span class="nav-count">(4)</span></summary>
+<ul>
+  <li><a href="spec/folio-self-spec.html">folio self-spec</a> <span class="nav-meta">self-spec</span></li>
+  <li><a href="spec/relations.html">folio relations spec</a> <span class="nav-meta">spec</span></li>
+  <li><a href="spec/rules.html">folio rules</a> <span class="nav-meta">rules</span></li>
+  <li><a href="spec/verification.html">folio verification spec</a> <span class="nav-meta">spec</span></li>
+</ul>
+</details>
+</section>
+
+<section id="cluster-decisions" class="nav-cluster">
+<h2>decisions — ADR (WHY)</h2>
+<details open>
+<summary>active <span class="nav-count">(1)</span></summary>
+<ul>
+  <li><a href="decisions/README.html">folio decisions index</a> <span class="nav-meta">cluster-readme</span></li>
+</ul>
+</details>
+<details>
+<summary>accepted <span class="nav-count">(25)</span></summary>
+<ul>
+  <li><a href="decisions/ADR-0001-architecture-rules-split.html">ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0003-plugin-architecture.html">ADR-0003 — folio plugin minimal architecture</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0004-jsonld-lint-mechanism.html">ADR-0004 — JSON-LD lint mechanism</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0006-caller-marker-hook.html">ADR-0006 — caller marker hook (hybrid env var OR marker file)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0007-context-injection.html">ADR-0007 — context injection (SessionStart + PreCompact, Beads-inspired)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0013-verification-framework.html">ADR-0013 — sandbox verification framework</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0015-sandbox-vs-experiment-verified.html">ADR-0015 — sandbox verification vs experiment-verified の境界</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0017-unit-integration-boundary.html">ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0018-cli-golden-harness.html">ADR-0018 — CLI golden-diff verification harness</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0019-path-boundary-pragmatic.html">ADR-0019 — path boundary hook (Option Pragmatic)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0020-validate-scope.html">ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0021-constitution-x4-amendment.html">ADR-0021 — constitution X4 amendment (脱-instance + 3-domain + P-13 新設)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0022-x4-0-canonical-layout.html">ADR-0022 — X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023 — X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0024-folio-init-scope.html">ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0025-folio-fix-bidirectional.html">ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0026-test-placement-model.html">ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0027-x4-d-architect-skill-review-agents.html">ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028 — X5-γ 二層 enforcement モデル + prose-gate 機械化 (validate に REQ-CI-013/014/015、 011/012 は agent-only、 minimal CI)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0029-phase-f-agent-set.html">ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0030-v1-stability-criteria.html">ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0031-mattpocock-authoring-absorption.html">ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0032-v1-goal-refinement-defer.html">ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0033-dual-audience-hub.html">ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0034-object-term-xref-system.html">ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</a> <span class="nav-meta">adr</span></li>
+</ul>
+</details>
+<details open>
+<summary>proposed <span class="nav-count">(2)</span></summary>
+<ul>
+  <li><a href="decisions/ADR-0035-walkable-architecture-nav-derive.html">ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)</a> <span class="nav-meta">adr</span></li>
+  <li><a href="decisions/ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</a> <span class="nav-meta">adr</span></li>
+</ul>
+</details>
+</section>
+
+<section id="cluster-research" class="nav-cluster">
+<h2>research — exploration</h2>
+<details open>
+<summary>active <span class="nav-count">(1)</span></summary>
+<ul>
+  <li><a href="research/README.html">folio research index</a> <span class="nav-meta">cluster-readme</span></li>
+</ul>
+</details>
+<details open>
+<summary>draft <span class="nav-count">(1)</span></summary>
+<ul>
+  <li><a href="research/plugin-sandbox-verification-research.html">folio plugin sandbox verification research</a> <span class="nav-meta">research</span></li>
+</ul>
+</details>
+<details open>
+<summary>superseded <span class="nav-count">(2)</span></summary>
+<ul>
+  <li><a href="research/constitution-x4-amendment-proposal.html">folio constitution X4 amendment proposal</a> <span class="nav-meta">planning</span></li>
+  <li><a href="research/x4-plan.html">folio Phase X4 分解 + 着手計画</a> <span class="nav-meta">planning</span></li>
+</ul>
+</details>
+</section>
+
 </body>
 </html>

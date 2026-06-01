@@ -13,6 +13,11 @@ files checked: 3 · relations checked: 0
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
   [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [WARN] cluster-reachability
   [OK] ears-coverage
+
+warnings (1):
+  spec/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
 
 clean: 0 violations

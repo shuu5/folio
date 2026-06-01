@@ -1,0 +1,18 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-002"
+ears_pattern: "unwanted-behavior"
+kind: "cli-golden"
+description: |
+  生成 index.html (三重 marker 付き) の curated region に存在しない file への <a href> を持つ
+  fixture corpus に対し、 folio validate の nav-dead-link gate (ADR-0035 §2.5、 gate n) が壊れた
+  href を [FAIL] 検出し exit 1 になることを実証する (regen-drift は curated を round-trip するため
+  [OK] のまま = dead-link が curated 手 link rot を独立に捕捉することの isolation)。
+  fixture の index.html は build 生成後に curated へ broken pin (spec/MISSING-doc.html) を手注入済。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-deadlink"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-deadlink.golden.txt"
+
+expect:
+  exit_code: 1

@@ -13,6 +13,8 @@ files checked: 3 · relations checked: 0
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
   [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [OK] nav-regen-drift
+  [OK] nav-dead-link
+  [OK] cluster-reachability
   [OK] ears-coverage
 
 clean: 0 violations

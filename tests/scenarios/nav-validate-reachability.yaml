@@ -1,0 +1,19 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-003"
+ears_pattern: "unwanted-behavior"
+kind: "cli-golden"
+description: |
+  self-root (spec/ に @type FolioConstitution を持つ = framework 本体相当) かつ research/ dir が
+  scannable doc を 1 つも持たない (JSON-LD head 無し file のみ = empty cluster) fixture corpus に対し、
+  folio validate の cluster-reachability gate (ADR-0035 §2.5、 gate o) が empty cluster を [FAIL]
+  検出し exit 1 になることを実証する。 生成 index は空 research cluster の section を silent 省略する
+  ため regen-drift は [OK] のまま = reachability が regen-drift の盲点 (cluster 丸ごと欠落) を独立に
+  捕捉することの明示テスト (ceiling 指摘の empty-cluster blind spot)。 self-root ゆえ warn でなく block。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-reachability"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-reachability.golden.txt"
+
+expect:
+  exit_code: 1

@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
-root: tests/fixtures/glossary-validate
-files checked: 1 · relations checked: 0
+root: tests/fixtures/nav-validate-consumer-deadend
+files checked: 2 · relations checked: 0
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -11,12 +11,13 @@ files checked: 1 · relations checked: 0
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
-  [FAIL] glossary
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
   [SKIP] nav-dead-link (生成 index 無し)
-  [OK] cluster-reachability
+  [WARN] cluster-reachability
   [OK] ears-coverage
 
-violations (2):
-  spec/t.html [glossary-stale-tooltip] term 'Alpha' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)
-  spec/t.html [glossary-unresolved] term 'Beta' が vocabulary.yaml に definition を持たない (data-term、 §2.8 resolve)
+warnings (1):
+  research/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
+
+clean: 0 violations

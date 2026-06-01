@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-01T14:07:15Z",
+  "generatedAt": "2026-06-01T21:32:47Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -943,6 +943,30 @@
           "spec/folio-self-spec.html"
         ]
       }
+    },
+    {
+      "@id": "decisions/README.html",
+      "title": "folio decisions index",
+      "summary": "folio Layer 0 の ADR cluster",
+      "doc-type": "cluster-readme",
+      "status": "active",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {}
+    },
+    {
+      "@id": "research/README.html",
+      "title": "folio research index",
+      "summary": "user 要望 + 業界調査 + plugin scope の集約",
+      "doc-type": "cluster-readme",
+      "status": "active",
+      "version": "0.5.0-draft",
+      "stakeholders": [],
+      "relations": {}
     },
     {
       "@id": "research/constitution-x4-amendment-proposal.html",

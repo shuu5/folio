@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 35 specs · folio 0.5.0-draft
+# 37 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -161,6 +161,16 @@
 - title: ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)
 - doc-type: adr · status: proposed
 - summary: folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip + click→glossary.html 両方。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は
+
+## decisions/README.html
+- title: folio decisions index
+- doc-type: cluster-readme · status: active
+- summary: folio Layer 0 の ADR cluster
+
+## research/README.html
+- title: folio research index
+- doc-type: cluster-readme · status: active
+- summary: user 要望 + 業界調査 + plugin scope の集約
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

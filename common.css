@@ -709,6 +709,20 @@ section.informative > h2:first-of-type::after {
 section.normative   > h2:first-of-type::after { content: "Normative";   color: var(--folio-normative);   background: rgba(178, 35, 35, 0.10); }
 section.informative > h2:first-of-type::after { content: "Informative"; color: var(--folio-informative); background: rgba(30, 123, 101, 0.10); }
 
+/* --- generated nav clusters (ADR-0035 folio build): informative 枠の見た目を流用しつつ
+   RFC corner label は出さない中立 nav 枠 (cluster は normative/informative の content でなく navigation) --- */
+section.nav-cluster {
+  position: relative;
+  border-left: 3px solid var(--folio-informative);
+  background: linear-gradient(rgba(30, 123, 101, 0.03), rgba(30, 123, 101, 0.03)), var(--folio-surface-normal);
+  padding: 0.25rem 1.25rem;
+  margin: 1.5rem 0;
+}
+section.nav-cluster > details { margin: 0.4rem 0; }
+section.nav-cluster > details > summary { cursor: pointer; font-weight: 600; }
+.nav-count { color: var(--folio-text-secondary); font-weight: 400; font-size: var(--folio-text-caption); }
+.nav-meta  { color: var(--folio-text-secondary); font-size: var(--folio-text-caption); margin-left: 0.3rem; }
+
 /* --- table zebra striping (neutral, dark mode 両対応) --------------- */
 tbody tr:nth-child(even) { background: rgba(127, 127, 127, 0.045); }
 

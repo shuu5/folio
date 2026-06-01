@@ -13,7 +13,12 @@ files checked: 3 · relations checked: 0
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
   [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [FAIL] nav-regen-drift
+  [OK] nav-dead-link
+  [WARN] cluster-reachability
   [OK] ears-coverage
+
+warnings (1):
+  spec/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
 
 violations (1):
   index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)

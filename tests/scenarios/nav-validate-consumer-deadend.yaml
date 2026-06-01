@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-005"
+ears_pattern: "unwanted-behavior"
+kind: "cli-golden"
+description: |
+  consumer corpus (FolioConstitution 無し) が生成 index を *まだ持たない* (folio init 後・folio build 前の
+  自然な状態) かつ research/README が外向き link を持たない dead-end のとき、 cluster-reachability gate が
+  index の有無に依存せず cluster dir scan で dead-end を [WARN] 検出することを実証する (ADR-0035 §1 が中心に
+  据える consumer defect #2)。 reachability は index 由来でなく dir/README graph scan ゆえ生成 index marker に
+  gate しない (ceiling 指摘: index marker に nest すると consumer の post-init/pre-build window で未検査になる)。
+  consumer ゆえ block でなく warn = exit 0 (validate-clean を壊さず authoring を nudge する)。 nav-regen-drift /
+  nav-dead-link は index 由来ゆえ生成 index 無しで [SKIP] のまま (両系の gate-対象の差を golden で固定)。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-consumer-deadend"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-consumer-deadend.golden.txt"
+
+expect:
+  exit_code: 0

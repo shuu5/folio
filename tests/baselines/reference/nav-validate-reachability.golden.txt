@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
-root: architecture
-files checked: 37 · relations checked: 334
+root: tests/fixtures/nav-validate-reachability
+files checked: 3 · relations checked: 0
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -10,11 +10,12 @@ files checked: 37 · relations checked: 334
   [OK] xref-resolve
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
-  [OK] xref-completeness
-  [OK] glossary
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [OK] nav-regen-drift
   [OK] nav-dead-link
-  [OK] cluster-reachability
+  [FAIL] cluster-reachability
   [OK] ears-coverage
 
-clean: 0 violations
+violations (1):
+  research/ [cluster-reachability] cluster dir exists but has 0 nav-reachable docs (empty cluster = regen-drift blind spot、 ADR-0035 §2.5)

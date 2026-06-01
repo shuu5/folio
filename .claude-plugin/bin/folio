@@ -1253,6 +1253,7 @@ folio_cmd_validate() {
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
   local nav_drift_fail=0 nav_seen=0   # gate (m) nav-regen-drift (ADR-0035、 top-level 生成 index、 marker 無し=SKIP keystone)
+  local nav_deadlink_fail=0 nav_reach_fail=0 nav_reach_warn=0 nav_reach_seen=0   # gate (n) dead-link / (o) cluster-reachability (ADR-0035 §2.5)
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
   local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
@@ -1425,12 +1426,11 @@ folio_cmd_validate() {
     violations+=("$uline"); xref_uniq_fail=1
   done < <(folio_xref_uniqueness_check "$root_abs")
 
-  # --- gate (m) nav-regen-drift — top-level <root>/index.html (生成 walkable nav、 ADR-0035 §2.5) が
-  #     graph から再生成した emit と byte 一致するか。 marker 判定は anchored folio_extract_meta (ADR §2.4
-  #     idiom、 <head> の実 <meta> に anchor、 escaped/prose 言及に誤反応しない) で folio-generated==folio-build
-  #     の時のみ検査。 marker 無し = hand-authored/未生成 = 対象外 = no-op (keystone: 現 corpus の hand-authored
-  #     index は SKIP で validate-clean を保つ)。 dead-link / cluster-reachability は nav-region を持つ Slice 2
-  #     で独立に意味を持つため本 slice では regen-drift に集中する (完全生成 index では両者は regen-drift に内包)。 ---
+  # --- gate (m) nav-regen-drift + (n) nav-dead-link — top-level <root>/index.html (生成 walkable nav、
+  #     ADR-0035 §2.5) を検査。 両 gate は *index 由来* (regen-drift は index を emit と byte-diff、 dead-link
+  #     は index 自身の <a href> を解決) ゆえ、 生成 index の存在 (folio-generated==folio-build marker、 anchored
+  #     folio_extract_meta = <head> 実 <meta> に anchor、 escaped/prose 言及に誤反応しない) に gate する。
+  #     marker 無し = hand-authored/未生成 = SKIP (keystone: hand-authored index で validate-clean を保つ)。 ---
   local nav_index="${root_abs}/index.html"
   if [[ -f "$nav_index" ]] && [[ "$(folio_extract_meta "$nav_index" folio-generated)" == "folio-build" ]]; then
     nav_seen=1
@@ -1438,6 +1438,29 @@ folio_cmd_validate() {
       violations+=("index.html"$'\t'"[nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)")
       nav_drift_fail=1
     fi
+    local dl
+    while IFS= read -r dl; do
+      [[ -z "$dl" ]] && continue
+      violations+=("$dl"); nav_deadlink_fail=1
+    done < <(folio_nav_deadlinks "$nav_index" "$root_abs")
+  fi
+
+  # --- gate (o) cluster-reachability — dead-end README / empty-cluster を検出 (ADR-0035 §2.5、 §1 defect #2/#3)。
+  #     これは index 由来でなく *cluster dir + README の dir/graph scan* ゆえ、 生成 index の有無に gate しない
+  #     (consumer は folio init 後 build 前でも dead-end を warn で気付ける = ADR §1 が中心に据える consumer defect。
+  #     index marker に nest すると consumer の post-init/pre-build window で未検査になる、 ceiling 指摘)。 regen-drift
+  #     には *内包されない* (regen-drift は index を byte-diff するだけで README dead-end / empty-cluster を見ない)。
+  #     architecture cluster dir が 1 つでも在れば走る。 self-root (spec/ に @type FolioConstitution) = block /
+  #     consumer = warn (ADR §2.5)。 ---
+  if [[ -d "${root_abs}/spec" || -d "${root_abs}/decisions" || -d "${root_abs}/research" ]]; then
+    nav_reach_seen=1
+    local nav_self=0; folio_nav_is_self_root "$root_abs" && nav_self=1
+    local rl
+    while IFS= read -r rl; do
+      [[ -z "$rl" ]] && continue
+      if [[ "$nav_self" -eq 1 ]]; then violations+=("$rl"); nav_reach_fail=1
+      else warnings+=("$rl"); nav_reach_warn=1; fi
+    done < <(folio_nav_reachability "$root_abs")
   fi
 
   # --- gate (f) delta-marker resolution (REQ-CI-015、 全 file 走査後に format + 解決 check) ---
@@ -1483,6 +1506,11 @@ folio_cmd_validate() {
   elif [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'; else printf '  [OK] glossary\n'; fi
   if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)\n'
   elif [[ "$nav_drift_fail" -eq 1 ]]; then printf '  [FAIL] nav-regen-drift\n'; else printf '  [OK] nav-regen-drift\n'; fi
+  if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-dead-link (生成 index 無し)\n'
+  elif [[ "$nav_deadlink_fail" -eq 1 ]]; then printf '  [FAIL] nav-dead-link\n'; else printf '  [OK] nav-dead-link\n'; fi
+  if [[ "$nav_reach_seen" -eq 0 ]]; then printf '  [SKIP] cluster-reachability (architecture cluster dir 無し)\n'
+  elif [[ "$nav_reach_fail" -eq 1 ]]; then printf '  [FAIL] cluster-reachability\n'
+  elif [[ "$nav_reach_warn" -eq 1 ]]; then printf '  [WARN] cluster-reachability\n'; else printf '  [OK] cluster-reachability\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
@@ -1741,6 +1769,28 @@ folio_build_attresc() {
   printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'
 }
 
+# 生成 index ($1) の curated region <!-- folio:nav-curated --> ... <!-- /folio:nav-curated --> の
+# 内側 (両 marker 自身は除く) を verbatim に stdout 出力する (ADR-0035 §2.4 curated 隔離)。 file 不在・
+# marker 無し・region 空なら空文字。 build はこれを読み戻して再 emit し human-authored editorial を保つ
+# (curated 往復保全)。 cluster section は graph から再生成、 curated は人間 SoT として round-trip する。
+#
+# 境界は「最初の open 行」と「最後の close 行」で取る (first-open / last-close)。 単純な state-machine
+# (open で capture 開始 / close で停止) だと、 curated editorial 本文が marker を解説する <pre> 等で raw
+# <!-- /folio:nav-curated --> を含むとそこで早期終端し以降を silent に切り捨てる (= #110/#116/#119 と
+# 同型の raw-mention 誤動作、 ceiling 実機再現)。 first-open/last-close なら region 内の raw marker 言及を
+# 内側として保全する (structural な open は必ず最初・close は必ず最後ゆえ idempotent)。 escaped marker
+# (&lt;) は HTML comment にならず boundary regex に一致しないため元から無害。
+folio_build_extract_curated() {
+  local f="$1" open_ln close_ln
+  [[ -f "$f" ]] || return 0
+  open_ln=$(grep -nE '<!--[[:space:]]*folio:nav-curated[[:space:]]*-->' "$f" | head -1 | cut -d: -f1)
+  close_ln=$(grep -nE '<!--[[:space:]]*/folio:nav-curated[[:space:]]*-->' "$f" | tail -1 | cut -d: -f1)
+  # close が open の直後 (隣接 = 空 region) なら内側ゼロ行ゆえ空を返す。 close_ln > open_ln+1 (= 間に
+  # 最低 1 行) の時だけ sed する (sed の逆範囲 "N+1,N p" は GNU sed で line N+1 を出してしまう footgun 回避)。
+  [[ -n "$open_ln" && -n "$close_ln" && "$close_ln" -gt "$((open_ln + 1))" ]] || return 0
+  sed -n "$((open_ln + 1)),$((close_ln - 1))p" "$f"
+}
+
 # <root_abs> ($1) の specs から top-level index.html 内容を stdout に emit (純関数・決定的)。
 # folio_build_entry を再利用し cluster (= @id path-prefix) ごとに doc を列挙する。 $(...) 経由でなく
 # 直接 redirect/process-sub で呼ぶこと (command substitution の trailing-newline strip を回避)。
@@ -1762,6 +1812,10 @@ folio_build_emit_index() {
       rows+=("${d}"$'\t'"${jid}"$'\t'"${jtitle}"$'\t'"${jdoctype}"$'\t'"${jstatus}")
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
+
+  # curated region 往復保全 (ADR-0035 §2.4): 既存 index の human-authored editorial を読み戻す。
+  # build write path は temp→mv ゆえ emit 実行中も ${root_abs}/index.html は intact (truncate されない)。
+  local curated; curated=$(folio_build_extract_curated "${root_abs}/index.html")
 
   cat <<'HEAD'
 <!DOCTYPE html>
@@ -1795,23 +1849,67 @@ folio_build_emit_index() {
 </aside>
 
 <!-- folio:nav-curated -->
-<!-- /folio:nav-curated -->
 HEAD
 
-  local row cur="" cl id ti dt st
+  # curated editorial (verbatim round-trip)。 初回移行 = marker 無し / 空 region なら空文字 = 旧挙動を
+  # 維持し golden 安定。 内側 line を再 emit し最後に閉じ marker を出すことで byte-exact round-trip。
+  [[ -n "$curated" ]] && printf '%s\n' "$curated"
+  printf '<!-- /folio:nav-curated -->\n'
+
+  # cluster section を status グルーピング + <details> 折りで emit (UX: decisions の長大 ADR 列を
+  # 既定折り畳み + status 別に整理)。 status 表示順は固定 precedence → 残りは alpha 順 (決定的・golden 安定)。
+  # rows は dir 順 (spec→decisions→research) かつ各 cluster 内 @id sort 済 (find|LC_ALL=C sort)。
+  local cl row id ti dt st s
   local -A clname=([spec]="spec — design intent (WHAT)" [decisions]="decisions — ADR (WHY)" [research]="research — exploration")
-  for row in ${rows[@]+"${rows[@]}"}; do
-    IFS=$'\t' read -r cl id ti dt st <<< "$row"
-    if [[ "$cl" != "$cur" ]]; then
-      [[ -n "$cur" ]] && printf '</ul>\n</section>\n\n'
-      cur="$cl"
-      printf '<section id="cluster-%s" class="informative">\n<h2>%s</h2>\n<ul>\n' "$cl" "$(folio_build_htesc "${clname[$cl]}")"
-    fi
-    printf '  <li><a href="%s">%s</a> <span class="nav-meta">%s · %s</span></li>\n' \
-      "$(folio_build_attresc "$id")" "$(folio_build_htesc "$ti")" "$(folio_build_htesc "$dt")" "$(folio_build_htesc "$st")"
+  local -a clusters=(spec decisions research)
+  local -a status_pref=(active accepted draft proposed superseded deprecated)
+  for cl in "${clusters[@]}"; do
+    local -a crows=()
+    for row in ${rows[@]+"${rows[@]}"}; do
+      [[ "${row%%$'\t'*}" == "$cl" ]] && crows+=("$row")
+    done
+    [[ ${#crows[@]} -eq 0 ]] && continue
+    printf '<section id="cluster-%s" class="nav-cluster">\n<h2>%s</h2>\n' "$cl" "$(folio_build_htesc "${clname[$cl]}")"
+
+    # この cluster に現れる status を precedence 順に列挙 → precedence 外は alpha 順で後置 (決定的)。
+    local -a present=()
+    for s in "${status_pref[@]}"; do
+      for row in "${crows[@]}"; do
+        IFS=$'\t' read -r _ _ _ _ st <<< "$row"
+        [[ "$st" == "$s" ]] && { present+=("$s"); break; }
+      done
+    done
+    local extra
+    extra=$(for row in "${crows[@]}"; do IFS=$'\t' read -r _ _ _ _ st <<< "$row"; printf '%s\n' "$st"; done \
+      | LC_ALL=C sort -u | while IFS= read -r s; do
+          case " ${status_pref[*]} " in *" $s "*) ;; *) [[ -n "$s" ]] && printf '%s\n' "$s" ;; esac
+        done)
+    while IFS= read -r s; do [[ -n "$s" ]] && present+=("$s"); done <<< "$extra"
+
+    # 各 status group を emit (decisions は長大ゆえ既定折り畳み、 他 cluster は open)。
+    for s in "${present[@]}"; do
+      local -a grp=()
+      for row in "${crows[@]}"; do
+        IFS=$'\t' read -r _ _ _ _ st <<< "$row"
+        [[ "$st" == "$s" ]] && grp+=("$row")
+      done
+      [[ ${#grp[@]} -eq 0 ]] && continue
+      # group が大きい (>8 entry) ときだけ既定折り畳み。 小 group は open のまま (cluster 種別でなく
+      # 量で畳むので consumer corpus の規模にも適応する)。
+      local openattr=" open"
+      [[ ${#grp[@]} -gt 8 ]] && openattr=""
+      printf '<details%s>\n<summary>%s <span class="nav-count">(%d)</span></summary>\n<ul>\n' \
+        "$openattr" "$(folio_build_htesc "$s")" "${#grp[@]}"
+      for row in "${grp[@]}"; do
+        IFS=$'\t' read -r cl id ti dt st <<< "$row"
+        printf '  <li><a href="%s">%s</a> <span class="nav-meta">%s</span></li>\n' \
+          "$(folio_build_attresc "$id")" "$(folio_build_htesc "$ti")" "$(folio_build_htesc "$dt")"
+      done
+      printf '</ul>\n</details>\n'
+    done
+    printf '</section>\n\n'
   done
-  [[ -n "$cur" ]] && printf '</ul>\n</section>\n'
-  printf '\n</body>\n</html>\n'
+  printf '</body>\n</html>\n'
 }
 
 # folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
@@ -1849,8 +1947,107 @@ folio_cmd_build() {
     return 0
   fi
 
-  folio_build_emit_index "$root_abs" > "$out" || { echo "folio build: write failed: ${out} (fail-closed)" >&2; exit 2; }
-  echo "folio build: wrote ${root}/index.html" >&2
+  # safe write: temp に emit してから mv で atomic 置換。 curated 往復保全のため emit は旧
+  # ${root_abs}/index.html を読み戻すが、 `cmd > out` は redirect が先に out を truncate するため
+  # 同 file へ直接書くと curated を読む前に消える footgun。 temp→mv で旧 index を intact に保つ。
+  local tmp; tmp=$(mktemp "${root_abs}/.folio-build.XXXXXX") || { echo "folio build: mktemp failed (fail-closed)" >&2; exit 2; }
+  trap 'rm -f "$tmp"' EXIT INT TERM   # 成功 mv 後は no-op、 失敗/signal 中断時に temp 残骸を掃除 (ceiling nit)
+  if folio_build_emit_index "$root_abs" > "$tmp"; then
+    mv "$tmp" "$out"
+    echo "folio build: wrote ${root}/index.html" >&2
+  else
+    echo "folio build: write failed: ${out} (fail-closed)" >&2; exit 2
+  fi
+}
+
+# ============================================================================
+# nav 検証 helpers (ADR-0035 §2.5: dead-link + cluster-reachability gate)
+# ============================================================================
+
+# 生成 index ($1, marker 付き前提) の <a href> 相対リンクが target file/dir (+ #anchor) に解決するか検査。
+# index は <root_abs> ($2) 直下に在り相対 href は root_abs 起点で解決。 stylesheet は <link> ゆえ自動除外、
+# 外部 scheme / mailto / pure #anchor / *.css は明示 skip。 違反行 (file\tdetail) を stdout (無ければ空)。
+# anchor 存在 check は既存 link-integrity gate と同 idiom (grep -qF id=)。 curated region の手 link rot を捕捉。
+folio_nav_deadlinks() {
+  local idx="$1" root_abs="$2" h pathpart anchor target_abs
+  while IFS= read -r h; do
+    [[ -z "$h" ]] && continue
+    case "$h" in
+      \#*) continue ;;          # pure anchor (同 file 内)
+      *://*) continue ;;        # 外部 scheme (http(s)/file 等)
+      mailto:*) continue ;;
+      *.css) continue ;;        # stylesheet (念のため)
+    esac
+    if [[ "$h" == *"#"* ]]; then pathpart="${h%%#*}"; anchor="${h#*#}"; else pathpart="$h"; anchor=""; fi
+    [[ -z "$pathpart" ]] && continue   # href="#x" は上で除外済、 href="" は self ゆえ skip
+    target_abs=$(realpath -m "${root_abs}/${pathpart}")
+    if [[ ! -e "$target_abs" ]]; then
+      printf 'index.html\t[nav-dead-link] href "%s" -> %s (target not found)\n' "$h" "$pathpart"
+    elif [[ -n "$anchor" ]] && [[ -f "$target_abs" ]]; then
+      if ! grep -qF "id=\"${anchor}\"" "$target_abs" && ! grep -qF "id='${anchor}'" "$target_abs"; then
+        printf 'index.html\t[nav-dead-link] href "%s" -> %s#%s (anchor id not found in target)\n' "$h" "$pathpart" "$anchor"
+      fi
+    fi
+  done < <(grep -oP '<a [^>]*href="\K[^"]*' "$idx" 2>/dev/null)
+}
+
+# root ($1) が folio-self (framework 本体) か判定 (return 0=self / 1=consumer)。 spec/ に @type
+# FolioConstitution の file が在れば self。 consumer の conforming constitution は @type schema:TechArticle
+# ゆえ区別される (folio_build_entry の constitution 除外 L121 と同基準)。 reachability の block/warn 振り分けに使う。
+folio_nav_is_self_root() {
+  local root_abs="$1" f block
+  [[ -d "${root_abs}/spec" ]] || return 1
+  while IFS= read -r f; do
+    [[ -z "$f" ]] && continue
+    block=$(folio_extract_head_jsonld "$f")
+    [[ "$(printf '%s' "$block" | jq -r '."@type" // empty' 2>/dev/null)" == "FolioConstitution" ]] && return 0
+  done < <(find "${root_abs}/spec" -maxdepth 1 -type f -name '*.html' 2>/dev/null)
+  return 1
+}
+
+# README ($1) が自 cluster の外 (親 = architecture top-level / 他 cluster / home) へ向かう <a href> を
+# 1 本以上持つか (return 0=有 / 1=dead-end)。 相対 href が '../' で始まる = cluster dir を出る、 で判定する。
+# heuristic (ADR-0035 §4 で明示授権): target file の実在も sibling cluster への実到達も検査しない (../無関係
+# file への link でも dead-end 回避になる)。 厳密化 (realpath -e 実在 + 自 cluster 戻り除外) は 1.0.0 後 (#119 系)。
+folio_nav_has_crosslink() {
+  local readme="$1" h pathpart
+  while IFS= read -r h; do
+    [[ -z "$h" ]] && continue
+    case "$h" in \#*) continue ;; *://*) continue ;; mailto:*) continue ;; *.css) continue ;; esac
+    pathpart="${h%%#*}"
+    case "$pathpart" in ../*|..) return 0 ;; esac   # 親へ抜ける = cross-cluster/index/home へ到達可能
+  done < <(grep -oP '<a [^>]*href="\K[^"]*' "$readme" 2>/dev/null)
+  return 1
+}
+
+# cluster-reachability (ADR-0035 §2.5 part B + empty-cluster blind spot)。 各 cluster dir について:
+#  (1) dir 存在かつ scannable doc 0 = empty cluster を flag (regen-drift は空 cluster の section silent
+#      省略を検出できない盲点。 cluster 丸ごと欠落をここで捕捉)。
+#  (2) doc 在りかつ README.html 在る場合、 README が自 cluster 外へ向かう link を持つか (dead-end 検出、
+#      現 research/README が該当)。
+# part A (index→全 doc 到達) は完全生成 index では regen-drift に内包される (index = emit が全 doc 列挙)
+# ため独立 gate 化しない (Slice 1 で確立した subsume 判断と同型)。 違反行 (file\tdetail) を stdout に出力、
+# caller が self=block / consumer=warn を振り分ける。
+folio_nav_reachability() {
+  local root_abs="$1" cl dir_abs ndocs readme f
+  for cl in spec decisions research; do
+    dir_abs="${root_abs}/${cl}"
+    [[ -d "$dir_abs" ]] || continue
+    ndocs=0
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      folio_build_entry "$f" "$root_abs" >/dev/null 2>&1 && ndocs=$((ndocs + 1))
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' 2>/dev/null | LC_ALL=C sort)
+    if [[ "$ndocs" -eq 0 ]]; then
+      printf '%s\t[cluster-reachability] cluster dir exists but has 0 nav-reachable docs (empty cluster = regen-drift blind spot、 ADR-0035 §2.5)\n' "${cl}/"
+      continue
+    fi
+    readme="${dir_abs}/README.html"
+    [[ -f "$readme" ]] || continue
+    if ! folio_nav_has_crosslink "$readme"; then
+      printf '%s\t[cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)\n' "${cl}/README.html"
+    fi
+  done
 }
 
 # ============================================================================

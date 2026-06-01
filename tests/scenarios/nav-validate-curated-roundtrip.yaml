@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-004"
+ears_pattern: "state-driven"
+kind: "cli-golden"
+description: |
+  生成 index.html の curated region が marker 構文を解説する <pre> 等で raw <!-- /folio:nav-curated -->
+  を含む場合でも、 folio build の curated 往復保全 (folio_build_extract_curated の first-open/last-close
+  抽出) が region 内の raw marker 言及を内側として保全し、 以降の editorial を silent 切り捨てしないことの
+  回帰 guard。 fixture の index は curated に raw close marker + sentinel (EDITORIAL-AFTER-RAW-MARKER) を
+  含み build round-trip 済ゆえ、 nav-regen-drift gate が [OK] (emit == committed index) になる = 抽出が
+  editorial を保全している証拠。 もし抽出が単純 state-machine (最初の close で停止) に退行すると emit が
+  raw marker 以降を脱落させ regen-drift が [FAIL] → 本 scenario が exit 1 で検出する (#110/#116/#119 系譜)。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-curated-roundtrip"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-curated-roundtrip.golden.txt"
+
+expect:
+  exit_code: 0
