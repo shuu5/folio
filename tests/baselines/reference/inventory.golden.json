@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-01T05:59:54Z",
+  "generatedAt": "2026-06-01T14:07:15Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -37,6 +37,8 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
@@ -79,6 +81,8 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
@@ -122,6 +126,8 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -237,6 +243,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0006-caller-marker-hook.html",
@@ -323,6 +330,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0017-unit-integration-boundary.html"
         ],
         "dc:references": [
@@ -476,6 +484,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -559,6 +568,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html"
+        ],
         "dc:references": [
           "spec/constitution.html#p-7",
           "spec/constitution.html#p-12",
@@ -583,6 +595,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
           "decisions/ADR-0026-test-placement-model.html"
         ],
@@ -611,6 +624,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0028-prose-gate-mechanization.html"
         ],
@@ -749,6 +763,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html"
@@ -776,6 +791,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html"
         ],
@@ -801,6 +817,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html"
+        ],
         "dc:references": [
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
@@ -822,6 +841,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html"
         ],
         "dc:references": [
@@ -848,12 +868,76 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html"
+        ],
         "dc:references": [
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0025-folio-fix-bidirectional.html",
           "decisions/ADR-0020-validate-scope.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+          "spec/rules.html",
+          "spec/relations.html",
+          "spec/folio-self-spec.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+      "title": "ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)",
+      "summary": "architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html"
+        ],
+        "dc:references": [
+          "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+          "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0003-plugin-architecture.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0032-v1-goal-refinement-defer.html",
+          "spec/rules.html",
+          "spec/relations.html",
+          "spec/folio-self-spec.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+      "title": "ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)",
+      "summary": "folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip + click→glossary.html 両方。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "0.5.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html"
+        ],
+        "dc:references": [
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "spec/rules.html",
           "spec/relations.html",
           "spec/folio-self-spec.html"
@@ -1084,6 +1168,18 @@
         "class": "decision",
         "ssot": "decisions/ADR-0034-object-term-xref-system.html",
         "essence": "architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。"
+      },
+      {
+        "id": "ADR-0035",
+        "class": "decision",
+        "ssot": "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+        "essence": "architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を"
+      },
+      {
+        "id": "ADR-0036",
+        "class": "decision",
+        "ssot": "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+        "essence": "folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip + click→glossary.html 両方。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は"
       },
       {
         "id": "P-1",

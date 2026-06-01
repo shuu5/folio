@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0035">
+<meta name="folio-adr-date" content="2026-06-01">
+<title>ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0035-walkable-architecture-nav-derive.html",
+  "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "./ADR-0036-folio-vocabulary-glossary-derive.html" }
+  ],
+  "dc:title": "ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0024-folio-init-scope.html" },
+    { "@id": "./ADR-0023-x4-c-scratch-to-architecture-migration.html" },
+    { "@id": "./ADR-0025-folio-fix-bidirectional.html" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "./ADR-0007-context-injection.html" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0034-object-term-xref-system.html" },
+    { "@id": "./ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "./ADR-0030-v1-stability-criteria.html" },
+    { "@id": "./ADR-0032-v1-goal-refinement-defer.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/relations.html" },
+    { "@id": "../spec/folio-self-spec.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権)</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を <code>folio build</code> が graph (head metadata + @id path-prefix + objectGraph の JOIN) から生成し commit、 marker + regen-drift gate で hand-authored と区別、 P-7/P-13 の空間排除は HOW+verification を名指すゆえ派生 view は憲法改訂なしに ADR で授権。 companion = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary)。 <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> init + <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張、 <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> の gitignore-projection を新 artifact class に限り反転</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0035</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-06-01</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0036 (companion = folio-vocabulary glossary、 本 ADR に depends、 glossary.html も walkable nav に載る)、 ADR-0024 (init scope = top-level index + nav region を生成物に追加)、 ADR-0023 (gitignore-projection = 生成物を architecture/ の外に置く原則を、 committed generated-view という新 class に限り反転)、 ADR-0025 (fix materialize = index↔cluster の reverse 双方向 link)、 ADR-0020 (validate scope = regen-drift / reachability / dead-link gate 追加)、 ADR-0007 (inventory/prime projection = nav の同型 derive、 graph SSoT → 複数 view)、 ADR-0003 (CLI surface = folio build 新 subcommand)、 ADR-0034 (xref/glossary = 同じ in-band SSoT + 生成 projection hybrid 系譜)、 ADR-0030/0032 (1.0.0 criteria = 本機能は criterion(c)「実用に耐える」判断への INPUT)、 rules.html (nav 規範 + generated-view markup + validate gate)、 relations.html (inventory §4 schema を nav node/edge へ)、 folio-self-spec.html (§2 layout に generated-view category 追記 + self dogfood)、 constitution P-2/P-3/P-7/P-13/P-5 (不変原則、 本 ADR は touch しない)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio が consumer に約束する <code>architecture/</code> design-intent 空間は <strong>「歩けない」</strong>。 検証済の現状 (grep 2026-06-01):</p>
+<ul>
+  <li><strong>folio 自身</strong>: <code>architecture/index.html</code> は hand-authored で <strong>ADR pin が stale</strong> (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> 止まり、 ADR-0031〜0034 が欠落)、 <code>dc:hasPart</code> を 1 本も持たず、 cluster README は逆に body prose 内に rich cross-ref を持つが <strong>top-level index へ上がる link を欠き index は孤島</strong>、 <code>research/README</code> は cross-cluster link ゼロの <strong>dead-end</strong>。</li>
+  <li><strong>生成された consumer</strong> (folio init / folio-architect 出力): <strong>top-level index 自体が無い</strong>。 spec/README → decisions へ 1 本のみ・research 行き止まり・decisions → 他 cluster なし。</li>
+</ul>
+<p>正確に言えば欠陥は「cluster が孤立している」ことではない (decisions/spec は body prose に rich xref を持つ — これは <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> の成果で、 nav が置換すべきものではない)。 narrower な実体は <strong>(1) 鮮度ある top-level 集約 index の不在 (folio 自身は pin が古化、 生成物は皆無)、 (2) <code>research/README</code> の dead-end、 (3) 生成物の cluster 横断 nav 欠如</strong>である。 手で index を維持してきた事実 (folio 自身) が、 <strong>「歩ける website を手で維持すると必ず drift する」</strong>ことの証拠になっている。</p>
+
+<p>user grill (2026-06-01) で 6 つの根の決定が確定した: (1) <strong>歩ける website を normative 化</strong> (folio 自身も init 生成物も同一規約・機械検証)、 (2) <strong>nav は graph から derive</strong> する派生 view (drift-proof)、 (3) folio-用語 glossary を folio が上流で author→ship・consumer は derive (companion <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a>)、 (4) これは pre-1.0.0 の主作業、 (5) <strong>golden 型 commit-in-place</strong> (build が生成物を architecture/ に in-place 再生成し commit、 marker + regen-drift gate で hand-authored と区別)、 (6) <strong>置き場所 = architecture/ 内 + ADR のみ</strong> (憲法改訂なし、 interpretive-gap 論拠、 §2.6)。 貫く 3 層原則: <strong>人間 = 意味を author / 機械 = 純構造を derive (nav・index・xref 配線) / 意味の人間向けレンダリングだけ co-author+enforce (prose essence、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a>)</strong>。</p>
+
+<p>本 feature は <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> の criterion(c)「実用に耐える」<strong>判断への INPUT</strong> である (user が歩行性を実用性の要件と判断 = criterion(c) を行使している)。 criterion(c) は <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> §3 で <strong>明示的に user の主観判断</strong>と定義されており機械 gate ではない — 本 ADR は (c) を「検査可能 gate に変える」ものではなく、 user の (c) 判断に資する証拠を作る。 criteria A〜G + criterion H (ADR-0031 実装 = task #84 完了 + greenfield walk PASS) は既に充足済。 <strong>status = proposed (user 承認待ち)</strong>。 設計は grill 6 問 + 4軸 design workflow + 敵対的 critique (blocker 3 解消) で確定。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-walkable">§2.1 walkable architecture を normative 化 (範囲 = architecture/ 内に限定)</h3>
+<p>top-level <code>architecture/index.html</code> + 全 cluster 横断 nav を <strong>folio 自身・folio init 生成物・consumer 生成物すべてで必須</strong>とし機械検証する。 mandate 範囲は <strong><code>architecture/</code> 配下 = folio が <a href="../spec/constitution.html#p-7">P-7</a> で既に govern する design-intent 空間に限定</strong>し、 consumer の test 配置・実装 dir・自由 documentation (docs/steering) には<strong>一切及ばない</strong> (<a href="../spec/constitution.html#p-13">P-13</a>(b) 不変、 test dir は引続き scaffold しない)。 nav は consumer に新 dir を強いず既存 <code>architecture/</code> 内で完結するため、 <a href="../spec/constitution.html#p-13">P-13</a>(a) spec 適合性 (framework 提供・普遍・dir 非 mandate と同型) の新 gate として位置づける。</p>
+
+<h3 id="s2-2-sot">§2.2 nav の SoT = graph の JOIN (「graph 1 つ」ではない)</h3>
+<p>nav の SoT は新 data 源を作らず既存 graph から導く。 ただし正確には<strong>単一 edge 集合ではなく JOIN</strong> である:</p>
+<ul>
+  <li><strong>cluster 分類</strong> = <code>@id</code> の <strong>path prefix</strong> (<code>spec/</code> / <code>decisions/</code> / <code>research/</code>) から導く。 individual ADR/spec は <code>dc:hasPart</code> edge を持たない (cluster README のみ持つ) ため、 cluster→doc membership は edge でなく path 規約で確定する。</li>
+  <li><strong>doc title / doc-type / status</strong> = 各 file の <code>&lt;head&gt;</code> JSON-LD (<code>inventory.json</code> の <code>specs[]</code> が抽出済) から node ごとに JOIN する。</li>
+  <li><strong>object 関係</strong> = <code>objectGraph</code> (principle/REQ/ADR projection)。</li>
+  <li><strong>curation (featured ordering)</strong> = <strong>初期はゼロ</strong>。 index は status / path で決定的に sort して pure-derive とし、 現 <code>index.html</code> の手 pin curation は捨てる。 load-bearing な pin が将来必要なら <code>&lt;head&gt;</code> JSON-LD に featured field (<code>schema:mainEntity</code> 等) を足して graph に昇格する (roadmap、 §3 TODO)。</li>
+</ul>
+<p>すなわち実 SoT = <strong>{head metadata + @id path-prefix 規約 + objectGraph (+ 将来 curation field)}</strong> であり、 nav はこの JOIN の派生 view で SSoT を持たない。</p>
+
+<h3 id="s2-3-build">§2.3 生成器 = folio build (新 subcommand)、 fix と責務分離</h3>
+<p>新 subcommand <code>folio build</code> を新設し、 §2.2 の JOIN から <code>architecture/index.html</code> + cluster README の nav region (+ companion <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> で <code>glossary.html</code>) を生成する。 <strong>deterministic・idempotent・timestamp 非含有・LC_ALL=C sort</strong> で golden 安定を保つ。 入力は <code>inventory.json</code> (無ければ内部で <code>folio inventory</code> を呼ぶ、 <code>prime</code> と同じ auto-regen) + 各 file の <code>&lt;head&gt;</code> JSON-LD。 既存 helper (<code>folio_build_relations</code> / <code>folio_resolve_relpath</code> / <code>folio_reverse_relid</code> / <code>folio_extract_head_jsonld</code>) を再利用する。 build ロジックは <code>.claude-plugin/bin/folio</code> に隔離維持し、 生成 HTML には platform 固有値 (絶対 path / env var) を埋め込まず<strong>相対リンクのみ</strong>とする (<a href="../spec/constitution.html#p-11">P-11</a>)。</p>
+<p>責務分離: <strong><code>folio fix</code> = in-band relation/xref/glossary-tooltip を spec 自身に materialize する「graph を整える」器</strong>、 <strong><code>folio build</code> = 整った graph から index/nav という「派生 view を出す」器</strong>。 別 subcommand とし CI/golden を独立させる (build-drift.yaml と fix-bidirectional.yaml が別 scenario)。 SoT が空 (relation 無し) なら nav も空で clean (additive/keystone、 既存 validate-clean を壊さない)。</p>
+
+<h3 id="s2-4-commit-in-place">§2.4 golden 型 commit-in-place = 三重 marker + curated region 隔離</h3>
+<p>生成物は <code>architecture/</code> に in-place commit するが、 hand-authored と機械可読・人間可読の両面で区別する:</p>
+<ul>
+  <li><strong>HTML comment marker</strong> <code>&lt;!-- folio:generated source=folio-build do-not-edit --&gt;</code> を <code>&lt;head&gt;</code> 直後 1 行目に固定 (validate が <code>grep -qF</code> で検出)。</li>
+  <li><strong>meta marker</strong> <code>&lt;meta name="folio-generated" content="folio-build"&gt;</code> (既存 <code>folio_extract_meta</code> idiom で読める)。</li>
+  <li><strong>人間 banner</strong> <code>&lt;p class="generated-note"&gt;</code> で「手編集禁止 — 内容を変えるには SoT (spec の dc:hasPart 等) を編集して再 build」。</li>
+  <li><strong>curated region 物理隔離</strong>: 残す editorial 文 (Purpose 等) は <code>&lt;!-- folio:nav-curated --&gt;</code> region に退避し generated region と分離する。 marker を持つ file/region のみ regen-drift gate の対象とし、 hand-authored は除外。</li>
+</ul>
+
+<h3 id="s2-5-gates">§2.5 enforcement = folio validate に 3 gate 追加 (ADR-0020 scope 拡張) + drift モデル</h3>
+<p><a href="./ADR-0020-validate-scope.html">ADR-0020</a> の validate scope を拡張し deterministic floor として追加する:</p>
+<ul>
+  <li><strong>regen-drift</strong>: marker 付き file/region を temp root で <code>build</code> 再実行し byte-exact diff。 不一致 = 手編集 or SoT 変化の未再生成 = block (exit 1)。 <code>fix</code>↔<code>validate</code> と同型の detect↔remediate (remediate は <code>build</code>)。 golden 同型 (<code>tests/baselines</code>)。</li>
+  <li><strong>cluster-reachability</strong>: graph 上で index→全 cluster→全 doc が有向到達可能か + 各 cluster README が他 cluster へ横断 link を持つか。 現 <code>research/README</code> dead-end を検出する。 <strong>consumer root は warn 既定</strong> (hand-edit を即 block せず <a href="../spec/constitution.html#p-13">P-13</a> 自律を尊重)、 <strong>folio-self は block</strong>。 <code>fix</code> が index↔cluster の <code>dc:hasPart</code> 双方向を materialize して reachability を自動修復できる範囲では block に昇格できる (detect↔remediate 成立時)。</li>
+  <li><strong>dead-link</strong>: 生成 index/nav/glossary の全 <code>&lt;a href&gt;</code> が target file + <code>#anchor</code> に解決する (既存 link-integrity / xref-resolve helper の再利用)。</li>
+</ul>
+<p><strong>drift モデル (正確化)</strong>: <code>inventory.json</code> / <code>prime</code> digest は各 file の <code>&lt;head&gt;</code> JSON-LD + <code>objectGraph</code> から derive され、 <strong><code>architecture/index.html</code> は inventory に走査されない</strong>。 ゆえに <strong>nav-body の編集は inventory/prime golden を汚さない</strong>。 新たな drift 面は <strong>nav-body ↔ graph</strong> であり、 これを regen-drift gate が所有する。 inventory/prime golden の再生成義務は <strong><code>&lt;head&gt;</code> の relation/status を変える slice のみ</strong>に適用する (例: §2.7 の reverse-materialize、 status flip — <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> broken-reverse の系譜)。</p>
+
+<h3 id="s2-6-authorization">§2.6 generated-view の architecture/ 同居を ADR で授権 (interpretive-gap、 constitution 不変)</h3>
+<p>決定 5/6 の commit-in-place は hand-authored design-intent 空間に機械生成物を同居させる。 これと Always-tier 原則の関係を以下に確定する:</p>
+<ul>
+  <li><a href="../spec/constitution.html#p-3">P-3</a> (WHAT-only) は「design-intent 文書に platform 固有 <strong>HOW を記述しない</strong>」= <strong>内容</strong>の規律で配置を規定しない。 生成 nav に platform-HOW は無い (相対リンクのみ、 §2.3)。</li>
+  <li>空間排除を述べるのは <a href="../spec/constitution.html#p-7">P-7</a> / <a href="../spec/constitution.html#p-13">P-13</a> = 「<strong>executable な HOW (実装 + verification) は design-intent 空間の外に置く</strong>」。 生成 <strong>nav/index/glossary view は「実装 HOW」でも「executable verification」でもなく、 design-intent の内容を純導出した提示 view</strong> である (SoT = graph、 新意味を author しない projection)。</li>
+  <li>→ <strong>憲法の空間排除は HOW+verification を名指しており派生 view を名指していない</strong>。 ゆえに generated-view を <code>architecture/</code> 内に置くことは Always-tier 原則の明白な違反ではなく、 憲法が想定していなかった <strong>解釈ギャップ</strong>である。 本 ADR は generated-view を新 artifact class として <strong>ADR で授権する (憲法を touch しない、 <a href="../spec/constitution.html#s6-amendment">P-10</a> を発火させない)</strong>。 marker + regen-drift gate (§2.4/§2.5) が hand-authored と generated の意味論的区別を物理同居しても回復する。</li>
+  <li><strong>fallback</strong>: この解釈が将来 challenge された場合は <a href="../spec/constitution.html#s6-amendment">P-10</a> 憲法改訂 (generated-view category の明文化) に escalate する (§4 で却下した選択肢を再活性化)。</li>
+</ul>
+<p><strong><a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> の明示的反転</strong>: ADR-0023 §alternatives は「<code>inventory</code> を <code>architecture/</code> に配置」を<strong>却下</strong>し走査 base と出力先を decouple した。 本 ADR の決定は、 <strong>committed generated-view という新 artifact class に限り、 その却下方向を反転する</strong>。 これは frictionless extension ではなく意図的な reversal である。 reconcile: AI 向け projection (<code>inventory.json</code>/<code>prime</code>) は disposable・gitignore・repo-root のまま (ADR-0023 保存)、 human 向け view (<code>index.html</code>/<code>glossary.html</code>) は committed・<code>architecture/</code> 内 (本 ADR)。 これは「2 種の派生物に 2 policy」という意図的な split であり、 根拠は<strong>用途の差</strong> (AI は build して捨てる / human は github.com 素閲覧・Pages で build なしに歩く)。</p>
+
+<h3 id="s2-7-init-self">§2.7 ADR-0024 init 拡張 + folio-self dogfood + self-spec layout 追記</h3>
+<p><a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> init 出力に top-level <code>index.html</code> skeleton + cluster README への nav region を加え、 init pipeline 末尾で <code>folio build</code> を 1 回走らせ即 <code>folio validate</code> clean (regen-drift 含む) を満たす (lazy materialize 維持 = 実在 cluster README のみ列挙、 空 placeholder を作らない、 0-part でも valid な index)。 folio 自身の <code>index.html</code> は build 出力へ移行し手動 pin drift を恒久解消する (dogfood)。</p>
+<p><strong>Slice 2 feasibility 注記</strong>: 現 <code>architecture/index.html</code> は <code>&lt;head&gt;</code> JSON-LD を持たず <code>architecture/</code> 直下 (3 scan dir の外) にある。 <code>folio fix</code> の index↔cluster reverse-materialize は、 先に <strong>index に JSON-LD head を与え scan-target に含める</strong>のが前提となる (Slice 1)。 frozen ADR <code>&lt;head&gt;</code> への <code>dc:isReferencedBy</code> reverse-link materialize は既存 broken-reverse gate で<strong>既に corpus clean な established practice</strong> (metadata であり prose 本文に触れない、 CLAUDE.md §2 の link-integrity 維持に該当)。</p>
+<p><code>folio-self-spec.html</code> §2 / <code>rules.html</code> §2 の layout 記述に <strong>generated-view category (index.html + cluster nav region) を追記</strong>する (assets/ と同じ「非 domain support」の拡張として明記)。 この spec 編集は caller-marker hook で gate され、 index.html の commit と<strong>同 slice で sequence</strong> し live layout と spec layout が乖離しないようにする。 check-readme-index.sh の <strong>§2 inventory-table 鮮度</strong>と <strong>cross-cluster nav</strong> は別概念として扱い、 build がどちらを担うかを実装で明示する (<a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> の hook+skill mutate 構想との関係は reverse-link + prose で trace = mechanism 置換であり単なる narrowing ではない)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong><a href="../spec/constitution.html#p-6">P-6</a> link-integrity を構造的に強化</strong>: orphan・dead-end・片方向リンク (現 <code>research/README</code> dead-end 等) が graph の hasPart edge 欠落の検出に帰着し、 reachability gate が機械的に潰す。</li>
+  <li><strong>folio 自身の index drift を自分の機構で解く dogfood</strong>: 手動 pin drift (現 ADR-0030 止まり) が nav-derive 移行で恒久解消。 生成物と self が同一規約であることが決定 1 の検証になる。</li>
+  <li><strong>criterion(c) 判断への強い INPUT</strong>: 「歩ける website (self+consumer 同一規約・機械検証)」が user の「実用に耐える」判断材料を構造的に提供する (本 ADR は (c) を機械 gate に変えるのではなく証拠を作る)。</li>
+  <li><strong>既存機構の拡張で収まる</strong>: inventory/prime projection / fix materialize / validate gate / golden harness を再利用。 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> の in-band SSoT + 生成 projection hybrid と同系譜。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>P-3/P-7 の新 artifact class を解釈で受容</strong> (§2.6): generated-view の <code>architecture/</code> 同居を憲法改訂でなく ADR 解釈で授権する。 解釈が challenge されれば <a href="../spec/constitution.html#s6-amendment">P-10</a> amendment に escalate する risk を負う。 marker + regen-drift gate が緩和。</li>
+  <li><strong>validate gate 追加 = strict-SemVer で MAJOR</strong> (<a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.3)。 ただし 0.x では自由 (<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a>: 0.x は strict-SemVer 約束なし)。 1.0.0 後の追加は通常の MAJOR bump であり「不可能」ではない (pre-1.0 landing は推奨だが deadline 強制ではない)。 新 subcommand <code>build</code> は criterion F (CLI surface 凍結) の command-set golden を更新し再凍結する。</li>
+  <li><strong>ADR-0023 の反転コスト</strong>: 2 種の派生物に 2 policy (AI projection は外置き・gitignore / human view は内置き・commit) を抱える。 §2.6 で意図的 split として正当化。</li>
+  <li><strong>consumer への build-before-validate 工程</strong>: reachability/regen-drift が consumer の <code>architecture/</code> を gate する。 consumer 自律性 (<a href="../spec/constitution.html#p-13">P-13</a>) を守るため consumer root は warn 既定とし、 build を formatter 同様の通常 authoring 工程として document する。</li>
+</ul>
+<h3>Neutral / TODO</h3>
+<ul>
+  <li><strong>open question (実装で確定)</strong>: (a) reachability gate の block/warn 最終境界 (fix 自動修復の成否に依存)、 (b) curation field (<code>schema:mainEntity</code> 等) を graph に足すか zero-curation を維持するか、 (c) generated-marker file への手編集を PreToolUse hook で能動 deny するか regen-drift gate (受動) のみに委ねるか、 (d) <code>glossary.html</code> term anchor の slug 化規約。</li>
+  <li>本 ADR は <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §10.3 の ADR-worthiness 3 条件 (hard-to-reverse: committed generated artifact + gate / surprising: 派生 view を architecture/ 内に + ADR-0023 反転 / real-trade-off: in-place vs 外置き vs P-10 amend) を満たす。 本 feature は <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> criterion(c) 判断への INPUT (#77)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採否</th></tr></thead>
+  <tbody>
+    <tr><td><strong>architecture/ 内 commit-in-place + ADR 授権 (interpretive-gap、 採用)</strong></td><td>採用 — user 決定 6。 P-7/P-13 の空間排除は HOW+verification を名指し派生 view を名指さないゆえ憲法改訂不要。 marker + regen-drift gate で hand-authored と区別。 github.com 素閲覧でも Pages でも build 不要で歩ける core 目的を満たす</td></tr>
+    <tr><td>architecture/ の外に置く (repo-root / Pages source、 ADR-0023 原則を守る)</td><td><strong>却下</strong> — build 不要で歩ける website には index/nav が <code>architecture/</code> 内に commit される必要 (外置き + gitignore では素閲覧で nav が存在しない)。 また cluster README 内の横断 nav が成立せず in-cluster nav が手書き drift か top-level index 経由のみに弱まる。 user が in-place を確定済</td></tr>
+    <tr><td>architecture/ 内 commit + P-10 憲法改訂</td><td><strong>却下 (fallback として保持)</strong> — P-7/P-13 に generated-view category を user 承認で明文追加すれば曖昧さゼロだが、 不変資産の constitution を触る重い操作。 §2.6 の interpretive-gap で十分と判断。 解釈が challenge された場合の fallback に retain</td></tr>
+    <tr><td>nav を check-only に留める (生成せず staleness を notify、 現 check-readme-index.sh の延長)</td><td>不採用 — 現 index の pin drift と <code>research/README</code> dead-end が示す通り check-only は drift を検出しても直さない。 決定 2「nav は派生 view・drift-proof」は SoT から再生成する mutate を要求 (<a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> 完成形目標も README index 自動更新)</td></tr>
+    <tr><td>SoT を「graph 1 つ (hasPart edge のみ)」とする</td><td>不採用 — individual ADR/spec は hasPart edge を持たず title も objectGraph に無い。 cluster 分類は @id path-prefix、 title/doc-type は specs[] head から JOIN する必要 (§2.2)。 「graph 1 つ」は不正確と確定</td></tr>
+    <tr><td>nav+glossary を 1 ADR に束ねる (split しない)</td><td>不採用 — supersede risk が glossary 側のみ集中・依存 cluster が別・hard-to-reverse 軸が別 (<a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §10.3「1 決定 = 1 ADR」)。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a>→<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> の split 先例に整合。 本 ADR (nav) + <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary、 本 ADR に depends) に分離</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点: #120 criterion-H walk で生成された consumer の <code>architecture/</code> HTML を user が閲覧中、 spec/README から decisions/research へ飛べない = cluster 横断ナビ欠如を提起。 folio 自身も同様か疑問。 「テンプレート化 + 機械検証 + 再現性 + 長期安定」が要望の核。</li>
+  <li>grill (2026-06-01、 6 問): nav の到達点 (歩ける website) → 生成モデル (derive) → glossary 配布 (ship+derive 両描画) → 1.0.0 順序 (pre-1.0.0 full) → materialize 先 (golden 型 commit-in-place) → 置き場所 (architecture/ 内 + ADR、 interpretive-gap)。</li>
+  <li>設計 workflow: 4軸 lens (憲法整合 / 既存 ADR 統合 / CLI+validate 機構 / slice+self 移行) → synthesize → 敵対的 critique。 critique が blocker 3 (criterion(c) gate 化の誤前提 / P-3 解釈 / glossary completeness の normative 化) + major 4 (drift モデル誤り / SoT 不十分 / Slice 2 不能 / ADR-0023 反転) を検出 → 本 ADR で全て解消。</li>
+  <li>拡張対象: <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> (init) / <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> (反転) / <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> (materialize) / <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate) / <a href="./ADR-0007-context-injection.html">ADR-0007</a> (inventory/prime) / <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> (CLI)。 いずれも本文 frozen、 reverse-link + 本 ADR prose で trace。</li>
+  <li>関連原則: <a href="../spec/constitution.html#p-2">P-2</a> (HTML) / <a href="../spec/constitution.html#p-3">P-3</a> (WHAT-only) / <a href="../spec/constitution.html#p-5">P-5</a> (1 canonical name) / <a href="../spec/constitution.html#p-6">P-6</a> (link integrity) / <a href="../spec/constitution.html#p-7">P-7</a> (3-domain) / <a href="../spec/constitution.html#p-11">P-11</a> (HOW 隔離) / <a href="../spec/constitution.html#p-13">P-13</a> (no-mandate-build + consumer 自律)。 本 ADR は constitution を touch しない。</li>
+  <li>実装 path: 5 slice (① build core + 3 gate → ② folio-self dogfood + link-superset regression → ③ consumer init scaffold + self-spec layout → ④ glossary = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> → ⑤ 統合検証 + criterion(c) INPUT 完成)。 各 slice は floor (validate + sandbox) + ceiling (独立 review)。</li>
+  <li>status: <strong>proposed</strong> (user 承認待ち)。 起票時に README index + reverse-link materialize + golden 再生成を実施。</li>
+</ul>
+</section>
+
+</body>
+</html>

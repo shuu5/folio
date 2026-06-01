@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 33 specs · folio 0.5.0-draft
+# 35 specs · folio 0.5.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -152,6 +152,16 @@
 - doc-type: adr · status: accepted
 - summary: architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。
 
+## decisions/ADR-0035-walkable-architecture-nav-derive.html
+- title: ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)
+- doc-type: adr · status: proposed
+- summary: architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を
+
+## decisions/ADR-0036-folio-vocabulary-glossary-derive.html
+- title: ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)
+- doc-type: adr · status: proposed
+- summary: folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip + click→glossary.html 両方。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は
+
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal
 - doc-type: planning · status: superseded
@@ -167,7 +177,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 87 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 89 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -195,6 +205,8 @@ ADR-0031 [decision] decisions/ADR-0031-mattpocock-authoring-absorption.html
 ADR-0032 [decision] decisions/ADR-0032-v1-goal-refinement-defer.html
 ADR-0033 [decision] decisions/ADR-0033-dual-audience-hub.html
 ADR-0034 [decision] decisions/ADR-0034-object-term-xref-system.html
+ADR-0035 [decision] decisions/ADR-0035-walkable-architecture-nav-derive.html
+ADR-0036 [decision] decisions/ADR-0036-folio-vocabulary-glossary-derive.html
 P-1 [principle] spec/constitution.html#p-1
 P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11
