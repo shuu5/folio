@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-05-31T22:17:53Z",
+  "generatedAt": "2026-06-01T05:59:54Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -15,7 +15,8 @@
         "dc:hasPart": [
           "spec/rules.html",
           "spec/folio-self-spec.html",
-          "spec/relations.html"
+          "spec/relations.html",
+          "spec/verification.html"
         ]
       }
     },
@@ -163,6 +164,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isPartOf": [
+          "spec/README.html"
+        ],
         "dc:isReferencedBy": [
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0032-v1-goal-refinement-defer.html",
