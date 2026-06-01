@@ -50,12 +50,6 @@
 }
 </script>
 <script src="../assets/mermaid.min.js" defer></script>
-<style>
-figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
-figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
-pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
-pre.mermaid[data-processed="true"] { visibility: visible; }
-</style>
 </head>
 <body>
 
@@ -302,7 +296,7 @@ flowchart TB
 <figure class="diagram" data-diagram-type="phase-flow">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
-flowchart LR
+flowchart TB
   accTitle: 7-Phase PR Cycle
   accDescr: Discovery A から Summary G まで 7 phase を順次実行。 Phase B と D は 2-3 specialist 並列、 Phase F は 7 specialist 並列固定
   A["A<br/>Discovery"]
@@ -468,7 +462,7 @@ flowchart TD
 <figure class="diagram" data-diagram-type="defense-pipeline">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
-flowchart LR
+flowchart TB
   accTitle: 3 axis × 5 層防御 pipeline
   accDescr: 3 軸の混同リスク (folio vs twill、 folio vs consumer、 spec edit vs impl edit) に対し 5 層の防御 (物理分離、 root marker、 meta 宣言、 caller marker、 directory naming) が pipeline で適用される
   subgraph AX["<b>3 axis 混同リスク</b>"]
@@ -477,7 +471,7 @@ flowchart LR
     A3["(c) spec edit vs impl edit"]
   end
   subgraph DEF["<b>5 層防御 pipeline</b>"]
-    direction LR
+    direction TB
     L1["L1<br/>物理 git repo<br/>分離"]
     L2["L2<br/>root marker<br/>file"]
     L3["L3<br/>HTML meta<br/>宣言"]
@@ -499,7 +493,7 @@ flowchart LR
 <figure class="diagram" data-diagram-type="ci-gate-pipeline">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
-flowchart LR
+flowchart TB
   accTitle: CI Gate Pipeline
   accDescr: PR / commit から merge までの 7 gate (link integrity、 declarative form、 what-only、 vocabulary、 EARS coverage、 delta marker consistency、 json-ld-validation) を順次通過した場合のみ merge 許可
   PR["PR / push"]
@@ -670,21 +664,31 @@ flowchart TB
 </section>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-  if (window.mermaid) {
-    mermaid.initialize({
-      startOnLoad: true,
-      securityLevel: 'antiscript',
-      theme: 'base',
-      themeVariables: {
-        primaryColor: '#2a4d6e',
-        primaryTextColor: '#ffffff',
-        lineColor: '#2a4d6e',
-        secondaryColor: '#5ac8b8',
-        tertiaryColor: '#f5f8fa'
-      }
-    });
-  }
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!window.mermaid) return;
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'antiscript',
+    theme: 'base',
+    flowchart: { useMaxWidth: false },
+    themeVariables: {
+      primaryColor: '#2a4d6e',
+      primaryTextColor: '#ffffff',
+      lineColor: '#2a4d6e',
+      secondaryColor: '#5ac8b8',
+      tertiaryColor: '#f5f8fa'
+    }
+  });
+  try { await mermaid.run(); } catch (e) {}
+  /* 横スクロールが発生した図のみ keyboard-focusable 化 (WCAG 2.2 SC 2.1.1、 rules §4.6) */
+  document.querySelectorAll('figure.diagram > pre.mermaid').forEach((p) => {
+    if (p.scrollWidth > p.clientWidth + 1) {
+      p.tabIndex = 0;
+      p.setAttribute('role', 'region');
+      const t = p.querySelector('svg title');
+      if (t && t.textContent) p.setAttribute('aria-label', t.textContent + ' (横スクロール可能な図)');
+    }
+  });
 });
 </script>
 

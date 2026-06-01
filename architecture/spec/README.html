@@ -10,12 +10,6 @@
 <title>folio — architecture/spec/ (framework spec index)</title>
 <link rel="stylesheet" href="../../common.css">
 <script src="../assets/mermaid.min.js" defer></script>
-<style>
-figure.diagram { margin: 1.5rem 0; padding: 1rem 1.25rem; background: var(--folio-surface-normal); border: 1px solid var(--folio-border-default); border-radius: var(--folio-radius-card); overflow-x: auto; }
-figure.diagram figcaption { font-size: var(--folio-text-small); color: var(--folio-text-secondary); margin-top: 0.75rem; line-height: 1.5; letter-spacing: normal; }
-pre.mermaid { visibility: hidden; background: transparent; border: none; padding: 0; }
-pre.mermaid[data-processed="true"] { visibility: visible; }
-</style>
 <script type="application/ld+json">
 {
   "@context": {
@@ -360,17 +354,27 @@ graph TD
 </section>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.mermaid) {
-    mermaid.initialize({
-      startOnLoad: true,
-      theme: 'base',
-      themeVariables: {
-        fontFamily: 'inherit',
-        fontSize: '14px'
-      }
-    });
-  }
+document.addEventListener('DOMContentLoaded', async () => {
+  if (!window.mermaid) return;
+  mermaid.initialize({
+    startOnLoad: false,
+    theme: 'base',
+    flowchart: { useMaxWidth: false },
+    themeVariables: {
+      fontFamily: 'inherit',
+      fontSize: '14px'
+    }
+  });
+  try { await mermaid.run(); } catch (e) {}
+  /* 横スクロールが発生した図のみ keyboard-focusable 化 (WCAG 2.2 SC 2.1.1、 rules §4.6) */
+  document.querySelectorAll('figure.diagram > pre.mermaid').forEach((p) => {
+    if (p.scrollWidth > p.clientWidth + 1) {
+      p.tabIndex = 0;
+      p.setAttribute('role', 'region');
+      const t = p.querySelector('svg title');
+      if (t && t.textContent) p.setAttribute('aria-label', t.textContent + ' (横スクロール可能な図)');
+    }
+  });
 });
 </script>
 

@@ -521,6 +521,52 @@ a.normative-ref:hover {
  *   - table zebra striping
  * ====================================================================== */
 
+/* --- mermaid diagram figure (横長 LR 対策 + SSoT 一元化、 #121) -------- */
+/* 図 styling の SSoT。 旧来 4 spec の inline <style> に分散していた figure.diagram /
+ * figcaption / pre.mermaid を本 block に集約し、 living spec 側 inline は撤去した。
+ * constitution.html は §2 frozen ゆえ inline 据置 = 旧 model (figure 自体を overflow
+ * scroll 容器にする + pre.mermaid { visibility:hidden }) が残る既知 gap (図は standalone
+ * で動作、 §2 ゆえ未追従)。 設計: figure.diagram は card chrome のみ。 横スクロールは内側の
+ * render 済 pre.mermaid が担う (下記 block + rules §4.6) — figure を scroll 容器にすると
+ * figcaption (xref tooltip 等で横に伸びうる) が spurious overflow を起こすため、 scroll/
+ * focusable 対象は図そのもの = pre に限定する。 ★graceful degradation: 旧 inline の
+ * pre.mermaid { visibility:hidden } は JS off 時に図 source を不可視化し §8 SHALL に反する
+ * ため living spec から廃止 — 未 render の raw <pre class="mermaid"> は generic pre (code
+ * block) のまま可視に保つ。 */
+figure.diagram {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--folio-surface-normal);
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+}
+figure.diagram figcaption {
+  font-size: var(--folio-text-small);
+  color: var(--folio-text-secondary);
+  margin-top: 0.75rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+/* スクロール容器は figure でなく render 済 pre = 図そのもの。 figcaption (xref tooltip 等で
+ * 横に伸びうる) を scroll 判定から除外し、 図が body 幅を超えた時だけ pre を横スクロールさせる。
+ * width:max-content + max-width:100% = 小図は tight に shrink-wrap、 wide 図は figure 幅で頭打ち
+ * にして内側の自然幅 SVG を overflow-x:auto で scroll。 generic pre の code-block chrome は除去
+ * (未 render の raw pre は触らず code 表示のまま = JS off fallback 可読、 §8)。 */
+figure.diagram > pre.mermaid[data-processed="true"] {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+figure.diagram > pre.mermaid[data-processed="true"]:focus-visible {
+  outline: 2px solid var(--folio-brand);
+  outline-offset: 2px;
+}
+
 /* --- callout / admonition ------------------------------------------- */
 .callout {
   border-left: 4px solid var(--folio-border-strong);
