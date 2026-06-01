@@ -1252,6 +1252,7 @@ folio_cmd_validate() {
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
+  local nav_drift_fail=0 nav_seen=0   # gate (m) nav-regen-drift (ADR-0035、 top-level 生成 index、 marker 無し=SKIP keystone)
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
   local vocab_list; vocab_list=$(folio_vocab_forbidden "$root_abs") || vocab_list=""
@@ -1424,6 +1425,21 @@ folio_cmd_validate() {
     violations+=("$uline"); xref_uniq_fail=1
   done < <(folio_xref_uniqueness_check "$root_abs")
 
+  # --- gate (m) nav-regen-drift — top-level <root>/index.html (生成 walkable nav、 ADR-0035 §2.5) が
+  #     graph から再生成した emit と byte 一致するか。 marker 判定は anchored folio_extract_meta (ADR §2.4
+  #     idiom、 <head> の実 <meta> に anchor、 escaped/prose 言及に誤反応しない) で folio-generated==folio-build
+  #     の時のみ検査。 marker 無し = hand-authored/未生成 = 対象外 = no-op (keystone: 現 corpus の hand-authored
+  #     index は SKIP で validate-clean を保つ)。 dead-link / cluster-reachability は nav-region を持つ Slice 2
+  #     で独立に意味を持つため本 slice では regen-drift に集中する (完全生成 index では両者は regen-drift に内包)。 ---
+  local nav_index="${root_abs}/index.html"
+  if [[ -f "$nav_index" ]] && [[ "$(folio_extract_meta "$nav_index" folio-generated)" == "folio-build" ]]; then
+    nav_seen=1
+    if ! diff <(folio_build_emit_index "$root_abs") "$nav_index" >/dev/null 2>&1; then
+      violations+=("index.html"$'\t'"[nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)")
+      nav_drift_fail=1
+    fi
+  fi
+
   # --- gate (f) delta-marker resolution (REQ-CI-015、 全 file 走査後に format + 解決 check) ---
   local idset dr drel dtag2 did2 dsup2
   idset=" $(printf '%s ' "${delta_ids[@]+"${delta_ids[@]}"}")"
@@ -1445,7 +1461,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -1465,6 +1481,8 @@ folio_cmd_validate() {
   elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi
   if [[ -z "$glossary_map" ]]; then printf '  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)\n'
   elif [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'; else printf '  [OK] glossary\n'; fi
+  if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)\n'
+  elif [[ "$nav_drift_fail" -eq 1 ]]; then printf '  [FAIL] nav-regen-drift\n'; else printf '  [OK] nav-regen-drift\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
@@ -1703,6 +1721,139 @@ HTML
 }
 
 # ============================================================================
+# build helpers — graph (各 spec の head metadata + @id path-prefix cluster 分類) から
+#   walkable nav view を derive (ADR-0035)。 top-level <root>/index.html を生成し、 三重
+#   marker (HTML comment + meta folio-generated + 人間 banner) で hand-authored と区別する。
+#   決定的 (LC_ALL=C sort + timestamp 非含有) ゆえ golden 安定・idempotent。 生成物は
+#   spec/decisions/research subdir の外 (top-level) ゆえ inventory/validate の per-subdir
+#   scan に出ず、 nav 専用 gate (regen-drift / dead-link / reachability) のみが対象とする。
+#   SoT は graph 1 つでなく {head metadata (folio_build_entry) + @id path-prefix} の JOIN。
+# ============================================================================
+
+# HTML text content 用に & < > を escape (生成 index の title/doc-type/status 埋込、 #035)。
+folio_build_htesc() {
+  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
+# HTML attribute 値用に & < > " を escape (生成 index の href 埋込、 ADR-0035、 ceiling minor)。
+# text 用 htesc に加え double-quote も escape し、 " を含む file 名 (= @id) が href 属性を break するのを防ぐ。
+folio_build_attresc() {
+  printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'
+}
+
+# <root_abs> ($1) の specs から top-level index.html 内容を stdout に emit (純関数・決定的)。
+# folio_build_entry を再利用し cluster (= @id path-prefix) ごとに doc を列挙する。 $(...) 経由でなく
+# 直接 redirect/process-sub で呼ぶこと (command substitution の trailing-newline strip を回避)。
+folio_build_emit_index() {
+  local root_abs="$1"
+  local dirs=("spec" "decisions" "research") d f entry jid jtitle jdoctype jstatus
+  local rows=()
+  for d in "${dirs[@]}"; do
+    local dir_abs="${root_abs}/${d}"
+    [[ -d "$dir_abs" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      entry=$(folio_build_entry "$f" "$root_abs") || continue
+      [[ -z "$entry" ]] && continue
+      jid=$(printf '%s' "$entry" | jq -r '."@id"')
+      jtitle=$(printf '%s' "$entry" | jq -r '.title | gsub("[\t\n]+"; " ")')   # tab/newline を space に正規化 (IFS-tab row split 破壊回避、 ceiling minor)
+      jdoctype=$(printf '%s' "$entry" | jq -r '."doc-type"')
+      jstatus=$(printf '%s' "$entry" | jq -r '.status')
+      rows+=("${d}"$'\t'"${jid}"$'\t'"${jtitle}"$'\t'"${jdoctype}"$'\t'"${jstatus}")
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
+  cat <<'HEAD'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- folio:generated source=folio-build do-not-edit -->
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="nav-index">
+<meta name="folio-generated" content="folio-build">
+<meta name="folio-status" content="active">
+<title>architecture — index</title>
+<link rel="stylesheet" href="../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./index.html",
+  "@type": "schema:CollectionPage",
+  "dc:title": "architecture index"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>architecture — index</h1>
+  <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
+</header>
+
+<aside class="informative">
+  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は下記 curated region に置きます。</p>
+</aside>
+
+<!-- folio:nav-curated -->
+<!-- /folio:nav-curated -->
+HEAD
+
+  local row cur="" cl id ti dt st
+  local -A clname=([spec]="spec — design intent (WHAT)" [decisions]="decisions — ADR (WHY)" [research]="research — exploration")
+  for row in ${rows[@]+"${rows[@]}"}; do
+    IFS=$'\t' read -r cl id ti dt st <<< "$row"
+    if [[ "$cl" != "$cur" ]]; then
+      [[ -n "$cur" ]] && printf '</ul>\n</section>\n\n'
+      cur="$cl"
+      printf '<section id="cluster-%s" class="informative">\n<h2>%s</h2>\n<ul>\n' "$cl" "$(folio_build_htesc "${clname[$cl]}")"
+    fi
+    printf '  <li><a href="%s">%s</a> <span class="nav-meta">%s · %s</span></li>\n' \
+      "$(folio_build_attresc "$id")" "$(folio_build_htesc "$ti")" "$(folio_build_htesc "$dt")" "$(folio_build_htesc "$st")"
+  done
+  [[ -n "$cur" ]] && printf '</ul>\n</section>\n'
+  printf '\n</body>\n</html>\n'
+}
+
+# folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
+#   既定 = 生成して in-place write。 --check = 生成せず committed (marker 付き) index と byte 比較し
+#   drift を exit 1 で報告 (validate の regen-drift gate と同じ detect、 fix↔validate と同型)。
+#   marker 無し (hand-authored・未生成) の index は drift 対象外 (keystone)。 exit 0=ok/1=drift/2=tool error。
+folio_cmd_build() {
+  command -v jq >/dev/null 2>&1 || { echo "folio build: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
+  command -v realpath >/dev/null 2>&1 || { echo "folio build: realpath not found (fail-closed)" >&2; exit 2; }
+
+  local root="architecture" check=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --root) [[ $# -ge 2 ]] || { echo "folio build: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
+      --root=*) root="${1#--root=}"; shift ;;
+      --check) check=1; shift ;;
+      *) echo "folio build: unknown argument '$1' (usage: folio build [--root <dir>] [--check])" >&2; exit 2 ;;
+    esac
+  done
+
+  local root_abs; root_abs=$(realpath -m "$root")
+  [[ -d "$root_abs" ]] || { echo "folio build: scan root not found: ${root} (fail-closed)" >&2; exit 2; }
+  local out="${root_abs}/index.html"
+
+  if [[ "$check" -eq 1 ]]; then
+    if [[ -f "$out" ]] && [[ "$(folio_extract_meta "$out" folio-generated)" == "folio-build" ]]; then
+      if ! diff <(folio_build_emit_index "$root_abs") "$out" >/dev/null 2>&1; then
+        echo "folio build --check: ${root}/index.html が graph から drift (folio build で再生成せよ)" >&2
+        return 1
+      fi
+      echo "folio build --check: ${root}/index.html は graph と同期 (clean)" >&2
+      return 0
+    fi
+    echo "folio build --check: ${root}/index.html は未生成 (marker 無し) = drift 対象外 (folio build で生成)" >&2
+    return 0
+  fi
+
+  folio_build_emit_index "$root_abs" > "$out" || { echo "folio build: write failed: ${out} (fail-closed)" >&2; exit 2; }
+  echo "folio build: wrote ${root}/index.html" >&2
+}
+
+# ============================================================================
 # dispatch
 # ============================================================================
 
@@ -1728,6 +1879,8 @@ Subcommands:
                            --root で検査 root override)
   fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
                            materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)
+  build [--root <dir>]     graph から top-level index.html (walkable nav) を生成 (ADR-0035、 三重 marker、
+        [--check]          決定的・idempotent、 --check で drift 検査 exit 0=ok/1=drift、 既定 write 0=ok/2=error)
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
@@ -1753,6 +1906,11 @@ EOF
   fix)
     shift
     folio_cmd_fix "$@"
+    exit $?
+    ;;
+  build)
+    shift
+    folio_cmd_build "$@"
     exit $?
     ;;
   *)

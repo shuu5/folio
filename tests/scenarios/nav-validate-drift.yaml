@@ -1,0 +1,18 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-001"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  folio-generated marker を持つが graph から drift した (overview.html の link を欠く stale)
+  top-level index.html を持つ fixture corpus に対し、 folio validate の nav-regen-drift gate
+  (ADR-0035 §2.5、 gate m) が [FAIL] を出し index.html の drift violation を report、 exit 1 に
+  なることを実証する (nav-validate-clean.yaml = clean 側の対、 detect↔remediate の detect 側)。
+  remediate = folio build (再生成で drift 解消)。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-drift"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-drift.golden.txt"
+
+expect:
+  exit_code: 1

@@ -1,0 +1,18 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-001"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  hand-authored な (= folio build 未生成の) top-level index.html が、 body の escaped <code> 例で
+  folio-generated marker 文字列を「言及」するだけのケースで、 folio validate の nav-regen-drift gate
+  (ADR-0035 §2.5、 gate m) が誤発火せず [SKIP] (keystone) を出し exit 0 + clean になることを実証する。
+  marker 判定は anchored folio_extract_meta (<head> の実 <meta> に anchor) ゆえ escaped/prose 言及に
+  反応しない (ceiling MAJOR fix の regression guard、 #110/#116 の escaped-mention false-positive 系)。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-keystone"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-keystone.golden.txt"
+
+expect:
+  exit_code: 0

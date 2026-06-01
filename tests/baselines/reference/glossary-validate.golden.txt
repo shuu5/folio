@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
 root: tests/fixtures/glossary-validate
 files checked: 1 · relations checked: 0
   [OK] internal link-integrity
@@ -12,6 +12,7 @@ files checked: 1 · relations checked: 0
   [OK] xref-tooltip-consistency
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
   [FAIL] glossary
+  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
   [OK] ears-coverage
 
 violations (2):

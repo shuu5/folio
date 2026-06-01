@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref (ADR-0020/0025/0028/0033/0034)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
 root: architecture
 files checked: 35 · relations checked: 334
   [OK] internal link-integrity
@@ -12,6 +12,7 @@ files checked: 35 · relations checked: 334
   [OK] xref-tooltip-consistency
   [OK] xref-completeness
   [OK] glossary
+  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
   [OK] ears-coverage
 
 clean: 0 violations

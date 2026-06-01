@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-001"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio build が graph (各 spec の head metadata + @id path-prefix cluster 分類) から生成した
+  top-level index.html (三重 marker 付き) を持つ fixture corpus に対し、 folio validate の
+  nav-regen-drift gate (ADR-0035 §2.5、 gate m) が [OK] (index == graph 再生成 emit) を出し
+  exit 0 + clean report になることを実証する (nav-validate-drift.yaml = drift 側の対)。
+  fixture の index.html は ../.claude-plugin/bin/folio build --root fixtures/nav-validate-clean で
+  生成済 (= emit と byte 一致)。 build 出力 format が変われば本 scenario が drift を検出し
+  fixture index の再生成を促す (build 出力安定性の golden 的 guard)。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-clean"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-clean.golden.txt"
+
+expect:
+  exit_code: 0
