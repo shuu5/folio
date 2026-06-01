@@ -524,14 +524,15 @@ a.normative-ref:hover {
 /* --- mermaid diagram figure (横長 LR 対策 + SSoT 一元化、 #121) -------- */
 /* 図 styling の SSoT。 旧来 4 spec の inline <style> に分散していた figure.diagram /
  * figcaption / pre.mermaid を本 block に集約し、 living spec 側 inline は撤去した。
- * constitution.html は §2 frozen ゆえ inline 据置 = 旧 model (figure 自体を overflow
- * scroll 容器にする + pre.mermaid { visibility:hidden }) が残る既知 gap (図は standalone
- * で動作、 §2 ゆえ未追従)。 設計: figure.diagram は card chrome のみ。 横スクロールは内側の
+ * constitution.html も #122 で inline <style> を撤去し本 block に追従 — 全 spec が本 SSoT を
+ * 共有する (旧 pre.mermaid { visibility:hidden } の §8 graceful 違反を解消、 frozen ゆえ
+ * user 承認の上で例外編集)。 設計:
+ * figure.diagram は card chrome のみ。 横スクロールは内側の
  * render 済 pre.mermaid が担う (下記 block + rules §4.6) — figure を scroll 容器にすると
  * figcaption (xref tooltip 等で横に伸びうる) が spurious overflow を起こすため、 scroll/
  * focusable 対象は図そのもの = pre に限定する。 ★graceful degradation: 旧 inline の
  * pre.mermaid { visibility:hidden } は JS off 時に図 source を不可視化し §8 SHALL に反する
- * ため living spec から廃止 — 未 render の raw <pre class="mermaid"> は generic pre (code
+ * ため 全 spec から廃止 (constitution は #122 で追従) — 未 render の raw <pre class="mermaid"> は generic pre (code
  * block) のまま可視に保つ。 */
 figure.diagram {
   margin: 1.5rem 0;
