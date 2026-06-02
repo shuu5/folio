@@ -297,12 +297,22 @@ run_cli_scaffold() {
 # ============================================================================
 run_cli_fix() {
   local scenario="$1"
-  local req_id fixture exp_exit post_fix_require
+  local req_id fixture exp_exit
   req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
   fixture=$(yq -r '.fixture' "$scenario")                  # SCRIPT_DIR (verification dir) 相対の fixture tree
   exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
-  post_fix_require=$(yq -r '.post_fix_require // ""' "$scenario")   # (任意) post-fix tree に grep -F で残るべきリテラル
-                                                           # (mask-01 injection 等 validate 不可視な code 破壊を behavioral に捕捉、 #116)
+  # (任意) post-fix tree を grep -F で behavioral 検査するリテラル群。 scalar (1 件) / seq (複数件) 両対応。
+  #   post_fix_require: post-fix tree に全て残るべき (anchor 生成 / code 破壊なし = mask-01 #116 / skip 保全)
+  #   post_fix_forbid : post-fix tree に 1 件も現れてはならない (opt-in no-op / 越権 mark の不在 = #131 ceiling)
+  # mikefarah yq は jq の `if/then/else ... end` を持たない (lexer error → 2>/dev/null で全件 silent 脱落 = assertion 死、
+  # #131 ceiling が no-op sabotage で実証)。 ゆえに seq 用と scalar 用の 2 query を連結して両形式を吸収する。
+  local -a post_reqs=() post_forbid=()
+  while IFS= read -r r; do [[ -n "$r" ]] && post_reqs+=("$r"); done < <(
+    yq -r 'select(.post_fix_require | tag == "!!seq") | .post_fix_require[]' "$scenario" 2>/dev/null
+    yq -r 'select(.post_fix_require | tag == "!!str") | .post_fix_require'   "$scenario" 2>/dev/null )
+  while IFS= read -r r; do [[ -n "$r" ]] && post_forbid+=("$r"); done < <(
+    yq -r 'select(.post_fix_forbid | tag == "!!seq") | .post_fix_forbid[]' "$scenario" 2>/dev/null
+    yq -r 'select(.post_fix_forbid | tag == "!!str") | .post_fix_forbid'   "$scenario" 2>/dev/null )
 
   local -a cmd=()
   while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")
@@ -347,13 +357,21 @@ run_cli_fix() {
     if [[ "$post_exit" != "0" ]]; then
       ok=false; reasons+=("post-fix validate not clean (exit ${post_exit}; reverse not materialized?)")
     fi
-    # (e) post_fix_require: 指定リテラルが post-fix tree に grep -F で残る (validate 不可視な code 破壊
-    #     = mask-01 injection 等を behavioral に捕捉。 code 行が wrap で破壊されるとリテラルが消えて FAIL)
-    if [[ -n "$post_fix_require" ]]; then
-      if ! grep -rqF -- "$post_fix_require" "$tmp"; then
-        ok=false; reasons+=("post_fix_require not found in post-fix tree: '${post_fix_require}' (code 例が fix で破壊された可能性 = mask-01 injection)")
+    # (e) post_fix_require: 指定リテラル群が post-fix tree に grep -F で全て残る (validate 不可視な code 破壊
+    #     = mask-01 injection を捕捉 + auto-mark の anchor 生成 / code・heading skip を behavioral に検証)
+    local _r
+    for _r in "${post_reqs[@]}"; do
+      if ! grep -rqF -- "$_r" "$tmp"; then
+        ok=false; reasons+=("post_fix_require not found in post-fix tree: '${_r}' (auto-mark 欠落 or code/heading 例が fix で破壊 = skip/injection regression)")
       fi
-    fi
+    done
+    # (e2) post_fix_forbid: 指定リテラル群が post-fix tree に 1 件も現れない (opt-in no-op / 越権 mark の不在 = 越権 regression 捕捉)
+    local _f
+    for _f in "${post_forbid[@]}"; do
+      if grep -rqF -- "$_f" "$tmp"; then
+        ok=false; reasons+=("post_fix_forbid present in post-fix tree (must be absent): '${_f}' (opt-in 越権 or 不正 auto-mark = no-op/partition regression)")
+      fi
+    done
     # (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (no-op)
     local snap1 snap2 refix_exit
     snap1=$( cd "$tmp" && find . -type f -exec sha256sum {} + 2>/dev/null | LC_ALL=C sort )

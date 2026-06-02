@@ -1,0 +1,10 @@
+# glossary-noautomark fixture vocabulary (REQ-GLOSS-002 opt-in no-op 検証用)。
+# folio-closed 語を持つが、 spec doc は folio-glossary-automark meta を持たない (非 opt-in) ため
+# auto-mark は走ってはならない (populate は opt-in 非依存ゆえ走る)。
+terms:
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "design-intent doc (no-automark fixture)。"
+  - canonical: "prime"
+    domain: "folio-closed"
+    definition: "progressive disclosure digest (no-automark fixture)。"

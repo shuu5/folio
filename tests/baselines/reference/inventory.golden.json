@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-01T21:32:47Z",
+  "generatedAt": "2026-06-02T08:51:20Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1401,7 +1401,13 @@
         "id": "REQ-GLOSS-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-001",
-        "essence": ""
+        "essence": "手動 (explicit) mark した glossary 用語の hover tooltip は &lt;span class=\"term\" data-term=\"&lt;canonical&gt;\"&gt; で表し、 data-term は vocabulary.yaml の canonical に解決し、 data-tooltip は その definition と一致する (folio-closed 語の folio fix auto-mark は REQ-GLOSS-002 の anchor 形が担う。 Class B best-effort、 未 mark 言及は gap-lint しない)。"
+      },
+      {
+        "id": "REQ-GLOSS-002",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-gloss-002",
+        "essence": "opt-in した living spec/research (folio-glossary-automark=enabled) では、 folio fix が domain: folio-closed 用語の doc 初出を best-effort で &lt;a class=\"term\" data-term href=\"../glossary.html#term-&lt;slug&gt;\" data-tooltip&gt; に auto-mark する (no-JS で click→glossary + hover を両立、 code/見出し/既 mark/consumer 用語は対象外、 全 occurrence は約束しない。 href は cluster 直下 depth-1 前提)。"
       },
       {
         "id": "REQ-REL-001",
@@ -1539,7 +1545,7 @@
         "id": "REQ-VER-019",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-019",
-        "essence": "folio validate は glossary gate を追加検査する: marked term (&lt;span class=\"term\" data-term&gt;) の data-term が vocabulary.yaml に解決し (resolve)、 data-tooltip が definition と一致する (consistency)。 folio fix は marked term の tooltip を definition から materialize する (best-effort、 gap-lint なし、 rules §9.5 / ADR-0034 §2.8)。"
+        "essence": "folio validate は glossary gate を追加検査する: marked term (explicit &lt;span class=\"term\" data-term&gt; / auto-mark &lt;a class=\"term\" data-term&gt; 双方) の data-term が vocabulary.yaml に解決し (resolve)、 data-tooltip が definition と一致する (consistency)。 folio fix は marked term の tooltip を definition から materialize する (best-effort、 gap-lint なし、 rules §9.5 / ADR-0034 §2.8)。"
       },
       {
         "id": "REQ-VER-020",

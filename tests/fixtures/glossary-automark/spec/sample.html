@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-glossary-automark" content="enabled">
+<title>glossary auto-mark fixture</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./sample.html", "@type": "schema:TechArticle", "dc:title": "glossary auto-mark fixture" }
+</script>
+</head>
+<body>
+<h2>§1. ADR は見出し内ゆえ auto-mark しない</h2>
+<p>既存 mark <span class="term" data-term="spec" data-tooltip="stale wrong tooltip">spec</span> は populate が定義へ正す (pre-RED の glossary-stale-tooltip)。</p>
+<p>code 内 <code>ADR</code> は mark しない。 この prose の ADR が doc 初出 anchor になる。 python-thing は consumer ゆえ auto-mark しない。</p>
+</body>
+</html>

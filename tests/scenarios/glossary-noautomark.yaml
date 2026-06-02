@@ -1,0 +1,24 @@
+schema_version: "0.1"
+req_id: "REQ-GLOSS-002"
+ears_pattern: "optional"
+kind: "cli-fix"
+description: |
+  非 opt-in doc (folio-glossary-automark meta 無し) では auto-mark が no-op であることを behavioral に保証する
+  (REQ-GLOSS-002 の opt-in gate = keystone「real corpus 不変」、 #131 ceiling が opt-in gate 撤去で
+  constitution 含む 11 file 106 anchor 混入を実証 → executable 化)。 populate (opt-in 非依存) は走るが auto-mark は走らない:
+    (a) pre-fix  validate が glossary-stale-tooltip で RED (既存 explicit <span> mark の tooltip drift)
+    (b) fix      が exit 0 で stale span を populate (→GREEN)、 prose の prime は auto-mark しない
+    (c) post-fix validate clean (exit 0)
+    (d) idempotency: 再 fix で exit 0 かつ tree sha256 不変
+    (e) post_fix_forbid: <a class="term" が post-fix tree に 1 件も無い (auto-mark anchor 不在 = opt-in gate 健在)
+  opt-in gate が壊れ auto-mark が常時走れば prose の prime が <a class="term"> 化し、 forbid が RED で捕捉する。
+  scope は ADR-0036 §2.3 (opt-in best-effort) で trace。
+
+fixture: "fixtures/glossary-noautomark"
+command: ["fix"]
+
+post_fix_forbid:                        # auto-mark anchor は 1 件も現れてはならない (非 opt-in = no-op)
+  - '<a class="term"'
+
+expect:
+  exit_code: 0

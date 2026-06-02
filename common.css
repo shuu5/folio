@@ -927,6 +927,16 @@ a.xref:hover { text-decoration-style: solid; text-decoration-thickness: 2px; }
   border-bottom: 1px dotted var(--folio-text-secondary);
   cursor: help;
 }
+/* auto-marked glossary term (REQ-GLOSS-002、 ADR-0036 §2.4): explicit <span class="term"> と同じ用語マーカー
+ * 見た目 (dotted underline + tooltip box を継承) だが、 click→glossary.html#term-<slug> へナビゲートできる
+ * anchor ゆえ pointer cursor。 通常 link の色/下線は付けず本文に溶け込ませ dotted border で term と判別する
+ * (a.xref と同 idiom)。 no-JS で click+hover 両立 (§8 graceful)。 */
+a.term {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+a.term:hover { border-bottom-style: solid; }
 a.xref[data-tooltip], .term[data-tooltip] { position: relative; }
 a.xref[data-tooltip]::after,
 .term[data-tooltip]::after {

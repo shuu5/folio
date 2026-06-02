@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-GLOSS-002"
+ears_pattern: "optional"
+kind: "cli-fix"
+description: |
+  folio fix が opt-in doc (folio-glossary-automark=enabled) の prose 内 domain:folio-closed 用語の
+  doc 初出を <a class="term" data-term href="../glossary.html#term-<slug>" data-tooltip> に auto-mark する
+  (ADR-0036 §2.3/§2.4、 REQ-GLOSS-002 best-effort)。 cli-fix harness で RED→GREEN+idempotent を behavioral 検証:
+    (a) pre-fix  validate が glossary-stale-tooltip で RED (既存 spec span の data-tooltip が定義と drift)
+    (b) fix      が exit 0 で stale span を populate + prose ADR 初出を <a class="term"> に auto-mark
+    (c) post-fix validate clean (exit 0) = 全 term mark が resolve + tooltip consistent
+    (d) idempotency: 再 fix で exit 0 かつ tree sha256 不変 (初出 wrap 済 + tooltip 一致 = no-op)
+    (e) post_fix_require (3 literal): auto-mark の anchor 生成 + code/見出し skip を behavioral に捕捉
+       - <a class="term" data-term="ADR" href="../glossary.html#term-adr"  … prose 初出が anchor 化 (slug=adr)
+       - <code>ADR</code>                                                  … code 内 ADR は wrap されず保全
+       - §1. ADR は見出し                                                  … 見出し内 ADR は wrap されず保全
+  consumer domain (python-thing) は folio-closed map 外ゆえ auto-mark 対象にならない (domain partition)。
+  既 mark の "spec" は present skip (idempotent)。 非 opt-in doc では auto-mark は no-op (real corpus 不変 = keystone)。
+  scope は ADR-0036 §2.3 で trace。
+
+# --- cli-fix scenario (fixture tree を temp copy し RED→fix→GREEN→idempotent、 runner.sh run_cli_fix) ---
+fixture: "fixtures/glossary-automark"   # SCRIPT_DIR (tests) 相対の fixture tree
+command: ["fix"]                        # bin/folio に渡す引数列 (--root <tmp> は harness が付与)
+
+post_fix_require:                       # post-fix tree に grep -F で全て残るべき literal (list 形式)
+  - '<a class="term" data-term="ADR" href="../glossary.html#term-adr"'
+  - "<code>ADR</code>"
+  - "§1. ADR は見出し"
+
+expect:
+  exit_code: 0                          # happy path (RED → fix 0 → GREEN → idempotent)

@@ -1,0 +1,12 @@
+# glossary-automark fixture vocabulary (REQ-GLOSS-002 auto-mark 検証用)。
+# domain で folio-closed (auto-mark 対象) / consumer (対象外) を区別する (ADR-0036 §2.2)。
+terms:
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "design-intent doc (auto-mark fixture)。"
+  - canonical: "ADR"
+    domain: "folio-closed"
+    definition: "decision record (auto-mark fixture)。"
+  - canonical: "python-thing"
+    domain: "consumer"
+    definition: "consumer-owned term (must NOT auto-mark)。"
