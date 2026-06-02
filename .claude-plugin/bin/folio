@@ -1045,18 +1045,25 @@ folio_xref_wrap_doc() {
 # definition の tab/改行は jq gsub で space に正規化 (TSV/交互行 transport の delimiter desync を防ぐ、
 # #116 gloss-tab; rules §3 は単一行 schema だが robustness で defensive)。 vocabulary.yaml / yq / jq /
 # definition 不在は無出力 (= glossary gate skip)。
-folio_glossary_map() {
-  local root_abs="$1" cand vf=""
-  # 探索順: root → 親 (self-host / consumer-local) → plugin-resident (consumer derive、 ADR-0036 §2.1 配布機構)。
-  # plugin-resident は $CLAUDE_PLUGIN_ROOT 設定時のみ candidate に入れる: 未設定の bare CLI / CI / sandbox では
-  # 加えないため、 vocab を持たない consumer-like fixture の [SKIP] glossary を汚さず test isolation を保つ
-  # (real consumer は Claude Code が $CLAUDE_PLUGIN_ROOT を set するゆえ plugin SSoT から derive する)。
+# vocabulary.yaml の path を candidate 探索で解決し stdout (見つからねば return 1)。 glossary_map / glossary_emit
+# が共用する単一の探索ロジック (drift 防止)。 探索順: root → 親 (self-host / consumer-local) → plugin-resident
+# (consumer derive、 ADR-0036 §2.1 配布機構)。 plugin-resident は $CLAUDE_PLUGIN_ROOT 設定時のみ candidate に
+# 入れる: 未設定の bare CLI / CI / sandbox では加えないため、 vocab を持たない consumer-like fixture の
+# [SKIP] glossary を汚さず test isolation を保つ (real consumer は Claude Code が $CLAUDE_PLUGIN_ROOT を set
+# するゆえ plugin SSoT から derive する)。
+folio_glossary_vocab_path() {
+  local root_abs="$1" cand
   local cands=("${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml")
   [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] && cands+=("${CLAUDE_PLUGIN_ROOT}/architecture/vocabulary.yaml")
   for cand in "${cands[@]}"; do
-    [[ -f "$cand" ]] && { vf="$cand"; break; }
+    [[ -f "$cand" ]] && { printf '%s' "$cand"; return 0; }
   done
-  [[ -z "$vf" ]] && return 1
+  return 1
+}
+
+folio_glossary_map() {
+  local root_abs="$1" vf
+  vf=$(folio_glossary_vocab_path "$root_abs") || return 1
   command -v yq >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
   local c def line state=0
@@ -1450,6 +1457,19 @@ folio_cmd_validate() {
       [[ -z "$dl" ]] && continue
       violations+=("$dl"); nav_deadlink_fail=1
     done < <(folio_nav_deadlinks "$nav_index" "$root_abs")
+  fi
+
+  # glossary.html も生成 artifact ゆえ同 nav-regen-drift で byte 検査する (ADR-0036 §2.5 glossary single-SoT =
+  # regen-drift の glossary 特化 = 手編集/vocabulary.yaml 変化の未再生成を検出)。 index と独立に存在判定し nav_seen を
+  # 立てる (build は index を無条件・glossary を vocab 解決時のみ生成ゆえ通常は共存、 abnormal な片在も robust に扱う)。
+  # vocabulary-parity (term 集合の対称差) は別 gate として S4c で追加。
+  local nav_gloss="${root_abs}/glossary.html"
+  if [[ -f "$nav_gloss" ]] && [[ "$(folio_extract_meta "$nav_gloss" folio-generated)" == "folio-build" ]]; then
+    nav_seen=1
+    if ! diff <(folio_glossary_emit "$root_abs") "$nav_gloss" >/dev/null 2>&1; then
+      violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が vocabulary.yaml から drift (folio build で再生成、 ADR-0036 §2.5)")
+      nav_drift_fail=1
+    fi
   fi
 
   # --- gate (o) cluster-reachability — dead-end README / empty-cluster を検出 (ADR-0035 §2.5、 §1 defect #2/#3)。
@@ -1949,7 +1969,74 @@ HEAD
   printf '</body>\n</html>\n'
 }
 
+# canonical 名 ($1) を glossary anchor 用 slug に変換 (lowercase / 非英数の連なりを単一 hyphen / 端の hyphen 除去)。
+# 例: "SSoT"→"ssot" / "canonical name"→"canonical-name" / "data-audience"→"data-audience"。 決定的。
+folio_glossary_slug() {
+  # LC_ALL=C で byte-based に固定し locale 非依存・決定的に (multibyte canonical でも非決定にならない、 ceiling minor)。
+  # 現 vocab は ASCII canonical のみゆえ出力不変。 非 ASCII/全記号 canonical の空 slug fallback + 一意性 gate は S4c。
+  printf '%s' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -e 's/[^a-z0-9]\+/-/g' -e 's/^-//' -e 's/-$//'
+}
+
+# <root_abs> ($1) の vocabulary.yaml (folio-closed 語) から glossary.html 内容を stdout に emit (純関数・決定的、 ADR-0036)。
+# vocab 解決不能 or term 無しなら何も出さず return 1 (= consumer で vocab 無し時は build が glossary を生成しない、 additive/keystone)。
+# 定義は raw を htesc で本文 escape (data-tooltip の attribute-escape とは別 = body 表示用)。 canonical を LC_ALL=C sort で決定化。
+folio_glossary_emit() {
+  local root_abs="$1" vf
+  vf=$(folio_glossary_vocab_path "$root_abs") || return 1
+  command -v yq >/dev/null 2>&1 || return 1
+  command -v jq >/dev/null 2>&1 || return 1
+  # canonical\traw-definition を folio-closed 語のみ抽出 (tab/改行は space に正規化 = 行 delimiter desync 防止)、 canonical sort。
+  local rows; rows=$(yq -o=json -I=0 '[.terms[] | select(.definition) | select((.domain // "folio-closed") == "folio-closed") | [.canonical, .definition]]' "$vf" 2>/dev/null \
+    | jq -r '.[] | (.[0]|gsub("[\t\n]+";" ")) + "\t" + (.[1]|gsub("[\t\n]+";" "))' 2>/dev/null | LC_ALL=C sort)
+  [[ -z "$rows" ]] && return 1
+
+  cat <<'HEAD'
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- folio:generated source=folio-build do-not-edit -->
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="glossary">
+<meta name="folio-generated" content="folio-build">
+<meta name="folio-status" content="active">
+<title>folio-vocabulary — glossary</title>
+<link rel="stylesheet" href="../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./glossary.html",
+  "@type": "schema:DefinedTermSet",
+  "dc:title": "folio-vocabulary glossary"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio-vocabulary — glossary</h1>
+  <div class="meta">folio-framework 語の canonical 定義 (folio build が vocabulary.yaml から生成、 ADR-0036)</div>
+</header>
+
+<aside class="informative">
+  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (folio 所有の canonical SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 spec 本文の用語 hover tooltip も同じ SSoT から供給されます (single-SoT)。</p>
+</aside>
+
+<dl class="glossary">
+HEAD
+
+  local canon def slug
+  while IFS=$'\t' read -r canon def; do
+    [[ -z "$canon" ]] && continue
+    slug=$(folio_glossary_slug "$canon")
+    printf '  <dt id="term-%s"><span class="term-name">%s</span></dt>\n  <dd>%s</dd>\n' \
+      "$(folio_build_attresc "$slug")" "$(folio_build_htesc "$canon")" "$(folio_build_htesc "$def")"
+  done <<< "$rows"
+
+  printf '</dl>\n\n<p class="nav-back"><a href="./index.html">&larr; architecture index</a></p>\n</body>\n</html>\n'
+}
+
 # folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
+#   companion で glossary.html も vocabulary.yaml から生成する (ADR-0036、 vocab 解決時のみ)。
 #   既定 = 生成して in-place write。 --check = 生成せず committed (marker 付き) index と byte 比較し
 #   drift を exit 1 で報告 (validate の regen-drift gate と同じ detect、 fix↔validate と同型)。
 #   marker 無し (hand-authored・未生成) の index は drift 対象外 (keystone)。 exit 0=ok/1=drift/2=tool error。
@@ -1972,15 +2059,20 @@ folio_cmd_build() {
   local out="${root_abs}/index.html"
 
   if [[ "$check" -eq 1 ]]; then
+    local drift=0
     if [[ -f "$out" ]] && [[ "$(folio_extract_meta "$out" folio-generated)" == "folio-build" ]]; then
       if ! diff <(folio_build_emit_index "$root_abs") "$out" >/dev/null 2>&1; then
-        echo "folio build --check: ${root}/index.html が graph から drift (folio build で再生成せよ)" >&2
-        return 1
+        echo "folio build --check: ${root}/index.html が graph から drift (folio build で再生成せよ)" >&2; drift=1
       fi
-      echo "folio build --check: ${root}/index.html は graph と同期 (clean)" >&2
-      return 0
     fi
-    echo "folio build --check: ${root}/index.html は未生成 (marker 無し) = drift 対象外 (folio build で生成)" >&2
+    local gout_c="${root_abs}/glossary.html"
+    if [[ -f "$gout_c" ]] && [[ "$(folio_extract_meta "$gout_c" folio-generated)" == "folio-build" ]]; then
+      if ! diff <(folio_glossary_emit "$root_abs") "$gout_c" >/dev/null 2>&1; then
+        echo "folio build --check: ${root}/glossary.html が vocabulary.yaml から drift (folio build で再生成せよ)" >&2; drift=1
+      fi
+    fi
+    [[ "$drift" -eq 1 ]] && return 1
+    echo "folio build --check: index/glossary は graph と同期 (clean、 marker 無し index/glossary は対象外)" >&2
     return 0
   fi
 
@@ -2005,6 +2097,23 @@ folio_cmd_build() {
     echo "folio build: wrote ${root}/index.html" >&2
   else
     echo "folio build: write failed: ${out} (fail-closed)" >&2; exit 2
+  fi
+
+  # glossary.html を vocabulary.yaml (folio-closed) から生成 (ADR-0036、 companion)。 vocab 解決不能 (consumer で
+  # $CLAUDE_PLUGIN_ROOT 未設定・vocab 無し) なら生成しない (additive/keystone)。 safe write = temp→mv (index と同型)。
+  local gout="${root_abs}/glossary.html" gtmp
+  gtmp=$(mktemp "${root_abs}/.folio-gloss.XXXXXX") || { echo "folio build: mktemp failed (fail-closed)" >&2; exit 2; }
+  trap 'rm -f "${gtmp:-}"' EXIT INT TERM
+  if folio_glossary_emit "$root_abs" > "$gtmp" 2>/dev/null && [[ -s "$gtmp" ]]; then
+    if [[ -f "$gout" ]] && [[ "$(folio_extract_meta "$gout" folio-generated)" != "folio-build" ]]; then
+      echo "folio build: 既存の hand-authored glossary (${gout}) を generated-view に置換します (再 build で vocabulary.yaml から再生成)" >&2
+    fi
+    mv "$gtmp" "$gout"
+    trap - EXIT INT TERM
+    echo "folio build: wrote ${root}/glossary.html" >&2
+  else
+    rm -f "$gtmp"
+    trap - EXIT INT TERM
   fi
 }
 

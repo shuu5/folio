@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<!-- folio:generated source=folio-build do-not-edit -->
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="glossary">
+<meta name="folio-generated" content="folio-build">
+<meta name="folio-status" content="active">
+<title>folio-vocabulary — glossary</title>
+<link rel="stylesheet" href="../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./glossary.html",
+  "@type": "schema:DefinedTermSet",
+  "dc:title": "folio-vocabulary glossary"
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio-vocabulary — glossary</h1>
+  <div class="meta">folio-framework 語の canonical 定義 (folio build が vocabulary.yaml から生成、 ADR-0036)</div>
+</header>
+
+<aside class="informative">
+  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (folio 所有の canonical SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 spec 本文の用語 hover tooltip も同じ SSoT から供給されます (single-SoT)。</p>
+</aside>
+
+<dl class="glossary">
+  <dt id="term-adr"><span class="term-name">ADR</span></dt>
+  <dd>Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。</dd>
+  <dt id="term-ears"><span class="term-name">EARS</span></dt>
+  <dd>Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。</dd>
+  <dt id="term-ssot"><span class="term-name">SSoT</span></dt>
+  <dd>Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。</dd>
+  <dt id="term-caller-marker"><span class="term-name">caller-marker</span></dt>
+  <dd>spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。</dd>
+  <dt id="term-canonical-name"><span class="term-name">canonical name</span></dt>
+  <dd>1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。</dd>
+  <dt id="term-ceiling"><span class="term-name">ceiling</span></dt>
+  <dd>LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。</dd>
+  <dt id="term-cluster"><span class="term-name">cluster</span></dt>
+  <dd>architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。</dd>
+  <dt id="term-constitution"><span class="term-name">constitution</span></dt>
+  <dd>folio の不変原則 (P-1〜P-13) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。</dd>
+  <dt id="term-data-audience"><span class="term-name">data-audience</span></dt>
+  <dd>要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。</dd>
+  <dt id="term-defined-object"><span class="term-name">defined-object</span></dt>
+  <dd>一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。</dd>
+  <dt id="term-dogfood"><span class="term-name">dogfood</span></dt>
+  <dd>folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。</dd>
+  <dt id="term-dual-audience"><span class="term-name">dual-audience</span></dt>
+  <dd>1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。</dd>
+  <dt id="term-essence"><span class="term-name">essence</span></dt>
+  <dd>defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。</dd>
+  <dt id="term-floor"><span class="term-name">floor</span></dt>
+  <dd>deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。</dd>
+  <dt id="term-invariant"><span class="term-name">invariant</span></dt>
+  <dd>spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。</dd>
+  <dt id="term-inventory"><span class="term-name">inventory</span></dt>
+  <dd>architecture 全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。</dd>
+  <dt id="term-prime"><span class="term-name">prime</span></dt>
+  <dd>inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。</dd>
+  <dt id="term-progressive-disclosure"><span class="term-name">progressive disclosure</span></dt>
+  <dd>情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。</dd>
+  <dt id="term-spec"><span class="term-name">spec</span></dt>
+  <dd>WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。</dd>
+  <dt id="term-vocabulary"><span class="term-name">vocabulary</span></dt>
+  <dd>folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。</dd>
+  <dt id="term-xref"><span class="term-name">xref</span></dt>
+  <dd>defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。</dd>
+</dl>
+
+<p class="nav-back"><a href="./index.html">&larr; architecture index</a></p>
+</body>
+</html>

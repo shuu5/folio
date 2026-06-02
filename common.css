@@ -964,3 +964,40 @@ a.xref[data-tooltip]:focus-visible::after,
   opacity: 1;
   visibility: visible;
 }
+
+/* ========================================================================
+ * Glossary page (ADR-0036、 folio build が vocabulary.yaml から生成する glossary.html)。
+ *   各 term を <dt id="term-<slug>"> anchor + definition <dd> で列挙する definition list。
+ *   spec 本文の用語 hover tooltip (.term) と同じ vocabulary.yaml SSoT から derive (single-SoT)。
+ *   spec body の用語 click → glossary.html#term-<slug> で該当語へ飛び :target で強調する
+ *   (既存 xref :target flash と同系の navigational feedback、 dt + 隣接 dd を一緒に highlight)。
+ * ====================================================================== */
+dl.glossary { margin: 1.5rem 0; }
+dl.glossary dt {
+  scroll-margin-top: 1rem;
+  margin-top: 1.1rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+}
+dl.glossary dt .term-name {
+  font-family: var(--folio-font-mono, ui-monospace, monospace);
+  color: var(--folio-brand);
+}
+dl.glossary dd {
+  margin: 0.15rem 0 0 0;
+  padding: 0 0.5rem 0.15rem 1.25rem;
+  color: var(--folio-text-secondary);
+  line-height: 1.6;
+}
+dl.glossary dt:target,
+dl.glossary dt:target + dd {
+  background: var(--folio-surface-raised, rgba(127, 127, 127, 0.1));
+}
+dl.glossary dt:target {
+  box-shadow: inset 3px 0 0 var(--folio-brand);
+  border-radius: var(--folio-radius-card, 6px) var(--folio-radius-card, 6px) 0 0;
+}
+.nav-back {
+  margin-top: 2rem;
+  font-size: var(--folio-text-small, 0.875rem);
+}

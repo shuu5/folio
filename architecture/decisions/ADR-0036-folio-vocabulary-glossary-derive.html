@@ -96,7 +96,7 @@
 
 <h3 id="s2-5-gates">§2.5 enforcement = folio validate に glossary gate 追加</h3>
 <ul>
-  <li><strong>glossary single-SoT</strong>: <code>glossary.html</code> の各 definition が <code>vocabulary.yaml</code> definition と byte 一致 (build derive の証明 + 手編集検出 = regen-drift の glossary 特化)。 同一 canonical 用語を別途 prose で重複定義しない (<a href="../spec/constitution.html#p-5">P-5</a> SSoT 唯一性)。</li>
+  <li><strong>glossary single-SoT</strong>: 生成 <code>glossary.html</code> 全体が <code>vocabulary.yaml</code> からの regen (<code>folio build</code> emit) と byte 一致 (definition drift + 構造 drift 双方を含む = build derive の証明 + 手編集検出)。 実装は nav-regen-drift gate に畳む (index.html と同型の regen-drift、 §2.5 冒頭の 3 gate に新 gate を増やさず glossary 特化を追加)。 同一 canonical 用語を別途 prose で重複定義しない (<a href="../spec/constitution.html#p-5">P-5</a> SSoT 唯一性)。</li>
   <li><strong>vocabulary-parity</strong>: <code>glossary.html</code> の term 集合 == <code>vocabulary.yaml</code> の canonical 集合 (過不足の対称差を報告し drift の所在を surface)。</li>
   <li><strong>term-marked (best-effort、 opt-in)</strong>: 既存 glossary gate (<code>data-term</code> resolve + tooltip consistency、 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.6) を folio-closed 語彙で再利用。 §2.3 により <strong>非 opt-in は no-op (keystone)</strong>、 opt-in でも best-effort tier (no-gaps normative にしない)。</li>
 </ul>
