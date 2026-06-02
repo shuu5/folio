@@ -30,3 +30,7 @@ worktrees/
 .dolt/
 *.db
 .beads-credential-key
+# Dolt が台帳の SSOT。jsonl export / embedded db は per-machine ゆえ track しない (beads-init #8)
+.beads/issues.jsonl
+.beads/interactions.jsonl
+embeddeddolt/

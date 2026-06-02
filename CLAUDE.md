@@ -75,3 +75,11 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 **Phase 2.5 (commit 1b18ddb)**: 公式 plugin 仕様 (plugins-reference L733: 「`.claude-plugin/` には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下」) に従い、 `hooks/` を plugin root 直下に移動。 scripts/ は `.claude-plugin/scripts/` 維持で P-11 部分隔離継続 (hooks.json command で path 指定参照)。 ADR-0003 §2.3 「.claude-plugin/ 配下に隔離」 の適用範囲は scripts/ 等の HOW 実装に narrowing (ADR 本文は frozen、 適用解釈は本 §6 + architecture/spec/README.html で trace)。
 
 **X4-F (ADR-0026)**: HOW-test dir を `verification/` → `tests/` に rename (folio の bash stack 慣習に整合)。 「verification」 は P-13 概念 + `architecture/spec/verification.html` contract + `folio validate` として **dir 名と独立に存続** (spec 名・REQ-VER-* は不変)。 test-placement model を是正: (a) spec 適合性 = `folio validate` (framework 提供・普遍・dir なし)、 (b) 実装適合性 = 各 stack 慣習 (`tests/` 等、 folio 非 mandate)。 consumer の (b) test 配置は規定せず、 `folio init` も test dir を scaffold しない (P-13(b))。 frozen ADR は移動ファイルへの `<a href>` のみ tests/ に rewrite (link maintenance、 prose の歴史記述は据置)。 検証: `folio validate` 3-gate clean + sandbox 10/10 GREEN。
+
+## 7. Beads Issue Tracker (bd)
+
+タスク追跡は **bd (beads)**。 SessionStart hook が `bd prime` で全ワークフロー文脈を毎セッション注入する (SSOT = `.beads/PRIME.md`)。 本節は bd 未注入時のフォールバック。
+
+- **タスク = beads / 知識 = doobidoo**: 永続・横断の作業は bd issue で追跡。 知見は doobidoo + 自動メモリ (MEMORY.md) に保存し、 **`bd remember/recall/memories` は使わない**。
+- 着手前に `bd create` → `bd update <id> --claim`。 終了前に `bd close` → `bd dolt push`。
+- コードは本リポ慣習 (conventional + 日本語 + Claude footer 無し + explicit `git add`) で commit し main へ push。
