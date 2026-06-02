@@ -1,37 +1,80 @@
-# folio canonical vocabulary (glossary SSoT) — ADR-0034 §2.8 / rules §3 schema (P-5)。
-# terms[].canonical = 正準名 (MUST)。 terms[].definition = 1 行 concept 定義 (glossary tooltip の SSoT、
-#   ADR-0031 §2.4 enrich、 ISO 704 concept model)。 HTML 上の <span class="term" data-term="<canonical>">
-#   を folio fix が data-tooltip = definition で materialize し、 folio validate の glossary gate が
-#   resolve + tooltip-consistency を検査する (best-effort tier、 explicit-mark のみ、 gap-lint しない)。
+# folio canonical vocabulary (glossary SSoT) — ADR-0034 §2.8 / ADR-0036 / rules §3 schema (P-5)。
+# terms[].canonical = 正準名 (MUST)。 terms[].definition = 1 行 concept 定義 (glossary tooltip + glossary.html
+#   の SSoT、 ADR-0031 §2.4 enrich、 ISO 704 concept model)。 terms[].domain = folio-closed | consumer
+#   (ADR-0036 §2.2 partition): folio-closed = folio 所有・固定ゆえ folio が canonical 定義を ship し consumer は
+#   plugin-resident vocabulary.yaml から derive/auto-mark で受け取る ($CLAUDE_PLUGIN_ROOT、 §2.1)。 consumer =
+#   consumer 所有・folio 解説不能ゆえ #110 手動 best-effort のまま (この folio 自身の vocab は全て folio-closed)。
+#   HTML 上の <span class="term" data-term="<canonical>"> を folio fix が data-tooltip = definition で materialize し
+#   (auto-mark + populate = spec mutate ゆえ fix の領分、 REQ-GLOSS-002)、 folio build が glossary.html を derive、
+#   folio validate の glossary gate が resolve + tooltip-consistency を検査する (best-effort tier、 gap-lint しない)。
+# 1.0.0 starter set (ADR-0036 §3、 #130 grill) = 中核 8 語: spec / ADR / constitution / invariant +
+#   inventory / prime / cluster / vocabulary。 残り (EARS/SSoT/xref/dogfood/caller-marker 等) は既収録 + 1.x 漸進。
 # forbidden は意図的に載せない (vocabulary gate REQ-CI-013 の誤検出 risk を避ける = #110 D2)。
-#   forbidden enrichment (vocabulary 規律の活性化) は別 task。
-# starter population ゆえ網羅でない (全 population は ADR-0034 §2.9 roadmap)。
 # definition は単一行 (rules §3 schema)。 tooltip 機構は改行を扱わず、 HTML 特殊文字 (& < > ") は
 # folio fix が attribute-escape して data-tooltip に格納する。
 terms:
+  # --- 1.0.0 starter set: 中核 8 語 (folio-作法の最頻出語、 ADR-0036 §3 / #130 grill 確定) ---
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。"
+  - canonical: "ADR"
+    domain: "folio-closed"
+    definition: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-0031 §10.3)。"
+  - canonical: "constitution"
+    domain: "folio-closed"
+    definition: "folio の不変原則 (P-1〜P-13) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。"
+  - canonical: "invariant"
+    domain: "folio-closed"
+    definition: "spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。"
+  - canonical: "inventory"
+    domain: "folio-closed"
+    definition: "architecture 全 spec を <head> JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。"
+  - canonical: "prime"
+    domain: "folio-closed"
+    definition: "inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。"
+  - canonical: "cluster"
+    domain: "folio-closed"
+    definition: "architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain)。"
+  - canonical: "vocabulary"
+    domain: "folio-closed"
+    definition: "folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。"
+  # --- 既収録 folio-framework 語 (xref/dual-audience 系譜で author 済) ---
   - canonical: "SSoT"
+    domain: "folio-closed"
     definition: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。"
   - canonical: "dual-audience"
+    domain: "folio-closed"
     definition: "1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。"
   - canonical: "data-audience"
+    domain: "folio-closed"
     definition: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。"
   - canonical: "EARS"
+    domain: "folio-closed"
     definition: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。"
   - canonical: "essence"
+    domain: "folio-closed"
     definition: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。"
   - canonical: "dogfood"
+    domain: "folio-closed"
     definition: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。"
   - canonical: "floor"
+    domain: "folio-closed"
     definition: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。"
   - canonical: "ceiling"
+    domain: "folio-closed"
     definition: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。"
   - canonical: "xref"
+    domain: "folio-closed"
     definition: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。"
   - canonical: "defined-object"
+    domain: "folio-closed"
     definition: "一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。"
   - canonical: "canonical name"
+    domain: "folio-closed"
     definition: "1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。"
   - canonical: "progressive disclosure"
+    domain: "folio-closed"
     definition: "情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。"
   - canonical: "caller-marker"
+    domain: "folio-closed"
     definition: "spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。"

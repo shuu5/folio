@@ -1047,14 +1047,21 @@ folio_xref_wrap_doc() {
 # definition 不在は無出力 (= glossary gate skip)。
 folio_glossary_map() {
   local root_abs="$1" cand vf=""
-  for cand in "${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml"; do
+  # 探索順: root → 親 (self-host / consumer-local) → plugin-resident (consumer derive、 ADR-0036 §2.1 配布機構)。
+  # plugin-resident は $CLAUDE_PLUGIN_ROOT 設定時のみ candidate に入れる: 未設定の bare CLI / CI / sandbox では
+  # 加えないため、 vocab を持たない consumer-like fixture の [SKIP] glossary を汚さず test isolation を保つ
+  # (real consumer は Claude Code が $CLAUDE_PLUGIN_ROOT を set するゆえ plugin SSoT から derive する)。
+  local cands=("${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml")
+  [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] && cands+=("${CLAUDE_PLUGIN_ROOT}/architecture/vocabulary.yaml")
+  for cand in "${cands[@]}"; do
     [[ -f "$cand" ]] && { vf="$cand"; break; }
   done
   [[ -z "$vf" ]] && return 1
   command -v yq >/dev/null 2>&1 || return 1
   command -v jq >/dev/null 2>&1 || return 1
   local c def line state=0
-  yq -o=json -I=0 '[.terms[] | select(.definition) | [.canonical, .definition]]' "$vf" 2>/dev/null \
+  # domain: folio-closed 語のみ derive/mark 対象 (ADR-0036 §2.2、 domain 欠落は folio-closed 既定で後方互換)。
+  yq -o=json -I=0 '[.terms[] | select(.definition) | select((.domain // "folio-closed") == "folio-closed") | [.canonical, .definition]]' "$vf" 2>/dev/null \
     | jq -r '.[] | ((.[0]|gsub("[\t\n]+";" ")), (.[1]|gsub("[\t\n]+";" ")))' 2>/dev/null \
     | while IFS= read -r line; do
         if [[ "$state" -eq 0 ]]; then c="$line"; state=1; continue; fi
