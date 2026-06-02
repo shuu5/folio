@@ -10,6 +10,9 @@ description: |
   gate しない (ceiling 指摘: index marker に nest すると consumer の post-init/pre-build window で未検査になる)。
   consumer ゆえ block でなく warn = exit 0 (validate-clean を壊さず authoring を nudge する)。 nav-regen-drift /
   nav-dead-link は index 由来ゆえ生成 index 無しで [SKIP] のまま (両系の gate-対象の差を golden で固定)。
+  さらに spec/README が持つ init-scaffold の home link (../index.html) は、 build 前で index がまだ無い本状態では
+  解決しない dangling であり、 同 gate の link-rot 検査 (#128) が 2 本目の [WARN] として捕捉する。 これにより
+  link-rot 検出が consumer では warn 経路を通ること (self-block の nav-validate-readme-linkrot と対) も同時に固定する。
 
 command: ["validate", "--root", "tests/fixtures/nav-validate-consumer-deadend"]
 capture: "stdout"

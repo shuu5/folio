@@ -1,0 +1,23 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-006"
+ears_pattern: "unwanted-behavior"
+kind: "cli-golden"
+description: |
+  self-root (spec/ に @type FolioConstitution) の cluster README が、 cluster 削除/再編で
+  解決しなくなった static cross-nav link (../research/README.html、 research/ cluster 不在) を
+  保持しているとき、 cluster-reachability gate (ADR-0035 §2.5、 gate o の link-rot 検査 #128) が
+  README body <a href> を realpath 正規化 + [[ -e ]] 実在検査で捕捉し [FAIL] block (exit 1) することを実証する。
+  link-integrity は JSON-LD relation のみ・nav-dead-link は生成 index のみで README body href を
+  未被覆ゆえ、 link-rot は本検査だけが捕捉する (横断 audit verified MAJOR の回帰 gate)。 spec/README は
+  解決する crosslink (../decisions/README.html) も併せ持つため dead-end ではなく link-rot のみで FAIL し、
+  dead-end 検出 (has_crosslink = ../ link の存在) と link-rot 検出 (存在する link の target 実在) が
+  独立であることも固定する。 nav-regen-drift / nav-dead-link は生成 index 無しで [SKIP] のまま (index 由来
+  gate と dir/README 由来 gate の対象差を golden で固定)。 self-root ゆえ warn でなく block。
+
+command: ["validate", "--root", "tests/fixtures/nav-validate-readme-linkrot"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/nav-validate-readme-linkrot.golden.txt"
+
+expect:
+  exit_code: 1

@@ -92,7 +92,7 @@
   <li>folio plugin が load 済の Claude Code session であること (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)。 未 load の session では hook が発火せず e2e は無意味。</li>
   <li>worktree 内で実行し、 probe file (<code>architecture/spec/e2e-*.html</code> / <code>architecture/random-e2e/</code> 等) は walk 後に全削除すること (working tree を汚さない)。</li>
   <li>marker file <code>.folio/architect-active</code> は <code>.gitignore</code> 済。 walk 完了後は必ず <code>rm -f</code> すること (残留すると sandbox の caller-marker unset→deny scenario が壊れ、 fail-open リスクも残る)。</li>
-  <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の全 GREEN (現 25 scenario file / 57 assertion PASS、 0 fail) を walk 前後で維持すること。</li>
+  <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の全 GREEN (現 26 scenario file / 58 assertion PASS、 0 fail) を walk 前後で維持すること。</li>
 </ul>
 </section>
 

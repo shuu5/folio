@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
-root: tests/fixtures/nav-validate-consumer-deadend
-files checked: 2 · relations checked: 0
+root: tests/fixtures/nav-validate-readme-linkrot
+files checked: 4 · relations checked: 0
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -14,11 +14,8 @@ files checked: 2 · relations checked: 0
   [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
   [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
   [SKIP] nav-dead-link (生成 index 無し)
-  [WARN] cluster-reachability
+  [FAIL] cluster-reachability
   [OK] ears-coverage
 
-warnings (2):
-  research/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
-  spec/README.html [cluster-reachability] README href "../index.html" -> ../index.html (link-rot: target not found)
-
-clean: 0 violations
+violations (1):
+  spec/README.html [cluster-reachability] README href "../research/README.html" -> ../research/README.html (link-rot: target not found)

@@ -2061,11 +2061,47 @@ folio_nav_has_crosslink() {
   return 1
 }
 
+# README ($1) の body <a href> 相対 link が target file/dir (+ #anchor) に解決するか検査 (#128 link-rot)。
+# href は README 自身の dir ($2 = cluster dir) 起点で解決 ($3 = 出力 label)。 folio_nav_deadlinks の README 版
+# (index は root_abs 直下ゆえ base=root、 README は cluster dir 直下ゆえ base=cluster dir)。 has_crosslink
+# (dead-end = ../ link の *存在*) と相補的で、 こちらは *存在する* href が rot していないか (target 実在) を見る。
+# cluster 削除/再編で残る static cross-nav の dangling を捕捉する (link-integrity は JSON-LD relation のみ・
+# nav-dead-link は生成 index のみで README body href を未被覆、 横断 audit verified MAJOR)。 外部 scheme /
+# mailto / pure #anchor / *.css は skip。 違反行 (label\tdetail) を stdout (無ければ空)。
+# 限界 (interim、 既存 nav-dead-link と同 idiom 継承): inline <code> 内 illustrative href も実 link として拾い
+# (folio_prose_only mask 未適用)、 query-string (?v=) を strip せず・大文字 HREF / single-quote href も非対象。
+# live corpus は全て無害。 mask 一般化 + query strip + 非 README body href 被覆は #119 系で parity 一括解消する。
+folio_nav_readme_deadlinks() {
+  local readme="$1" base_abs="$2" label="$3" h pathpart anchor target_abs
+  while IFS= read -r h; do
+    [[ -z "$h" ]] && continue
+    case "$h" in
+      \#*) continue ;;          # pure anchor (同 file 内)
+      *://*) continue ;;        # 外部 scheme
+      mailto:*) continue ;;
+      *.css) continue ;;        # stylesheet
+    esac
+    if [[ "$h" == *"#"* ]]; then pathpart="${h%%#*}"; anchor="${h#*#}"; else pathpart="$h"; anchor=""; fi
+    [[ -z "$pathpart" ]] && continue
+    target_abs=$(realpath -m "${base_abs}/${pathpart}")
+    if [[ ! -e "$target_abs" ]]; then
+      printf '%s\t[cluster-reachability] README href "%s" -> %s (link-rot: target not found)\n' "$label" "$h" "$pathpart"
+    elif [[ -n "$anchor" ]] && [[ -f "$target_abs" ]]; then
+      if ! grep -qF "id=\"${anchor}\"" "$target_abs" && ! grep -qF "id='${anchor}'" "$target_abs"; then
+        printf '%s\t[cluster-reachability] README href "%s" -> %s#%s (link-rot: anchor id not found in target)\n' "$label" "$h" "$pathpart" "$anchor"
+      fi
+    fi
+  done < <(grep -oP '<a [^>]*href="\K[^"]*' "$readme" 2>/dev/null)
+}
+
 # cluster-reachability (ADR-0035 §2.5 part B + empty-cluster blind spot)。 各 cluster dir について:
 #  (1) dir 存在かつ scannable doc 0 = empty cluster を flag (regen-drift は空 cluster の section silent
 #      省略を検出できない盲点。 cluster 丸ごと欠落をここで捕捉)。
 #  (2) doc 在りかつ README.html 在る場合、 README が自 cluster 外へ向かう link を持つか (dead-end 検出、
 #      現 research/README が該当)。
+#  (3) README 存在時、 その body <a href> 相対 link が rot (target 不在) していないか (#128 link-rot)。
+#      (2) は cross-link の *存在* を見る heuristic、 (3) は *存在する* link の target 実在を見る相補的検査。
+#      cluster 削除/再編で残る static cross-nav の dangling を捕捉 (folio_nav_readme_deadlinks)。
 # part A (index→全 doc 到達) は完全生成 index では regen-drift に内包される (index = emit が全 doc 列挙)
 # ため独立 gate 化しない (Slice 1 で確立した subsume 判断と同型)。 違反行 (file\tdetail) を stdout に出力、
 # caller が self=block / consumer=warn を振り分ける。
@@ -2088,6 +2124,8 @@ folio_nav_reachability() {
     if ! folio_nav_has_crosslink "$readme"; then
       printf '%s\t[cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)\n' "${cl}/README.html"
     fi
+    # (3) link-rot (#128): README の cross-nav/prose 相対 href が target 実在に解決するか。 base = cluster dir。
+    folio_nav_readme_deadlinks "$readme" "$dir_abs" "${cl}/README.html"
   done
 }
 
