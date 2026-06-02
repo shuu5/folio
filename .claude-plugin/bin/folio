@@ -1621,6 +1621,12 @@ YAML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; project design-intent (WHAT) cluster の entry point</div>
 </header>
 
+<nav class="cluster-nav" aria-label="architecture 横断ナビ">
+  <a href="../index.html">&larr; architecture index</a> &middot;
+  <a href="../decisions/README.html">decisions/</a> &middot;
+  <a href="../research/README.html">research/</a>
+</nav>
+
 <aside class="informative">
 <p>本 dir (<code>architecture/spec/</code>) はこの project の <strong>design-intent spec</strong> (構造・不変条件・WHAT) を集約する cluster です。 spec file は <a href="https://folio.dev/">folio</a> framework の rules に従い HTML + JSON-LD で記述します。 共通 stylesheet (<code>common.css</code>) は project root に任意で配置してください。</p>
 </aside>
@@ -1674,6 +1680,12 @@ HTML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; decision (WHY) cluster の entry point</div>
 </header>
 
+<nav class="cluster-nav" aria-label="architecture 横断ナビ">
+  <a href="../index.html">&larr; architecture index</a> &middot;
+  <a href="../spec/README.html">spec/</a> &middot;
+  <a href="../research/README.html">research/</a>
+</nav>
+
 <aside class="informative">
 <p>本 dir (<code>architecture/decisions/</code>) はこの project の <strong>Architecture Decision Records (ADR)</strong> を保持する cluster です。 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置します。</p>
 </aside>
@@ -1726,6 +1738,12 @@ HTML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; exploration cluster の entry point</div>
 </header>
 
+<nav class="cluster-nav" aria-label="architecture 横断ナビ">
+  <a href="../index.html">&larr; architecture index</a> &middot;
+  <a href="../spec/README.html">spec/</a> &middot;
+  <a href="../decisions/README.html">decisions/</a>
+</nav>
+
 <aside class="informative">
 <p>本 dir (<code>architecture/research/</code>) は spec に反映する前の <strong>探索・調査資料</strong>を集約する cluster です。 自由形式で memo / 調査結果 / 設計案を蓄積し、 確定した内容を spec/ や decisions/ に昇格させます。</p>
 </aside>
@@ -1745,6 +1763,18 @@ HTML
     echo "folio init: one or more files could not be written (fail-closed)" >&2
     exit 2
   fi
+
+  # --- top-level index.html を生成 (ADR-0035 §2.7: init 末尾で folio build を 1 回走らせ walkable nav を
+  #     materialize し即 validate clean = regen-drift を満たす)。 lazy 維持 = 実在 cluster README のみ列挙、
+  #     0-part でも valid な index。 subshell で build を呼び EXIT trap (temp 掃除) を init から隔離する。
+  #     再 init: 既存 generated index の curated region は build が往復保全する (editorial 保持)。 ただし marker
+  #     無し hand-authored index の curated 外本文は generated-view に置換され失われるため build が事前 warn する
+  #     (per-file preserve 契約は seed file 限定、 index は build 再生成が SoT)。 失敗は fail-closed。 ---
+  if ! ( folio_cmd_build --root "$arch" ); then
+    echo "folio init: index build failed (fail-closed)" >&2
+    exit 2
+  fi
+
   echo "folio init: done (existing files preserved, missing files created)"
 }
 
@@ -1947,13 +1977,24 @@ folio_cmd_build() {
     return 0
   fi
 
+  # 既存 index が hand-authored (marker 無し) の場合、 generated-view への置換で curated region 外の本文が
+  # 失われる (curated region は emit が往復保全するが、 marker 無し index には curated marker が無く本文全体が
+  # 置換対象)。 regen-drift gate が marker 無し index を keystone (対象外) 扱いするのと対称に、 build は置換前に
+  # warn する (init の per-file preserve 契約は seed file のみ、 index は build が再生成する、 ceiling minor)。
+  if [[ -f "$out" ]] && [[ "$(folio_extract_meta "$out" folio-generated)" != "folio-build" ]]; then
+    echo "folio build: 既存の hand-authored index (${out}) を generated-view に置換します (curated region 外の本文は失われます。 必要なら curated region に移してください)" >&2
+  fi
+
   # safe write: temp に emit してから mv で atomic 置換。 curated 往復保全のため emit は旧
   # ${root_abs}/index.html を読み戻すが、 `cmd > out` は redirect が先に out を truncate するため
   # 同 file へ直接書くと curated を読む前に消える footgun。 temp→mv で旧 index を intact に保つ。
   local tmp; tmp=$(mktemp "${root_abs}/.folio-build.XXXXXX") || { echo "folio build: mktemp failed (fail-closed)" >&2; exit 2; }
-  trap 'rm -f "$tmp"' EXIT INT TERM   # 成功 mv 後は no-op、 失敗/signal 中断時に temp 残骸を掃除 (ceiling nit)
+  # 失敗/signal 中断時に temp 残骸を掃除。 ${tmp:-} は trap が関数 scope 外 (subshell 終了等) で発火した際の
+  # unbound (set -u) を避ける。 成功 path では mv 後に trap を解除し scope 外での冗長発火を防ぐ。
+  trap 'rm -f "${tmp:-}"' EXIT INT TERM
   if folio_build_emit_index "$root_abs" > "$tmp"; then
     mv "$tmp" "$out"
+    trap - EXIT INT TERM
     echo "folio build: wrote ${root}/index.html" >&2
   else
     echo "folio build: write failed: ${out} (fail-closed)" >&2; exit 2

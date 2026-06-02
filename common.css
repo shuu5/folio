@@ -723,6 +723,10 @@ section.nav-cluster > details > summary { cursor: pointer; font-weight: 600; }
 .nav-count { color: var(--folio-text-secondary); font-weight: 400; font-size: var(--folio-text-caption); }
 .nav-meta  { color: var(--folio-text-secondary); font-size: var(--folio-text-caption); margin-left: 0.3rem; }
 
+/* cluster README の cross-cluster nav bar (folio build/init 生成、 ADR-0035。 generated index 側の nav と視覚整合) */
+nav.cluster-nav { font-size: var(--folio-text-small); margin: 0.5rem 0 1rem; color: var(--folio-text-secondary); }
+nav.cluster-nav a { white-space: nowrap; }
+
 /* --- table zebra striping (neutral, dark mode 両対応) --------------- */
 tbody tr:nth-child(even) { background: rgba(127, 127, 127, 0.045); }
 

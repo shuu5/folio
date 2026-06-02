@@ -1,4 +1,5 @@
 architecture/decisions/README.html
+architecture/index.html
 architecture/research/README.html
 architecture/spec/README.html
 folio.config.yaml
