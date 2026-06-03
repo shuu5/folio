@@ -351,17 +351,17 @@ flowchart TB
 flowchart LR
   accTitle: Specialist Agents 並列 spawn (Phase B / D / F)
   accDescr: Phase B では spec-explorer を 2-3 並列、 Phase D では spec-architect を 2-3 並列 (optional)、 Phase F では spec-review 7 個を並列固定で spawn する
-  subgraph PB["<b>Phase B</b><br/>(2-3 並列)"]
+  subgraph PB["<b>Phase B</b> — 2-3 並列"]
     SE1["spec-explorer #1"]
     SE2["spec-explorer #2"]
     SE3["spec-explorer #3"]
   end
-  subgraph PD["<b>Phase D</b><br/>(2-3 並列、 optional)"]
+  subgraph PD["<b>Phase D</b> — 2-3 並列 (optional)"]
     SA1["spec-architect #1<br/>(minimal)"]
     SA2["spec-architect #2<br/>(clean)"]
     SA3["spec-architect #3<br/>(pragmatic)"]
   end
-  subgraph PF["<b>Phase F</b><br/>(7 並列固定)"]
+  subgraph PF["<b>Phase F</b> — 7 並列固定"]
     R1["review-vocabulary"]
     R2["review-structure"]
     R3["review-ssot"]
