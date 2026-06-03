@@ -1,42 +1,43 @@
 {
   "schema": "folio-e2e-observations/0.1",
-  "req": "REQ-VER-009 傘下の CLI lifecycle (REQ-VER-010 inventory / 012 prime / 013/020 validate / 014 init / 015/018 fix)。 xref/glossary/dual-audience SHIP 後の統合層被覆を含む。",
+  "req": "REQ-VER-009 傘下の CLI lifecycle (REQ-VER-010 inventory / 012 prime / 013/020 validate / 014 init / 015/018 fix)。 xref/glossary/dual-audience に加え nav (ADR-0035/0036) SHIP 後の統合層被覆を含む。",
   "method": "agent-driven runbook walk (verification.html §4.1 Step 2 worktree integration)、 CLI lifecycle 統合 (S-H〜S-J)。 bash-CLI ゆえ hook/agent load 非依存 = session 非依存ゆえ、 本 walk は PARENT session で直接実走した。 一次 assertion = exit code + chained state。 sandbox cli-golden (REQ-VER-011) が isolated fixture の byte 比較なのに対し、 本 e2e は実 disk 上の temp consumer project / live repo で lifecycle を chain する統合検証。",
-  "status": "PASS (CLI lifecycle re-walk、 2026-06-01、 xref Slice (a69b965) + glossary (d1cca12) + #116 (fee3fe1) + #117 (6f069bb) SHIP 後)。 init→validate が fresh consumer project で clean (12-gate、 opt-in gate は SKIP で graceful)、 detect↔remediate (validate↔fix) が live で閉じ冪等 (fix は reverse materialize + xref auto-wrap + glossary tooltip を担う)、 inventory/prime が live repo で 33 specs + 87-node object-graph projection を出力。 3 scenario / 全 assertion PASS。",
+  "status": "PASS (CLI lifecycle re-walk、 2026-06-03、 nav (ADR-0035/0036、 a69b965〜fb5bc1c) SHIP + 「歩ける website」epic close 後)。 init→validate が fresh consumer project で clean (15-gate、 opt-in gate は SKIP で graceful)、 detect→remediate (validate→fix→build) が live で閉じ冪等 (★remediate は 2 ツール: fix が graph/xref/glossary、 build が nav index を担う)、 inventory/prime が live repo で 37 specs + 91-node object-graph projection を出力。 3 scenario / 全 assertion PASS。",
   "session": {
-    "date": "2026-06-01",
+    "date": "2026-06-03",
     "host": "ipatho-server-2",
-    "branch": "main (6f069bb、 #117 doc-drift 是正後)",
+    "branch": "main (fb5bc1c、 S5 統合検証 = 歩ける website epic close 後)",
     "cwd": "/home/shuu5/projects/local-projects/folio",
     "cli_load": "bin/folio は bash CLI ゆえ plugin load/session freshness 非依存。 `.claude-plugin/bin/folio <subcmd>` を直接実行 (走査 base = cwd 相対 architecture/、 --root で override)。",
-    "primary_assertion": "exit code + chained state。 init exit 0 + scaffold tree、 validate exit 0/1 + 12-gate 結果、 fix exit 0 + reverse/xref/glossary materialize、 inventory exit 0 + 件数 + object-graph node 数、 prime exit 0 + Tier 1 digest + object-graph index。",
-    "rewalk_rationale": "前回 walk (observations-cli@2026-05-28) は xref/glossary/dual-audience SHIP より前で、 validate を 5-gate、 inventory/prime を 31 specs・object-graph 無しと記録していた。 本 re-walk は SHIP 済機構を live lifecycle で被覆し直す: (a) validate が 12-gate (dual-audience-structural + xref 4 gate + glossary 追加、 opt-in gate は consumer fresh project で graceful SKIP)、 (b) fix が reverse 加え xref auto-wrap + glossary tooltip materialize を担う、 (c) inventory/prime が 87-node object-graph (xref AI-graph projection、 ADR-0034) を出力、 (d) spec graph 成長 (31→33 specs)。 #118。",
-    "note": "S-I の spec mutation は bash heredoc (Edit/Write tool だと path-boundary hook が doc-type=spec を gate しうる、 hook は bash 非対象)。 lazy init は spec を seed しないため最小 spec alpha/beta を自前作成。"
+    "primary_assertion": "exit code + chained state。 init exit 0 + scaffold tree (folio build で index.html も生成)、 validate exit 0/1 + 15-gate 結果、 fix exit 0 + reverse/xref/glossary materialize、 build exit 0 + nav index 再生成、 inventory exit 0 + 件数 + object-graph node 数、 prime exit 0 + Tier 1 digest + object-graph index。",
+    "rewalk_rationale": "前回 walk (observations-cli@2026-06-01、 #118) は nav (ADR-0035/0036) SHIP より前で、 validate を 12-gate、 init を 4 file scaffold、 remediate を fix 単独、 inventory/prime を 33 specs・87-node object-graph と記録していた。 本 re-walk は nav slice (S1-S5、 a69b965〜fb5bc1c、 epic folio-aad) で追加された機構を live lifecycle で被覆し直す: (a) validate が 15-gate (nav-regen-drift + nav-dead-link + cluster-reachability 追加、 fresh consumer で graceful OK)、 (b) folio init が folio build を内蔵し index.html も scaffold する (4→5 file)、 (c) ★remediate が 2 ツール化 = consumer が spec を追加すると nav-regen-drift も RED になり、 fix (graph/xref/glossary) では閉じず folio build (nav index 再生成) が必要、 (d) spec graph 成長 (33→37 specs、 object-graph 87→91 nodes / 77→76 edges)。 #118 系の e2e 規律 (dated walk は retroactive edit せず re-walk + supersession で更新) に従う。 folio-rf6。",
+    "note": "S-I の spec mutation は bash heredoc (Edit/Write tool だと path-boundary hook が doc-type=spec を gate しうる、 hook は bash 非対象)。 fix の reverse 挿入 anchor (#89) は multi-line 整形 JSON-LD (行頭 \"@type\": / 行末 \"key\": [) を要するため fixture を複数行で作成する (単一行 JSON-LD は fail-closed)。 lazy init は spec を seed しないため最小 spec alpha/beta を自前作成。"
   },
   "cli_under_test": [
-    "folio init <dir> — consumer canonical layout の構造のみ scaffold (REQ-VER-014、 ADR-0031 lazy、 idempotent)",
-    "folio validate [--root] — 12-gate (link-integrity / jsonld structural / broken-reverse / vocabulary / delta-marker / dual-audience-structural / xref-resolve / xref-uniqueness / xref-tooltip-consistency / xref-completeness / glossary / ears-coverage、 REQ-VER-013/015/017/019/020、 ADR-0020/0025/0028/0033/0034)",
-    "folio fix [--root] — reverse relation materialize + opt-in xref auto-wrap + glossary tooltip materialize (REQ-VER-015/018、 ADR-0025 / ADR-0034 §2.5、 idempotent)",
-    "folio inventory — inventory.json 生成 (specs + 87-node object-graph、 REQ-VER-010 / ADR-0034)",
+    "folio init <dir> — consumer canonical layout の構造を scaffold + folio build で index.html 生成 (REQ-VER-014、 ADR-0031 lazy + ADR-0035 nav、 idempotent)",
+    "folio validate [--root] — 15-gate (link-integrity / jsonld structural / broken-reverse / vocabulary / delta-marker / dual-audience-structural / xref-resolve / xref-uniqueness / xref-tooltip-consistency / xref-completeness / glossary / nav-regen-drift / nav-dead-link / cluster-reachability / ears-coverage、 REQ-VER-013/015/017/019/020、 ADR-0020/0025/0028/0033/0034/0035)",
+    "folio fix [--root] — reverse relation materialize + opt-in xref auto-wrap + glossary tooltip materialize (REQ-VER-015/018、 ADR-0025 / ADR-0034 §2.5、 idempotent)。 ★nav index regen は担わない (folio build の責務)",
+    "folio build [--root] — graph から nav index.html を再生成 (ADR-0035 §2.5)。 nav-regen-drift の remediate ツール",
+    "folio inventory — inventory.json 生成 (specs + 91-node object-graph、 REQ-VER-010 / ADR-0034)",
     "folio prime — Tier 1 digest + object-graph index stdout (REQ-VER-012 / ADR-0034)"
   ],
   "observations": [
     {
       "id": "S-H",
-      "name": "CLI lifecycle: init → validate (lazy init = 構造のみ、 fresh consumer project が 12-gate で out-of-the-box clean か)",
+      "name": "CLI lifecycle: init → validate (lazy init = 構造 + nav index、 fresh consumer project が 15-gate で out-of-the-box clean か)",
       "operation": "TMP=$(mktemp -d); folio init $TMP → tree 観察 → folio validate --root $TMP/architecture",
       "expected": {
         "init_exit": 0,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html"],
+        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html", "architecture/index.html"],
         "validate_exit": 0,
         "validate_clean": true
       },
       "observed": {
         "init_exit": 0,
-        "init_message": "folio init: scaffolding consumer canonical layout ... done (existing files preserved, missing files created)",
-        "init_files_created": 4,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html"],
-        "lazy_note": "constitution.html / overview.html は seed されない (ADR-0031 §2.3): folio-architect の greenfield onboarding grilling が引き出した時に Phase E で lazy-materialize。",
+        "init_message": "folio init: scaffolding consumer canonical layout ... / create folio.config.yaml + 3 cluster README / folio build: wrote architecture/index.html / done (existing files preserved, missing files created)",
+        "init_files_created": 5,
+        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html", "architecture/index.html"],
+        "lazy_note": "constitution.html / overview.html は seed されない (ADR-0031 §2.3): folio-architect の greenfield onboarding grilling が引き出した時に Phase E で lazy-materialize。 index.html は init が folio build を内蔵して生成する (ADR-0035、 fresh consumer に歩ける入口を与える)。",
         "validate_exit": 0,
         "validate_summary": "files checked: 3 · relations checked: 0",
         "validate_gates": {
@@ -44,41 +45,52 @@
           "vocabulary": "SKIP (forbidden synonym 無し = opt-in)", "delta-marker": "OK",
           "dual-audience-structural": "OK", "xref-resolve": "OK", "xref-uniqueness": "OK",
           "xref-tooltip-consistency": "OK", "xref-completeness": "SKIP (folio-xref-completeness=enabled doc 無し = opt-in)",
-          "glossary": "SKIP (vocabulary.yaml definition 無し = opt-in)", "ears-coverage": "OK"
+          "glossary": "SKIP (vocabulary.yaml definition 無し = opt-in)",
+          "nav-regen-drift": "OK", "nav-dead-link": "OK", "cluster-reachability": "OK",
+          "ears-coverage": "OK"
         },
         "validate_result": "clean: 0 violations"
       },
       "result": "PASS",
-      "interpretation": "lazy init が consumer canonical layout の純粋構造 (4 file) を exit 0 で scaffold し、 生成 skeleton が folio validate 12-gate で out-of-the-box clean。 新規 gate (dual-audience-structural / xref 4 gate / glossary) は dual-audience card・xref opt-in・vocabulary.yaml を持たない fresh consumer project で graceful に OK/SKIP し、 既存 gate を破壊しない (additive keystone を live consumer で実証)。 空 placeholder constitution を生成しないため hollow-constitution failure が構造的に発生しない (criterion H deterministic floor)。 REQ-VER-014 + 12-gate validate を live temp project で実証。"
+      "interpretation": "lazy init が consumer canonical layout の構造 (folio.config + 3 cluster README) を scaffold し、 さらに folio build を内蔵して index.html (歩ける入口) も生成 (計 5 file)、 生成 skeleton が folio validate 15-gate で out-of-the-box clean。 ★nav 3 gate (nav-regen-drift / nav-dead-link / cluster-reachability) も fresh consumer で graceful に OK: init が index.html を build 済ゆえ nav-regen-drift は drift 無し、 cluster-nav が index.html を指す先が実在ゆえ nav-dead-link OK、 全 cluster が index から到達可ゆえ cluster-reachability OK = nav gate の additive-keystone 性 (既存 gate を破壊せず fresh consumer で破綻しない) を live consumer で初実証。 空 placeholder constitution を生成しないため hollow-constitution failure が構造的に発生しない (criterion H deterministic floor)。 REQ-VER-014 + 15-gate validate を live temp project で実証。"
     },
     {
       "id": "S-I",
-      "name": "CLI lifecycle: detect ↔ remediate (validate↔fix の往復が 12-gate 下で live に閉じ冪等か)",
-      "operation": "$TMP の spec/ に最小 spec 2 本 (alpha→beta forward、 reverse 欠落) を bash heredoc で作成 → validate (RED broken-reverse) → fix → validate (clean) → fix再 (no-op)",
+      "name": "CLI lifecycle: detect → remediate (validate→fix→build の連鎖が 15-gate 下で live に閉じ冪等か)",
+      "operation": "$TMP の spec/ に最小 spec 2 本 (alpha→beta forward、 reverse 欠落) を bash heredoc で追加 → validate (RED: nav-regen-drift + broken-reverse) → fix (reverse materialize) → validate (nav-regen-drift 残) → build (nav index 再生成) → validate (clean) → fix再 (no-op)",
       "expected": {
         "validate_red_exit": 1,
+        "nav_drift_detected": true,
         "broken_reverse_detected": true,
         "fix_exit": 0,
         "reverse_materialized": true,
+        "build_exit": 0,
         "validate_green_exit": 0,
         "fix_idempotent": true
       },
       "observed": {
-        "fixture": "alpha.html (object JSON-LD、 複数行、 dc:references → ./beta.html) + beta.html (relation 無し)。",
+        "fixture": "alpha.html (object JSON-LD、 複数行整形 [fix anchor 用]、 dc:references → ./beta.html) + beta.html (relation 無し)。 fresh-init の spec/ に追加 (= index.html が graph から drift)。",
         "validate_red_exit": 1,
-        "validate_red_summary": "12-gate 出力 (xref/glossary は SKIP)、 violations (1)",
-        "violation_report": "spec/alpha.html [broken-reverse] dc:references -> spec/beta.html (target missing reverse dc:isReferencedBy back to spec/alpha.html)",
+        "validate_red_summary": "15-gate 出力、 violations (2): nav-regen-drift + broken-reverse (xref/glossary は SKIP)",
+        "violation_reports": [
+          "index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)",
+          "spec/alpha.html [broken-reverse] dc:references -> spec/beta.html (target missing reverse dc:isReferencedBy back to spec/alpha.html)"
+        ],
         "fix_exit": 0,
         "fix_banner": "folio fix — reverse relation materialize + xref auto-wrap (REQ-REL-002 / ADR-0025 / ADR-0034 §2.5)",
         "fix_message": "+1 reverse @id  spec/beta.html / materialized 1 reverse @id(s) across 1 file(s)",
         "reverse_materialized": "beta.html に dc:isReferencedBy [ ./alpha.html ] が追加",
+        "validate_after_fix_exit": 1,
+        "validate_after_fix_summary": "broken-reverse OK、 だが nav-regen-drift 残 (violations (1)) = ★fix は nav index を再生成しない",
+        "build_exit": 0,
+        "build_message": "folio build: wrote architecture/index.html",
         "validate_green_exit": 0,
-        "validate_green_summary": "12-gate clean: 0 violations",
+        "validate_green_summary": "15-gate clean: 0 violations (build で nav-regen-drift 解消)",
         "fix_again_exit": 0,
-        "fix_again_message": "already complete: graph is bidirectional + opt-in xref materialized + glossary tooltips populated (0 changes)"
+        "fix_again_message": "already complete: graph is bidirectional + opt-in xref/glossary materialized + glossary tooltips populated (0 changes)"
       },
       "result": "PASS",
-      "interpretation": "validate が broken-reverse を exit 1 + 具体 report で検出 (12-gate 中の broken-reverse gate) → fix が reverse を exit 0 で materialize (banner が reverse + xref auto-wrap の双務を明示) → validate 再走 clean → fix 再走 no-op (冪等 message が xref/glossary materialize も含む 3 機構の完了を報告) という detect↔remediate ペアが xref/glossary 拡張後も live consumer project で完全に閉じた。 REQ-VER-015/018 を実 disk lifecycle chain で実証。"
+      "interpretation": "★15-gate 下では detect→remediate が 2 ツールに分業する: consumer が spec を追加すると validate が (a) nav-regen-drift = index.html が graph から drift、 (b) broken-reverse = forward 片側、 の 2 violation を exit 1 + 具体 report で検出する。 fix は (b) を reverse materialize で閉じる (banner が reverse + xref auto-wrap の双務を明示) が (a) は残す = fix は graph/xref/glossary の責務で nav index 再生成は担わない。 nav-regen-drift の violation message 自体が「folio build で再生成」と remediate ツールを指示しており、 folio build が index.html を再生成して 15-gate clean に到達する。 fix 再走は no-op (冪等 message が graph bidirectional + xref/glossary materialize 完了を報告)。 detect→remediate ペアが nav 拡張後は fix (graph) + build (nav) の連鎖で live consumer project で閉じることを実証 (2026-06-01 の「validate↔fix 単独で閉じる」は nav SHIP で 2 ツール化)。 REQ-VER-015/018 を実 disk lifecycle chain で実証。"
     },
     {
       "id": "S-J",
@@ -86,23 +98,23 @@
       "operation": "live repo で folio inventory → folio prime (真の exit は prime >/dev/null で別取り)",
       "expected": {
         "inventory_exit": 0,
-        "spec_count": 33,
-        "object_graph_nodes": 87,
+        "spec_count": 37,
+        "object_graph_nodes": 91,
         "prime_exit": 0,
         "prime_has_object_graph": true
       },
       "observed": {
         "inventory_exit": 0,
-        "inventory_message": "folio inventory: wrote inventory.json (33 specs, 87 object-graph nodes)",
-        "inventory_json": { "folioVersion": "0.5.0-draft", "specs_length": 33, "objectGraph_nodes": 87, "objectGraph_edges": 77 },
+        "inventory_message": "folio inventory: wrote inventory.json (37 specs, 91 object-graph nodes)",
+        "inventory_json": { "folioVersion": "0.5.0-draft", "specs_length": 37, "objectGraph_nodes": 91, "objectGraph_edges": 76 },
         "prime_exit": 0,
         "prime_exit_note": "prime | head は SIGPIPE で exit 141 になるため、 真値は prime >/dev/null; echo $? で取得 = 0",
-        "prime_digest_head": "# folio inventory digest — Tier 1 (progressive disclosure) / # 33 specs · folio 0.5.0-draft",
-        "prime_object_graph_section": "# object-graph index — 87 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT) — id [class] ssot-location を一覧 (例: ADR-0001 [decision] decisions/ADR-0001-...)",
+        "prime_digest_head": "# folio inventory digest — Tier 1 (progressive disclosure) / # 37 specs · folio 0.5.0-draft",
+        "prime_object_graph_section": "# object-graph index — 91 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT) — id [class] ssot-location を一覧 (例: ADR-0001 [decision] decisions/ADR-0001-...)",
         "repo_pollution": "inventory.json は .gitignore 対象ゆえ git status clean (live repo 非汚染)"
       },
       "result": "PASS",
-      "interpretation": "inventory が live repo を走査して 33 specs + 87-node object-graph の inventory.json を exit 0 で生成、 prime が Tier 1 digest に加え object-graph index (xref AI-graph projection、 ADR-0034) を exit 0 で stdout 出力。 xref SHIP 前の observation (31 specs・object-graph 無し) から、 spec graph 成長 (31→33) + xref projection (nodes 87 / edges 77) の出現を被覆。 REQ-VER-010/012 を live repo で実証し、 xref AI-graph が prime/inventory に確かに projection されることを統合層で確認。"
+      "interpretation": "inventory が live repo を走査して 37 specs + 91-node object-graph の inventory.json を exit 0 で生成、 prime が Tier 1 digest に加え object-graph index (xref AI-graph projection、 ADR-0034) を exit 0 で stdout 出力。 前回 walk (33 specs・87 nodes・77 edges) から spec graph 成長 (33→37、 ADR-0035/0036 等の追加) + object-graph projection の更新 (nodes 87→91 / edges 77→76) を被覆。 REQ-VER-010/012 を live repo で実証し、 xref AI-graph が prime/inventory に確かに projection されることを統合層で確認。"
     }
   ],
   "summary": {
@@ -110,6 +122,6 @@
     "observation_points": 3,
     "pass": 3,
     "fail": 0,
-    "verdict": "PASS — folio CLI が xref/glossary/dual-audience SHIP 後も『ひとまとまりの道具』として end-to-end で動いた (re-walk 2026-06-01)。 init→validate (12-gate、 fresh project clean、 opt-in gate graceful SKIP)、 detect↔remediate (validate↔fix live + 冪等、 fix は reverse + xref + glossary の 3 機構)、 inventory/prime (live repo digest + 87-node object-graph projection) のすべてが期待通り。 sandbox cli-golden (決定的 unit) + 本 e2e (live 統合) の 2 層で、 最新機構を通った CLI lifecycle を被覆。 #118 の CLI 部分 = closed。"
+    "verdict": "PASS — folio CLI が nav (歩ける website) SHIP 後も『ひとまとまりの道具』として end-to-end で動いた (re-walk 2026-06-03)。 init→validate (15-gate、 fresh project clean、 nav 3 gate も graceful OK = init が index.html を build 済)、 detect→remediate (validate→fix→build live + 冪等、 ★remediate は fix [graph] + build [nav] の 2 ツール分業)、 inventory/prime (live repo digest + 91-node object-graph projection) のすべてが期待通り。 sandbox cli-golden (決定的 unit) + 本 e2e (live 統合) の 2 層で、 nav 機構を通った CLI lifecycle を被覆。 #118 の CLI 部分 = re-walk 済 (folio-rf6)。"
   }
 }

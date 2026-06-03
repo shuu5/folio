@@ -223,26 +223,25 @@ PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除
 **操作** (すべて bash):
 1. `TMP=$(mktemp -d)` で temp consumer project root を作る。
 2. `bash .claude-plugin/bin/folio init "$TMP"` → exit code + scaffold tree を観察。
-3. `bash .claude-plugin/bin/folio validate --root "$TMP/architecture"` → exit code + 3-gate 結果を観察。
+3. `bash .claude-plugin/bin/folio validate --root "$TMP/architecture"` → exit code + 15-gate 結果を観察。
 
-**期待観察** (ADR-0031 lazy init 後):
+**期待観察** (ADR-0031 lazy init + ADR-0035 nav 後):
 - init **exit 0** + `folio.config.yaml` + `architecture/spec/README.html` +
-  `architecture/{decisions,research}/README.html` (計 **4 file = 構造のみ**) を create + 「existing files preserved」message。
+  `architecture/{decisions,research}/README.html` + `architecture/index.html` (計 **5 file**: 構造 4 + folio build 内蔵で生成する nav 入口 index.html、 ADR-0035) を create + 「existing files preserved」message。
   constitution / overview は **seed されない** (実体は folio-architect の greenfield onboarding grilling が
   引き出した時に Phase E で lazy-materialize。空 placeholder を残さない)。spec/README は実在 file のみ `dc:hasPart` 宣言 (生成直後は part 0)。
-- validate **exit 0 clean** (files checked: **3** = 3 cluster README、relations 0、3-gate すべて OK)。
+- validate **exit 0 clean** (files checked: **3** = 3 cluster README、relations 0、15-gate すべて OK = nav 3 gate [nav-regen-drift / nav-dead-link / cluster-reachability] も fresh consumer で graceful: init が index.html を build 済ゆえ drift/dead-link/到達性すべて成立)。
   hollow-constitution が構造的に発生しない (whisper failure の根治)。
 
 **後始末**: `rm -rf "$TMP"`。golden = `baselines/reference/observations-cli.json`。
 
 ---
 
-## S-I — CLI lifecycle 統合: detect ↔ remediate (★X4-E: validate↔fix の往復が live で閉じるか)
+## S-I — CLI lifecycle 統合: detect → remediate (★X4-E: validate→fix→build の連鎖が live で閉じるか)
 
-**目的**: forward 関係を片側だけ持つ spec graph を `folio validate` が **broken-reverse violation (exit 1)** で検出し、
-`folio fix` が reverse を materialize して clean (exit 0) に戻す **detect↔remediate ペア** が live で閉じることを
-実証する (REQ-VER-015 / ADR-0025)。sandbox `fix-bidirectional.yaml` の fixture 検証に対し、本 S-I は S-H の
-temp project 上で edit→validate→fix→validate を **chain** する統合 walk。
+**目的**: forward 関係を片側だけ持つ spec を temp project に追加し、`folio validate` が **2 violation (nav-regen-drift + broken-reverse、 exit 1)** で検出することを起点に、`folio fix` (graph: reverse materialize) と `folio build` (nav: index 再生成) の **2 ツール remediate** が clean (exit 0) に戻す **detect→remediate 連鎖** が live で閉じることを
+実証する (REQ-VER-015 / ADR-0025/0035)。sandbox `fix-bidirectional.yaml` の fixture 検証に対し、本 S-I は S-H の
+temp project 上で edit→validate→fix→build→validate を **chain** する統合 walk。 ★nav SHIP で remediate が fix 単独から fix+build の 2 ツールに分業した (fix は graph/xref/glossary、 nav index 再生成は build の責務)。
 
 **前提**: S-H の temp project を再利用。lazy init は spec を生成しない (構造のみ) ため、detect↔remediate を
 試す **最小 spec 2 本を bash で作成**してから walk する (onboarding grilling が spec を materialize した状態を
@@ -252,18 +251,21 @@ bash で代替再現)。spec 作成・mutation は **bash で行う** (Edit/Writ
 **操作** (すべて bash、S-H の `$TMP/architecture/spec/` 上):
 1. bash heredoc で最小 spec 2 本を `spec/` に作成: `alpha.html` (object JSON-LD、forward `dc:references → ./beta.html`、
    reverse は付けない) + `beta.html` (object JSON-LD、relation 無し)。validate は root 配下全 .html を scan するため
-   README hasPart 登録は broken-reverse 検証に不要 (throwaway probe spec)。
-2. `folio validate --root "$TMP/architecture"` → broken-reverse RED。
-3. `folio fix --root "$TMP/architecture"` → reverse materialize。
-4. `folio validate` 再走 → clean。
-5. `folio fix` 再走 → 冪等 no-op。
+   README hasPart 登録は broken-reverse 検証に不要 (throwaway probe spec)。 ★各 spec は **`folio-doc-type=spec` + `folio-version` + `folio-status` (例 `draft`) の meta を必ず付ける** — `folio-status` が**空/無の spec は folio build の status グルーピングが index から黙って除外**するため、 status を欠くと spec を追加しても index.html が drift せず **nav-regen-drift が発火しない** (= broken-reverse 1 件だけになり、 (2) の「2 violations」を再現できない)。 ★JSON-LD は**複数行整形** (各 key を改行、行頭 `"@type":`) で作る — fix の reverse 挿入 anchor は単一行 JSON-LD では不在で fail-closed (#89)。
+2. `folio validate --root "$TMP/architecture"` → RED (nav-regen-drift + broken-reverse、 spec 追加で index.html も graph から drift)。
+3. `folio fix --root "$TMP/architecture"` → reverse materialize (broken-reverse 解消、 nav-regen-drift は残る)。
+4. `folio validate` 再走 → nav-regen-drift だけ残り依然 exit 1。
+5. `folio build --root "$TMP/architecture"` → nav index 再生成。
+6. `folio validate` 再走 → clean (exit 0)。
+7. `folio fix` 再走 → 冪等 no-op。
 
 **期待観察**:
-- (2) validate **exit 1** + `[FAIL] broken-reverse` + report (`spec/alpha.html [broken-reverse] dc:references ->
-  spec/beta.html (target missing reverse dc:isReferencedBy ...)`)。
-- (3) fix **exit 0** + `+1 reverse @id spec/beta.html` + beta.html に `dc:isReferencedBy → ./alpha.html` materialize。
-- (4) validate **exit 0 clean** (3-gate OK、relations checked に reverse +1)。
-- (5) fix **exit 0** + 「already complete: graph is bidirectional (0 reverse relations added)」、再 validate exit 0 (冪等性)。
+- (2) validate **exit 1** + violations (2): `[FAIL] nav-regen-drift` (`index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成 ...)`) + `[FAIL] broken-reverse` (`spec/alpha.html [broken-reverse] dc:references -> spec/beta.html (target missing reverse dc:isReferencedBy ...)`)。
+- (3) fix **exit 0** + `+1 reverse @id spec/beta.html` + beta.html に `dc:isReferencedBy → ./alpha.html` materialize (broken-reverse のみ解消)。
+- (4) validate **exit 1** + violations (1): `[FAIL] nav-regen-drift` のみ (★fix は graph 担当で nav index を再生成しない)。
+- (5) build **exit 0** + `folio build: wrote architecture/index.html`。
+- (6) validate **exit 0 clean** (15-gate OK、relations checked に reverse +1)。
+- (7) fix **exit 0** + 「already complete: graph is bidirectional + opt-in xref/glossary materialized + glossary tooltips populated (0 changes)」、再 validate exit 0 (冪等性)。
 
 **後始末**: `rm -rf "$TMP"`。golden = `baselines/reference/observations-cli.json`。
 
@@ -284,8 +286,8 @@ Tier 1 digest を stdout に出すことを実証する (REQ-VER-010 / REQ-VER-0
    注: `prime | head` は SIGPIPE で exit 141 になるため、真の exit は `prime >/dev/null; echo $?` で別取りする。
 
 **期待観察**:
-- inventory **exit 0** + 「wrote inventory.json (26 specs)」 + `inventory.json` の `.specs|length == 26` / `.folioVersion == "0.5.0-draft"`。
-- prime **exit 0** (head パイプなし) + 先頭 `# folio inventory digest — Tier 1` + `# 26 specs · folio 0.5.0-draft` +
+- inventory **exit 0** + 「wrote inventory.json (37 specs, 91 object-graph nodes)」 + `inventory.json` の `.specs|length == 37` / `.folioVersion == "0.5.0-draft"`。
+- prime **exit 0** (head パイプなし) + 先頭 `# folio inventory digest — Tier 1` + `# 37 specs · folio 0.5.0-draft` +
   per-spec エントリ (`## <path>` / title / doc-type·status / summary)。
 
 **後始末**: なし (read-only、`inventory.json` は gitignored)。golden = `baselines/reference/observations-cli.json`。
