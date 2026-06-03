@@ -125,6 +125,7 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 - [ ] Step 4 で marker を削除したか
 - [ ] domain の構造を反映する **HTML 視覚要素** (mermaid stateDiagram / sequenceDiagram / flowchart / classDiagram / erDiagram、 `<table>` / `<details>` / `<dl>` 等) を selective に採用したか (canonical list は [rules.html §4.5](../../architecture/spec/rules.html#s4-5-visual)、 grill 時の声かけは [refs/grilling-protocol.md `## 視覚表現レパートリー`](./refs/grilling-protocol.md))。 plain text に止まらず folio の HTML 表現メリットを活用する。
 - [ ] 編集した mermaid 図 / spec text が **a11y minimum rule** ([rules.html §4.6](../../architecture/spec/rules.html#s4-6-a11y)) を満たすか: (a) WCAG 2.2 SC 1.4.3 contrast 4.5:1 (normal) / 3:1 (large)、 (b) mermaid 図に `accTitle` / `accDescr` 付与、 (c) `classDef` / `style` で `fill` を override する場合 `color` paired 指定 (`primaryTextColor` 継承による白文字事故の防止)。 根拠 verbatim quote + paired override 正攻法は [refs/html-spec-craft.md](./refs/html-spec-craft.md) §1-§2 を参照。
+- [ ] mermaid を採用した spec の loader が **vendored** (`<script src="../assets/mermaid.min.js" defer></script>`) で、 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) を使っていない**か ([rules.html §8 REQ-DA-JS-2](../../architecture/spec/rules.html#s8-js-governance) vendoring MUST / no-cloud、 canonical loader pattern = [refs/html-spec-craft.md §2.0](./refs/html-spec-craft.md))。 consumer が `architecture/assets/mermaid.min.js` 未 vendoring でも raw `<pre class="mermaid">` は graceful degradation で可読。
 
 ### stale marker の cleanup
 

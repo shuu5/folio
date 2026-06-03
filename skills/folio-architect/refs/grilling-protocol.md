@@ -57,6 +57,7 @@ folio spec は HTML を表現基体としており、 plain text を超える **
 - diagram label / table header / state 名は `vocabulary.yaml` の canonical name を使う (P-5)。
 - 大きすぎる図 (>20 node) は **分割**または `<details>` で hide。
 - mermaid loader 未 load 時でも `<pre class="mermaid">` の raw syntax は人間に読める形のままにする (graceful degradation)。
+- ★mermaid loader は **vendored MUST** = `<script src="../assets/mermaid.min.js" defer></script>` (spec が `architecture/spec/` 配下なら `../assets/`)。 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) は [rules.html §8 REQ-DA-JS-2](../../../architecture/spec/rules.html#s8-js-governance) 違反ゆえ MUST NOT** (no-cloud 原則)。 consumer が `architecture/assets/mermaid.min.js` を未 vendoring でも、 raw `<pre class="mermaid">` は上記 graceful degradation で可読 (図は vendoring 後に render)。 canonical loader pattern は [html-spec-craft.md](./html-spec-craft.md) §2.0。
 
 ## 2 つの grilling context
 
