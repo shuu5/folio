@@ -920,23 +920,15 @@ a.xref:hover { text-decoration-style: solid; text-decoration-thickness: 2px; }
 
 /* CSS-only tooltip: :hover + :focus-visible で擬似要素 box を表示 (data-tooltip 属性供給)。
  * 既存 surface/border/text/elevation token のみ使用 = light/dark 両対応。 */
-/* Glossary term (ADR-0034 §2.8、 explicit-mark <span class="term" data-term>)。 Class A xref と同じ
- * no-JS tooltip box を共用する (data-tooltip = vocabulary.yaml definition、 folio fix が materialize)。
- * term は「定義へのリンク」でなく用語マーカーゆえ help cursor + 控えめな dotted underline (secondary)。 */
+/* Glossary term (ADR-0034 §2.8 + ADR-0036、 <span class="term" data-term> = explicit REQ-GLOSS-001 +
+ * auto-mark REQ-GLOSS-002 双方、 span 統一・hover-only)。 Class A xref と同じ no-JS tooltip box を共用する
+ * (data-tooltip = vocabulary.yaml definition、 folio fix が materialize)。 term は「定義へのリンク」でなく
+ * 用語マーカーゆえ help cursor + 控えめな dotted underline (secondary)、 glossary.html へは link しない
+ * (doc 名と被る用語の routing 衝突を回避、 folio-ovi 2026-06-03)。 */
 .term {
   border-bottom: 1px dotted var(--folio-text-secondary);
   cursor: help;
 }
-/* auto-marked glossary term (REQ-GLOSS-002、 ADR-0036 §2.4): explicit <span class="term"> と同じ用語マーカー
- * 見た目 (dotted underline + tooltip box を継承) だが、 click→glossary.html#term-<slug> へナビゲートできる
- * anchor ゆえ pointer cursor。 通常 link の色/下線は付けず本文に溶け込ませ dotted border で term と判別する
- * (a.xref と同 idiom)。 no-JS で click+hover 両立 (§8 graceful)。 */
-a.term {
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
-}
-a.term:hover { border-bottom-style: solid; }
 a.xref[data-tooltip], .term[data-tooltip] { position: relative; }
 a.xref[data-tooltip]::after,
 .term[data-tooltip]::after {
@@ -979,8 +971,9 @@ a.xref[data-tooltip]:focus-visible::after,
  * Glossary page (ADR-0036、 folio build が vocabulary.yaml から生成する glossary.html)。
  *   各 term を <dt id="term-<slug>"> anchor + definition <dd> で列挙する definition list。
  *   spec 本文の用語 hover tooltip (.term) と同じ vocabulary.yaml SSoT から derive (single-SoT)。
- *   spec body の用語 click → glossary.html#term-<slug> で該当語へ飛び :target で強調する
- *   (既存 xref :target flash と同系の navigational feedback、 dt + 隣接 dd を一緒に highlight)。
+ *   glossary.html は nav/index から到達する独立辞書 (spec 本文からは hover-only で deep-link しない、 folio-ovi)。
+ *   直 URL / in-page index から #term-<slug> へ来た場合は :target で該当 dt + 隣接 dd を強調する
+ *   (既存 xref :target flash と同系の navigational feedback)。
  * ====================================================================== */
 dl.glossary { margin: 1.5rem 0; }
 dl.glossary dt {

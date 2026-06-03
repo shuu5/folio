@@ -9,7 +9,7 @@
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0036">
 <meta name="folio-adr-date" content="2026-06-01">
-<title>ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</title>
+<title>ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
@@ -23,7 +23,7 @@
   "dc:isReferencedBy": [
     { "@id": "./ADR-0035-walkable-architecture-nav-derive.html" }
   ],
-  "dc:title": "ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover+click 両描画、 completeness は best-effort で ADR-0034 §2.8 を extend)",
+  "dc:title": "ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)",
   "folio:version": "0.5.0-draft",
   "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
   "dc:references": [
@@ -42,7 +42,7 @@
 
 <header class="doc-header">
   <h1>ADR-0036 — folio-vocabulary glossary derive + partition</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip + click→glossary.html 両方。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 の best-effort tier を保存し新 REQ で extend (supersede しない)。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) に depends</div>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 の best-effort tier を保存し新 REQ で extend (supersede しない)。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) に depends</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
@@ -59,7 +59,7 @@
 <section id="s1-context" class="informative">
 <h2>§1. Context</h2>
 
-<p>folio の用語のうち <strong>consumer の domain 用語</strong> (例: python project の python 用語) は folio が解説不能だが、 <strong>folio architecture の「作法」に固有の用語</strong> (<code>spec</code> / <code>ADR</code> / <code>constitution</code> / EARS / invariant / SSoT / xref / vocabulary / inventory / prime / cluster / dogfood / caller-marker 等) は <strong>folio 所有・closed・stable</strong> である。 ゆえに folio が canonical 定義を上流で一度 author し、 テンプレートと共に配布すれば、 consumer の architecture/ で <strong>hover tooltip / click リンク解説を再現性を保って提供</strong>できる。 境界は明快: <strong>consumer-domain-vocabulary (consumer 所有・folio 解説不能) vs folio-framework-vocabulary (folio 所有・実現可能・全 consumer で再利用)</strong>。</p>
+<p>folio の用語のうち <strong>consumer の domain 用語</strong> (例: python project の python 用語) は folio が解説不能だが、 <strong>folio architecture の「作法」に固有の用語</strong> (<code>spec</code> / <code>ADR</code> / <code>constitution</code> / EARS / invariant / SSoT / xref / vocabulary / inventory / prime / cluster / dogfood / caller-marker 等) は <strong>folio 所有・closed・stable</strong> である。 ゆえに folio が canonical 定義を上流で一度 author し、 テンプレートと共に配布すれば、 consumer の architecture/ で <strong>hover tooltip 解説を再現性を保って提供</strong>できる。 境界は明快: <strong>consumer-domain-vocabulary (consumer 所有・folio 解説不能) vs folio-framework-vocabulary (folio 所有・実現可能・全 consumer で再利用)</strong>。</p>
 
 <p>前史 (<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 / rules §9.5 REQ-GLOSS-001、 task #110): 「用語 hover tooltip を機械的に全網羅するのは困難 (自然語の全 occurrence 検出は NLP 難問) + 手動リンクは再現性が崩れる」ゆえ glossary は <strong>explicit-mark のみ・best-effort tier・auto-detect / gap-lint しない</strong>と確立済。 本 ADR の novelty は<strong>分割</strong>にある: folio-framework 語は <strong>closed set かつ folio 所有</strong>ゆえ <strong>canonical 定義を folio が一度 author→ship → consumer は derive で受け取る</strong> (consumer は folio 語を一切書かない)。 これにより #110 が諦めた「全網羅は無理」の問題を、 <strong>folio が所有・固定できる部分集合だけ切り出して機械配布</strong>することで解く。</p>
 
@@ -86,13 +86,14 @@
 <p>ゆえに:</p>
 <ul>
   <li><strong>REQ-GLOSS-001 (best-effort) を据置く</strong> — 「未 mark 言及を gap-lint しない」を変更しない。</li>
-  <li>auto-mark は <strong>新 REQ-GLOSS-002 を best-effort tier で追加</strong>する: 「<code>domain: folio-closed</code> 語について <strong><code>folio fix</code></strong> が doc 初出の canonical occurrence を best-effort で auto-mark する」。 <strong>主語は <code>build</code> でなく <code>fix</code> (#130 grill 2026-06-02 確定)</strong>: auto-mark = spec body に term mark (<code>&lt;a class="term"&gt;</code>、 hover tooltip と click→glossary を no-JS 単一 anchor で両立する形に実装で refine、 §2.4) を挿入する <strong>spec mutate</strong> ゆえ、 <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> §2.3 の「<code>fix</code> = graph を整える (spec mutate) / <code>build</code> = 派生 view を出す」分離に従い <code>fix</code> の領分とする (既存 <code>fix</code> Pass 3 = xref auto-wrap / Pass 4 = glossary tooltip populate と同系譜、 <code>build</code> が spec を mutate する設計矛盾を回避)。 <strong>全 occurrence の no-gaps normative 化はしない</strong> (それは ADR-0034 が却下した NLP-hard occurrence 検出を再燃させ REQ-GLOSS-001 の supersede = <a href="../spec/constitution.html#s6-amendment">P-10</a> risk になる)。</li>
+  <li>auto-mark は <strong>新 REQ-GLOSS-002 を best-effort tier で追加</strong>する: 「<code>domain: folio-closed</code> 語について <strong><code>folio fix</code></strong> が doc 初出の canonical occurrence を best-effort で auto-mark する」。 <strong>主語は <code>build</code> でなく <code>fix</code> (#130 grill 2026-06-02 確定)</strong>: auto-mark = spec body に term mark (<code>&lt;span class="term"&gt;</code>、 hover tooltip のみの no-JS span、 click→glossary は §2.4 で撤回) を挿入する <strong>spec mutate</strong> ゆえ、 <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> §2.3 の「<code>fix</code> = graph を整える (spec mutate) / <code>build</code> = 派生 view を出す」分離に従い <code>fix</code> の領分とする (既存 <code>fix</code> Pass 3 = xref auto-wrap / Pass 4 = glossary tooltip populate と同系譜、 <code>build</code> が spec を mutate する設計矛盾を回避)。 <strong>全 occurrence の no-gaps normative 化はしない</strong> (それは ADR-0034 が却下した NLP-hard occurrence 検出を再燃させ REQ-GLOSS-001 の supersede = <a href="../spec/constitution.html#s6-amendment">P-10</a> risk になる)。</li>
   <li>partition は <strong>2 tier の境界定義</strong>であって既存 tier の縮小ではない (REQ-GLOSS-001 の best-effort はそのまま、 REQ-GLOSS-002 が共存する追加 tier)。</li>
 </ul>
 <p>すなわち <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> 決定 1 の「機械検証」は glossary については <strong>「ship された定義の consistency / parity を機械検証する」</strong>意味であり、 <strong>「全 folio-term occurrence が mark 済」を normative 保証する意味ではない</strong>。</p>
 
-<h3 id="s2-4-render">§2.4 描画 = hover tooltip + click→glossary.html 両方 (single-SoT derive)</h3>
-<p>同じ ship 済 <code>vocabulary.yaml</code> を 2 面に derive する: (1) <strong>hover tooltip</strong> (no-JS CSS-only、 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.4 と同機構)、 (2) <strong>click→canonical <code>glossary.html</code> ページ</strong>の該当 term anchor へ。 <strong>供給者は artifact 別 (#130 grill 確定)</strong>: spec-body の marked anchor (<code>&lt;a class="term"&gt;</code>、 hover+click を no-JS 単一 element で両立) の <code>data-tooltip</code> は <strong><code>fix</code> Pass 4</strong> が plugin-resident vocabulary.yaml の definition から populate し (§2.3 の auto-mark と同 subcommand = spec mutate)、 <strong><code>glossary.html</code> ページは <code>build</code></strong> が同 vocabulary.yaml から derive する<strong>生成 projection</strong> (view 出力、 二重化回避 = <a href="../spec/constitution.html#p-7">P-7</a>、 definition を 2 箇所に author しない double-SoT 構造排除)。 これは <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.9 が <strong>roadmap (1.x)</strong> に置いた「生成 HTML glossary view」を <strong>pre-1.0.0 に timing pull-forward</strong> するものであり、 §2.9 自身が「非破壊で後付け可」と宣言した項目の timing 変更で<strong>決定内容の supersede ではない</strong>。</p>
+<h3 id="s2-4-render">§2.4 描画 = hover tooltip のみ (single-SoT derive、 旧 click→glossary.html は S4b-2 dogfood で routing 衝突が判明し撤回)</h3>
+<p>同じ ship 済 <code>vocabulary.yaml</code> を 2 面に derive する: (1) spec-body の <strong>hover tooltip</strong> (no-JS CSS-only、 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.4 と同機構)、 (2) nav/index から到達する独立辞書 <strong><code>glossary.html</code> ページ</strong>。 <strong>spec-body の用語 mark から glossary.html へ deep-link はしない (hover-only)</strong>。 <strong>供給者は artifact 別 (#130 grill 確定)</strong>: spec-body の marked span (<code>&lt;span class="term"&gt;</code>、 hover tooltip のみ) の <code>data-tooltip</code> は <strong><code>fix</code> Pass 4</strong> が plugin-resident vocabulary.yaml の definition から populate し (§2.3 の auto-mark と同 subcommand = spec mutate)、 <strong><code>glossary.html</code> ページは <code>build</code></strong> が同 vocabulary.yaml から derive する<strong>生成 projection</strong> (view 出力、 二重化回避 = <a href="../spec/constitution.html#p-7">P-7</a>、 definition を 2 箇所に author しない double-SoT 構造排除)。 これは <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.9 が <strong>roadmap (1.x)</strong> に置いた「生成 HTML glossary view」を <strong>pre-1.0.0 に timing pull-forward</strong> するものであり、 §2.9 自身が「非破壊で後付け可」と宣言した項目の timing 変更で<strong>決定内容の supersede ではない</strong>。</p>
+<p class="informative"><strong>amend (folio-ovi、 2026-06-03)</strong>: 当初 §2.4 は描画を <strong>hover tooltip + click→glossary.html 両方</strong>とし、 auto-mark を <code>&lt;a class="term" href="../glossary.html#term-&lt;slug&gt;"&gt;</code> anchor で実装した (S4b-2 SHIP、 commit 6648c11)。 しかし SHIP 後の dogfood で <strong>doc 名と被る用語 (<code>constitution</code> / <code>ADR</code> / <code>inventory</code> / <code>prime</code> / <code>vocabulary</code> 等) を glossary へ deep-link すると、 本来その語の実体 doc (例 <code>constitution.html</code>) へ飛ぶべき導線と routing が衝突・冗長化する</strong>ことが判明した。 ゆえに描画を <strong>hover-only</strong> に転換し、 用語 mark を <code>&lt;span class="term"&gt;</code> (href なし) に統一する。 glossary.html ページは nav/index から到達する独立辞書として存続する (deep-link を失うのみで辞書自体は不変)。 REQ-GLOSS-001/002 は共に span 形に統一され、 区別は manual (001) か auto (002) かのみとなる。</p>
 
 <h3 id="s2-5-gates">§2.5 enforcement = folio validate に glossary gate 追加</h3>
 <ul>
@@ -100,14 +101,14 @@
   <li><strong>vocabulary-parity</strong>: <code>glossary.html</code> の term 集合 == <code>vocabulary.yaml</code> の canonical 集合 (過不足の対称差を報告し drift の所在を surface)。</li>
   <li><strong>term-marked (best-effort、 opt-in)</strong>: 既存 glossary gate (<code>data-term</code> resolve + tooltip consistency、 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.6) を folio-closed 語彙で再利用。 §2.3 により <strong>非 opt-in は no-op (keystone)</strong>、 opt-in でも best-effort tier (no-gaps normative にしない)。</li>
 </ul>
-<p>term anchor の slug 化規約 (<code>#term-&lt;canonical&gt;</code>、 canonical 名の space/記号の slug 化) は実装で確定する (open question)。</p>
+<p>slug 化規約 (<code>#term-&lt;canonical&gt;</code>、 canonical 名の space/記号の slug 化) は <code>glossary.html</code> ページ内部の <code>&lt;dt&gt;</code> term id に用いる (nav/index からの直 URL 到達 + in-page 索引用; spec-body の用語 mark は hover-only ゆえ <code>#term-</code> へ deep-link しない)。 実装で確定する (empty-slug fallback + 一意性 gate は S4c)。</p>
 </section>
 
 <section id="s3-consequences" class="informative">
 <h2>§3. Consequences</h2>
 <h3>Positive</h3>
 <ul>
-  <li><strong>folio 語が consumer で「ただで」再現性ある解説を得る</strong>: folio が一度 author した canonical 定義を全 consumer が derive で受け取り、 hover+click で読める。 手動リンクの再現性崩壊を構造的に回避。</li>
+  <li><strong>folio 語が consumer で「ただで」再現性ある解説を得る</strong>: folio が一度 author した canonical 定義を全 consumer が derive で受け取り、 hover tooltip で読める。 手動リンクの再現性崩壊を構造的に回避。</li>
   <li><strong>分割が folio 半分を機械化可能にする</strong>: 全体では不可能だった「全用語の機械解説」を、 folio 所有・closed の部分集合に限って実現する (#110 の前史を否定せず延長)。</li>
   <li><strong>既存機構の extend で収まる</strong>: <code>vocabulary.yaml</code> SSoT + <code>data-term</code> tooltip + <code>folio_glossary_map</code> / <code>folio_glossary_populate_doc</code> を再利用。 <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> を supersede せず extend、 constitution 不変。</li>
 </ul>
@@ -120,7 +121,7 @@
 <h3>Neutral / TODO</h3>
 <ul>
   <li>folio-framework 語彙の<strong>網羅 author</strong> (canonical 定義文確定) は人間 author 層 (3 層原則) で、 folio-architect grill + maintainer 判断で確定する (本 ADR では schema + 機構を決め、 語彙 author は Slice 4)。 <strong>1.0.0 starter set = 中核 8 語 (#130 grill 2026-06-02 確定)</strong>: <code>spec</code> / <code>ADR</code> / <code>constitution</code> / <code>invariant</code> + <code>inventory</code> / <code>prime</code> / <code>cluster</code> / <code>vocabulary</code>。 残り (<code>EARS</code> / <code>SSoT</code> / <code>xref</code> / <code>dogfood</code> / <code>caller-marker</code> / <code>reverse-relation</code> 等) は S4 author 中 + 1.x で漸進追加 (§2.3 best-effort 方針 = no-gaps normative にしないゆえ starter からの漸増は valid)。</li>
-  <li>term anchor slug 化規約 / JS rich tooltip (roadmap) は実装/後付け。</li>
+  <li><code>glossary.html</code> 内 term id の slug 化規約 / JS rich tooltip (roadmap) は実装/後付け。</li>
   <li>本 ADR は <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §10.3 ADR-worthiness (hard-to-reverse: ship された語彙の derive 約束 / surprising: closed-set partition で #110 結論の射程外を切り出す / real-trade-off: completeness 約束範囲) を満たす。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> と共に criterion(c) 判断への INPUT。</li>
 </ul>
 </section>
@@ -130,9 +131,10 @@
 <table>
   <thead><tr><th>案</th><th>採否</th></tr></thead>
   <tbody>
-    <tr><td><strong>ship 語彙 + derive (hover+click 両方)、 completeness best-effort (採用)</strong></td><td>採用 — folio-closed を folio が author→ship、 consumer derive。 描画は user 原文「hover とか click とか」= 両方。 completeness は §2.3 で best-effort 保存 (REQ-GLOSS-001 据置 + REQ-GLOSS-002 追加) し ADR-0034 を extend (supersede せず)</td></tr>
+    <tr><td><strong>ship 語彙 + derive (hover-only tooltip + 独立 glossary.html)、 completeness best-effort (採用)</strong></td><td>採用 — folio-closed を folio が author→ship、 consumer derive。 描画は <strong>hover tooltip のみ</strong> (当初 hover+click 両方で採用したが S4b-2 dogfood で doc 名 routing 衝突が判明し click→glossary を撤回 = §2.4 amend / §5 trace folio-ovi)。 glossary.html ページは nav/index 到達の独立辞書として存続。 completeness は §2.3 で best-effort 保存 (REQ-GLOSS-001 据置 + REQ-GLOSS-002 追加) し ADR-0034 を extend (supersede せず)</td></tr>
     <tr><td>folio-term completeness を normative 化 (全 occurrence mark を no-gaps で強制)</td><td><strong>却下</strong> — 「closed-set→NLP 不要」は非 sequitur (occurrence 検出が NLP-hard、 集合列挙でない)。 normative 化は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 が却下した問題を再燃させ REQ-GLOSS-001 supersede = <a href="../spec/constitution.html#s6-amendment">P-10</a> risk。 best-effort に留める</td></tr>
-    <tr><td>hover tooltip のみ (glossary.html ページなし) / click→ページのみ (hover なし)</td><td>不採用 — user 原文は両方。 同じ <code>vocabulary.yaml</code> を 2 面に derive するだけで両立し、 SoT は 1 つ (二重化なし)</td></tr>
+    <tr><td>hover+click 両方 (用語 mark から <code>glossary.html#term-&lt;slug&gt;</code> へ deep-link) — <em>当初採用 (S4b-2)、 後に撤回</em></td><td><strong>撤回</strong> (folio-ovi、 2026-06-03) — S4b-2 で <code>&lt;a class="term" href&gt;</code> anchor として実装したが dogfood で routing 衝突が判明 (詳細は §2.4 amend / §5 trace folio-ovi 項)。 採用案 (hover-only + 独立 glossary.html 存続) に転換。 hover-only と独立辞書ページの存続は両立し SoT は 1 つ (二重化なし)</td></tr>
+    <tr><td>hover も click も無し (glossary.html ページも作らない)</td><td>不採用 — folio 所有の closed 語は canonical 辞書を再現性付きで配れる (#110 の射程外を切り出す本 ADR の核)。 独立 <code>glossary.html</code> は nav/index 到達の参照価値があるゆえ存続させる</td></tr>
     <tr><td>glossary を DB / 外部 store を SoT にする</td><td>不採用 (<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> が DB-as-SSoT を却下、 継承)。 <code>vocabulary.yaml</code> (rules §3 の YAML 例外) を SoT に保ち <code>glossary.html</code> は derive projection</td></tr>
     <tr><td>nav と 1 ADR に束ねる</td><td>不採用 — supersede risk が glossary 側のみ集中ゆえ nav の clean な extends と混ぜると ADR-0034 への関係が曖昧化。 <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) と分離し本 ADR は ADR-0035 に depends</td></tr>
   </tbody>
@@ -143,12 +145,13 @@
 <h2>§5. Trace</h2>
 <ul>
   <li>起点: #120 walk 生成物を user 閲覧中に提起した「architecture nav + folio-用語 glossary」論点の glossary 半分。 「python 用語は無理だが folio 語は folio 所有ゆえ canonical 辞書を配れる」が核心アイデア。</li>
-  <li>grill (2026-06-01): glossary 配布 = ship 語彙 + derive (= ADR-0034 機構の延長)、 描画 = hover+click 両方。 分割 (closed 自動 / open 手動) を明文化。</li>
+  <li>grill (2026-06-01): glossary 配布 = ship 語彙 + derive (= ADR-0034 機構の延長)、 描画 = hover+click 両方 (後に S4b-2 dogfood で hover-only に amend、 下記 folio-ovi 項)。 分割 (closed 自動 / open 手動) を明文化。</li>
   <li>設計 workflow + 敵対的 critique: critique が blocker「closed-set→NLP 不要は非 sequitur、 completeness normative 化は REQ-GLOSS-001 supersede」を検出 → §2.3 で best-effort 保存 + 新 REQ-GLOSS-002 追加に修正。</li>
   <li><strong>S4 前 grill (#130、 2026-06-02)</strong>: 横断 audit が S4 着手前に潰すべきとした未解決論点を user 確定 — (1) <strong>配布機構</strong> = plugin-resident 参照 (<code>$CLAUDE_PLUGIN_ROOT</code> 直読み・consumer に vocabulary.yaml を置かない、 §2.1; copy 配布は P-5 分裂ゆえ却下)、 (2) <strong>auto-mark 責務</strong> = <code>fix</code> (REQ-GLOSS-002 主語 build→fix、 spec mutate ゆえ <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> §2.3 の fix/build 分離に従う、 §2.3/§2.4)、 (3) <strong>starter set</strong> = 中核 8 語 (§3)。 proposed のうちに §2.1/§2.3/§2.4/§3 を amend。</li>
+  <li><strong>routing 撤回 (folio-ovi、 2026-06-03)</strong>: S4b-2 (auto-mark を <code>&lt;a class="term" href="../glossary.html#term-&lt;slug&gt;"&gt;</code> anchor で SHIP、 commit 6648c11) 後の dogfood grill で、 auto-mark の deep-link が <strong>doc 名と被る用語 (<code>constitution</code> / <code>ADR</code> / <code>inventory</code> / <code>prime</code> / <code>vocabulary</code> 等) で実体 doc への本来の導線と routing 衝突</strong>すると判明。 描画を <strong>hover-only</strong> に転換 — §2.4 を hover+click→hover-only に amend、 §2.3/§2.4 の element を <code>&lt;a&gt;</code>→<code>&lt;span&gt;</code> に統一、 §4 採用行を hover-only へ・旧 hover+click を撤回行へ反転。 <code>glossary.html</code> ページは nav/index 到達の独立辞書として存続 (deep-link を失うのみ)。 REQ-GLOSS-001/002 が span 形に統一 (区別は manual/auto のみ)。 verification REQ-VER-019 / rules §9.5 も span 統一に同期。</li>
   <li>拡張対象: <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 (extend、 supersede せず) / <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> (vocabulary.yaml glossary SSoT) / <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (3 層原則)。 frozen 本文不変、 reverse-link + prose で trace。 depends: <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (glossary.html も walkable nav に載る)。</li>
   <li>関連原則: <a href="../spec/constitution.html#p-5">P-5</a> (1 canonical name = domain namespace 区別の基盤) / <a href="../spec/constitution.html#p-7">P-7</a> (定義二重化禁止 = glossary.html は derive projection)。 本 ADR は constitution を touch しない。</li>
-  <li>実装 path: Slice 4 (folio-vocabulary 網羅 author + domain schema + glossary.html 生成 + hover/click + glossary gate)。 floor (validate glossary gate + sandbox) + ceiling (fidelity lens で定義文の essence 忠実性 + partition 越権検出)。</li>
+  <li>実装 path: Slice 4 (folio-vocabulary 網羅 author + domain schema + glossary.html 生成 + hover-only auto-mark〔click は folio-ovi で撤回〕 + glossary gate)。 floor (validate glossary gate + sandbox) + ceiling (fidelity lens で定義文の essence 忠実性 + partition 越権検出)。</li>
   <li>status: <strong>proposed</strong> (user 承認待ち)。</li>
 </ul>
 </section>

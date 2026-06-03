@@ -600,8 +600,8 @@ folio_cmd_fix() {
     done < <(find "$xdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
-  # --- Pass 4: glossary — auto-mark (opt-in doc に <a class="term"> を挿入、 REQ-GLOSS-002 best-effort) +
-  #     tooltip populate (explicit <span> + auto-mark <a> 双方の data-tooltip を vocabulary.yaml definition から
+  # --- Pass 4: glossary — auto-mark (opt-in doc に <span class="term"> を挿入、 REQ-GLOSS-002 best-effort、 hover-only) +
+  #     tooltip populate (explicit + auto-mark 双方 <span> の data-tooltip を vocabulary.yaml definition から
   #     materialize、 ADR-0034 §2.8 + ADR-0036 §2.3/§2.4、 idempotent) ---
   # glossary は living spec/research のみ走査する (frozen decisions/ ADR 本文を書き換えない、 CLAUDE.md §2 / P-6)
   local gloss_pop=0 gloss_mark=0 gloss_touched=0 gd gf gfrel gn gm
@@ -1086,9 +1086,9 @@ folio_glossary_map() {
       done
 }
 
-# file ($1) 内の <span class="term" data-term="X"> / <a class="term" data-term="X"> (auto-mark) に
-# vocabulary.yaml の definition を data-tooltip として materialize する (ADR-0034 §2.8 glossary、 explicit-mark
-# + REQ-GLOSS-002 auto-mark 双方、 idempotent)。 更新数を stdout。 vocabulary.yaml / yq / definition 無しは no-op (0)。
+# file ($1) 内の <span class="term" data-term="X"> (explicit REQ-GLOSS-001 + auto-mark REQ-GLOSS-002、 span 統一) に
+# vocabulary.yaml の definition を data-tooltip として materialize する (ADR-0034 §2.8 glossary、 idempotent)。
+# 更新数を stdout。 vocabulary.yaml / yq / definition 無しは no-op (0)。
 folio_glossary_populate_doc() {
   local file="$1" root_abs="$2"
   local mapfile; mapfile=$(mktemp)
@@ -1103,9 +1103,8 @@ folio_glossary_populate_doc() {
       if(skip==0){
         res=""
         while(1){
-          ps=index(line,"<span"); pa=index(line,"<a ")   # span (explicit REQ-GLOSS-001) と a (auto-mark REQ-GLOSS-002) 双方の term mark を populate
-          if(ps==0 && pa==0){ res=res line; break }
-          if(ps==0) p=pa; else if(pa==0) p=ps; else p=(ps<pa?ps:pa)
+          p=index(line,"<span")   # span 統一後の term mark (explicit REQ-GLOSS-001 + auto-mark REQ-GLOSS-002 双方) を populate
+          if(p==0){ res=res line; break }
           seg=substr(line,p); gt=index(seg,">")
           if(gt==0){ res=res line; break }
           tag=substr(seg,1,gt)
@@ -1136,36 +1135,34 @@ folio_glossary_populate_doc() {
 }
 
 # file ($1) の prose 内で既に mark 済の term canonical 集合 (data-term 値、 distinct) を stdout。
-# auto-mark の idempotent skip 源 (<span|a class="term" data-term="X"> いずれも対象)。
+# auto-mark の idempotent skip 源 (<span class="term" data-term="X"> を対象、 span 統一後の全 term mark)。
 # prose_only 経由で code/pre/aside 内の raw 例示 mark を除外する = gate (l) と detect/remediate 対称
 # (raw 例示 mark が present に混じり genuine prose 初出の auto-mark を抑止する false-negative を防ぐ、 #131 ceiling)。
 folio_glossary_present_terms() {
-  folio_prose_only "$(folio_extract_body "$1")" | grep -oP '<(span|a)\s[^>]*class="term"[^>]*>' 2>/dev/null \
+  folio_prose_only "$(folio_extract_body "$1")" | grep -oP '<span\s[^>]*class="term"[^>]*>' 2>/dev/null \
     | grep -oP 'data-term="\K[^"]*' 2>/dev/null | LC_ALL=C sort -u
 }
 
 # file ($1=絶対, $2=root 相対, $3=root 絶対) の opt-in doc の prose 内 folio-closed 用語の doc 初出を
-# <a class="term" data-term href="../glossary.html#term-<slug>" data-tooltip> に auto-mark する
+# <span class="term" data-term data-tooltip> に auto-mark する (hover-only、 href なし)
 # (REQ-GLOSS-002 best-effort、 ADR-0036 §2.3/§2.4)。 mark 追加数を stdout。
 # opt-in signal = <meta name="folio-glossary-automark" content="enabled"> (無ければ no-op = 0、 xref completeness と同型)。
-# anchor = no-JS click→glossary.html + hover tooltip (Class A xref の <a data-tooltip> 機構を共用、 §8 graceful)。
+# mark = hover tooltip のみ (glossary.html へ link しない = doc 名と被る用語の routing 衝突を回避、 folio-ovi 2026-06-03)。
 # 既 mark 用語は skip (idempotent)、 vocab 解決不能 / yq 無しは no-op。 awk は mask (tag/<a>/inline+block code を
 # space 化) で語境界 + tag/anchor/code 内除外を判定し doc 初出のみ置換 (全 occurrence は no-gaps にしない = best-effort、
-# href の "../glossary.html" は spec/ research/ = depth-1 cluster 前提、 nested は S4c で robust 化)。
+# href を持たないため cluster depth/nesting の前提は無い)。
 folio_glossary_automark_doc() {
   local file="$1" file_rel="$2" root_abs="$3"
   [[ "$(folio_extract_meta "$file" folio-glossary-automark)" == "enabled" ]] || { printf '0'; return 0; }
 
-  local mapfile present canon def slug href cand=0
+  local mapfile present canon def cand=0
   mapfile=$(mktemp)
   present=$(folio_glossary_present_terms "$file")
   # canonical 長い順に並べ、 長い phrase を短い substring より先に wrap (現 vocab に包含関係は無いが defensive)。
   while IFS=$'\t' read -r canon def; do
     [[ -z "$canon" ]] && continue
     printf '%s\n' "$present" | grep -qxF "$canon" && continue   # 既 mark = skip (idempotent)
-    slug=$(folio_glossary_slug "$canon"); [[ -z "$slug" ]] && continue
-    href="../glossary.html#term-${slug}"
-    printf '%s\t%s\t%s\n' "$canon" "$href" "$def" >> "$mapfile"
+    printf '%s\t%s\n' "$canon" "$def" >> "$mapfile"
     cand=$((cand + 1))
   done < <(folio_glossary_map "$root_abs" 2>/dev/null | awk -F'\t' '{print length($1)"\t"$0}' | LC_ALL=C sort -rn | cut -f2-)
   if [[ "$cand" -eq 0 ]]; then rm -f "$mapfile"; printf '0'; return 0; fi
@@ -1175,7 +1172,7 @@ folio_glossary_automark_doc() {
   out=$(mktemp)
   awk -v mapfile="$mapfile" '
     BEGIN{ nt=0
-      while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=3){ nt++; toks[nt]=a[1]; href[a[1]]=a[2]; tip[a[1]]=a[3]; wrapped[a[1]]=0 } }
+      while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=2){ nt++; toks[nt]=a[1]; tip[a[1]]=a[2]; wrapped[a[1]]=0 } }
       ANC=0; skip=0; incode=0; inbody=0 }
     function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
     function build_mask(s,   i,c,mk){
@@ -1212,8 +1209,8 @@ folio_glossary_automark_doc() {
             bch=(p>1)?substr(mk,p-1,1):""
             ach=substr(mk,p+length(tk),1)
             if((bch=="" || !isword(bch)) && (ach=="" || !isword(ach))){
-              anc="<a class=\"term\" data-term=\"" tk "\" href=\"" href[tk] "\" data-tooltip=\"" tip[tk] "\">" tk "</a>"
-              line=substr(line,1,p-1) anc substr(line,p+length(tk))
+              mark="<span class=\"term\" data-term=\"" tk "\" data-tooltip=\"" tip[tk] "\">" tk "</span>"
+              line=substr(line,1,p-1) mark substr(line,p+length(tk))
               wrapped[tk]=1; break
             }
             start=p+length(tk)
@@ -1514,7 +1511,7 @@ folio_cmd_validate() {
       fi
 
       # --- gate (l) glossary — marked term の resolve + tooltip-consistency (block、 opt-in: vocabulary.yaml definition、 ADR-0034 §2.8 + ADR-0036)。
-      #     explicit <span> (REQ-GLOSS-001) + auto-mark <a> (REQ-GLOSS-002) 双方を検査。 best-effort tier ゆえ
+      #     explicit + auto-mark 双方とも <span class="term"> (span 統一) を検査。 best-effort tier ゆえ
       #     「全 term 言及を mark せよ」 の gap-lint はしない (marked term のみ検査)。 ---
       if [[ -n "$glossary_map" && ( "$subdir" == "spec" || "$subdir" == "research" ) ]]; then   # fix(populate) と対称に living spec/research のみ検査 (frozen decisions/ は fix で remediate 不可 = stuck-RED ゆえ除外、 detect↔remediate 不変条件 REQ-VER-015 を保つ)
         local gtag gterm gtip gdef
@@ -1530,7 +1527,7 @@ folio_cmd_validate() {
           if [[ "$gtip" != "$gdef" ]]; then
             violations+=("${rel}"$'\t'"[glossary-stale-tooltip] term '${gterm}' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)"); glossary_fail=1
           fi
-        done < <(folio_prose_only "$body" | grep -oP '<(span|a) [^>]*class="term"[^>]*>' 2>/dev/null)
+        done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
       fi
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done

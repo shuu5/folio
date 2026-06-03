@@ -10,15 +10,16 @@ description: |
     (b) fix      が exit 0 で stale span を populate (→GREEN)、 prose の prime は auto-mark しない
     (c) post-fix validate clean (exit 0)
     (d) idempotency: 再 fix で exit 0 かつ tree sha256 不変
-    (e) post_fix_forbid: <a class="term" が post-fix tree に 1 件も無い (auto-mark anchor 不在 = opt-in gate 健在)
-  opt-in gate が壊れ auto-mark が常時走れば prose の prime が <a class="term"> 化し、 forbid が RED で捕捉する。
+    (e) post_fix_forbid: data-term="prime" が post-fix tree に 1 件も無い (prose の prime が auto-mark span 化されない = opt-in gate 健在)
+  opt-in gate が壊れ auto-mark が常時走れば prose の prime が <span class="term" data-term="prime"> 化し、 forbid が RED で捕捉する
+  (span 統一後は anchor 弁別子 <a class="term" が gate 破れ時も現れないため、 auto-mark される語の data-term を弁別子にする)。
   scope は ADR-0036 §2.3 (opt-in best-effort) で trace。
 
 fixture: "fixtures/glossary-noautomark"
 command: ["fix"]
 
-post_fix_forbid:                        # auto-mark anchor は 1 件も現れてはならない (非 opt-in = no-op)
-  - '<a class="term"'
+post_fix_forbid:                        # 非 opt-in = no-op ゆえ prose の prime が auto-mark span 化されてはならない
+  - 'data-term="prime"'
 
 expect:
   exit_code: 0
