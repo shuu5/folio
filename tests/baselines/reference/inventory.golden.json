@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-03T09:13:41Z",
+  "generatedAt": "2026-06-03T14:12:50Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -889,7 +889,7 @@
       "title": "ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)",
       "summary": "architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を",
       "doc-type": "adr",
-      "status": "proposed",
+      "status": "accepted",
       "version": "0.5.0-draft",
       "stakeholders": [
         "Developer",
@@ -922,7 +922,7 @@
       "title": "ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)",
       "summary": "folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は",
       "doc-type": "adr",
-      "status": "proposed",
+      "status": "accepted",
       "version": "0.5.0-draft",
       "stakeholders": [
         "Developer",

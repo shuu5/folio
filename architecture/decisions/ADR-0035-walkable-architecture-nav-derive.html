@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0035">
 <meta name="folio-adr-date" content="2026-06-01">
@@ -48,14 +48,14 @@
 
 <header class="doc-header">
   <h1>ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権)</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を <code>folio build</code> が graph (head metadata + @id path-prefix + objectGraph の JOIN) から生成し commit、 marker + regen-drift gate で hand-authored と区別、 P-7/P-13 の空間排除は HOW+verification を名指すゆえ派生 view は憲法改訂なしに ADR で授権。 companion = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary)。 <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> init + <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張、 <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> の gitignore-projection を新 artifact class に限り反転</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を <code>folio build</code> が graph (head metadata + @id path-prefix + objectGraph の JOIN) から生成し commit、 marker + regen-drift gate で hand-authored と区別、 P-7/P-13 の空間排除は HOW+verification を名指すゆえ派生 view は憲法改訂なしに ADR で授権。 companion = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary)。 <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> init + <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張、 <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> の gitignore-projection を新 artifact class に限り反転</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0035</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-06-01</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0036 (companion = folio-vocabulary glossary、 本 ADR に depends、 glossary.html も walkable nav に載る)、 ADR-0024 (init scope = cluster README の cross-cluster nav region を生成物に追加 + pipeline 末尾で build 1 回呼び index 生成)、 ADR-0023 (gitignore-projection = 生成物を architecture/ の外に置く原則を、 committed generated-view という新 class に限り反転)、 ADR-0025 (fix materialize = index↔cluster の reverse 双方向 link)、 ADR-0020 (validate scope = regen-drift / reachability / dead-link gate 追加)、 ADR-0007 (inventory/prime projection = nav の同型 derive、 graph SSoT → 複数 view)、 ADR-0003 (CLI surface = folio build 新 subcommand)、 ADR-0034 (xref/glossary = 同じ in-band SSoT + 生成 projection hybrid 系譜)、 ADR-0030/0032 (1.0.0 criteria = 本機能は criterion(c)「実用に耐える」判断への INPUT)、 rules.html (nav 規範 + generated-view markup + validate gate)、 relations.html (inventory §4 schema を nav node/edge へ)、 folio-self-spec.html (§2 layout に generated-view category 追記 + self dogfood)、 constitution P-2/P-3/P-7/P-13/P-5 (不変原則、 本 ADR は touch しない)</dd>
@@ -74,7 +74,7 @@
 
 <p>user grill (2026-06-01) で 6 つの根の決定が確定した: (1) <strong>歩ける website を normative 化</strong> (folio 自身も init 生成物も同一規約・機械検証)、 (2) <strong>nav は graph から derive</strong> する派生 view (drift-proof)、 (3) folio-用語 glossary を folio が上流で author→ship・consumer は derive (companion <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a>)、 (4) これは pre-1.0.0 の主作業、 (5) <strong>golden 型 commit-in-place</strong> (build が生成物を architecture/ に in-place 再生成し commit、 marker + regen-drift gate で hand-authored と区別)、 (6) <strong>置き場所 = architecture/ 内 + ADR のみ</strong> (憲法改訂なし、 interpretive-gap 論拠、 §2.6)。 貫く 3 層原則: <strong>人間 = 意味を author / 機械 = 純構造を derive (nav・index・xref 配線) / 意味の人間向けレンダリングだけ co-author+enforce (prose essence、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a>)</strong>。</p>
 
-<p>本 feature は <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> の criterion(c)「実用に耐える」<strong>判断への INPUT</strong> である (user が歩行性を実用性の要件と判断 = criterion(c) を行使している)。 criterion(c) は <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> §3 で <strong>明示的に user の主観判断</strong>と定義されており機械 gate ではない — 本 ADR は (c) を「検査可能 gate に変える」ものではなく、 user の (c) 判断に資する証拠を作る。 criteria A〜G + criterion H (ADR-0031 実装 = task #84 完了 + greenfield walk PASS) は既に充足済。 <strong>status = proposed (user 承認待ち)</strong>。 設計は grill 6 問 + 4軸 design workflow + 敵対的 critique (blocker 3 解消) で確定。</p>
+<p>本 feature は <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> の criterion(c)「実用に耐える」<strong>判断への INPUT</strong> である (user が歩行性を実用性の要件と判断 = criterion(c) を行使している)。 criterion(c) は <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> §3 で <strong>明示的に user の主観判断</strong>と定義されており機械 gate ではない — 本 ADR は (c) を「検査可能 gate に変える」ものではなく、 user の (c) 判断に資する証拠を作る。 criteria A〜G + criterion H (ADR-0031 実装 = task #84 完了 + greenfield walk PASS) は既に充足済。 <strong>status = accepted (S5 統合検証 PASS 後 user 承認)</strong>。 設計は grill 6 問 + 4軸 design workflow + 敵対的 critique (blocker 3 解消) で確定。</p>
 </section>
 
 <section id="s2-decision" class="normative">
@@ -178,7 +178,7 @@
   <li>拡張対象: <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> (init) / <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> (反転) / <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> (materialize) / <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate) / <a href="./ADR-0007-context-injection.html">ADR-0007</a> (inventory/prime) / <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> (CLI)。 いずれも本文 frozen、 reverse-link + 本 ADR prose で trace。</li>
   <li>関連原則: <a href="../spec/constitution.html#p-2">P-2</a> (HTML) / <a href="../spec/constitution.html#p-3">P-3</a> (WHAT-only) / <a href="../spec/constitution.html#p-5">P-5</a> (1 canonical name) / <a href="../spec/constitution.html#p-6">P-6</a> (link integrity) / <a href="../spec/constitution.html#p-7">P-7</a> (3-domain) / <a href="../spec/constitution.html#p-11">P-11</a> (HOW 隔離) / <a href="../spec/constitution.html#p-13">P-13</a> (no-mandate-build + consumer 自律)。 本 ADR は constitution を touch しない。</li>
   <li>実装 path: 5 slice (① build core + 3 gate → ② folio-self dogfood + link-superset regression → ③ consumer init scaffold + self-spec layout → ④ glossary = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> → ⑤ 統合検証 + criterion(c) INPUT 完成)。 各 slice は floor (validate + sandbox) + ceiling (独立 review)。</li>
-  <li>status: <strong>proposed</strong> (user 承認待ち)。 起票時に README index + reverse-link materialize + golden 再生成を実施。</li>
+  <li>status: <strong>accepted</strong> (S5 統合検証 PASS 後 user 承認、 folio-bmk)。 起票時に README index + reverse-link materialize + golden 再生成を実施。</li>
 </ul>
 </section>
 

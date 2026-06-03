@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0036">
 <meta name="folio-adr-date" content="2026-06-01">
@@ -42,14 +42,14 @@
 
 <header class="doc-header">
   <h1>ADR-0036 — folio-vocabulary glossary derive + partition</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 の best-effort tier を保存し新 REQ で extend (supersede しない)。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) に depends</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 の best-effort tier を保存し新 REQ で extend (supersede しない)。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) に depends</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0036</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-06-01</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0034 (object/term xref = glossary Class B SSoT=vocabulary.yaml + explicit-mark best-effort を extend、 supersede しない)、 ADR-0031 (vocabulary.yaml glossary enrich = ISO 704 concept model、 canonical/forbidden/definition)、 ADR-0033 (dual-audience 3 層 = author/derive/co-author の理論母体)、 ADR-0035 (companion nav-derive = glossary.html も walkable nav に載る、 本 ADR は ADR-0035 に depends)、 rules.html (§9 glossary 規範 + REQ-GLOSS-002 追加)、 relations.html (vocabulary domain namespace)、 folio-self-spec.html (folio-vocabulary self-host)、 constitution P-5/P-7 (1 canonical name / 定義二重化禁止、 本 ADR は touch しない)</dd>
@@ -63,7 +63,7 @@
 
 <p>前史 (<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 / rules §9.5 REQ-GLOSS-001、 task #110): 「用語 hover tooltip を機械的に全網羅するのは困難 (自然語の全 occurrence 検出は NLP 難問) + 手動リンクは再現性が崩れる」ゆえ glossary は <strong>explicit-mark のみ・best-effort tier・auto-detect / gap-lint しない</strong>と確立済。 本 ADR の novelty は<strong>分割</strong>にある: folio-framework 語は <strong>closed set かつ folio 所有</strong>ゆえ <strong>canonical 定義を folio が一度 author→ship → consumer は derive で受け取る</strong> (consumer は folio 語を一切書かない)。 これにより #110 が諦めた「全網羅は無理」の問題を、 <strong>folio が所有・固定できる部分集合だけ切り出して機械配布</strong>することで解く。</p>
 
-<p>貫く 3 層原則 (<a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a>): 人間 = 意味を author / 機械 = 純構造を derive / 意味の人間向けレンダリングだけ co-author+enforce。 glossary の <strong>定義文</strong>は derive 不可 (誰かが author した意味) だが、 folio-framework 語については <strong>folio maintainer が上流で一度 author</strong> するため、 consumer 視点では derive になる。 本 ADR は companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (walkable nav) に depends する (<code>glossary.html</code> も歩ける website の一部として nav に載る)。 <strong>status = proposed (user 承認待ち)</strong>。</p>
+<p>貫く 3 層原則 (<a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a>): 人間 = 意味を author / 機械 = 純構造を derive / 意味の人間向けレンダリングだけ co-author+enforce。 glossary の <strong>定義文</strong>は derive 不可 (誰かが author した意味) だが、 folio-framework 語については <strong>folio maintainer が上流で一度 author</strong> するため、 consumer 視点では derive になる。 本 ADR は companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (walkable nav) に depends する (<code>glossary.html</code> も歩ける website の一部として nav に載る)。 <strong>status = accepted (S5 統合検証 PASS 後 user 承認)</strong>。</p>
 </section>
 
 <section id="s2-decision" class="normative">
@@ -152,7 +152,7 @@
   <li>拡張対象: <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 (extend、 supersede せず) / <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> (vocabulary.yaml glossary SSoT) / <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (3 層原則)。 frozen 本文不変、 reverse-link + prose で trace。 depends: <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (glossary.html も walkable nav に載る)。</li>
   <li>関連原則: <a href="../spec/constitution.html#p-5">P-5</a> (1 canonical name = domain namespace 区別の基盤) / <a href="../spec/constitution.html#p-7">P-7</a> (定義二重化禁止 = glossary.html は derive projection)。 本 ADR は constitution を touch しない。</li>
   <li>実装 path: Slice 4 (folio-vocabulary 網羅 author + domain schema + glossary.html 生成 + hover-only auto-mark〔click は folio-ovi で撤回〕 + glossary gate)。 floor (validate glossary gate + sandbox) + ceiling (fidelity lens で定義文の essence 忠実性 + partition 越権検出)。</li>
-  <li>status: <strong>proposed</strong> (user 承認待ち)。</li>
+  <li>status: <strong>accepted</strong> (S5 統合検証 PASS 後 user 承認、 folio-bmk)。</li>
 </ul>
 </section>
 
