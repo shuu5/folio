@@ -1,0 +1,8 @@
+# slug 衝突 fixture: "SSoT" と "ssot" は共に slug "ssot" を生む (REQ-GLOSS-003)。
+terms:
+  - canonical: "SSoT"
+    domain: "folio-closed"
+    definition: "Single Source of Truth (collision fixture)。"
+  - canonical: "ssot"
+    domain: "folio-closed"
+    definition: "衝突相手 (collision fixture)。"

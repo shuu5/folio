@@ -1,0 +1,21 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
+root: tests/fixtures/glossary-slug-collision
+files checked: 0 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [FAIL] glossary
+  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [SKIP] cluster-reachability (architecture cluster dir 無し)
+  [OK] ears-coverage
+
+violations (1):
+  (vocabulary.yaml) [glossary-slug] vocabulary.yaml の canonical が一意な glossary slug を生まない (<dt id="term-…"> 重複、 REQ-GLOSS-003、 vocabulary.yaml の canonical を修正)

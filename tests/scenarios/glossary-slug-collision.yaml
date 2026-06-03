@@ -1,0 +1,26 @@
+schema_version: "0.1"
+req_id: "REQ-GLOSS-003"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  slug uniqueness gate (REQ-GLOSS-003、 ADR-0036 §2.5 S4c) を実証する。 vocabulary.yaml に異なる canonical
+  ("SSoT" と "ssot") が同一 slug "ssot" を生む衝突を seed し、 folio validate が exit 1 + [glossary-slug] を出す。
+  この死角は nav-regen-drift の byte 検査では捕捉できない (emit が決定的に壊れた <dt id> を出し committed も同じ
+  壊れ id で byte 一致するため) — emit を single SoT に fail-closed (return 3) で検出し、 validate が block する。
+  ★fixture は glossary.html を含まない (= fresh consumer / build fail-closed 後の状態)。 slug 衝突は vocab の
+  不変条件ゆえ glossary.html の有無と独立に [FAIL] glossary で block する (build の fail-closed exit 2 と
+  detect↔remediate parity)。 build 側の fail-closed (no-write + exit 2) は ceiling/手動で別途実証。
+  検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/glossary-slug-collision"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/glossary-slug-collision.golden.txt"
+
+setup:
+  fixtures:
+    - "glossary-slug-collision/vocabulary.yaml"   # SSoT / ssot = 同一 slug 衝突 (glossary.html 無し = 無条件 block を test)
+
+expect:
+  exit_code: 1                                    # slug 衝突検出 ([glossary-slug]、 glossary.html 不在でも block)

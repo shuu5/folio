@@ -1,0 +1,8 @@
+# parity 対称差 fixture: vocab は spec+prime、 committed glossary は spec のみ → [vocab のみ: prime] を surface (REQ-VER-019)。
+terms:
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "design-intent doc (parity fixture)。"
+  - canonical: "prime"
+    domain: "folio-closed"
+    definition: "Tier 1 digest (parity fixture)。"

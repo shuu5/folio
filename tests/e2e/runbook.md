@@ -34,7 +34,7 @@ RED→fix→validate GREEN / inventory 件数・prime digest 形式)。これは
 - folio plugin が load 済の session (`~/.claude/plugins/folio` symlink + cld auto discovery)。
 - worktree 内で実行。probe file は walk 後に**全削除**。
 - marker file `.folio/architect-active` は `.gitignore` 済。walk 後は必ず `rm -f`。
-- walk 前後で sandbox 全 GREEN を維持 (`rm -f .folio/architect-active` 後に runner 実行、現 28 scenario file / 60 assertion PASS、0 fail)。
+- walk 前後で sandbox 全 GREEN を維持 (`rm -f .folio/architect-active` 後に runner 実行、現 32 scenario file / 64 assertion PASS、0 fail)。
 
 ## marker 機構 (caller-marker hook)
 
@@ -339,4 +339,4 @@ deterministic floor。semantic ceiling = 本 S-K)。
 - [ ] probe file を全削除した (`architecture/spec/e2e-*.html` / `architecture/random-e2e/` / `architecture/spec/e2e-x4d-seed.html`、README.md 復元)
 - [ ] temp consumer project を全削除した (`rm -rf /tmp/folio-e2e-consumer-*`、S-H/S-I/S-K)
 - [ ] marker file を unset した (`rm -f .folio/architect-active`)
-- [ ] sandbox 全 GREEN を維持した (現 28 scenario file / 60 assertion PASS、0 fail、marker cleanup 後に runner 実行)
+- [ ] sandbox 全 GREEN を維持した (現 32 scenario file / 64 assertion PASS、0 fail、marker cleanup 後に runner 実行)

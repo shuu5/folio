@@ -1513,21 +1513,31 @@ folio_cmd_validate() {
       # --- gate (l) glossary — marked term の resolve + tooltip-consistency (block、 opt-in: vocabulary.yaml definition、 ADR-0034 §2.8 + ADR-0036)。
       #     explicit + auto-mark 双方とも <span class="term"> (span 統一) を検査。 best-effort tier ゆえ
       #     「全 term 言及を mark せよ」 の gap-lint はしない (marked term のみ検査)。 ---
-      if [[ -n "$glossary_map" && ( "$subdir" == "spec" || "$subdir" == "research" ) ]]; then   # fix(populate) と対称に living spec/research のみ検査 (frozen decisions/ は fix で remediate 不可 = stuck-RED ゆえ除外、 detect↔remediate 不変条件 REQ-VER-015 を保つ)
-        local gtag gterm gtip gdef
-        while IFS= read -r gtag; do
-          [[ -z "$gtag" ]] && continue
-          gterm=$(printf '%s' "$gtag" | grep -oP 'data-term="\K[^"]*'); [[ -z "$gterm" ]] && continue
-          gdef=$(printf '%s\n' "$glossary_map" | awk -F'\t' -v t="$gterm" '$1==t{print $2; exit}')
-          if [[ -z "$gdef" ]]; then
-            violations+=("${rel}"$'\t'"[glossary-unresolved] term '${gterm}' が vocabulary.yaml に definition を持たない (data-term、 §2.8 resolve)"); glossary_fail=1
-            continue
-          fi
-          gtip=$(printf '%s' "$gtag" | grep -oP 'data-tooltip="\K[^"]*')
-          if [[ "$gtip" != "$gdef" ]]; then
-            violations+=("${rel}"$'\t'"[glossary-stale-tooltip] term '${gterm}' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)"); glossary_fail=1
-          fi
-        done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
+      if [[ ( "$subdir" == "spec" || "$subdir" == "research" ) ]]; then   # living spec/research のみ (frozen decisions/ は fix で remediate 不可 = stuck-RED ゆえ除外、 detect↔remediate 不変条件 REQ-VER-015 を保つ)
+        # anchor-residue (REQ-GLOSS-003、 ADR-0036 §2.4 hover-only): span 統一ゆえ <a class="term"> は退行。 vocab 有無と独立に block
+        # (hover-only 不可逆の機械保証は marking 形の問題で vocabulary.yaml 解決に依存しない)。 detect-only (folio fix で <a>→<span> 自動変換はしない)。
+        local gres
+        while IFS= read -r gres; do
+          [[ -z "$gres" ]] && continue
+          violations+=("${rel}"$'\t'"[glossary-anchor-residue] <a class=\"term\"> は hover-only 転換で撤回済 (<span class=\"term\"> を使う、 REQ-GLOSS-003 / ADR-0036 §2.4)"); glossary_fail=1
+        done < <(folio_prose_only "$body" | grep -oP '<a [^>]*class="term"[^>]*>' 2>/dev/null)
+        # resolve + tooltip-consistency は vocabulary.yaml definition 解決時のみ (opt-in、 ADR-0034 §2.8 + ADR-0036)。
+        if [[ -n "$glossary_map" ]]; then
+          local gtag gterm gtip gdef
+          while IFS= read -r gtag; do
+            [[ -z "$gtag" ]] && continue
+            gterm=$(printf '%s' "$gtag" | grep -oP 'data-term="\K[^"]*'); [[ -z "$gterm" ]] && continue
+            gdef=$(printf '%s\n' "$glossary_map" | awk -F'\t' -v t="$gterm" '$1==t{print $2; exit}')
+            if [[ -z "$gdef" ]]; then
+              violations+=("${rel}"$'\t'"[glossary-unresolved] term '${gterm}' が vocabulary.yaml に definition を持たない (data-term、 §2.8 resolve)"); glossary_fail=1
+              continue
+            fi
+            gtip=$(printf '%s' "$gtag" | grep -oP 'data-tooltip="\K[^"]*')
+            if [[ "$gtip" != "$gdef" ]]; then
+              violations+=("${rel}"$'\t'"[glossary-stale-tooltip] term '${gterm}' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)"); glossary_fail=1
+            fi
+          done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
+        fi
       fi
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
@@ -1560,17 +1570,45 @@ folio_cmd_validate() {
     done < <(folio_nav_deadlinks "$nav_index" "$root_abs")
   fi
 
-  # glossary.html も生成 artifact ゆえ同 nav-regen-drift で byte 検査する (ADR-0036 §2.5 glossary single-SoT =
-  # regen-drift の glossary 特化 = 手編集/vocabulary.yaml 変化の未再生成を検出)。 index と独立に存在判定し nav_seen を
-  # 立てる (build は index を無条件・glossary を vocab 解決時のみ生成ゆえ通常は共存、 abnormal な片在も robust に扱う)。
-  # vocabulary-parity (term 集合の対称差) は別 gate として S4c で追加。
-  local nav_gloss="${root_abs}/glossary.html"
-  if [[ -f "$nav_gloss" ]] && [[ "$(folio_extract_meta "$nav_gloss" folio-generated)" == "folio-build" ]]; then
-    nav_seen=1
-    if ! diff <(folio_glossary_emit "$root_abs") "$nav_gloss" >/dev/null 2>&1; then
-      violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が vocabulary.yaml から drift (folio build で再生成、 ADR-0036 §2.5)")
-      nav_drift_fail=1
+  # glossary single-SoT (ADR-0036 §2.5): 生成 glossary.html ≡ folio_glossary_emit(vocab) を byte 検査 (nav-regen-drift)。
+  # slug-integrity (REQ-GLOSS-003) は vocab の不変条件ゆえ glossary.html の有無と独立に検査する: 異なる canonical が
+  # 同一 slug を生む衝突 (emit return 3) は committed が壊れ <dt id> で byte 一致しても捕捉できない死角 →
+  # vocab 解決時 (glossary_map 非空) に無条件で [glossary-slug] block し glossary gate に乗せる (build の fail-closed
+  # exit 2 と detect↔remediate parity、 glossary.html 未生成の fresh consumer/build-fail 後も block)。
+  # vocabulary-parity (term 集合) は独立 gate にしない: byte 検査が term 集合一致を構造的に含意する真部分集合 (純冗長、
+  # S4c design wf 確定)。 parity diagnostic「drift の所在を surface」は regen-drift message に term 対称差を埋めて回収。
+  local nav_gloss="${root_abs}/glossary.html" gloss_marked=0
+  if [[ -f "$nav_gloss" ]] && [[ "$(folio_extract_meta "$nav_gloss" folio-generated)" == "folio-build" ]]; then gloss_marked=1; fi
+  if [[ -n "$glossary_map" ]]; then
+    local gtmp_v gec_v; gtmp_v=$(mktemp)
+    folio_glossary_emit "$root_abs" > "$gtmp_v" 2>/dev/null; gec_v=$?
+    if [[ "$gec_v" -eq 3 ]]; then
+      violations+=("(vocabulary.yaml)"$'\t'"[glossary-slug] vocabulary.yaml の canonical が一意な glossary slug を生まない (<dt id=\"term-…\"> 重複、 REQ-GLOSS-003、 vocabulary.yaml の canonical を修正)")
+      glossary_fail=1
+    elif [[ "$gec_v" -eq 0 ]] && [[ "$gloss_marked" -eq 1 ]]; then
+      nav_seen=1
+      if ! diff "$gtmp_v" "$nav_gloss" >/dev/null 2>&1; then
+        # parity diagnostic: emit と committed の <dt> term の canonical 集合の対称差を message に埋め込む
+        # (term-name = htesc(canonical) を抽出、 slug でなく可読 canonical で surface、 LC_ALL=C 決定的)。
+        local em_t com_t only_v only_g symd
+        em_t=$(grep -oP '<span class="term-name">\K[^<]*' "$gtmp_v" | LC_ALL=C sort)
+        com_t=$(grep -oP '<span class="term-name">\K[^<]*' "$nav_gloss" | LC_ALL=C sort)
+        only_v=$(LC_ALL=C comm -23 <(printf '%s\n' "$em_t") <(printf '%s\n' "$com_t") | grep -v '^$' | paste -sd' ' -)
+        only_g=$(LC_ALL=C comm -13 <(printf '%s\n' "$em_t") <(printf '%s\n' "$com_t") | grep -v '^$' | paste -sd' ' -)
+        symd=""
+        [[ -n "$only_v" ]] && symd="${symd} [vocab のみ: ${only_v}]"
+        [[ -n "$only_g" ]] && symd="${symd} [glossary のみ: ${only_g}]"
+        violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が vocabulary.yaml から drift (folio build で再生成、 ADR-0036 §2.5)${symd}")
+        nav_drift_fail=1
+      fi
     fi
+    rm -f "$gtmp_v"
+  elif [[ "$gloss_marked" -eq 1 ]]; then
+    # orphan: 生成 (folio-build) glossary.html が在るが vocabulary.yaml が解決しない = source 消失の未再生成。
+    # vocab 有無で slug/byte は検査できないが、 単一 SoT 契約 (生成物は vocab から再生成可能) を破るゆえ drift 検出 (HEAD と対称)。
+    nav_seen=1
+    violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が在るが vocabulary.yaml が解決しない (orphan: vocab を復元するか glossary.html を削除、 ADR-0036 §2.5)")
+    nav_drift_fail=1
   fi
 
   # --- gate (o) cluster-reachability — dead-end README / empty-cluster を検出 (ADR-0035 §2.5、 §1 defect #2/#3)。
@@ -1630,8 +1668,8 @@ folio_cmd_validate() {
   if [[ "$xref_tooltip_fail" -eq 1 ]]; then printf '  [FAIL] xref-tooltip-consistency\n'; else printf '  [OK] xref-tooltip-consistency\n'; fi
   if [[ "$xref_complete_seen" -eq 0 ]]; then printf '  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)\n'
   elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi
-  if [[ -z "$glossary_map" ]]; then printf '  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)\n'
-  elif [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'; else printf '  [OK] glossary\n'; fi
+  if [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'   # anchor-residue は vocab 無しでも fire するゆえ fail-first
+  elif [[ -z "$glossary_map" ]]; then printf '  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)\n'; else printf '  [OK] glossary\n'; fi
   if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)\n'
   elif [[ "$nav_drift_fail" -eq 1 ]]; then printf '  [FAIL] nav-regen-drift\n'; else printf '  [OK] nav-regen-drift\n'; fi
   if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-dead-link (生成 index 無し)\n'
@@ -2072,10 +2110,15 @@ HEAD
 
 # canonical 名 ($1) を glossary anchor 用 slug に変換 (lowercase / 非英数の連なりを単一 hyphen / 端の hyphen 除去)。
 # 例: "SSoT"→"ssot" / "canonical name"→"canonical-name" / "data-audience"→"data-audience"。 決定的。
+# 空 slug (canonical が全非ASCII/全記号) は決定的 hash fallback "x<cksum>" を当てる (REQ-GLOSS-003、 ADR-0036 §2.5 S4c)。
+# 連番 (term-1/term-2) は vocab 行追加で全 empty-slug anchor が shift する golden footgun ゆえ不採用。 prefix x で数字始まり id を回避。
 folio_glossary_slug() {
   # LC_ALL=C で byte-based に固定し locale 非依存・決定的に (multibyte canonical でも非決定にならない、 ceiling minor)。
-  # 現 vocab は ASCII canonical のみゆえ出力不変。 非 ASCII/全記号 canonical の空 slug fallback + 一意性 gate は S4c。
-  printf '%s' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -e 's/[^a-z0-9]\+/-/g' -e 's/^-//' -e 's/-$//'
+  # 現 vocab は ASCII canonical のみゆえ slug 非空 = fallback path 未到達 = 出力不変。
+  local s
+  s=$(printf '%s' "$1" | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -e 's/[^a-z0-9]\+/-/g' -e 's/^-//' -e 's/-$//')
+  [[ -z "$s" ]] && s="x$(printf '%s' "$1" | LC_ALL=C cksum | cut -d' ' -f1)"   # 全非ASCII/全記号 → 決定的 hash (位置非依存)
+  printf '%s' "$s"
 }
 
 # <root_abs> ($1) の vocabulary.yaml (folio-closed 語) から glossary.html 内容を stdout に emit (純関数・決定的、 ADR-0036)。
@@ -2090,6 +2133,20 @@ folio_glossary_emit() {
   local rows; rows=$(yq -o=json -I=0 '[.terms[] | select(.definition) | select((.domain // "folio-closed") == "folio-closed") | [.canonical, .definition]]' "$vf" 2>/dev/null \
     | jq -r '.[] | (.[0]|gsub("[\t\n]+";" ")) + "\t" + (.[1]|gsub("[\t\n]+";" "))' 2>/dev/null | LC_ALL=C sort)
   [[ -z "$rows" ]] && return 1
+
+  # slug uniqueness 検査 (REQ-GLOSS-003、 ADR-0036 §2.5 S4c): 異なる canonical が同一 slug を生むと
+  # glossary.html の <dt id="term-<slug>"> が重複し in-page anchor が壊れる。 nav-regen-drift は committed も
+  # 同じ壊れ id で byte 一致ゆえ捕捉できない死角 → emit を single SoT に fail-closed で検出 (return 3、
+  # vocab-absent の return 1 = keystone SKIP と弁別)。 build は no-write + error、 validate は [glossary-slug] block。
+  local dup
+  dup=$(while IFS=$'\t' read -r canon def; do
+          [[ -z "$canon" ]] && continue
+          folio_glossary_slug "$canon"; printf '\n'
+        done <<< "$rows" | LC_ALL=C sort | LC_ALL=C uniq -d)
+  if [[ -n "$dup" ]]; then
+    printf 'folio: glossary slug 衝突 — 異なる canonical が同一 slug を生成: %s (vocabulary.yaml の canonical を一意な slug に、 REQ-GLOSS-003)\n' "$(printf '%s' "$dup" | tr '\n' ' ')" >&2
+    return 3
+  fi
 
   cat <<'HEAD'
 <!DOCTYPE html>
@@ -2166,14 +2223,19 @@ folio_cmd_build() {
         echo "folio build --check: ${root}/index.html が graph から drift (folio build で再生成せよ)" >&2; drift=1
       fi
     fi
-    local gout_c="${root_abs}/glossary.html"
-    if [[ -f "$gout_c" ]] && [[ "$(folio_extract_meta "$gout_c" folio-generated)" == "folio-build" ]]; then
-      if ! diff <(folio_glossary_emit "$root_abs") "$gout_c" >/dev/null 2>&1; then
-        echo "folio build --check: ${root}/glossary.html が vocabulary.yaml から drift (folio build で再生成せよ)" >&2; drift=1
-      fi
+    local gout_c="${root_abs}/glossary.html" gtmp_c gec_c gout_marked=0
+    if [[ -f "$gout_c" ]] && [[ "$(folio_extract_meta "$gout_c" folio-generated)" == "folio-build" ]]; then gout_marked=1; fi
+    gtmp_c=$(mktemp); folio_glossary_emit "$root_abs" > "$gtmp_c" 2>/dev/null; gec_c=$?
+    if [[ "$gec_c" -eq 3 ]]; then   # slug 衝突 = vocab の不変条件違反 (glossary.html の有無と独立、 validate と同 fail-closed contract、 REQ-GLOSS-003)
+      echo "folio build --check: glossary slug 衝突 (vocabulary.yaml の canonical を一意な slug に修正、 REQ-GLOSS-003)" >&2; drift=1
+    elif [[ "$gec_c" -eq 0 ]] && [[ "$gout_marked" -eq 1 ]] && ! diff "$gtmp_c" "$gout_c" >/dev/null 2>&1; then
+      echo "folio build --check: ${root}/glossary.html が vocabulary.yaml から drift (folio build で再生成せよ)" >&2; drift=1
+    elif [[ "$gec_c" -ne 0 ]] && [[ "$gec_c" -ne 3 ]] && [[ "$gout_marked" -eq 1 ]]; then   # orphan: 生成 glossary.html が在るが vocab 解決不能 (validate と対称)
+      echo "folio build --check: ${root}/glossary.html が在るが vocabulary.yaml が解決しない (orphan: vocab を復元するか glossary.html を削除)" >&2; drift=1
     fi
+    rm -f "$gtmp_c"
     [[ "$drift" -eq 1 ]] && return 1
-    echo "folio build --check: index/glossary は graph と同期 (clean、 marker 無し index/glossary は対象外)" >&2
+    echo "folio build --check: index は graph・glossary は vocabulary.yaml と同期 (clean、 marker 無し index/glossary は対象外)" >&2
     return 0
   fi
 
@@ -2202,18 +2264,24 @@ folio_cmd_build() {
 
   # glossary.html を vocabulary.yaml (folio-closed) から生成 (ADR-0036、 companion)。 vocab 解決不能 (consumer で
   # $CLAUDE_PLUGIN_ROOT 未設定・vocab 無し) なら生成しない (additive/keystone)。 safe write = temp→mv (index と同型)。
-  local gout="${root_abs}/glossary.html" gtmp
+  local gout="${root_abs}/glossary.html" gtmp gec
   gtmp=$(mktemp "${root_abs}/.folio-gloss.XXXXXX") || { echo "folio build: mktemp failed (fail-closed)" >&2; exit 2; }
   trap 'rm -f "${gtmp:-}"' EXIT INT TERM
-  if folio_glossary_emit "$root_abs" > "$gtmp" 2>/dev/null && [[ -s "$gtmp" ]]; then
+  folio_glossary_emit "$root_abs" > "$gtmp"; gec=$?   # 衝突(3) の slug 診断は stderr に流す (REQ-GLOSS-003)
+  if [[ "$gec" -eq 0 ]] && [[ -s "$gtmp" ]]; then
     if [[ -f "$gout" ]] && [[ "$(folio_extract_meta "$gout" folio-generated)" != "folio-build" ]]; then
       echo "folio build: 既存の hand-authored glossary (${gout}) を generated-view に置換します (再 build で vocabulary.yaml から再生成)" >&2
     fi
     mv "$gtmp" "$gout"
     trap - EXIT INT TERM
     echo "folio build: wrote ${root}/glossary.html" >&2
-  else
+  elif [[ "$gec" -eq 3 ]]; then
     rm -f "$gtmp"
+    trap - EXIT INT TERM
+    echo "folio build: glossary slug 衝突のため glossary.html を生成しません (上記 vocabulary.yaml を修正、 REQ-GLOSS-003)" >&2
+    exit 2
+  else
+    rm -f "$gtmp"   # vocab 解決不能 (return 1) = glossary を生成しない (additive/keystone、 consumer の vocab 無し)
     trap - EXIT INT TERM
   fi
 }

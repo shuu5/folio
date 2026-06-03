@@ -1,0 +1,24 @@
+schema_version: "0.1"
+req_id: "REQ-VER-019"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  orphan glossary.html gate (ADR-0036 §2.5 single-SoT) を実証する。 生成 (folio-build marker) glossary.html が
+  在るが vocabulary.yaml が解決しない = vocab source 消失後の未再生成 (orphan) を folio validate が exit 1 +
+  [nav-regen-drift] (orphan) で block する。 ★S4c ceiling 第2回が検出した fix-regression のガード: slug/parity を
+  vocab 解決時に検査する restructure で orphan 検出を取りこぼさないことを固定する (HEAD は検出していた挙動を保つ)。
+  glossary.html のみで vocab/spec 無しゆえ他 gate は SKIP/OK、 nav-regen-drift のみ orphan で FAIL。
+  検査 root override (--root) で fixtures を汚染なく検査する (test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/glossary-orphan"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/glossary-orphan.golden.txt"
+
+setup:
+  fixtures:
+    - "glossary-orphan/glossary.html"   # folio-build marker 付き・vocabulary.yaml 無し = orphan
+
+expect:
+  exit_code: 1                          # orphan 検出 ([nav-regen-drift])

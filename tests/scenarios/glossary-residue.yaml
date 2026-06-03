@@ -1,0 +1,25 @@
+schema_version: "0.1"
+req_id: "REQ-GLOSS-003"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  anchor-residue gate (REQ-GLOSS-003、 folio-ovi) を実証する。 hover-only 転換後の用語 mark は span 統一ゆえ
+  <a class="term"> は二度と現れない。 living spec prose に退行 <a class="term"> を seed し、 folio validate が
+  exit 1 + [glossary-anchor-residue] を出す。 emit/explicit は span only ゆえ正常 path で anchor は生成不能で、
+  守るのは手書き誤記/退行のみ = hover-only 不可逆性の機械保証 (mask-01 detect↔remediate parity の精神)。
+  既存 glossary gate (REQ-VER-019、 spec/research のみ・frozen decisions 除外 = stuck-RED 回避) に相乗りで
+  新 gate を立てず 15-gate 維持。 検査 root override (--root) で fixtures を汚染なく検査する (test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/glossary-residue"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/glossary-residue.golden.txt"
+
+setup:
+  fixtures:
+    - "glossary-residue/vocabulary.yaml"   # spec の definition (glossary gate 活性化)
+    - "glossary-residue/spec/t.html"        # prose に <a class="term"> を seed (anchor-residue)
+
+expect:
+  exit_code: 1                             # anchor-residue 検出 ([glossary-anchor-residue])

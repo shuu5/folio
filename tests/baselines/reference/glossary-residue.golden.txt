@@ -1,0 +1,21 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
+root: tests/fixtures/glossary-residue
+files checked: 1 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [FAIL] glossary
+  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+
+violations (1):
+  spec/t.html [glossary-anchor-residue] <a class="term"> は hover-only 転換で撤回済 (<span class="term"> を使う、 REQ-GLOSS-003 / ADR-0036 §2.4)

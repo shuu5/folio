@@ -1,0 +1,5 @@
+# anchor-residue fixture: spec prose に <a class="term"> を seed (hover-only 転換で撤回済、 REQ-GLOSS-003)。
+terms:
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "design-intent doc (residue fixture)。"

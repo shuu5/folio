@@ -1,0 +1,26 @@
+schema_version: "0.1"
+req_id: "REQ-VER-019"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  vocabulary-parity diagnostic (REQ-VER-019、 ADR-0036 §2.5) を実証する。 vocabulary-parity は独立 gate にせず
+  nav-regen-drift の byte 検査に畳むが (生成 glossary の term 集合は構造的に vocab canonical 集合と恒等 = 真部分集合)、
+  ADR-0036 §2.5 が parity に求めた「過不足の対称差で drift の所在を surface」を regen-drift violation message に
+  term-level 対称差 (comm -3、 LC_ALL=C 決定的) を埋め込んで回収する。 vocab = spec+prime、 committed glossary は
+  spec のみ (prime 欠落) を seed し、 folio validate が exit 1 + [nav-regen-drift] ... [vocab のみ: prime] を出す。
+  この fixture が無いと comm/paste/grep pipeline の silent break を見逃す (ceiling 指摘の coverage gap)。
+  検査 root override (--root) で fixtures を汚染なく検査する (test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/glossary-parity-drift"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/glossary-parity-drift.golden.txt"
+
+setup:
+  fixtures:
+    - "glossary-parity-drift/vocabulary.yaml"   # spec + prime
+    - "glossary-parity-drift/glossary.html"      # marker 付き・prime 欠落 (term 対称差)
+
+expect:
+  exit_code: 1                                  # parity drift 検出 ([nav-regen-drift] + [vocab のみ: prime])
