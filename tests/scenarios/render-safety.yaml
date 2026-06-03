@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-VER-021"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の render-safety gate (REQ-VER-021、 rules §4.5、 gate p) が、 mermaid の
+  <pre class="mermaid"> ブロック内の subgraph 多行タイトル (title bracket ["…"] に <br> を含む)
+  を検出し、 [FAIL] render-safety + exit 1 + 具体 violation を出すことを実証する。
+  fixture multiline-subgraph.html は subgraph PF["<b>Phase F</b><br/>(7 並列固定)"] を持ち、
+  mermaid が cluster-label の縦 padding を 1 行分しか確保しないため 2 行目が子ノードに overlap する
+  (render 後の幾何欠陥を static pattern-lint で捕捉)。 node label の <br> (N1["plain<br/>node label ok"])
+  は対象外で誤検出しないことも併せて被覆する (violation が 1 件のみ = subgraph タイトルだけ)。
+
+command: ["validate", "--root", "tests/fixtures/render-safety"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/render-safety.golden.txt"
+
+expect:
+  exit_code: 1

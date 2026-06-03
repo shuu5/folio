@@ -731,6 +731,23 @@ folio_prose_only() {
 # を持つ実 container block (section.req / details.spec-row) を走査するため escaped 例
 # (&lt;section / &lt;details) には反応しない。 -5 は CSS class 短縮形
 # (req__ears--event/state) を canonical (event-driven/state-driven) に正規化して比較する。
+# gate (p) diagram-render-safety (REQ-VER-021 / rules §4.5): mermaid の <pre class="mermaid">
+# ブロック内で subgraph の多行タイトル (title bracket ["…"] に <br> を含む) を検出する。
+# mermaid は subgraph cluster-label の縦 padding を 1 行分しか確保しないため、 <br> 2 行目が
+# 子ノード/枠に overlap する (render 後の幾何欠陥、 static 検査では DOM を見れないので「既知の
+# overlap パターン」を pattern-lint する)。 node label の <br> は node が自動 sizing するため対象外。
+folio_check_render_safety() {
+  local body="$1" rel="$2"
+  printf '%s\n' "$body" | awk -v rel="$rel" '
+    /<pre[^>]*class="[^"]*mermaid/ { inblk = 1 }
+    inblk && /<\/pre>/ { inblk = 0 }
+    inblk && /subgraph[^[]*\[[^]]*<[Bb][Rr]/ {
+      line = $0; sub(/^[ \t]+/, "", line); sub(/[ \t]+$/, "", line)
+      printf "%s\t[render-safety] subgraph の多行タイトル (<br>) は mermaid cluster-label が子ノードに overlap する: %s (単行タイトルにする、 REQ-VER-021 / rules §4.5)\n", rel, substr(line, 1, 52)
+    }
+  '
+}
+
 folio_check_dual_audience() {
   local body="$1" rel="$2"
   # -3: data-audience 値域 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)。 prose_only で code 例示を除外。
@@ -1362,7 +1379,7 @@ folio_cmd_validate() {
   # FolioConstitution schema の constitution は @type で schema-based に skip (inventory と同基準、 名前非依存、 ADR-0023 / ADR-0024 §2.2) ---
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
-  local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0
+  local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0 render_safety_fail=0
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
@@ -1463,6 +1480,9 @@ folio_cmd_validate() {
       # gate (g) dual-audience structural — block (REQ-DA-STRUCT-1..5、 ADR-0033、 rules §7 floor)
       local dav
       while IFS= read -r dav; do [[ -n "$dav" ]] && { violations+=("$dav"); da_fail=1; }; done < <(folio_check_dual_audience "$body" "$rel")
+      # gate (p) diagram-render-safety — mermaid subgraph 多行タイトル overlap (REQ-VER-021、 rules §4.5)
+      local rsv
+      while IFS= read -r rsv; do [[ -n "$rsv" ]] && { violations+=("$rsv"); render_safety_fail=1; }; done < <(folio_check_render_safety "$body" "$rel")
 
       # --- xref gates (ADR-0034 §2.6): resolve/tooltip = universal、 completeness = opt-in meta ---
       # gate (h) xref resolve-integrity — body の <a class="xref" href> が定義 site に解決するか。
@@ -1650,7 +1670,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -1678,6 +1698,7 @@ folio_cmd_validate() {
   elif [[ "$nav_reach_fail" -eq 1 ]]; then printf '  [FAIL] cluster-reachability\n'
   elif [[ "$nav_reach_warn" -eq 1 ]]; then printf '  [WARN] cluster-reachability\n'; else printf '  [OK] cluster-reachability\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
+  if [[ "$render_safety_fail" -eq 1 ]]; then printf '  [FAIL] render-safety\n'; else printf '  [OK] render-safety\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
   if [[ ${#warnings[@]} -gt 0 ]]; then

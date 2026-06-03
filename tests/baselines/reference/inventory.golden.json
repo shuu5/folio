@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-03T14:12:50Z",
+  "generatedAt": "2026-06-03T22:02:54Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1558,6 +1558,12 @@
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-020",
         "essence": "folio validate は dual-audience-structural gate を検査する: data-audience=\"human\" requirement container (verbose section.req + compact details.spec-row の両 form) の machine 対応部存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を強制し、 違反は exit 1。 意味的 fidelity は floor 対象外 = ceiling (spec-review-fidelity agent)。"
+      },
+      {
+        "id": "REQ-VER-021",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-021",
+        "essence": "folio validate は render-safety gate を検査する: &lt;pre class=\"mermaid\"&gt; ブロック内の subgraph 多行タイトル (title bracket [\"…\"] に &lt;br&gt; を含む) を flag する。 mermaid が cluster-label の縦 padding を 1 行分しか確保せず 2 行目が子ノード/枠に overlap する render-後の幾何欠陥を、 DOM を見れない static lint が「既知の overlap パターン」として捕捉する (node label の &lt;br&gt; は対象外)。 違反は exit 1 (block)。 任意 overlap の網羅は browser-render を要する ceiling の領分。"
       },
       {
         "id": "REQ-XREF-001",

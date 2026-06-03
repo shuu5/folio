@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
 root: tests/fixtures/nav-validate-drift
 files checked: 3 · relations checked: 0
   [OK] internal link-integrity
@@ -16,6 +16,7 @@ files checked: 3 · relations checked: 0
   [OK] nav-dead-link
   [WARN] cluster-reachability
   [OK] ears-coverage
+  [OK] render-safety
 
 warnings (1):
   spec/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)

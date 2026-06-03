@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
 root: tests/fixtures/validate-violations
 files checked: 5 · relations checked: 2
   [FAIL] internal link-integrity
@@ -16,6 +16,7 @@ files checked: 5 · relations checked: 2
   [SKIP] nav-dead-link (生成 index 無し)
   [OK] cluster-reachability
   [OK] ears-coverage
+  [OK] render-safety
 
 violations (14):
   spec/bad-jsonld.html [jsonld-structural] @context must be object (new pattern), got string

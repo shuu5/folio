@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="consumer">
+<meta name="folio-version" content="0.1.0">
+<meta name="folio-status" content="draft">
+<title>render-safety fixture — 多行 subgraph タイトル</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {"dc":"http://purl.org/dc/terms/","schema":"https://schema.org/","folio":"https://folio.dev/spec/v1/"},
+  "@id": "./multiline-subgraph.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "render-safety fixture"
+}
+</script>
+</head>
+<body>
+<header class="doc-header"><h1>render-safety fixture</h1></header>
+<section id="s1" class="informative">
+<h2>§1. 多行 subgraph タイトル (overlap risk)</h2>
+<p>下図の subgraph タイトルは <code>&lt;br&gt;</code> を含む多行タイトルで、 mermaid の cluster-label が
+子ノードに overlap する (REQ-VER-021)。 node label の <code>&lt;br&gt;</code> は対象外。</p>
+<figure class="diagram">
+<pre class="mermaid">
+flowchart LR
+  subgraph PF["<b>Phase F</b><br/>(7 並列固定)"]
+    R1["review-a"]
+    R2["review-b"]
+  end
+  N1["plain<br/>node label ok"]
+  PF --> N1
+</pre>
+<figcaption>図. 多行 subgraph タイトルを持つ図 (render-safety gate が flag する)。</figcaption>
+</figure>
+</section>
+</body>
+</html>

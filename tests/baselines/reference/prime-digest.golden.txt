@@ -187,7 +187,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 91 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 92 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -276,6 +276,7 @@ REQ-VER-017 [requirement] spec/verification.html#req-ver-017
 REQ-VER-018 [requirement] spec/verification.html#req-ver-018
 REQ-VER-019 [requirement] spec/verification.html#req-ver-019
 REQ-VER-020 [requirement] spec/verification.html#req-ver-020
+REQ-VER-021 [requirement] spec/verification.html#req-ver-021
 REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
 REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
 REQ-XREF-003 [requirement] spec/rules.html#req-xref-003

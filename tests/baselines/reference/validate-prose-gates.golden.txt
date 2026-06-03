@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
 root: tests/fixtures/validate-prose-gates
 files checked: 4 · relations checked: 0
   [OK] internal link-integrity
@@ -16,6 +16,7 @@ files checked: 4 · relations checked: 0
   [SKIP] nav-dead-link (生成 index 無し)
   [OK] cluster-reachability
   [WARN] ears-coverage
+  [OK] render-safety
 
 warnings (2):
   spec/ears-bad.html [ears-coverage] ears block に ears-shall span が無い
