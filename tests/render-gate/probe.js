@@ -24,7 +24,7 @@ window.__folioRenderProbe = function () {
      30px を境に多行 = 子ノード/枠への overlap-prone と判定 (signal 巨大ゆえ font 差に頑健)。 */
   const CLUSTER_LABEL_MAX_H = 30;
   /* label と「別の」node rect の交差面積比。 0.15 = 明確な food-on-block overlap のみ拾い、
-     罫線が接する程度の grazing は無視。 clean corpus 15 図で誤検出 0 を実測した値。 */
+     罫線が接する程度の grazing は無視。 clean corpus 15 図 (blocking 13 + advisory 2) で誤検出 0 を実測した値。 */
   const OVERLAP_FRAC = 0.15;
   /* node 同士の交差 (layout collision)。 mermaid は通常 node を重ねないため高め。 */
   const NODE_NODE_FRAC = 0.30;

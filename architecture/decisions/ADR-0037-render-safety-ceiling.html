@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0037">
+<meta name="folio-adr-date" content="2026-06-04">
+<title>ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling、 後者は playwright で flowchart 幾何 overlap を CI 検出する folio dogfood)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0037-render-safety-ceiling.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling、 後者は playwright で flowchart 幾何 overlap を CI 検出する folio dogfood)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "../spec/verification.html" },
+    { "@id": "../spec/rules.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-04 &middot; folio v0.5.0-draft &middot; render-safety verification を二層化する — static floor (bash の既知パターン lint、 全 consumer 配布) + deterministic browser ceiling (headless chromium で実 render し flowchart の幾何 overlap を検出する playwright gate、 CI-only folio dogfood、 決定的ゆえ blocking)。 mermaid 図の render 後 overlap (文字がブロック/枠に重なる) は pure-bash の folio validate が見れない floor の死角ゆえ、 実ブラウザ render で補う。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の ceiling は元から <strong>LLM ceiling 限定</strong>で、 その CI 不適格根拠 (LLM の非決定性) は決定的 render ceiling を排除しない点を<strong>明示化</strong> (CI 採用基準=決定性)、 <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate scope を render-safety ceiling に拡張 (frozen 本文不変、 reverse-link + prose で trace)。 <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> の二層 prose を機構化 (専用 REQ-VER-022 は defer)。 retrospective (Slice A〜C SHIP 後の user 承認起票)</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0037</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-04</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0020 (validate-scope = floor の link/jsonld gate を render-safety ceiling へ拡張)、 ADR-0028 (二層 enforcement = 「ceiling」語を LLM-advisory と deterministic-blocking に二分、 CI 採用基準=決定性を render ceiling に適用)、 verification.html (REQ-VER-021 = floor の二層 prose が ceiling の WHAT anchor、 専用 REQ-VER-022 は defer)、 rules.html (§4.5 mermaid subgraph 単行タイトル rule)、 constitution P-11/P-13 (HOW 隔離 / WHAT↔HOW 分離、 本 ADR は touch しない)。 follow-up: folio-w5z (detector generality)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>criterion-c (1.0.0 「実用に耐える」判断) で user が公開 architecture の <strong>folio-self-spec 図5</strong> の subgraph 多行タイトル (「7 並列固定」等) が枠/子ノードに <strong>overlap</strong> しているのを発見した。 この種の視覚欠陥は過去の mermaid 問題 (<a href="../spec/rules.html#s4-5-visual">#121 / #123</a>) も全て人間の目視で発見されており、 <code>folio validate</code> の機械 gate を素通りしていた。</p>
+
+<p>根本原因は構造的である: <code>folio validate</code> は <strong>pure-bash で動き、 mermaid が render した後の DOM 幾何 (<code>getBoundingClientRect</code> 座標) を観測できない</strong>。 link-integrity / jsonld / EARS 等の<strong>構造</strong>は検査できるが、 「render しないと存在しない」テキスト-ブロック overlap は static 解析の<strong>原理的死角</strong>である。 floor (<a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> render-safety gate、 Slice B) は<strong>既知の overlap-prone パターン (<code>&lt;pre class="mermaid"&gt;</code> 内の subgraph 多行タイトル)</strong> を static pattern-lint するに留まり、 「任意の」幾何 overlap は捕捉できない。</p>
+
+<p>一方 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> は「ceiling (Phase F の LLM review agent) は<strong>非決定的</strong>ゆえ CI gate に不適 = authoring advisory」と定義していた。 render geometry の検査は LLM でなく <strong>決定的</strong> (vendored mermaid + pinned browser を固定すれば座標は再現する) であり、 ADR-0028 の「ceiling」語が想定した非決定 LLM ceiling とは<strong>別カテゴリ</strong>である。 ゆえに render-safety の上層 (ceiling) を CI に搭載するには、 「ceiling = CI 不可」 framing の射程を明確化する必要がある。</p>
+</section>
+
+<section id="s2-decision" class="normative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-two-layer">§2.1 render-safety を二層化する (static floor + browser ceiling)</h3>
+<p>render-safety verification を二層で構成する:</p>
+<ul>
+  <li><strong>floor</strong> = <code>folio validate</code> の render-safety gate (bash、 <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a>)。 <strong>全 consumer に配布</strong>。 render 後 DOM を見れないため<strong>既知の overlap-prone パターン</strong> (subgraph 多行タイトル) を deterministic に static pattern-lint する。</li>
+  <li><strong>ceiling</strong> = headless chromium (playwright) で spec 図を<strong>実 render</strong> し、 render 後の幾何から flowchart の text-block overlap を検出する gate (<code>tests/render-gate/</code>)。 browser 依存ゆえ <strong>consumer の <code>folio validate</code> には入れず、 folio 自身の CI で dogfood する (CI-only)</strong>。</li>
+</ul>
+<p>floor は「既知パターンを全 consumer に安価に配る」/ ceiling は「任意の幾何 overlap を folio 自身で網羅的に検査する」の役割分担で、 floor が原理的に拾えない欠陥を ceiling が埋める (<a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> の二層 prose を機構として実現する)。</p>
+
+<h3 id="s2-2-ceiling-bisect">§2.2 「ceiling」語を二分する — ADR-0028 の CI 不適格根拠 (LLM 非決定性) は決定的 ceiling を排除しない</h3>
+<p><a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> は ceiling を一貫して「LLM ceiling」 (Phase F の <code>spec-review-*</code> agent) と<strong>限定して定義済</strong>で、 それが「CI gate に不適」とした根拠は <strong>LLM agent の非決定性</strong> (出力が再現しない) であった。 本 ADR は「ceiling」を 2 種に明示分割し、 この CI 不適格根拠が決定的 ceiling に及ばない点を clarify する:</p>
+<ul>
+  <li><strong>(a) semantic ceiling = LLM advisory</strong> (Phase F の <code>spec-review-*</code> agent)。 非決定的ゆえ <strong>CI 非搭載・authoring advisory</strong> (ADR-0028 のまま不変)。</li>
+  <li><strong>(b) visual ceiling = deterministic blocking</strong> (本 render-gate)。 vendored mermaid + pinned playwright + pinned font で render が<strong>決定的</strong>ゆえ、 ADR-0028 が CI gate に要求した「決定性」を満たし <strong>blocking CI gate にできる</strong>。</li>
+</ul>
+<p>すなわち ADR-0028 の CI 不適格根拠は <strong>(a) LLM ceiling の非決定性</strong>に紐づき、 (b) 決定的 visual ceiling を排除しない。 CI 採用の唯一の基準は「決定的か」であり、 LLM/render の別ではない (frozen な ADR-0028 本文は不変、 本 §2.2 はその適用解釈を <strong>clarify (明示化)</strong> する — ADR-0028 が広く ceiling=CI 不可と述べていたのを狭めるのではなく、 元から LLM 限定だった射程の外に決定的 ceiling が在ることを示す)。</p>
+
+<h3 id="s2-3-determinism">§2.3 決定性は三重 pin で担保し、 ゆえに blocking とする</h3>
+<p>visual ceiling を blocking merge gate にする正当化は決定性である。 三重 pin で render を固定する:</p>
+<ul>
+  <li><strong>vendored mermaid</strong> (<code>architecture/assets/mermaid.min.js</code>、 <a href="../spec/rules.html#s8-js-governance">rules §8</a> REQ-DA-JS-2) — layout アルゴリズムを固定。</li>
+  <li><strong>pinned playwright</strong> (<code>requirements.txt</code> で版固定) — chromium revision を固定。</li>
+  <li><strong>pinned font</strong> (CI が <code>fonts-noto-cjk</code> を install) — text shaping を固定。 spec 図は CJK label を含むため font 環境が text 幅に効く。</li>
+</ul>
+<p>detector の主軸 (多行 cluster-label の height) は font-size 駆動で行数に比例するため font 差に頑健。 面積比 detector は text 幅依存だが mermaid dagre layout が node box を label 幅に self-normalize するため conservative threshold を跨ぎにくい (font 摂動の実測で交差比は不変)。 三重 pin により render は再現的で、 blocking が正当化される。</p>
+
+<h3 id="s2-4-failclosed-carveout">§2.4 fail-closed + constitution の advisory carve-out</h3>
+<ul>
+  <li><strong>fail-closed (完全性)</strong>: render が間に合わず図数が不足したまま probe すると「存在する svg だけ見て overlap 0 = clean」に化ける (false-clean = 見逃し)。 ceiling は<strong>「render 済 svg 数 &gt;= 期待図数」を満たすまで待ち、 不足は見逃しでなく失敗 (exit 1)</strong> に倒す。 期待図数は実 <code>&lt;pre class="mermaid"&gt;</code> 数 (HTML コメント内は除外) で導出する。</li>
+  <li><strong>constitution carve-out</strong>: <code>constitution.html</code> は編集禁止の不変資産 (<a href="../spec/constitution.html#s6-amendment">P-10</a> amendment は user 承認必須) ゆえ、 blocking gate で overlap を検出しても救済不能 (frozen deadlock) になる。 これを <strong>advisory (表示のみ・非 blocking)</strong> で扱う。 判定は doc 自身の <code>@type==FolioConstitution</code> で行い (mention するだけの README/relations は blocking のまま)、 floor (<code>folio validate</code>) が <code>FolioConstitution</code> を scan 除外するのと同基準とする。</li>
+</ul>
+
+<h3 id="s2-5-scope">§2.5 検出範囲 = flowchart 3-class、 完全網羅は normative 化しない</h3>
+<p>ceiling が検出するのは flowchart/graph の <strong>3 class</strong>: (1) 多行 cluster-label (subgraph タイトルの縦 overflow)、 (2) label-over-foreign-node (text が自分以外の node 矩形と交差)、 (3) node-over-node (layout collision)。 <strong>非 flowchart 図 (sequence/state) は <code>.node</code>/<code>.cluster</code> を出さず vacuous、 横溢れ / viewport clip は未対応</strong> (follow-up folio-w5z)。 「任意 overlap の<strong>完全網羅</strong>」は <strong>normative 化しない</strong> (best-effort tier): render 環境差 + 図 type 多様性ゆえ no-gaps 保証は過大で、 floor/ceiling の二層分業 (<a href="../spec/verification.html#req-ver-021">REQ-VER-021</a>) を<strong>精緻化</strong>するに留める (完全網羅を約束する supersede ではない)。</p>
+<p>ceiling の WHAT は <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> の二層 prose (「任意 overlap の網羅は browser-render を要する ceiling の領分」) を anchor とし、 <strong>専用 REQ-VER-022 は defer</strong> する: folio の既存 ceiling (Phase F <code>spec-review-fidelity</code>) も独立 REQ を持たず floor REQ の prose 内に位置づけられる先例に倣う (HOW = <code>tests/render-gate/</code> は <a href="../spec/constitution.html#p-11">P-11</a> 隔離・executable、 <a href="../spec/constitution.html#p-13">P-13</a> WHAT↔HOW 分離)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>視覚欠陥の死角を機械で埋める</strong>: pure-bash floor が原理的に見れない render 後 overlap を、 実ブラウザ render の幾何検査が捕捉する。 criterion-c で人間の目に依存していた検出を自動化。</li>
+  <li><strong>決定的ゆえ blocking 可</strong>: 三重 pin で再現的な gate を merge block に使える (LLM ceiling と違い CI に載る)。 CI 初実走で green を実証 (全図 完全 render・clean)。</li>
+  <li><strong>独立 ceiling review の価値が実証された</strong>: floor (validate + sandbox + 自前 selftest) を通過後も、 独立敵対 review が fail-open (render 不足の false-clean) / constitution deadlock / font 未 pin / overclaim を捕捉し、 ship 前に全て塞いだ。</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>新 CI 依存</strong>: python + playwright + chromium を CI に導入する (folio の bash stack に対し新 ecosystem)。 ただし <strong>consumer に配布しない folio dogfood のみ</strong>で、 別 job に隔離して fast な bash 検証を遅らせない。</li>
+  <li><strong>検出は flowchart 限定</strong>: 非 flowchart 図・横溢れは未対応 (folio-w5z)。 現 corpus は全 flowchart/graph ゆえ live gap は無いが latent。</li>
+  <li><strong>font 環境の pin 運用</strong>: 決定性は font pin に依存し、 CI/local の font 一致を維持する運用負荷が残る。</li>
+</ul>
+<h3>Neutral / TODO</h3>
+<ul>
+  <li><strong>専用 REQ-VER-022 trace</strong> は defer (現状 REQ-VER-021 prose + 本 ADR + <code>tests/render-gate/README.md</code> で部分 trace)。 将来 ceiling を spec REQ で formalize するか判断する際は、 本 ceiling が <strong>blocking merge gate</strong> である点 (authoring-advisory な <code>spec-review-fidelity</code> ceiling とは非対称) を材料に含める — blocking gate は <a href="../spec/verification.html#req-ver-021">verification.html</a> §3.7 coverage RTM の被覆対象外で gap 可視化の網から外れるため、 REQ trace の要否判断が advisory ceiling とは異なりうる。</li>
+  <li><strong>detector generality</strong> (folio-w5z): 非 flowchart の vacuous warning / 横溢れ detector / selftest で detector(3)・非 cluster arm の被覆 / useMaxWidth:true での scale 不変化。</li>
+  <li>本 ADR は <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.5 (= <a href="../spec/rules.html#s10-3">rules §10.3</a> REQ-ADR-001) の ADR-worthiness を満たす (hard-to-reverse: 新 CI 依存 + blocking gate の採用 / surprising: ADR-0028 の CI 不適格根拠 (LLM 非決定性) が決定的 render ceiling を排除しない点の明示化 / real-trade-off: 完全網羅を約束せず best-effort に留める scope 線引き)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採否</th></tr></thead>
+  <tbody>
+    <tr><td><strong>二層 (static floor 全配布 + deterministic browser ceiling CI-only blocking、 採用)</strong></td><td>採用 — floor が原理的に見れない render 幾何を ceiling が実ブラウザで埋める。 決定的ゆえ blocking、 browser 依存ゆえ consumer 非配布の folio dogfood。 完全網羅は best-effort (flowchart 3-class) で <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> を精緻化</td></tr>
+    <tr><td>ceiling も全 consumer に配布 (browser gate を consumer validate に同梱)</td><td>不採用 — browser + chromium download は consumer の bash/yq/jq stack に重く、 folio の「pure-bash floor を全配布」の軽量性を壊す。 ceiling は folio dogfood に留め、 consumer には floor (static lint) のみ配る</td></tr>
+    <tr><td>ceiling を advisory (report-only、 non-blocking) にする</td><td>不採用 — render geometry は決定的ゆえ <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の CI gate 基準を満たし blocking 可能。 advisory に格下げすると視覚欠陥を merge block できず検出力を活かせない。 fail-closed + 三重 pin + constitution carve-out で blocking を安全化 (§2.3/§2.4)</td></tr>
+    <tr><td>floor (static lint) だけで完結させる (ceiling を作らない)</td><td>不採用 — pure-bash は render 後 DOM 幾何を原理的に見れず、 既知パターン以外の任意 overlap (図5 以外) を捕捉できない。 criterion-c の視覚欠陥クラスは static 解析の死角ゆえ browser ceiling が要る</td></tr>
+    <tr><td>任意 overlap の完全網羅を normative 化 (全図 type・横溢れ含め no-gaps 強制)</td><td>不採用 — render 環境差 + 図 type 多様性ゆえ no-gaps 保証は過大で、 REQ-VER-021 の floor/ceiling 二層分業を逸脱。 flowchart 3-class の best-effort に留め generality は folio-w5z へ漸進 (§2.5)</td></tr>
+    <tr><td>ADR-0028 を改訂して「ceiling」定義を直接書き換える</td><td>不採用 — ADR-0028 は frozen (CLAUDE.md §2、 <a href="../spec/constitution.html#p-10">P-10</a> 隣接の historical record)。 本文を触らず、 本 ADR が「ceiling 語を二分し CI 基準=決定性を render ceiling に適用」の適用解釈を授権する (reverse-link + prose で trace)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点: criterion-c で user が公開 architecture の folio-self-spec 図5 の subgraph 多行タイトル overlap を発見し「なぜ起きる / 塞ぐ仕組みは / folio plugin で塞いで」と要望。 視覚欠陥が全 floor を通過する死角の発覚。</li>
+  <li>実装 (epic folio-l2g、 Slice A〜C): <strong>Slice A</strong> (dec7f6c) 図5 の多行 subgraph タイトルを単行化し overlap 解消 / <strong>Slice B</strong> (5b36c2f) floor = render-safety を <code>folio validate</code> の gate 化 (<a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> + <a href="../spec/rules.html#s4-5-visual">rules §4.5</a> authoring rule + sandbox) / <strong>Slice C</strong> (be58ef4) ceiling = playwright 視覚 render gate を CI 追加 (<code>tests/render-gate/</code>、 CI 初実走 green 実証)。</li>
+  <li>scope 決定 (Slice C 着手前、 2026-06-04): user が AskUq で toolchain=Python-playwright / CI=blocking merge gate / 本 ADR=retrospective (Slice C 先) を確定。</li>
+  <li>独立 ceiling review (4-lens 敵対 workflow): floor green 後も <strong>fail-open (render 不足の silent false-clean) / constitution の frozen deadlock / font 未 pin の決定性 overclaim / 「任意 overlap」claim と実装 (flowchart 3-class) の乖離</strong> を検出 → §2.3〜§2.5 に全反映 (fail-closed・carve-out・三重 pin・claim narrowing)。 font 摂動の実測で面積比 detector が dagre self-normalize により font 幅に頑健と確認 (blocking の安全性を裏付け)。</li>
+  <li>拡張対象: <a href="./ADR-0020-validate-scope.html">ADR-0020</a> (validate scope を render-safety ceiling に拡張) / <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (「ceiling」語を LLM-advisory と deterministic-blocking に二分、 CI 採用基準=決定性を render ceiling に適用)。 両者とも frozen 本文不変、 reverse-link + prose で trace。</li>
+  <li>関連原則: <a href="../spec/constitution.html#p-11">P-11</a> (HOW 隔離 = <code>tests/render-gate/</code>) / <a href="../spec/constitution.html#p-13">P-13</a> (WHAT↔HOW 分離 = ceiling は executable HOW、 WHAT は REQ-VER-021 prose) / <a href="../spec/constitution.html#p-10">P-10</a> (constitution immutability = advisory carve-out の根拠)。 本 ADR は constitution を touch しない。</li>
+  <li>follow-up: <strong>folio-w5z</strong> (detector generality + selftest 被覆拡張)。 専用 REQ-VER-022 trace は同 follow-up で判断。</li>
+  <li>status: <strong>accepted</strong> (retrospective、 Slice A〜C SHIP 済 + user 承認起票)。</li>
+</ul>
+</section>
+
+</body>
+</html>
