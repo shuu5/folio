@@ -1,16 +1,23 @@
 # folio verification CI — ADR-0028 §2.4 "minimal CI" (deterministic floor の merge gating)。
 #
 # verification.html §4.2「完成形 = 全 scenario PR ごと auto-run + merge gating」の軽量版。
-# 2 段で検証する:
+# 3 段で検証する:
 #   (1) folio validate    = deterministic floor 16-gate (link / jsonld / broken-reverse / vocabulary
 #                           / delta-marker / dual-audience-structural / xref-resolve / xref-uniqueness
 #                           / xref-tooltip-consistency / xref-completeness / glossary / nav-regen-drift
 #                           / nav-dead-link / cluster-reachability / ears-coverage / render-safety、
 #                           ADR-0020/0025/0028/0033/0034/0035)
 #   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
+#   (3) render-gate       = render-safety ceiling (playwright headless render の flowchart 幾何 overlap
+#                           検出、 verification.html REQ-VER-021 の二層モデル上層 / tests/render-gate/README.md)。
+#                           (1) の render-safety gate は pure-bash で render 後 DOM を見れず既知パターン
+#                           しか lint できない floor。 本 job は実ブラウザ render で flowchart の cluster/node/
+#                           label 幾何 overlap を捕捉する deterministic ceiling = folio dogfood (CI-only)。
+#                           決定性は vendored mermaid + pinned playwright + pinned font (fonts-noto-cjk) で
+#                           担保。 正式 decision 記録は ADR-0037 (retrospective、 別 PR) に切り出す。
 #
 # LLM ceiling (Phase F review agent = REQ-CI-011 declarative-form / 012 what-only) は
-# 非決定的ゆえ CI 非搭載 (authoring advisory、 ADR-0028 §2.3)。
+# 非決定的ゆえ CI 非搭載 (authoring advisory、 ADR-0028 §2.3)。 render-gate は決定的ゆえ blocking。
 # Inspect AI / Promptfoo 移行は post-1.0 / optional に DEFER (ADR-0028 §2.4)。
 name: folio verification
 
@@ -74,3 +81,40 @@ jobs:
             exit 1
           fi
           echo "all sandbox scenarios GREEN"
+
+  # render-safety ceiling (verification.html REQ-VER-021 二層モデル上層)。 verify (bash floor) と並列の独立 job。
+  # browser 依存ゆえ別 job に隔離し、 fast な bash 検証を遅らせない。 deterministic ゆえ blocking。
+  render-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10   # install + 5 ファイル render は通常数分。 apt/DL hang で runner を長時間占有させない。
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5   # node24 ランタイム
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # CJK font を pin して text shaping を CI/local で固定する (spec 図は日本語 label を含む)。
+      # --with-deps は IPAfont を入れるが、 font set を明示 pin して決定性を実装で裏打ちする (REQ: blocking gate)。
+      - name: Pin CJK font (determinism)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+
+      # playwright 版は requirements.txt で pin → chromium revision 固定 → mermaid (vendored) + font と
+      # 併せ render を三重 pin。 --with-deps で headless chromium の system lib も入れる。
+      - name: Install playwright (pinned) + chromium
+        run: |
+          python3 -m pip install -r tests/render-gate/requirements.txt
+          python3 -m playwright install --with-deps chromium
+
+      # detector が「まだ欠陥を捕捉できる」ことを fixture で自己検証 (版 drift への回帰ガード)。
+      - name: render-gate self-test (detector 検出力の floor-proof)
+        run: python3 tests/render-gate/check.py --selftest
+
+      # 全 spec を実ブラウザで render し flowchart 幾何 overlap + render 不足を検出。 1 件でも exit 1 で merge block。
+      - name: render-safety ceiling (全 spec の flowchart 幾何 overlap)
+        run: python3 tests/render-gate/check.py

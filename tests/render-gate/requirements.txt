@@ -1,0 +1,4 @@
+# folio render-safety ceiling (tests/render-gate/check.py) の唯一の依存。
+# 版を pin して chromium revision を固定し render を決定的にする (vendored mermaid と併せ二重 pin)。
+# CI: pip install -r tests/render-gate/requirements.txt && playwright install --with-deps chromium
+playwright==1.60.0
