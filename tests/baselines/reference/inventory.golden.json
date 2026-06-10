@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-10T15:18:17Z",
+  "generatedAt": "2026-06-10T15:47:34Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -126,6 +126,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0037-render-safety-ceiling.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
@@ -486,6 +487,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0037-render-safety-ceiling.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
@@ -710,6 +712,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0037-render-safety-ceiling.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
@@ -845,6 +848,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html"
         ],
@@ -873,6 +877,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html"
         ],
@@ -902,6 +907,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html"
         ],
         "dc:references": [
@@ -935,6 +941,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html"
         ],
         "dc:references": [
@@ -961,6 +968,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "research/presentation-design-patterns.html"
+        ],
         "dc:references": [
           "decisions/ADR-0020-validate-scope.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -1037,6 +1047,32 @@
           "spec/rules.html",
           "spec/folio-self-spec.html",
           "spec/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "research/presentation-design-patterns.html",
+      "title": "folio presentation design patterns research",
+      "summary": "human-first presentation layer (grill 2026-06-10 決定 6 件) の設計根拠調査 (6 軸 + critic + gap-fill 3 + synthesis、 11 agent / 100+ sources、 workflow wf_01c66953、 2026-06-11)",
+      "doc-type": "research",
+      "status": "draft",
+      "version": "0.1.0-draft",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/constitution.html",
+          "spec/rules.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0037-render-safety-ceiling.html"
         ]
       }
     },

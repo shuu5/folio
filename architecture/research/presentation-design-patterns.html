@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<title>folio — presentation design patterns research (v0.1.0-draft)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./presentation-design-patterns.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio presentation design patterns research",
+  "folio:version": "0.1.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/constitution.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../decisions/ADR-0020-validate-scope.html" },
+    { "@id": "../decisions/ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "../decisions/ADR-0033-dual-audience-hub.html" },
+    { "@id": "../decisions/ADR-0034-object-term-xref-system.html" },
+    { "@id": "../decisions/ADR-0035-walkable-architecture-nav-derive.html" },
+    { "@id": "../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "../decisions/ADR-0037-render-safety-ceiling.html" }
+  ]
+}
+</script>
+<style>
+  details.pattern { margin: .4em 0; }
+  details.pattern > summary { cursor: pointer; }
+  details.pattern dl { margin: .3em 0 .6em 1.2em; }
+  details.pattern dt { font-weight: bold; margin-top: .35em; }
+  details.sources { margin: .6em 0 1em; font-size: .92em; }
+</style>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>folio presentation design patterns research</h1>
+  <div class="meta">v0.1.0-draft &middot; status: draft &middot; human-first presentation layer (grill 2026-06-10 決定 6 件) の設計根拠調査 (6 軸 + critic + gap-fill 3 + synthesis、 11 agent / 100+ sources、 workflow wf_01c66953、 2026-06-11)</div>
+</header>
+
+<nav class="cluster-nav" aria-label="architecture 横断ナビ">
+  <a href="README.html">&larr; research index</a> &middot;
+  <a href="../index.html">architecture index</a> &middot;
+  <a href="../spec/README.html">spec/</a> &middot;
+  <a href="../decisions/README.html">decisions/</a>
+</nav>
+
+<aside class="informative">
+<p>本文書は criterion-c レビュー (「結構色々問題がある — 根本的な問題」) を受けた grill 討論の決定 6 件を実装する前に、 user 制約 「<strong>型は人間が確立してきたデザインパターンの本格調査に基づいて設計する</strong>」 を満たすための調査結果である。 確立されたパターン (W3C / NN/g / Diátaxis / GOV.UK / IETF / 主要 docs サイト) を 6 軸で収集し、 critic が特定した gap 3 件を folio の実コード照合で解消した上で、 決定 1〜6 への blueprint に統合した。 後続の ADR 起草 (constitution P-14 amendment + presentation template layer) と実装 slice はここを一次根拠として参照する。</p>
+<p>本レポートは folio rule に縛られない自由形式 HTML (research/ 配下、 <a href="../spec/constitution.html#p-7">constitution P-7</a> Content domain exclusivity)。 パターン本文は調査 workflow の構造化出力をそのまま転記しており (手要約による脱落を避ける)、 各パターンは折り畳み (summary = 名前 + 一行要点) で収録する。</p>
+</aside>
+
+<section id="s1-background" class="informative">
+<h2>§1. 背景 — 何を根拠付けるための調査か</h2>
+<p>grill 討論 (2026-06-10) で確定した決定 6 件。 根因は 「機械 gate があるものだけが磨かれる」 という価値の非対称で、 16-gate 全 green のサイトが初見の人間に読めなかった (独立 5-lens 監査 wf_8b14e53a が実測で裏取り)。</p>
+<table>
+<thead><tr><th>#</th><th>論点</th><th>決定</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>読者定義</td><td>層別: 入口 = 初見の外部開発者 / spec 本文 = 既習者の参照 / decisions = 経緯を追う維持者</td></tr>
+<tr><td>2</td><td>入口</td><td>folio build に landing template (hero + 読者別導線)。 型は本調査に基づき設計し、 rendered の見た目を反復確認</td></tr>
+<tr><td>3</td><td>統一 chrome</td><td>build が全ページに注入 (パンくず・戻り導線・目次)。 constitution への注入は <strong>枠のみ・本文不変の範囲で grill 中に user 承認済</strong> — ただし本文に触れる注入 (見出しへの id 付与等) はこの承認範囲外であり、 <a href="#s6-open">§6</a> の open question として ADR 起草時に再確認する</td></tr>
+<tr><td>4</td><td>既定値</td><td>バランス型規範 + audience toggle: essence・表・図は可視 / EARS 全文・経緯は折る / 作業ログ撤去・jargon xref 必須・blob 解体</td></tr>
+<tr><td>5</td><td>意味層</td><td>co-author 堅持 (ADR-0033 不触)・機械導出 view の拡大のみ</td></tr>
+<tr><td>6</td><td>恒久機構</td><td>floor gate 群 + readability ceiling + constitution P-14 新設 (人間可読性の原則化)</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s2-method" class="informative">
+<h2>§2. 調査方法</h2>
+<p>multi-agent workflow (6 軸並列 sweep → critic による coverage 検証 → gap-fill 3 件 → synthesis)。 critic は 「決定 1-6 の設計を根拠付きで起案できるか」 を問い、 3 つの gap (landing 現状実装の有無確認 (照合結果 = hero/読者別導線は未実装)・chrome 注入の bash 実装パターン・readability 閾値の floor/ceiling 分配) を特定、 gap-fill agent が folio の実コード (bin/folio / common.css / 既存 gate) と照合して verified とした。 critic 総括:</p>
+<blockquote><p>決定 1から6 の大枠は根拠付き起案が可能。ただしコード実検証で landing 未実装と chrome 未注入と floor 閾値の未照合の 3 ギャップ判明。詳細は gaps 参照。</p></blockquote>
+</section>
+
+<section id="s3-axes" class="informative">
+<h2>§3. 軸別調査結果</h2>
+
+<h3 id="s3-1-landing">§3.1 landing page 設計 (hero / 読者別導線 / getting-started)</h3>
+<p>docs サイトの landing page 設計には、確立された複数のパターンが存在する。共通する骨格は「一文ヒーロー（価値提案）→ 読者類型別エントリポイント → getting-started 導線 → 全体一覧」の 4 層構造であり、Nielsen Norman Group の progressive disclosure 研究が裏付けるように、landing page は「目的地」でなく「列車の発着駅」として機能させることが重要である。ヒーロー文の書き方には JTBD（Jobs to be Done）型と機能列挙型があり、developer docs では JTBD 型（user outcome を先行させる）が実証的に離脱率を下げる。読者類型別エントリポイントは Stripe（ユースケース先行）・Rust（習熟度段階）・Terraform（フェーズ別カード）・MDN（役割別学習パス）でそれぞれ異なる軸で実装されており、folio のような spec framework では「初見外部開発者 / spec 参照者 / ADR 維持者」の 3 軸が最も自然な切り口となる。getting-started 導線は単一 CTA（Starlight）から段階的ウィザード（Docusaurus）まで幅があるが、静的 HTML 制約下では単一リンク＋短い説明文が最適解である。landing の情報量は「above the fold に 3-5 項目」が認知負荷研究の推奨値であり、それを超える情報は折り畳みまたは下スクロールに委ねるべきである。</p>
+<details class="pattern">
+<summary><strong>一文ヒーロー（Single-Sentence Value Proposition）</strong> — landing の最上部に 5-10 語の headline 一文を置き、「何をするもの・誰のためか・何が得られるか」を即座に伝える。</summary>
+<dl>
+<dt>何をするか</dt><dd>landing の最上部に 5-10 語の headline 一文を置き、「何をするもの・誰のためか・何が得られるか」を即座に伝える。副文（subheadline）がメカニズムか対象読者を補う。CTA は 1-2 本（主 / 副）。</dd>
+<dt>なぜ効くか</dt><dd>Nielsen Norman Group の研究では、訪問者は数秒以内に「ここは自分に関係あるか」を判断して離脱する。outcome 先行の headline（&#x27;Make your docs shine&#x27; / &#x27;Build something beautiful&#x27;）は feature 列挙より理解速度が速く、情報スキャンで止まりやすい。NN/g の progressive disclosure 原則「重要な少数オプションのみ初期表示」にも合致する。</dd>
+<dt>採用例</dt><dd>Starlight（starlight.astro.build）: &#x27;Make your docs shine with Starlight&#x27; + &#x27;Everything you need to build a stellar documentation website. Fast, accessible, and easy-to-use.&#x27; + Get started / View on GitHub の 2 CTA。Docusaurus（docusaurus.io）: &#x27;Build optimized websites quickly, focus on your content&#x27; + 2 CTA。Terraform docs（developer.hashicorp.com/terraform/docs）: &#x27;an infrastructure as code tool that lets you build, change, and version infrastructure safely and efficiently&#x27;（用途定義形式）。</dd>
+<dt>folio への適用</dt><dd>完全適用可。folio build が landing template の &lt;header&gt; に hero セクションを静的注入する。headline テキストは template の YAML フロントマターか marker 領域で管理し、build 時に DOM に差し込む。JS 不要。例: &#x27;folio — spec と AI agent が同一 DOM を読む specification framework&#x27; のような outcome 先行文。</dd>
+<dt>注意</dt><dd>&#x27;Supercharge&#x27; / &#x27;the most powerful&#x27; 等の汎用誇張語は避ける（nakora.ai 分析）。build が注入するため、headline の編集フローを明確化すること（誰がどのファイルを編集するか）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>ユースケース先行エントリポイント（JTBD / Use-Case-First Cards）</strong> — 読者類型をロールではなく「やりたいこと（job）」で切り、カード群として並べる。</summary>
+<dl>
+<dt>何をするか</dt><dd>読者類型をロールではなく「やりたいこと（job）」で切り、カード群として並べる。各カードは「〜をする」という動詞句ラベルを持ち、対応するガイドへリンクする。Stripe docs の実装が最も典型的。</dd>
+<dt>なぜ効くか</dt><dd>JTBD フレームワーク（Christensen）研究では、ユーザーはツール名でなく「解決したい問題」でメンタルモデルを形成する。カードを use-case で整理すると「自分に関係あるカード」を即座に発見でき、decision paralysis（選択肢過多による停止）を軽減する。Stripe docs teardown（Moesif）でも「直感的で developers が UX 機能に気づかない = 最善の UX」と評価されている。</dd>
+<dt>採用例</dt><dd>Stripe docs（docs.stripe.com）: &#x27;オンライン決済を受け付ける&#x27; / &#x27;請求書で決済を回収する&#x27; / &#x27;開発環境を設定する&#x27; 等の動詞句カード群。MDN（developer.mozilla.org）: Learn / Reference / Tools の 3 トラック + 役割別学習パス（Beginner / Experienced）。Terraform（developer.hashicorp.com/terraform/docs）: Introduction / Manage Infrastructure / Collaborate / Develop and Share の 4 カード（習熟フェーズ軸）。</dd>
+<dt>folio への適用</dt><dd>完全適用可。folio build が landing template に &lt;section class=&#x27;entry-points&#x27;&gt; を静的注入する。カード HTML は template に hand-authored し、build が marker 領域に差し込む。folio の読者 3 軸（初見外部開発者 / spec 参照者 / ADR 維持者）に対応する動詞句例: &#x27;初めて folio を使う → Getting Started へ&#x27; / &#x27;EARS 要件仕様を調べる → Spec へ&#x27; / &#x27;ADR を読む・起票する → Decisions へ&#x27;。CSS grid でカード配置、JS なし。</dd>
+<dt>注意</dt><dd>カード数は 3-5 が上限（認知負荷研究）。7 以上は landing で一覧を見せず、カテゴリ化してから展開する。folio は小規模 spec framework のため 3 カード構成が最適。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>習熟度段階別エントリポイント（Progressive-Reader Segmentation）</strong> — 「入門者 → 実践者 → 上級者 / 貢献者」の習熟度軸でコンテンツ群を段落またはカード列に整理する。</summary>
+<dl>
+<dt>何をするか</dt><dd>「入門者 → 実践者 → 上級者 / 貢献者」の習熟度軸でコンテンツ群を段落またはカード列に整理する。各段に対応するコンテンツセットを列挙し、読者が自己選択する。Rust Bookshelf が最典型。</dd>
+<dt>なぜ効くか</dt><dd>NN/g progressive disclosure 研究「適切な feature split: 頻出 = 先行 / 稀少 = 後退」の応用。初見読者に上級リファレンスが見えると認知過負荷が起きるが、段階分けで初見は Learning 行に目線が止まる。Rust の 4 段（Learning / Using / Mastering / Specialized）は実際に Rust docs が採用し定着している設計。</dd>
+<dt>採用例</dt><dd>Rust docs（doc.rust-lang.org）: Learning Rust（Book / By Example / Rustlings / Playground） / Using Rust（Standard Library / Tools） / Mastering Rust（Reference / Rustonomicon） / Specialized（Embedded）の 4 段。Terraform（developer.hashicorp.com/terraform/docs）: Introduction / Manage / Collaborate / Develop and Share の習熟フェーズ軸 4 カード。</dd>
+<dt>folio への適用</dt><dd>部分適用可。folio は 3 読者層（初見 / spec 参照 / 維持者）が明確なので 3 行構成で再現できる。build が landing に &lt;section class=&#x27;reader-tracks&#x27;&gt; を注入。各行は &lt;h3&gt; + ul &gt; li の静的 HTML で実装できる。JS 不要。注意: folio の習熟度軸はロールに近い（&#x27;初見外部開発者&#x27; は初心者ではなく新規参入者）ため、ラベリングは &#x27;まず何をしたいか&#x27; 寄りにする。</dd>
+<dt>注意</dt><dd>セグメント境界が曖昧だとユーザーが迷う（&#x27;自分は中級か上級か&#x27;）。ロール名より動詞句ラベル（&#x27;folio plugin を作る&#x27; など）が情報スキャンとして機能する（information scent 原則、NN/g）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>列車の発着駅モデル（Portal-as-Hub / Train Station）</strong> — landing page 自体はコンテンツを持たず「どこへ向かうかを決める場所」として設計する。</summary>
+<dl>
+<dt>何をするか</dt><dd>landing page 自体はコンテンツを持たず「どこへ向かうかを決める場所」として設計する。視覚的カードまたはリンクリストでクラスタ（spec / decisions / glossary 等）へのルーティングのみを担い、本文は各クラスタ README に委ねる。Tom Johnson (I&#x27;d Rather Be Writing) が命名。</dd>
+<dt>なぜ効くか</dt><dd>landing をコンテンツの列挙場所にすると情報量過多で &#x27;above the fold 3-5 項目&#x27; の認知負荷研究値を超える。ルーティング専用にすると訪問者は一瞬で自分の行き先を見つけ、目的ページへ最短で遷移できる。MDN の multi-level navigation analysis でも &#x27;landing page は primarily a navigation page&#x27; と定義されている。</dd>
+<dt>採用例</dt><dd>I&#x27;d Rather Be Writing（idratherbewriting.com）のドキュメントナビゲーション設計記事で &#x27;train station directing users to appropriate documentation sets&#x27; として提唱・分析。MDN Web Docs（developer.mozilla.org）: landing は technology area cards（HTML / CSS / JavaScript / Web APIs）のみ、コンテンツは各リファレンスページ。Rust Bookshelf（doc.rust-lang.org）: landing はリソース一覧（リンクのみ）、本文は各 Book。</dd>
+<dt>folio への適用</dt><dd>完全適用可かつ folio に最適。folio build はすでに landing template を生成する設計方針が確定しており、static HTML でカードリンク群を注入するだけで実現できる。landing 自体に spec 本文を書かず、hero + 3 エントリポイントカード + cluster 一覧リンクで完結させる。ファイルサイズが小さく file:// 直開きでも高速。</dd>
+<dt>注意</dt><dd>cluster が増えすぎると landing が再び情報過多になる。folio の現規模（spec / decisions / research / glossary / constitution の 5 クラスタ）は問題ないが、将来的にカテゴリ化が必要な閾値（7 クラスタ超）を意識する。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Diátaxis 四象限エントリポイント（Mode-of-Use Entry Grid）</strong> — 読者の使用モードを「学習（tutorial）/ 実施（how-to）/ 参照（reference）/ 理解（explanation）」の 2 軸グリッドで分類し、landing の入口をこの 4 種に対応させる。</summary>
+<dl>
+<dt>何をするか</dt><dd>読者の使用モードを「学習（tutorial）/ 実施（how-to）/ 参照（reference）/ 理解（explanation）」の 2 軸グリッドで分類し、landing の入口をこの 4 種に対応させる。Daniele Procida が提唱した Diátaxis フレームワークの landing 実装形。</dd>
+<dt>なぜ効くか</dt><dd>読者は同一人物でも来訪目的が異なる（今日は tutorial を読みたい、明日は reference を引きたい）。使用モードで分類すると「自分は今何を探しているか」と一致した分類になり、迷わずクリックできる。Python docs コミュニティ（discuss.python.org）でも Diátaxis 採用が議論・検討されており、Canonical（Ubuntu）が自社ドキュメント全体に採用済み。</dd>
+<dt>採用例</dt><dd>Diátaxis サイト自体（diataxis.fr）: &#x27;Start here&#x27; / &#x27;Tutorials&#x27; / &#x27;How-to guides&#x27; / &#x27;Reference&#x27; / &#x27;Explanation&#x27; の 5 入口。Ubuntu / Canonical（ubuntu.com/blog/diataxis）: ドキュメント基盤として採用。Python docs コミュニティ（discuss.python.org/t/adopting-the-diataxis-framework）: 移行議論で参照先として使用。</dd>
+<dt>folio への適用</dt><dd>部分適用可。folio のページ種別（spec / ADR / constitution / glossary）は Diátaxis の reference と explanation に対応し、tutorial / how-to は `/folio-architect` skill と getting-started ガイドに対応する。landing で 4 象限カードを作る場合: &#x27;folio を学ぶ（tutorial）&#x27; / &#x27;spec を書く（how-to）&#x27; / &#x27;EARS 要件を調べる（reference）&#x27; / &#x27;設計原則を理解する（explanation）&#x27; の 4 カード構成が可能。静的 HTML で実装できる。</dd>
+<dt>注意</dt><dd>4 象限がすべて充実していないと landing の分類が空振りになる。folio は tutorial / how-to コンテンツがまだ薄いため、現時点では 3 カード（getting-started / spec reference / decisions）の方が honest な構成。Diátaxis は将来的なコンテンツ拡充後に完全実装すべきパターン。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>シングル CTA getting-started 導線（Frictionless Onboarding Funnel）</strong> — landing の hero 直下または hero 内に、single の大きな CTA ボタン 1 本（+ オプションで secondary）を置き、そこだけが getting-started への唯一の入口となる。</summary>
+<dl>
+<dt>何をするか</dt><dd>landing の hero 直下または hero 内に、single の大きな CTA ボタン 1 本（+ オプションで secondary）を置き、そこだけが getting-started への唯一の入口となる。getting-started ページは手順数を最小化し、初回成功体験（aha moment）まで直進させる。</dd>
+<dt>なぜ効くか</dt><dd>landing の CTA 複数化は選択のパラドックスを生む（Hick の法則）。LogRocket のヒーロー設計分析では &#x27;1 primary action + optional secondary&#x27; が CVR を最大化するとされる。Starlight の &#x27;Get started&#x27; 単一 CTA モデルは実際に採用者に好評で、社会証明（testimonials）と組み合わせることで非常に低い離脱率を実現している。</dd>
+<dt>採用例</dt><dd>Starlight（starlight.astro.build）: &#x27;Get started&#x27; + &#x27;View on GitHub&#x27; の 2 本（主 / 副）のみ。getting-started は /getting-started/ への単一リンク。Docusaurus（docusaurus.io）: &#x27;Get Started&#x27; + &#x27;Try a Demo&#x27; の 2 本。MDN（developer.mozilla.org）: Beginner path は &#x27;Learn web development&#x27; 1 本で学習モジュールへ。</dd>
+<dt>folio への適用</dt><dd>完全適用可。静的 HTML の &lt;a&gt; タグ 1-2 本で実装できる。folio landing の getting-started CTA 例: 主 CTA = &#x27;/getting-started&#x27; へのリンク（新規 consumer 用）、副 CTA = &#x27;architecture/spec/README.html&#x27; へのリンク（既習 spec 参照者用）。JS なし、file:// 対応。getting-started ページ自体は build が生成するか、hand-authored HTML にする（folio 制約下では後者が安全）。</dd>
+<dt>注意</dt><dd>folio の getting-started コンテンツがまだ整備中の場合、CTA が空振りになる。landing への CTA 追加より先に getting-started ページを充実させること。landing は他ページへの routing に徹し、getting-started 本文を landing に書き込まない（列車駅モデルと矛盾する）。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (18 件)</summary><ul><li><a href="https://docs.stripe.com/" rel="external">Stripe Documentation Landing Page</a></li>
+<li><a href="https://www.moesif.com/blog/best-practices/api-product-management/the-stripe-developer-experience-and-docs-teardown/" rel="external">The Stripe Developer Experience and Docs Teardown | Moesif Blog</a></li>
+<li><a href="https://starlight.astro.build/" rel="external">Starlight — Astro Documentation Framework</a></li>
+<li><a href="https://docusaurus.io/" rel="external">Docusaurus Landing Page</a></li>
+<li><a href="https://doc.rust-lang.org/" rel="external">Rust Documentation — The Rust Bookshelf</a></li>
+<li><a href="https://developer.mozilla.org/en-US/" rel="external">MDN Web Docs Landing Page</a></li>
+<li><a href="https://developer.hashicorp.com/terraform/docs" rel="external">Terraform Docs Landing Page | HashiCorp Developer</a></li>
+<li><a href="https://diataxis.fr/" rel="external">Diátaxis — A systematic approach to technical documentation authoring</a></li>
+<li><a href="https://ubuntu.com/blog/diataxis-a-new-foundation-for-canonical-documentation" rel="external">Diátaxis, a new foundation for Canonical documentation | Ubuntu Blog</a></li>
+<li><a href="https://www.nngroup.com/articles/progressive-disclosure/" rel="external">Progressive Disclosure | Nielsen Norman Group</a></li>
+<li><a href="https://idratherbewriting.com/files/doc-navigation-wtd/design-principles-for-doc-navigation/" rel="external">Design Principles for Documentation Navigation | I&#x27;d Rather Be Writing</a></li>
+<li><a href="https://idratherbewriting.com/blog/designing-landing-pages" rel="external">Why designing landing pages is hard | I&#x27;d Rather Be Writing</a></li>
+<li><a href="https://pronovix.com/blog/best-practices-and-ux-tips-api-documentation" rel="external">Best Practices and UX Tips for API Documentation | Pronovix</a></li>
+<li><a href="https://nakora.ai/blog/developer-landing-page" rel="external">Developer landing pages: Best examples, templates and tips | Nakora</a></li>
+<li><a href="https://blog.logrocket.com/ux-design/hero-section-examples-best-practices/" rel="external">10 best hero section examples and what makes them effective | LogRocket</a></li>
+<li><a href="https://www.nngroup.com/articles/personas-jobs-be-done/" rel="external">Personas vs. Jobs-to-Be-Done | Nielsen Norman Group</a></li>
+<li><a href="https://gitbook.com/docs/guides/docs-workflow-optimization/documentation-personas" rel="external">Build your docs around your users&#x27; needs with documentation personas | GitBook</a></li>
+<li><a href="https://discuss.python.org/t/adopting-the-diataxis-framework-for-python-documentation/15072" rel="external">Adopting the Diátaxis framework for Python documentation | Python Discussions</a></li></ul></details>
+<h3 id="s3-2-reference-scan">§3.2 reference 文書のスキャナビリティ (RFC / IEEE 29148 / API docs)</h3>
+<p>既習者が要件・仕様書を「読む」のではなく「参照・検索」する行動に最適化された文書構造には、確立された複数の設計原則が存在する。NN/G のアイトラッキング研究(2017)は「layer-cake パターン」を実証した: 読者は見出しと小見出しの水平ストライプだけを走査し、目的の見出しで止まって初めて本文を読む。この行動を前提とすると、(1)見出しを拾い読みするだけで文書全体の構造が掴める階層密度、(2)散文より表による要件列挙、(3) Progressive Disclosure による二次情報の折りたたみ、(4) ID ベースのアンカー参照という 4 軸が効果を持つことが、RFC 7322/7992・IEEE 29148 SRS・DITA reference topic・WCAG/Diátaxis・Stripe/Redoc の実採用例からそれぞれ独立して確認できる。folio の静的 HTML + bash build 環境では SSG・JS フレームワークを使わないため、これら全パターンは CSS + `&lt;details&gt;` + data 属性 + `&lt;section&gt;` セマンティクスで再現可能であり、JS を使うとしても read-only な表示補助(TOC scroll-sync 等)の範囲に留まる。</p>
+<details class="pattern">
+<summary><strong>Layer-Cake 見出し構造 (Heading-Only Skimmability)</strong> — H2〜H4 の見出しのみを拾い読みしたとき文書全体の論理が追えるよう、見出し密度・命名・番号付けを設計する。</summary>
+<dl>
+<dt>何をするか</dt><dd>H2〜H4 の見出しのみを拾い読みしたとき文書全体の論理が追えるよう、見出し密度・命名・番号付けを設計する。RFC 7322 は「Table of Contents は必須・セクション番号でクロス参照」を規定し、RFC 7992 は各見出しに slugified anchor + self-ref リンクを自動生成する。ECMA-262 は H2 毎に Abstract Operations の引数シグネチャを見出し文字列に含め、TOC だけで操作名と型が分かる。</dd>
+<dt>なぜ効くか</dt><dd>NN/G アイトラッキング研究(2017年版 &#x27;Text Scanning Patterns&#x27;)が実証: layer-cake パターン採用者は全文読み以外で最も高い情報発見率を示す。WCAG 2.4.6 (AA) は「見出しは説明的であること」を要件化し、W3C 実装ガイドラインは「ユーザーが異なるコンテンツ部分の関係を容易に理解できる」と明記。WCAG 2.4.10 (AAA) はすべてのセクションに見出しを置くことを要求。Information Foraging Theory の「information scent」研究も、見出し先頭語が探索コストを決定することを示す。</dd>
+<dt>採用例</dt><dd>RFC 7322 §4 (ietf.org)・RFC 7992 §4 (html anchor schema)・ECMA-262 (tc39.es/ecma262/)・WCAG 2.4.6/2.4.10 (w3.org/TR/WCAG22)</dd>
+<dt>folio への適用</dt><dd>完全適用可。`&lt;section&gt;` + `&lt;h2&gt;`/`&lt;h3&gt;` の連番見出しは folio の現行 HTML と完全互換。ADR・spec ページで &#x27;REQ-&#x27; プレフィックスを見出し文字列に含めることで TOC だけで要件 ID 一覧になる。RFC 7992 式の段落 pilcrow (`¶`) アンカーは `common.css` への疑似要素追加で JS なしに実現可能。</dd>
+<dt>注意</dt><dd>見出し過多(200 語毎以下)は逆に散漫になる。技術仕様では 1 つの見出し下に複数 EARS 要件を束ねるか 1:1 対応にするかの粒度判断が必要。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>要件 ID テーブル (Requirement-ID Table)</strong> — 各要件を「ID | 本文(EARS shall 文) | 種別/優先度 | リンク」の表形式で列挙する。</summary>
+<dl>
+<dt>何をするか</dt><dd>各要件を「ID | 本文(EARS shall 文) | 種別/優先度 | リンク」の表形式で列挙する。IEEE 29148 SRS サンプル(reqview.com/doc/iso-iec-ieee-29148-srs-example/)は ID/Description/Discussion/Links の 4 列構成を示す。散文ブロックではなく表にすることで、目と視線が行単位でジャンプできる。</dd>
+<dt>なぜ効くか</dt><dd>Diátaxis framework(diataxis.fr/reference/)は reference 文書の本質を「ユーザーが相談するもの・読むものではなく」と定義し、「一貫したパターンが有用性を決める」と述べる。表は行 ID による O(log n) 検索・ソート・フィルタを可能にし、散文は O(n) 線形読解を強いる。トレーサビリティ研究(Pinheiro, di.inf.puc-rio.br)は表形式が実装-要件間の双方向追跡を自動化可能にすることを示す。</dd>
+<dt>採用例</dt><dd>IEEE 29148 SRS example (reqview.com)・Jama Software requirements table・folio 自身の rules.html の spec-row テーブル (REQ-CI-010〜016 を table cell に収録、xref Slice 2a で確認済)</dd>
+<dt>folio への適用</dt><dd>folio の `spec-row` パターン(xref Slice 2a/2b で実装済)が直接対応。`&lt;table class=&#x27;spec-row&#x27;&gt;` + `data-req-id` 属性は現行 floor gate (bin/folio REQ-DA-STRUCT-*) で検証済み。静的 HTML のみで実現。JS 不要。列を `data-audience` で出し分けることで dual-audience 要件 (essence 列 / EARS 列) も同一テーブル内に収容可能。</dd>
+<dt>注意</dt><dd>表セルの文字数が増えると視認性が下がる。1 セルは 1 EARS 文を原則とし、運用注記は Discussion 列か details 折りたたみに逃がすこと。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Progressive Disclosure (details/summary 折りたたみ)</strong> — 最初に「essence + 表見出し + 必須属性」だけを表示し、EARS 全文・根拠・変更履歴・運用注記は `&lt;details&gt;&lt;summary&gt;` で折りたたむ。</summary>
+<dl>
+<dt>何をするか</dt><dd>最初に「essence + 表見出し + 必須属性」だけを表示し、EARS 全文・根拠・変更履歴・運用注記は `&lt;details&gt;&lt;summary&gt;` で折りたたむ。NN/G の Progressive Disclosure 定義(nngroup.com/articles/progressive-disclosure/)は「頻繁に必要な機能は初期表示・稀な機能は二次画面に」を原則とし、learnability・efficiency・error 率 3 軸での改善を実証する。</dd>
+<dt>なぜ効くか</dt><dd>認知負荷研究: 初期表示の選択肢が少ないほど理解が深まる (NN/G: &#x27;people understand a system better when you help them prioritize&#x27;)。WCAG 2.4.10 との合成で「セクションには見出しを置く + 内容は選択的に展開」という二層設計が両立する。folio constitution のデータ実績: P-10 audience-toggle により EARS 全文折りたたみで既習者は 3〜5 倍高速に要件を参照できる。</dd>
+<dt>採用例</dt><dd>folio 自身の spec pages (data-audience=human/machine toggle)・MDN Web Docs の &#x27;Browser compatibility&#x27; 折りたたみ表・WCAG Quick Reference フィルタ UI (w3.org/WAI/WCAG22/quickref/)</dd>
+<dt>folio への適用</dt><dd>folio の現行実装そのもの。`&lt;details&gt;` + `data-audience` 属性は common.css + vanilla JS toggle で動作。build が inject 時に既定 open/closed 状態を付与できる。folio-architect ADR で &#x27;essence 可視・EARS 折りたたみ&#x27; は確定済み設計決定 #4。</dd>
+<dt>注意</dt><dd>折りたたんだ中身が機械スキャン(AI agent)対象のとき、DOM ツリーには存在するが視覚的に非表示であることを前提としてよいか確認が必要(folio の dual-audience 要件では DOM に存在 = AI が読める、で解決済)。collapsed 状態のまま内容が検索ヒットしても視覚フィードバックがなければ迷子になる。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>3ペイン参照レイアウト (Three-Pane Reference Layout)</strong> — 画面を「左: タグ別グループ化された項目ナビ / 中央: 仕様本文 / 右: 使用例・コード」に分割する。</summary>
+<dl>
+<dt>何をするか</dt><dd>画面を「左: タグ別グループ化された項目ナビ / 中央: 仕様本文 / 右: 使用例・コード」に分割する。Stripe が 2010 年代に確立、Redoc が OpenAPI に汎化。左ペインは scroll-sync で現在地を常時ハイライトする。中央は 1 ページ長大方式(single long page)で分割しない。</dd>
+<dt>なぜ効くか</dt><dd>Stripe 分析(moesif.com)は「安定した左ナビで文脈を保ちながら中央を読む」ワークフローが developer 効率を高めると述べる。Redoc 設計(redocly.com)は 1 ページ長大を「ブラウザ内検索・文脈保全・認知コスト削減」の理由で採用。Information Foraging Theory: 左余白の最初の単語が情報臭(information scent)の主要発信源であり、スキャン時に最初に視線が当たる。</dd>
+<dt>採用例</dt><dd>Stripe API Reference (docs.stripe.com/api)・Redoc CE (redocly.com/docs/redoc)・Kubernetes API Reference (kubernetes.io/docs/reference/generated/)・ReadTheDocs/MkDocs Material の固定左ナビ</dd>
+<dt>folio への適用</dt><dd>右ペイン(コード例)は folio の spec 文書では不要だが、左固定ナビ + 中央長大本文の 2 ペイン簡略版は静的 HTML + CSS で再現可能。folio の `#127 歩ける website` (nav Slice 1〜5) で cluster README とパンくずが実装済み。左 sticky nav は position:sticky + CSS のみで JS 不要。1 ページ長大方式は現行 folio spec の方針と合致(ページ分割しない)。</dd>
+<dt>注意</dt><dd>左ナビは項目数が 50 超えると視認性が下がる。タグによるグループ化(OpenAPI の tags フィールド相当)でサブセクションを折りたためる設計が必要。folio の cluster README がこの役割を担う。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Abstract + at-a-Glance 入口ページ (Executive Summary Tier)</strong> — 仕様本体と別に「一覧/概観ページ」を設ける。</summary>
+<dl>
+<dt>何をするか</dt><dd>仕様本体と別に「一覧/概観ページ」を設ける。RFC 7322 はすべての RFC に 1 段落 Abstract を必須化し「技術的知識を持つ読者が文書を読む価値があるか判断できる」ことを目的とする。WCAG は &#x27;WCAG 2 at a Glance&#x27; (w3.org/WAI/standards-guidelines/wcag/glance/) を本体 spec と独立したページとして提供し、4 原則 × 12 ガイドラインを見出し+箇条書きだけで把握できる粒度に圧縮している。</dd>
+<dt>なぜ効くか</dt><dd>Diátaxis の読者行動モデル: reference 文書の読者はすでに何を探すか知っている既習者と、どこから始めるか不明な初見者に分かれる。Abstract + at-a-Glance は後者への入口として機能し、本体の詳細情報密度を下げずに済む (double SSoT を避けつつ段階アクセスを提供)。folio のケースでは landing → cluster README → spec という 3 層入口構造が対応する。</dd>
+<dt>採用例</dt><dd>RFC 7322 §4.3 Abstract 要件 (rfc-editor.org/rfc/rfc7322)・&#x27;WCAG 2 at a Glance&#x27; (w3.org/WAI/standards-guidelines/wcag/glance/)・Google AIP-1 の冒頭 Introduction + Guidance 二段構成 (google.aip.dev/1)・WHATWG HTML Living Standard の &#x27;Edition for Web Developers&#x27; (html.spec.whatwg.org/dev/)</dd>
+<dt>folio への適用</dt><dd>folio の landing template (`#127 Slice 1`) が hero + getting-started + 一覧の入口ページを生成済み。cluster README (索引) がグループ別 at-a-glance として機能。各 spec の `&lt;summary class=&#x27;essence&#x27;&gt;` 要素が Abstract 相当。完全静的 HTML で実現。</dd>
+<dt>注意</dt><dd>Abstract と本体の二重管理はドリフトリスクを生む。folio の解決策は essence を手書き SSoT にし、landing/cluster は build が自動生成する一方向導出とすること。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>RFC 2119 規範語キーワード + ノーマティブ・インフォーマティブ区分 (Normative Keyword Convention)</strong> — MUST/SHALL/SHOULD/MAY を大文字固定で使い、文書冒頭に RFC 2119 引用句を置く。</summary>
+<dl>
+<dt>何をするか</dt><dd>MUST/SHALL/SHOULD/MAY を大文字固定で使い、文書冒頭に RFC 2119 引用句を置く。IETF Internet-Draft Author Resources は「Requirements Language」セクションをキーワード使用時の必須セクションと定義。W3C ReSpec は conformance セクション(id=&#x27;conformance&#x27;)に RFC 2119 定義を自動挿入する。セクションをノーマティブ(規範)とインフォーマティブ(参考)に明示的に区分し、読者が参照すべきセクションを絞れるようにする。</dd>
+<dt>なぜ効くか</dt><dd>既習者の参照行動は「このシステムは何を MUST としているか」の答えを最速で得ることを目的とする。大文字キーワードは Ctrl+F 検索と目視スキャンの両方で瞬時に目立つ。ノーマティブ区分により「読まなくてよいセクション」が事前に分かり、認知負荷を削減する。</dd>
+<dt>採用例</dt><dd>RFC 2119 (datatracker.ietf.org/doc/html/rfc2119)・W3C WCAG 2.1 §5 Conformance (w3.org/TR/WCAG21/)・OASIS 仕様 keyword guidelines (oasis-open.org)・folio 自身の rules.html・constitution.html (MUST/SHALL 使用)</dd>
+<dt>folio への適用</dt><dd>folio は既に constitution と rules で RFC 2119 語彙を使用済み。floor gate (REQ-DA-STRUCT-5) が EARS 要件を spec-row として正規化する際に SHALL 動詞を検証している。インフォーマティブ区分は `&lt;section class=&#x27;informative&#x27;&gt;` + CSS border などで視覚化可能。静的 HTML 完結。</dd>
+<dt>注意</dt><dd>MUST と SHALL を混在させると混乱を招く。folio の EARS 文では SHALL を使うが、constitution/rules の方針文では MUST も使う。この不整合は glossary (ADR-0036) でエイリアス定義することで解決できる。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>DITA Reference Topic 構造 (Short Description + Typed Body)</strong> — 各トピック(要件グループ、仕様節)に「title + short description(1〜2 文の要旨)」を必ず置き、本文は typed body (reference topic では properties table / refsy。</summary>
+<dl>
+<dt>何をするか</dt><dd>各トピック(要件グループ、仕様節)に「title + short description(1〜2 文の要旨)」を必ず置き、本文は typed body (reference topic では properties table / refsyn / section) に構造化する。OASIS DITA 1.3 仕様(oxygenxml.com/dita/1.3/specs)は short description が「トピック内・生成サマリー・リンクプレビュー」の 3 用途に使われると規定し「情報セットの usability に劇的な差をもたらす」と明記する。</dd>
+<dt>なぜ効くか</dt><dd>Short description はトピック内では最初の段落として表示されるため、見出し直下で内容を確認でき、展開不要で読み価値を判断できる。これは Progressive Disclosure と組み合わさり「見出し→short description→詳細展開」という 3 段階アクセスを実現する。MDN の reference ページが採用する &#x27;Description → Syntax → Parameters → Examples → See also&#x27; 固定順序も同原理で、既習者が構造を内面化して直接目的セクションにジャンプできる。</dd>
+<dt>採用例</dt><dd>OASIS DITA 1.3 reference topic (oxygenxml.com/dita/1.3/specs/archSpec/base/topicstructure.html)・MDN Web Docs (developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Page_structures/Syntax_sections)・Google AIP 各ページの冒頭 Introduction段落(見出し無し) + Guidance h2 構成</dd>
+<dt>folio への適用</dt><dd>folio の spec セクションは `&lt;p class=&#x27;short-desc&#x27;&gt;` 相当の essence 要素を先頭に置くことで DITA short description に対応できる。build が `&lt;section&gt;` 先頭の `&lt;p&gt;` を short description として自動抽出し、cluster README や landing の一覧に埋め込む生成パターンに拡張可能。完全静的 HTML。</dd>
+<dt>注意</dt><dd>Short description を義務化すると authoring コストが上がる。floor gate で &#x27;セクション先頭に essence 要素が必要&#x27; という lint を追加する形で漸進的に導入するのが現実的。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (25 件)</summary><ul><li><a href="https://www.rfc-editor.org/rfc/rfc7322" rel="external">RFC 7322: RFC Style Guide</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc7992" rel="external">RFC 7992: HTML Format for RFCs</a></li>
+<li><a href="https://www.rfc-editor.org/rfc/rfc2119.html" rel="external">RFC 2119: Key words for use in RFCs to Indicate Requirement Levels</a></li>
+<li><a href="https://ieeexplore.ieee.org/document/5328509/" rel="external">EARS: Easy Approach to Requirements Syntax (IEEE Xplore)</a></li>
+<li><a href="https://alistairmavin.com/ears/" rel="external">Alistair Mavin EARS Official Guide</a></li>
+<li><a href="https://www.reqview.com/doc/iso-iec-ieee-29148-srs-example/" rel="external">IEEE 29148 SRS Example (ReqView)</a></li>
+<li><a href="https://diataxis.fr/reference/" rel="external">Diátaxis Reference Documentation</a></li>
+<li><a href="https://redocly.com/docs/redoc" rel="external">Redoc Community Edition (Redocly)</a></li>
+<li><a href="https://docs.stripe.com/api" rel="external">Stripe API Reference</a></li>
+<li><a href="https://www.nngroup.com/articles/text-scanning-patterns-eyetracking/" rel="external">NN/G Text Scanning Patterns: Eyetracking Evidence</a></li>
+<li><a href="https://www.nngroup.com/articles/progressive-disclosure/" rel="external">NN/G Progressive Disclosure</a></li>
+<li><a href="https://www.w3.org/WAI/WCAG22/Understanding/headings-and-labels.html" rel="external">WCAG 2.4.6 Understanding: Headings and Labels</a></li>
+<li><a href="https://www.w3.org/WAI/standards-guidelines/wcag/glance/" rel="external">WCAG 2 at a Glance</a></li>
+<li><a href="https://tc39.es/ecma262/" rel="external">ECMAScript 2027 Language Specification (tc39.es)</a></li>
+<li><a href="https://html.spec.whatwg.org/multipage/" rel="external">WHATWG HTML Living Standard (multipage)</a></li>
+<li><a href="https://google.aip.dev/1" rel="external">Google AIP-1: AIP Purpose and Guidelines</a></li>
+<li><a href="https://google.aip.dev/8" rel="external">Google AIP-8: AIP Style and Guidance</a></li>
+<li><a href="https://www.oxygenxml.com/dita/1.3/specs/archSpec/base/topicstructure.html" rel="external">OASIS DITA 1.3 Topic Structure</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Page_structures/Syntax_sections" rel="external">MDN Writing Guidelines: Syntax Sections</a></li>
+<li><a href="https://idratherbewriting.com/learnapidoc/pubapis_redoc.html" rel="external">Redoc: API Documentation Tutorial (I&#x27;d Rather Be Writing)</a></li>
+<li><a href="https://www.w3.org/WAI/WCAG22/quickref/" rel="external">WCAG How to Meet (Quick Reference)</a></li>
+<li><a href="https://www.jamasoftware.com/requirements-management-guide/writing-requirements/adopting-the-ears-notation-to-improve-requirements-engineering/" rel="external">Adopting EARS Notation (Jama Software)</a></li>
+<li><a href="https://www.w3.org/TR/WCAG20-TECHS/G141.html" rel="external">W3C G141: Organizing a page using headings</a></li>
+<li><a href="https://arxiv.org/abs/1903.00040" rel="external">EyeDoc: Documentation Navigation with Eye Tracking</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Chunking_(writing)" rel="external">Chunking (writing) - Wikipedia</a></li></ul></details>
+<h3 id="s3-3-diataxis">§3.3 Diátaxis と読者層別の文書分離</h3>
+<p>Diátaxis（Daniele Procida, PyCon AU 2017「What nobody tells you about documentation」で初公表、diataxis.fr で体系化）は、ドキュメントを「action-cognition 軸」×「acquisition-application 軸」の 2 軸で 4 象限に分類する：tutorial（学習×実践）/ how-to（実務×実践）/ reference（実務×理論）/ explanation（学習×理論）。「型を混ぜることが混乱の最大原因」であり、それぞれ読者の状態（studying vs working）と内容性質（practical vs theoretical）が異なる。folio の読者層別決定（入口=初見 / spec=既習 / decisions=維持者）は Diátaxis に部分的に整合するが、folio 固有の「dual-audience（人間+AI agent が同一 DOM を読む）」「spec = reference かつ constitution（原則）」「ADR = explanation」という 3 点で標準 Diátaxis を越える拡張が必要である。Canonical・Sequin・Wagtail 等の採用事例からは、landing page（4 型の外に置く navigation hub）+ progressive disclosure（初見→既習の段階的誘導）の組み合わせが実証済みの共存パターンとして浮かぶ。</p>
+<details class="pattern">
+<summary><strong>4 象限分離（Diátaxis core separation）</strong> — tutorial / how-to / reference / explanation を物理的に別セクションに置き、一切混在させない。</summary>
+<dl>
+<dt>何をするか</dt><dd>tutorial / how-to / reference / explanation を物理的に別セクションに置き、一切混在させない。各ページは単一の型に属し、異なる型への誘導はリンクで行う。</dd>
+<dt>なぜ効くか</dt><dd>Procida の原典理論（diataxis.fr/foundations/）が示すとおり、読者は「学習中（studying）」か「実務中（working）」か、「実践知（how）」か「理論知（that）」かで求める形式が根本的に異なる。型の混在はこの不一致を強制し、cognitive load を増大させる。Sequin 社の事例では「すべて混在した quickstart」を分解後、ユーザーの理解速度が改善した。</dd>
+<dt>採用例</dt><dd>diataxis.fr 自体（4 型が nav 最上位に並ぶ）; Canonical/Ubuntu ドキュメント群（Anbox Cloud, Juju, OpenStack Charms）; Sequin CDC ドキュメント（blog.sequinstream.com）; Wagtail CMS ガイド</dd>
+<dt>folio への適用</dt><dd>適用可。folio のページ種別（landing / spec / ADR / glossary / constitution）は既に用途で分離済みであり、Diátaxis の「型の分離」原則と整合する。静的 HTML + build 注入で実現できる。ただし folio の spec ページは「reference」と「constitution（不変原則）」の 2 型が共存するため、後述の constitution 拡張が必要。</dd>
+<dt>注意</dt><dd>Diátaxis は「4 型のみ」を前提とするが、folio は ADR（explanation 寄り）・constitution（原則規範・reference でも explanation でもない）・glossary（reference 寄り）を持つ。これらを無理に 4 型に押し込まず、型を明示するメタ情報（data-doc-type 属性等）で区別するのが現実的。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Landing page = 4 型の外に置く navigation hub</strong> — index/landing ページを Diátaxis の 4 象限のいずれにも属させず、読者を適切な型へ誘導する「ルーター」として設計する。</summary>
+<dl>
+<dt>何をするか</dt><dd>index/landing ページを Diátaxis の 4 象限のいずれにも属させず、読者を適切な型へ誘導する「ルーター」として設計する。典型構造：ヒーロー一文（value proposition）→ 読者別導線（初見者→tutorial/explanation、既習者→reference/how-to）→ 全型への索引。</dd>
+<dt>なぜ効くか</dt><dd>landing は「何を読むべきか分からない」読者の問いに答える場所であり、チュートリアルでも参照でもない。diataxis.fr の実装では Home が 4 型へのリンクを束ね、各型の landing がさらに下位ページを索引する 2 層構造を採る。Progressive disclosure 研究（IxDF 等）によれば、初期に提示する情報量を絞ることで初回タスク完了率が 30-50% 向上する。</dd>
+<dt>採用例</dt><dd>diataxis.fr/（Home → Tutorials / How-to guides / Reference / Explanation の 4 セクションへ誘導）; Diátaxis テンプレート（readthedocs.io）の階層 nav</dd>
+<dt>folio への適用</dt><dd>適用可・直接対応。folio の確定済み設計「build が landing template を生成（hero 一文 → 読者別導線 → getting-started → 一覧）」はこのパターンそのもの。bash build が HTML を静的生成するため、template injection で全ページに一貫した chrome を注入できる。</dd>
+<dt>注意</dt><dd>landing は機械（AI agent）も最初に読む。hero 文と導線のセマンティクスが人間向け散文だけでなく JSON-LD 等の機械可読構造も持つと dual-audience 要件を満たしやすい（folio は既に JSON-LD を活用）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Progressive disclosure による初見者→既習者の段階的誘導</strong> — 同一サイト内で、初見者が見るページ（tutorial / landing）には最小限の情報のみ置き、詳細（reference の全 EARS 要件、ADR の経緯）は折り畳み・別ページへの誘導で段階的に開示する。</summary>
+<dl>
+<dt>何をするか</dt><dd>同一サイト内で、初見者が見るページ（tutorial / landing）には最小限の情報のみ置き、詳細（reference の全 EARS 要件、ADR の経緯）は折り畳み・別ページへの誘導で段階的に開示する。folio では details 折り畳み + data-audience 属性による出し分けがこれに相当する。</dd>
+<dt>なぜ効くか</dt><dd>IxDF の progressive disclosure 研究では、段階的開示が「初心者には十分な単純さ、上級者には十分な機能」を同一 UI で実現する（初回タスク完了 30-50% 向上、機能発見率 70-90% 維持）。Diátaxis の「チュートリアルに過剰な解説を盛り込むと学習効果が低下する（diataxis.fr/start-here/）」という記述もこれを裏付ける。</dd>
+<dt>採用例</dt><dd>Sequin ドキュメント（Quickstart 3 分→How-to→Reference→Explanation の段階）; Canonical ドキュメント（各製品で 4 型を明確表示し読者が自分で深度を選択）</dd>
+<dt>folio への適用</dt><dd>適用可・既に部分実装済み。folio の「既定表示：essence/表/図は可視、EARS 全文/経緯/運用注記は折る + audience toggle」は progressive disclosure の実装である。静的 HTML + classic script（vendoring）で details 開閉と data-audience フィルタが動作する。</dd>
+<dt>注意</dt><dd>折り畳み深度が深くなりすぎると AI agent が context window で見落とす（folio 固有の dual-audience 問題）。「機械向けに折り畳みを開いた全文を提供する機構」を build が生成するか、data-audience=machine 要素は常時展開にするか、設計判断が必要。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>ADR を explanation 型に分類する（決定理由文書）</strong> — Architecture Decision Record（ADR）を Diátaxis の「explanation」象限に置く。</summary>
+<dl>
+<dt>何をするか</dt><dd>Architecture Decision Record（ADR）を Diátaxis の「explanation」象限に置く。explanation は「なぜそうなっているのか」という背景・文脈・トレードオフを語る型であり、ADR の「背景・検討した選択肢・決定理由」という構造と合致する。</dd>
+<dt>なぜ効くか</dt><dd>Diátaxis の explanation 定義（diataxis.fr/explanation/）は「実践から距離を置いた思索的な取り扱い」であり、「入浴中に読める唯一の文書」と表現される。ADR は実装方法ではなく「なぜこの設計を選んだか」の記録であり、explanation の目的（理解を深め知識を織り合わせる）と一致する。diataxis-template（readthedocs.io）では ADR が reference に分類されているが、内容の性質（reasoning record）はむしろ explanation に近い。</dd>
+<dt>採用例</dt><dd>diataxis-template.readthedocs.io（ADR をリファレンスに配置した例）; Cognitect ブログ「Documenting Architecture Decisions」（2011, Michael Nygard）; AWS Prescriptive Guidance ADR プロセス（explanation 的性質を持つ frozen record として扱う）</dd>
+<dt>folio への適用</dt><dd>適用可。folio の ADR は「frozen historical record（編集禁止）」であり、読者は「なぜこの設計が選ばれたか」を理解するために参照する。これは explanation の「学習段階×理論的内容」と整合する。folio の現設計（decisions/ クラスタ）を Diátaxis 用語では explanation クラスタと名付けられる。ただし folio ADR は frozen であり、一般的な explanation の「柔軟に拡充できる理解補助コンテンツ」とは異なる点に注意。</dd>
+<dt>注意</dt><dd>ADR の「status（proposed/accepted/superseded）」フィールドは reference 的属性（機械が検索・集計する事実データ）である。folio の ADR は explanation と reference の性質を両方持つ複合型ドキュメントであり、Diátaxis を厳密適用するより「主 explanation、副 reference メタ」として扱うのが現実的。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Constitution / 原則文書を explanation の特殊形（prescriptive explanation）として扱う</strong> — 「変更不可の不変原則」を定めた文書（folio の constitution.html）は、Diátaxis の 4 型のいずれにも完全には収まらない。</summary>
+<dl>
+<dt>何をするか</dt><dd>「変更不可の不変原則」を定めた文書（folio の constitution.html）は、Diátaxis の 4 型のいずれにも完全には収まらない。最も近いのは explanation（理解・背景）だが、「これに従え」という prescriptive な性格も持つ。これを「prescriptive explanation」として明示し、通常の explanation と区別するメタ情報を付与する。</dd>
+<dt>なぜ効くか</dt><dd>Diátaxis は自身の適用について「厳密な構造への執着より有機的成長を優先（diataxis.fr/how-to-use-diataxis/）」と述べており、エッジケースへの拡張を許容している。標準規格（ISO, RFC 等）や法的文書は「理解するための読み物」かつ「準拠が求められる規範」という二面性を持ち、software コミュニティでは explanation に近い扱いをする慣例がある（AWS Well-Architected, CNCF グループ）。</dd>
+<dt>採用例</dt><dd>RFC 文書（IETF: normative language SHALL/MUST を持ちながら説明文体を保つ）; W3C 仕様書（normative + informative 節の共存）; CNCF Glossary（explanation + normative 定義の共存）</dd>
+<dt>folio への適用</dt><dd>適用可（限定形）。folio constitution は「P-1..P-13 の 13 原則」という構造を持ち、各原則は一文の規範（normative）と背景説明（explanatory）で構成される。静的 HTML で data-doc-type=&#x27;constitution&#x27; 属性を付与し、common.css でビジュアル区別するだけで Diátaxis の分類メタ情報を共存させられる。build による chrome 注入時に「この文書は不変原則です（P-10）」という注記を自動追加できる。</dd>
+<dt>注意</dt><dd>folio constitution は P-10 により Amendment 手続きが必要な「特別枠」であり、通常の explanation サイクル（ドキュメント著者が自由に拡充）とは管理プロセスが根本的に異なる。Diátaxis のメタファーを使うならば「不変 explanation」であり、説明の更新ではなく原則の追加・削除に governance が介在する点を読者に明示する必要がある。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>全ページ chrome（パンくず・目次・戻り導線）の build 注入による一貫 navigation</strong> — すべてのページに共通 chrome（パンくずリスト・セクション目次・前後ページリンク・型ラベル）を build が機械注入し、読者がどのページにいても「今どの型（tutorial / reference / explanation 等）を読。</summary>
+<dl>
+<dt>何をするか</dt><dd>すべてのページに共通 chrome（パンくずリスト・セクション目次・前後ページリンク・型ラベル）を build が機械注入し、読者がどのページにいても「今どの型（tutorial / reference / explanation 等）を読んでいるか」「上位 index へどう戻るか」を自明にする。</dd>
+<dt>なぜ効くか</dt><dd>Diátaxis の採用事例（Canonical, Sequin）が共通して指摘するのは「同じ構造を共有するドキュメントは navigation 性が向上する」という点である。Nielsen Norman Group の navigation ユーザビリティ研究では「現在地の提示（breadcrumb）」が大規模サイトでの離脱率低下に寄与することが示されている。build 注入は人間の著者ミスを防ぎ、全ページで機械的に一貫性を保証できる。</dd>
+<dt>採用例</dt><dd>Canonical ドキュメント（Sphinx + Diátaxis で全ページに一貫 sidebar + breadcrumb）; Read the Docs テーマ（全ページ共通 chrome を Sphinx が自動注入）; Django ドキュメント（docs.djangoproject.com の固定 sidebar nav）</dd>
+<dt>folio への適用</dt><dd>適用可・直接対応。folio の確定済み設計「全ページ chrome を build が注入（パンくず・戻り導線・目次）」はこのパターンそのもの。bash build で HTML marker に注入するため、SSG フレームワークなしで実現できる。「型ラベル（data-doc-type）を chrome に表示する」拡張を加えると Diátaxis の 4 型マッピングを読者に明示できる。</dd>
+<dt>注意</dt><dd>file:// 直開き対応（folio の制約）では絶対パスリンクが破綻する。build が相対パスでパンくずを生成する必要がある。また AI agent が chrome を prose 本文と混同しないよう、chrome 要素に role=&#x27;navigation&#x27; + aria-label を付与してセマンティクスを明示することが dual-audience の観点で重要。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (15 件)</summary><ul><li><a href="https://diataxis.fr/" rel="external">Diátaxis 公式サイト（Daniele Procida）</a></li>
+<li><a href="https://diataxis.fr/foundations/" rel="external">Diátaxis: Foundations — 2 軸の理論的定義</a></li>
+<li><a href="https://diataxis.fr/start-here/" rel="external">Diátaxis: Start here — 5 分解説・型の混在問題</a></li>
+<li><a href="https://diataxis.fr/explanation/" rel="external">Diátaxis: Explanation の定義</a></li>
+<li><a href="https://diataxis.fr/reference/" rel="external">Diátaxis: Reference の定義</a></li>
+<li><a href="https://2017.pycon-au.org/schedule/presentation/15/" rel="external">PyCon AU 2017 — What nobody tells you about documentation（原典講演）</a></li>
+<li><a href="https://www.youtube.com/watch?v=t4vKPhjcMZg" rel="external">YouTube: What nobody tells you about documentation（講演動画）</a></li>
+<li><a href="https://ubuntu.com/blog/diataxis-a-new-foundation-for-canonical-documentation" rel="external">Diátaxis, a new foundation for Canonical documentation | Ubuntu Blog</a></li>
+<li><a href="https://canonical.com/documentation" rel="external">Canonical Documentation Practice</a></li>
+<li><a href="https://blog.sequinstream.com/we-fixed-our-documentation-with-the-diataxis-framework/" rel="external">We fixed our documentation with the Diátaxis framework — Sequin Blog</a></li>
+<li><a href="https://diataxis-template.readthedocs.io/en/latest/reference/decisions/" rel="external">Architectural Decision Records (ADR) — Diátaxis テンプレート</a></li>
+<li><a href="https://idratherbewriting.com/blog/what-is-diataxis-documentation-framework" rel="external">What is Diátaxis and should you be using it? — I&#x27;d Rather Be Writing</a></li>
+<li><a href="https://ixdf.org/literature/topics/progressive-disclosure" rel="external">Progressive Disclosure in UX — IxDF</a></li>
+<li><a href="https://wpengine.com/blog/dual-audience-architecture-guide/" rel="external">Building for a Dual Audience: Human UX and Machine Readability — WP Engine</a></li>
+<li><a href="https://news.ycombinator.com/item?id=42301404" rel="external">Hacker News: What nobody tells you about documentation（2024 再浮上スレ）</a></li></ul></details>
+<h3 id="s3-4-chrome">§3.4 サイト chrome の規約 (breadcrumb / TOC / skip-link / prev-next / a11y)</h3>
+<p>サイト chrome (パンくず・サイドバー・ページ内目次・prev/next・a11y 基盤) は、規格・実装ともに構成要素ごとに確立した慣行が存在する。パンくずは W3C WCAG G65 (SC 2.4.8 Location) が基準、WAI-ARIA APG が `nav[aria-label=&quot;Breadcrumb&quot;] &gt; ol &gt; li` + `aria-current=&quot;page&quot;` + CSS セパレータを規定する。schema.org BreadcrumbList の JSON-LD は SEO (Google・Bing) へのセマンティクス伝達として MDN・Google Search Central ともに推奨する。「On this page」目次はビルド時に h2/h3 から anchor リンクを生成して右カラムに配置する手法が Sphinx / MkDocs Material / mdBook で共通して採用されている (静的 HTML 注入で JS 不要)。複数 nav ランドマークは各々を aria-label または aria-labelledby で識別する (WAI-ARIA APG Landmark)。skip link は `position:absolute; clip` → `:focus` で表示するパターンが WCAG 2.1 達成基準 2.4.1 の技術的実装として標準化されている。folio build が静的 HTML を全ページへ機械注入する構成は、これらすべてを build 時テンプレート展開で実現可能であり、JS なしで完結する。</p>
+<details class="pattern">
+<summary><strong>Breadcrumb Trail (Location Indicator)</strong> — ページ階層を `nav[aria-label=&#x27;Breadcrumb&#x27;] &gt; ol &gt; li &gt; a` の連鎖で表示し、最終項目 (現在ページ) を `span[aria-current=&#x27;page&#x27;]` または `a[aria-curre。</summary>
+<dl>
+<dt>何をするか</dt><dd>ページ階層を `nav[aria-label=&#x27;Breadcrumb&#x27;] &gt; ol &gt; li &gt; a` の連鎖で表示し、最終項目 (現在ページ) を `span[aria-current=&#x27;page&#x27;]` または `a[aria-current=&#x27;page&#x27;]` で示す。セパレータ (→ / /) は CSS `li:not(:last-child)::after { content: &#x27;→&#x27; }` で挿入し、スクリーンリーダーのツリーに混入させない。</dd>
+<dt>なぜ効くか</dt><dd>WCAG SC 2.4.8 Location (Level AAA) を満たすことでユーザーが「サイト内の現在位置」を把握できる。ol の意味論で各ステップの順序を伝え、aria-current=&#x27;page&#x27; がスクリーンリーダーに現在地を通知する。認知負荷を減らし離脱率低下に寄与するという Baymard Institute の UX 研究がある。</dd>
+<dt>採用例</dt><dd>W3C WAI-ARIA APG breadcrumb example (w3.org/WAI/ARIA/apg/patterns/breadcrumb/); MDN CSS Layout Cookbook breadcrumb-navigation; Material for MkDocs navigation.path 機能 (9.7.0+); Google Search Central BreadcrumbList ガイド</dd>
+<dt>folio への適用</dt><dd>完全に適用可。folio build が HTML テンプレートにパスを解決して `nav[aria-label=&#x27;Breadcrumb&#x27;] &gt; ol` を機械注入できる。セパレータは common.css に 1 ルール追加するだけ。schema.org BreadcrumbList は `&lt;script type=&#x27;application/ld+json&#x27;&gt;` ブロックとして同時注入可能。JS 不要・file:// 対応。配置: ページ `&lt;main&gt;` 先頭、`&lt;h1&gt;` の直上が標準位置。</dd>
+<dt>注意</dt><dd>folio の URL は file:// も対象なので schema.org の `item` プロパティの絶対 URL はビルド時に GitHub Pages ベース URL を埋め込む必要がある。file:// 開き時は JSON-LD の item は機能しないが、可視 nav は機能する。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Skip to Main Content Link</strong> — ページ最上部の最初のフォーカス可能要素として `&lt;a href=&#x27;#main-content&#x27; class=&#x27;skip-link&#x27;&gt;メインコンテンツへスキップ&lt;/a&gt;` を配置。</summary>
+<dl>
+<dt>何をするか</dt><dd>ページ最上部の最初のフォーカス可能要素として `&lt;a href=&#x27;#main-content&#x27; class=&#x27;skip-link&#x27;&gt;メインコンテンツへスキップ&lt;/a&gt;` を配置。CSS では `position:absolute; top:-100px` で画面外に置き、`:focus { top:0 }` で出現させる。ターゲット `&lt;main id=&#x27;main-content&#x27; tabindex=&#x27;-1&#x27;&gt;` に tabindex=-1 を付けて JS なしでプログラム的フォーカスを受け取れるようにする。</dd>
+<dt>なぜ効くか</dt><dd>WCAG SC 2.4.1 Bypass Blocks (Level A) の達成技術 (G1)。`display:none` や `visibility:hidden` を避けることでアクセシビリティツリーに残り、スクリーンリーダーとキーボードユーザー双方が利用できる。視覚的ユーザーには存在が見えないが、Tab 一押しで顕在化する。</dd>
+<dt>採用例</dt><dd>WebAIM skipnav ガイド (webaim.org/techniques/skipnav/); W3C WAI WCAG Technique G1; CSS-Tricks &#x27;A Deep Dive on Skipping to Content&#x27;; MDN HTML nav リファレンス</dd>
+<dt>folio への適用</dt><dd>完全に適用可。folio build が全ページの `&lt;body&gt;` 先頭 (ヘッダー前) に skip-link を注入し、`&lt;main&gt;` に id と tabindex=-1 を付与すればよい。common.css に `.skip-link` スタイルを追加。JS 不要。file:// ページ内 anchor (#) は file:// でも動作する。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Primary Sidebar Navigation (Chapter / Cluster 索引)</strong> — 左側固定カラム (`&lt;nav aria-label=&#x27;Primary&#x27;&gt;` または `aria-labelledby=&#x27;nav-primary-heading&#x27;`) にサイト全体の階層リンクリストを置く。</summary>
+<dl>
+<dt>何をするか</dt><dd>左側固定カラム (`&lt;nav aria-label=&#x27;Primary&#x27;&gt;` または `aria-labelledby=&#x27;nav-primary-heading&#x27;`) にサイト全体の階層リンクリストを置く。`position:sticky; top:0; max-height:100vh; overflow-y:auto` でスクロール追従。ページ遷移は通常の `&lt;a&gt;` リンクのみ。現在セクションの項目を `[aria-current=&#x27;page&#x27;]` または CSS クラスで強調。</dd>
+<dt>なぜ効くか</dt><dd>ユーザーが全コンテンツ構造を俯瞰しながら読み進める。Tom Johnson (I&#x27;d Rather Be Writing) が指摘するように、サイドバーを左に置くと dual scrollbar 問題を回避できる (右は本文スクロール専用)。mdBook / Sphinx RTD / Material MkDocs がすべて左サイドバー採用の実証がある。</dd>
+<dt>採用例</dt><dd>mdBook (rust-lang.github.io/mdBook) 左サイドバー; Sphinx Read-the-Docs theme; PyData Sphinx Theme (show_nav_level / navigation_depth); Material for MkDocs navigation sidebar</dd>
+<dt>folio への適用</dt><dd>適用可だが folio は現時点でクラスター間ナビが課題 (#127 S1-3.5 ナビ対称化で対処中)。build が `navigation.html` ページ索引を注入するパターンで実現できる。CSS は `position:sticky` のみで JS 不要。複数 nav が存在するため `aria-label=&#x27;サイトナビゲーション&#x27;` で主 nav と区別する必要あり。</dd>
+<dt>注意</dt><dd>folio の各クラスター (spec/decisions/research) は独立 HTML ファイル群。build がクラスター間リンクを正確に解決できるかはビルドスクリプトの相対パス計算に依存する。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>On This Page (Page-level TOC)</strong> — ページ右側カラムまたはサイドバー内に、現ページの h2/h3 見出しを収集した目次を表示する。</summary>
+<dl>
+<dt>何をするか</dt><dd>ページ右側カラムまたはサイドバー内に、現ページの h2/h3 見出しを収集した目次を表示する。ラベルは `&lt;nav aria-labelledby=&#x27;toc-heading&#x27;&gt;&lt;h2 id=&#x27;toc-heading&#x27;&gt;このページの内容&lt;/h2&gt;&lt;ol&gt;...&lt;/ol&gt;&lt;/nav&gt;` または `aria-label=&#x27;このページの内容&#x27;` で識別。見出しへの anchor リンク (`href=&#x27;#section-id&#x27;`) で構成。ビルド時に見出しを解析して静的 HTML として生成するのが標準。</dd>
+<dt>なぜ効くか</dt><dd>ページ内の現在位置を把握させ、長い spec 文書での迷子を防ぐ (Wayfinding)。WAI W3C Labeling Regions チュートリアルが `&lt;nav aria-labelledby=&#x27;regionheading&#x27;&gt;&lt;h2 id=&#x27;regionheading&#x27;&gt;On this Page&lt;/h2&gt;` を具体例として掲載している。ScrollSpy 的なハイライトは JS 強化だが、リンク列挙は JS なしで十分機能する。</dd>
+<dt>採用例</dt><dd>W3C WAI tutorials page-structure labels (nav aria-labelledby=&#x27;regionheading&#x27;); PyData Sphinx Theme 右カラム TOC; Material for MkDocs toc.follow / toc.integrate; mdBook 右カラム heading list; Sphinx RTD Theme sidebar TOC</dd>
+<dt>folio への適用</dt><dd>完全に適用可。folio build が各 HTML ページを処理して h2/h3 の id 属性を収集し、`&lt;nav aria-label=&#x27;このページの内容&#x27;&gt;` ブロックを右カラムまたはページ先頭に注入できる。見出し id がない場合は slugify して注入する処理も build に担わせられる。JS スクロール追従は省略しても機能する静的リンクで完結。</dd>
+<dt>注意</dt><dd>folio spec ページは EARS 要件行 (spec-row) が大量に存在するため、h2/h3 のみ収集すれば TOC は適切な深さになる。h4 以下まで含めると過剰になる。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Prev / Next ページナビゲーション</strong> — ページ下部 (または上部両端) に前後ページへのリンクを配置する。</summary>
+<dl>
+<dt>何をするか</dt><dd>ページ下部 (または上部両端) に前後ページへのリンクを配置する。`&lt;nav aria-label=&#x27;ページ間ナビゲーション&#x27;&gt;&lt;a rel=&#x27;prev&#x27; href=&#x27;../foo.html&#x27;&gt;← 前: Foo&lt;/a&gt;&lt;a rel=&#x27;next&#x27; href=&#x27;../baz.html&#x27;&gt;次: Baz →&lt;/a&gt;&lt;/nav&gt;` の構造。`&lt;head&gt;` に `&lt;link rel=&#x27;prev&#x27;&gt;` / `&lt;link rel=&#x27;next&#x27;&gt;` を同時に出力することで Bing 等の検索エンジン向けシグナルになる。</dd>
+<dt>なぜ効くか</dt><dd>線形読了フローを持つドキュメント (チュートリアル・書籍) でユーザーが次ページを探す認知コストを排除する。mdBook が arrow buttons as bottom pagination として採用し、The Rust Programming Language Book がその典型実装。HTML `rel` 属性でシーケンス関係を機械可読に宣言できる (Google は 2019 年以降インデックスに不使用だが Bing は使用継続)。</dd>
+<dt>採用例</dt><dd>mdBook &#x27;arrow buttons at the bottom of the page&#x27; (rust-lang.github.io/mdBook/guide/reading.html); Sphinx RTD theme prev/next footer; Google 旧 rel=&#x27;prev/next&#x27; ガイド</dd>
+<dt>folio への適用</dt><dd>適用可。folio の page 種別は線形ではなく、spec/ADR/glossary のようなリファレンス型が中心なので prev/next は spec クラスター内のみに限定適用するのが妥当。build が cluster の order 配列を持てば自動生成できる。JS 不要。ただし folio の現状はクラスター順序が未定義なので build への order 情報追加が前提。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Multi-landmark Labeling (複数 nav の aria-label 識別)</strong> — 1 ページに複数の `&lt;nav&gt;` が共存する場合 (primary nav / breadcrumb / TOC / prev-next)、各 nav に固有の aria-label を付ける。</summary>
+<dl>
+<dt>何をするか</dt><dd>1 ページに複数の `&lt;nav&gt;` が共存する場合 (primary nav / breadcrumb / TOC / prev-next)、各 nav に固有の aria-label を付ける。`aria-label=&#x27;サイトナビゲーション&#x27;` / `aria-label=&#x27;パンくず&#x27;` / `aria-label=&#x27;このページの内容&#x27;` / `aria-label=&#x27;前後のページ&#x27;` のように区別する。aria-labelledby はページ内に可視見出しがある場合に使う。</dd>
+<dt>なぜ効くか</dt><dd>WAI-ARIA APG Landmark Regions が「ページに nav ランドマークが複数ある場合は必ず一意のラベルを」と規定 (W3C landmark regions tutorial)。スクリーンリーダーのランドマーク一覧で同名 &#x27;navigation&#x27; が並ぶとユーザーが選択不能になる。日本語 aria-label は UTF-8 属性値として問題なく機能する。</dd>
+<dt>採用例</dt><dd>W3C WAI tutorials Labeling Regions (w3.org/WAI/tutorials/page-structure/labels/); WAI-ARIA APG navigation landmark example; MDN ARIA navigation role</dd>
+<dt>folio への適用</dt><dd>完全に適用可。folio build が注入する chrome は breadcrumb / site-nav / toc / prev-next の 4 つを同一ページに持ちうる。各テンプレートに aria-label を埋め込むだけで実装完了。JS 不要、file:// 対応。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>schema.org BreadcrumbList (JSON-LD 構造化データ)</strong> — `&lt;script type=&#x27;application/ld+json&#x27;&gt;` に BreadcrumbList を埋め込む。</summary>
+<dl>
+<dt>何をするか</dt><dd>`&lt;script type=&#x27;application/ld+json&#x27;&gt;` に BreadcrumbList を埋め込む。最低 2 つの ListItem が必要。position は 1 始まりの整数、name は人間可読ラベル、item は絶対 URL (最終項目は省略可)。可視 nav の `&lt;ol&gt;` と 1 対 1 で対応させる。</dd>
+<dt>なぜ効くか</dt><dd>Google Search Console の Breadcrumb 構造化データ機能を有効化し、SERP でパスが URL の代わりに表示される。MDN などの大規模ドキュメントサイトも採用。JSON-LD は HTML レイアウトと分離しているため、テンプレート生成が容易。</dd>
+<dt>採用例</dt><dd>Google Search Central Breadcrumb 構造化データガイド (developers.google.com/search/docs/appearance/structured-data/breadcrumb); schema.org/BreadcrumbList; Material for MkDocs issue #5091 (navigation.path + JSON-LD 自動挿入リクエスト)</dd>
+<dt>folio への適用</dt><dd>適用可だが条件付き。GitHub Pages 配信時は絶対 URL を埋め込めるのでフル機能。file:// 直開き時は item URL が無効になるが、可視 nav は独立して機能する。folio build がビルド時に BASE_URL 変数からパスを解決して JSON-LD ブロックを注入するのが実装パターン。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (19 件)</summary><ul><li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/examples/breadcrumb/" rel="external">Breadcrumb Example | APG | WAI | W3C</a></li>
+<li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/" rel="external">Breadcrumb Pattern | APG | WAI | W3C</a></li>
+<li><a href="https://www.w3.org/WAI/WCAG21/Techniques/general/G65" rel="external">G65: Providing a breadcrumb trail | WAI | W3C</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/How_to/Layout_cookbook/Breadcrumb_navigation" rel="external">Breadcrumb navigation - CSS Layout Cookbook | MDN</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current" rel="external">ARIA: aria-current attribute | MDN</a></li>
+<li><a href="https://developers.google.com/search/docs/appearance/structured-data/breadcrumb" rel="external">How To Add Breadcrumb (BreadcrumbList) Markup | Google Search Central</a></li>
+<li><a href="https://schema.org/BreadcrumbList" rel="external">schema.org BreadcrumbList</a></li>
+<li><a href="https://www.w3.org/WAI/tutorials/page-structure/labels/" rel="external">Labeling Regions | WAI Web Accessibility Tutorials</a></li>
+<li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/examples/navigation.html" rel="external">Navigation Landmark: ARIA Landmark Example | W3C</a></li>
+<li><a href="https://webaim.org/techniques/skipnav/" rel="external">WebAIM: Skip Navigation Links</a></li>
+<li><a href="https://css-tricks.com/a-deep-dive-on-skipping-to-content/" rel="external">A Deep Dive on Skipping to Content | CSS-Tricks</a></li>
+<li><a href="https://rust-lang.github.io/mdBook/guide/reading.html" rel="external">Reading books - mdBook Documentation</a></li>
+<li><a href="https://squidfunk.github.io/mkdocs-material/setup/setting-up-navigation/" rel="external">Setting up navigation - Material for MkDocs</a></li>
+<li><a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/navigation.html" rel="external">Navigation depth and collapsing sidebars — PyData Sphinx Theme</a></li>
+<li><a href="https://www.pencilandpaper.io/articles/breadcrumbs-ux" rel="external">Breadcrumbs UX Navigation - The Ultimate Design Guide | Pencil &amp; Paper</a></li>
+<li><a href="https://idratherbewriting.com/2016/10/23/coding-sidebar-navigation-for-documentation-websites/" rel="external">Coding the sidebar navigation element for documentation websites | I&#x27;d Rather Be Writing</a></li>
+<li><a href="https://github.com/squidfunk/mkdocs-material/issues/5091" rel="external">Automatically insert breadcrumbs schema when navigation.path is enabled · mkdocs-material #5091</a></li>
+<li><a href="https://www.aditus.io/patterns/breadcrumbs/" rel="external">Accessible Breadcrumbs - aditus.io</a></li>
+<li><a href="https://developers.google.com/search/blog/2011/09/pagination-with-relnext-and-relprev" rel="external">Pagination with rel=next and rel=prev | Google Search Central Blog</a></li></ul></details>
+<h3 id="s3-5-template-systems">§3.5 template 先行の文書システム (ADR / RFC / man / OpenAPI / SSG theme)</h3>
+<p>「型を framework が所有し強制する」文書システムは、ADR (Nygard/MADR)、RFC/man page、OpenAPI レンダラー、SSG テーマ (Sphinx/Docusaurus/Starlight/Hugo) という 4 系統で実践されている。共通する利点は「読者の認知負荷削減」「著者の記入漏れ防止」「ツール連携のための機械可読性」の三点。強制の深度には幅があり、XML スキーマ (DITA) による剛強制から Hugo archetype のような柔強制 (生成時のみ) まで連続的に分布する。失敗モードとして、テンプレートが内容の思考を代替してしまう「over-templating」と、テンプレート改訂後に既存コンテンツが旧構造のまま放置される「構造ドリフト」が文献で繰り返し指摘される。folio の制約 (bash CLI による静的 HTML 生成、JS read-only) では、生成時の gate 検査 (floor) と LLM review (ceiling) の組み合わせが既存の ADR/MADR 方式と最も整合する。</p>
+<details class="pattern">
+<summary><strong>Nygard ADR テンプレート (Title/Context/Decision/Status/Consequences)</strong> — 5 節固定のプレーンテキスト (後に Markdown) テンプレート。</summary>
+<dl>
+<dt>何をするか</dt><dd>5 節固定のプレーンテキスト (後に Markdown) テンプレート。各節の役割を明確に分離し、1–2 ページ以内に収める。Context は価値中立の力学記述、Decision は能動態の一文、Consequences は正負問わず全結果列挙。Status フィールドにより決定のライフサイクルを追跡できる。</dd>
+<dt>なぜ効くか</dt><dd>Nygard 自身が「大きなドキュメントは誰も読まないし、更新もされない」と述べており、bite-sized 単位が更新継続を促す。節名が質問形式 (Context=なぜ? / Decision=何を? / Consequences=どうなった?) に対応しているため、読者は場所を知って読み飛ばせる (スキャナビリティ)。チーム交代時に意思決定の動機が失われる問題 (institutional amnesia) を構造で防ぐ。</dd>
+<dt>採用例</dt><dd>Cognitect Blog 2011-11-15 (原典) / UK GDS Way 標準採用 / arc42 公式例 / joelparkerhenderson/architecture-decision-record GitHub リポジトリ (3.3k+ stars)</dd>
+<dt>folio への適用</dt><dd>直接適用可。folio の ADR は既にこの骨格 (status/context/decision/consequences) を採用済み。HTML &lt;section&gt; 要素への対応が容易で、floor gate で 5 節の存在・非空チェックを bash の grep で実装できる。</dd>
+<dt>注意</dt><dd>Nygard 版は Options 節を持たないため意思決定の根拠が書かれないことがある。「Consequences に良い結果だけ書く」誤用が現場で報告されている。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>MADR (Markdown Architectural Decision Records) — 節構造の mandatory/optional 分離</strong> — MADR v4.0.0 はフル / 最小 / ベア / ベア最小の 4 テンプレートを提供。</summary>
+<dl>
+<dt>何をするか</dt><dd>MADR v4.0.0 はフル / 最小 / ベア / ベア最小の 4 テンプレートを提供。必須節は「Context and Problem Statement」「Considered Options」「Decision Outcome」の 3 節。オプションとして「Decision Drivers」「Pros and Cons of the Options」「Confirmation」「More Information」を追加できる。YAML frontmatter で status (proposed/accepted/deprecated 等)、date、decision-makers、consulted、informed を持つ。</dd>
+<dt>なぜ効くか</dt><dd>Considered Options を強制することで「なぜ他の選択肢を捨てたか」が記録され、Nygard 版の institutional amnesia 問題をさらに徹底する。mandatory/optional の明示分離により、チームが最低限の負荷で採用しやすく、必要に応じて詳細化できる段階的適用が可能 (CALM 原則: Collaborative / Accountability / Learning / Management)。markdownlint での lint 統合でツールチェーンに乗せられる。</dd>
+<dt>採用例</dt><dd>adr.github.io/madr (v4.0.0, 2024-09-17) / simpler.grants.gov Wiki / ADR Manager for VS Code 拡張</dd>
+<dt>folio への適用</dt><dd>必須 3 節の存在チェックは bash の grep/xmllint で実装可能。folio の HTML 形式では section.req id 付きブロックに対応させることができる。YAML frontmatter の status/date は HTML &lt;meta&gt; または &lt;div class=&quot;meta&quot;&gt; で代替。</dd>
+<dt>注意</dt><dd>テンプレートは記述時にのみ機能し、既存 ADR の構造ドリフト (status フラグ変更による内容陳腐化) は検出できない。MADR は「同じ抽象レベルの選択肢を比較せよ」と注意書きするが機械強制は困難。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>RFC 固定形式 (IETF) — 必須節 + RFC 2119 語彙による要件レベル型付け</strong> — RFC 7322 (RFC Style Guide) が定義する構造: Introduction (最初の本文節、必須) / Status of This Memo (RFC Editor 供給) / References (normati。</summary>
+<dl>
+<dt>何をするか</dt><dd>RFC 7322 (RFC Style Guide) が定義する構造: Introduction (最初の本文節、必須) / Status of This Memo (RFC Editor 供給) / References (normative / informative 分離必須) / Abstract。本文節は番号付き、付録はアルファベット付き。RFC 2119 の MUST/SHOULD/MAY を大文字で使うことで要件レベルを型付けし、boilerplate 宣言で文書冒頭に必ず参照を示す。</dd>
+<dt>なぜ効くか</dt><dd>RFC 2119 語彙は「必須要件か推奨か任意か」を機械判定可能にし、適合性テストを自動化できる。型付き語彙は同じ文書を読む実装者と仕様者の解釈ズレを防ぐ (認知的負荷の分散)。固定節構造は数百の RFC に渡る相互参照を可能にし、既知の節名で情報を探せる。</dd>
+<dt>採用例</dt><dd>RFC 2119 (BCP 14) / RFC 7322 / RFC 7990 / すべての IETF 標準文書 (7,000+ RFC)</dd>
+<dt>folio への適用</dt><dd>folio の EARS 要件記述は RFC 2119 型付けと直接対応 (MUST → SHALL、SHOULD → SHOULD NOT 等)。floor gate の REQ-DA-STRUCT シリーズが節構造強制の同型実装。HTML の &lt;section data-req-level=&quot;must&quot;&gt; 等で要件レベルを属性化でき、機械検索が可能。</dd>
+<dt>注意</dt><dd>RFC の boilerplate は RFC Editor が供給する運用に依存しており、自前実装では boilerplate の陳腐化が起きやすい。RFC 2119 語彙の大文字/小文字区別はヒューマンエラーを誘発する (RFC 8174 で補強済みだが)。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>man page 節規約 (NAME/SYNOPSIS/DESCRIPTION) — POSIX 慣習的強制</strong> — man-pages(7) Linux マニュアルページ規約: 最低限 NAME / SYNOPSIS / DESCRIPTION の 3 節が必須。</summary>
+<dl>
+<dt>何をするか</dt><dd>man-pages(7) Linux マニュアルページ規約: 最低限 NAME / SYNOPSIS / DESCRIPTION の 3 節が必須。追加節として OPTIONS / EXIT STATUS / RETURN VALUE / ERRORS / ENVIRONMENT / FILES / EXAMPLES / SEE ALSO が慣習化。nroff/troff の .SH マクロで節を宣言し、groff/mandoc ツールチェーンがレンダリング。POSIX は Section 1 (一般コマンド) から Section 8 (管理コマンド) まで section 番号で文書種別を型付けする。</dd>
+<dt>なぜ効くか</dt><dd>数十年の普及により読者は節の位置を事前知識として持つ (「SYNOPSIS を見れば引数がわかる」)。この prior knowledge による認知負荷ゼロ化が最大の利点。SEE ALSO が相互参照グラフを形成し、孤立ページを防ぐ。</dd>
+<dt>採用例</dt><dd>Linux man-pages プロジェクト (10,000+ ページ) / POSIX 標準 / BSD man pages / GNU Coreutils</dd>
+<dt>folio への適用</dt><dd>folio の glossary / spec / ADR の各ページ種別に対して man page 方式の節規約 (種別ごとに必須節セットを定義) を適用できる。bash grep ベースの floor gate で節の有無を検査可能。SEE ALSO に相当する xref システムは folio ADR-0034 で既実装。</dd>
+<dt>注意</dt><dd>nroff マクロによる強制は troff ツールチェーンに依存しており、HTML へのストレートな移植はない。節の欠如でも man コマンドはエラーなく表示するため「soft 強制」にとどまる。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>OpenAPI → Redoc/SwaggerUI — スキーマが構造を所有し renderer が派生する</strong> — OpenAPI 仕様 (YAML/JSON) がエンドポイント / パラメータ / スキーマ / タグを定義する単一の SSoT。</summary>
+<dl>
+<dt>何をするか</dt><dd>OpenAPI 仕様 (YAML/JSON) がエンドポイント / パラメータ / スキーマ / タグを定義する単一の SSoT。Redoc は 3 パネル (左:ナビ / 中:ドキュメント / 右:コード例) を必ず生成し、x-tagGroups 拡張でサイドナビのグルーピングを制御。SwaggerUI は同仕様から「Try it out」インタラクション付き UI を導出。著者は OpenAPI YAML のみ編集し、見た目・構造・ナビは renderer (framework) が全所有する。</dd>
+<dt>なぜ効くか</dt><dd>スキーマからの派生により「ドキュメントが古くなる」問題を構造的に排除 (ドキュメント = 仕様のビュー)。エンドポイントが追加されれば自動的にナビに現れ、削除されれば消える。型付き request/response スキーマが例示生成を自動化し、著者は説明文のみに集中できる。</dd>
+<dt>採用例</dt><dd>Redocly/redoc GitHub (23k+ stars) / Stripe API Docs (Redoc 採用) / GitHub REST API (SwaggerUI 採用) / Kubernetes API Reference</dd>
+<dt>folio への適用</dt><dd>「スキーマが構造を所有する」モデルの folio 版は inventory.json (folio inventory CLI 生成) + nav テンプレート注入 (folio build) で既実装。folio build が landing template・パンくず・目次を注入するのは Redoc の 3 パネル自動生成と同型。ES modules/fetch は使えないが、bash CLI が同等の派生処理を担う。</dd>
+<dt>注意</dt><dd>OpenAPI/Redoc は CDN 配信前提で JS バンドルが巨大 (folio の vendoring 原則・file:// 対応と相性が悪い)。folio はこのパターンの bash 実装版として設計されており、直接 Redoc を採用することはできない。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Sphinx テーマの block 継承 / Jinja2 スロットモデル</strong> — Sphinx は Jinja2 テーマ継承を使い、layout.html が relbar1/sidebar/document/footer 等の named block を定義する。</summary>
+<dl>
+<dt>何をするか</dt><dd>Sphinx は Jinja2 テーマ継承を使い、layout.html が relbar1/sidebar/document/footer 等の named block を定義する。コンテンツ著者は .rst /.md を書くだけで、テーマが HTML 骨格・ナビ・パンくず・TOC を全所有する。カスタマイズは templates_path にテーマと同名ファイルを置くことで特定 block だけを上書きする。{{ super() }} で親の出力を継承しつつ拡張できる。</dd>
+<dt>なぜ効くか</dt><dd>「コンテンツと表示の関心分離」により著者は構造を意識せず執筆できる。テーマを変えるだけで全ページの見た目が一変する (一点変更・全体波及)。継承チェーンにより basic → alabaster/RTD/pydata 等が段階的に特殊化でき、企業テーマの維持コストが低い。</dd>
+<dt>採用例</dt><dd>sphinx-doc.org 本体 / Read the Docs プラットフォーム (数百万ページ) / PyData Sphinx Theme (NumPy/Pandas) / numpy/scipy ドキュメント</dd>
+<dt>folio への適用</dt><dd>folio build の marker 置換 (&lt;!-- FOLIO:BREADCRUMB --&gt; 等) は Sphinx block と同型のスロットモデル。bash sed/awk による静的注入で JS 不要。テーマ (common.css + テンプレート) が chrome を所有し、著者は section 内容のみを書くモデルは folio と完全整合。ただし Jinja2 の継承ロジックは bash では実現できないため、folio はフラットな marker 置換で代替する。</dd>
+<dt>注意</dt><dd>Sphinx は Python + Jinja2 への依存が深く、bash 環境への移植は困難。Sphinx テーマのブロックは &quot;unsafe&quot; スロットを直接書き換えるとマイナーバージョンで壊れるリスクがある (Docusaurus のスウィズリングにも同様の安全ティアが存在)。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Hugo Archetype / SSG frontmatter の layout フィールド — 作成時スキャフォールド</strong> — Hugo の `hugo new content` コマンドがアーキタイプテンプレートを評価し、frontmatter (date/draft/title 等) とコンテンツ本文の雛形を生成する。</summary>
+<dl>
+<dt>何をするか</dt><dd>Hugo の `hugo new content` コマンドがアーキタイプテンプレートを評価し、frontmatter (date/draft/title 等) とコンテンツ本文の雛形を生成する。frontmatter の layout フィールドでページ種別を指定し、テーマがその種別専用のテンプレートを選択する。Jekyll も同様に layout フィールドで _layouts/ の Liquid テンプレートを選択する。Starlight (Astro) は docsSchema() で Zod による frontmatter 型検証を実施し、title は必須フィールド。</dd>
+<dt>なぜ効くか</dt><dd>作成時のスキャフォールドにより「どの節を書けばよいか」を著者に明示する。layout フィールドはページの「型」を宣言し、テーマが型に応じた chrome を選択することで、著者は構造を意識せずに正しいテンプレートを使える。Zod 検証 (Starlight) により無効な frontmatter がビルド時にエラーになる。</dd>
+<dt>採用例</dt><dd>Hugo 公式 Archetypes ドキュメント / Jekyll _layouts/ 慣習 / Starlight frontmatter スキーマ (withastro/starlight schema.ts) / Docusaurus docusaurus-theme-frontmatter プラグイン</dd>
+<dt>folio への適用</dt><dd>folio の HTML ページは &lt;div class=&quot;meta&quot;&gt; + data-doc-type 属性でページ種別を宣言し、folio build が種別に応じたテンプレートを注入する構造に対応可能。title 相当 (&lt;h1&gt;) の非空チェックは既に floor gate で実装済み (REQ-INV-005 等)。</dd>
+<dt>注意</dt><dd>Hugo archetype は「生成時のみ評価」であり、作成後の構造変更を防がない。SSG の frontmatter 強制はビルド時エラーを出すが、HTML コメント marker の場合は lint ルールを自前実装する必要がある。over-templating 失敗モード (テンプレートが思考の代替になる) は特に onboarding ドキュメントで観察される。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>DITA Information Typing — XML スキーマによる剛強制</strong> — OASIS DITA 標準の Concept/Task/Reference 3 種別。</summary>
+<dl>
+<dt>何をするか</dt><dd>OASIS DITA 標準の Concept/Task/Reference 3 種別。Task トピックは XML スキーマで &lt;steps&gt;/&lt;step&gt; 要素を必須化し、順序付き手順以外の記述が schema violation になる。すべてのトピックが title + shortdesc + prolog + body の共通 XML 骨格を持つ。Specialization 機構で新型別を定義でき、製品ドキュメント向けの「Parts List Reference」等を schema 拡張で作れる。</dd>
+<dt>なぜ効くか</dt><dd>XML スキーマ検証がビルドパイプラインで自動実行されるため、著者の意図に関わらず構造違反が検出される (最強の強制レベル)。型別が目的を明確化するため「What is...?」には Concept、「How do I...?」には Task を選ぶという著者の思考整理にもなる。</dd>
+<dt>採用例</dt><dd>IBM 製品ドキュメント (DITA 発祥) / Adobe 技術文書 / OASIS DITA TC 仕様書群 / oXygen XML Editor の DITA サポート</dd>
+<dt>folio への適用</dt><dd>folio は HTML + bash で XML スキーマ検証相当の強制を行う。DITA の剛強制と完全同等は困難だが、floor gate (bash + xmllint) が schema validation の代役を担う。DITA の topic type 分類は folio のページ種別 (spec/ADR/glossary/constitution) に対応し、種別ごとの必須節セットを floor gate で検査するモデルが適用可能。</dd>
+<dt>注意</dt><dd>DITA は XML ツールチェーン (DITA-OT、oXygen) への依存が深く、軽量な HTML/bash 環境には過剰。Specialization は強力だが学習コストが高く、小規模チームでは採用障壁になる。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (20 件)</summary><ul><li><a href="https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions" rel="external">Documenting Architecture Decisions — Michael Nygard (2011)</a></li>
+<li><a href="https://adr.github.io/adr-templates/" rel="external">ADR Templates | adr.github.io</a></li>
+<li><a href="https://adr.github.io/madr/" rel="external">About MADR | adr.github.io/madr</a></li>
+<li><a href="https://ozimmer.ch/practices/2022/11/22/MADRTemplatePrimer.html" rel="external">The Markdown ADR (MADR) Template Explained and Distilled — Olaf Zimmermann</a></li>
+<li><a href="https://github.com/adr/madr" rel="external">GitHub: adr/madr</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc7322" rel="external">RFC 7322 — RFC Style Guide</a></li>
+<li><a href="https://datatracker.ietf.org/doc/html/rfc2119" rel="external">RFC 2119 — Key words for Requirement Levels</a></li>
+<li><a href="https://man7.org/linux/man-pages/man7/man-pages.7.html" rel="external">man-pages(7) — Linux Manual Page</a></li>
+<li><a href="https://github.com/Redocly/redoc" rel="external">GitHub: Redocly/redoc</a></li>
+<li><a href="https://redocly.com/docs/redoc" rel="external">Redoc CE: Open source API documentation tool</a></li>
+<li><a href="https://www.sphinx-doc.org/en/master/development/html_themes/index.html" rel="external">HTML theme development — Sphinx documentation</a></li>
+<li><a href="https://www.sphinx-doc.org/en/master/development/html_themes/templating.html" rel="external">Templating — Sphinx documentation</a></li>
+<li><a href="https://docusaurus.io/docs/swizzling" rel="external">Swizzling — Docusaurus</a></li>
+<li><a href="https://starlight.astro.build/reference/frontmatter/" rel="external">Frontmatter Reference — Astro Starlight</a></li>
+<li><a href="https://gohugo.io/content-management/archetypes/" rel="external">Archetypes — Hugo</a></li>
+<li><a href="https://www.heretto.com/blog/concept-task-reference" rel="external">The 3 Core DITA Topic Types Explained — Heretto</a></li>
+<li><a href="https://dita-lang.org/dita/archspec/base/information-typing" rel="external">Information typing — DITA Language Reference</a></li>
+<li><a href="https://dev.to/barryosull/template-driven-development-why-it-doesn-t-work-3c2f" rel="external">Template Driven Development: Why it doesn&#x27;t work — Barry O&#x27;Sullivan</a></li>
+<li><a href="https://adr.github.io/" rel="external">Architecture Decision Records (ADR) — adr.github.io</a></li>
+<li><a href="https://ceur-ws.org/Vol-2072/paper9.pdf" rel="external">MADR: Markdown Architectural Decision Records — CEUR-WS Vol-2072</a></li></ul></details>
+<h3 id="s3-6-disclosure">§3.6 段階的開示と表示切替 (progressive disclosure / audience toggle / 編集規範)</h3>
+<p>段階的開示 (progressive disclosure) は「よく使う情報を前面に、まれにしか必要としない情報を要求時に開示する」原則として Nielsen (1995) が定式化した。reference ドキュメントに適用する際の本質的緊張は「隠しすぎが参照性を破壊する」点にある。Diataxis フレームワークが明確に言語化するとおり、reference は「読む」ものでなく「引く」ものであり、ユーザーは既知の場所に既知の形式で情報があることを期待する。したがって reference では「折り畳み量を最小化し、よく参照される情報は常時可視」が原則となる一方、背景説明・運用注記・エラー一覧など二次情報は折り畳み候補となる。HTML `&lt;details&gt;` 要素は Chromium 系ブラウザで find-in-page が自動展開するがFirefox/Safariは非対応という非互換があり、印刷時は `@media print { details { display: block } }` の CSS ワークアラウンドが必要。GOV.UK / Canada.ca などの公的ガイドラインは「まず折り畳みなしで書ける構造を目指せ、accordion は最終手段」と位置づけており、これは folio の「floor gate で巨大段落 lint」設計と整合する。audience toggle (人間向け essence / 機械向け EARS) の先行例としては Stripe の言語切替タブ・Redoc の nested schema 折り畳みがあり、「コンテキストを保ったまま冗長なレイヤーのみ開示」というパターンが確立されている。</p>
+<details class="pattern">
+<summary><strong>Progressive Disclosure (Nielsen 1995)</strong> — UI を「初期表示：頻繁に必要な情報のみ」「二次表示：専門的/まれな情報を要求時に提示」の2段構造にするインタラクションパターン。</summary>
+<dl>
+<dt>何をするか</dt><dd>UI を「初期表示：頻繁に必要な情報のみ」「二次表示：専門的/まれな情報を要求時に提示」の2段構造にするインタラクションパターン。最大2段が推奨され、3段以上は usability を損なう。</dd>
+<dt>なぜ効くか</dt><dd>認知負荷低減と学習効率の両立。Nielsen は「人間は機能の優先順位付けを助けられると理解が深まる」と実証。NN/G の研究では「初期表示に何が入るかの正確な分割（task analysis / 使用頻度統計）」が成否を決定すると述べており、分割が誤ると複雑性を移動するだけで削減しない。</dd>
+<dt>採用例</dt><dd>NN/G 記事 (https://www.nngroup.com/articles/progressive-disclosure/)、Apple Safari の「開発者用設定」タブ折り畳み、Microsoft Windows Security app の詳細展開</dd>
+<dt>folio への適用</dt><dd>直接適用可。folio の「essence 可視 / EARS 折り畳み」はこのパターンの直接実装。essence が頻繁参照 = 初期表示、EARS 全文 + 経緯 + 運用注記が二次表示。data-audience 属性でのフィルタリングは CSS のみで静的 HTML に実現できる（JS 不要）。ただし Nielsen の「2段上限」を守るため、details のネスト（details の中に details）は避けること。</dd>
+<dt>注意</dt><dd>初期表示に入れるものの選定ミスが最大リスク。folio では floor gate で「hero 非空 / 巨大段落 lint」を検査しているが、さらに「essence が空のまま EARS だけある section」を floor gate に追加することを検討すべき。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Accordion (Expand/Collapse) パターン</strong> — 垂直に積まれた見出しが各々の内容を開閉するパネル群。</summary>
+<dl>
+<dt>何をするか</dt><dd>垂直に積まれた見出しが各々の内容を開閉するパネル群。単一展開（exclusive、HTML name 属性）と複数同時展開の2形態がある。「Show all sections / Hide all sections」ボタンを併置するのが GOV.UK / Canada.ca の実装慣行。</dd>
+<dt>なぜ効くか</dt><dd>「概要だけ把握したい」読者がすべてのパネル見出しを一覧してから必要な部分だけ開く、という参照行動に適合する。NN/G の研究（accordions-complex-content）では「ユーザーが必要な情報のほとんどを見なければならない場合は accordion が阻害要因になる」とも警告しており、reference doc ではセクションの多くが毎回参照される場合はすべて展開が望ましい。</dd>
+<dt>採用例</dt><dd>GOV.UK Design System Accordion (https://design-system.service.gov.uk/components/accordion/)、Canada.ca Expand/Collapse (https://design.canada.ca/common-design-patterns/collapsible-content.html)、W3C APG Accordion Pattern (https://www.w3.org/WAI/ARIA/apg/patterns/accordion/)</dd>
+<dt>folio への適用</dt><dd>静的 HTML + classic script で実現可能。「Show all / Hide all」ボタンは数行の JS（ES module 不使用の inline script で可）。HTML5 ネイティブ `&lt;details name=&#x27;group&#x27;&gt;` を使えば JS ゼロで exclusive accordion も実装できる（Chrome/Firefox/Safari 対応済み、2023年時点）。ただし `details` の find-in-page 自動展開は Chrome/Edge のみで Firefox/Safari は非対応 — reference 用途では注意が必要。</dd>
+<dt>注意</dt><dd>GOV.UK の実証的知見「まず accordion なしで書ける構造を目指せ」は folio の floor gate 設計に直接対応する。accordion を入れる前に prose を短くする / 見出しを細分化する方が根本解決。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Summary-First (Short + Long) 開示</strong> — 各アイテムに対して「1文以内の短い説明（summary / tagline）」を常時表示し、「詳細説明全文」を折り畳む。</summary>
+<dl>
+<dt>何をするか</dt><dd>各アイテムに対して「1文以内の短い説明（summary / tagline）」を常時表示し、「詳細説明全文」を折り畳む。rustdoc の items リストがこの形式の古典例。essence 一行 → details 内の EARS 全文 という folio の DOM 構造もこのパターンの変形。</dd>
+<dt>なぜ効くか</dt><dd>Rust Internals での議論（2015）が記録するとおり、長い説明を常時展開すると「大局を見失う」。summary 行が情報スキャンの anchor となり、詳細が必要なアイテムだけ開く。Diataxis の「reference はスキャンして引くもの」という消費モデルと適合する。</dd>
+<dt>採用例</dt><dd>rustdoc のアイテム一覧（summary line + 折り畳み詳細）、Stripe API Reference の attribute リスト（属性名 + 型 + 一行説明が常時表示、child attributes を折り畳み）、Redoc の nested schema collapse</dd>
+<dt>folio への適用</dt><dd>folio 既存の essence/EARS 構造と直接対応。essence は summary 役（常時可視）、EARS + 背景・経緯 + 運用注記は details 内（折り畳み既定）。build が `&lt;details&gt;` マーカー領域に注入するとき、`&lt;summary&gt;` に essence 冒頭 1 文を入れるとさらに走査性が上がる。静的 HTML のみで実現可。</dd>
+<dt>注意</dt><dd>「summary 行が空または不十分」だと折り畳みが有害になる。floor gate で「essence が最低 1 文あること」を保証する必要がある（現行 hero 非空 gate の拡張）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Audience Toggle (コンテキスト別 audience 切替)</strong> — 同一 DOM に複数 audience 向けコンテンツを共存させ、ユーザーが audience 属性をトグルすると表示コンテンツが切り替わるパターン。</summary>
+<dl>
+<dt>何をするか</dt><dd>同一 DOM に複数 audience 向けコンテンツを共存させ、ユーザーが audience 属性をトグルすると表示コンテンツが切り替わるパターン。Stripe の言語切替タブがコード例での典型実装。folio の `data-audience` 属性出し分けはこのパターンの spec 表示版。</dd>
+<dt>なぜ効くか</dt><dd>ユーザーが自身の文脈に合わせて情報密度を選べるため「隠しすぎ」と「多すぎ」の両極端を回避できる。Stripe が言語切替タブを採用することで developer ごとのコピペ摩擦をほぼゼロにしたことは、audience-aware disclosure の経済効果の実証とされている（Moesif teardown）。</dd>
+<dt>採用例</dt><dd>Stripe Docs の言語切替タブ（Python/Node/Ruby/Go 等）、Twilio Docs のインタラクティブ言語切替、ReadTheDocs / Sphinx-Immaterial の `details` `:open:` オプション選択、folio 既存の `data-audience` + details 折り畳み構造</dd>
+<dt>folio への適用</dt><dd>folio の data-audience 属性 + CSS `[data-audience=&#x27;machine&#x27;] { display: none }` という現行実装はこのパターンの CSS-only 版。JS toggle を追加する場合は classic script で `document.querySelectorAll(&#x27;[data-audience]&#x27;)` を操作するだけで済み、ES modules 不使用 + file:// 対応を維持できる。「人間向け」「機械向け」「両方」の3状態トグルボタンを common.css + inline script で提供するのが folio 制約に最も適合した実装形。</dd>
+<dt>注意</dt><dd>toggle の状態をページをまたいで記憶するには localStorage が必要（file:// では動作するが、セキュリティ文脈によっては制限あり）。永続化が不要であれば URL hash または単純な DOM class 切替で十分。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>既定開示レベルの判断基準（Defer vs Expose by Default）</strong> — 「何を既定で見せ何を折るか」の判断フレームワーク。</summary>
+<dl>
+<dt>何をするか</dt><dd>「何を既定で見せ何を折るか」の判断フレームワーク。Nielsen の基準：(A) 大多数のユーザーが頻繁に必要 → 常時表示、(B) 少数のユーザーまたは稀な場面でのみ必要 → 折り畳み。GOV.UK はさらに「まず折り畳みなしで書け」を上位ルールとして追加。Diataxis は reference では「消費者が走査して引く」前提を強調し、走査に必要な情報（名前・型・一行説明）は常時可視とする。</dd>
+<dt>なぜ効くか</dt><dd>NN/G accordion 研究の核心知見：「ユーザーがそのページのほとんどの情報を必要とする場合、accordion は interaction cost を増加させるだけで削減しない」。逆に「数十の選択肢から自分に当てはまるものだけ選ぶ」FAQ 型では折り畳みが有効。folio の spec 本文（EARS）は「既習者が特定 REQ を引く」参照用途 → 1 section ≒ 1 REQ = ほぼ毎回参照 → 既定開放が有利だが、ページ全体の長さとのバランスで essence 可視 + EARS 折り畳みは合理的な妥協。</dd>
+<dt>採用例</dt><dd>GOV.UK Accordion ガイド「Do not use an accordion for content that all users need to see」、Canada.ca「Expand all/collapse all は二次情報が多い場合のみ使用」、NN/G「accordions-on-desktop」</dd>
+<dt>folio への適用</dt><dd>folio の既定値設定（essence/表/図 = 可視、EARS 全文/経緯/運用注記 = 折り畳み）はこの基準と一致している。floor gate として「essence は最低 X 語/文字以上」「EARS section が存在するなら必ず対応 essence を持つ」を追加することで、「essence が空 → 折り畳み内容に辿り着けない」という最悪パターンを防止できる。</dd>
+<dt>注意</dt><dd>ページ種別（landing / spec / ADR / glossary / constitution）ごとに既定開示レベルを差別化することを推奨。landing は全可視、spec は essence 可視 + EARS 折り畳み、ADR は context/decision 可視 + consequences 折り畳み、など。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Print 対応と find-in-page 対応</strong> — `&lt;details&gt;` は印刷時にも折り畳まれたまま出力されるブラウザが多い。</summary>
+<dl>
+<dt>何をするか</dt><dd>`&lt;details&gt;` は印刷時にも折り畳まれたまま出力されるブラウザが多い。対策は `@media print { details, details[open] { display: block !important; } details &gt; *:not(summary) { display: block !important; } }` という CSS ルール。find-in-page（Ctrl+F）は Chrome/Edge では自動展開されるが Firefox/Safari は非対応。</dd>
+<dt>なぜ効くか</dt><dd>隠れた内容を印刷物で失わせないことは plain language / document accessibility の基本要件。W3C WCAG 2.1 はキーボードアクセスを要求し、find-in-page 非展開は「目の見えないユーザーが折り畳み内を検索できない」アクセシビリティリスクになる。</dd>
+<dt>採用例</dt><dd>Scott O&#x27;Hara による `&lt;details&gt;` ブラウザ互換性詳細報告 (https://www.scottohara.me/blog/2022/09/12/details-summary.html)、Deque University のアクセシビリティ実装例、Bootstrap Issue #12130（印刷時 accordion 展開の議論）</dd>
+<dt>folio への適用</dt><dd>folio の common.css に `@media print` ルールを1ブロック追加するだけで対応可能。file:// でも print は機能する。floor gate として「印刷 CSS が存在するか」を検査することを推奨（validate の CSS リント拡張）。Firefox/Safari の find-in-page 非対応問題に対しては、summary 要素に essence の冒頭を入れることで「折り畳んだまま検索できる」を部分補完できる（summary テキストは折り畳み状態でも DOM 可視）。</dd>
+<dt>注意</dt><dd>Chrome/Edge の find-in-page 自動展開は spec 確定でなくブラウザ実装依存（2022年時点で Firefox/Safari 未実装）。WCAG 遵守のためには JS で全 details を open にする「expand-all for print」を beforeprint イベントで仕込む方が確実だが、classic script の範囲で実装可能。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Plain Language 編集規範（段落・文長の上限）</strong> — 一段落 = 一概念（one idea per paragraph）。</summary>
+<dl>
+<dt>何をするか</dt><dd>一段落 = 一概念（one idea per paragraph）。GOV.UK 基準：段落は最大 5 文、理想は 3 文以内。文長は平均 15-20 語、25 語超の文は分割を検討。これは折り畳みの前に行う「情報を削る編集」に対応する。</dd>
+<dt>なぜ効くか</dt><dd>NN/G の F-pattern eye-tracking 研究によると、web ページでは読者は左上から水平にスキャンし、以降は垂直スキャンに移行する。短い段落・短い文はこのスキャンパターンでの情報摂取量を最大化する。GOV.UK が「大きなテキストブロックは読みにくい」とユーザーテストで確認しており、段落を短くすること自体が scannability を改善する。</dd>
+<dt>採用例</dt><dd>GOV.UK Writing Standards「keep to 1 thought per paragraph」(https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/)、U.S. Plain Language Guidelines（plainlanguage.gov）、Microsoft Writing Style Guide</dd>
+<dt>folio への適用</dt><dd>folio の「巨大段落 lint」floor gate の定量基準として使える。現行 gate はパターンマッチのみと思われるが、GOV.UK の 5 文 / 25 語基準を threshold として実装できる（bash の wc + awk で近似計測可能）。essence セクションにこの基準を適用することで「essence が長文の EARS の別写し」になることを防止できる。</dd>
+<dt>注意</dt><dd>技術仕様文書（EARS フォーマット）は構造的に長文になる場合があるため、EARS セクションには plain language 上限を適用せず、essence セクションのみに適用するのが現実的。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (20 件)</summary><ul><li><a href="https://www.nngroup.com/articles/progressive-disclosure/" rel="external">Progressive Disclosure - Nielsen Norman Group</a></li>
+<li><a href="https://www.nngroup.com/articles/accordions-complex-content/" rel="external">Accordions for Complex Website Content on Desktops - NN/G</a></li>
+<li><a href="https://www.nngroup.com/articles/accordions-on-desktop/" rel="external">Accordions on Desktop: When and How to Use - NN/G</a></li>
+<li><a href="https://design-system.service.gov.uk/components/accordion/" rel="external">GOV.UK Design System - Accordion Component</a></li>
+<li><a href="https://design.canada.ca/common-design-patterns/collapsible-content.html" rel="external">Canada.ca - Collapsible Content Design Pattern</a></li>
+<li><a href="https://diataxis.fr/reference/" rel="external">Diátaxis - Reference Documentation</a></li>
+<li><a href="https://web.dev/learn/html/details" rel="external">Details and Summary Elements - web.dev</a></li>
+<li><a href="https://www.scottohara.me/blog/2022/09/12/details-summary.html" rel="external">The details and summary elements, again - Scott O&#x27;Hara</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Element/details" rel="external">MDN - HTML details element</a></li>
+<li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/accordion/" rel="external">W3C WAI - Accordion Pattern (APG)</a></li>
+<li><a href="https://learn.microsoft.com/en-us/windows/win32/uxguide/ctrl-progressive-disclosure-controls" rel="external">Progressive Disclosure Controls - Microsoft Win32 UX Guidelines</a></li>
+<li><a href="https://design.gitlab.com/patterns/progressive-disclosure/" rel="external">Progressive Disclosure - GitLab Pajamas Design System</a></li>
+<li><a href="https://primer.style/ui-patterns/progressive-disclosure" rel="external">Progressive Disclosure - GitHub Primer</a></li>
+<li><a href="https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/" rel="external">Sentence length: why 25 words is our limit - GOV.UK Inside Blog</a></li>
+<li><a href="https://internals.rust-lang.org/t/could-function-text-in-rustdoc-be-collapsed-by-default/2470" rel="external">Could function text in rustdoc be collapsed by default? - Rust Internals</a></li>
+<li><a href="https://blog.goose.love/posts/rustdoc/" rel="external">How rustdoc achieves a genius design - blog.goose.love</a></li>
+<li><a href="https://docs.stripe.com/api" rel="external">Stripe API Reference</a></li>
+<li><a href="https://www.moesif.com/blog/best-practices/api-product-management/the-stripe-developer-experience-and-docs-teardown/" rel="external">The Stripe Developer Experience and Docs Teardown - Moesif Blog</a></li>
+<li><a href="https://dequeuniversity.com/library/aria/expand-collapse-summary" rel="external">Expand/Collapse Accessibility - Deque University</a></li>
+<li><a href="https://www.nngroup.com/articles/text-scanning-patterns-eyetracking/" rel="external">Text Scanning Patterns: Eyetracking Evidence - NN/G</a></li></ul></details>
+
+</section>
+
+<section id="s4-gapfill" class="informative">
+<h2>§4. gap-fill — critic 特定 gap の実コード照合</h2>
+<p>critic が特定した 3 gap を、 folio の実装現状 (bin/folio / common.css / render-gate) と突き合わせて解消した追加調査。 「業界パターンが folio 制約 (静的 HTML / 単一 common.css / classic JS read-only / file:// 直開き / bash flat marker 置換) の下で実装可能か」 を verified にしている。</p>
+
+<h3 id="s4-1">§4.1 3 カラム chrome を狭幅 viewport で破綻させない CSS パターン</h3>
+<p>静的 HTML + 単一 CSS（JS は read-only 補助のみ）で左 sticky サイドナビ・中央本文・右 on-this-page TOC・上部パンくずの chrome を狭幅 viewport で破綻させない CSS パターンを 5 つ特定した。folio の技術制約（body max-width:940px / モバイル BP 未存在 / JS は classic script 補助のみ / file:// 直開き必須）に照らすと、(1) 3 カラム Grid を狭幅で単一カラムへ折りたたむ grid-template-areas コラプス、(2) sticky サイドナビを min-width ブレークポイント外では normal-flow に戻す Conditional Sticky、(3) 右 TOC を狭幅で非表示にする Media-Query TOC Hide、(4) ハンバーガーなし JS-free ナビ折りたたみとして details/summary 要素を使う手法、(5) Playwright multi-viewport 視覚回帰の CI 戦略、の 5 パターンが実在の採用事例・仕様で裏付けられた。checkbox hack はアクセシビリティ上 Wikimedia が details 要素への移行を決定（T333394）しており新規採用に適さない。MkDocs Material は 220–479px / 480–719px / 720–959px / 960–1219px / 1220px+ の 5 段階 em ブレークポイントを採用し、Sphinx RTD は 480px・768px の 2 段、mdBook は 980px 単一境界を採用している。folio の common.css には現在 @media ルールがダークモード 1 本のみ（verified）で、3 カラム chrome 追加時は 980–1024px 以上で Grid 活性化・それ未満でシングルカラム化する BP を新設することが最小追加となる。Playwright file:// は page.goto(&#x27;file://…&#x27;) で動作するが、同一環境（Docker/CI）でのベースライン生成が必須で、ローカル HTTP サーバー起動（python -m http.server など）の方が font 描画ブレを抑えられる（verified パターン）。</p>
+<details class="pattern">
+<summary><strong>Grid-Template-Areas 3-カラム・コラプスパターン（Holy Grail Responsive Layout）</strong> — display:grid と grid-template-areas を使い、desktop では &#x27;nav content aside&#x27; の 3 カラムを定義し、@media (max-width: 979px) で grid-templ。</summary>
+<dl>
+<dt>何をするか</dt><dd>display:grid と grid-template-areas を使い、desktop では &#x27;nav content aside&#x27; の 3 カラムを定義し、@media (max-width: 979px) で grid-template-areas を &#x27;nav&#x27; / &#x27;content&#x27; / &#x27;aside&#x27; の 1 カラム積み重ねに書き換える。カラム比の典型例は 1fr 4fr 1fr（MDN推奨）または 20vw auto（DBM Solutions実装）。grid-template-areas 書き換えのみでカラム順序を制御でき、HTML の source order は変更不要。</dd>
+<dt>なぜ効くか</dt><dd>CSS Grid の grid-template-areas は再定義するだけでカラム配置が変わるため、@media ブロック内での変更が最小。source order と視覚順を独立させられる。MDN のガイド「Realizing common layouts using grids」で実証済み。モバイルで各エリアが 100% 幅になるため内容が圧迫されない。</dd>
+<dt>採用例</dt><dd>MDN Web Docs 自身の docs サイト（500px/700px BP 採用、verified: https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Grid_layout/Common_grid_layouts）、matthewjamestaylor.com Holy Grail Layout（768px/1024px BP）</dd>
+<dt>folio への適用</dt><dd>適用可。Grid/Flexbox は folio 技術制約で明示許可。file:// で完全動作（CSS のみ）。common.css の body ブロック（max-width:940px）の外側に .page-chrome クラスを追加し、@media (min-width: 980px) で grid を活性化するのが最小追加。既存 body max-width との干渉を避けるため、.page-chrome は body の幅制限を引き継ぐか、grid-column で本文エリアに max-width を当てる。</dd>
+<dt>注意</dt><dd>grid-template-areas の各行はセル数が一致しないと invalid になる。aside（右 TOC）を mobile では nav より後に配置すると source order が視覚順と一致するが、スクリーンリーダーは source order を読むため、TOC は本文の後（aside を HTML 末尾）に置くことが推奨。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Conditional Sticky サイドナビ（min-width + min-height 二重ガード）</strong> — サイドナビに position:sticky と top 値を与える CSS を @media screen and (min-width: 980px) and (min-height: 560px) ブロック内にのみ記述する。</summary>
+<dl>
+<dt>何をするか</dt><dd>サイドナビに position:sticky と top 値を与える CSS を @media screen and (min-width: 980px) and (min-height: 560px) ブロック内にのみ記述する。この ブレークポイント外（狭幅）では position がデフォルト(static)に戻り、ナビは normal flow で本文の前後に配置される。sticky の親コンテナには overflow:hidden / auto / scroll を付けない（sticky 破壊の筆頭原因）。Grid 配置と組み合わせる場合は align-self: start を必ず付与（デフォルト stretch が sticky を即無効化する）。</dd>
+<dt>なぜ効くか</dt><dd>Polypane 記事「Getting stuck: all the ways position:sticky can fail」が整理した通り、sticky の失敗原因は（a）親の overflow 設定、（b）inset 値の欠如、（c）align-items:stretch の stretch、（d）要素がコンテナより大きい、の 4 系統。min-width ガードにより「ナビが本文を圧迫する」問題をそもそも発生させない。DBM Solutions の実装（min-width:980px、min-height:560px）が実証済み。</dd>
+<dt>採用例</dt><dd>DBM Solutions「Mobile-friendly, sticky, sidebar navigation using CSS Grid, with overflow protection」（980px/560px 二重ガード、verified: https://dbm.solutions/posts/mobile-friendly-sticky-sidebar-navigation-using-css-grid-with-overflow-protection/）、CSS-Tricks「A Dynamically-Sized Sticky Sidebar」（max-height: calc(100vh - var(--offset)*2) + overflow-y:auto で内部スクロール対応）</dd>
+<dt>folio への適用</dt><dd>適用可。CSS のみで動作し file:// でも完全動作。folio の common.css には現在 overflow:hidden/scroll の親がなく sticky の親 overflow 問題は生じない。新設する .page-chrome Grid コンテナに overflow を付けないよう注意。サイドナビの sticky 適用は 980px+ 限定とし、それ未満では Grid のシングルカラム化で先頭 or 末尾配置に自然に戻す。</dd>
+<dt>注意</dt><dd>Safari iOS 15 以前は -webkit-sticky が必要（現行端末では不要になりつつあるが、folio ターゲットが技術者向け PC 中心なら問題少）。モバイル Chrome/Safari で address bar が動的に消えると sticky の top 算出がずれる場合がある（stevefenton.co.uk 実証）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Media-Query TOC Hide（右 on-this-page パネルの狭幅非表示）</strong> — 右の on-this-page TOC（folio では nav.toc）を @media (max-width: 979px) { nav.toc.sidebar { display: none; } } で非表示にする。</summary>
+<dl>
+<dt>何をするか</dt><dd>右の on-this-page TOC（folio では nav.toc）を @media (max-width: 979px) { nav.toc.sidebar { display: none; } } で非表示にする。同時に、常時可視のインライン TOC（現行 folio の nav.toc カードスタイル）を本文先頭に残す。つまり「デスクトップ=右 sticky TOC パネル + インライン TOC 非表示 / モバイル=インライン TOC + 右パネルなし」の 2 モードを切り替える。MkDocs Material / Sphinx RTD はいずれもこのパターンを採用（右 TOC は 960px 以上でのみ表示）。</dd>
+<dt>なぜ効くか</dt><dd>3 カラムを狭幅で維持しようとすると中央本文が実質読めない幅に圧縮される。TOC の情報は本文上部のインライン TOC で代替できるため、右パネルを hidden にしても情報損失がない。CSS-Tricks や GeneratePress フォーラムの実装例でも「980px 未満では sticky TOC を外す」が定番パターンとして確立している。</dd>
+<dt>採用例</dt><dd>MkDocs Material（960px 以下で右 TOC 非表示、verified: https://github.com/squidfunk/mkdocs-material/discussions/7130）、Sphinx RTD（768px 以下でサイドナビを top-bar に変換し右 TOC は非表示、verified issue #1438）</dd>
+<dt>folio への適用</dt><dd>適用可。folio の common.css に既存の nav.toc カードスタイルはインライン（本文内）配置を想定して設計されており、右パネル版は新クラス（例: nav.toc--sidebar）として追加するのが適切。display:none は file:// でも動作。既存インライン TOC の表示/非表示を media query で切り替えるだけなので CSS 追加量が最小。</dd>
+<dt>注意</dt><dd>インライン TOC と右パネル TOC の 2 要素を HTML に持つと、build が両方を生成する必要がある。folio build のテンプレート生成ロジックで data-audience や条件クラスを付けて 1 要素を 2 ロールに使い回す設計も検討できる。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>details/summary ナビ折りたたみ（JS-free、checkbox hack 代替）</strong> — ハンバーガートグルを HTML ネイティブの &lt;details&gt;/&lt;summary&gt; 要素で実装する。</summary>
+<dl>
+<dt>何をするか</dt><dd>ハンバーガートグルを HTML ネイティブの &lt;details&gt;/&lt;summary&gt; 要素で実装する。&lt;details id=&#x27;site-nav&#x27;&gt;&lt;summary&gt;メニュー&lt;/summary&gt;&lt;nav&gt;…&lt;/nav&gt;&lt;/details&gt; の構造にし、CSS で details[open] nav { display: block; } / details:not([open]) nav { display: none; } を記述。@media (min-width: 980px) では details を常時 open 固定（details { display: contents; } または details[open]:not([data-forced]) の回避）または details 自体を非表示にして nav を直接表示する。</dd>
+<dt>なぜ効くか</dt><dd>Wikimedia の T243126 調査で checkbox hack はスクリーンリーダーで「チェックボックス」と読み上げられる・キーボード操作が破綻するという根本的欠陥が確認され、details/summary 要素への移行が推奨されタスクは T333394 の解決として clsoe された。details/summary はブラウザネイティブの disclosure widget でアクセシビリティツリーに正しく統合される。JS 不要で file:// でも完全動作する。</dd>
+<dt>採用例</dt><dd>Wikimedia Phabricator T243126 → T333394（checkbox hack から details 移行の公式決定）、Silvestar Bistrović「CSS sidebar toggle」（checkbox hack 実装だが同著者が後続で details 推奨に言及）、Polypane「The perfect responsive menu」（JS 版だが同記事が details を JS-free 代替として紹介）</dd>
+<dt>folio への適用</dt><dd>適用可（最優先推奨）。folio は既に common.css で details/summary を spec-row / nav-cluster に多用しており、ナビ折りたたみに同要素を使うのは設計一貫性が高い。CSS のみ・file:// 動作・a11y 合格の三拍子が揃う。デスクトップ（980px+）では details を open 固定にする CSS トリックが必要（details { open を CSS で強制する標準手段はなく、JS 1 行 document.querySelectorAll(&#x27;details.nav-toggle&#x27;).forEach(d=&gt;d.open=true) を onload で付ける Progressive Enhancement が実用的）。</dd>
+<dt>注意</dt><dd>details を CSS だけで「常時 open」にする確立した手法が存在しない（details[open] を CSS で設定できない）。デスクトップでは details 全体を非表示にして別の nav を表示する 2-HTML パターン、または onload で open 属性を付与する JS 補助のどちらかが必要。folio の「JS は read-only 補助」方針と open 属性付与の組み合わせはセマンティクス的に問題ない（表示状態の制御であり DOM 構造変更ではない）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Playwright multi-viewport 視覚回帰 CI 戦略（ADR-0037 ceiling の viewport 拡張）</strong> — playwright.config.ts の projects 配列に mobile（375×667）・tablet（768×1024）・desktop（1280×720）の 3 エントリーを追加し、各プロジェクトが独立したスナップショット。</summary>
+<dl>
+<dt>何をするか</dt><dd>playwright.config.ts の projects 配列に mobile（375×667）・tablet（768×1024）・desktop（1280×720）の 3 エントリーを追加し、各プロジェクトが独立したスナップショットディレクトリ（例: __screenshots__/mobile-375-linux.png）を生成する。page.goto に file:// URL を渡す場合はローカル HTTP サーバーを webServer ブロックで起動する方が font 描画ブレを防げる（python3 -m http.server 8080 など）。CI は公式 Docker イメージ（mcr.microsoft.com/playwright:vX.Y-noble）を使い OS を固定することで「CI の font とローカルの font が違う」フォールスポジティブを排除する。スナップショットは git commit し PR で visual diff を review する。</dd>
+<dt>なぜ効くか</dt><dd>folio の ADR-0037 render-safety ceiling は現在デスクトップ viewport 1 本の Playwright 視覚ゲートのみ。狭幅で崩れる 3 カラム chrome の崩れは desktop 幅スクリーンショットでは捕捉不能（blind spot）。bug0.com/Playwright Visual Regression Guide で「responsive design that looks perfect on desktop completely falls apart on tablet sizes」が盲点として実証されている。375/768/1024px の 3 viewport が業界標準（Playwright 公式 devices・Frontguard・testdino 一致）。</dd>
+<dt>採用例</dt><dd>Playwright 公式ドキュメント（devices 配列に iPhone 13=390px, iPad Pro=1024px など実装済み、verified: https://playwright.dev/docs/test-snapshots）、Duncan MacKenzie ブログ（Hugo 静的サイトで local HTTP server + GitHub Actions windows-latest 固定でOSブレ排除）、bug0.com Playwright Visual Regression（mobile/tablet/desktop 3 project 構成の設定例、verified）</dd>
+<dt>folio への適用</dt><dd>適用可。folio は既に ADR-0037 で playwright を CI gate として採用済み（uv run --with playwright python で実行、verified）。既存の desktop ゲートに加えて mobile-375 と tablet-768 プロジェクトを追加するのが最小変更。page.goto は file:// でも動作するが、font pin（Noto CJK など）のためローカル HTTP サーバー起動推奨。folio の uv 環境（~/.local/bin/uv）で playwright を使うパターンは MEMORY.md に記録済み。スナップショット差分は golden ディレクトリ（tests/baselines/）の既存構造に統合可能。</dd>
+<dt>注意</dt><dd>OS が異なるとフォント rasterization が変わるためスナップショットが CI とローカルで不一致になる。folio CI（GitHub Actions）のランナーを ubuntu に固定し、local 実行も Docker か同一 ubuntu イメージで行う必要がある。3 viewport × ページ数のスナップショット量が増えるためストレージと CI 時間のトレードオフに注意。maxDiffPixelRatio は 0.1–0.5% が component 単位の適切値（full-page では 1–2%）。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (17 件)</summary><ul><li><a href="https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Grid_layout/Common_grid_layouts" rel="external">MDN Web Docs: Realizing common layouts using grids</a></li>
+<li><a href="https://matthewjamestaylor.com/holy-grail-layout" rel="external">matthewjamestaylor.com: Holy Grail 3 Column Responsive Layout</a></li>
+<li><a href="https://dbm.solutions/posts/mobile-friendly-sticky-sidebar-navigation-using-css-grid-with-overflow-protection/" rel="external">DBM Solutions: Mobile-friendly sticky sidebar navigation using CSS Grid with overflow protection</a></li>
+<li><a href="https://polypane.app/blog/getting-stuck-all-the-ways-position-sticky-can-fail/" rel="external">Polypane: Getting stuck — all the ways position:sticky can fail</a></li>
+<li><a href="https://css-tricks.com/a-dynamically-sized-sticky-sidebar-with-html-and-css/" rel="external">CSS-Tricks: A Dynamically-Sized Sticky Sidebar with HTML and CSS</a></li>
+<li><a href="https://polypane.app/blog/the-perfect-responsive-menu/" rel="external">Polypane: The perfect responsive menu (2021)</a></li>
+<li><a href="https://phabricator.wikimedia.org/T243126" rel="external">Wikimedia Phabricator T243126: Investigate accessibility of checkbox hacks</a></li>
+<li><a href="https://www.silvestar.codes/articles/css-sidebar-toggle/" rel="external">Silvestar Bistrović: CSS sidebar toggle</a></li>
+<li><a href="https://blog.logrocket.com/create-responsive-mobile-menu-css-without-javascript/" rel="external">LogRocket Blog: Create a responsive mobile menu with CSS (no JavaScript)</a></li>
+<li><a href="https://github.com/squidfunk/mkdocs-material/discussions/7130" rel="external">MkDocs Material: Altering breakpoints (Discussion #7130)</a></li>
+<li><a href="https://github.com/squidfunk/mkdocs-material/issues/5530" rel="external">MkDocs Material: Consider switching media queries to px breakpoints (Issue #5530)</a></li>
+<li><a href="https://github.com/readthedocs/sphinx_rtd_theme/issues/1438" rel="external">Sphinx RTD theme: Improve responsive design breakpoint consistency (Issue #1438)</a></li>
+<li><a href="https://playwright.dev/docs/test-snapshots" rel="external">Playwright: Visual comparisons (toHaveScreenshot)</a></li>
+<li><a href="https://bug0.com/knowledge-base/playwright-visual-regression-testing" rel="external">bug0.com: Playwright Visual Regression Testing Guide 2026</a></li>
+<li><a href="https://www.duncanmackenzie.net/blog/visual-regression-testing/" rel="external">Duncan MacKenzie: Visual Regression Testing using Playwright and GitHub Actions</a></li>
+<li><a href="https://testdino.com/blog/playwright-visual-testing" rel="external">testdino.com: Playwright Visual Testing — Screenshot Comparison Setup &amp; CI Guide</a></li>
+<li><a href="https://scanlyapp.com/blog/mobile-web-emulation-playwright" rel="external">scanlyapp.com: Mobile Web Emulation with Playwright</a></li></ul></details>
+<h3 id="s4-2">§4.2 bash CLI (sed/awk marker 置換) による chrome 一括注入の実装パターン</h3>
+<p>bash CLI（sed/awk によるフラット marker 置換）で静的 HTML ページ群に breadcrumb・TOC・skip-link・prev/next を一括注入する際の核心課題は 4 点に集約される。(1) ディレクトリ深さに応じた相対パスプレフィックスの算出：find で取得したパスの &quot;/&quot; 個数を tr -cd &#x27;/&#x27; | wc -c でカウントし &quot;../&quot; を繰り返す手法が最小依存で実装可能。(2) JSON-LD BreadcrumbList の URL 戦略：Google は絶対 URL を要求するが、相対 URL もバリデータが URL 検査時に補完するため構造データとしては機能する。file:// 直開き時は JSON-LD を SEO 無効（コンテンツ確認目的）と割り切り BASE_URL 変数が空のときは script ブロック自体を省略するか &quot;@id&quot; を省略する二段構え戦略が現実的。(3) h2/h3 から on-this-page TOC を生成する awk パイプライン：Python-Markdown 互換の slugify（lowercase・非英数→ハイフン・重複に _N サフィックス）は純 awk+sed で再現でき、id 無し見出しへの attr 注入は sed の in-place 置換で実施できる。(4) 複数 nav landmark の aria-label：W3C APG は「複数 nav が同一ページに存在する場合は各々に一意な aria-label を付与せよ」と規定しており、breadcrumb/site-nav/toc/prev-next の 4 種には &quot;breadcrumbs&quot;・&quot;Primary&quot;（または &quot;Site&quot;）・&quot;Table of contents&quot;・&quot;Page&quot; といった固定ラベルをテンプレートに埋め込むだけで機械生成が成立する。SSG（Hugo/Sphinx/Jekyll）がテンプレートエンジン・ページオブジェクト・パスヘルパーで暗黙に吸収している「深さ計算・前後ページ追跡・重複 slug カウンタ」を bash では明示的に実装する必要があり、それがコストと落とし穴の主要源となる。</p>
+<details class="pattern">
+<summary><strong>Directory-depth relative-root prefix（深さカウント法）</strong> — find で列挙した各 HTML ファイルのパスについて、リポジトリルートからの相対パスに含まれる &#x27;/&#x27; の数を `depth=$(echo &quot;$rel_path&quot; | tr -cd &#x27;/&#x27; | wc -c)` で算出し、`printf 。</summary>
+<dl>
+<dt>何をするか</dt><dd>find で列挙した各 HTML ファイルのパスについて、リポジトリルートからの相対パスに含まれる &#x27;/&#x27; の数を `depth=$(echo &quot;$rel_path&quot; | tr -cd &#x27;/&#x27; | wc -c)` で算出し、`printf &#x27;../%.0s&#x27; $(seq 1 $depth)` で ROOT_REL プレフィックス文字列を生成する。これを sed の marker 置換時に注入することで、どの階層の HTML も正しく root 相対リソースを参照できる。</dd>
+<dt>なぜ効くか</dt><dd>HTML の相対パス解決は現在ファイルの位置から &#x27;../&#x27; を辿るという単純規則に従うため、深さ分だけ &#x27;../&#x27; を繰り返せば必ず root に到達する。テンプレートエンジンが内部的に行う pathto() 計算（Sphinx: relative_uri() in sphinx/util/osutil.py）と等価な演算を bash の文字列操作で再現する。</dd>
+<dt>採用例</dt><dd>Sphinx builders/html.py の pathto() + relative_uri()（sphinx-doc/sphinx issue #513 で実装確認）。Hugo の RelPermalink / relLangURL（gohugo.io/functions/urls/）。ssg5 系 bash SSG のヘッダ注入パターン（github.com/nalmeida/ssg5-test）</dd>
+<dt>folio への適用</dt><dd>適用可。folio build の marker 置換ループ（sed -i で &lt;!-- NAV:BREADCRUMB --&gt; 等を置換）の前処理として depth を算出し、ROOT_REL 変数を展開すれば実装完結。注意点：sed の置換文字列に &#x27;/&#x27; が含まれる場合はデリミタを &#x27;|&#x27; か &#x27;@&#x27; に変更する（wooledge.org/TemplateFiles 記載の injection 回避）。マルチバイト文字を含むパス名では tr -cd &#x27;/&#x27; が安全（POSIX 保証）。</dd>
+<dt>注意</dt><dd>find の出力順は OS 依存のため、前後ページ (prev/next) を導出するには sort で正規化する必要がある。シンボリックリンクや階層が 5 段超になる場合は depth オーバーカウントに注意（実ファイルパスで検証すること）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>BASE_URL 二段構え戦略（JSON-LD 絶対 URL vs file:// 省略）</strong> — ビルド時に環境変数 BASE_URL を受け取り、非空のとき（GitHub Pages 配信）は JSON-LD BreadcrumbList の `item` に `${BASE_URL}${page_path}` として絶対 URL を。</summary>
+<dl>
+<dt>何をするか</dt><dd>ビルド時に環境変数 BASE_URL を受け取り、非空のとき（GitHub Pages 配信）は JSON-LD BreadcrumbList の `item` に `${BASE_URL}${page_path}` として絶対 URL を注入し、空のとき（file:// 直開き）は `&lt;script type=&quot;application/ld+json&quot;&gt;` ブロック自体を省略するか `&quot;item&quot;` プロパティを JSON から除外する。nav の href は常に相対パスのみで記述し JSON-LD と分離する。</dd>
+<dt>なぜ効くか</dt><dd>Google Search Central ドキュメントは BreadcrumbList の item に絶対 HTTP/HTTPS URL を要求する（相対 URL 例は一切示されていない）。一方 Sergeyski の実測（sergeyski.com/relative-urls-in-structured-data/）では URL 検査時にバリデータが相対パスをドメイン付きに補完するため機能するが、image 等の一部プロパティでは相対 URL がエラーになる。file:// では JSON-LD が SEO 価値をもたないため、省略が最もクリーンな解。Jekyll の site.url / baseurl 分離（mademistakes.com/mastering-jekyll/site-url-baseurl/）が先例。</dd>
+<dt>採用例</dt><dd>Jekyll の absolute_url / relative_url フィルタ分離（jekyllrb.com 公式）。Hugo の absURL() vs relURL() の使い分け（gohugo.io/functions/urls/absurl/）。Cloudflare Pages の CF_PAGES_URL 環境変数注入パターン（blog.nathanv.me/posts/cloudflare-pages-hugo-baseurl/）</dd>
+<dt>folio への適用</dt><dd>適用可。folio build に `BASE_URL=${BASE_URL:-}` を追加し、生成テンプレートで `if [ -n &quot;$BASE_URL&quot; ]; then inject_jsonld; fi` と分岐する。GitHub Pages の Workflow では `BASE_URL=https://org.github.io/folio` をビルドステップの env に渡す。file:// で動作確認するユーザー向けには JSON-LD 省略を明示 README に記す。</dd>
+<dt>注意</dt><dd>BASE_URL にトレイリングスラッシュを含めるかどうかをビルドスクリプト内で統一する（`${BASE_URL%/}` でスラッシュを strip するのが安全）。JSON-LD の `position` は 1 始まり整数で連番でなければ Google に拒否される。最後の breadcrumb（現在ページ）は item を省略可だが、含めた方が完全性が高い。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>awk+sed 二段階 TOC 生成パターン（slugify → id 注入 → nav 生成）</strong> — 第一段：awk で `/&lt;h[23][^&gt;]*&gt;/ { ... }` を検出し、既存の id 属性があれば再利用、無ければ見出しテキストを `tolower()`・`gsub(/[^a-z0-9]+/,&quot;-&quot;)` で slugify し重複。</summary>
+<dl>
+<dt>何をするか</dt><dd>第一段：awk で `/&lt;h[23][^&gt;]*&gt;/ { ... }` を検出し、既存の id 属性があれば再利用、無ければ見出しテキストを `tolower()`・`gsub(/[^a-z0-9]+/,&quot;-&quot;)` で slugify し重複カウンタ（`seen[slug]++`）を付加して `id=&quot;slug&quot;` を生成。第二段：sed の in-place 置換で id なし見出しタグに算出した id を挿入。第三段：同 awk パスで `&lt;li&gt;&lt;a href=&quot;#slug&quot;&gt;text&lt;/a&gt;&lt;/li&gt;` のリストを stdout に吐き出し、`&lt;!-- TOC --&gt;` marker を sed で置換する。</dd>
+<dt>なぜ効くか</dt><dd>Python-Markdown の TOC extension が採用している slugify アルゴリズム（小文字化・非英数字をハイフン化・重複は _1/_2 サフィックス）と同一ロジックを bash で再現できる。既存 id を優先することで手書きアンカーが壊れない（python-markdown.github.io/extensions/toc/ 仕様準拠）。</dd>
+<dt>採用例</dt><dd>Python-Markdown toc extension（python-markdown.github.io/extensions/toc/）。caseyamcl/toc PHP ライブラリ（github.com/caseyamcl/toc）。awk slugify gist（gist.github.com/oneohthree/f528c7ae1e701ad990e6）。</dd>
+<dt>folio への適用</dt><dd>適用可。folio の HTML は手書きのため見出しには既存 id がある場合が多い（ADR 等）。既存 id を再利用する分岐を必ず実装すること。awk で複数行 HTML タグ（見出しが複数行に折り返されるケース）を正しく処理するには RS=&quot;&quot; で段落モードを使うか、最初に tr -d &#x27;
+&#x27; で join してから処理する。h4 以下は folio spec では登場頻度が低いため h2/h3 のみで十分。</dd>
+<dt>注意</dt><dd>sed の in-place (-i) 後にパスが変わるため、同一ファイルへの二回書き込みは中間ファイルを挟む（sed -e &#x27;...&#x27; in.html &gt; tmp &amp;&amp; mv tmp in.html）。CJK 見出しを slugify するとすべてハイフンになるため、代替として見出し出現順の連番 id（h2-1, h2-2...）を使う方が安全。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>4-nav landmark の固定 aria-label テンプレート注入</strong> — 1 ページに breadcrumb・site-nav・on-this-page TOC・prev/next の 4 つの `&lt;nav&gt;` が共存する場合、各 `&lt;nav&gt;` に異なる aria-label を静的テンプレートとして埋め込む：。</summary>
+<dl>
+<dt>何をするか</dt><dd>1 ページに breadcrumb・site-nav・on-this-page TOC・prev/next の 4 つの `&lt;nav&gt;` が共存する場合、各 `&lt;nav&gt;` に異なる aria-label を静的テンプレートとして埋め込む：`&lt;nav aria-label=&quot;Breadcrumbs&quot;&gt;` / `&lt;nav aria-label=&quot;Primary&quot;&gt;` / `&lt;nav aria-labelledby=&quot;toc-heading&quot;&gt;` / `&lt;nav aria-label=&quot;Page&quot;&gt;` （または Prev/Next）。ラベル文字列自体に「navigation」を含めない（APG 規定：重複アナウンス防止）。</dd>
+<dt>なぜ効くか</dt><dd>W3C WAI-ARIA APG「Landmark Regions」は「ページに複数の navigation landmark が存在する場合は各々に一意ラベルを付与せよ」と規定する（w3.org/WAI/ARIA/apg/practices/landmark-regions/）。screen reader ユーザーはランドマークリストで nav を区別するため、ラベルなし重複 nav は「Navigation × 4」と読み上げられ機能しない。固定文字列を build が marker 置換で注入すればテンプレートエンジン不要。</dd>
+<dt>採用例</dt><dd>W3C APG Navigation Landmark Example（w3.org/WAI/ARIA/apg/patterns/landmarks/examples/navigation.html）。web.dev/learn/html/navigation の breadcrumbs セクション（`aria-label=&quot;breadcrumbs&quot;` + `aria-labelledby` for TOC）。aditus.io/patterns/breadcrumbs/ のコード例（`aria-label=&quot;breadcrumbs&quot;` on `&lt;nav&gt;`）。</dd>
+<dt>folio への適用</dt><dd>適用可かつ推奨。folio の build marker 置換は純 HTML 文字列置換のみで実装でき、aria-label はリテラル文字列なのでエスケープ問題が発生しない。TOC nav は `aria-labelledby=&quot;toc-heading&quot;` で可視見出しテキストを参照する形にすると多言語対応がしやすい（web.dev 推奨パターン）。skip-link は 4 nav よりも先（body 最上位）に `&lt;a href=&quot;#main-content&quot; class=&quot;skip-link&quot;&gt;Skip to main content&lt;/a&gt;` を配置し、CSS で `:focus` 時のみ可視化する（webaim.org/techniques/skipnav/ 仕様）。</dd>
+<dt>注意</dt><dd>breadcrumb の現在ページは `aria-current=&quot;page&quot;` を最後の `&lt;a&gt;` に付与する（W3C APG 必須）。aria-label の翻訳をしない場合は英語固定でよいが、folio が多言語展開するなら data-i18n 属性化を検討する。landmark の重複ラベルは APG 例外として許容されるのは「全く同一のリンクセット」のみ（上下ページネーションなど）。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>SSG テンプレートエンジン vs bash marker 置換のトレードオフ対比</strong> — Hugo はページオブジェクト（.Ancestors / .RelPermalink / .PrevInSection / .NextInSection）がパス計算・前後追跡・TOC を自動提供する。</summary>
+<dl>
+<dt>何をするか</dt><dd>Hugo はページオブジェクト（.Ancestors / .RelPermalink / .PrevInSection / .NextInSection）がパス計算・前後追跡・TOC を自動提供する。Sphinx は pathto() が相対 URL を算出し toctree() が TOC を構築し prev/next が自動セットされる。Jekyll は Liquid で page.url をスプリットして breadcrumb を再構築し、relative_url / absolute_url フィルタで環境対応する。bash marker 置換はこれらをすべて自前実装する必要がある：深さ計算（tr -cd）/ 前後ページ（ファイル一覧をソートして隣接要素取得）/ TOC（awk 2-pass）/ JSON-LD 分岐（if BASE_URL）。</dd>
+<dt>なぜ効くか</dt><dd>SSG は glob・AST・依存グラフを持つため「前後ページ」「親ページタイトル」を O(1) で参照できる。bash は状態を持たないため同等の操作を 2-pass（一覧生成 → 注入）に分割する必要がある。SSG 側の落とし穴：file:// サポートは Sphinx でも pathto() の relative_uri() が &#x27;file://&#x27; スキームを認識せず失敗した既知バグがある（sphinx-doc/sphinx issue #513）。つまり SSG も file:// 問題は等しく抱えている。</dd>
+<dt>採用例</dt><dd>Hugo .Ancestors（v0.109.0 追加、gohugo.io）/ RelPermalink。Sphinx pathto() + relative_uri()（sphinx-doc/sphinx issue #513）。Jekyll relative_url filter（jekyllrb.com）。bash SSG (andrew-ayers/ssg, nalmeida/ssg5-test) のヘッダ注入パターン。</dd>
+<dt>folio への適用</dt><dd>folio は SSG を採用しない（bash CLI 固定）ため、このパターンは「何をコストとして払うか」の設計根拠として参照する。最も工数が高いのは prev/next 生成（ページ順の定義が必要）と重複 slug カウンタ（グローバル状態）。TOC と breadcrumb は 1 ファイル完結処理なのでコストは低い。JSON-LD は BASE_URL がある場合のみ生成すれば file:// 問題を完全回避できる。</dd>
+<dt>注意</dt><dd>bash での sed marker 置換は wooledge.org/TemplateFiles が指摘するとおり「変数内容が sed コマンドとして解釈される」injection リスクがある。置換内容に HTML タグ・スラッシュ・アンパサンドが含まれる breadcrumb テキストでは perl -p -e &#x27;s/PLACEHOLDER/$ENV{V}/g&#x27; に切り替えるか、プレースホルダをファイル行番号参照（r コマンド）で置換する方が安全。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (25 件)</summary><ul><li><a href="https://www.w3.org/WAI/ARIA/apg/practices/landmark-regions/" rel="external">W3C WAI-ARIA APG: Landmark Regions</a></li>
+<li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/breadcrumb/" rel="external">W3C WAI-ARIA APG: Breadcrumb Pattern</a></li>
+<li><a href="https://www.w3.org/WAI/ARIA/apg/patterns/landmarks/examples/navigation.html" rel="external">W3C WAI-ARIA APG: Navigation Landmark Example</a></li>
+<li><a href="https://web.dev/learn/html/navigation" rel="external">web.dev: Learn HTML / Navigation</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Roles/navigation_role" rel="external">MDN: ARIA navigation role</a></li>
+<li><a href="https://www.aditus.io/patterns/breadcrumbs/" rel="external">aditus.io: Accessible Breadcrumbs pattern</a></li>
+<li><a href="https://developers.google.com/search/docs/appearance/structured-data/breadcrumb" rel="external">Google Search Central: BreadcrumbList structured data</a></li>
+<li><a href="https://schema.org/BreadcrumbList" rel="external">Schema.org BreadcrumbList type</a></li>
+<li><a href="https://sergeyski.com/relative-urls-in-structured-data/" rel="external">Sergeyski: Relative URLs in structured data</a></li>
+<li><a href="https://hugocodex.org/add-ons/breadcrumbs/" rel="external">Hugo Breadcrumbs (Hugo Codex)</a></li>
+<li><a href="https://discourse.gohugo.io/t/implementing-breadcrumb-navigation-in-hugo/1048" rel="external">Hugo discourse: Implementing breadcrumb navigation</a></li>
+<li><a href="https://gohugo.io/functions/urls/absurl/" rel="external">Hugo absURL function</a></li>
+<li><a href="https://www.sphinx-doc.org/en/master/development/html_themes/templating.html" rel="external">Sphinx Templating: pathto() and navigation variables</a></li>
+<li><a href="https://github.com/sphinx-doc/sphinx/issues/513" rel="external">sphinx-doc/sphinx issue #513: pathto() / relative_uri() and file://</a></li>
+<li><a href="https://mademistakes.com/mastering-jekyll/site-url-baseurl/" rel="external">Made Mistakes: Jekyll site.url and baseurl</a></li>
+<li><a href="https://cogitorium.info/2021/04/jekyll-structured-breadcrumbs" rel="external">Cogitorium: Structured Data Breadcrumbs in Jekyll (JSON-LD)</a></li>
+<li><a href="https://python-markdown.github.io/extensions/toc/" rel="external">Python-Markdown TOC extension (slugify algorithm)</a></li>
+<li><a href="https://github.com/caseyamcl/toc" rel="external">caseyamcl/toc: HTML Table of Contents generator (PHP)</a></li>
+<li><a href="https://gist.github.com/oneohthree/f528c7ae1e701ad990e6" rel="external">Quick bash slugify gist</a></li>
+<li><a href="https://duncanlock.net/blog/2021/06/15/good-simple-bash-slugify-function/" rel="external">Good simple bash slugify function (duncanlock.net)</a></li>
+<li><a href="https://webaim.org/techniques/skipnav/" rel="external">WebAIM: Skip Navigation Links</a></li>
+<li><a href="https://mywiki.wooledge.org/TemplateFiles" rel="external">wooledge.org: TemplateFiles (bash sed substitution pitfalls)</a></li>
+<li><a href="https://github.com/nalmeida/ssg5-test" rel="external">nalmeida/ssg5-test: bash static site generator</a></li>
+<li><a href="https://fmash16.github.io/content/posts/ssg5_site.html" rel="external">fmash16: Generate static site with POSIX shell + pandoc + sed</a></li>
+<li><a href="https://gist.github.com/rordi/eab8606b377638eeaa984367bde0a2d0" rel="external">Hugo: Previous/Next navigation gist</a></li></ul></details>
+<h3 id="s4-3">§4.3 readability の floor (機械 lint) / ceiling (LLM review) 分配と CJK 閾値</h3>
+<p>技術文書の可読性を機械的 lint（floor gate）と LLM review（ceiling）に分配する設計は、業界の確立した実践と符合する。定量閾値は英語では「文 25-30 語、段落 3-6 文」が GOV.UK・Hemingway App・Vale 実用例のコンセンサスだが、EARS 形式の要件文は構造上 1 文に複数節を持つため同一閾値を適用すると false positive が頻発し、floor gate の対象から除外する設計が妥当。日本語（CJK）では形態素解析なしに「語」を計数できないため、textlint-ja 実績（`sentence-length` max:100字、`max-ten` max:3読点）が示すように文字数＋句読点カウントを代理指標とし、句点（。）・感嘆符（！）・疑問符（？）のみで文境界を認識する句点ベース近似が bash/awk で実現可能。floor と ceiling の分割基準は「決定論的・偽陽性ゼロ保証可能か否か」であり、非空性・最小文字数・リンク到達性はフローア向き、文体的適切さ・文脈依存判断は ceiling 向きという Mozilla/LintMe の知見が裏付けている。</p>
+<details class="pattern">
+<summary><strong>GOV.UK 25語/3-6文 閾値（根拠付き）</strong> — 1 文の単語数上限を 25 語、1 段落の文数上限を 3-6 文に設定する定量閾値。</summary>
+<dl>
+<dt>何をするか</dt><dd>1 文の単語数上限を 25 語、1 段落の文数上限を 3-6 文に設定する定量閾値。GOV.UK コンテンツ設計ガイドラインが採用し、Inside GOV.UK ブログ（2014）が Ann Wylie 研究（14語→90% 理解・43語→10% 未満）と Nielsen Norman Group のスキャン行動研究（約 25% しか読まれない）を根拠として明示。</dd>
+<dt>なぜ効くか</dt><dd>平均文長 14 語で読者理解率 90% 以上、25 語超で「difficult」に分類される（Wylie 研究）。段落 3-6 文は読者が段落単位でスキャンする行動パターンに最適化。ただし 25 語はあくまで「超えたら見直す」ガイドラインであり、厳格な単一カットオフとして設計されていない点が論文原著のニュアンス。</dd>
+<dt>採用例</dt><dd>GOV.UK content design guide (https://www.gov.uk/guidance/content-design/writing-for-gov-uk)、Inside GOV.UK blog 2014-08-04 (https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/)、Vale SentenceLength.yml 実装例（max: 25, scope: sentence, level: suggestion）</dd>
+<dt>folio への適用</dt><dd>静的 HTML の essence セクション（`data-audience=&quot;human&quot;` 相当要旨）に適用可。bash/awk で `gsub(/[[:space:]]+/,&quot; &quot;) ; n=split($0,a,&quot; &quot;)` により英語単語数計測は可能。日本語 essence には不適（後述の文字数ベースパターンへ委譲）。EARS 全文（`&lt;details&gt;` 内構造化要件）は対象外とすべき—後述パターン参照。</dd>
+<dt>注意</dt><dd>「25 語」は 2014 年調査に基づく実務ルールであり、単一研究の精密なカットオフではない。技術用語が密な spec 本文では 25 語でも情報密度が不足する場合があり、essence に限定適用するのが合理的。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Hemingway App 20語/30語 色別閾値</strong> — 文ごとの語数に対して 2 段階の色別閾値を設ける。</summary>
+<dl>
+<dt>何をするか</dt><dd>文ごとの語数に対して 2 段階の色別閾値を設ける。20-29 語: 黄（hard to read）、30 語以上: 赤（very hard to read）。アドバイザリー表示のみで自動修正はしない。grade 9 を既定ターゲットとし、`4.71×平均語長 + 0.5×平均文長 - 21.43` の Automated Readability Index 変形式で grade を算出。</dd>
+<dt>なぜ効くか</dt><dd>色分けによる視覚的 feedback が著者の自己修正行動を促す。2 段階（hard/very hard）に分けることで「一律禁止」でなく「改善の余地がある」という段階的メッセージになり、専門的な長文が必要な場面での over-flagging を緩和する。</dd>
+<dt>採用例</dt><dd>Hemingway App（https://hemingwayapp.com/help/docs/readability）、Medium 解説「Deconstructing the Hemingway App」(https://medium.com/free-code-camp/deconstructing-the-hemingway-app-8098e22d878d)</dd>
+<dt>folio への適用</dt><dd>直接移植は不可（JS 依存・CDN 禁止）。ただし thresholds の考え方（20語=warn、30語=error 相当）を bash/awk 実装の閾値選択に援用できる。folio build の readability lint rule として「essence 段落内の各文を句読点分割→語数計算→20語超で warning・30語超で error」の近似実装が静的 HTML で再現可能。</dd>
+<dt>注意</dt><dd>Hemingway は英語専用。日本語テキストに適用するとスペース区切りで誤カウントする。folio は日英混在 spec を扱うため言語判定が必要。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Vale severity 3 階層（error/warning/suggestion）による floor-ceiling 段階化</strong> — Vale は rule ごとに `level: error | warning | suggestion` を設定し、`MinAlertLevel` でどのレベル以上を CI ブロックにするかを制御。</summary>
+<dl>
+<dt>何をするか</dt><dd>Vale は rule ごとに `level: error | warning | suggestion` を設定し、`MinAlertLevel` でどのレベル以上を CI ブロックにするかを制御。構造的形式違反（省略語、固有表記）は error、文長などの可読性チェックは suggestion に設定する運用パターン。</dd>
+<dt>なぜ効くか</dt><dd>Datadog の実践例に見られるように、abbreviations.yml は `level: error`（決定論的に誤り）、sentence-length や Oxford comma は `level: suggestion`（文脈依存で許容ケースあり）と分けることで false-positive による contributor 摩擦を最小化しながらも根本的な誤りはブロックできる。LWN 記事でも「小チームは suggestion、大規模プロジェクトは warning/error に上げる」という実践が紹介されている。</dd>
+<dt>採用例</dt><dd>Datadog blog「How we use Vale to improve our documentation editing process」(https://www.datadoghq.com/blog/engineering/how-we-use-vale-to-improve-our-documentation-editing-process/)、LWN.net「Vale: enforcing style guidelines for text」(https://lwn.net/Articles/964075/)、Hyperlint sentence-length rule (https://hyperlint.com/vale/rule/sentence-length-check/)：`level: suggestion, max: 30`</dd>
+<dt>folio への適用</dt><dd>folio は Vale を使わないが、この severity 階層の思想は folio validate の gate 設計に直接移植できる。bash validate runner の exit コードを「error=1（CI ブロック）・warning=0（ログ出力のみ）」と 2 段階にマップし、非空性・最小長のような決定論的チェックを error、readability 閾値を warning に振り分けることで同等の効果を得られる。</dd>
+<dt>注意</dt><dd>Vale のように rule ファイルが YAML で独立しているのとは異なり、folio は bash スクリプトで実装するため gate 別の severity 管理が煩雑になりやすい。gate 番号と severity のマッピング表を rules.html か verification.html に記述して追跡可能にする必要がある。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>Vale scope selector による EARS 全文除外・essence のみ適用</strong> — Vale は `scope: sentence` `scope: paragraph` `scope: summary` `scope: ~heading` など細粒度のセレクタで rule の適用範囲を制御する。</summary>
+<dl>
+<dt>何をするか</dt><dd>Vale は `scope: sentence` `scope: paragraph` `scope: summary` `scope: ~heading` など細粒度のセレクタで rule の適用範囲を制御する。`summary` スコープは見出し・コードブロック・リスト項目・表を自動除外し本文散文のみに適用。AND 論理（`&amp;`）と否定（`~`）の組み合わせで任意セクションを除外できる（例: `paragraph &amp; ~blockquote`）。</dd>
+<dt>なぜ効くか</dt><dd>readability チェックが「完全な散文」を前提とする（Flesch-Kincaid 等は構造化テンプレート文に不正確）ため、コードブロック・表・見出しを除外することで false positive を排除できる。Vale の `readability` built-in rule が `summary` スコープに固定されている（オーバーライド不可）のはこの設計判断を公式に反映している。</dd>
+<dt>採用例</dt><dd>Vale Scopes ドキュメント (https://vale.sh/docs/scopes)：`heading`, `paragraph`, `sentence`, `summary`, `table.cell`, `blockquote` 等のセレクタ一覧。Vale readability rule の `summary` スコープ固定の説明（https://www.mintlify.com/errata-ai/vale/reference/rules/readability）。Grafana Writers&#x27; Toolkit Vale rules (https://grafana.com/docs/writers-toolkit/review/lint-prose/rules/)。</dd>
+<dt>folio への適用</dt><dd>folio の HTML DOM では EARS 全文は `&lt;details&gt;` 要素内、essence は `&lt;summary&gt;` または `data-audience=&quot;human&quot;` 付き要素に収まる（ADR-0028 dual-audience 設計）。bash validate スクリプトは `xmllint --xpath` や `grep` で `data-audience` 属性付き要素テキストのみを抽出し readability lint を適用するセレクタ相当の実装が可能。EARS 全文を含む `&lt;details&gt;` ブロックは対象外とする。</dd>
+<dt>注意</dt><dd>folio の HTML は Vale が直接 parse する形式ではないため、Vale を直接使う場合は Markdown/HTML モードの設定が必要。folio build が生成する HTML を直接 lint する場合は `xmllint + awk` によるカスタム抽出が現実的。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>textlint-ja 文字数ベース日本語 lint（形態素解析不要）</strong> — textlint-rule-preset-ja-technical-writing が採用する文字数カウント方式：1 文の文字数上限 max:100（技術文書 max:120 も）、読点（、）上限 max:3、連続漢字上限 6 文字。</summary>
+<dl>
+<dt>何をするか</dt><dd>textlint-rule-preset-ja-technical-writing が採用する文字数カウント方式：1 文の文字数上限 max:100（技術文書 max:120 も）、読点（、）上限 max:3、連続漢字上限 6 文字。sentence-splitter ライブラリが句点（。）・感嘆符（！）・疑問符（？）をセパレータとして日本語文境界を検出し、MeCab 等の形態素解析なしで動作する。skipPatterns（正規表現）で URL や括弧内を文字数から除外できる。</dd>
+<dt>なぜ効くか</dt><dd>日本語はスペース区切りがなく「語」の単位が曖昧なため、英語の語数カウントを直接適用できない。文字数は scriptype 混在（漢字・ひらがな・カタカナ・英数字）でも一意に計測でき、実証的な閾値（100 字/文）が複数の技術文書プリセットで収束している。学術研究（Brandeis / Sato 2008 ACL）でも「文あたり平均文字数」が日本語可読性の主要予測変数であることが確認されている（R²=0.791）。</dd>
+<dt>採用例</dt><dd>textlint-rule-preset-ja-technical-writing (https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing): `sentence-length: { max: 100 }`, `max-ten: { max: 3 }`。sentence-splitter (https://github.com/textlint-rule/sentence-splitter): 。を含む句点ベース境界検出。Sato et al. 2008「Automatic Assessment of Japanese Text Readability Based on a Textbook Corpus」(https://aclanthology.org/L08-1230/)。</dd>
+<dt>folio への適用</dt><dd>bash/awk での近似実装: `awk &#x27;BEGIN{RS=&quot;[。！？]&quot;} {if(length($0)&gt;100) print NR, length($0), $0}&#x27; input.txt` で 100 文字超の文を検出できる。URL や英数字コードブロックは `skipPatterns` 相当の `gsub(/https?://[^ ]*/,&quot;&quot;)` 等の前処理で除外可能。folio build が essence テキストを抽出した後にこの awk スクリプトを適用する形で静的 HTML gate として実現できる（Node.js/MeCab 不要）。</dd>
+<dt>注意</dt><dd>句点ベース文境界は括弧内の句点（例: コード内の「。」）や省略語後の句点を誤検出する可能性がある。skipPatterns による除外が必要。また英語文が混在する箇所ではスペース区切り語数 vs 文字数の扱いを統一するか、言語判定で分岐させる必要がある。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>textlint filter-rule による EARS 構造化要件の lint 除外</strong> — textlint の filter rule 機構（`shouldIgnore(node.range)`）を用い、特定 AST ノード型（BlockQuote・CodeBlock 等）に対する lint 結果を抑制する。</summary>
+<dl>
+<dt>何をするか</dt><dd>textlint の filter rule 機構（`shouldIgnore(node.range)`）を用い、特定 AST ノード型（BlockQuote・CodeBlock 等）に対する lint 結果を抑制する。`textlint-filter-rule-node-types` を使えば設定ファイルで `{ &quot;filters&quot;: { &quot;node-types&quot;: { &quot;nodeTypes&quot;: [&quot;BlockQuote&quot;] } } }` と宣言するだけで対象ノード型の報告を除外できる。</dd>
+<dt>なぜ効くか</dt><dd>EARS 形式要件文は「While A, When B, the system shall C」のように構造上複数節を持つため、単純な文長・語数閾値を適用すると true violation ではなく false positive が大量発生する。AST ノード型ベースで除外することで EARS 専用の構造化ブロック（folio では `&lt;details&gt;` 内要素）を readability lint から完全に除外し、floor gate の偽陽性率をゼロに保てる。</dd>
+<dt>採用例</dt><dd>textlint filter-rule ドキュメント (https://textlint.org/docs/filter-rule/)、textlint-filter-rule-node-types (https://github.com/textlint/textlint-filter-rule-node-types)、EARS の「複数前提条件で非常に長い文になる」問題への言及: QRA Corp「When Not to Use EARS」(https://qracorp.com/when-not-to-use-ears/)、Jama Software EARS FAQ (https://www.jamasoftware.com/requirements-management-guide/writing-requirements/frequently-asked-questions-about-the-ears-notation-and-jama-connect-requirements-advisor/)。</dd>
+<dt>folio への適用</dt><dd>folio は textlint を使わないが設計原則は bash validate に移植可能。`xmllint` で `data-audience=&quot;machine&quot;` 属性付き要素または `&lt;details&gt;` 内テキストを抽出し readability lint の入力から除外する前処理ステップを追加すれば同等の「EARS 除外・essence のみ検査」が実現できる。これは既存 16 gate の validate アーキテクチャに新規 gate として追加する際の scope 逸脱を防ぐ—ADR-0020 の design-intent 適合性検査 scope（structural conformance）と readability lint の混在を避け、後者は advisory warning として validate とは別の report として出力する設計が整合的。</dd>
+<dt>注意</dt><dd>folio の `folio validate` は ADR-0020 で「design-intent 適合性検査（structural conformance）」に scope を限定している。readability lint（文長・段落長）をこの validate に追加することは scope 逸脱のリスクがある。別 script（`folio readability-check` 等）として分離し、CI では warning のみ出力（exit 0）とする方が ADR との整合性が高い。</dd>
+</dl></details>
+<details class="pattern">
+<summary><strong>LintMe / The Star Chamber パターン：決定論的 floor + 意味的 ceiling の分割原則</strong> — LintMe（arxiv 2603.00331）は markdown lint を「プログラマティック演算子（extract/count/threshold/regexMatch）」と「LLM エスケープハッチ（evaluateUsingL。</summary>
+<dl>
+<dt>何をするか</dt><dd>LintMe（arxiv 2603.00331）は markdown lint を「プログラマティック演算子（extract/count/threshold/regexMatch）」と「LLM エスケープハッチ（evaluateUsingLLM）」に分割。The Star Chamber（Mozilla）は「semantic validator = blocking（exit 1）」「LLM advisory = non-blocking（exit 0）」と明示的に段階を分ける。分割基準は「決定論的かつ偽陽性ゼロ保証が可能か否か」。</dd>
+<dt>なぜ効くか</dt><dd>非空性・URL 到達性・文字数閾値は binary で判定でき偽陽性ゼロが保証できる（floor）。文体的適切さ・文脈依存の曖昧表現・essence の概念的明確さは人間または LLM の意味理解が必要（ceiling）。この分割により CI パイプラインでは floor のみが blocking になり、ceiling は pull request コメントや review レポートとして advisory フィードバックを与える設計になる。</dd>
+<dt>採用例</dt><dd>LintMe 論文（arxiv, 2603.00331）(https://arxiv.org/html/2603.00331)、Mozilla The Star Chamber ブログ (https://blog.mozilla.ai/the-star-chamber-multi-llm-consensus-for-code-quality/)、JetBrains「Offload mechanical workflow procedures from LLM prose to script execution」(https://youtrack.jetbrains.com/projects/YTDB/issues/YTDB-1037)。</dd>
+<dt>folio への適用</dt><dd>folio の既存 floor（`folio validate` 16 gate）は structural conformance（リンク到達性・inventory 整合等）を決定論的に検査しており LintMe の「プログラマティック演算子」層に相当。readability lint（文長・段落長）は閾値次第で false positive が生じうるため、folio validate の 17 番目 gate として追加するより `folio readability-lint` として warning-only 別 script とし、ADR-0037 の二層設計（floor/ceiling）のうち ceiling（LLM review agent）が意味的適切さを担う構成が ADR との整合性・scope 維持の両面で優れている。</dd>
+<dt>注意</dt><dd>「readability を ceiling に全部委ねる」はコスト高。非空性（essence が空でない）・最小文字数（1 文以上存在）のような binary 判定可能な最低品質保証は floor gate に追加して問題ない。曖昧なのは「文が長すぎる」という閾値依存判断であり、これが ceiling or advisory-floor に振るべき対象。</dd>
+</dl></details>
+<details class="sources"><summary>出典 (24 件)</summary><ul><li><a href="https://insidegovuk.blog.gov.uk/2014/08/04/sentence-length-why-25-words-is-our-limit/" rel="external">GOV.UK: Sentence length: why 25 words is our limit – Inside GOV.UK (2014)</a></li>
+<li><a href="https://www.gov.uk/guidance/content-design/writing-for-gov-uk" rel="external">GOV.UK: Content design: planning, writing and managing content</a></li>
+<li><a href="https://hemingwayapp.com/help/docs/readability" rel="external">Hemingway App: Readability and document stats</a></li>
+<li><a href="https://hemingwayapp.com/articles/readability/readability-score" rel="external">Hemingway App: What a Readability Score is and how to use it</a></li>
+<li><a href="https://vale.sh/docs/scopes" rel="external">Vale CLI: Scopes documentation</a></li>
+<li><a href="https://vale.sh/docs" rel="external">Vale CLI: Official documentation</a></li>
+<li><a href="https://www.mintlify.com/errata-ai/vale/reference/rules/readability" rel="external">Vale: Readability rule (Mintlify/errata-ai mirror)</a></li>
+<li><a href="https://hyperlint.com/vale/rule/sentence-length-check/" rel="external">Hyperlint: Sentence Length Check Vale Rule</a></li>
+<li><a href="https://www.datadoghq.com/blog/engineering/how-we-use-vale-to-improve-our-documentation-editing-process/" rel="external">Datadog: How we use Vale to improve our documentation editing process</a></li>
+<li><a href="https://lwn.net/Articles/964075/" rel="external">LWN.net: Vale: enforcing style guidelines for text</a></li>
+<li><a href="https://textlint.org/docs/filter-rule/" rel="external">textlint: Creating Filter Rule</a></li>
+<li><a href="https://github.com/textlint/textlint-filter-rule-node-types" rel="external">GitHub: textlint-filter-rule-node-types</a></li>
+<li><a href="https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing" rel="external">GitHub: textlint-rule-preset-ja-technical-writing</a></li>
+<li><a href="https://github.com/textlint-rule/textlint-rule-sentence-length" rel="external">GitHub: textlint-rule-sentence-length</a></li>
+<li><a href="https://github.com/textlint-rule/sentence-splitter" rel="external">GitHub: sentence-splitter (textlint-rule/sentence-splitter)</a></li>
+<li><a href="https://aclanthology.org/L08-1230/" rel="external">Sato et al. (2008): Automatic Assessment of Japanese Text Readability Based on a Textbook Corpus – ACL Anthology</a></li>
+<li><a href="https://arxiv.org/html/2603.00331" rel="external">LintMe: Linting Style and Substance in READMEs (arxiv 2603.00331)</a></li>
+<li><a href="https://blog.mozilla.ai/the-star-chamber-multi-llm-consensus-for-code-quality/" rel="external">Mozilla AI: The Star Chamber: Multi-LLM Consensus for Code Quality</a></li>
+<li><a href="https://alistairmavin.com/ears/" rel="external">Alistair Mavin: EARS Official Guide</a></li>
+<li><a href="https://qracorp.com/when-not-to-use-ears/" rel="external">QRA Corp: When Not to Use EARS</a></li>
+<li><a href="https://www.jamasoftware.com/requirements-management-guide/writing-requirements/frequently-asked-questions-about-the-ears-notation-and-jama-connect-requirements-advisor/" rel="external">Jama Software: Adopting EARS Notation – FAQ</a></li>
+<li><a href="https://readabilityguidelines.co.uk/clear-language/simple-sentences/" rel="external">Readability Guidelines: Simple sentences</a></li>
+<li><a href="https://design.homeoffice.gov.uk/accessibility/written-content/readability" rel="external">Home Office Design System: Readability</a></li>
+<li><a href="https://readable.com/blog/readability-for-technical-writers/" rel="external">Readable.com: Readability for technical writers</a></li></ul></details>
+
+</section>
+
+<section id="s5-blueprint" class="informative">
+<h2>§5. blueprint — 決定 1〜6 への統合推奨</h2>
+<p>synthesis agent が 6 軸 + gap-fill を統合した設計推奨。 全推奨に根拠パターンが紐づく (調査に無い思いつきは混ぜない)。 ADR 起草はこの節を出発点に grill で確定する。</p>
+<h3 id="s5-0-exec">§5.0 executive summary</h3>
+<p>6 軸 + gap-fill 調査を実コードで照合した結果、critic 評価の 3 ギャップ前提を全て verified とした。(1) landing: repo-root index.html は手書き 33 行・build 生成の architecture/index.html は status グルーピングリストのみで、hero/読者別導線/getting-started/カードはゼロ — 決定 2 は新規実装として読み直す。(2) chrome: 現状は init scaffold が hand-code する cluster-nav リンク 3 本のみ (bin/folio L1811-1928)、breadcrumb/skip-link/on-this-page TOC/prev-next は未注入 — 決定 3 はゼロベース。(3) floor: validate は現在 16 gate (a〜p) で構造検査 (REQ-DA-STRUCT) + render-safety pattern-lint のみ、段落長/文長/essence-非空/hero-非空 等の readability 閾値 gate は不在 — 決定 6 の floor 閾値は新規追加領域。設計骨格は Diátaxis (landing=4型外の navigation hub)・NN/g progressive disclosure (2段上限)・W3C APG (4 nav landmark の一意 aria-label)・GOV.UK (accordion は最終手段)・MADR/RFC (型の必須節強制) という確立パターンで全面的に裏付けられる。folio 固有制約 (静的 HTML / 単一 common.css / classic JS read-only / file:// 直開き / bash flat marker 置換) では、Grid-template-areas コラプス + Conditional Sticky + details/summary ナビ折りたたみ + ROOT_REL 深さカウント + BASE_URL 二段構え + playwright multi-viewport が実装パターンとして適合する。common.css は @media が dark-mode 1 本のみで狭幅 breakpoint 未存在 (verified)、render-gate ceiling は viewport 1280 単一 (blind spot) ゆえ、3 カラム chrome 追加時は 980px breakpoint 新設と mobile-375/tablet-768 視覚回帰拡張が最小追加となる。</p>
+
+<h3 id="s5-1-recommendations">§5.1 決定別推奨</h3>
+
+<details class="pattern" open>
+<summary><strong>決定 2 (入口 landing)</strong> — landing は本文を持たない navigation hub (列車の発着駅モデル) として設計し、build が hero 一文 → 読者別 3 カード → getting-started 単一 CTA → cluster 一覧の 4 層を architecture/index.html に注入する。読者軸は fo</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>landing は本文を持たない navigation hub (列車の発着駅モデル) として設計し、build が hero 一文 → 読者別 3 カード → getting-started 単一 CTA → cluster 一覧の 4 層を architecture/index.html に注入する。読者軸は folio 確定の 3 層 (初見外部開発者 / spec 参照者 / ADR 維持者) を JTBD 動詞句ラベルにする。hero 文・カード HTML は手書き marker 領域 (folio:nav-curated と同型の curated region) に置き、status グルーピングリストは現行 folio_build_emit_index の出力を 4 層目に温存する。</dd>
+<dt>根拠パターン</dt><dd>列車の発着駅モデル (Tom Johnson / MDN) + ユースケース先行カード (Stripe / Moesif teardown) + シングル CTA (Starlight) + Landing=4型外 navigation hub (Diátaxis diataxis.fr) + 一文ヒーロー (NN/g progressive disclosure)</dd>
+<dt>具体仕様の素案</dt><dd>folio_build_emit_index() を拡張し、既存 status リスト出力の前に hero region を emit する。hero は &lt;header class=&quot;landing-hero&quot;&gt; に (a) &lt;h1&gt; + 一文 value proposition (outcome 先行・誇張語禁止)、(b) &lt;nav class=&quot;reader-tracks&quot; aria-label=&quot;読者別導線&quot;&gt; に 3 枚の &lt;a class=&quot;track-card&quot;&gt; (動詞句: 「初めて folio を使う→getting-started」「EARS 要件を調べる→spec」「ADR を読む・起票する→decisions」)、(c) getting-started への単一 primary CTA。hero テキストは folio:landing-hero curated region から往復保全し (折り畳み量ゼロ・全可視)、build は curated を verbatim 読み戻す (既存 folio_build_extract_curated と同 first-open/last-close idiom)。カード数は 3 (認知負荷上限 3-5)、above-the-fold 項目は 3-5 に収める。</dd>
+</dl></details>
+<details class="pattern" open>
+<summary><strong>決定 3 (全ページ chrome)</strong> — build が全 spec/ADR/glossary ページに 4 種 chrome (skip-link / breadcrumb / on-this-page TOC / prev-next) を marker 置換で注入する。各 nav に W3C APG 準拠の一意 aria-label (Breadcrumb</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>build が全 spec/ADR/glossary ページに 4 種 chrome (skip-link / breadcrumb / on-this-page TOC / prev-next) を marker 置換で注入する。各 nav に W3C APG 準拠の一意 aria-label (Breadcrumbs / Primary / aria-labelledby=toc-heading / Page) を固定リテラルで埋め込む。相対パスは ROOT_REL 深さカウント (tr -cd &#x27;/&#x27; | wc -c) で算出。schema.org BreadcrumbList JSON-LD は BASE_URL 二段構え (非空=絶対URL注入 / 空=script ブロック省略) で file:// を壊さない。可視 nav の href は常に相対パスのみ。</dd>
+<dt>根拠パターン</dt><dd>Breadcrumb Trail (W3C WCAG G65 / WAI-ARIA APG) + Skip to Main (WCAG 2.4.1 / WebAIM) + On This Page (W3C WAI Labeling Regions) + Multi-landmark aria-label (WAI-ARIA APG Landmark Regions) + Directory-depth ROOT_REL (Sphinx pathto 等価) + BASE_URL 二段構え (Jekyll absolute_url/relative_url 分離)</dd>
+<dt>具体仕様の素案</dt><dd>bin/folio に chrome 注入ループを新設: (1) skip-link = body 直後に &lt;a href=&quot;#main-content&quot; class=&quot;skip-link&quot;&gt;メインコンテンツへスキップ&lt;/a&gt;、main に id=main-content tabindex=-1。(2) breadcrumb = &lt;nav aria-label=&quot;Breadcrumbs&quot;&gt;&lt;ol&gt; の連鎖、最終項目に aria-current=&quot;page&quot;、セパレータは CSS li:not(:last-child)::after で挿入。(3) on-this-page = awk 2-pass で h2/h3 を抽出 (既存 id 優先・無ければ出現順連番 id=h2-N を sed in-place 注入。CJK 見出しは slug 化せず連番採用)、&lt;nav aria-labelledby=&quot;toc-heading&quot;&gt;。(4) prev-next = cluster order 配列で &lt;nav aria-label=&quot;Page&quot;&gt;、rel=prev/next。JSON-LD は if [ -n &quot;$BASE_URL&quot; ] 分岐で BreadcrumbList を emit (position 1始まり整数連番)。sed 置換は変数内容が HTML/スラッシュ/&amp; を含むため perl -p または r コマンド file 参照で injection 回避。注入は ADR-0035 nav-regen-drift gate (gate m) の検査対象に含める。</dd>
+</dl></details>
+<details class="pattern" open>
+<summary><strong>決定 4 (既定表示 + audience toggle)</strong> — 既定表示はページ種別ごとに差別化する: landing=全可視 / spec=essence+表+図 可視・EARS全文+経緯+運用注記 折る / ADR=Context+Decision 可視・Consequences 折る / constitution=原則文+背景 可視。details のネストは 2 段上限 (</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>既定表示はページ種別ごとに差別化する: landing=全可視 / spec=essence+表+図 可視・EARS全文+経緯+運用注記 折る / ADR=Context+Decision 可視・Consequences 折る / constitution=原則文+背景 可視。details のネストは 2 段上限 (NN/g) を守り禁止。summary に essence 冒頭 1 文を入れ折り畳み状態でも find-in-page (Firefox/Safari 非対応) と DOM scan を部分補完する。common.css に @media print { details[open], details { display:block } } を追加し印刷時の内容欠落を防ぐ。</dd>
+<dt>根拠パターン</dt><dd>Progressive Disclosure 2段上限 (Nielsen 1995 / NN/g) + Summary-First (rustdoc / Stripe attribute list) + ページ種別別既定開示 (axis6 Defer-vs-Expose 基準) + Print 対応 (Scott O&#x27;Hara details 互換性報告) + Audience Toggle (Stripe 言語切替タブ)</dd>
+<dt>具体仕様の素案</dt><dd>common.css に (a) @media print ブロックで details 強制展開、(b) summary に essence 冒頭を表示する既存 spec-row パターンを landing 外全種別へ一般化。build はページ種別 (meta folio-doc-type) を読み details の既定 open/closed を出し分ける: spec の req__machine は closed、ADR の Consequences section は closed、それ以外 open。audience toggle は classic script で document.querySelectorAll(&#x27;[data-audience]&#x27;) を操作する 3 状態 (人間/機械/両方) ボタン、状態は DOM class 切替のみ (localStorage 任意・file:// 動作)。data-audience=machine 要素は CSS display:none でフィルタするが DOM には残し AI agent から読める (REQ-DA-STRUCT-4 aria-hidden 禁止と整合)。</dd>
+</dl></details>
+<details class="pattern" open>
+<summary><strong>決定 1 (読者層別) / 決定 4</strong> — ページ種別を Diátaxis 4 型 + folio 拡張でメタ分類し、chrome に型ラベルを表示する。spec=reference、ADR=explanation (副 reference メタ: status/date)、constitution=prescriptive explanation (不変原則)</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>ページ種別を Diátaxis 4 型 + folio 拡張でメタ分類し、chrome に型ラベルを表示する。spec=reference、ADR=explanation (副 reference メタ: status/date)、constitution=prescriptive explanation (不変原則)、glossary=reference、landing=4型外 hub。data-doc-type 属性で機械分類を持たせ common.css で視覚区別する。型を無理に 4 象限へ押し込まず明示メタで区別する。</dd>
+<dt>根拠パターン</dt><dd>Diátaxis 4 象限分離 (diataxis.fr/foundations) + ADR=explanation (Diátaxis explanation 定義 / Nygard) + Constitution=prescriptive explanation (RFC/W3C normative+informative 共存) + 型ラベル chrome 表示 (Canonical/Sphinx Diátaxis 採用例)</dd>
+<dt>具体仕様の素案</dt><dd>既存 meta folio-doc-type を Diátaxis 型へマップする registry を bin/folio に追加: spec-row→reference / adr→explanation / cluster-readme→hub / glossary→reference / constitution→prescriptive-explanation。chrome の breadcrumb 末尾または doc-header に &lt;span class=&quot;doc-type-label&quot; data-doc-type=&quot;...&quot;&gt; を build 注入。constitution には build が「この文書は P-10 で保護された不変原則です」注記を自動付与。型ラベルは folio が所有する語ゆえ glossary (ADR-0036) の tooltip 対象にできる。</dd>
+</dl></details>
+<details class="pattern" open>
+<summary><strong>決定 6 (floor gate)</strong> — readability floor は essence/landing-hero のみに限定適用し、EARS 規範要件には適用しない (構造的に長文化するため)。新規 floor gate として (a) hero 非空、(b) essence 非空 (EARS section があれば対応 essence を必須)、</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>readability floor は essence/landing-hero のみに限定適用し、EARS 規範要件には適用しない (構造的に長文化するため)。新規 floor gate として (a) hero 非空、(b) essence 非空 (EARS section があれば対応 essence を必須)、(c) landing カードの dead-end 検出 を追加する。段落長/文長の数値閾値は CJK 分かち書き不能問題ゆえ句点ベース近似に留め、意味的可読性は ceiling (LLM review) に委ねる。floor=決定的・false-positive 回避、ceiling=意味的・文脈依存の線引きを守る。</dd>
+<dt>根拠パターン</dt><dd>Defer-vs-Expose 既定基準 (NN/g accordion 研究 / GOV.UK「accordion は最終手段」) + essence-非空が空折り畳み最悪パターンを防ぐ (axis6) + Vale/textlint selector scope (essence のみ適用) + EARS は長文化ゆえ閾値除外 (axis6 caveat) + 既存 REQ-DA-STRUCT floor の延長 (bin/folio L763-803)</dd>
+<dt>具体仕様の素案</dt><dd>bin/folio に新 gate (q) readability-floor を追加 (17 gate 化): (1) landing-hero region が空でない (hero 非空)、(2) data-audience=machine を持つ section に対応 &lt;span class=&quot;essence&quot;&gt; が存在し非空 (孤立 EARS の essence 欠落検出、REQ-DA-STRUCT-1 を essence 充足側へ拡張)、(3) landing の全 track-card href が実在 file に解決 (dead-end、既存 gate n dead-link を landing へ適用)。段落長は句点 (。) 数で近似カウントし essence のみ閾値 warn (block でない) とする — 形態素解析なしゆえ block は false-positive リスク。EARS section (req__machine 内) は readability 検査の skip 対象 (folio_prose_only と同 idiom で除外)。閾値の数値根拠 (GOV.UK 段落5文) は warn の目安に留め、block 化しない。</dd>
+</dl></details>
+<details class="pattern" open>
+<summary><strong>決定 3 (chrome) / 決定 6 (ceiling)</strong> — 3 カラム chrome (左 sticky nav / 中央本文 / 右 on-this-page TOC) を狭幅で破綻させないため common.css に 980px breakpoint を新設し、Grid-template-areas コラプス + Conditional Sticky で実装する。ナビ折り</summary>
+<dl>
+<dt>推奨 (全文)</dt><dd>3 カラム chrome (左 sticky nav / 中央本文 / 右 on-this-page TOC) を狭幅で破綻させないため common.css に 980px breakpoint を新設し、Grid-template-areas コラプス + Conditional Sticky で実装する。ナビ折りたたみは checkbox hack でなく details/summary を採用 (a11y・file:// 動作・folio 設計一貫性)。崩れの捕捉は ADR-0037 render-safety ceiling を mobile-375/tablet-768 viewport へ拡張する (現状 1280 単一は blind spot)。</dd>
+<dt>根拠パターン</dt><dd>Grid-Template-Areas コラプス (MDN Common grid layouts) + Conditional Sticky 二重ガード (DBM Solutions 980/560px / Polypane sticky 失敗整理) + Media-Query TOC Hide (MkDocs Material 960px) + details/summary ナビ (Wikimedia T333394 checkbox hack 廃止決定) + Playwright multi-viewport (公式 devices / bug0.com)</dd>
+<dt>具体仕様の素案</dt><dd>common.css: (1) .page-chrome に display:grid・@media (min-width:980px){ grid-template-areas:&#x27;nav content toc&#x27; } / 狭幅は &#x27;nav&#x27;/&#x27;content&#x27;/&#x27;toc&#x27; 単一カラム。aside (右TOC) は HTML 末尾配置で source order=視覚順、狭幅では本文先頭インライン TOC を代替表示し右パネルは display:none。(2) サイドナビ position:sticky は @media (min-width:980px) and (min-height:560px) 内のみ・親に overflow 禁止・align-self:start 付与。(3) ナビ折りたたみは &lt;details class=&quot;nav-toggle&quot;&gt;&lt;summary&gt;、デスクトップは onload で d.open=true 付与 (read-only 表示制御ゆえ JS 方針と整合)。render-gate: tests/render-gate/check.py の viewport={width:1280} に加え mobile (375x667)・tablet (768x1024) を追加し各々独立 baseline (golden は tests/baselines/ 構造へ統合)、font pin (Noto CJK) のため file:// でなくローカル http.server 配信、CI は ubuntu 固定で OS font ブレ排除、maxDiffPixelRatio は full-page 1-2%。</dd>
+</dl></details>
+<h3 id="s5-2-hero">§5.2 hero 構成案 (3 案)</h3><ul>
+<li>構造案A (outcome 先行・最小): &lt;header class=&quot;landing-hero&quot;&gt; に &lt;h1&gt;folio&lt;/h1&gt; + 一文 value proposition (例: 仕様の意味は人が書き、ナビは folio が生む — AI agent と人間が同じ HTML を読む spec framework)。直下に primary CTA 1 本 (getting-started)。above-the-fold は h1+一文+CTA の 3 要素に絞り、読者別カードは fold 直下に配置。根拠: Starlight シングル CTA + NN/g above-the-fold 3-5 項目。誇張語 (most powerful 等) 禁止。</li>
+<li>構造案B (読者別 3 カード先行): hero 一文の直下に &lt;nav class=&quot;reader-tracks&quot; aria-label=&quot;読者別導線&quot;&gt; で 3 枚の動詞句カード (初めて使う→getting-started / EARS を調べる→spec / ADR を読む起票する→decisions)。CSS grid (repeat(auto-fit,minmax))・JS なし。各カードは &lt;a class=&quot;track-card&quot;&gt; で 1 リンク。folio の 3 読者層を JTBD 動詞句で表現。根拠: Stripe ユースケース先行カード + 習熟度段階別 (Rust Bookshelf)。狭幅では grid が 1 カラムへ自然コラプス。</li>
+<li>構造案C (Diátaxis 4 象限・将来拡充後): tutorial/how-to/reference/explanation の 4 カードだが、folio は tutorial/how-to が薄いため現時点は honest でない。当面は案B の 3 カードを採用し、getting-started 充実後に案C へ移行。landing は 4 型外の hub に徹し本文を書かない (列車駅モデル)。根拠: Diátaxis 4象限 caveat (全型充実が前提) + Tom Johnson 列車駅。</li>
+</ul>
+<h3 id="s5-3-chrome">§5.3 chrome blueprint</h3><p>build が全 spec/ADR/glossary ページ (constitution は P-10 frozen ゆえ chrome 注入を慎重に・cross-ref のみ) に 4 種 chrome を marker 置換で注入する。配置・形式・生成規則: (1) skip-link = body 直後・最初の focusable、&lt;a href=&quot;#main-content&quot; class=&quot;skip-link&quot;&gt;。CSS で画面外 (position:absolute) → :focus で出現。main に id=main-content tabindex=-1。(2) breadcrumb = main 先頭・h1 直上、&lt;nav aria-label=&quot;Breadcrumbs&quot;&gt;&lt;ol&gt;&lt;li&gt;&lt;a&gt;...&lt;li&gt;&lt;span aria-current=&quot;page&quot;&gt;。セパレータは CSS li:not(:last-child)::after { content:&#x27;→&#x27; }。schema.org BreadcrumbList JSON-LD を BASE_URL 非空時のみ &lt;script type=application/ld+json&gt; で併注入 (position 1始まり整数)。(3) on-this-page TOC = 右カラム (デスクトップ sticky) + 狭幅は本文先頭インライン、&lt;nav aria-labelledby=&quot;toc-heading&quot;&gt;&lt;h2 id=toc-heading&gt;。awk 2-pass で h2/h3 抽出・既存 id 優先・無ければ出現順連番 id=h2-N を sed in-place 注入 (CJK 見出しは slug 化せず連番)。h4 以下は除外。(4) prev-next = 本文末尾、&lt;nav aria-label=&quot;Page&quot;&gt;&lt;a rel=prev&gt;&lt;a rel=next&gt;、cluster order 配列から導出 (spec cluster 内のみ・reference 型は線形でないため限定)。head に &lt;link rel=prev/next&gt; 併出力。生成規則: 相対パスは ROOT_REL=$(printf &#x27;../%.0s&#x27; $(seq 1 $depth)) で深さ算出 (depth=rel_path の &#x27;/&#x27; 数 tr -cd &#x27;/&#x27; | wc -c)。4 nav の aria-label は固定リテラル (Breadcrumbs/Primary/toc-heading 参照/Page) で APG 一意性を満たす。全 chrome は ADR-0035 nav-regen-drift gate (m) の検査対象に含める。sed injection 回避は perl -p または r コマンド file 参照。</p>
+<h3 id="s5-4-defaults">§5.4 層別既定表示の規範案</h3><p>ページ種別 × 既定表示 (可視 / fold / 撤去) の規範表:</p>
+<table>
+<thead><tr><th>ページ種別 (folio-doc-type)</th><th>可視 (既定 open)</th><th>fold (既定 closed details)</th><th>撤去/非該当</th></tr></thead>
+<tbody>
+<tr><td>landing (nav-index/hub)</td><td>hero 一文・読者別カード・getting-started CTA・cluster 一覧 (全可視)</td><td>なし (folding 量ゼロ)</td><td>本文・EARS (landing は本文を持たない=列車駅)</td></tr>
+<tr><td>cluster README (索引)</td><td>§Purpose・§Contents・cluster-nav・配下リンク</td><td>大規模 status group (&gt;8 entry は既定折り)</td><td>EARS 全文</td></tr>
+<tr><td>spec (reference)</td><td>essence・spec-row summary・表・図・見出し</td><td>EARS 全文 (req__machine)・経緯・運用注記</td><td>なし</td></tr>
+<tr><td>ADR (explanation)</td><td>Title・Status・Context・Decision</td><td>Consequences・代替案詳細・検討経緯</td><td>なし (frozen ゆえ build は本文非改変・chrome のみ)</td></tr>
+<tr><td>glossary (reference)</td><td>用語 canonical・1行 essence</td><td>長い定義本文 (任意)</td><td>EARS</td></tr>
+<tr><td>constitution (prescriptive explanation)</td><td>原則文 (P-1..P-13)・背景説明</td><td>なし (原則は全可視が望ましい・P-10 frozen)</td><td>EARS・audience toggle (不変資産ゆえ最小介入)</td></tr>
+</tbody>
+</table>
+<p>横断規則: (a) details ネストは 2 段上限 (NN/g)・3 段以上禁止。(b) summary には essence 冒頭 1 文を入れ折り畳み状態でも find-in-page (Firefox/Safari) と AI scan を部分補完。(c) @media print で全 details 強制展開 (印刷欠落防止)。(d) data-audience=machine 要素は CSS display:none でフィルタするが DOM に残す (REQ-DA-STRUCT-4 aria-hidden 禁止)。(e) audience toggle (人間/機械/両方) は全種別共通 chrome として右上に配置 (landing 除く)。</p>
+<h3 id="s5-5-toggle">§5.5 audience toggle 実装案</h3><p>classic script (ES module/fetch 不使用・vendoring・read-only 表示補助) での audience toggle 実装パターン: (1) DOM 構造 = build が data-audience=&quot;human&quot;|&quot;machine&quot; 属性を各要素に付与済 (REQ-DA-STRUCT-3 で値域 floor 検査済)。machine 部は既定 CSS display:none、human 部は表示 (現行 folio の CSS-only 出し分けを踏襲)。(2) toggle UI = chrome 右上に 3 状態ボタン &lt;div class=&quot;audience-toggle&quot; role=&quot;group&quot; aria-label=&quot;audience 切替&quot;&gt; に「人間向け / 機械向け / 両方」3 ボタン。(3) 動作 = inline classic script で document.querySelectorAll(&#x27;[data-audience]&#x27;) を走査し body の class (.show-human / .show-machine / .show-both) を切替えるだけ (DOM 構造は変更しない=read-only enhancement)。CSS 側で body.show-machine [data-audience=human]{display:none} 等を定義。(4) 永続化 = localStorage 任意 (file:// でも動作するがセキュリティ文脈で制限ありゆえ必須にしない)。永続不要なら単純 class 切替で十分。(5) file:// 互換 = inline script・no fetch・no module ゆえ file:// 直開きで動作。(6) progressive enhancement = JS 無効時は CSS 既定 (human 表示・machine は DOM に存在し AI 読取可) で degrade。toggle は表示制御のみで意味データ (essence/EARS) は手書き SSoT のまま (決定 5 と整合)。根拠: Stripe 言語切替タブ + axis5 audience-aware disclosure + MEMORY.md (JS は read-only enhancement・aria-hidden 不使用)。</p>
+<h3 id="s5-6-gates">§5.6 floor gate 候補</h3><ul>
+<li>hero 非空: landing-hero region (curated) が空文字でないこと。閾値根拠 = 既存 REQ-DA-STRUCT/REQ-INV-005 の非空チェック (h1 非空) と同型・決定的・false-positive ゼロ。空 hero は列車駅 landing の機能を破壊するため block。</li>
+<li>essence 非空 (孤立 EARS 防止): data-audience=&quot;machine&quot; を持つ section に対応する &lt;span class=&quot;essence&quot;&gt; が存在し非空であること。閾値根拠 = axis6「essence が空のまま EARS だけある section」最悪パターン (折り畳み内容に辿り着けない) の機械防止。既存 gate (g) dual-audience REQ-DA-STRUCT-1 (孤立 human 検出) の essence 充足側への対称拡張。block 妥当。</li>
+<li>landing dead-end (カード href 解決): landing の全 track-card / cluster リンクが実在 file へ解決すること。閾値根拠 = 既存 gate (n) nav-dead-link を landing scope へ適用 (同 idiom)・決定的。dead-end は離脱を招くため block。</li>
+<li>段落長 warn (essence のみ・CJK 近似): essence region の句点 (。) 数を近似カウントし上限超で warn (block でない)。閾値根拠 = GOV.UK 段落 5 文を目安に warn 化。CJK は形態素解析なしゆえ語数 block は false-positive リスク (axis6/gap-fill)・句点ベース文分割の限界を踏まえ warn 止まり。EARS (req__machine) は構造的長文化ゆえ skip 対象 (folio_prose_only idiom)。</li>
+<li>狭幅 render 崩れ (ceiling 拡張・floor でない): 3 カラム chrome の狭幅崩れは bash pattern-lint では DOM を見れず捕捉不能ゆえ floor 化せず、ADR-0037 render-safety ceiling を mobile-375/tablet-768 viewport へ拡張して playwright 視覚回帰で捕捉。閾値根拠 = render-gate が現状 1280 単一で狭幅は blind spot (gap-fill verified)・maxDiffPixelRatio full-page 1-2%。これは floor 候補でなく ceiling 拡張だが floor/ceiling 線引きの根拠として明記。</li>
+</ul>
+
+</section>
+
+<section id="s6-open" class="informative">
+<h2>§6. open questions — ADR grill で確定すべき残論点</h2>
+<p>調査では決め切れず、 user 判断ないし実機確認を要する論点。 ADR 起草 (folio-nmy / folio-2ii) の grill agenda になる。</p>
+<ul>
+
+<li>constitution.html (P-10 frozen・編集禁止) への chrome 注入をどこまで許すか。breadcrumb/skip-link は cross-ref link maintenance 相当として許容済の前例があるが、on-this-page TOC は h2 に id 連番を sed 注入する=本文改変になりうる。constitution は chrome 注入対象から外すか、id 注入のみ marker 領域外で許容するか user 判断が必要 (P-10 amendment gate)。</li>
+<li>audience toggle の状態を localStorage で永続化するか。file:// では動作するがセキュリティ文脈 (sandbox file://) で制限される場合がある。ページ跨ぎの状態記憶が UX 価値を持つか、単純 class 切替 (永続なし) で十分かは実機 walk での確認が望ましい。</li>
+<li>readability warn 閾値 (essence の句点数上限) の具体値。GOV.UK 5 文は英語実証値で、日本語 essence への移植値は未検証。textlint/Vale の CJK rule 実例を別途調査するか、当面は warn のみで運用し ceiling (LLM review) の指摘頻度から逆算して調整するか。</li>
+<li>prev-next の cluster order 定義をどこに持たせるか。folio はクラスター順序が未定義 (MEMORY.md nav Slice 知見)。order 配列を bin/folio に hard-code するか、cluster README の dc:hasPart 順から導出するか。reference 型 (spec/ADR) は線形読了でないため prev-next を spec cluster 内のみに限定する妥当性も要検討。</li>
+<li>render-gate multi-viewport 拡張のスナップショット量と CI 時間のトレードオフ。3 viewport × ページ数で golden が増大する。全 spec ページを撮るか landing + 代表 spec + ADR の代表ページのみに絞るか、ストレージと CI rate (5h) を踏まえた撮影対象の選定基準が必要。</li>
+
+</ul>
+<p><strong>追記 (転記外、 本文書の編集判断)</strong>: 本文書自身が header 直後に手書きの cluster-nav を置いている (既存 research leaf doc に前例なし)。 決定 3 の chrome 注入が leaf research にも及ぶ実装段階で、 この手書き nav は build 導出版へ置換 (または curated region 化) しないと二重化・ドリフトの種になる — ADR 起草時の確認事項とする。</p>
+</section>
+
+</body>
+</html>
