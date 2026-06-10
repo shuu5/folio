@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0039">
+<meta name="folio-adr-date" content="2026-06-11">
+<title>ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0039-presentation-template-layer.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0038-constitution-p14-human-readability.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "./ADR-0035-walkable-architecture-nav-derive.html" },
+    { "@id": "./ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "./ADR-0037-render-safety-ceiling.html" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" },
+    { "@id": "../research/presentation-design-patterns.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0039 — human-first presentation template layer</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-11 &middot; folio v0.5.0-draft &middot; ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0039</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-06-11</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0038 (上位原則 P-14、 本 ADR が実装)、 ADR-0033 (dual-audience co-author = 意味層の境界、 不変)、 ADR-0035 (nav-derive = build 生成の先例、 生成範囲を chrome へ拡張)、 ADR-0036 (glossary derive、 jargon xref 化が活用)、 ADR-0037 (render ceiling、 multi-viewport + chrome detector へ拡張)、 ADR-0020 (validate scope、 readability floor へ拡張)、 rules.html (読者層定義 §新設 + 編集規範 + JS 統治)、 verification.html (REQ 群追加先)、 research/presentation-design-patterns.html (設計根拠)。 bd: folio-2ii / epic folio-v8s。 実装 slice: folio-1ko (build template + chrome + floor) / folio-ef4 (編集 sweep + toggle) / folio-ewq (ceiling)。 吸収: folio-dct / folio-s97 / folio-a8y / folio-ea9 / folio-dd0</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>背景の root cause 分析は <a href="./ADR-0038-constitution-p14-human-readability.html">ADR-0038</a> §1 を参照 (価値の非対称 → gate の非対称 → 16-gate green のまま人間に読めないサイト)。 本 ADR はその機構側の答えを確定する。 独立 5-lens 監査 (wf_8b14e53a) が実測した症状の構造化: <strong>(a) 入口の型が不在</strong> — landing に hero / 読者別導線 / getting-started がゼロ、 最初の本文が保守者向け運用注記。 <strong>(b) chrome の不在と分裂</strong> — 33 ページが dead-end、 戻り導線 3 方式、 ページ内目次は 1 ページのみ。 <strong>(c) 既定表示が読者ニーズと逆</strong> — rules.html は折り畳み 26 個全閉で要件要旨が 1 件も見えず、 index は 28 ADR を丸ごと隠す。 <strong>(d) 削る編集の不在</strong> — 単一段落 8,858 字 (監査 2026-06-10 時点実測) の blob、 無定義略語が 1 文に 5〜8 個、 glossary hover の本文 auto-mark 適用 0 件。</p>
+
+<p>重要な対比として、 ADR 層には §1〜§5 の固定 template が既に徹底されており「型化の能力はあるのに、 最も恩恵の大きい入口・ナビ層にだけ型が無い」が核心 gap である (監査 + research の一致した結論)。 また folio build は index / glossary を既に機械生成しており (<a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> / <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a>)、 「build が型を所有する」前例は確立済み — 本 ADR はその生成範囲の拡張であって方針転換ではない。 討論の決定 1〜5 (読者層別 / 入口 template / 統一 chrome / バランス型既定値 + toggle / co-author 堅持) と ADR grill G3〜G7 が設計を確定し、 業界パターンの裏付けは <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> (Diátaxis / NN/g / W3C APG / GOV.UK / MADR ほか 100+ sources) に集約した。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-readers">§2.1 読者層定義 (P-14 委任の履行)</h3>
+
+<p>rules に「ページ種別 × 主たる人間読者層」の定義節を新設する (P-14 が存在を要求、 本 ADR が初期割当を確定): <strong>入口層</strong> (landing index / cluster README) = folio を知らない初見の外部開発者。 <strong>spec 本文層</strong> = folio を導入済みで仕様を参照・検索する既習 consumer 開発者。 <strong>decisions 層</strong> = 設計経緯を時系列で辿る維持者。 glossary = 初見〜既習の横断参照。 機械読者 (AI agent) への正確さは全層で維持する (dual-audience の machine 側は不変)。 以後の提示判断 (見せる / 折る / 削る) はこの定義を物差しとする。</p>
+
+<h3 id="s2-2-landing">§2.2 landing template (grill G3 = A+B 合成)</h3>
+
+<p><code>folio build</code> が生成する landing (architecture/index.html) に 4 層の固定型を導入する: <strong>(1) hero</strong> — h1 + 一文の価値提案 (誇張語禁止・outcome 先行)。 <strong>(2) 単一 CTA</strong> — 「まずここから」1 本。 行き先は repo README の導入手順 (getting-started ページの新設は tutorial 層の充実時に defer — 空のカードを並べる「正直でない」入口を作らない)。 <strong>(3) 読者別 3 カード</strong> — §2.1 の 3 読者層を動詞句ラベルで分岐 (「初めて folio を使う →」「仕様・要件を調べる → spec」「設計の経緯を追う → decisions」)。 CSS grid のみ・JS なし・狭幅 1 カラム収束。 <strong>(4) cluster 一覧</strong> — 現行の status 別生成リストを温存。 hero 一文とカード文言は curated region (<code>folio:landing-hero</code>、 既存 <code>folio:nav-curated</code> と同じ first-open/last-close 往復保全 idiom) に置き、 <strong>型 (構造) は build が所有し、 文言 (意味) は人間が author する</strong> — <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の co-author 境界と同じ線。 consumer へは <code>folio init</code> が placeholder 入り scaffold を配布する。 文言の確定は実装時に rendered を反復確認して行う (research 制約 (b))。</p>
+
+<h3 id="s2-3-chrome">§2.3 全ページ chrome 注入 (grill G4 = B + 横断規則)</h3>
+
+<p><code>folio build</code> が全 spec / ADR / glossary / README ページへ marker 領域で 4 種 chrome を注入・維持する: <strong>skip-link</strong> (body 直後、 W3C APG 準拠) / <strong>breadcrumb</strong> (nav[aria-label] + aria-current、 schema.org BreadcrumbList JSON-LD は BASE_URL 設定時のみ併注入 = file:// を壊さない二段構え) / <strong>ページ内目次</strong> (on-this-page、 h2/h3 から導出) / <strong>prev-next</strong>。 生成規則:</p>
+
+<ul>
+  <li><strong>既存 id のみ規則 (横断)</strong>: 目次は文書に既に存在する id からのみ導出し、 <strong>本文へ id を注入しない</strong>。 導出は 2 段 fallback — 見出し (h2/h3) 自身に id があればそれを、 無ければ<strong>最近接の id 持ち section へリンクする (ラベルは見出しテキスト)</strong>。 後者が実質の主経路である: 実測で id は section 要素側に揃っており (rules = section 13/13・constitution = section 8/8、 一方 h2/h3 単体の id は rules 11/28・constitution 0)、 見出し id 限定だと最重要 spec で目次がほぼ空になる。 section fallback により frozen 文書 (constitution + ADR 28 本) にも<strong>本文不変のまま</strong>実用的な目次を張れる。 なお research §5.3 は連番 id の機械注入を推奨したが、 本 ADR は意図的に転換した — 注入は frozen 文書で P-10 案件になり (research §6 open question 1)、 living 文書でも再 build で id が振り直されると外部からの deep-link を壊す。 「既存 id のみ + section fallback」は P-10 非発火・deep-link 安定・決定的の三点で優る。</li>
+  <li><strong>prev-next の順序 SSoT</strong>: spec cluster = README の <code>dc:hasPart</code> 順。 decisions cluster = ADR 番号順 (維持者の仕事 = 経緯を時系列で辿る、 に直結する決定的順序)。 番号順は<strong>実在 file の昇順隣接</strong>として実装する (欠番 0005 / 0008〜0012 / 0014 / 0016 等は単に飛ぶ — 番号の連続性を仮定しない)。 順序 SSoT の無い research / 孤立文書は prev-next 対象外。</li>
+  <li><strong>constitution</strong>: 枠のみ 3 種 (skip-link + breadcrumb + 目次)。 prev-next は対象外 (孤立文書)。 注入は marker 領域 + 既存 id 参照のみで本文不変 — 討論で承認済みの「枠のみ」の範囲に収まる。</li>
+  <li><strong>相対パスは深さから決定的に算出</strong> (ROOT_REL idiom)。 aria-label は固定リテラルで landmark 一意性を満たす。 chrome は <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> の nav-regen-drift gate の検査対象に含め、 手書き chrome (research doc の cluster-nav 等) は build 導出版へ置換する。</li>
+</ul>
+
+<h3 id="s2-4-defaults">§2.4 層別既定表示 + 編集規範 (討論決定 4)</h3>
+
+<p>ページ種別ごとの既定表示規範を rules に定める (適用対象は living spec・生成物・新規 ADR template。 <strong>frozen 文書の本文は不変</strong> — 折り畳み化は本文改変のため適用しない): landing = 全可視 (折り畳みゼロ)。 spec = essence・表・図・見出しは可視 / EARS 全文・経緯・運用注記は折る。 ADR (新規 template) = Context・Decision 可視 / 詳細 fold。 折り畳みネストは 2 段上限、 summary に要旨 1 文、 印刷時は全展開 (@media print)。 あわせて編集規範: <strong>地の文の folio 内部用語は glossary xref (hover 解説) を必須化</strong> (folio-a8y を吸収)、 <strong>巨大 prose の構造化</strong> (decisions/README 番号体系メモ blob の解体を含む)、 <strong>作業ログ類の人間面からの撤去</strong> (research / git 履歴へ)。</p>
+
+<h3 id="s2-5-toggle">§2.5 audience toggle (grill G5 = 永続なし)</h3>
+
+<p>chrome に「人間向け / 機械向け / 両方」の 3 状態 toggle を置く。 実装は classic script が body class を切替えるだけ (DOM 構造不変 = rules §8 の read-only enhancement 範囲、 file:// 動作)。 状態はページ内のみ有効 (永続なし) — 連続閲覧の煩わしさが実機 walk で実証されたら localStorage 昇格 (graceful degradation 付き) する片道を注記する。 toggle JS の導入と同 commit で <strong>REQ-DA-JS-2 の機械 gate (spec 内 runtime-CDN script 検出) を validate に追加</strong>し (folio-ea9 を吸収)、 統治外 JS の混入を構造的に塞ぐ。</p>
+
+<h3 id="s2-6-derive">§2.6 機械導出 view の拡大と意味層の境界 (討論決定 5 = B)</h3>
+
+<p>essence / EARS / 決定理由の執筆は人間の co-author に残し (<a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> Option B は<strong>再オープンしない</strong>)、 機械導出は「書かれた意味を組み合わせて見せる view」にのみ拡大する: cluster README への配下 spec 要旨 (essence) 吸い上げ一覧、 spec 冒頭の概観 card (REQ 件数・状態・図一覧を head metadata から生成) 等。 essence そのものの生成 (derive-into-DOM / Option A') は引き続き roadmap に留める。</p>
+
+<h3 id="s2-7-floor">§2.7 readability floor — validate 17-gate 化 (grill G6 = B)</h3>
+
+<p><code>folio validate</code> に readability-floor gate を新設する (<a href="./ADR-0020-validate-scope.html">ADR-0020</a> scope の拡張): <strong>block 3 種</strong> — (1) hero 非空 (landing-hero curated region が空なら fail)、 (2) essence 非空 (machine 節に対応する人間向け要旨の欠落 = 孤立 EARS、 REQ-DA-STRUCT-1 の対称拡張)、 (3) landing dead-end (カード・CTA リンクの実在)。 <strong>warn 2 種</strong> — (4) essence の句点数上限 (日本語は語数の決定的計測が不能のため句点近似・warn 止まり)、 (5) 一般 prose の単一段落文字数上限 (可視の人間向け本文のみ。 文字数は CJK でも決定的。 blob 再発の機械的見張り — 8,858 字 blob は essence でなく通常段落であり、 essence 限定では再発を見張れないため research 推奨から適用範囲を拡大)。 machine fold・code・EARS・frozen 文書は scan 除外 (既存 prose_only idiom)。 warn 閾値は corpus 実測で較正し、 block 化は ceiling の指摘頻度を見て判断する。 REQ trace は verification.html に追加し、 gate 追加の golden cascade (validate 出力 1 行増 → 全 validate golden) は確立済みの --accept + diff 検証手順で処理する。</p>
+
+<h3 id="s2-8-ceiling">§2.8 readability ceiling (grill G7 = C + 討論決定 6)</h3>
+
+<ul>
+  <li><strong>render-gate の拡張</strong> (<a href="./ADR-0037-render-safety-ceiling.html">ADR-0037</a> の延長): viewport を 375 / 768 / 1280 の 3 点に拡張し、 chrome 幾何 detector を 2 arm 新設 — (i) 意図しない横 overflow (本文が viewport を溢れて横スクロール発生)、 (ii) nav landmark と本文の矩形重なり。 selftest fixture を kind 完全一致流儀で追加。 「既存 detector を multi-viewport で回すだけ」は chrome 崩れに効かず緑だけ増えるため明示的に却下。 screenshot は CI artifact として保存するのみ (golden 化しない — brittle 回避)、 人間 review の補助に充てる。</li>
+  <li><strong>readability review lens の常設</strong>: 「初見の外部開発者として index から歩く」persona-based の LLM review を、 ページ追加・template 変更時に回す (本討論の監査 lens 1 の常設化)。 P-14 を検査観点に持つ。</li>
+  <li><strong>criterion-c walk の手続き化</strong>: template 変更時は user の実機 walk を必須 step とする — 「読める」の最終検査器は人間であることを手続きとして認める (P-14 §3 の限界認識と対)。</li>
+</ul>
+
+<h3 id="s2-9-remediate">§2.9 remediate の役割整理 (folio-dd0 の解消)</h3>
+
+<p>表示層の regen は <code>folio build</code> が一元所有する (index / glossary / chrome / landing — 「nav-regen-drift 系の違反は build で直す」)。 <code>folio fix</code> は graph (reverse-link / xref / tooltip) の materialize 専任。 validate の violation message は対応する remediate tool を名指しする (どの違反をどちらで直すかの迷いを消す)。 この 2 分業を rules に明記する。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<ul>
+  <li><strong>実装 slice</strong>: folio-1ko (build template + chrome 注入 + floor gates + <strong>init scaffold 更新</strong> — consumer 向け landing placeholder / chrome marker / cluster README 雛形を §2.2〜§2.3 整合へ) → folio-ef4 (編集 sweep + toggle + ea9 gate) → folio-ewq (ceiling 拡張)。 各 slice は rendered preview を user が目視確認してから確定する (研究制約 (b) の反復視覚検証)。 吸収タスク: folio-dct / folio-s97 (chrome と dead-end gate が実装)、 folio-a8y (xref sweep)、 folio-ea9 (§2.5)、 folio-dd0 (§2.9)。</li>
+  <li><strong>build の責務拡大</strong>: 「index を作る」から「全ページの枠を維持する」へ。 idempotent・決定的・marker 往復保全の既存規律を全 chrome に適用し、 nav-regen-drift gate が drift を機械検出する。</li>
+  <li><strong>consumer への配布</strong>: template / chrome / gate は folio の機構として全 consumer に配布され、 init scaffold も更新される — 入口が読めない問題の再生産を META FRAMEWORK のレベルで止める。</li>
+  <li><strong>golden cascade</strong>: gate 追加 + index 構造変更により validate / inventory / prime / nav 系 golden の再生成が複数回発生する。 確立済みの --accept + git diff 検証手順で 1 slice ごとに処理。</li>
+  <li><strong>リスクと限界</strong>: 型は可読性の必要条件であって十分条件ではない — 文言の質は編集 (ef4) と ceiling が担う。 また chrome 注入は全ページ書き換えを伴うため、 slice 1 は少数ページでの preview を先行させ、 全体適用はその確認後とする。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+
+<table>
+  <thead><tr><th>案</th><th>内容</th><th>不採用理由</th></tr></thead>
+  <tbody>
+    <tr><td>curated 拡充のみ</td><td>既存 curated region に hero 等を手書き</td><td>型が機構にならず consumer に配布されない・gate も張れない (対症療法)</td></tr>
+    <tr><td>人間向け入口の別ページ分離</td><td>architecture/index.html は機械向けに温存し別 landing を新設</td><td>入口が 2 つに割れ、 直リンク着地者を救えず、 記述が乖離する</td></tr>
+    <tr><td>client-side JS で chrome 生成</td><td>閲覧時に JS が目次・パンくずを組み立てる</td><td>静的 DOM に chrome が存在せず、 人間と機械が同じ DOM を見る原則と非対称になる (rules §8 の精神に反する)</td></tr>
+    <tr><td>Diátaxis 4 象限カード (G3 案 C)</td><td>tutorial / how-to / reference / explanation の 4 入口</td><td>folio は tutorial/how-to 層が薄く、 空のカードを並べる「正直でない」入口になる — 充実後の移行先として保持</td></tr>
+    <tr><td>既存 detector の multi-viewport 化のみ (G7 案 B)</td><td>viewport を増やすが detector は mermaid 専用のまま</td><td>chrome 崩れに効かず「検査してるつもり」の緑だけ増える — 本討論の root cause の再生産</td></tr>
+    <tr><td>screenshot golden 回帰</td><td>全ページのスクリーンショットを golden 比較</td><td>brittle (正当な変更で大量 diff)・golden 容量増。 幾何 detector + artifact 保存 + 人間 walk の組合せが folio の決定性方針に整合</td></tr>
+    <tr><td>derive-into-DOM (Option A')</td><td>essence も build が生成し食い違いを構造的に消す</td><td>build に LLM が要り決定性・golden 体系と衝突。 ADR-0033 の roadmap 位置を維持 (討論決定 5)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li><strong>討論</strong>: criterion-c 徹底討論 (2026-06-10、 決定 1〜6) + ADR grill (2026-06-11、 G3〜G7)。 監査 wf_8b14e53a (5-lens、 現状 evidence 実測)。</li>
+  <li><strong>調査</strong>: <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> — §5 blueprint が本 ADR の各節の根拠パターンを、 §6 open questions が grill G4〜G7 の論点を提供。</li>
+  <li><strong>上位原則</strong>: <a href="./ADR-0038-constitution-p14-human-readability.html">ADR-0038</a> (P-14)。 本 ADR は P-14 の「定義された読者層」「二層検証」を機構に落とす。</li>
+  <li><strong>bd</strong>: folio-2ii (本 ADR) / epic folio-v8s / 実装 folio-1ko・ef4・ewq / 吸収 folio-dct・s97・a8y・ea9・dd0。</li>
+  <li><strong>手続き状態</strong>: proposed (user 承認待ち)。 承認後に accepted 昇格 + status-flip golden 再生成、 実装は slice ごとに rendered preview → user 確認 → SHIP。</li>
+</ul>
+</section>
+
+</body>
+</html>

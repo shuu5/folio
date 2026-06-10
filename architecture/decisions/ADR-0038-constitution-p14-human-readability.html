@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0038">
+<meta name="folio-adr-date" content="2026-06-11">
+<title>ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0038-constitution-p14-human-readability.html",
+  "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "./ADR-0039-presentation-template-layer.html" }
+  ],
+  "dc:title": "ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/constitution.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "./ADR-0021-constitution-x4-amendment.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0030-v1-stability-criteria.html" },
+    { "@id": "./ADR-0032-v1-goal-refinement-defer.html" },
+    { "@id": "../research/presentation-design-patterns.html" }
+  ]
+}
+</script>
+</head>
+<body>
+
+<header class="doc-header">
+  <h1>ADR-0038 — constitution P-14 (Human Readability) 新設 amendment</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-11 &middot; folio v0.5.0-draft &middot; constitution に第 14 原則 Human Readability を新設する amendment 提案。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは <a href="./ADR-0021-constitution-x4-amendment.html">ADR-0021</a> 前例 (番号 append・renumber なし・rationale aside 併記) を踏襲し、 user 承認 (本 ADR の accepted 化) と同時に constitution §2 へ追記する。 機構実装は ADR-0039 (presentation template layer) が担う。</div>
+</header>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0038</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-06-11</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0021 (X4 amendment 内で P-13 を Always tier に append した principle-amendment 手続きの前例 = append・renumber なし・rationale aside・tier 分類・count-fix 同 commit)、 ADR-0028 (二層 enforcement = P-14 の検証を floor/ceiling 両層に割り当てる語彙)、 ADR-0030 §2.5 (constitution version は framework version と別 trace) / ADR-0032 (framework 1.0.0 の defer = WS5)、 constitution §2 (追記先) / §5 (versioning) / §6 P-10 (amendment 手続き)、 rules.html (読者層定義の委任先 = ADR-0039 §2.1 が新設)、 research/presentation-design-patterns.html (設計根拠調査)。 実装 ADR: ADR-0039。 bd: folio-nmy / epic folio-v8s。 同乗: folio-e2s (constitution 内 mermaid initialize 整合)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>criterion-c (1.0.0「実用に耐える」判断) のサイトレビューで user が「結構色々問題がある — 根本的な問題」と報告し、 徹底討論 (2026-06-10) を実施した。 独立 5-lens 監査 (wf_8b14e53a) の実測が示した症状は: <code>architecture/index.html</code> の第 1 画面に folio の定義文が無く最初の本文が「手編集禁止」の運用注記 / spec 4 + ADR 28 + constitution = 33 ページが上位へ戻れない dead-end / 単一段落 8,858 字 (監査 2026-06-10 時点実測) の prose blob / 折り畳み既定値が読者ニーズと逆 — いずれも <strong>validate 16-gate 全 green のまま</strong>存在していた。</p>
+
+<p>討論が特定した root cause は個別バグではなく<strong>価値の非対称</strong>である。 constitution の 13 原則は機械側の価値 (<a href="../spec/constitution.html#p-3">P-3</a> 検証可能性、 <a href="../spec/constitution.html#p-6">P-6</a> リンク完全性 等) を原則化しているが、 人間可読性の原則は存在しない。 その結果、 原則と機械 gate に忠実な agent ほど「gate のある品質」だけを磨き、 「人間が読めるか」は唯一の検査器である user の目 (criterion-c) に届くまで劣化し続ける。 実証: agent は 28 本の accepted ADR (監査時点) を起票しながら一度も戻りリンクを足さなかった — 原則側に錨が無い限り、 このドリフトは構造的に再演される。</p>
+
+<p>討論の決定 6 件のうち決定 6 が「floor gate 群 + readability ceiling + <strong>constitution への原則新設</strong>」を選択し (gate だけ足して価値体系を直さないのは対症療法、 という判断)、 続く ADR grill (G1/G2) で本 amendment の構成と型を確定した。 設計根拠調査は <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> に集約済み。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-text">§2.1 P-14 の文面 (新設する原則)</h3>
+
+<p>constitution §2 の原則 <code>dl</code> に以下を追加する (字句は accepted 化の時点で本 ADR のこの節が SSoT):</p>
+
+<blockquote>
+<p><strong>P-14: Human Readability</strong> — folio の design-intent 文書とその生成物は、 機械可読性と同格に人間可読性を保つ。 各ページ種別には主たる人間読者層が定義されていなければならず (具体の定義と割当は rules が規定する)、 ページはその読者が当該ページの仕事を果たせる形で提示される。 人間可読性は検証対象であり、 決定的 floor gate と review ceiling の二層で継続的に検証する。 機械可読性のための構造が人間への提示を損なうこと、 およびその逆を認めない。</p>
+</blockquote>
+
+<h3 id="s2-2-form">§2.2 型の選択 — 構造要求型 (grill G2 = C)</h3>
+
+<p>P-14 は<strong>「読者層定義の存在」を構造的に要求し、 定義の中身は rules に委任する</strong>。 比較した両極はそれぞれ事故シナリオを持つ: 全委任 (原則は価値宣言のみ) は定義を骨抜きにしても P-14 違反にならない空殻化リスク、 読者層 3 層の焼き込みは将来読者層を 1 つ足すだけで P-10 amendment が要る硬直リスク。 構造要求型は <a href="../spec/constitution.html#p-13">P-13</a> が「trace は machine-navigable でなければならない」と書く構造要求の文体と同型で、 folio の原則スタイルに整合する。 これにより読者層の進化 (追加・改名) は living spec の改訂で済み、 定義の不存在・削除のみが原則違反となる。</p>
+
+<h3 id="s2-3-procedure">§2.3 amendment 手続き (ADR-0021 前例の踏襲)</h3>
+
+<ul>
+  <li><strong>user 承認</strong>: 本 ADR は status <code>proposed</code> で起票し、 user 承認をもって <code>accepted</code> へ昇格 + constitution 編集を実行する (<a href="../spec/constitution.html#s6-amendment">P-10</a>)。 文面・型は grill (2026-06-10〜11) で方向承認済、 最終承認は本 ADR の accept。</li>
+  <li><strong>追記形式</strong>: §2 の <code>dl</code> 末尾 (P-12 の後、 文書順) に <code>&lt;dt id="p-14"&gt;</code> + <code>&lt;dd&gt;</code> を append。 番号は append のみで renumber しない (既存 cross-ref + frozen ADR 参照の保護、 ADR-0021 前例)。 <code>dd</code> 内に <code>aside.ai-rationale</code> (hidden、 <code>data-adr="ADR-0038"</code>) で決定 metadata を併記。</li>
+  <li><strong>tier 帰属</strong>: Always tier (P-1〜P-7 + P-13 + P-14)。 tier は番号連続でなく分類で定義する (P-13 rationale の前例)。</li>
+  <li><strong>連動 count-fix (同 commit、 ADR-0021 前例の踏襲)</strong>: P-14 追加で stale 化する constitution 内の原則数表記を同 commit で更新する — head JSON-LD の <code>principles</code> 13→14 と <code>tiers.Always</code> 8→9 / meta div の「13 immutable principles」/ §2 見出しの原則数 / §2.1 見出しの「Always Tier (P-1〜P-7 + P-13)」への P-14 追加 / 図2 (tier mermaid) の node label + accDescr の「8 原則」→「9 原則」。 取りこぼすと constitution が内部不整合になる (ADR-0021 が同種の count-fix を Negative consequence として捕捉した前例)。</li>
+  <li><strong>同乗是正</strong>: 同じ amendment commit で constitution 内 mermaid initialize を living-spec pattern に整合させる (folio-e2s、 dormant 起票済の非整合。 P-10 承認を一度で済ませる)。 まとめると constitution への変更は (a) P-14 append、 (b) 連動 count-fix 群、 (c) e2s mermaid initialize 整合、 の 3 群で全て本 ADR が列挙する範囲に限る。</li>
+  <li><strong>version</strong>: 原則追加は <a href="../spec/constitution.html#s5-versioning">§5</a> 上 MAJOR。 <a href="./ADR-0021-constitution-x4-amendment.html">ADR-0021</a> 前例 (P-13 新設時に 0.x の MAJOR 級 bump = 0.5.0-draft、 適用 scope は constitution.html + plugin.json) に従い、 <strong>constitution version を 0.5.0-draft → 0.6.0-draft へ bump する</strong> (accepted 化と同 commit)。 これは constitution 自身の version trace であり、 <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.5 が framework version と別 trace と定めるもの — ADR-0030/<a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> が defer するのは framework の 1.0.0 bump (WS5) であって本 bump は deferral の対象外。 bin/folio の VERSION (0.4.2-draft) は不変。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<ul>
+  <li><strong>rules への定義義務</strong>: P-14 が要求する読者層定義を rules に新設する義務が生じる (ADR-0039 §2.1 が実装: 入口 = 初見の外部開発者 / spec 本文 = 既習 consumer 開発者の参照 / decisions = 経緯を追う維持者、 を初期割当として規範化)。</li>
+  <li><strong>gate の根拠</strong>: ADR-0039 の readability floor gate 群と ceiling (review lens + multi-viewport render gate) は P-14 を上位根拠に持つ。 「なぜこの gate があるか」の trace が原則まで通る。</li>
+  <li><strong>ドリフトへの錨</strong>: 以後、 機械 gate を追加・最適化する変更は「人間提示を損なわないか」を P-14 違反として問われ得る (ceiling review の検査観点に追加)。 逆方向 (人間向け装飾が machine SSoT を壊す) も同じ原則で塞ぐ。</li>
+  <li><strong>consumer への波及</strong>: constitution は Layer 0 として全 consumer に配布されるため、 P-14 は folio 自身だけでなく consumer の architecture にも適用される普遍原則になる。</li>
+  <li><strong>リスク</strong>: 「読める」は最終的に人間の判断で、 原則化しても機械では完全検証できない — だからこそ二層 (決定的 floor は構造代理指標、 ceiling は LLM/人間 review) で挟む。 P-14 は gate の万能性を主張しない。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+
+<table>
+  <thead><tr><th>案</th><th>内容</th><th>不採用理由</th></tr></thead>
+  <tbody>
+    <tr><td>原則化せず rules のみ</td><td>同趣旨を rules (living spec) に書く</td><td>機構としては同一に動くが、 root cause が「価値レベルの非対称」である以上、 価値体系の最上位に錨が無ければ将来の機械側偏重ドリフトを押し戻せない (grill 決定 6 で C を選択)</td></tr>
+    <tr><td>全委任型 (G2 案 A)</td><td>P-14 は価値宣言のみ、 定義は全て rules</td><td>定義を骨抜きにしても原則違反にならない空殻化リスク</td></tr>
+    <tr><td>焼き込み型 (G2 案 B)</td><td>P-14 本文に読者層 3 層を明記</td><td>読者層の追加・変更が毎回 P-10 amendment になり、 重さゆえ更新されず形骸化する</td></tr>
+    <tr><td>機構 ADR と 1 本統合 (G1 案 B)</td><td>amendment + template layer を単一 ADR に</td><td>P-10 という最重手続きが機構詳細に埋もれ、 将来 P-14 の出典を辿る読者の焦点がぼける (principle-amendment を機構実装と分けて記録する方針。 ADR-0021 も P-13 append を X4 layout 実装とは別 ADR で記録した)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<ul>
+  <li><strong>討論</strong>: criterion-c 徹底討論 (2026-06-10、 決定 6 件) + ADR grill (2026-06-11、 G1 = 2 本構成 / G2 = 構造要求型)。 独立 5-lens 監査 wf_8b14e53a が現状 evidence を実測。</li>
+  <li><strong>調査</strong>: <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> (6 軸 41 パターン + gap-fill + blueprint)。</li>
+  <li><strong>bd</strong>: folio-nmy (本 ADR) / epic folio-v8s。 同乗: folio-e2s。</li>
+  <li><strong>手続き状態</strong>: proposed (user 承認待ち)。 承認後: 本 ADR accepted 化 + constitution §2 へ P-14 append + e2s 同乗是正 + status-flip に伴う golden 再生成 (inventory / prime / validate-clean) を同 commit 系で実施。</li>
+</ul>
+</section>
+
+</body>
+</html>
