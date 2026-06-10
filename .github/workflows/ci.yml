@@ -9,12 +9,13 @@
 #                           ADR-0020/0025/0028/0033/0034/0035)
 #   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
 #   (3) render-gate       = render-safety ceiling (playwright headless render の flowchart 幾何 overlap
-#                           検出、 verification.html REQ-VER-021 の二層モデル上層 / tests/render-gate/README.md)。
-#                           (1) の render-safety gate は pure-bash で render 後 DOM を見れず既知パターン
-#                           しか lint できない floor。 本 job は実ブラウザ render で flowchart の cluster/node/
-#                           label 幾何 overlap を捕捉する deterministic ceiling = folio dogfood (CI-only)。
-#                           決定性は vendored mermaid + pinned playwright + pinned font (fonts-noto-cjk) で
-#                           担保。 正式 decision 記録は ADR-0037 (retrospective、 別 PR) に切り出す。
+#                           + clip 検出、 verification.html REQ-VER-022 / tests/render-gate/README.md)。
+#                           (1) の render-safety gate (REQ-VER-021) は pure-bash で render 後 DOM を見れず
+#                           既知パターンしか lint できない floor。 本 job は実ブラウザ render で flowchart の
+#                           cluster/node/label 幾何欠陥 4 class を捕捉する deterministic ceiling = folio
+#                           dogfood (CI-only)。 非 flowchart 図は vacuous warning で可視化する。 決定性は
+#                           vendored mermaid + pinned playwright + pinned font (fonts-noto-cjk) で担保。
+#                           正式 decision 記録は ADR-0037。
 #
 # LLM ceiling (Phase F review agent = REQ-CI-011 declarative-form / 012 what-only) は
 # 非決定的ゆえ CI 非搭載 (authoring advisory、 ADR-0028 §2.3)。 render-gate は決定的ゆえ blocking。
@@ -82,7 +83,7 @@ jobs:
           fi
           echo "all sandbox scenarios GREEN"
 
-  # render-safety ceiling (verification.html REQ-VER-021 二層モデル上層)。 verify (bash floor) と並列の独立 job。
+  # render-safety ceiling (verification.html REQ-VER-022、 floor = REQ-VER-021 の二層上層)。 verify (bash floor) と並列の独立 job。
   # browser 依存ゆえ別 job に隔離し、 fast な bash 検証を遅らせない。 deterministic ゆえ blocking。
   render-gate:
     runs-on: ubuntu-latest

@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-04T02:08:22Z",
+  "generatedAt": "2026-06-10T15:18:17Z",
   "folioVersion": "0.5.0-draft",
   "specs": [
     {
@@ -1597,6 +1597,12 @@
         "essence": "folio validate は render-safety gate を検査する: &lt;pre class=\"mermaid\"&gt; ブロック内の subgraph 多行タイトル (title bracket [\"…\"] に &lt;br&gt; を含む) を flag する。 mermaid が cluster-label の縦 padding を 1 行分しか確保せず 2 行目が子ノード/枠に overlap する render-後の幾何欠陥を、 DOM を見れない static lint が「既知の overlap パターン」として捕捉する (node label の &lt;br&gt; は対象外)。 違反は exit 1 (block)。 任意 overlap の網羅は browser-render を要する ceiling の領分。"
       },
       {
+        "id": "REQ-VER-022",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-022",
+        "essence": "CI の render-gate job は、 実 mermaid 図を持つ spec を headless chromium で実 render し、 render 後の DOM 幾何から 4 class の欠陥 (多行 cluster-label / label-over-node / node-over-node / content-clipped) を検出して merge を block する (render-safety の ceiling 層、 floor = REQ-VER-021)。 render 不足は見逃しでなく fail (fail-closed)、 constitution は advisory、 幾何対象を持たない図型 (sequence 等) は vacuous warning・.node は出すが flowchart でない図型 (state 等) は uncalibrated warning で可視化。 検出力は selftest fixture (kind 完全一致 + scale&lt;1 正規化を含む 8 case) が回帰固定し、 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保 (deterministic ゆえ blocking 適格)。"
+      },
+      {
         "id": "REQ-XREF-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-xref-001",
@@ -1884,11 +1890,19 @@
       },
       {
         "from": "spec/verification.html",
+        "to": "ADR-0028"
+      },
+      {
+        "from": "spec/verification.html",
         "to": "ADR-0033"
       },
       {
         "from": "spec/verification.html",
         "to": "ADR-0034"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0037"
       },
       {
         "from": "spec/verification.html",

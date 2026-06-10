@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>render-gate selftest — non-flowchart vacuous (sequence)</title>
+<script src="../../../architecture/assets/mermaid.min.js" defer></script>
+</head>
+<body>
+<!--
+  render-gate self-test fixture (vacuous)。 sequenceDiagram は .node/.cluster を出さないため
+  幾何 detector が構造的に空振りする。 check.py --selftest は「clean かつ vacuous=true 報告」を期待する
+  (= 非 flowchart 図を silent pass せず warning 可視化できることの回帰ガード)。
+-->
+<figure class="diagram">
+<pre class="mermaid">
+sequenceDiagram
+  participant A as author
+  participant V as validate
+  A->>V: spec を編集して検証
+  V-->>A: 16-gate 結果
+</pre>
+<figcaption>vacuous: sequenceDiagram (幾何検査の対象外)</figcaption>
+</figure>
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!window.mermaid) return;
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'antiscript', theme: 'base' });
+  try { await mermaid.run(); } catch (e) {}
+});
+</script>
+</body>
+</html>

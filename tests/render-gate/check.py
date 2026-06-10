@@ -6,9 +6,11 @@ chromium で render し、 render 後の DOM 幾何から **flowchart の text-b
 
 folio validate (pure-bash floor、 REQ-VER-021) は render 後の DOM を見れないため「既知の
 overlap-prone パターン (subgraph 多行タイトル)」を static pattern-lint するに留まる。 本 gate は
-実ブラウザ render を行い、 flowchart の cluster/node/label 矩形に対する幾何 overlap (多行
-cluster-label / label-over-node / node-over-node の 3 class、 probe.js 参照) を捕捉する ceiling 層。
-非 flowchart 図 (sequence/state 等) や横溢れ・viewport clip は未対応 (README「限界」節)。
+実ブラウザ render を行い、 flowchart の cluster/node/label 矩形に対する幾何 overlap + clip (多行
+cluster-label / label-over-node / node-over-node / content-clipped の 4 class、 probe.js 参照) を
+捕捉する ceiling 層。 幾何対象 (.node/.cluster) を持たない図型 (sequence 等) は vacuous、 .node は
+持つが flowchart でない図型 (stateDiagram 等 — .node を「出す」ため構造だけでは区別できない) は
+uncalibrated として、 いずれも warning で可視化する (silent pass にしない — README「限界」節)。
 
 決定性: mermaid は repo に vendored、 playwright 版は requirements.txt で pin、 **CI は font も pin**
 (ci.yml が fonts-noto-cjk を install) するため layout + text shaping が固定される。 detector の主軸
@@ -135,6 +137,17 @@ def run_sweep(base_url: str, targets: list[dict]) -> int:
             status = "FAIL" if (n or short) else "OK"
             note = f" (render 不足: {got}/{expected})" if short else ""
             print(f"  [{status}]{tag} {rel} — {got}/{expected} 図 / {n} overlap{note}")
+            # coverage warning (fail にはしないが silent pass を可視化する — 将来 folio が
+            # sequence/state 図を足したとき「検査済」と誤認させない):
+            #   vacuous      = .node/.cluster 不在で幾何検査が構造的に空振り (sequence 等)
+            #   uncalibrated = .node はあるが flowchart でない図型 (state 等)。 幾何は測るが
+            #                  threshold は flowchart 較正のため検査済とは言えない
+            for d in result["diagrams"]:
+                which = d.get("caption") or d.get("id") or ("図#" + str(d["idx"] + 1))
+                if d.get("vacuous"):
+                    print(f"    [warn] vacuous-coverage: {which} (type={d.get('type') or '不明'}) — .node/.cluster 不在で幾何検査の対象外")
+                elif d.get("uncalibrated"):
+                    print(f"    [warn] uncalibrated-coverage: {which} (type={d.get('type') or '不明'}) — flowchart 較正外の図型 (幾何は測るが threshold 未較正)")
             if not blocking:
                 continue  # constitution は advisory: 表示のみ、 exit に影響させない
             if short:
@@ -153,39 +166,57 @@ def run_sweep(base_url: str, targets: list[dict]) -> int:
 def run_selftest(base_url: str) -> int:
     """detector の検出力を fixture で自己検証する (mermaid/chromium 版変化への回帰ガード)。
 
-    各 case は (fixture, 期待図数, 期待 flagged)。 render 不足 (svgCount < 期待図数) は GOOD でも FAIL に
-    倒す — 「壊れて何も render しない」を「clean」と取り違えない (tautology escape hatch を塞ぐ)。
+    各 case は (fixture, 期待図数, 期待 violation kind 集合, 期待 coverage)。 判定は 2 軸とも厳密:
+    - kind は **完全一致** (subset でない) — 期待した detector「だけ」が発火することを要求する。
+      subset 判定だと positive fixture 上の予期せぬ誤発火 (別 detector の偽陽性) が masking される。
+      随伴発火 (multiline fixture の cluster-label-over-node 等) は期待集合に明記して許容集合を閉じる。
+    - coverage は full / vacuous / uncalibrated の 3 値一致 — 非 flowchart 図の可視化経路も固定する。
+    render 不足 (svgCount < 期待図数) はどの case でも FAIL に倒す — 「壊れて何も render しない」を
+    「clean」と取り違えない (tautology escape hatch を塞ぐ)。
     """
     fix = Path(__file__).resolve().parent / "fixtures"
     cases = [
-        ("multiline-subgraph.html", 1, True),    # 多行 subgraph タイトル → 必ず overlap
-        ("single-line-subgraph.html", 1, False),  # 単行 → 必ず clean (かつ render 成功)
+        # 実 mermaid render を通す fixture (mermaid/chromium 版 drift への回帰ガード):
+        ("multiline-subgraph.html", 1, {"cluster-label-multiline", "cluster-label-over-node"}, "full"),  # detector(1) + 随伴(2)
+        ("single-line-subgraph.html", 1, set(), "full"),                       # clean (誤検出なし)
+        ("scaled-multiline-subgraph.html", 1, {"cluster-label-multiline", "cluster-label-over-node"}, "full"),  # detector(1) の scale<1 正規化
+        ("nonflowchart-vacuous.html", 1, set(), "vacuous"),                    # sequence → clean かつ vacuous 報告
+        ("state-uncalibrated.html", 1, set(), "uncalibrated"),                 # state は .node を出す → uncalibrated 報告
+        # 合成 SVG fixture (mermaid は通常この欠陥を生成しないため、 mermaid 出力と同じ class 構造の
+        # SVG を直置きして detector arm 自体を検証する):
+        ("node-overlap.html", 1, {"node-over-node"}, "full"),                  # detector(3)
+        ("clipped-content.html", 1, {"content-clipped"}, "full"),              # detector(4)
+        ("label-over-node.html", 1, {"label-over-foreign-node"}, "full"),      # detector(2) 単独 arm
     ]
     ok = True
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1280, "height": 900})
-        for name, expected, expect_flagged in cases:
+        for name, expected, expect_kinds, expect_cov in cases:
             rel = (fix / name).relative_to(REPO_ROOT).as_posix()
             result = probe_page(page, f"{base_url}/{rel}", expected)
             got = result["svgCount"]
-            n = sum(len(d["violations"]) for d in result["diagrams"])
-            flagged = n > 0
+            kinds = {v["kind"] for d in result["diagrams"] for v in d["violations"]}
+            cov = "full"
+            if any(d.get("vacuous") for d in result["diagrams"]):
+                cov = "vacuous"
+            elif any(d.get("uncalibrated") for d in result["diagrams"]):
+                cov = "uncalibrated"
             rendered = got >= expected
-            passed = rendered and (flagged == expect_flagged)
+            passed = rendered and kinds == expect_kinds and cov == expect_cov
             if not passed:
                 ok = False
             verdict = "PASS" if passed else "FAIL"
-            exp = "overlap 検出" if expect_flagged else "clean"
+            exp = ("+".join(sorted(expect_kinds)) or "clean") + (f"+{expect_cov}" if expect_cov != "full" else "")
             if not rendered:
                 got_s = f"render 不足 ({got}/{expected})"
             else:
-                got_s = f"{n} overlap" if flagged else "clean"
+                got_s = ("+".join(sorted(kinds)) or "clean") + (f"+{cov}" if cov != "full" else "")
             print(f"  [selftest {verdict}] {name}: 期待={exp} / 実際={got_s}")
         browser.close()
     print()
     if ok:
-        print("selftest: PASS — detector は欠陥を捕捉し、 clean を誤検出せず、 render 失敗を clean と取り違えない")
+        print("selftest: PASS — 全 detector arm が kind 完全一致で発火し、 clean を誤検出せず、 scale 正規化と coverage 分類 (vacuous/uncalibrated) が固定されている")
         return 0
     print("selftest: FAIL — detector が期待通り動作しない (mermaid/chromium 版 drift?)")
     return 1
