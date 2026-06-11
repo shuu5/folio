@@ -31,11 +31,41 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-summary">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">constitution-x4-amendment-proposal</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>constitution X4 amendment proposal</h1>
   <div class="meta">planning / proposal &middot; status: superseded &middot; 2026-05-25 &middot; constitution 改訂の review 用ドラフト (即編集前の文面提示、 user 承認 → ADR 起票 → 編集の順)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-summary">§1. Summary &amp; SemVer</a></li>
+  <li class="toc--sub"><a href="#s1-scope">scope 確定 (本 session 決定、 delegated)</a></li>
+  <li><a href="#s2-principles">§2. Principle 改訂 (before / after)</a></li>
+  <li class="toc--sub"><a href="#s2-p2">✏ P-2 (format)</a></li>
+  <li class="toc--sub"><a href="#s2-p3">✏ P-3 (WHAT-only)</a></li>
+  <li class="toc--sub"><a href="#s2-p4">✏ P-4 (Declarative form)</a></li>
+  <li class="toc--sub"><a href="#s2-p7">✏ P-7 (Content domain exclusivity) — 4→3 domain</a></li>
+  <li class="toc--sub"><a href="#s2-p11">✏ P-11 (Never tier — design-intent 文書に HOW を書かない)</a></li>
+  <li class="toc--sub"><a href="#s2-p13">✚ P-13 (NEW — Verification &amp; Traceability、 Always tier)</a></li>
+  <li class="toc--sub"><a href="#s2-tier">✏ §2 tier 構造 + metadata</a></li>
+  <li><a href="#s3-amendment-proc">§3. §6 Amendment Procedure 書き換え (changes/ + archive/ 廃止反映)</a></li>
+  <li><a href="#s4-structure-vs-location">§4. 「構造を constitution 固定」と「location override 可」の両立</a></li>
+  <li><a href="#s5-ripple">§5. Ripple (constitution 編集後に整合させる file)</a></li>
+  <li><a href="#s6-plan">§6. Phased Execution Plan (parent / spawn 分担)</a></li>
+  <li class="toc--sub"><a href="#s6-1-phase1">§6.1 Phase 1 (amendment) checklist — ✅ 完了 (commit fbd2549, 2026-05-25)</a></li>
+  <li class="toc--sub"><a href="#s6-2-after">§6.2 Phase 1 後</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本 doc は <a href="../spec/constitution.html">constitution.html</a> 改訂の <strong>review 用 proposal</strong>。 P-10 (constitution 変更前 user 承認 MUST) + frozen 統制に従い、 <strong>constitution 自体はまだ編集していない</strong>。 user が本文面を承認 → amendment ADR 起票 (user 承認 MUST) → constitution を delta marker 付きで編集、 の順で進める。 changes/ 廃止 (本 proposal §2 P-7) に伴い、 本 proposal は専用 changes/ dir でなく scratch/ 直下の planning doc として置く (新 §6 手続きの dogfood)。</p>
@@ -189,5 +219,7 @@
 <p>X4-0 (layout 確定) を PARENT で着手 — constitution が layout 不変になったため self-spec §2 / rules §2 の canonical rework が安全に行える (x4-plan §3 論点表の解決)。 その後 X4-C (migration) から実装を SPAWN + feature-dev に委譲する。 X4 全体の分解は <a href="x4-plan.html">x4-plan.html</a> を参照。</p>
 </section>
 
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

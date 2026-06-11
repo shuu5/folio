@@ -39,11 +39,33 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0038</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0038 — constitution P-14 (Human Readability) 新設 amendment</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-06-11 &middot; folio v0.5.0-draft &middot; constitution に第 14 原則 Human Readability を新設する amendment。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは <a href="./ADR-0021-constitution-x4-amendment.html">ADR-0021</a> 前例 (番号 append・renumber なし・rationale aside 併記) を踏襲し、 user 承認 (本 ADR の accepted 化) と同時に constitution §2 へ追記する。 機構実装は ADR-0039 (presentation template layer) が担う。</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-text">§2.1 P-14 の文面 (新設する原則)</a></li>
+  <li class="toc--sub"><a href="#s2-2-form">§2.2 型の選択 — 構造要求型 (grill G2 = C)</a></li>
+  <li class="toc--sub"><a href="#s2-3-procedure">§2.3 amendment 手続き (ADR-0021 前例の踏襲)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -130,5 +152,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0037-render-safety-ceiling.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling、 後者は playwright で flowchart 幾何 overlap を CI 検出する folio dogfood)</span></a>
+  <a class="prevnext__next" href="ADR-0039-presentation-template-layer.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

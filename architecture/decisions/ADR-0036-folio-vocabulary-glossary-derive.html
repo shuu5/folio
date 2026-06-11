@@ -41,11 +41,35 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0036</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0036 — folio-vocabulary glossary derive + partition</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> §2.8 の best-effort tier を保存し新 REQ で extend (supersede しない)。 companion <a href="./ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> (nav) に depends</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-ship-derive">§2.1 folio が canonical folio-vocabulary を author→ship、 consumer は derive (ADR-0034 §2.8 を extend)</a></li>
+  <li class="toc--sub"><a href="#s2-2-partition">§2.2 分割ルールの明文化 + vocabulary.yaml domain namespace (P-5 cross-layer)</a></li>
+  <li class="toc--sub"><a href="#s2-3-completeness">§2.3 completeness は best-effort を保存 (REQ-GLOSS-001 据置 + 新 REQ-GLOSS-002 追加、 ADR-0034 を supersede しない)</a></li>
+  <li class="toc--sub"><a href="#s2-4-render">§2.4 描画 = hover tooltip のみ (single-SoT derive、 旧 click→glossary.html は S4b-2 dogfood で routing 衝突が判明し撤回)</a></li>
+  <li class="toc--sub"><a href="#s2-5-gates">§2.5 enforcement = folio validate に glossary gate 追加</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -158,5 +182,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0035-walkable-architecture-nav-derive.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)</span></a>
+  <a class="prevnext__next" href="ADR-0037-render-safety-ceiling.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling、 後者は playwright で flowchart 幾何 overlap を CI 検出する folio dogfood)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

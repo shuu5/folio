@@ -61,14 +61,52 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">rules</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>folio rules</h1>
   <div class="meta">v0.5.0-draft &middot; status: draft &middot; Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
+  <li><a href="#s2-directory">§2. Directory Structure (Layer 1 consumer project)</a></li>
+  <li><a href="#s3-naming">§3. File Naming Convention</a></li>
+  <li><a href="#s4-format">§4. HTML Format Conventions</a></li>
+  <li class="toc--sub"><a href="#s4-5-visual">§4.5 Visual Richness Patterns (HTML 活用 guidance)</a></li>
+  <li class="toc--sub"><a href="#s4-6-a11y">§4.6 Accessibility Minimum Rules (a11y, normative)</a></li>
+  <li><a href="#s5-delta">§5. Delta Marker Markup</a></li>
+  <li><a href="#s6-ears">§6. EARS Notation Markup</a></li>
+  <li><a href="#s7-dual-audience">§7. Dual-Audience Markup (data-audience taxonomy)</a></li>
+  <li class="toc--sub"><a href="#s7-1-taxonomy">§7.1 data-audience taxonomy</a></li>
+  <li class="toc--sub"><a href="#s7-2-canonical-pattern">§7.2 Canonical markup pattern (2 form)</a></li>
+  <li class="toc--sub"><a href="#s7-3-floor">§7.3 Dual-Audience Safety Invariants (conditional-normative floor)</a></li>
+  <li class="toc--sub"><a href="#s7-4-human-view">§7.4 Human view guidance (Hybrid)</a></li>
+  <li><a href="#s8-js-governance">§8. JavaScript Governance (read-only enhancement only)</a></li>
+  <li><a href="#s9-xref">§9. Object Cross-Reference (in-band xref + no-JS hover tooltip)</a></li>
+  <li class="toc--sub"><a href="#s9-1-markup">§9.1 markup 規約 + prefix→SSoT-doc registry</a></li>
+  <li class="toc--sub"><a href="#s9-2-essence">§9.2 essence 抽出 contract (tooltip text の生成元)</a></li>
+  <li class="toc--sub"><a href="#s9-3-tooltip-css">§9.3 tooltip CSS governance (no-JS、 §8 整合)</a></li>
+  <li class="toc--sub"><a href="#s9-4-requirements">§9.4 Cross-reference requirements (REQ-XREF-*)</a></li>
+  <li class="toc--sub"><a href="#s9-5-glossary">§9.5 Glossary terms (Class B、 vocabulary.yaml SSoT + explicit/auto-mark hover tooltip)</a></li>
+  <li><a href="#s10-mandatory">§10. Mandatory Actions for Layer 1 Consumer</a></li>
+  <li class="toc--sub"><a href="#s10-1">§10.1 Spec Edit Caller Marker</a></li>
+  <li class="toc--sub"><a href="#s10-2">§10.2 CI Gate Compliance</a></li>
+  <li class="toc--sub"><a href="#s10-3">§10.3 ADR Worthiness</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
-<p>本文書は <a href="./constitution.html">constitution.html</a> の不変原則 (<a class="xref" href="./constitution.html#p-1" data-tooltip="spec は未来理想の anchor である">P-1</a>〜<a class="xref" href="./constitution.html#p-13" data-tooltip="Verification &amp; Traceability">P-13</a>) を <em>実装する</em> rules 集である。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。 folio framework 自身の architecture spec は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
+<p>本文書は <a href="./constitution.html">constitution.html</a> の不変原則 (<a class="xref" href="./constitution.html#p-1" data-tooltip="spec は未来理想の anchor である">P-1</a>〜<a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a>) を <em>実装する</em> rules 集である。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。 folio framework 自身の architecture spec は <a href="folio-self-spec.html">folio-self-spec.html</a> を参照。</p>
 </aside>
 
 <section id="s0-reader-guide" class="informative">
@@ -861,5 +899,10 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__next" href="folio-self-spec.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">folio — self-spec (v0.5.0-draft)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

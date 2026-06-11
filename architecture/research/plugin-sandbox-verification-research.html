@@ -38,11 +38,91 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-background">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">plugin-sandbox-verification-research</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>folio plugin sandbox verification research</h1>
   <div class="meta">v0.1.0-draft &middot; status: draft &middot; Phase X3 minimal plugin の実機検証フレーム設計調査 (87 sources、 5 researcher 並列調査、 session 59a916c0、 2026-05-23)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-background">§1. 調査背景</a></li>
+  <li class="toc--sub"><a href="#s1-1-problem">§1.1 中核問題</a></li>
+  <li class="toc--sub"><a href="#s1-2-subquestions">§1.2 10 サブ質問</a></li>
+  <li class="toc--sub"><a href="#s1-3-method">§1.3 調査手法</a></li>
+  <li><a href="#s2-q1-claude-code">§2. Q1 — Claude Code 公式仕様 reference (test/dev workflow)</a></li>
+  <li class="toc--sub"><a href="#s2-1-dev-mode">§2.1 Development mode: --plugin-dir が公式 dev install</a></li>
+  <li class="toc--sub"><a href="#s2-2-hook-test">§2.2 Hook テストパターン: 公式に automated framework なし (deduced)</a></li>
+  <li class="toc--sub"><a href="#s2-3-skill-test">§2.3 Skill テスト = Evaluation-Driven Development (verified)</a></li>
+  <li class="toc--sub"><a href="#s2-4-transcript">§2.4 Transcript / Log capture: 公式 API なし、 JSONL 自動保存 (verified)</a></li>
+  <li class="toc--sub"><a href="#s2-5-marketplace">§2.5 Marketplace 審査 (verified)</a></li>
+  <li class="toc--sub"><a href="#s2-6-deny-bug">§2.6 PreToolUse permissionDecision: "deny" Bug 群 (4 件 verified)</a></li>
+  <li class="toc--sub"><a href="#s2-7-sandbox-misc">§2.7 Claude Code 別途 Sandbox 機構 (plugin 関連ではない)</a></li>
+  <li><a href="#s3-q2-ecosystem">§3. Q2 — 類似 plugin ecosystem test harness deep dive (9 事例)</a></li>
+  <li class="toc--sub"><a href="#s3-1-matrix">§3.1 9 事例の 4 軸 (runner / scenario / instrumentation / CI) 整理</a></li>
+  <li class="toc--sub"><a href="#s3-2-patterns">§3.2 6 応用 pattern (folio 用、 A〜F)</a></li>
+  <li class="toc--sub"><a href="#s3-3-common">§3.3 全事例共通 pattern (folio でも必須採用)</a></li>
+  <li><a href="#s4-q3-q6">§4. Q3 + Q6 — AI agent eval framework + Property/Behavioral testing</a></li>
+  <li class="toc--sub"><a href="#s4-1-inspect-ai">§4.1 Inspect AI (UK AISI) — Task/Dataset/Solver/Scorer 4 層 (verified)</a></li>
+  <li class="toc--sub"><a href="#s4-2-promptfoo">§4.2 Promptfoo — YAML 宣言 + 多様な assertion (verified)</a></li>
+  <li class="toc--sub"><a href="#s4-3-llm-judge">§4.3 LLM-as-judge 4 主要バイアス対策 (verified)</a></li>
+  <li class="toc--sub"><a href="#s4-4-hypothesis">§4.4 Hypothesis — RuleBasedStateMachine (verified)</a></li>
+  <li class="toc--sub"><a href="#s4-5-fast-check">§4.5 fast-check — Model-based Testing (JS/TS、 deduced)</a></li>
+  <li class="toc--sub"><a href="#s4-6-ears-gherkin">§4.6 EARS → Gherkin/BDD 1:1 変換 (verified)</a></li>
+  <li class="toc--sub"><a href="#s4-7-langchain-misc">§4.7 LangChain Trajectory eval / その他</a></li>
+  <li><a href="#s5-q4-q7">§5. Q4 + Q7 — Conformance test suite design + Observability instrumentation</a></li>
+  <li class="toc--sub"><a href="#s5-1-wpt">§5.1 W3C Web Platform Tests (WPT) scenario file 構造 (verified)</a></li>
+  <li class="toc--sub"><a href="#s5-2-ts-baseline">§5.2 TypeScript compiler test baseline (verified)</a></li>
+  <li class="toc--sub"><a href="#s5-3-specmatic">§5.3 Specmatic / Arazzo (OpenAPI/AsyncAPI conformance、 verified)</a></li>
+  <li class="toc--sub"><a href="#s5-4-snapshot">§5.4 Golden file / Snapshot testing の使い分け (verified)</a></li>
+  <li class="toc--sub"><a href="#s5-5-transcript">§5.5 Claude Code transcript capture format (verified)</a></li>
+  <li class="toc--sub"><a href="#s5-6-otel">§5.6 OpenTelemetry を CLI hook 経由で emit (verified)</a></li>
+  <li class="toc--sub"><a href="#s5-7-format">§5.7 Scenario file format 比較 (folio 用推奨導出)</a></li>
+  <li><a href="#s6-q5">§6. Q5 — 隔離環境構築 + Claude Code sandbox 可否</a></li>
+  <li class="toc--sub"><a href="#s6-1-comparison">§6.1 9 方式比較表</a></li>
+  <li class="toc--sub"><a href="#s6-2-claude-sandbox">§6.2 「Claude Code 自体を sandbox で動かす」 判定</a></li>
+  <li class="toc--sub"><a href="#s6-3-3step">§6.3 folio 用 3 段階推奨パターン</a></li>
+  <li class="toc--sub"><a href="#s6-4-boundary">§6.4 「folio 軽量」 vs「本格 hermetic」 の境界</a></li>
+  <li><a href="#s7-q8">§7. Q8 — folio 用 Sandbox Verification Framework 推奨設計</a></li>
+  <li class="toc--sub"><a href="#s7-1-principles">§7.1 設計原則 (folio constitution と整合)</a></li>
+  <li class="toc--sub"><a href="#s7-2-layout">§7.2 配置 (scratch 内)</a></li>
+  <li class="toc--sub"><a href="#s7-3-format">§7.3 Scenario format 推奨: YAML (MCPSpec / Promptfoo / pytest-regressions 流)</a></li>
+  <li class="toc--sub"><a href="#s7-4-runner">§7.4 Runner 選択 trade-off</a></li>
+  <li class="toc--sub"><a href="#s7-5-usecases">§7.5 8 use case verification scenario 設計</a></li>
+  <li class="toc--sub"><a href="#s7-6-ci">§7.6 CI 統合 + 観察 instrumentation</a></li>
+  <li><a href="#s8-q9">§8. Q9 — twill experiment-verified との境界明文化</a></li>
+  <li class="toc--sub"><a href="#s8-1-twill">§8.1 twill の experiment-verified pattern (reference)</a></li>
+  <li class="toc--sub"><a href="#s8-2-folio-vs-twill">§8.2 folio の方針: 機能単位 (use case 単位) sandbox 検証</a></li>
+  <li class="toc--sub"><a href="#s8-3-rationale">§8.3 なぜ folio が twill 方式を採用しないか</a></li>
+  <li class="toc--sub"><a href="#s8-4-future">§8.4 情報単位 verified が将来別 plugin として独立する根拠</a></li>
+  <li class="toc--sub"><a href="#s8-5-what-only">§8.5 本 verification framework が WHAT のみ規定する設計</a></li>
+  <li><a href="#s9-q10">§9. Q10 — ADR 起票候補</a></li>
+  <li><a href="#s10-open-questions">§10. Open Questions / Future Work</a></li>
+  <li class="toc--sub"><a href="#s10-1-gaps">§10.1 Gaps (実装直前の盲点、 critic 検出)</a></li>
+  <li class="toc--sub"><a href="#s10-2-warnings">§10.2 Citation WARNING (critic 検出)</a></li>
+  <li class="toc--sub"><a href="#s10-3-out-of-scope">§10.3 本調査の範囲外 (将来の調査候補)</a></li>
+  <li><a href="#s11-references">§11. References (Evidence Table)</a></li>
+  <li class="toc--sub"><a href="#s11-1-claude-code">§11.1 Claude Code 公式 + Issues (13 件)</a></li>
+  <li class="toc--sub"><a href="#s11-2-vscode-jetbrains">§11.2 VS Code / Neovim / JetBrains / Chrome (12 件)</a></li>
+  <li class="toc--sub"><a href="#s11-3-mcp">§11.3 MCP / Plugin testing tools (8 件)</a></li>
+  <li class="toc--sub"><a href="#s11-4-eval">§11.4 AI agent eval framework (12 件)</a></li>
+  <li class="toc--sub"><a href="#s11-5-property">§11.5 Property / Behavioral testing + EARS conversion (6 件)</a></li>
+  <li class="toc--sub"><a href="#s11-6-conformance">§11.6 Conformance test design (9 件)</a></li>
+  <li class="toc--sub"><a href="#s11-7-snapshot">§11.7 Snapshot / golden file (5 件)</a></li>
+  <li class="toc--sub"><a href="#s11-8-observability">§11.8 Observability / Telemetry (5 件)</a></li>
+  <li class="toc--sub"><a href="#s11-9-sandbox">§11.9 Sandbox runtime (12 件)</a></li>
+  <li><a href="#s12-meta">§12. メタ情報</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本文書は <a href="../spec/constitution.html">constitution</a> の P-3 (WHAT-only) + P-11 (HOW 禁止) 遵守の上で、 <a href="plugin-architecture-research.html">plugin-architecture-research.html</a> で確定した folio Phase X3 minimal plugin (1 skill + 4 hook + 6 script + 1 CLI) を sandbox で実機検証するフレームワーク設計の調査結果である。 前回 2 レポート (plugin-architecture / spec-graph-management) は web 上の情報のみで実機 verify 未実施。 minimal plugin 実装直前に「動くと思って書いたが動かない」 リスクを低減するため本調査を実施。</p>
@@ -1191,5 +1271,7 @@ teardown:
 </dl>
 </section>
 
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

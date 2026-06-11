@@ -54,11 +54,42 @@
 <script src="../assets/mermaid.min.js" defer></script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">folio-self-spec</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>folio self-spec</h1>
   <div class="meta">v0.5.0-draft &middot; status: draft &middot; folio Layer 0 framework 自身の architecture spec (provisional)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
+  <li><a href="#s1-architecture">§1. 2-Layer Architecture (物理 repo 分離)</a></li>
+  <li><a href="#s2-folio-layout">§2. folio repo Layout (Layer 0)</a></li>
+  <li><a href="#s3-dual-audience">§3. Dual-Audience Presentation (self-application)</a></li>
+  <li class="toc--sub"><a href="#s3-1-core">§3.1 dual-audience core (data-audience + fold + essence)</a></li>
+  <li class="toc--sub"><a href="#s3-2-enforcement">§3.2 consistency = 二層 enforcement (機械的導出の代役)</a></li>
+  <li class="toc--sub"><a href="#s3-3-js">§3.3 JavaScript governance</a></li>
+  <li class="toc--sub"><a href="#s3-4-xref">§3.4 Object cross-reference (self-application)</a></li>
+  <li><a href="#s7-harness">§7. Harness Layer Components</a></li>
+  <li class="toc--sub"><a href="#s7-1-7phase">§7.1 7-Phase PR Cycle (folio-architect SKILL)</a></li>
+  <li class="toc--sub"><a href="#s7-2-specialists">§7.2 Specialist Agents (9 個)</a></li>
+  <li class="toc--sub"><a href="#s7-3-caller-marker">§7.3 Caller Marker</a></li>
+  <li class="toc--sub"><a href="#s7-4-defense">§7.4 5-Layer Context Boundary Defense (3 axis)</a></li>
+  <li class="toc--sub"><a href="#s7-5-ci-gate">§7.5 CI Gate Specification</a></li>
+  <li class="toc--sub"><a href="#s7-6-phase-x3-minimal">§7.6 Phase X3 Minimal Implementation</a></li>
+  <li><a href="#s8-plugin">§8. Plugin Integration (Claude Code plugin としての folio)</a></li>
+  <li><a href="#s9-bindings">§9. Bindings (platform-specific HOW の分離)</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href="rules.html">rules.html</a> を参照。 constitution の不変原則は <a href="./constitution.html">constitution.html</a> を参照。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。</p>
@@ -695,5 +726,11 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="rules.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio — rules (v0.5.0-draft)</span></a>
+  <a class="prevnext__next" href="relations.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">folio — relations (v0.5.0-draft)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

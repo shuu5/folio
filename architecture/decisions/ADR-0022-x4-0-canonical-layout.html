@@ -40,11 +40,33 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0022</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0022 — X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.5.0-draft &middot; forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-canonical">§2.1 canonical layout (folio + consumer 一意)</a></li>
+  <li class="toc--sub"><a href="#s2-2-forks">§2.2 確定した fork</a></li>
+  <li class="toc--sub"><a href="#s2-3-application">§2.3 適用範囲 (X4-0 PARENT / X4-C SPAWN)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -141,5 +163,11 @@ verification/                # HOW-test (architecture/ の sibling、 executable
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0021-constitution-x4-amendment.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0021 — constitution X4 amendment (脱-instance + 3-domain + P-13 新設)</span></a>
+  <a class="prevnext__next" href="ADR-0023-x4-c-scratch-to-architecture-migration.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0023 — X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

@@ -31,11 +31,41 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0001</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-22 &middot; Revision: v3 &middot; folio v0.4.1-draft → v0.4.2-draft (PATCH bump)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1">§2.1 architecture-rules.html を 2 file に split</a></li>
+  <li class="toc--sub"><a href="#s2-2">§2.2 architecture-rules.html 冒頭に provisional aside を追加 (commit 1)</a></li>
+  <li class="toc--sub"><a href="#s2-3">§2.3 constitution.html §3 §4 を cross-ref スタブに縮小 + §1 Purpose 補強</a></li>
+  <li class="toc--sub"><a href="#s2-4">§2.4 SemVer bump + constitution P-2/3/11/12 plain text 修正</a></li>
+  <li class="toc--sub"><a href="#s2-5">§2.5 commit 粒度 — Precise List (v3 で行番号付き 10+ 操作点に refine)</a></li>
+  <li class="toc--sub"><a href="#s2-6">§2.6 rules.html §10 Mandatory Actions — EARS REQ-ID Markup (v3 で Agent A draft 確定)</a></li>
+  <li class="toc--sub"><a href="#s2-7">§2.7 Branch Strategy — feature branch + draft PR squash merge (v3 で新設)</a></li>
+  <li class="toc--sub"><a href="#s2-8">§2.8 Mermaid 移植 詳細 (v3 で新設)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li class="toc--sub"><a href="#s3-1">§3.1 Positive</a></li>
+  <li class="toc--sub"><a href="#s3-2">§3.2 Negative</a></li>
+  <li class="toc--sub"><a href="#s3-3">§3.3 Neutral</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本 ADR は IETF <strong>RFC 2119</strong> および <strong>RFC 8174 / BCP 14</strong> に定義される MUST / SHOULD / MAY / SHALL のキーワード解釈規約に従う。</p>
@@ -492,5 +522,10 @@ binding 詳細は &lt;a href="folio-self-spec.html#s9-bindings"&gt;folio-self-sp
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__next" href="ADR-0002-scratch-layout.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0002 — folio repo を scratch 中心の試作層に整理</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

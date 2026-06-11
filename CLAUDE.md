@@ -63,7 +63,7 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 ├── .claude-plugin/                         Claude Code manifest + 内部 HOW (P-11 部分隔離)
 │   ├── plugin.json                         Claude Code 必須 manifest (spec_path = architecture/spec/)
 │   ├── scripts/                            hook script (hooks.json から path 指定で参照)
-│   ├── bin/folio                           CLI (version / inventory / prime / validate、 走査 base = architecture/)
+│   ├── bin/folio                           CLI (version / init / inventory / prime / validate / fix / build、 走査 base = architecture/)
 │   └── refs/                               試作 placeholder (X4-D specialist agent 用 ref data 予約)
 └── inventory.json                          folio inventory CLI の生成物 (repo-root、 .gitignore)
 ```

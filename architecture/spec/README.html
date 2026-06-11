@@ -31,17 +31,35 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-purpose">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li aria-current="page">spec</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>architecture/spec/ — folio framework spec index</h1>
   <div class="meta">v0.5.0-draft &middot; ブラッシュアップ対象の folio framework spec を集約 (constitution は spec graph scan 対象外の特別枠)</div>
 </header>
-
-<nav class="cluster-nav" aria-label="architecture 横断ナビ">
-  <a href="../index.html">&larr; architecture index</a> &middot;
-  <a href="../decisions/README.html">decisions/</a> &middot;
-  <a href="../research/README.html">research/</a>
+<!-- folio:chrome-toc -->
+<nav class="cluster-nav" aria-label="関連 cluster"><a href="../decisions/README.html">decisions/</a> &middot; <a href="../research/README.html">research/</a></nav>
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-purpose">§1. Purpose</a></li>
+  <li><a href="#s2-inventory">§2. File Inventory</a></li>
+  <li><a href="#s3-graph">§3. Dependency Graph</a></li>
+  <li><a href="#s4-reading-order">§4. Reading Order</a></li>
+  <li><a href="#s5-changelog">§5. Change Log</a></li>
+  <li><a href="#s6-todo">§6. Open TODO</a></li>
+  <li class="toc--sub"><a href="#s6-1-dogfood">§6.1 Dogfood failure (frozen file、 user 判断待ち)</a></li>
+  <li class="toc--sub"><a href="#s6-2-phase-x3-deferred">§6.2 Phase X3 進行中の defer 事項 (2026-05-24 集約)</a></li>
+  <li class="toc--sub"><a href="#s6-3-adr-candidates">§6.3 ADR 起票候補 (user 承認 MUST)</a></li>
+</ol>
 </nav>
+<!-- /folio:chrome-toc -->
+
 
 <aside class="informative">
 <p>本 dir (<code>architecture/spec/</code>) は folio framework の design-intent spec を集約する (constitution + rules + folio-self-spec + relations + verification)。 spec は draft 状態でブラッシュアップ対象、 constitution は不変資産 (scan 対象外)。 X4-C で <code>scratch/</code> から canonical layout へ物理移植済 (<a href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)。</p>
@@ -383,5 +401,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

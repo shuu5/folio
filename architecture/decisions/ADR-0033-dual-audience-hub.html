@@ -42,11 +42,39 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0033</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-29 &middot; folio v0.5.0-draft &middot; dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> floor + ceiling 拡張 / <a href="./ADR-0029-phase-f-agent-set.html">ADR-0029</a> Phase F に fidelity 追加 (実装は SPAWN)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-ssot">§2.1 SSoT モデル = 単一ソース + progressive disclosure</a></li>
+  <li class="toc--sub"><a href="#s2-2-structure">§2.2 構造 = data-audience taxonomy + &lt;details&gt; fold (no aria-hidden)</a></li>
+  <li class="toc--sub"><a href="#s2-3-option-b">§2.3 Option B (co-author + enforce) 採用 / Option A' (derive-into-DOM) は roadmap</a></li>
+  <li class="toc--sub"><a href="#s2-4-enforcement">§2.4 consistency = 二層 enforcement (ADR-0028 拡張)</a></li>
+  <li class="toc--sub"><a href="#s2-5-human-view">§2.5 human view = Hybrid (concept flowchart + compact list + coverage RTM)</a></li>
+  <li class="toc--sub"><a href="#s2-6-tiered">§2.6 普遍性 = tiered</a></li>
+  <li class="toc--sub"><a href="#s2-7-minimal-normative">§2.7 normative = minimal + rich guidance</a></li>
+  <li class="toc--sub"><a href="#s2-8-js-governance">§2.8 JS governance = read-only enhancement のみ</a></li>
+  <li class="toc--sub"><a href="#s2-9-application">§2.9 適用 (実装 scope)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -173,5 +201,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0032-v1-goal-refinement-defer.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)</span></a>
+  <a class="prevnext__next" href="ADR-0034-object-term-xref-system.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

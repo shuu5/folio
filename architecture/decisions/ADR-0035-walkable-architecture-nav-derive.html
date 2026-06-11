@@ -47,11 +47,37 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0035</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-06-01 &middot; folio v0.5.0-draft &middot; architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を <code>folio build</code> が graph (head metadata + @id path-prefix + objectGraph の JOIN) から生成し commit、 marker + regen-drift gate で hand-authored と区別、 P-7/P-13 の空間排除は HOW+verification を名指すゆえ派生 view は憲法改訂なしに ADR で授権。 companion = <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary)。 <a href="./ADR-0024-folio-init-scope.html">ADR-0024</a> init + <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張、 <a href="./ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a> の gitignore-projection を新 artifact class に限り反転</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-walkable">§2.1 walkable architecture を normative 化 (範囲 = architecture/ 内に限定)</a></li>
+  <li class="toc--sub"><a href="#s2-2-sot">§2.2 nav の SoT = graph の JOIN (「graph 1 つ」ではない)</a></li>
+  <li class="toc--sub"><a href="#s2-3-build">§2.3 生成器 = folio build (新 subcommand)、 fix と責務分離</a></li>
+  <li class="toc--sub"><a href="#s2-4-commit-in-place">§2.4 golden 型 commit-in-place = 三重 marker + curated region 隔離</a></li>
+  <li class="toc--sub"><a href="#s2-5-gates">§2.5 enforcement = folio validate に 3 gate 追加 (ADR-0020 scope 拡張) + drift モデル</a></li>
+  <li class="toc--sub"><a href="#s2-6-authorization">§2.6 generated-view の architecture/ 同居を ADR で授権 (interpretive-gap、 constitution 不変)</a></li>
+  <li class="toc--sub"><a href="#s2-7-init-self">§2.7 ADR-0024 init 拡張 + folio-self dogfood + self-spec layout 追記</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -184,5 +210,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0034-object-term-xref-system.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</span></a>
+  <a class="prevnext__next" href="ADR-0036-folio-vocabulary-glossary-derive.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

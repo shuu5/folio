@@ -57,11 +57,48 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">relations</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>folio relations</h1>
   <div class="meta">v0.5.0-draft &middot; status: draft &middot; spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
+  <li><a href="#s1-w3c-vocab">§1. W3C Standard Vocabulary</a></li>
+  <li class="toc--sub"><a href="#s1-1-dcterms">§1.1 Dublin Core Terms (DCMI)</a></li>
+  <li class="toc--sub"><a href="#s1-2-schema-org">§1.2 schema.org (補完)</a></li>
+  <li class="toc--sub"><a href="#s1-3-prov-o">§1.3 PROV-O (履歴・派生)</a></li>
+  <li><a href="#s2-folio-vocab">§2. folio Custom Vocabulary</a></li>
+  <li class="toc--sub"><a href="#s2-1-vocab-table">§2.1 folio 独自語彙 (規範定義)</a></li>
+  <li class="toc--sub"><a href="#s2-2-naming-rules">§2.2 命名規則 (standard 優先原則)</a></li>
+  <li><a href="#s3-jsonld">§3. JSON-LD Schema in &lt;head&gt;</a></li>
+  <li class="toc--sub"><a href="#s3-1-minimal">§3.1 Minimal Example (関係性なし)</a></li>
+  <li class="toc--sub"><a href="#s3-2-full">§3.2 Full Example (関係性込み)</a></li>
+  <li class="toc--sub"><a href="#s3-3-id-resolution">§3.3 @id Resolution Rules</a></li>
+  <li class="toc--sub"><a href="#s3-4-conformance">§3.4 Conformance Level (Phase 1)</a></li>
+  <li><a href="#s4-inventory">§4. Inventory Schema</a></li>
+  <li class="toc--sub"><a href="#s4-1-structure">§4.1 inventory.json Structure</a></li>
+  <li class="toc--sub"><a href="#s4-2-tier">§4.2 Three-Tier Progressive Disclosure Model</a></li>
+  <li class="toc--sub"><a href="#s4-3-generation">§4.3 Auto-Generation Timing</a></li>
+  <li class="toc--sub"><a href="#s4-4-input-output">§4.4 Input / Output Behavior</a></li>
+  <li><a href="#s5-bidirectional">§5. Bidirectional Reference</a></li>
+  <li class="toc--sub"><a href="#s5-1-pattern">§5.1 双方向 dual の対象関係</a></li>
+  <li class="toc--sub"><a href="#s5-2-precedent">§5.2 Precedent (log4brains pattern)</a></li>
+  <li class="toc--sub"><a href="#s5-3-ears">§5.3 EARS 規範要件</a></li>
+  <li><a href="#s6-refs">§6. References</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本文書は folio framework の <strong>関係性管理 spec (relation management spec)</strong>。 各 spec file 同士の関係 (置き換え / 参照 / 依存 / 拡張 等) を <strong>machine-readable</strong> に表現する規約を定める。</p>
@@ -666,5 +703,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 });
 </script>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="folio-self-spec.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio — self-spec (v0.5.0-draft)</span></a>
+  <a class="prevnext__next" href="verification.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">folio — verification (v0.5.0-draft)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

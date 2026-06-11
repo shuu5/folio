@@ -41,11 +41,37 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0027</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0027 — X4-D folio-architect 7-Phase SKILL 昇格 + Phase F review agents 3 個 (ears/vocabulary/ssot、 explorer/architect は X5+)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-scope">§2.1 X4-D scope (incremental)</a></li>
+  <li class="toc--sub"><a href="#s2-2-agent-mechanism">§2.2 agent 実現機構 (Claude Code 公式仕様)</a></li>
+  <li class="toc--sub"><a href="#s2-3-orchestration">§2.3 7-Phase orchestration (folio-architect SKILL)</a></li>
+  <li class="toc--sub"><a href="#s2-4-review-contract">§2.4 review agent contract</a></li>
+  <li class="toc--sub"><a href="#s2-5-growth-amend">§2.5 §7.6 growth path amendment</a></li>
+  <li class="toc--sub"><a href="#s2-6-verification">§2.6 verification (REQ-VER-016)</a></li>
+  <li class="toc--sub"><a href="#s2-7-application">§2.7 適用範囲</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -161,5 +187,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0026-test-placement-model.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0026 — test-placement model 是正 (verification/ → tests/ rename + consumer test 配置 非規定)</span></a>
+  <a class="prevnext__next" href="ADR-0028-prose-gate-mechanization.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0028 — X5-γ 二層 enforcement モデル + prose-gate 機械化 (validate に REQ-CI-013/014/015、 011/012 は agent-only、 minimal CI)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

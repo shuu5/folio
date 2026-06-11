@@ -41,11 +41,36 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0030</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0030 — folio v1.0 stability criteria + version formalization (draft→1.0.0、 frozen-ADR provenance 保全、 strict-SemVer 移行)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; accepted (user 承認済 2026-05-27)。 §2.2 bump は criterion D (WS3 / 実 consumer adoption) PASS 後 = WS5</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-criteria">§2.1 v1.0 stability criteria (7 gate)</a></li>
+  <li class="toc--sub"><a href="#s2-2-bump-scope">§2.2 version bump scope (1.0.0 昇格時)</a></li>
+  <li class="toc--sub"><a href="#s2-3-semver">§2.3 strict-SemVer commitment (1.0.0 以降)</a></li>
+  <li class="toc--sub"><a href="#s2-4-defer">§2.4 post-1.0 deferrals (v1.0 scope の境界)</a></li>
+  <li class="toc--sub"><a href="#s2-5-constitution-version">§2.5 constitution version の扱い</a></li>
+  <li class="toc--sub"><a href="#s2-6-application">§2.6 適用範囲 (WS5、 承認後)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -173,5 +198,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0029-phase-f-agent-set.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0029 — X5-γ Phase F agent セット確定 (temporal build / structure cut / explorer・architect・stakeholder defer) + §7.2 完成形 anchor 改訂</span></a>
+  <a class="prevnext__next" href="ADR-0031-mattpocock-authoring-absorption.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

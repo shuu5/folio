@@ -41,11 +41,35 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0021</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0021 — constitution X4 amendment (脱-instance + 3-domain + P-13 新設)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.5.0-draft &middot; forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-deinstance">§2.1 脱-instance (P-2 / P-3 / P-4 / P-11)</a></li>
+  <li class="toc--sub"><a href="#s2-2-3domain">§2.2 3-domain 化 + changes/ 廃止 (P-7 + §6)</a></li>
+  <li class="toc--sub"><a href="#s2-3-p13">§2.3 P-13 新設 — Verification &amp; Traceability (Always tier)</a></li>
+  <li class="toc--sub"><a href="#s2-4-structure-location">§2.4 構造固定と location override の両立</a></li>
+  <li class="toc--sub"><a href="#s2-5-semver">§2.5 SemVer</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -152,5 +176,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0020-validate-scope.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0020 — folio validate の試作 scope (internal link-integrity + jsonld structural)</span></a>
+  <a class="prevnext__next" href="ADR-0022-x4-0-canonical-layout.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0022 — X4-0 canonical layout 確定 (3-domain self-host + verification sibling + Diátaxis/steering 除去 + fix)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

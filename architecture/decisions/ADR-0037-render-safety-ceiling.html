@@ -37,11 +37,35 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0037</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-06-04 &middot; folio v0.5.0-draft &middot; render-safety verification を二層化する — static floor (bash の既知パターン lint、 全 consumer 配布) + deterministic browser ceiling (headless chromium で実 render し flowchart の幾何 overlap を検出する playwright gate、 CI-only folio dogfood、 決定的ゆえ blocking)。 mermaid 図の render 後 overlap (文字がブロック/枠に重なる) は pure-bash の folio validate が見れない floor の死角ゆえ、 実ブラウザ render で補う。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の ceiling は元から <strong>LLM ceiling 限定</strong>で、 その CI 不適格根拠 (LLM の非決定性) は決定的 render ceiling を排除しない点を<strong>明示化</strong> (CI 採用基準=決定性)、 <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate scope を render-safety ceiling に拡張 (frozen 本文不変、 reverse-link + prose で trace)。 <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a> の二層 prose を機構化 (専用 REQ-VER-022 は defer)。 retrospective (Slice A〜C SHIP 後の user 承認起票)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-two-layer">§2.1 render-safety を二層化する (static floor + browser ceiling)</a></li>
+  <li class="toc--sub"><a href="#s2-2-ceiling-bisect">§2.2 「ceiling」語を二分する — ADR-0028 の CI 不適格根拠 (LLM 非決定性) は決定的 ceiling を排除しない</a></li>
+  <li class="toc--sub"><a href="#s2-3-determinism">§2.3 決定性は三重 pin で担保し、 ゆえに blocking とする</a></li>
+  <li class="toc--sub"><a href="#s2-4-failclosed-carveout">§2.4 fail-closed + constitution の advisory carve-out</a></li>
+  <li class="toc--sub"><a href="#s2-5-scope">§2.5 検出範囲 = flowchart 3-class、 完全網羅は normative 化しない</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -154,5 +178,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0036-folio-vocabulary-glossary-derive.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</span></a>
+  <a class="prevnext__next" href="ADR-0038-constitution-p14-human-readability.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

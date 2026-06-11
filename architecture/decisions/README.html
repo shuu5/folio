@@ -24,17 +24,31 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-purpose">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li aria-current="page">decisions</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>decisions/ — Architecture Decision Records</h1>
   <div class="meta">v0.5.0-draft &middot; folio Layer 0 の ADR cluster</div>
 </header>
-
-<nav class="cluster-nav" aria-label="architecture 横断ナビ">
-  <a href="../index.html">&larr; architecture index</a> &middot;
-  <a href="../spec/README.html">spec/</a> &middot;
-  <a href="../research/README.html">research/</a>
+<!-- folio:chrome-toc -->
+<nav class="cluster-nav" aria-label="関連 cluster"><a href="../spec/README.html">spec/</a> &middot; <a href="../research/README.html">research/</a></nav>
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-purpose">§1. Purpose</a></li>
+  <li><a href="#s2-adr-status">§2. ADR Status Lifecycle</a></li>
+  <li><a href="#s3-adr-list">§3. Current ADRs</a></li>
+  <li><a href="#s4-naming">§4. Naming Convention</a></li>
+  <li><a href="#s5-amendment">§5. ADR Creation Procedure</a></li>
+</ol>
 </nav>
+<!-- /folio:chrome-toc -->
+
 
 <aside class="informative">
 <p>本 cluster は folio framework に関する architectural decision を記録する Architecture Decision Records (ADR) を保持する。 <a href="../spec/rules.html#s3-naming">rules.html §3 File Naming Convention</a> に従い、 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置する。</p>
@@ -318,5 +332,7 @@
 <p><strong>例外</strong>: folio 初の ADR (ADR-0001) は bootstrap 段階で起票されたため proposal step を skip した折衷を採用。 後続 ADR は本手順を遵守する MUST。</p>
 </section>
 
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

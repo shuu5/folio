@@ -42,11 +42,39 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0034</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0034 — object/term cross-reference system (in-band xref + hover tooltip + 生成 AI-graph を hybrid、 維持は folio fix materialize + validate completeness、 DB-as-SSoT 却下)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-30 &middot; folio v0.5.0-draft &middot; architecture 全体の defined-object に in-band untyped xref + no-JS hover tooltip を張り、 folio fix で穴を materialize し validate で completeness を機械保証、 AI-graph は inventory/prime projection、 glossary は vocabulary.yaml SSoT の best-effort、 DB-as-SSoT は却下 (hybrid)。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の延長 (tooltip = dual-audience essence 再利用) / <a href="./ADR-0025-folio-fix-bidirectional.html">ADR-0025</a> materialize + <a href="./ADR-0020-validate-scope.html">ADR-0020</a> validate を拡張 (実装は SPAWN)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-architecture">§2.1 architecture = hybrid (in-band SSoT + 生成 projection)、 DB-as-SSoT 却下、 constitution 不変</a></li>
+  <li class="toc--sub"><a href="#s2-2-identity">§2.2 object-identity model (ReqIF 整合)</a></li>
+  <li class="toc--sub"><a href="#s2-3-reference">§2.3 reference model = untyped inline xref (typed は file-level + roadmap)</a></li>
+  <li class="toc--sub"><a href="#s2-4-tooltip">§2.4 tooltip = no-JS CSS-only (fix 生成 text + 動くリンク baseline)、 JS は roadmap</a></li>
+  <li class="toc--sub"><a href="#s2-5-materialize">§2.5 維持 = folio fix materialize (option F) + completeness scoping</a></li>
+  <li class="toc--sub"><a href="#s2-6-validate">§2.6 enforcement = folio validate に 4 gate 追加 (ADR-0020 scope 拡張)</a></li>
+  <li class="toc--sub"><a href="#s2-7-projection">§2.7 AI-graph = inventory.json 拡張 + prime index、 鮮度 governance</a></li>
+  <li class="toc--sub"><a href="#s2-8-glossary">§2.8 glossary (Class B) = vocabulary.yaml SSoT + explicit-mark best-effort</a></li>
+  <li class="toc--sub"><a href="#s2-9-scope">§2.9 1.0.0 scope + 適用</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -187,5 +215,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0033-dual-audience-hub.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</span></a>
+  <a class="prevnext__next" href="ADR-0035-walkable-architecture-nav-derive.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

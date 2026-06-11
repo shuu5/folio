@@ -39,11 +39,34 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0015</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0015 — sandbox verification vs experiment-verified (twill 方式) の境界</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-23 &middot; folio v0.4.2-draft</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-folio-scope">§2.1 folio framework = 機能単位 sandbox verification</a></li>
+  <li class="toc--sub"><a href="#s2-2-out-of-scope">§2.2 情報単位 experiment-verified は scope 外</a></li>
+  <li class="toc--sub"><a href="#s2-3-comparison">§2.3 2 方式の境界表</a></li>
+  <li class="toc--sub"><a href="#s2-4-rationale">§2.4 採用しない理由 (3 件)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -147,5 +170,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0013-verification-framework.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0013 — sandbox verification framework (scratch/verification/)</span></a>
+  <a class="prevnext__next" href="ADR-0017-unit-integration-boundary.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

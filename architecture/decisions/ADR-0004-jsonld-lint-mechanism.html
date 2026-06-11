@@ -36,11 +36,33 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0004</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0004 — JSON-LD lint mechanism (試作 Option B Light: jq 構造 check)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; retrospective (実装 + e2e 検証済)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-light">§2.1 試作実装 = Option B Light (純粋 shell の構造 check)</a></li>
+  <li class="toc--sub"><a href="#s2-2-completion-defer">§2.2 完成形は ajv + pyld 2 層に defer</a></li>
+  <li class="toc--sub"><a href="#s2-3-posttooluse">§2.3 PostToolUse placement (block ではなく notify)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -137,5 +159,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0003-plugin-architecture.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0003 — folio plugin minimal architecture (skill + hook + script + CLI)</span></a>
+  <a class="prevnext__next" href="ADR-0006-caller-marker-hook.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0006 — caller marker hook (hybrid: env var OR marker file)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

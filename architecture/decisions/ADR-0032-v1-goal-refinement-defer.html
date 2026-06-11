@@ -36,11 +36,36 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0032</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0032 — v1.0 goal 精緻化 (1.0.0 を defer、 authoring-quality criterion H 追加、 ADR-0031 を 0.x 実装に resequence、 ADR-0030/0031 partial-revise)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-27 &middot; folio v0.5.0-draft &middot; accepted (user 承認済 2026-05-27)。 <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> §2.6 timing + <a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> §2.1 sequencing を partial-revise (本文 frozen)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-defer">§2.1 1.0.0 を defer (WS5 を保留)</a></li>
+  <li class="toc--sub"><a href="#s2-2-criterion-h">§2.2 criterion H 追加 (authoring quality) + criterion D の十分性明確化</a></li>
+  <li class="toc--sub"><a href="#s2-3-resequence">§2.3 ADR-0031 を 0.x 実装に resequence</a></li>
+  <li class="toc--sub"><a href="#s2-4-unchanged">§2.4 ADR-0030 の不変部分</a></li>
+  <li class="toc--sub"><a href="#s2-5-final-gate">§2.5 1.0.0 宣言の最終 gate</a></li>
+  <li class="toc--sub"><a href="#s2-6-application">§2.6 適用</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -148,5 +173,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0031-mattpocock-authoring-absorption.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0031 — mattpocock authoring-pattern 吸収 (grill 流 elicitation + adoption-aware folio-architect 統合 + vocabulary glossary enrich + ADR-worthiness + lazy materialize、 protocol-only / v1.x roadmap)</span></a>
+  <a class="prevnext__next" href="ADR-0033-dual-audience-hub.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0033 — dual-audience HTML hub (machine SSoT + human 派生 view を 1 DOM に co-author、 ADR-0028 enforcement で consistency 担保)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

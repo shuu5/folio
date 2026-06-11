@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-007"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  chrome 領域 (marker 間 = build 所有) が改竄・stale 化した page を folio validate の chrome-drift
+  検査 (nav-regen-drift gate、 ADR-0039 §2.3) が exit 1 で block することを実証する
+  (chrome-validate-clean.yaml = clean 側の対)。 fixture は chrome-inject のコピーに対し
+  spec/alpha.html の breadcrumb label を改竄したもの — render 再計算と byte 不一致になり
+  [chrome-drift] violation が出る。 remediate は folio build (§2.9 分業: 表示層 regen は build 所有、
+  violation message が名指しする)。 marker 無し page は keystone skip (nav-validate-keystone と同型)
+  のため、 本 scenario が「注入済 corpus の chrome は drift を許さない」側を担保する。
+
+command: ["validate", "--root", "tests/fixtures/chrome-drift"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-validate-drift.golden.txt"
+
+expect:
+  exit_code: 1

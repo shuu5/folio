@@ -1,0 +1,22 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+root: tests/fixtures/chrome-drift
+files checked: 6 · relations checked: 4
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [FAIL] nav-regen-drift
+  [OK] nav-dead-link
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+
+violations (1):
+  spec/alpha.html [chrome-drift] chrome 領域が graph/本文から drift (folio build で再生成、 ADR-0039 §2.3)

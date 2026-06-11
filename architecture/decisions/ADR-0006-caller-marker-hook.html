@@ -36,11 +36,34 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0006</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0006 — caller marker hook (hybrid: env var OR marker file)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; retrospective (実装 + e2e 検証済)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-gate-scope">§2.1 gate 対象 = spec_path 配下のみ</a></li>
+  <li class="toc--sub"><a href="#s2-2-hybrid">§2.2 hybrid allow 条件 (env var OR marker file)</a></li>
+  <li class="toc--sub"><a href="#s2-3-rationale">§2.3 hybrid の根拠</a></li>
+  <li class="toc--sub"><a href="#s2-4-skill-entry">§2.4 folio-architect SKILL = canonical author entry</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -136,5 +159,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0004-jsonld-lint-mechanism.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0004 — JSON-LD lint mechanism (試作 Option B Light: jq 構造 check)</span></a>
+  <a class="prevnext__next" href="ADR-0007-context-injection.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0007 — context injection (SessionStart + PreCompact、 Beads-inspired)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

@@ -31,11 +31,30 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-what">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">x4-plan</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>Phase X4 分解 + 着手計画</h1>
   <div class="meta">planning memo &middot; status: superseded &middot; 2026-05-25 &middot; X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-what">§1. X4 とは</a></li>
+  <li><a href="#s2-decompose">§2. 分解 (X4-0 〜 X4-E)</a></li>
+  <li><a href="#s3-x40-decisions">§3. X4-0 で確定すべき layout 論点 (user 主導)</a></li>
+  <li><a href="#s4-state">§4. 着手時の state 参照 (2026-05-25 時点)</a></li>
+  <li><a href="#s5-x40-resolved">§5. X4-0 layout 確定結果 (2026-05-25)</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="informative">
 <p>本 memo は <strong>Phase X4 (最終・最大フェーズ)</strong> の分解と着手計画を記録する planning 用 scratch doc (spec/ADR ではない、 CLAUDE.md §3 の「scratch/ 直下 思考 memo」 枠)。 ⓪〜④ (ADR batch / Track 1 inventory / Track 2 context injection / ADR-0017 / Track 3 folio validate) は完了済 (main <code>b9a5bba</code>、 8/8 sandbox GREEN)。 X4 着手時は本 memo を起点に X4-0 の layout 確定から進める。</p>
@@ -147,5 +166,7 @@ consumer Layer 1:
 <p class="informative"><strong>X4-0 完了</strong> (2026-05-25): spec が canonical layout を記述。 物理実体は scratch のまま (P-1、 X4-C で追従)。 検証: validate 19 files/81 relations clean、 sandbox 8/8 GREEN。</p>
 </section>
 
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

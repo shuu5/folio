@@ -12,7 +12,7 @@ files checked: 4 · relations checked: 0
   [FAIL] xref-tooltip-consistency
   [FAIL] xref-completeness
   [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
-  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
   [SKIP] nav-dead-link (生成 index 無し)
   [OK] cluster-reachability
   [OK] ears-coverage

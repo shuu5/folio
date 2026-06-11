@@ -1,0 +1,25 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-007"
+ears_pattern: "state-driven"
+kind: "cli-golden"
+description: |
+  folio build が全 page (graph scan 対象) に注入した chrome (chrome-top: skip-link + breadcrumb /
+  chrome-toc: on-this-page 目次 / chrome-bottom: prev-next、 ADR-0039 §2.3) を持つ fixture corpus に
+  対し、 folio validate の chrome-drift 検査 (nav-regen-drift gate に内包) が clean (exit 0) になる
+  ことを実証する (chrome-validate-drift.yaml = drift 側の対)。 fixture は
+  ../.claude-plugin/bin/folio build --root fixtures/chrome-inject で生成済 (= render と byte 一致) で、
+  生成規則の意味論を committed bytes として pin する: 見出し id 経路 (beta §1) / 最近接 section id
+  fallback (alpha・README) / h3 sub + dedupe (beta §1.1) / prev-next の hasPart 順 (spec: alpha→beta) /
+  実在 file 昇順隣接の欠番 skip (decisions: ADR-0001 の next = ADR-0003、 0002 不在) / README・
+  chain 外 page の prev-next 省略。 build 出力 format が変われば本 scenario が drift を検出し fixture
+  再生成を促す (build 出力安定性の golden 的 guard、 nav-validate-clean と同型)。
+  REQ-NAV-007 の spec-row 正式化は slice C の readability floor REQ 一括起票で行う
+  (REQ-NAV-001〜006 と同じ scenario-first 慣行)。
+
+command: ["validate", "--root", "tests/fixtures/chrome-inject"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-validate-clean.golden.txt"
+
+expect:
+  exit_code: 0

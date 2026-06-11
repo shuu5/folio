@@ -698,6 +698,10 @@ folio_vocab_forbidden() {
 # 機械可読ブロック内の文字列で誤検出しないため。 block (<pre> 内の <code> 含む) は行ごと除去 (skip
 # カウンタ)、 inline <code> は build_mask と同型の char-state machine で span 除去 (detect↔remediate
 # 対称、 REQ-VER-015)。
+# chrome 領域 (<!-- folio:chrome-* --> marker 間、 ADR-0039 §2.3) も行除去する: chrome は build 生成の
+# view であって authored prose でなく、 目次 label が見出し文を複製するため mask しないと xref
+# orphan-mention / vocabulary が二重検出する。 marker は build が必ず単独行で emit する (raw marker を
+# prose の <pre> 例に書く場合は escaped (&lt;) にする規約 — 生 marker は line-granular に誤 mask する)。
 folio_prose_only() {
   printf '%s\n' "$1" | awk '
     function mask_inline_code(s,   i,c,n,out){
@@ -710,10 +714,12 @@ folio_prose_only() {
       }
       return out
     }
-    BEGIN{ skip=0; incode=0 }
+    BEGIN{ skip=0; incode=0; chrome=0 }
+    /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/{chrome=1}
     /<(pre|script|style)[ >]/{skip++}
     /<aside class="machine-readable"/{skip++}
-    skip==0{ print mask_inline_code($0) }
+    skip==0 && chrome==0 { print mask_inline_code($0) }
+    /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{chrome=0}
     /<\/(pre|script|style|aside)>/{if(skip>0)skip--}
   '
 }
@@ -1023,9 +1029,10 @@ folio_xref_wrap_doc() {
       return mk
     }
     { line=$0
+      if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
-      wrappable = (skip==0) && (line !~ /<h[23][ >]/)
+      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[23][ >]/)   # chrome 領域 (build 生成 view) は wrap しない (ADR-0039 §2.3、 prose_only と parity)
       anc_in=ANC; incode_in=incode; intag_in=intag
       if(wrappable){
         for(ti=1; ti<=nt; ti++){
@@ -1047,6 +1054,7 @@ folio_xref_wrap_doc() {
         }
       }
       ANC=anc_in; incode=incode_in; intag=intag_in; build_mask(line)   # 最終 line で ANC/incode/intag を次行へ carry (複数行 opening tag を mask、 #131 ceiling)
+      if(line ~ /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=0
       if(line ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
       print line
     }
@@ -1211,9 +1219,10 @@ folio_glossary_automark_doc() {
     }
     { if(!inbody){ print; if($0 ~ /<\/head>/) inbody=1; next }   # head は mark しない (body のみ、 prose-gate と同 idiom)
       line=$0
+      if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
-      wrappable = (skip==0) && (line !~ /<h[1-6][ >]/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)
+      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[1-6][ >]/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)。 chrome 領域 (build 生成 view) も wrap しない (ADR-0039 §2.3、 prose_only と parity)
       anc_in=ANC; incode_in=incode; intag_in=intag
       if(wrappable){
         for(ti=1; ti<=nt; ti++){
@@ -1235,6 +1244,7 @@ folio_glossary_automark_doc() {
         }
       }
       ANC=anc_in; incode=incode_in; intag=intag_in; build_mask(line)   # 最終 line で ANC/incode/intag を次行へ carry (複数行 opening tag を mask、 #131 ceiling)
+      if(line ~ /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=0
       if(line ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
       print line
     }
@@ -1383,7 +1393,7 @@ folio_cmd_validate() {
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
-  local nav_drift_fail=0 nav_seen=0   # gate (m) nav-regen-drift (ADR-0035、 top-level 生成 index、 marker 無し=SKIP keystone)
+  local nav_drift_fail=0 nav_seen=0 chrome_seen=0   # gate (m) nav-regen-drift (ADR-0035 生成 index + ADR-0039 chrome。 chrome_seen は index 由来の nav_seen と分離 = nav-dead-link の SKIP 判定を汚さない)
   local nav_deadlink_fail=0 nav_reach_fail=0 nav_reach_warn=0 nav_reach_seen=0   # gate (n) dead-link / (o) cluster-reachability (ADR-0035 §2.5)
   local violations=() warnings=() delta_records=() delta_ids=()
   # vocabulary forbidden synonym list (opt-in: vocabulary.yaml + yq、 無ければ空 = gate skip)
@@ -1631,6 +1641,27 @@ folio_cmd_validate() {
     nav_drift_fail=1
   fi
 
+  # chrome-drift (ADR-0039 §2.3): marker 持ち page の chrome を render と byte 比較し、 drift を
+  # nav-regen-drift gate に乗せる (ADR が「chrome は nav-regen-drift gate の検査対象に含める」と規定)。
+  # marker 無し page = 未注入 = keystone skip (生成 index/glossary と同じ位置づけ)。 remediate は folio build
+  # (§2.9 分業: 表示層 regen は build 所有)。 render 不能 file は scan 対象の前提崩れだが validate では
+  # skip (build 側が fail-closed で捕捉)。
+  local chv_base chv_rel chv_tmp
+  chv_base=$(folio_chrome_base_url "$root_abs")
+  while IFS= read -r chv_rel; do
+    [[ -z "$chv_rel" ]] && continue
+    grep -qE '<!--[[:space:]]*folio:chrome-top[[:space:]]*-->' "${root_abs}/${chv_rel}" || continue
+    chrome_seen=1
+    chv_tmp=$(mktemp)
+    if folio_chrome_render_doc "${root_abs}/${chv_rel}" "$chv_rel" "$root_abs" "$chv_base" > "$chv_tmp" 2>/dev/null; then
+      if ! cmp -s "$chv_tmp" "${root_abs}/${chv_rel}"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-drift] chrome 領域が graph/本文から drift (folio build で再生成、 ADR-0039 §2.3)")
+        nav_drift_fail=1
+      fi
+    fi
+    rm -f "$chv_tmp"
+  done < <(folio_chrome_targets "$root_abs")
+
   # --- gate (o) cluster-reachability — dead-end README / empty-cluster を検出 (ADR-0035 §2.5、 §1 defect #2/#3)。
   #     これは index 由来でなく *cluster dir + README の dir/graph scan* ゆえ、 生成 index の有無に gate しない
   #     (consumer は folio init 後 build 前でも dead-end を warn で気付ける = ADR §1 が中心に据える consumer defect。
@@ -1690,7 +1721,7 @@ folio_cmd_validate() {
   elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi
   if [[ "$glossary_fail" -eq 1 ]]; then printf '  [FAIL] glossary\n'   # anchor-residue は vocab 無しでも fire するゆえ fail-first
   elif [[ -z "$glossary_map" ]]; then printf '  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)\n'; else printf '  [OK] glossary\n'; fi
-  if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-regen-drift (folio-generated index.html 無し = keystone)\n'
+  if [[ "$nav_seen" -eq 0 && "$chrome_seen" -eq 0 ]]; then printf '  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)\n'
   elif [[ "$nav_drift_fail" -eq 1 ]]; then printf '  [FAIL] nav-regen-drift\n'; else printf '  [OK] nav-regen-drift\n'; fi
   if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-dead-link (生成 index 無し)\n'
   elif [[ "$nav_deadlink_fail" -eq 1 ]]; then printf '  [FAIL] nav-dead-link\n'; else printf '  [OK] nav-dead-link\n'; fi
@@ -1808,11 +1839,6 @@ YAML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; project design-intent (WHAT) cluster の entry point</div>
 </header>
 
-<nav class="cluster-nav" aria-label="architecture 横断ナビ">
-  <a href="../index.html">&larr; architecture index</a> &middot;
-  <a href="../decisions/README.html">decisions/</a> &middot;
-  <a href="../research/README.html">research/</a>
-</nav>
 
 <aside class="informative">
 <p>本 dir (<code>architecture/spec/</code>) はこの project の <strong>design-intent spec</strong> (構造・不変条件・WHAT) を集約する cluster です。 spec file は <a href="https://folio.dev/">folio</a> framework の rules に従い HTML + JSON-LD で記述します。 共通 stylesheet (<code>common.css</code>) は project root に任意で配置してください。</p>
@@ -1867,11 +1893,6 @@ HTML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; decision (WHY) cluster の entry point</div>
 </header>
 
-<nav class="cluster-nav" aria-label="architecture 横断ナビ">
-  <a href="../index.html">&larr; architecture index</a> &middot;
-  <a href="../spec/README.html">spec/</a> &middot;
-  <a href="../research/README.html">research/</a>
-</nav>
 
 <aside class="informative">
 <p>本 dir (<code>architecture/decisions/</code>) はこの project の <strong>Architecture Decision Records (ADR)</strong> を保持する cluster です。 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置します。</p>
@@ -1925,11 +1946,6 @@ HTML
   <div class="meta">v0.1.0-draft &middot; status: active &middot; exploration cluster の entry point</div>
 </header>
 
-<nav class="cluster-nav" aria-label="architecture 横断ナビ">
-  <a href="../index.html">&larr; architecture index</a> &middot;
-  <a href="../spec/README.html">spec/</a> &middot;
-  <a href="../decisions/README.html">decisions/</a>
-</nav>
 
 <aside class="informative">
 <p>本 dir (<code>architecture/research/</code>) は spec に反映する前の <strong>探索・調査資料</strong>を集約する cluster です。 自由形式で memo / 調査結果 / 設計案を蓄積し、 確定した内容を spec/ や decisions/ に昇格させます。</p>
@@ -2211,6 +2227,7 @@ folio_glossary_emit() {
 <head>
 <!-- folio:generated source=folio-build do-not-edit -->
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="glossary">
 <meta name="folio-generated" content="folio-build">
 <meta name="folio-status" content="active">
@@ -2227,6 +2244,20 @@ folio_glossary_emit() {
 </head>
 <body>
 
+HEAD
+
+  # chrome (ADR-0039 §2.3): 生成 page は emit が chrome を inline 所有する (injector の対象外 =
+  # nav-regen-drift の whole-file byte 比較が chrome も被覆)。 skip-link は最初の term anchor へ
+  # (見出し無し page の fallback と同義)。 目次 (h2/h3 無し) と prev-next (順序 SSoT 無し) は対象外。
+  local gl_first gl_base
+  gl_first=$(folio_glossary_slug "$(printf '%s\n' "$rows" | head -1 | cut -f1)")
+  gl_base=$(folio_chrome_base_url "$root_abs")
+  printf '<!-- folio:chrome-top -->\n'
+  printf '<a class="skip-link" href="#term-%s">本文へスキップ</a>\n' "$(folio_build_attresc "$gl_first")"
+  folio_chrome_breadcrumb "glossary.html" "$gl_base"
+  printf '<!-- /folio:chrome-top -->\n'
+
+  cat <<'HEAD2'
 <header class="doc-header">
   <h1>folio-vocabulary — glossary</h1>
   <div class="meta">folio-framework 語の canonical 定義 (folio build が vocabulary.yaml から生成、 ADR-0036)</div>
@@ -2237,7 +2268,7 @@ folio_glossary_emit() {
 </aside>
 
 <dl class="glossary">
-HEAD
+HEAD2
 
   local canon def slug
   while IFS=$'\t' read -r canon def; do
@@ -2251,7 +2282,8 @@ HEAD
 }
 
 # folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
-#   companion で glossary.html も vocabulary.yaml から生成する (ADR-0036、 vocab 解決時のみ)。
+#   companion で glossary.html も vocabulary.yaml から生成し (ADR-0036、 vocab 解決時のみ)、
+#   全 page (graph scan 対象 + constitution) に chrome を注入・維持する (ADR-0039 §2.3)。
 #   既定 = 生成して in-place write。 --check = 生成せず committed (marker 付き) index と byte 比較し
 #   drift を exit 1 で報告 (validate の regen-drift gate と同じ detect、 fix↔validate と同型)。
 #   marker 無し (hand-authored・未生成) の index は drift 対象外 (keystone)。 exit 0=ok/1=drift/2=tool error。
@@ -2291,8 +2323,22 @@ folio_cmd_build() {
       echo "folio build --check: ${root}/glossary.html が在るが vocabulary.yaml が解決しない (orphan: vocab を復元するか glossary.html を削除)" >&2; drift=1
     fi
     rm -f "$gtmp_c"
+    # chrome-drift check (ADR-0039 §2.3): marker 持ち page の render と byte 比較 (marker 無し = 未注入 = keystone skip)
+    local cc_base cc_rel cc_tmp
+    cc_base=$(folio_chrome_base_url "$root_abs")
+    while IFS= read -r cc_rel; do
+      [[ -z "$cc_rel" ]] && continue
+      grep -qE '<!--[[:space:]]*folio:chrome-top[[:space:]]*-->' "${root_abs}/${cc_rel}" || continue
+      cc_tmp=$(mktemp)
+      if folio_chrome_render_doc "${root_abs}/${cc_rel}" "$cc_rel" "$root_abs" "$cc_base" > "$cc_tmp" 2>/dev/null; then
+        if ! cmp -s "$cc_tmp" "${root_abs}/${cc_rel}"; then
+          echo "folio build --check: ${root}/${cc_rel} の chrome が graph/本文から drift (folio build で再生成せよ)" >&2; drift=1
+        fi
+      fi
+      rm -f "$cc_tmp"
+    done < <(folio_chrome_targets "$root_abs")
     [[ "$drift" -eq 1 ]] && return 1
-    echo "folio build --check: index は graph・glossary は vocabulary.yaml と同期 (clean、 marker 無し index/glossary は対象外)" >&2
+    echo "folio build --check: index は graph・glossary は vocabulary.yaml・chrome は render と同期 (clean、 marker 無し file は対象外)" >&2
     return 0
   fi
 
@@ -2340,6 +2386,350 @@ folio_cmd_build() {
   else
     rm -f "$gtmp"   # vocab 解決不能 (return 1) = glossary を生成しない (additive/keystone、 consumer の vocab 無し)
     trap - EXIT INT TERM
+  fi
+
+  # --- 全ページ chrome 注入 (ADR-0039 §2.3): graph scan 対象 + constitution に 3 marker 領域を
+  #     注入・維持する。 注入は idempotent (render 一致なら no-write)。 render 不能 (body 無し等) は
+  #     fail-closed。 生成 index/glossary は対象外 (chrome は各 emit が inline 所有)。 ---
+  local ch_base ch_rel ch_st ch_total=0 ch_changed=0
+  ch_base=$(folio_chrome_base_url "$root_abs")
+  while IFS= read -r ch_rel; do
+    [[ -z "$ch_rel" ]] && continue
+    ch_total=$((ch_total + 1))
+    if ! ch_st=$(folio_chrome_inject_doc "${root_abs}/${ch_rel}" "$ch_rel" "$root_abs" "$ch_base"); then
+      echo "folio build: chrome 注入失敗: ${root}/${ch_rel} (<body> 境界が見つからない等、 fail-closed)" >&2
+      exit 2
+    fi
+    [[ "$ch_st" == "changed" ]] && ch_changed=$((ch_changed + 1))
+  done < <(folio_chrome_targets "$root_abs")
+  [[ "$ch_total" -gt 0 ]] && echo "folio build: chrome maintained in ${ch_total} pages (${ch_changed} updated)" >&2
+}
+
+# ============================================================================
+# chrome helpers — 全ページ chrome 注入 (ADR-0039 §2.3)。 folio build が graph scan 対象
+#   (+ constitution = 枠のみ) の各 page に 3 つの marker 領域を注入・維持する:
+#     chrome-top    (<body> 直後)        = skip-link + breadcrumb
+#     chrome-toc    (最初の </header> 直後) = cluster-nav (README のみ) + on-this-page 目次
+#     chrome-bottom (最後の </body> 直前)  = prev-next
+#   領域内は build 所有 (landing-hero の curated と逆: 人間編集は再 build が上書き)。 生成規則:
+#   - 既存 id のみ (目次は 2 段 fallback: 見出し自身の id → 最近接の id 持ち open section)。
+#     本文へ id を注入しない (frozen 文書も本文不変のまま目次が張れる、 ADR-0039 §2.3)。
+#   - prev-next の順序 SSoT: spec = README dc:hasPart 順 / decisions = 実在 ADR file 昇順隣接。
+#     SSoT の無い research / README 自身 / constitution (hasPart 外) は prev-next 対象外。
+#   - 相対パスは rel の深さから決定的算出 (ROOT_REL idiom)。 aria-label は固定リテラル (landmark 一意)。
+#   - BreadcrumbList JSON-LD は folio.config.yaml の base_url 設定時のみ併注入 (file:// を壊さない二段構え)。
+#   - prose gate / xref / glossary wrap は chrome 領域を mask する (folio_prose_only + 各 build_mask、
+#     生成 view は authored prose でない。 目次 label が見出し文を複製するため必須)。
+#   検査: 同じ render を validate (nav-regen-drift gate の chrome-drift) と build --check が byte 比較
+#   (detect↔remediate 対、 REQ-VER-015)。 marker 無し file は keystone skip (未注入 corpus を赤くしない、
+#   生成 index/glossary と同じ位置づけ)。
+# ============================================================================
+
+# rel ($1) から root への相対 prefix を返す (深さから決定的、 ROOT_REL idiom)。
+# 例: spec/rules.html → "../"、 glossary.html → ""。
+folio_chrome_rootrel() {
+  local p="$1" out=""
+  while [[ "$p" == */* ]]; do out="${out}../"; p="${p#*/}"; done
+  printf '%s' "$out"
+}
+
+# breadcrumb 葉 label: ADR-NNNN-<slug>.html → "ADR-NNNN"、 他は file 名 stem (短い決定的 label。
+# <title> は ADR で 100 字級になり breadcrumb に不適)。
+folio_chrome_leaf_label() {
+  local base="${1##*/}"
+  base="${base%.html}"
+  if [[ "$base" =~ ^ADR-([0-9]{4}) ]]; then
+    printf 'ADR-%s' "${BASH_REMATCH[1]}"
+  else
+    printf '%s' "$base"
+  fi
+}
+
+# folio.config.yaml (root の親 → root の順、 vocab 探索と同 idiom) の base_url を stdout
+# (未設定・yq 不在は空 = JSON-LD 併注入なし。 末尾 / は除去)。
+folio_chrome_base_url() {
+  local root_abs="$1" cand v
+  command -v yq >/dev/null 2>&1 || return 0
+  for cand in "$(dirname "$root_abs")/folio.config.yaml" "${root_abs}/folio.config.yaml"; do
+    [[ -f "$cand" ]] || continue
+    v=$(yq -r '.base_url // ""' "$cand" 2>/dev/null)
+    [[ -n "$v" && "$v" != "null" ]] && { printf '%s' "${v%/}"; return 0; }
+  done
+  return 0
+}
+
+# file ($1) から chrome 領域 (marker 行ごと) を除いた内容を stdout。 render の入力 = chrome-free
+# 本文 (冪等性の要: render(render(f)) == render(f))。
+folio_chrome_strip() {
+  awk '
+    /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/{cs=1; next}
+    /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{cs=0; next}
+    cs==0{print}
+  ' "$1"
+}
+
+# stripped file ($1) から on-this-page 目次行 "level\ttarget-id\tlabel" を文書順に emit。
+# h2/h3 を走査し 2 段 fallback で target を解決 (見出し自身の id → 最近接の id 持ち open section)。
+# どちらも無い見出しと既出 target への重複 (同一 section 内の id 無し h3 等) は skip。
+# pre/script/style/machine-readable 内は除外 (escaped 見出し例は <h に非マッチで自然除外)。
+# label は tag 除去 + trim + tab→space (TSV transport 保全)。 source の HTML entity は escape 済
+# text としてそのまま再 emit する (再 escape すると &amp; が二重化する)。
+folio_chrome_toc_rows() {
+  awk '
+    BEGIN{ skip=0; depth=0 }
+    /<(pre|script|style)[ >]/{skip++}
+    /<aside class="machine-readable"/{skip++}
+    skip==0 && /<section[ >]/ {
+      depth++
+      sid[depth]=""
+      if(match($0, /<section[^>]*id="[^"]*"/)){ seg=substr($0,RSTART,RLENGTH); sub(/^.*id="/,"",seg); sub(/"$/,"",seg); sid[depth]=seg }
+    }
+    skip==0 && /<h[23][ >]/ {
+      lvl = ($0 ~ /<h2[ >]/) ? 2 : 3
+      tgt=""
+      if(match($0, /<h[23][^>]*id="[^"]*"/)){ seg=substr($0,RSTART,RLENGTH); sub(/^.*id="/,"",seg); sub(/"$/,"",seg); tgt=seg }
+      if(tgt==""){ for(d=depth; d>=1; d--){ if(sid[d]!=""){ tgt=sid[d]; break } } }
+      if(tgt!="" && !(tgt in seen)){
+        seen[tgt]=1
+        lab=$0
+        sub(/^.*<h[23][^>]*>/,"",lab)
+        sub(/<\/h[23]>.*$/,"",lab)
+        gsub(/<[^>]*>/,"",lab)
+        gsub(/^[ \t]+|[ \t]+$/,"",lab)
+        gsub(/\t/," ",lab)
+        if(lab!="") printf "%d\t%s\t%s\n", lvl, tgt, lab
+      }
+    }
+    skip==0 && /<\/section>/ { if(depth>0) depth-- }
+    /<\/(pre|script|style|aside)>/{ if(skip>0) skip-- }
+  ' "$1"
+}
+
+# skip-link の行き先 id を stripped file ($1) から決定的に返す: 目次の最初の target →
+# fallback で body 内最初の id (glossary 等の見出し無し page 用)。 無ければ空 (= skip-link 省略)。
+folio_chrome_skip_target() {
+  local t
+  t=$(folio_chrome_toc_rows "$1" | head -1 | cut -f2)
+  [[ -n "$t" ]] && { printf '%s' "$t"; return 0; }
+  awk '
+    BEGIN{ skip=0; body=0 }
+    /<\/head>/{ body=1; next }
+    body==0{ next }
+    /<(pre|script|style)[ >]/{skip++}
+    /<aside class="machine-readable"/{skip++}
+    skip==0 && match($0, /id="[^"]*"/){ print substr($0,RSTART+4,RLENGTH-5); exit }
+    /<\/(pre|script|style|aside)>/{ if(skip>0) skip-- }
+  ' "$1"
+}
+
+# breadcrumb nav (+ base_url 設定時 BreadcrumbList JSON-LD) を emit。 $1=rel $2=base_url (空可)。
+# 階層は rel から決定: root 直下 = architecture > leaf、 cluster page = architecture > cluster > leaf、
+# cluster README = architecture > cluster (現在地)。 現在地は aria-current="page" で link なし。
+folio_chrome_breadcrumb() {
+  local rel="$1" base="$2" rr leaf cl
+  rr=$(folio_chrome_rootrel "$rel")
+  leaf=$(folio_chrome_leaf_label "$rel")
+  printf '<nav class="breadcrumb" aria-label="パンくず"><ol>\n'
+  printf '  <li><a href="%sindex.html">architecture</a></li>\n' "$rr"
+  if [[ "$rel" == */* ]]; then
+    cl="${rel%%/*}"
+    if [[ "${rel##*/}" == "README.html" ]]; then
+      printf '  <li aria-current="page">%s</li>\n' "$(folio_build_htesc "$cl")"
+    else
+      printf '  <li><a href="./README.html">%s</a></li>\n' "$(folio_build_htesc "$cl")"
+      printf '  <li aria-current="page">%s</li>\n' "$(folio_build_htesc "$leaf")"
+    fi
+  else
+    printf '  <li aria-current="page">%s</li>\n' "$(folio_build_htesc "$leaf")"
+  fi
+  printf '</ol></nav>\n'
+  if [[ -n "$base" ]]; then
+    local items
+    items="{\"@type\":\"ListItem\",\"position\":1,\"name\":\"architecture\",\"item\":\"${base}/index.html\"}"
+    if [[ "$rel" == */* ]]; then
+      cl="${rel%%/*}"
+      if [[ "${rel##*/}" == "README.html" ]]; then
+        items="${items},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"${cl}\",\"item\":\"${base}/${rel}\"}"
+      else
+        items="${items},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"${cl}\",\"item\":\"${base}/${cl}/README.html\"}"
+        items="${items},{\"@type\":\"ListItem\",\"position\":3,\"name\":\"${leaf}\",\"item\":\"${base}/${rel}\"}"
+      fi
+    else
+      items="${items},{\"@type\":\"ListItem\",\"position\":2,\"name\":\"${leaf}\",\"item\":\"${base}/${rel}\"}"
+    fi
+    printf '<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[%s]}</script>\n' "$items"
+  fi
+}
+
+# cluster README 用の横断 nav (手書き cluster-nav の build 導出版、 ADR-0039 §2.3「手書き chrome は
+# build 導出版へ置換」)。 実在する兄弟 cluster README のみ列挙 (up-nav は breadcrumb が担う)。
+folio_chrome_clusternav() {
+  local rel="$1" root_abs="$2" out="" d
+  local cl="${rel%%/*}"   # 別 local 行に分離 (同一 local 行の自己参照は enclosing scope の同名 var を読む footgun、 ceiling 実測)
+  for d in spec decisions research; do
+    [[ "$d" == "$cl" ]] && continue
+    [[ -f "${root_abs}/${d}/README.html" ]] || continue
+    out="${out}<a href=\"../${d}/README.html\">${d}/</a> &middot; "
+  done
+  [[ -z "$out" ]] && return 0
+  printf '<nav class="cluster-nav" aria-label="関連 cluster">%s</nav>\n' "${out% &middot; }"
+}
+
+# rel ($1) の prev/next を "prev_rel\tnext_rel" で stdout (どちらかが空も可)。 chain 対象外
+# (research / README 自身 / 順序 SSoT に不在 = constitution 含む) は無出力。
+folio_chrome_chain_neighbors() {
+  local rel="$1" root_abs="$2" list=""
+  local subdir="${rel%%/*}"   # 別 local 行に分離 (同上)
+  [[ "$rel" == */* ]] || return 0
+  [[ "${rel##*/}" == "README.html" ]] && return 0
+  case "$subdir" in
+    spec)
+      local block id resolved
+      block=$(folio_extract_head_jsonld "${root_abs}/spec/README.html")
+      [[ -z "$block" ]] && return 0
+      list=$(printf '%s' "$block" | jq -r '."dc:hasPart"[]?."@id" // empty' 2>/dev/null | while IFS= read -r id; do
+        [[ -z "$id" ]] && continue
+        resolved=$(folio_resolve_relpath "$id" "spec" "$root_abs"); resolved="${resolved%%#*}"
+        [[ -f "${root_abs}/${resolved}" ]] && printf '%s\n' "$resolved"
+      done)
+      ;;
+    decisions)
+      list=$(find "${root_abs}/decisions" -maxdepth 1 -type f -name 'ADR-*.html' 2>/dev/null | LC_ALL=C sort \
+        | while IFS= read -r f; do realpath -m --relative-to="$root_abs" "$f"; done)
+      ;;
+    *) return 0 ;;
+  esac
+  [[ -z "$list" ]] && return 0
+  local prev="" next="" found=0 cur
+  while IFS= read -r cur; do
+    [[ -z "$cur" ]] && continue
+    if [[ "$found" -eq 1 ]]; then next="$cur"; break; fi
+    if [[ "$cur" == "$rel" ]]; then found=1; continue; fi
+    prev="$cur"
+  done <<< "$list"
+  [[ "$found" -eq 0 ]] && return 0
+  printf '%s\t%s' "$prev" "$next"
+}
+
+# chrome-top 領域の中身 (skip-link + breadcrumb) を emit。 $1=stripped file $2=rel $3=base_url。
+folio_chrome_top_emit() {
+  local stripped="$1" rel="$2" base="$3" target
+  target=$(folio_chrome_skip_target "$stripped")
+  [[ -n "$target" ]] && printf '<a class="skip-link" href="#%s">本文へスキップ</a>\n' "$(folio_build_attresc "$target")"
+  folio_chrome_breadcrumb "$rel" "$base"
+}
+
+# chrome-toc 領域の中身 (cluster-nav [README のみ] + on-this-page 目次) を emit。
+# $1=stripped file $2=rel $3=root_abs。 目次 0 行 (glossary 等) なら目次 nav 自体を省略。
+folio_chrome_toc_emit() {
+  local stripped="$1" rel="$2" root_abs="$3" rows lvl tgt lab cls
+  [[ "${rel##*/}" == "README.html" ]] && folio_chrome_clusternav "$rel" "$root_abs"
+  rows=$(folio_chrome_toc_rows "$stripped")
+  [[ -z "$rows" ]] && return 0
+  printf '<nav class="toc" aria-label="ページ内目次">\n<ol>\n'
+  while IFS=$'\t' read -r lvl tgt lab; do
+    [[ -z "$tgt" ]] && continue
+    cls=""
+    [[ "$lvl" == "3" ]] && cls=' class="toc--sub"'
+    printf '  <li%s><a href="#%s">%s</a></li>\n' "$cls" "$(folio_build_attresc "$tgt")" "$lab"
+  done <<< "$rows"
+  printf '</ol>\n</nav>\n'
+}
+
+# chrome-bottom 領域の中身 (prev-next) を emit。 $1=rel $2=root_abs。 chain 外は無出力。
+folio_chrome_bottom_emit() {
+  local rel="$1" root_abs="$2" nb prev next t
+  nb=$(folio_chrome_chain_neighbors "$rel" "$root_abs")
+  [[ -z "$nb" ]] && return 0
+  prev="${nb%%$'\t'*}"; next="${nb#*$'\t'}"
+  [[ -z "$prev" && -z "$next" ]] && return 0
+  printf '<nav class="prevnext" aria-label="前後の文書">\n'
+  if [[ -n "$prev" ]]; then
+    t=$(folio_extract_title "${root_abs}/${prev}"); [[ -z "$t" ]] && t="${prev##*/}"
+    printf '  <a class="prevnext__prev" href="%s"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">%s</span></a>\n' \
+      "$(folio_build_attresc "${prev##*/}")" "$(folio_build_htesc "$t")"
+  fi
+  if [[ -n "$next" ]]; then
+    t=$(folio_extract_title "${root_abs}/${next}"); [[ -z "$t" ]] && t="${next##*/}"
+    printf '  <a class="prevnext__next" href="%s"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">%s</span></a>\n' \
+      "$(folio_build_attresc "${next##*/}")" "$(folio_build_htesc "$t")"
+  fi
+  printf '</nav>\n'
+}
+
+# page の期待 content (chrome 注入済全文) を stdout。 $1=file $2=rel $3=root_abs $4=base_url。
+# strip → 抽出 → 挿入の純関数 (file は不変)。 挿入点: 最初の <body> 行直後 (top) / 最初の
+# </header> 行直後 (toc、 doc-header 無し page は省略) / 最後の </body> 行直前 (bottom)。
+# 行番号は grep -n で先に確定し awk に渡す (prose の <pre> 例に raw </body> 等が現れても
+# 最初の <body> と最後の </body> は実 boundary、 ADR-0039 §2.3 決定性)。
+# <body> / </body> が無い file は render 不能 = return 1 (caller skip、 fail-closed)。
+folio_chrome_render_doc() {
+  local file="$1" rel="$2" root_abs="$3" base="$4"
+  local stripped body_ln head_ln close_ln top toc bottom
+  stripped=$(mktemp) || return 1
+  folio_chrome_strip "$file" > "$stripped"
+  body_ln=$(grep -n '<body[ >]' "$stripped" | head -1 | cut -d: -f1)
+  close_ln=$(grep -n '</body>' "$stripped" | tail -1 | cut -d: -f1)
+  if [[ -z "$body_ln" || -z "$close_ln" ]]; then rm -f "$stripped"; return 1; fi
+  head_ln=$(awk -v b="$body_ln" 'NR>b && /<\/header>/{print NR; exit}' "$stripped")
+  top=$(folio_chrome_top_emit "$stripped" "$rel" "$base")
+  toc=$(folio_chrome_toc_emit "$stripped" "$rel" "$root_abs")
+  bottom=$(folio_chrome_bottom_emit "$rel" "$root_abs")
+  CHROME_TOP="$top" CHROME_TOC="$toc" CHROME_BOTTOM="$bottom" \
+  awk -v body_ln="$body_ln" -v head_ln="${head_ln:-0}" -v close_ln="$close_ln" '
+    NR==close_ln {
+      print "<!-- folio:chrome-bottom -->"
+      if(ENVIRON["CHROME_BOTTOM"]!="") print ENVIRON["CHROME_BOTTOM"]
+      print "<!-- /folio:chrome-bottom -->"
+    }
+    { print }
+    NR==body_ln {
+      print "<!-- folio:chrome-top -->"
+      if(ENVIRON["CHROME_TOP"]!="") print ENVIRON["CHROME_TOP"]
+      print "<!-- /folio:chrome-top -->"
+      if(head_ln==0){
+        print "<!-- folio:chrome-toc -->"
+        if(ENVIRON["CHROME_TOC"]!="") print ENVIRON["CHROME_TOC"]
+        print "<!-- /folio:chrome-toc -->"
+      }
+    }
+    NR==head_ln && head_ln>0 {
+      print "<!-- folio:chrome-toc -->"
+      if(ENVIRON["CHROME_TOC"]!="") print ENVIRON["CHROME_TOC"]
+      print "<!-- /folio:chrome-toc -->"
+    }
+  ' "$stripped"
+  rm -f "$stripped"
+}
+
+# chrome 注入対象 (graph scan 対象 = head JSON-LD 持ち。 FolioConstitution も含む = 枠のみ授権、
+# ADR-0039 §2.3 / grill 決定 3) の rel path を 1 行ずつ stdout。 生成 index/glossary は対象外
+# (chrome は各 emit が inline 所有)。
+folio_chrome_targets() {
+  local root_abs="$1" d f block
+  for d in spec decisions research; do
+    [[ -d "${root_abs}/${d}" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      block=$(folio_extract_head_jsonld "$f")
+      [[ -z "$block" ]] && continue
+      realpath -m --relative-to="$root_abs" "$f"
+    done < <(find "${root_abs}/${d}" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+}
+
+# 1 page に chrome を注入 (render と一致しなければ temp→mv で置換)。 stdout "changed"/"unchanged"。
+# render 不能 (body 無し等) は return 1 (caller が fail-closed)。
+folio_chrome_inject_doc() {
+  local file="$1" rel="$2" root_abs="$3" base="$4" out
+  out=$(mktemp "${root_abs}/.folio-chrome.XXXXXX") || return 1
+  if ! folio_chrome_render_doc "$file" "$rel" "$root_abs" "$base" > "$out"; then
+    rm -f "$out"; return 1
+  fi
+  if cmp -s "$out" "$file"; then
+    rm -f "$out"; printf 'unchanged'
+  else
+    mv "$out" "$file"; printf 'changed'
   fi
 }
 
@@ -2497,8 +2887,9 @@ Subcommands:
                            --root で検査 root override)
   fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
                            materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)
-  build [--root <dir>]     graph から top-level index.html (walkable nav) を生成 (ADR-0035、 三重 marker、
-        [--check]          決定的・idempotent、 --check で drift 検査 exit 0=ok/1=drift、 既定 write 0=ok/2=error)
+  build [--root <dir>]     graph から top-level index.html (walkable nav) + glossary.html を生成し、
+        [--check]          全 page に chrome (skip-link/breadcrumb/目次/prev-next) を注入・維持 (ADR-0035/0036/0039、
+                           決定的・idempotent、 --check で drift 検査 exit 0=ok/1=drift、 既定 write 0=ok/2=error)
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF

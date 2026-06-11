@@ -41,11 +41,36 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0024</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0024 — folio init scope (consumer Layer 1 canonical scaffold + folio.config.yaml 生成)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-26 &middot; folio v0.5.0-draft &middot; forward (X4-A、 user 承認済 (AskUq)、 実装は SPAWN + feature-dev)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-scaffold">§2.1 生成物 (標準 seed = canonical layout skeleton)</a></li>
+  <li class="toc--sub"><a href="#s2-2-starter-constitution">§2.2 starter constitution は通常 spec schema</a></li>
+  <li class="toc--sub"><a href="#s2-3-idempotent">§2.3 idempotency</a></li>
+  <li class="toc--sub"><a href="#s2-4-validate-clean">§2.4 validate-clean 保証 (品質ゲート)</a></li>
+  <li class="toc--sub"><a href="#s2-5-config">§2.5 folio.config.yaml 生成値</a></li>
+  <li class="toc--sub"><a href="#s2-6-verification">§2.6 検証 (REQ-VER-014)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -153,5 +178,11 @@ review_model: "opus"                   # optional
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0023-x4-c-scratch-to-architecture-migration.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0023 — X4-C scratch→architecture 物理 migration (canonical layout 実体化 + scratch 撤去)</span></a>
+  <a class="prevnext__next" href="ADR-0025-folio-fix-bidirectional.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0025 — folio fix + validate broken-reverse gate (双方向 link materialize, REQ-REL-002/004)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

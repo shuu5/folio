@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T00:04:38Z",
+  "generatedAt": "2026-06-11T02:16:34Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1949,7 +1949,7 @@
       },
       {
         "from": "spec/rules.html",
-        "to": "P-13"
+        "to": "P-14"
       },
       {
         "from": "spec/rules.html",

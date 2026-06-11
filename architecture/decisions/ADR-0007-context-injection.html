@@ -37,11 +37,34 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0007</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0007 — context injection (SessionStart + PreCompact、 Beads-inspired)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; forward (user 承認済、 実装は Track 2 spawn)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-mechanism">§2.1 mechanism = SessionStart hook → folio prime stdout (matcher 省略 = 全 source)</a></li>
+  <li class="toc--sub"><a href="#s2-2-content">§2.2 注入内容 = Tier 1 inventory digest (compact text)</a></li>
+  <li class="toc--sub"><a href="#s2-3-prime-cli">§2.3 folio prime CLI (Beads bd prime 相当)</a></li>
+  <li class="toc--sub"><a href="#s2-4-staleness">§2.4 staleness = auto-regen</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -145,5 +168,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0006-caller-marker-hook.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0006 — caller marker hook (hybrid: env var OR marker file)</span></a>
+  <a class="prevnext__next" href="ADR-0013-verification-framework.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0013 — sandbox verification framework (scratch/verification/)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

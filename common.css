@@ -645,7 +645,10 @@ dl.doc-meta dd { margin: 0; color: var(--folio-text-primary); }
 .badge--draft       { background: rgba(145, 102, 38, 0.14); color: var(--folio-caution);     border-color: rgba(145, 102, 38, 0.30); }
 .badge--active      { background: rgba(30, 123, 101, 0.14); color: var(--folio-success);     border-color: rgba(30, 123, 101, 0.30); }
 
-/* --- in-page TOC card ----------------------------------------------- */
+/* --- in-page TOC card (on-this-page 目次) ----------------------------
+ * 単一 SSoT: folio build の chrome-toc 注入 (ol + .toc--sub、 ADR-0039 §2.3) と
+ * 手書き legacy (ul、 constitution 等の frozen) の両 markup を同じ box で支える。
+ * タイトルは ::before 一本 (emit 側に title 要素を持たない = 二重 label 防止)。 */
 nav.toc {
   background: var(--folio-surface-normal);
   border: 1px solid var(--folio-border-default);
@@ -656,17 +659,24 @@ nav.toc {
   font-size: var(--folio-text-small);
 }
 nav.toc::before {
-  content: "On this page";
+  content: "このページ";
   display: block;
   font-size: var(--folio-text-caption);
-  text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--folio-text-tertiary);
   font-weight: 600;
   margin-bottom: 0.6rem;
 }
 nav.toc ul { margin: 0; padding-left: 1.1rem; columns: 2; column-gap: 1.5rem; }
-nav.toc li { margin-bottom: 0.3rem; }
+nav.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  column-width: 280px;
+  column-gap: 2rem;
+}
+nav.toc li { margin-bottom: 0.3rem; break-inside: avoid; }
+nav.toc li.toc--sub { padding-left: 1rem; }
 nav.toc a { text-decoration: none; }
 nav.toc a:hover { text-decoration: underline; }
 
@@ -1143,3 +1153,77 @@ a.reader-card:focus-visible {
   font-size: var(--folio-text-small);
   line-height: 1.55;
 }
+
+/* ========================================================================
+ * Chrome (ADR-0039 §2.3、 folio build が全ページに注入する marker 領域)。
+ *   chrome-top = skip-link + breadcrumb / chrome-toc = cluster-nav (README) +
+ *   on-this-page 目次 / chrome-bottom = prev-next。 領域内は build 所有。
+ * ====================================================================== */
+
+/* skip-link: 視覚非表示 → keyboard focus で出現 (W3C APG)。 */
+a.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background: var(--folio-brand);
+  color: var(--folio-text-invert);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0 6px 6px;
+  text-decoration: none;
+  font-weight: 600;
+}
+a.skip-link:focus { left: 0; }
+
+/* breadcrumb: 小さく secondary、 現在地は強調 (aria-current)。 */
+nav.breadcrumb { font-size: var(--folio-text-small); margin: 0.25rem 0 1rem; }
+nav.breadcrumb ol {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  padding: 0;
+  margin: 0;
+}
+nav.breadcrumb li { color: var(--folio-text-secondary); }
+nav.breadcrumb li + li::before {
+  content: "\203A";        /* › (alt-text 構文非対応 browser 向け fallback) */
+  content: "\203A" / "";   /* 装飾 separator を a11y tree から除外 (SR の読み上げ抑止、 ceiling 実測) */
+  margin: 0 0.5rem;
+  color: var(--folio-text-tertiary);
+}
+nav.breadcrumb a { text-decoration: none; }
+nav.breadcrumb a:hover { text-decoration: underline; }
+nav.breadcrumb [aria-current="page"] { font-weight: 600; color: var(--folio-text-primary); }
+
+/* on-this-page 目次の box/title/list 様式は visual-first component library の
+   nav.toc block (上方) が SSoT (chrome 注入 ol と legacy ul の両対応をそちらで定義)。 */
+
+/* prev-next: 末尾の前後導線。 長 title は単行 ellipsis。 */
+nav.prevnext {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid var(--folio-border-default);
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+}
+nav.prevnext a {
+  display: block;
+  max-width: 48%;
+  min-width: 0;
+  text-decoration: none;
+}
+nav.prevnext .prevnext__dir {
+  display: block;
+  font-size: var(--folio-text-caption);
+  color: var(--folio-text-secondary);
+}
+nav.prevnext .prevnext__title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+nav.prevnext a:hover .prevnext__title { text-decoration: underline; }
+nav.prevnext a.prevnext__next { margin-left: auto; text-align: right; }

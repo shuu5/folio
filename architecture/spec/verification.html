@@ -66,11 +66,48 @@
 <script src="../assets/mermaid.min.js" defer></script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">verification</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>folio verification</h1>
   <div class="meta">v0.5.0-draft &middot; status: draft &middot; sandbox verification framework spec (機能単位 use case verification の SSoT)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
+  <li><a href="#s1-contract">§1. Verification Contract Definition</a></li>
+  <li class="toc--sub"><a href="#s1-1-concepts">§1.1 3 concept</a></li>
+  <li class="toc--sub"><a href="#s1-2-scope-boundary">§1.2 本 framework の scope</a></li>
+  <li><a href="#s2-scope">§2. Verification Scope</a></li>
+  <li class="toc--sub"><a href="#s2-1-targets">§2.1 verification 対象</a></li>
+  <li class="toc--sub"><a href="#s2-2-out-of-scope">§2.2 scope 外</a></li>
+  <li><a href="#s3-ears">§3. EARS Requirements (REQ-VER-001〜)</a></li>
+  <li class="toc--sub"><a href="#s3-1-scenario-format">§3.1 scenario format (YAML、 1 REQ = 1 scenario)</a></li>
+  <li class="toc--sub"><a href="#s3-2-yaml-schema">§3.2 YAML schema</a></li>
+  <li class="toc--sub"><a href="#s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</a></li>
+  <li class="toc--sub"><a href="#s3-4-baseline">§3.4 golden baseline 管理</a></li>
+  <li class="toc--sub"><a href="#s3-5-ears-mapping">§3.5 EARS → Gherkin 1:1 mapping</a></li>
+  <li class="toc--sub"><a href="#s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</a></li>
+  <li class="toc--sub"><a href="#s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</a></li>
+  <li><a href="#s4-implementation">§4. Implementation Phase</a></li>
+  <li class="toc--sub"><a href="#s4-1-3step">§4.1 3-Step approach</a></li>
+  <li class="toc--sub"><a href="#s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</a></li>
+  <li><a href="#s5-open-questions">§5. Open Questions / ADR Cross-references</a></li>
+  <li class="toc--sub"><a href="#s5-1-gaps">§5.1 Open Questions (Gap、 sandbox-verification-research §10.1 参照)</a></li>
+  <li class="toc--sub"><a href="#s5-2-pending-adrs">§5.2 起票保留 ADR (SHOULD ランク)</a></li>
+  <li class="toc--sub"><a href="#s5-3-related-adrs">§5.3 関連 ADR (acceptance 済)</a></li>
+  <li><a href="#s6-references">§6. References</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <dl class="doc-meta">
   <div><dt>Status</dt><dd><span class="badge badge--draft">draft</span></dd></div>
@@ -80,18 +117,6 @@
   <div><dt>Stakeholders</dt><dd>Developer · AI Agent · External Reviewer</dd></div>
   <div><dt>Depends-on</dt><dd><a href="rules.html">rules</a> · <a href="relations.html">relations</a></dd></div>
 </dl>
-
-<nav class="toc">
-  <ul>
-    <li><a href="#s0-reader-guide">§0 Reader's Guide</a></li>
-    <li><a href="#s1-contract">§1 Verification Contract Definition</a></li>
-    <li><a href="#s2-scope">§2 Verification Scope</a></li>
-    <li><a href="#s3-ears">§3 EARS Requirements (REQ-VER-001〜016)</a></li>
-    <li><a href="#s4-implementation">§4 Implementation Phase</a></li>
-    <li><a href="#s5-open-questions">§5 Open Questions / ADR</a></li>
-    <li><a href="#s6-references">§6 References</a></li>
-  </ul>
-</nav>
 
 <aside class="callout callout--note">
 <p>本文書は folio framework の <strong>verification contract 定義</strong>。 folio plugin (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> minimal scope) を sandbox で実機検証する枠組みを集約 SSoT 化する。 具体的検証実体は <code>tests/</code> 配下に隔離 (constitution <a href="./constitution.html#s2-principles">P-11 (HOW 禁止)</a> 整合)。 「verification」 は本 contract の<strong>概念名</strong> (<a class="xref" href="./constitution.html#p-13" data-tooltip="Verification &amp; Traceability">P-13</a> / <code>folio validate</code> / 本 spec) であり、 実体 dir 名 <code>tests/</code> (folio の bash stack 慣習) とは独立する (概念↔dir 分離、 <a href="../decisions/ADR-0026-test-placement-model.html">ADR-0026</a>)。</p>
@@ -750,5 +775,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 });
 </script>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="relations.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio — relations (v0.5.0-draft)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

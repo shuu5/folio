@@ -37,11 +37,34 @@
 </script>
 </head>
 <body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0018</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 
 <header class="doc-header">
   <h1>ADR-0018 — CLI golden-diff verification harness (kind:cli-golden)</h1>
   <div class="meta">Status: accepted &middot; Date: 2026-05-25 &middot; folio v0.4.2-draft &middot; retrospective (Track 1 実装 + GREEN 検証済)</div>
 </header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-kind">§2.1 kind:cli-golden discriminator</a></li>
+  <li class="toc--sub"><a href="#s2-2-harness">§2.2 harness 挙動 (REQ-VER-011)</a></li>
+  <li class="toc--sub"><a href="#s2-3-normalize">§2.3 非決定的 field の normalize</a></li>
+  <li class="toc--sub"><a href="#s2-4-single-entry">§2.4 単一 runner entry point (拡張、 別 script 化しない)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
@@ -135,5 +158,11 @@
 </ul>
 </section>
 
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0017-unit-integration-boundary.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0017 — verification の unit (sandbox) vs integration (e2e) 境界</span></a>
+  <a class="prevnext__next" href="ADR-0019-path-boundary-pragmatic.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0019 — path boundary hook (Option Pragmatic: content-marker 検出)</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>
