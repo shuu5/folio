@@ -9,6 +9,10 @@ description: |
   検出し exit 1 になることを実証する。 生成 index は空 research cluster の section を silent 省略する
   ため regen-drift は [OK] のまま = reachability が regen-drift の盲点 (cluster 丸ごと欠落) を独立に
   捕捉することの明示テスト (ceiling 指摘の empty-cluster blind spot)。 self-root ゆえ warn でなく block。
+  併せて index-backlink arm (folio-s97) を被覆する: decisions/README.html は兄弟 cluster への
+  crosslink は持つが ../index.html への戻りを持たない (= index 孤島。 JSON-LD head 無し = 非 scannable
+  で graph / 生成 index に不干渉) fixture で、 dead-end とは独立の index-backlink violation が
+  2 件目として出ることを実証する。 spec/README.html は backlink を持ち発火しない (clean 側の対)。
 
 command: ["validate", "--root", "tests/fixtures/nav-validate-reachability"]
 capture: "stdout"

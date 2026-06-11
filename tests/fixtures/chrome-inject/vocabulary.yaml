@@ -1,0 +1,10 @@
+# chrome-inject fixture 用の最小 vocabulary (folio-dct: vocab×clusternav 相互作用の pin)。
+# vocab が解決する corpus では folio_chrome_clusternav が cluster-nav 末尾に ../glossary.html link を
+# 加え、 folio build が glossary.html を生成する — この相互作用を chrome-validate-clean.yaml の
+# golden (chrome byte-equality [OK] + glossary link-rot clean) が回帰固定する。 no-vocab 形の
+# cluster-nav は chrome-drift fixture (vocabulary.yaml 無し) が引き続き pin する (両形被覆)。
+# definition に生の > / < を書かない (real vocabulary.yaml ヘッダの不変条件に倣う)。
+terms:
+  - canonical: "spec"
+    domain: "folio-closed"
+    definition: "WHAT (設計意図) を declarative に記述する design-intent 文書 (fixture 用最小定義)。"

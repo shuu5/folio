@@ -11,7 +11,7 @@ files checked: 6 · relations checked: 4
   [OK] xref-uniqueness
   [OK] xref-tooltip-consistency
   [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
-  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [OK] glossary
   [OK] nav-regen-drift
   [OK] nav-dead-link
   [OK] cluster-reachability

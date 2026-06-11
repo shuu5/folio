@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T13:37:58Z",
+  "generatedAt": "2026-06-11T14:02:51Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1604,7 +1604,7 @@
         "id": "REQ-NAV-003",
         "class": "requirement",
         "ssot": "spec/verification.html#req-nav-003",
-        "essence": "cluster dir / README の graph scan (生成 index の有無に依存しない) が dead-end README・empty cluster を検出する。 self-root (FolioConstitution 保持) = block / consumer = warn。"
+        "essence": "cluster dir / README の graph scan (生成 index の有無に依存しない) が dead-end README・empty cluster・index-backlink 欠落 (兄弟 cluster へは抜けるが ../index.html への戻りが無い = index 孤島) を検出する。 self-root (FolioConstitution 保持) = block / consumer = warn。"
       },
       {
         "id": "REQ-NAV-004",

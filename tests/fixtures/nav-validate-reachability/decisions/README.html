@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>decisions index</title>
+<link rel="stylesheet" href="../../common.css">
+</head>
+<body>
+<!-- index-backlink 欠落の意図的 fixture (folio-s97): 兄弟 cluster へは抜ける (crosslink pass) が
+     ../index.html への戻りが無い = 「index 孤島」。 REQ-NAV-003 の index-backlink arm が
+     これを [cluster-reachability] violation として検出することの conformance。
+     JSON-LD head を意図的に持たない (= 非 scannable) — graph / 生成 index に影響させず
+     reachability の README 検査 (file 存在ベース) だけを単独で発火させる。 chrome marker も
+     持たない (build 未適用の手書き README 相当 = keystone skip)。 -->
+<header class="doc-header"><h1>decisions index</h1><div class="meta">nav fixture (index backlink 無し)</div></header>
+<nav class="cluster-nav"><a href="../spec/README.html">spec/</a></nav>
+<section id="s1-purpose" class="informative"><h2>§1. Purpose</h2><p>nav-validate fixture の decisions cluster index (index backlink を意図的に持たない)。</p></section>
+</body>
+</html>

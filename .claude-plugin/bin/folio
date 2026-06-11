@@ -2593,7 +2593,7 @@ folio_cmd_build() {
 # chrome helpers — 全ページ chrome 注入 (ADR-0039 §2.3)。 folio build が graph scan 対象
 #   (+ constitution = 枠のみ) の各 page に 3 つの marker 領域を注入・維持する:
 #     chrome-top    (<body> 直後)        = skip-link + breadcrumb
-#     chrome-toc    (最初の </header> 直後) = cluster-nav (README のみ) + on-this-page 目次
+#     chrome-toc    (最初の </header> 直後) = cluster-nav (README のみ、 兄弟 cluster + vocab 解決時 glossary) + on-this-page 目次
 #     chrome-bottom (最後の </body> 直前)  = prev-next
 #   領域内は build 所有 (landing-hero の curated と逆: 人間編集は再 build が上書き)。 生成規則:
 #   - 既存 id のみ (目次は 2 段 fallback: 見出し自身の id → 最近接の id 持ち open section)。
@@ -2746,7 +2746,10 @@ folio_chrome_breadcrumb() {
 }
 
 # cluster README 用の横断 nav (手書き cluster-nav の build 導出版、 ADR-0039 §2.3「手書き chrome は
-# build 導出版へ置換」)。 実在する兄弟 cluster README のみ列挙 (up-nav は breadcrumb が担う)。
+# build 導出版へ置換」)。 実在する兄弟 cluster README を列挙 (up-nav は breadcrumb が担う) し、
+# glossary は vocabulary.yaml が解決する corpus でのみ末尾に加える (glossary discoverability が
+# landing 単一経路依存だった gap の解消、 folio-dct。 vocab 無し consumer では生成されない
+# glossary.html へ dead link を張らない = nav-dead-link / link-rot 安全)。
 folio_chrome_clusternav() {
   local rel="$1" root_abs="$2" out="" d
   local cl="${rel%%/*}"   # 別 local 行に分離 (同一 local 行の自己参照は enclosing scope の同名 var を読む footgun、 ceiling 実測)
@@ -2755,6 +2758,9 @@ folio_chrome_clusternav() {
     [[ -f "${root_abs}/${d}/README.html" ]] || continue
     out="${out}<a href=\"../${d}/README.html\">${d}/</a> &middot; "
   done
+  if folio_glossary_vocab_path "$root_abs" >/dev/null 2>&1; then
+    out="${out}<a href=\"../glossary.html\">glossary</a> &middot; "
+  fi
   [[ -z "$out" ]] && return 0
   printf '<nav class="cluster-nav" aria-label="関連 cluster">%s</nav>\n' "${out% &middot; }"
 }
@@ -2803,7 +2809,7 @@ folio_chrome_top_emit() {
   folio_chrome_breadcrumb "$rel" "$base"
 }
 
-# chrome-toc 領域の中身 (cluster-nav [README のみ] + on-this-page 目次) を emit。
+# chrome-toc 領域の中身 (cluster-nav [README のみ、 兄弟 cluster + vocab 解決時 glossary] + on-this-page 目次) を emit。
 # $1=stripped file $2=rel $3=root_abs。 目次 0 行 (glossary 等) なら目次 nav 自体を省略。
 folio_chrome_toc_emit() {
   local stripped="$1" rel="$2" root_abs="$3" rows lvl tgt lab cls
@@ -3023,6 +3029,23 @@ folio_nav_has_crosslink() {
   return 1
 }
 
+# README ($1) が root index への backlink (../index.html、 chrome breadcrumb の canonical 形) を
+# 持つか。 has_crosslink は「../ link 1 本」で pass するため、 兄弟 cluster への link だけがあって
+# index への戻りが無い形 (= ADR-0035 §1 が名指した「index は孤島」) を見逃す — 本検査がその穴を塞ぐ
+# (folio-s97)。 remediate = folio build (breadcrumb 再生成) で detect↔remediate parity が成立する。
+# 限界 (interim、 folio_nav_readme_deadlinks と同 idiom 継承): 大文字 HREF / single-quote href /
+# ?query 付き / ./../ 等の非 canonical 形は受理しない (canonical pipeline = build breadcrumb は常に
+# ../index.html を emit するため実害なし)。 正規化の一括解消は #119 系 (parity cleanup) の領分。
+folio_nav_has_index_backlink() {
+  local readme="$1" h pathpart
+  while IFS= read -r h; do
+    [[ -z "$h" ]] && continue
+    pathpart="${h%%#*}"
+    case "$pathpart" in ../index.html|..|../) return 0 ;; esac
+  done < <(grep -oP '<a [^>]*href="\K[^"]*' "$readme" 2>/dev/null)
+  return 1
+}
+
 # README ($1) の body <a href> 相対 link が target file/dir (+ #anchor) に解決するか検査 (#128 link-rot)。
 # href は README 自身の dir ($2 = cluster dir) 起点で解決 ($3 = 出力 label)。 folio_nav_deadlinks の README 版
 # (index は root_abs 直下ゆえ base=root、 README は cluster dir 直下ゆえ base=cluster dir)。 has_crosslink
@@ -3085,6 +3108,10 @@ folio_nav_reachability() {
     [[ -f "$readme" ]] || continue
     if ! folio_nav_has_crosslink "$readme"; then
       printf '%s\t[cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)\n' "${cl}/README.html"
+    elif ! folio_nav_has_index_backlink "$readme"; then
+      # dead-end (上) とは独立の弱い形: 兄弟 cluster へは抜けるが index への戻りが無い = index 孤島。
+      # dead-end が既に出ている README には重ねない (1 README 1 主因で remediate を迷わせない)。
+      printf '%s\t[cluster-reachability] cluster README lacks an index backlink (../index.html 無し = index が孤島。 folio build が breadcrumb を再生成する)\n' "${cl}/README.html"
     fi
     # (3) link-rot (#128): README の cross-nav/prose 相対 href が target 実在に解決するか。 base = cluster dir。
     folio_nav_readme_deadlinks "$readme" "$dir_abs" "${cl}/README.html"

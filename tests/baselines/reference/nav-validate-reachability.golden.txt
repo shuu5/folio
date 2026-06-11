@@ -19,5 +19,6 @@ files checked: 3 · relations checked: 0
   [OK] render-safety
   [OK] readability-floor
 
-violations (1):
+violations (2):
+  decisions/README.html [cluster-reachability] cluster README lacks an index backlink (../index.html 無し = index が孤島。 folio build が breadcrumb を再生成する)
   research/ [cluster-reachability] cluster dir exists but has 0 nav-reachable docs (empty cluster = regen-drift blind spot、 ADR-0035 §2.5)
