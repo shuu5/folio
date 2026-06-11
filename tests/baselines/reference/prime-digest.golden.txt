@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 41 specs · folio 0.6.0-draft
+# 42 specs · folio 0.6.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -201,6 +201,11 @@
 - title: folio presentation design patterns research
 - doc-type: research · status: draft
 - summary: human-first presentation layer (grill 2026-06-10 決定 6 件) の設計根拠調査 (6 軸 + critic + gap-fill 3 + synthesis、 11 agent / 100+ sources、 workflow wf_01c66953、 2026-06-11)
+
+## research/spec-readme-worklog-archive.html
+- title: spec/README 作業ログ archive
+- doc-type: research · status: superseded
+- summary: spec/README の dated 作業ログ (2026-05 期 Change Log + Phase X3 解消済 defer 行) を ADR-0039 §2.4 編集規範 (作業ログ類の人間面からの撤去) に従い verbatim 保存する歴史記録
 
 ## research/x4-plan.html
 - title: folio Phase X4 分解 + 着手計画

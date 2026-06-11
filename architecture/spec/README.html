@@ -20,6 +20,9 @@
   },
   "@id": "./README.html",
   "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "../research/spec-readme-worklog-archive.html" }
+  ],
   "dc:title": "folio framework spec index",
   "folio:version": "0.5.0-draft",
   "dc:hasPart": [
@@ -193,46 +196,7 @@ graph TD
 <section id="s5-changelog" class="informative">
 <h2>§5. Change Log</h2>
 
-<table>
-  <thead><tr><th>date</th><th>change</th><th>related ADR / commit</th></tr></thead>
-  <tbody>
-    <tr>
-      <td>2026-05-24</td>
-      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で <a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
-      <td>commit 1b18ddb、 spawn 検証 × 3 (folio-test-090218 / -b093240 / -c094741) で 真因確定 + Option A/B/C 比較 → Option C 採用</td>
-    </tr>
-    <tr>
-      <td>2026-05-24</td>
-      <td>§6 Open TODO を 3 sub-section に再編 (§6.1 dogfood / §6.2 Phase X3 deferred / §6.3 ADR 候補)。 Phase X3 Step 0-2 完遂 (sandbox-verified 2/3、 14/14 PASS) 過程で発生した deferred 事項を集約 trace。 spec 本文の編集なし、 informative TODO の整理のみ</td>
-      <td>Phase X3 Step 0 (b0a1155) / Step 1 (53f9929 + dffe235) / Step 2 (e01f089 + 63c9cc6) 累積</td>
-    </tr>
-    <tr>
-      <td>2026-05-23</td>
-      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 <a class="xref" href="./rules.html#req-ci-016" data-tooltip="Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。">REQ-CI-016</a> (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
-      <td>research/plugin-architecture-research.html + research/plugin-sandbox-verification-research.html 結論の規範化</td>
-    </tr>
-    <tr>
-      <td>2026-05-22</td>
-      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (<a class="xref" href="./rules.html#req-ci-010" data-tooltip="link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。">REQ-CI-010</a> 詳細化)、 relations.html §5 normative 化 + EARS <a class="xref" href="./relations.html#req-rel-001" data-tooltip="各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を &lt;head&gt; JSON-LD に宣言する (関係が存在する場合)。">REQ-REL-001</a>/002/003、 §4.2 3-tier mapping 具体例追加</td>
-      <td>本 commit</td>
-    </tr>
-    <tr>
-      <td>2026-05-22</td>
-      <td>relations.html を新設 (Phase 1 = JSON-LD + W3C 語彙 + inventory schema)、 rules.html §4.1 に JSON-LD 関係性表現を追加、 rules.html 自身の <code>&lt;head&gt;</code> JSON-LD も新規定準拠化、 README を index 化 (本 §1-§5)</td>
-      <td>research/spec-graph-management-research.html 結論の規範化</td>
-    </tr>
-    <tr>
-      <td>2026-05-22</td>
-      <td>scratch/specs/ dir 新設、 rules.html + folio-self-spec.html を移動 (ブラッシュアップ可化)</td>
-      <td><a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
-    </tr>
-    <tr>
-      <td>2026-05-22</td>
-      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
-      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> (v3)</td>
-    </tr>
-  </tbody>
-</table>
+<p>初期 (2026-05-22〜24) の change log table は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §2</a> へ退避した (<a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.4 の作業ログ撤去、 2026-06-11)。 以後の変更履歴の SSoT は <strong>git log + 各 ADR + delta marker (<a href="rules.html#s5-delta">rules §5</a>)</strong> — 本 README には変更履歴を蓄積しない。</p>
 </section>
 
 <section id="s6-todo" class="informative">
@@ -258,11 +222,11 @@ graph TD
   </tbody>
 </table>
 
-<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は前 commit (2026-05-22) で新規定 pattern に移行済 (§5 Change Log 参照)。</p>
+<p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は前 commit (2026-05-22) で新規定 pattern に移行済 (<a href="../research/spec-readme-worklog-archive.html">作業ログ archive</a> §2 参照)。</p>
 
 <h3 id="s6-2-phase-x3-deferred">§6.2 Phase X3 進行中の defer 事項 (2026-05-24 集約)</h3>
 
-<p>Phase X3 Step 0-2 着手・実装の過程で発生した defer 事項。 Step 3 以降または別 commit で対応予定:</p>
+<p>Phase X3 起源の defer 事項のうち、 <strong>frozen ADR (ADR-0003) divergence trace と未解消の既知制限のみ</strong>を恒久保持する (frozen は P-10 で修正不可のため、 実装との乖離は本表が trace の SSoT)。 解消済の作業記録 7 行は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §3</a> へ退避した (ADR-0039 §2.4、 2026-06-11):</p>
 
 <table>
   <caption>Phase X3 deferred issues (整理 2026-05-24)</caption>
@@ -272,11 +236,6 @@ graph TD
       <td>Gap 1 (#39344 fix)</td><td>LOW (一部解消)</td>
       <td>Claude Code <code>permissionDecision: deny</code> Bug 群 (Issue #37210 / #33106 / #39344 / #18312) の upstream fix 確認。 <strong>Phase 2.5 実機検証で PostToolUse blocking error は機能 (commit 1b18ddb)</strong>、 exit 2 + stderr 経路は信頼可能と判明 (<a class="xref" href="./verification.html#req-ver-006" data-tooltip="scenario assertion は permissionDecision JSON を主軸にすべきでない (upstream bug 既知ゆえ、 §3.3 の exit_code 中心と対)。">REQ-VER-006</a> SHOULD NOT は維持で問題なし)</td>
       <td>upstream fix 公式アナウンス時に full 解消 (現状で実用上影響なし)</td>
-    </tr>
-    <tr>
-      <td>verification §3.2 schema 拡張</td><td>✓ 完遂</td>
-      <td>scenario YAML の <code>given.{env, file_path, content}</code> + <code>when.tool</code> を <a href="verification.html#s3-2-yaml-schema">§3.2 schema</a> に展開 (Stage 2a / D-6、 実装と整合)</td>
-      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
     </tr>
     <tr>
       <td>verification §3 <a class="xref" href="./verification.html#req-ver-007" data-tooltip="spec_path 外への spec (.html) 作成は、 PreToolUse path-boundary hook が deny する (exit 2)。">REQ-VER-007</a>/008 昇格</td><td>✓ 完遂</td>
@@ -289,18 +248,8 @@ graph TD
       <td>upstream docs 更新待ち or 実機検証</td>
     </tr>
     <tr>
-      <td>shared lib 化 (実装済)</td><td>✓ 完遂</td>
-      <td><code>plugin-lib.sh</code> 実装 (Phase 3 DRY refactor、 commit c292b47)。 8 関数 (folio_spec_path / read_payload / require_jq / json_field / under_spec_path / is_html / require_write_tool / deny) を 4 hook script が source 再利用</td>
-      <td>解消済 (Phase 3)</td>
-    </tr>
-    <tr>
-      <td>plugin 実機 install 確認</td><td>✓ 完遂</td>
-      <td>Phase 2.5 で <a href="verification.html#s4-1-3step">verification.html §4.1</a> Step 2 (worktree-based integration test) 達成。 symlink (<code>~/.claude/plugins/folio</code>) + Option C 構造 (hooks/ plugin root 直下) で cld auto discovery 経由 plugin load、 3 hook 全実機 fire 確認 (caller marker / path boundary / jsonld-lint)。 検証経過: <strong>plugin 構造誤り発覚 → 公式仕様調査 (plugins-reference L733) → Option C 採用 → 再検証 PASS</strong></td>
-      <td>commit 1b18ddb、 解消済</td>
-    </tr>
-    <tr>
       <td>Phase 2.5: plugin 構造修正 (hooks/ 配置 fix)</td><td>✓ 完遂</td>
-      <td>当初 <code>.claude-plugin/hooks/hooks.json</code> 配置で hook 認識されず (公式仕様 L733: <code>.claude-plugin/</code> には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下 MUST)。 fix: git mv で <code>hooks/hooks.json</code> に移動、 hooks.json 内 command path を <code>${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/</code> に書き換え (scripts/ は P-11 部分隔離維持)</td>
+      <td>当初 <code>.claude-plugin/hooks/hooks.json</code> 配置で hook 認識されず (公式仕様 L733: <code>.claude-plugin/</code> には plugin.json のみ、 hooks/ skills/ 等は plugin root 直下 MUST)。 fix: git mv で <code>hooks/hooks.json</code> に移動、 hooks.json 内 command path を <code>${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/</code> に書き換え (scripts/ は <a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> 部分隔離維持)</td>
       <td>commit 1b18ddb、 解消済。 ADR-0003 §2.3 「<code>.claude-plugin/</code> 配下に隔離」 の適用範囲は scripts/ 等の HOW に narrowing 解釈 (ADR 本文は frozen 維持、 CLAUDE.md §6 + 本 §6.2 で trace)</td>
     </tr>
     <tr>
@@ -309,24 +258,9 @@ graph TD
       <td>恒久 benign (distribute 時に CLAUDE.md を分離する場合のみ解消)</td>
     </tr>
     <tr>
-      <td>LOW 級 review findings</td><td>LOW</td>
-      <td>yq 多重呼び (R1-2) / NotebookEdit test / subdirectory test / absolute path test / matcher array 形式 / 用語 cross-ref / FOLIO_SPEC_PATH override scenario</td>
-      <td>Step 3 以降の shared lib 化 + fold back</td>
-    </tr>
-    <tr>
-      <td>Phase X1 placeholder README.md</td><td>LOW</td>
-      <td><code>.claude-plugin/{agents,skills,scripts,bin,refs,static}/README.md</code> は Phase X1 placeholder のまま</td>
-      <td>試作完了時に整理 (Phase X3 終盤)</td>
-    </tr>
-    <tr>
       <td>ADR-0003 §2.1 script 命名 drift</td><td>MEDIUM</td>
       <td>ADR-0003 §2.1 table の <code>lint-jsonld</code> (script name) vs 実装 <code>check-jsonld-lint.sh</code> の divergence。 ADR は frozen (<a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a>) のため修正不可、 命名規約は <code>check-*</code> prefix 採用 (caller-marker / path-boundary / jsonld-lint と統一)</td>
       <td><a class="xref" href="../decisions/ADR-0004-jsonld-lint-mechanism.html" data-tooltip="retrospective (実装 + e2e 検証済)">ADR-0004</a> 起票時に script 命名規約 (check-* prefix) を formal 化、 ADR-0003 との drift を trace</td>
-    </tr>
-    <tr>
-      <td>PostToolUse README update (check 型、 Step 4 完遂)</td><td>✓ 完遂</td>
-      <td>ADR-0003 §2.1「PostToolUse: README update」の試作 slice = <code>check-readme-index.sh</code> 実装済 (commit 5a2d9f2)。 挙動型 = check 型 (cluster README index 未掲載の .html を staleness notify、 file 改変なし)。 REQ-VER-008 / verification.html §3.6 (下記 divergence 行参照)</td>
-      <td>Step 4 完了 (解消済、 commit 5a2d9f2)</td>
     </tr>
     <tr>
       <td>JSON-LD 複数 block 検査</td><td>LOW</td>
@@ -344,13 +278,8 @@ graph TD
       <td>完成形 mutate 移行時に ADR-0004 候補で formal 化</td>
     </tr>
     <tr>
-      <td>SessionStart / inject-inventory 未実装</td><td>MEDIUM</td>
-      <td>ADR-0003 §2.1 SessionStart hook (<code>inject-inventory</code> script、 Beads pattern で inventory.json を agent context に inject) は宣言済だが未実装。 hooks.json に SessionStart entry なし、 inject-inventory.sh 不在</td>
-      <td>Step 5 (context injection slice) で実装</td>
-    </tr>
-    <tr>
       <td>ADR-0003 §2.1 script count 6 vs 実装 5 file + plugin-lib</td><td>LOW</td>
-      <td>ADR 宣言 6 script vs 実装 5 file (check-caller-marker / check-path-boundary / check-jsonld-lint / check-readme-index / plugin-lib)。 差異: inject-inventory 未実装 (上記行) / link-integrity 未実装 (CI、 Phase X4+) / lint-jsonld→check-jsonld-lint 命名 / plugin-lib.sh 追加 (ADR 未宣言 shared lib)</td>
+      <td>ADR 宣言 6 script vs 実装 5 file (check-caller-marker / check-path-boundary / check-jsonld-lint / check-readme-index / plugin-lib)。 差異: inject-inventory は <a href="../decisions/ADR-0007-context-injection.html">ADR-0007</a> で実装済 (経緯は<a href="../research/spec-readme-worklog-archive.html">作業ログ archive</a> §3) / link-integrity 未実装 (CI、 Phase X4+) / lint-jsonld→check-jsonld-lint 命名 / plugin-lib.sh 追加 (ADR 未宣言 shared lib)</td>
       <td>inject-inventory=Step 5 (Track 2 解消済)、 link-integrity: internal(anchor+fs)=Track 3 <code>folio validate</code> に取込 (<a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a>)・external URL CI script=Phase X4+、 命名/lib=ADR-0004 候補</td>
     </tr>
   </tbody>

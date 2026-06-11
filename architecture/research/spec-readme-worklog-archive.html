@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="0.6.0-draft">
+<meta name="folio-status" content="superseded">
+<meta name="folio-stakeholders" content="Developer">
+<title>spec/README 作業ログ archive (2026-05 期 Change Log + Phase X3 解消済 defer)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./spec-readme-worklog-archive.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "spec/README 作業ログ archive",
+  "folio:version": "0.6.0-draft",
+  "dc:references": [ { "@id": "../spec/README.html" } ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">spec-readme-worklog-archive</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>spec/README 作業ログ archive</h1>
+  <div class="meta">status: superseded &middot; 2026-06-11 退避 &middot; spec/README の dated 作業ログ (2026-05 期 Change Log + Phase X3 解消済 defer 行) を ADR-0039 §2.4 編集規範 (作業ログ類の人間面からの撤去) に従い verbatim 保存する歴史記録</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. 退避の経緯</a></li>
+  <li><a href="#s2-changelog">§2. 旧 §5 Change Log (2026-05-22〜24、 verbatim)</a></li>
+  <li><a href="#s3-resolved">§3. 旧 §6.2 解消済 defer 行 (verbatim)</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<section id="s1-context" class="informative">
+<h2>§1. 退避の経緯</h2>
+<p>spec/README.html は spec cluster の entry point (人間読者 = 仕様を参照する開発者) だが、 §5 Change Log (2026-05-22〜24 で更新停止) と §6.2 の解消済 defer 行は dated 作業記録であり、 入口層の可読性を下げていた。 ADR-0039 §2.4 の編集規範 (「作業ログ類の人間面からの撤去 — research / git 履歴へ」) に従い 2026-06-11 に本 doc へ verbatim 退避した。 <strong>frozen ADR divergence trace と未解消の既知制限は spec/README §6.2 に残置</strong> (退避対象は解消済・stale 行のみ)。 以後の変更履歴の SSoT は git log + ADR + delta marker (rules §5)。</p>
+</section>
+
+<section id="s2-changelog" class="informative">
+<h2>§2. 旧 §5 Change Log (2026-05-22〜24、 verbatim)</h2>
+<table>
+  <thead><tr><th>date</th><th>change</th><th>related ADR / commit</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>2026-05-24</td>
+      <td>Phase 2.5 完遂: hooks/ を plugin root 直下に移動 (Option C 採用、 Claude Code 公式仕様 plugins-reference L733 準拠)。 scripts/ は <code>.claude-plugin/</code> 維持で <a class="xref" href="../spec/constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a> 部分隔離継続。 実機検証 (claude --plugin-dir 経由) で 3 hook 全 fire 確認、 PostToolUse blocking error も検証 (Issue #39344 一部解消の証拠)</td>
+      <td>commit 1b18ddb、 spawn 検証 × 3 (folio-test-090218 / -b093240 / -c094741) で 真因確定 + Option A/B/C 比較 → Option C 採用</td>
+    </tr>
+    <tr>
+      <td>2026-05-24</td>
+      <td>§6 Open TODO を 3 sub-section に再編 (§6.1 dogfood / §6.2 Phase X3 deferred / §6.3 ADR 候補)。 Phase X3 Step 0-2 完遂 (sandbox-verified 2/3、 14/14 PASS) 過程で発生した deferred 事項を集約 trace。 spec 本文の編集なし、 informative TODO の整理のみ</td>
+      <td>Phase X3 Step 0 (b0a1155) / Step 1 (53f9929 + dffe235) / Step 2 (e01f089 + 63c9cc6) 累積</td>
+    </tr>
+    <tr>
+      <td>2026-05-23</td>
+      <td>Phase X3 着手準備: scope 漏れ統合 + verification framework spec 化。 新 file <code>verification.html</code> 新設 (REQ-VER-001〜005)、 folio-self-spec.html §7.6 (Phase X3 minimal plugin scope = 1 skill + 4 hook + 6 script + 1 CLI)、 rules.html §10.2 <a class="xref" href="../spec/rules.html#req-ci-016" data-tooltip="Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。">REQ-CI-016</a> (JSON-LD validation gate)、 relations.html §4.4 (inventory I/O behavior)、 ADR-0003 / 0013 / 0015 起票</td>
+      <td>research/plugin-architecture-research.html + research/plugin-sandbox-verification-research.html 結論の規範化</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>Phase 1 残り要素規範化: folio-self-spec.html head JSON-LD dogfood 解消、 rules.html §10.2 内 lychee + hyperlink enforcement 補強 (<a class="xref" href="../spec/rules.html#req-ci-010" data-tooltip="link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。">REQ-CI-010</a> 詳細化)、 relations.html §5 normative 化 + EARS <a class="xref" href="../spec/relations.html#req-rel-001" data-tooltip="各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を &lt;head&gt; JSON-LD に宣言する (関係が存在する場合)。">REQ-REL-001</a>/002/003、 §4.2 3-tier mapping 具体例追加</td>
+      <td>本 commit</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>relations.html を新設 (Phase 1 = JSON-LD + W3C 語彙 + inventory schema)、 rules.html §4.1 に JSON-LD 関係性表現を追加、 rules.html 自身の <code>&lt;head&gt;</code> JSON-LD も新規定準拠化、 README を index 化 (本 §1-§5)</td>
+      <td>research/spec-graph-management-research.html 結論の規範化</td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>scratch/specs/ dir 新設、 rules.html + folio-self-spec.html を移動 (ブラッシュアップ可化)</td>
+      <td><a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
+    </tr>
+    <tr>
+      <td>2026-05-22</td>
+      <td>architecture-rules.html を rules.html + folio-self-spec.html に分離</td>
+      <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> (v3)</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s3-resolved" class="informative">
+<h2>§3. 旧 §6.2 解消済 defer 行 (verbatim)</h2>
+<p>severity 「✓ 完遂」 の純作業記録、 および退避時点で stale と判明していた行 (SessionStart 未実装 = ADR-0007 で実装済 / Phase X1 placeholder = agents・skills・static は X4-F で撤去済、 bin・scripts・refs の予約 README は dormant のまま現存 — 残整理は bd issue で追跡)。</p>
+<table>
+  <caption>Phase X3 deferred issues のうち解消済 (元: spec/README §6.2)</caption>
+  <thead><tr><th>項目</th><th>severity</th><th>内容</th><th>解消 timing</th></tr></thead>
+  <tbody>
+<tr>
+      <td>verification §3.2 schema 拡張</td><td>✓ 完遂</td>
+      <td>scenario YAML の <code>given.{env, file_path, content}</code> + <code>when.tool</code> を <a href="../spec/verification.html#s3-2-yaml-schema">§3.2 schema</a> に展開 (Stage 2a / D-6、 実装と整合)</td>
+      <td>解消済 (Stage 2a、 commit 54c57b3)</td>
+    </tr>
+<tr>
+      <td>shared lib 化 (実装済)</td><td>✓ 完遂</td>
+      <td><code>plugin-lib.sh</code> 実装 (Phase 3 DRY refactor、 commit c292b47)。 8 関数 (folio_spec_path / read_payload / require_jq / json_field / under_spec_path / is_html / require_write_tool / deny) を 4 hook script が source 再利用</td>
+      <td>解消済 (Phase 3)</td>
+    </tr>
+<tr>
+      <td>plugin 実機 install 確認</td><td>✓ 完遂</td>
+      <td>Phase 2.5 で <a href="../spec/verification.html#s4-1-3step">verification.html §4.1</a> Step 2 (worktree-based integration test) 達成。 symlink (<code>~/.claude/plugins/folio</code>) + Option C 構造 (hooks/ plugin root 直下) で cld auto discovery 経由 plugin load、 3 hook 全実機 fire 確認 (caller marker / path boundary / jsonld-lint)。 検証経過: <strong>plugin 構造誤り発覚 → 公式仕様調査 (plugins-reference L733) → Option C 採用 → 再検証 PASS</strong></td>
+      <td>commit 1b18ddb、 解消済</td>
+    </tr>
+<tr>
+      <td>LOW 級 review findings</td><td>LOW</td>
+      <td>yq 多重呼び (R1-2) / NotebookEdit test / subdirectory test / absolute path test / matcher array 形式 / 用語 cross-ref / FOLIO_SPEC_PATH override scenario</td>
+      <td>Step 3 以降の shared lib 化 + fold back</td>
+    </tr>
+<tr>
+      <td>Phase X1 placeholder README.md</td><td>LOW</td>
+      <td><code>.claude-plugin/{agents,skills,scripts,bin,refs,static}/README.md</code> は Phase X1 placeholder のまま</td>
+      <td>試作完了時に整理 (Phase X3 終盤)</td>
+    </tr>
+<tr>
+      <td>PostToolUse README update (check 型、 Step 4 完遂)</td><td>✓ 完遂</td>
+      <td>ADR-0003 §2.1「PostToolUse: README update」の試作 slice = <code>check-readme-index.sh</code> 実装済 (commit 5a2d9f2)。 挙動型 = check 型 (cluster README index 未掲載の .html を staleness notify、 file 改変なし)。 REQ-VER-008 / verification.html §3.6 (下記 divergence 行参照)</td>
+      <td>Step 4 完了 (解消済、 commit 5a2d9f2)</td>
+    </tr>
+<tr>
+      <td>SessionStart / inject-inventory 未実装</td><td>MEDIUM</td>
+      <td>ADR-0003 §2.1 SessionStart hook (<code>inject-inventory</code> script、 Beads pattern で inventory.json を agent context に inject) は宣言済だが未実装。 hooks.json に SessionStart entry なし、 inject-inventory.sh 不在</td>
+      <td>Step 5 (context injection slice) で実装</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

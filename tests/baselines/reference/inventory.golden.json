@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T04:02:50Z",
+  "generatedAt": "2026-06-11T04:58:28Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -12,6 +12,9 @@
       "version": "0.5.0-draft",
       "stakeholders": [],
       "relations": {
+        "dc:isReferencedBy": [
+          "research/spec-readme-worklog-archive.html"
+        ],
         "dc:hasPart": [
           "spec/rules.html",
           "spec/folio-self-spec.html",
@@ -1146,6 +1149,22 @@
       }
     },
     {
+      "@id": "research/spec-readme-worklog-archive.html",
+      "title": "spec/README 作業ログ archive",
+      "summary": "spec/README の dated 作業ログ (2026-05 期 Change Log + Phase X3 解消済 defer 行) を ADR-0039 §2.4 編集規範 (作業ログ類の人間面からの撤去) に従い verbatim 保存する歴史記録",
+      "doc-type": "research",
+      "status": "superseded",
+      "version": "0.6.0-draft",
+      "stakeholders": [
+        "Developer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/README.html"
+        ]
+      }
+    },
+    {
       "@id": "research/x4-plan.html",
       "title": "folio Phase X4 分解 + 着手計画",
       "summary": "X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)",
@@ -1800,6 +1819,22 @@
     ],
     "edges": [
       {
+        "from": "research/spec-readme-worklog-archive.html",
+        "to": "P-11"
+      },
+      {
+        "from": "research/spec-readme-worklog-archive.html",
+        "to": "REQ-CI-010"
+      },
+      {
+        "from": "research/spec-readme-worklog-archive.html",
+        "to": "REQ-CI-016"
+      },
+      {
+        "from": "research/spec-readme-worklog-archive.html",
+        "to": "REQ-REL-001"
+      },
+      {
         "from": "spec/README.html",
         "to": "ADR-0001"
       },
@@ -1817,23 +1852,15 @@
       },
       {
         "from": "spec/README.html",
+        "to": "ADR-0039"
+      },
+      {
+        "from": "spec/README.html",
         "to": "P-10"
       },
       {
         "from": "spec/README.html",
         "to": "P-11"
-      },
-      {
-        "from": "spec/README.html",
-        "to": "REQ-CI-010"
-      },
-      {
-        "from": "spec/README.html",
-        "to": "REQ-CI-016"
-      },
-      {
-        "from": "spec/README.html",
-        "to": "REQ-REL-001"
       },
       {
         "from": "spec/README.html",
