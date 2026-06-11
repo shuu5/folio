@@ -22,7 +22,6 @@
 
 <header class="doc-header">
   <h1>architecture — index</h1>
-  <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
 </header>
 
 <section class="landing-hero">
@@ -40,12 +39,12 @@
 <!-- folio:nav-curated -->
 <section class="curated">
 <h2>Key documents</h2>
-<ul>
-  <li><a href="spec/constitution.html">constitution.html</a> — 不変 14 原則 (編集禁止、 graph 走査外ゆえ手 pin)</li>
-  <li><a href="spec/folio-self-spec.html">folio-self-spec.html</a> — Layer 0 architecture spec</li>
-  <li><a href="spec/rules.html">rules.html</a> — Layer 1 consumer 向け universal rules</li>
-  <li><a href="spec/verification.html">verification.html</a> — sandbox verification framework spec</li>
-  <li><a href="glossary.html">glossary.html</a> — folio-vocabulary 用語集 (folio build が vocabulary.yaml から生成、 ADR-0036)</li>
+<ul class="doc-list">
+  <li><a href="spec/constitution.html">constitution</a><span class="doc-desc">folio の 14 不変原則。 すべての設計判断の最上位根拠 (編集禁止)</span></li>
+  <li><a href="spec/rules.html">rules</a><span class="doc-desc">spec の書き方の規範 — markup・命名・EARS 要件・検証の universal rules</span></li>
+  <li><a href="spec/folio-self-spec.html">folio-self-spec</a><span class="doc-desc">folio 自身の architecture spec (framework の self-host 実例)</span></li>
+  <li><a href="spec/verification.html">verification</a><span class="doc-desc">仕様がどう機械検証されるか — validate / sandbox framework の contract</span></li>
+  <li><a href="glossary.html">glossary</a><span class="doc-desc">folio 用語集 — 本文の用語 hover 解説と同じ定義から生成</span></li>
 </ul>
 <p><a href="../">&larr; folio home</a></p>
 </section>
@@ -138,7 +137,7 @@
 </details>
 </section>
 
-<aside class="informative">
+<aside class="informative landing-foot">
   <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は hero (<code>folio:landing-hero</code>) と curated region (<code>folio:nav-curated</code>) に置きます。</p>
 </aside>
 

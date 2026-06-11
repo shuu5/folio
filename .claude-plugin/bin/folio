@@ -2064,7 +2064,6 @@ folio_build_emit_index() {
 
 <header class="doc-header">
   <h1>architecture — index</h1>
-  <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
 </header>
 
 HEAD
@@ -2157,7 +2156,7 @@ HEAD
   # 保守者向け運用注記は末尾に置く (ADR-0039 §2.2 / P-14: 入口の最初の本文を維持者向け注記にしない —
   # 監査 wf_8b14e53a の症状 (a) の再発防止。 内容は従来と同一、 位置のみ demote)。
   cat <<'FOOT'
-<aside class="informative">
+<aside class="informative landing-foot">
   <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は hero (<code>folio:landing-hero</code>) と curated region (<code>folio:nav-curated</code>) に置きます。</p>
 </aside>
 

@@ -710,18 +710,89 @@ section.normative   > h2:first-of-type::after { content: "Normative";   color: v
 section.informative > h2:first-of-type::after { content: "Informative"; color: var(--folio-informative); background: rgba(30, 123, 101, 0.10); }
 
 /* --- generated nav clusters (ADR-0035 folio build): informative 枠の見た目を流用しつつ
-   RFC corner label は出さない中立 nav 枠 (cluster は normative/informative の content でなく navigation) --- */
+   RFC corner label は出さない中立 nav 枠 (cluster は normative/informative の content でなく navigation)。
+   ADR-0039 / P-14 humanize: 下線リンクの羅列をやめ、 行 hover + doc-type badge の行カードで
+   視覚スキャンを支える (landing 目視 feedback 反映)。 --- */
 section.nav-cluster {
   position: relative;
   border-left: 3px solid var(--folio-informative);
   background: linear-gradient(rgba(30, 123, 101, 0.03), rgba(30, 123, 101, 0.03)), var(--folio-surface-normal);
-  padding: 0.25rem 1.25rem;
+  padding: 0.5rem 1.25rem 0.75rem;
   margin: 1.5rem 0;
+  border-radius: 0 var(--folio-radius-card) var(--folio-radius-card) 0;
+}
+section.nav-cluster > h2 {
+  font-size: var(--folio-text-h3);
+  margin: 0.6rem 0 0.4rem;
 }
 section.nav-cluster > details { margin: 0.4rem 0; }
-section.nav-cluster > details > summary { cursor: pointer; font-weight: 600; }
+section.nav-cluster > details > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+}
+section.nav-cluster > details > summary:hover { background: rgba(127, 127, 127, 0.08); }
 .nav-count { color: var(--folio-text-secondary); font-weight: 400; font-size: var(--folio-text-caption); }
-.nav-meta  { color: var(--folio-text-secondary); font-size: var(--folio-text-caption); margin-left: 0.3rem; }
+.nav-meta  {
+  color: var(--folio-text-secondary);
+  font-size: var(--folio-text-caption);
+  background: rgba(127, 127, 127, 0.12);
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* nav 行 (generated cluster 一覧): タイトル + doc-type badge の行。 hover で行背景、
+   link 下線は hover 時のみ (「かろうじてハイパーリンク」な裸リスト見えの解消) */
+section.nav-cluster ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.5rem;
+}
+section.nav-cluster li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+}
+section.nav-cluster li:hover { background: rgba(127, 127, 127, 0.07); }
+section.nav-cluster li a { text-decoration: none; flex: 1 1 auto; }
+section.nav-cluster li a:hover { text-decoration: underline; }
+
+/* curated Key documents (landing): タイトル行 + 一行説明の stacked 行カード。
+   見出しは nav-cluster の h2 と同サイズに揃える (同階層 section の視覚整合) */
+section.curated > h2 { font-size: var(--folio-text-h3); margin: 1.5rem 0 0.4rem; }
+ul.doc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.25rem 0 0.5rem;
+}
+ul.doc-list li {
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+}
+ul.doc-list li:hover { background: rgba(127, 127, 127, 0.07); }
+ul.doc-list li a {
+  display: block;
+  text-decoration: none;
+  font-weight: 600;
+}
+ul.doc-list li a:hover { text-decoration: underline; }
+ul.doc-list .doc-desc {
+  display: block;
+  color: var(--folio-text-secondary);
+  font-size: var(--folio-text-small);
+  line-height: 1.5;
+}
+
+/* 保守者向け generated-note の caption 減衰は landing 末尾 (.landing-foot) 限定。
+   glossary.html 等の冒頭バナーは本文サイズを維持する (class 単独 selector だと
+   cross-page bleed して glossary の警告が本文より読みにくくなる、 ceiling 実測) */
+.landing-foot .generated-note { font-size: var(--folio-text-caption); color: var(--folio-text-tertiary); }
 
 /* cluster README の cross-cluster nav bar (folio build/init 生成、 ADR-0035。 generated index 側の nav と視覚整合) */
 nav.cluster-nav { font-size: var(--folio-text-small); margin: 0.5rem 0 1rem; color: var(--folio-text-secondary); }
@@ -1017,7 +1088,6 @@ dl.glossary dt:target {
 .landing-tagline {
   font-size: 1.2rem;
   line-height: 1.8;
-  max-width: var(--folio-width-narrative);
 }
 .landing-cta-row { margin: 1.25rem 0; }
 a.landing-cta {
