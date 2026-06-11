@@ -2,11 +2,11 @@
 #
 # verification.html §4.2「完成形 = 全 scenario PR ごと auto-run + merge gating」の軽量版。
 # 3 段で検証する:
-#   (1) folio validate    = deterministic floor 16-gate (link / jsonld / broken-reverse / vocabulary
+#   (1) folio validate    = deterministic floor 17-gate (link / jsonld / broken-reverse / vocabulary
 #                           / delta-marker / dual-audience-structural / xref-resolve / xref-uniqueness
 #                           / xref-tooltip-consistency / xref-completeness / glossary / nav-regen-drift
-#                           / nav-dead-link / cluster-reachability / ears-coverage / render-safety、
-#                           ADR-0020/0025/0028/0033/0034/0035)
+#                           / nav-dead-link / cluster-reachability / ears-coverage / render-safety / readability-floor、
+#                           ADR-0020/0025/0028/0033/0034/0035/0037/0039)
 #   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
 #   (3) render-gate       = render-safety ceiling (playwright headless render の flowchart 幾何 overlap
 #                           + clip 検出、 verification.html REQ-VER-022 / tests/render-gate/README.md)。
@@ -57,7 +57,7 @@ jobs:
           yq --version
 
       # deterministic floor。 root 既定 = architecture/ (CWD = repo root 前提)。 exit 1 で merge block。
-      - name: folio validate (deterministic floor — 16 gate)
+      - name: folio validate (deterministic floor — 17 gate)
         run: .claude-plugin/bin/folio validate
 
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。

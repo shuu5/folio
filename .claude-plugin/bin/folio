@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # folio CLI (Phase X3 試作)
 # 完成形は init / validate / inventory / prime / fix subcommands (ADR-0003 §2.1)
-# 試作段階は version / help / init / inventory / prime / validate を実装
+# 試作段階は version / help / init / inventory / prime / validate / fix / build を実装
 #
 # inventory subcommand (REQ-VER-010):
 #   relations.html §4.4.1 の scan 対象 (architecture/spec/ + architecture/decisions/ +
@@ -822,6 +822,106 @@ folio_check_dual_audience() {
   '
 }
 
+# readability-floor 検査 (gate q、 REQ-VER-023 / ADR-0039 §2.7 + P-14)。 per-file の 4 検査を
+# "V\trel\t[readability-floor] ..." (block) / "W\trel\t[readability-floor] ..." (warn) 行で stdout 出力し、
+# caller (folio_cmd_validate) が channel に振り分ける。 landing 検査 (hero 非空 / hero dead-end) は
+# per-file でなく生成 index 由来のため caller 側 (nav_index block) に置く。
+#   block (1) viewport — <head> 内 (</head> より前) に実 <meta name="viewport"> が無い (mobile responsive
+#       不発火、 rules §4.6 MUST)。 head-anchored 走査ゆえ body/<pre> 例示の raw 言及に誤反応しない
+#       (#110/#116 系 keystone idiom)。 全 scan 対象 doc に適用 (remediate = head への 1 行追加は
+#       frozen ADR でも additions-only で可能、 chrome 注入と同範疇)。
+#   block (2) essence 非空 — data-audience="human" container に machine 対応部があるのに人間向け要旨
+#       (class="essence" / "req__essence") が無い・空 (孤立 EARS、 REQ-DA-STRUCT-1 の対称拡張)。
+#       living spec/research のみ (frozen decisions/ は remediate 不可 = stuck-RED ゆえ除外、 glossary gate と
+#       同基準)。 container-less な machine 要素の検出は ceiling の領分 (構造 heuristic が brittle)。
+#   warn (3) essence 句点数 — essence 内の 「。」 が 4 個超 (日本語は語数の決定的計測が不能のため句点近似、
+#       ADR-0039 §2.7)。 閾値 4 = corpus 較正 2026-06-11 (実測 max 4: REQ-VER-019/021)。 frozen (doc-type=adr) 除外。
+#   warn (4) 可視 prose 段落長 — prose_only 可視域 (pre/code/aside.machine/chrome 除外) の単一 <p> 段落が
+#       2000 codepoints 超 (class="ears" 完全一致の <p> = EARS 全文は除外)。 閾値 2000 = corpus 較正 2026-06-11
+#       (gate 同一計測の実測: blob 9545 / 次点 1429 — blob 再発のみ見張り正当な長文を flag しない)。 frozen (doc-type=adr) 除外。
+#       codepoint 数は UTF-8 継続 byte 除去 (gsub /[\200-\277]/) で locale 非依存に決定計測 (CJK 3 byte 問題の回避)。
+folio_check_readability_floor_file() {
+  local f="$1" rel="$2" subdir="$3" body="$4"
+  local dtype living_ess=0
+  dtype=$(folio_extract_meta "$f" folio-doc-type)
+  [[ "$subdir" == "spec" || "$subdir" == "research" ]] && living_ess=1
+
+  # (1) viewport block — </head> より前の実 meta のみ (head-anchored)。 検出は canonical 形
+  # (name-first / lowercase / double-quote) 前提 = folio_extract_meta と同じ lenient-canonical idiom
+  # (init seed / build 生成物 / corpus sweep は全て canonical 形で emit するため self には十分)。
+  if [[ -z "$(awk '/<\/head>/{exit} /<meta[ \t]+name="viewport"/{print 1; exit}' "$f")" ]]; then
+    printf 'V\t%s\t[readability-floor] <head> に <meta name="viewport"> が無い (mobile responsive 不発火、 rules §4.6 / REQ-VER-023。 width=device-width, initial-scale=1 を追加)\n' "$rel"
+  fi
+
+  # (2)(3) essence 非空 block + 句点数 warn — dual-audience container を block 走査 (gate g と同 idiom)。
+  # LC_ALL=C = byte-based 固定 (「。」 literal は byte 列 match、 locale 非依存・決定的)。
+  printf '%s\n' "$body" | LC_ALL=C awk -v rel="$rel" -v essblk="$living_ess" -v isadr="$([[ "$dtype" == "adr" ]] && echo 1 || echo 0)" '
+    function esstext(blk,   rest, opentag, out, depth, pos) {
+      # essence 要素の内側 text を抽出 (span = depth 追跡で nested <span class="term"> 等を越えて閉じる /
+      # p = nested <p> 無しゆえ最初の </p>)。 要素不在は sentinel "\001MISSING" を返す。
+      if (!match(blk, /<(span|p)[^>]*class="(req__)?essence"[^>]*>/)) return "\001MISSING"
+      opentag = substr(blk, RSTART, RLENGTH)
+      rest = substr(blk, RSTART + RLENGTH)
+      if (opentag ~ /^<p/) {
+        pos = index(rest, "</p>")
+        return (pos > 0) ? substr(rest, 1, pos - 1) : rest
+      }
+      depth = 1; out = ""
+      while (depth > 0 && match(rest, /<\/?span[^>]*>/)) {
+        out = out substr(rest, 1, RSTART - 1)
+        if (substr(rest, RSTART, 2) == "</") depth--; else depth++
+        if (depth == 0) break
+        out = out substr(rest, RSTART, RLENGTH)
+        rest = substr(rest, RSTART + RLENGTH)
+      }
+      if (depth > 0) out = out rest   # 閉じ不在 (壊れ markup) は残り全部 = 非空判定に倒す
+      return out
+    }
+    function chk(   txt, plain, n) {
+      if (!inb) return
+      inb = 0
+      secid = ""
+      if (match(blk, /id="[^"]*"/)) secid = substr(blk, RSTART+4, RLENGTH-5)
+      if (blk !~ /data-audience="machine"/) return   # 孤立 human は gate g (REQ-DA-STRUCT-1) の責務
+      txt = esstext(blk)
+      plain = txt; gsub(/<[^>]*>/, "", plain); gsub(/[ \t\r\n]/, "", plain)
+      if (txt == "\001MISSING" || plain == "") {
+        if (essblk) printf "V\t%s\t[readability-floor] %s の essence (人間向け要旨) が無い/空 (孤立 EARS、 REQ-VER-023 / ADR-0039 §2.7。 essence を author する)\n", rel, (secid != "" ? secid : "(container)")
+        return
+      }
+      if (isadr) return
+      n = gsub(/。/, "。", txt)
+      if (n > 4) printf "W\t%s\t[readability-floor] %s の essence 句点 %d 個 > 4 (要旨は数文に収める、 REQ-VER-023 corpus 較正 2026-06-11)\n", rel, (secid != "" ? secid : "(container)"), n
+    }
+    /<(section|details)[^>]*data-audience="human"/ {
+      chk(); inb = 1; blk = ""
+      closetag = ($0 ~ /<details[^>]*data-audience="human"/) ? "</details>" : "</section>"
+    }
+    inb { blk = blk $0 "\n"; if (index($0, closetag)) chk() }
+    END { chk() }
+  '
+
+  # (4) 可視 prose 段落長 warn — prose_only (pre/script/style/aside.machine/chrome 除去 + inline code mask) 上で
+  # <p>...</p> を累積し codepoint 数を計測。 EARS 全文 (class~ears) は machine 側ゆえ除外。
+  if [[ "$dtype" != "adr" ]]; then
+    # LC_ALL=C = byte-based 固定 (UTF-8 locale の gawk は [\200-\277] を collation 解釈してエラー、
+    # C locale なら byte range。 継続 byte 除去後の length() = codepoint 数)。
+    folio_prose_only "$body" | LC_ALL=C awk -v rel="$rel" '
+      function flush(   t, n) {
+        if (par ~ /<p[^>]*class="ears"/) { par = ""; return }   # 完全一致 (class="years" 等の部分一致誤除外を防ぐ、 EARS p は単一 class 規約)
+        t = par
+        gsub(/<[^>]*>/, "", t)
+        gsub(/[\200-\277]/, "", t)   # UTF-8 継続 byte 除去 = codepoint 数 (locale 非依存・決定的)
+        n = length(t)
+        if (n > 2000) printf "W\t%s\t[readability-floor] 可視 prose 単一段落 %d codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)\n", rel, n
+        par = ""
+      }
+      /<p[ >]/ && !inp { inp = 1; par = "" }
+      inp { par = par $0 "\n"; if (index($0, "</p>")) { inp = 0; flush() } }
+    '
+  fi
+}
+
 # ============================================================================
 # xref helpers — object cross-reference の横断機構 (ADR-0034 §2.2〜§2.7)。
 #   defined-object (principle P-N / requirement REQ-* / decision ADR-NNNN) の
@@ -859,7 +959,7 @@ folio_xref_ssot() {
     principle) printf 'spec/constitution.html' ;;
     requirement)
       case "$token" in
-        REQ-VER-*) printf 'spec/verification.html' ;;
+        REQ-VER-*|REQ-NAV-*) printf 'spec/verification.html' ;;
         REQ-REL-*) printf 'spec/relations.html' ;;
         REQ-CI-*|REQ-DA-*|REQ-CM-*|REQ-ADR-*|REQ-XREF-*|REQ-GLOSS-*) printf 'spec/rules.html' ;;
       esac ;;
@@ -1390,6 +1490,7 @@ folio_cmd_validate() {
   local dirs=("spec" "decisions" "research") d f
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0 render_safety_fail=0
+  local floor_fail=0 floor_warn=0   # gate (q) readability-floor (REQ-VER-023、 ADR-0039 §2.7 / P-14)
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
@@ -1569,6 +1670,15 @@ folio_cmd_validate() {
           done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
         fi
       fi
+
+      # gate (q) readability-floor — per-file 検査 (viewport block / essence 非空 block / essence 句点 warn /
+      # 段落長 warn、 REQ-VER-023 / ADR-0039 §2.7)。 landing 検査 (hero) は生成 index 由来で後段に置く。
+      local fl_ch fl_rest
+      while IFS=$'\t' read -r fl_ch fl_rest; do
+        [[ -z "$fl_ch" ]] && continue
+        if [[ "$fl_ch" == "V" ]]; then violations+=("$fl_rest"); floor_fail=1
+        else warnings+=("$fl_rest"); floor_warn=1; fi
+      done < <(folio_check_readability_floor_file "$f" "$rel" "$subdir" "$body")
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
@@ -1598,6 +1708,21 @@ folio_cmd_validate() {
       [[ -z "$dl" ]] && continue
       violations+=("$dl"); nav_deadlink_fail=1
     done < <(folio_nav_deadlinks "$nav_index" "$root_abs")
+
+    # gate (q) readability-floor の landing 検査 (REQ-VER-023 / ADR-0039 §2.7 block (1)(3))。 生成 index
+    # 由来ゆえ nav gate と同じ keystone 位置 (hand-authored index は skip)。 hero = 入口層の curated region。
+    # 空 hero は build が placeholder を再 emit するため nav-regen-drift も併発する (remediate = folio build
+    # の自己修復、 両 violation が同じ tool を名指しする整合)。 非空 hero の dead-end (link ゼロ) は curated
+    # 往復保全で byte 一致のまま起きるため本検査だけが捕捉する。
+    local lhero
+    lhero=$(folio_build_extract_region "$nav_index" "folio:landing-hero")
+    if [[ -z "${lhero//[[:space:]]/}" ]]; then
+      violations+=("index.html"$'\t'"[readability-floor] landing hero (folio:landing-hero) が空 (入口の価値提案欠落、 REQ-VER-023 / ADR-0039 §2.2。 hero を author するか folio build で placeholder 再生成)")
+      floor_fail=1
+    elif ! printf '%s' "$lhero" | grep -q '<a [^>]*href='; then
+      violations+=("index.html"$'\t'"[readability-floor] landing hero に <a href> が 1 本も無い (入口 dead-end、 hero curated region にカード/CTA の実 link を author する、 REQ-VER-023 / ADR-0039 §2.2)")
+      floor_fail=1
+    fi
   fi
 
   # glossary single-SoT (ADR-0036 §2.5): 生成 glossary.html ≡ folio_glossary_emit(vocab) を byte 検査 (nav-regen-drift)。
@@ -1701,7 +1826,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -1730,6 +1855,8 @@ folio_cmd_validate() {
   elif [[ "$nav_reach_warn" -eq 1 ]]; then printf '  [WARN] cluster-reachability\n'; else printf '  [OK] cluster-reachability\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
   if [[ "$render_safety_fail" -eq 1 ]]; then printf '  [FAIL] render-safety\n'; else printf '  [OK] render-safety\n'; fi
+  if [[ "$floor_fail" -eq 1 ]]; then printf '  [FAIL] readability-floor\n'
+  elif [[ "$floor_warn" -eq 1 ]]; then printf '  [WARN] readability-floor\n'; else printf '  [OK] readability-floor\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
   if [[ ${#warnings[@]} -gt 0 ]]; then
@@ -1811,6 +1938,7 @@ YAML
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="cluster-readme">
 <meta name="folio-layer" content="project">
 <meta name="folio-version" content="0.1.0-draft">
@@ -1846,7 +1974,7 @@ YAML
 
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
-<p>本 README は <strong>spec/ cluster の index</strong> (entry point) です。 cluster 内の spec を一望し、 reader (人間 / AI agent) のナビゲーションを支えます。</p>
+<p>本 README は <strong>spec/ cluster の index</strong> (entry point) です。 cluster 内の spec を一望し、 reader (人間 / AI agent) のナビゲーションを支えます。 主な人間読者は<strong>仕様・要件を参照する導入済みの開発者</strong>です — project 全体の俯瞰や他 cluster への入口は <code>architecture/index.html</code> (landing) が担います。</p>
 </section>
 
 <section id="s2-contents" class="informative">
@@ -1865,6 +1993,7 @@ HTML
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="cluster-readme">
 <meta name="folio-layer" content="project">
 <meta name="folio-version" content="0.1.0-draft">
@@ -1900,7 +2029,7 @@ HTML
 
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
-<p>decisions/ は architectural decision の WHY を記録します。 spec (WHAT) の背景にある意思決定とその根拠を trace します。</p>
+<p>decisions/ は architectural decision の WHY を記録します。 spec (WHAT) の背景にある意思決定とその根拠を trace します。 主な人間読者は<strong>設計の経緯を時系列で辿る維持者</strong>です — ADR は決定時点の記録 (frozen) であり、 現在の WHAT は spec/ を参照してください。</p>
 </section>
 
 <section id="s2-adr-list" class="informative">
@@ -1918,6 +2047,7 @@ HTML
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="cluster-readme">
 <meta name="folio-layer" content="project">
 <meta name="folio-version" content="0.1.0-draft">
@@ -1953,7 +2083,7 @@ HTML
 
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
-<p>research/ は exploration 領域です。 厳密な markup 規約に縛られず、 design intent が固まる前の思考を自由に記録します。</p>
+<p>research/ は exploration 領域です。 厳密な markup 規約に縛られず、 design intent が固まる前の思考を自由に記録します。 確定した内容は spec/ (WHAT) または decisions/ (WHY) へ昇格させ、 本 cluster には探索の足跡を残します。</p>
 </section>
 
 </body>
@@ -2882,9 +3012,10 @@ Subcommands:
                            --root で scan/output root を override = validate/fix と対称)
   prime [--root <dir>]     Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen、
                            --root で scan/inventory.json 場所を override = inventory と対称)
-  validate [--root <dir>]  spec 集合の internal link-integrity + jsonld structural +
-                           broken-reverse 検査 (ADR-0020/0025 3-gate、 exit 0=clean/1=violation/2=tool error、
-                           --root で検査 root override)
+  validate [--root <dir>]  spec 集合の 17-gate 検査 (link-integrity / jsonld / broken-reverse / vocabulary /
+                           delta-marker / dual-audience / xref ×4 / glossary / nav ×3 / ears-coverage /
+                           render-safety / readability-floor、 ADR-0020/0025/0028/0033/0034/0035/0039、
+                           exit 0=clean/1=violation/2=tool error、 --root で検査 root override)
   fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
                            materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)
   build [--root <dir>]     graph から top-level index.html (walkable nav) + glossary.html を生成し、

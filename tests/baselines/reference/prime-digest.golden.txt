@@ -207,7 +207,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 97 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 105 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -276,6 +276,13 @@ REQ-DA-STRUCT-5 [requirement] spec/rules.html#req-da-struct-5
 REQ-GLOSS-001 [requirement] spec/rules.html#req-gloss-001
 REQ-GLOSS-002 [requirement] spec/rules.html#req-gloss-002
 REQ-GLOSS-003 [requirement] spec/rules.html#req-gloss-003
+REQ-NAV-001 [requirement] spec/verification.html#req-nav-001
+REQ-NAV-002 [requirement] spec/verification.html#req-nav-002
+REQ-NAV-003 [requirement] spec/verification.html#req-nav-003
+REQ-NAV-004 [requirement] spec/verification.html#req-nav-004
+REQ-NAV-005 [requirement] spec/verification.html#req-nav-005
+REQ-NAV-006 [requirement] spec/verification.html#req-nav-006
+REQ-NAV-007 [requirement] spec/verification.html#req-nav-007
 REQ-REL-001 [requirement] spec/relations.html#req-rel-001
 REQ-REL-002 [requirement] spec/relations.html#req-rel-002
 REQ-REL-003 [requirement] spec/relations.html#req-rel-003
@@ -302,6 +309,7 @@ REQ-VER-019 [requirement] spec/verification.html#req-ver-019
 REQ-VER-020 [requirement] spec/verification.html#req-ver-020
 REQ-VER-021 [requirement] spec/verification.html#req-ver-021
 REQ-VER-022 [requirement] spec/verification.html#req-ver-022
+REQ-VER-023 [requirement] spec/verification.html#req-ver-023
 REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
 REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
 REQ-XREF-003 [requirement] spec/rules.html#req-xref-003

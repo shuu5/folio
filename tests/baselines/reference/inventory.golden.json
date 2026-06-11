@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T02:16:34Z",
+  "generatedAt": "2026-06-11T04:02:50Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1570,6 +1570,48 @@
         "essence": "生成 glossary.html の各 &lt;dt&gt; term id は canonical を slug 化した #term-&lt;slug&gt; で、 slug は 決定的 (lowercase / 非英数連→単一 hyphen / 端 hyphen 除去 / LC_ALL=C)・非空 (全非ASCII/全記号 canonical は決定的 x&lt;cksum&gt; fallback)・ページ内 一意。 slug 衝突 (異なる canonical が同一 slug) は folio build が fail-closed (glossary 非生成・exit 2)・folio validate が block ([glossary-slug]) する — glossary.html の有無と独立。 加えて用語 mark は span 統一ゆえ living spec/research prose の &lt;a class=\"term\"&gt; は anchor-residue として block する (detect-only、 hover-only 不可逆、 ADR-0036 §2.4)。"
       },
       {
+        "id": "REQ-NAV-001",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-001",
+        "essence": "folio validate は folio-generated marker (head-anchored) を持つ生成 index.html を folio build の emit と byte 比較し drift を block する。 marker 無し (hand-authored) index は keystone skip — body の escaped 言及には反応しない。"
+      },
+      {
+        "id": "REQ-NAV-002",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-002",
+        "essence": "生成 index 内の &lt;a href&gt; が実在 file / anchor に解決しない場合、 [nav-dead-link] で block する (curated region の手書き link rot も被覆)。"
+      },
+      {
+        "id": "REQ-NAV-003",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-003",
+        "essence": "cluster dir / README の graph scan (生成 index の有無に依存しない) が dead-end README・empty cluster を検出する。 self-root (FolioConstitution 保持) = block / consumer = warn。"
+      },
+      {
+        "id": "REQ-NAV-004",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-004",
+        "essence": "folio build の curated region 往復保全は first-open / last-close 抽出で行い、 region 内の raw marker 言及 (&lt;pre&gt; 解説等) を内側として保全する — editorial の silent 切り捨てを構造的に防ぐ。"
+      },
+      {
+        "id": "REQ-NAV-005",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-005",
+        "essence": "consumer corpus (FolioConstitution 無し) の reachability findings は block でなく warn (exit 0) — validate-clean を壊さず authoring を nudge する。 生成 index 不在でも検査される。"
+      },
+      {
+        "id": "REQ-NAV-006",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-006",
+        "essence": "cluster README body の static cross-nav link が解決しない (link rot) 場合、 [cluster-reachability] の link-rot 検査が捕捉する — link-integrity (JSON-LD のみ) と nav-dead-link (生成 index のみ) の未被覆領域を埋める。"
+      },
+      {
+        "id": "REQ-NAV-007",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-007",
+        "essence": "chrome marker (folio:chrome-top/toc/bottom) を持つ page の chrome 領域は render 再計算と byte 一致を保つ — drift は [chrome-drift] (nav-regen-drift gate 内包) で block、 marker 無し page は keystone skip。 remediate は folio build。"
+      },
+      {
         "id": "REQ-REL-001",
         "class": "requirement",
         "ssot": "spec/relations.html#req-rel-001",
@@ -1724,6 +1766,12 @@
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-022",
         "essence": "CI の render-gate job は、 実 mermaid 図を持つ spec を headless chromium で実 render し、 render 後の DOM 幾何から 4 class の欠陥 (多行 cluster-label / label-over-node / node-over-node / content-clipped) を検出して merge を block する (render-safety の ceiling 層、 floor = REQ-VER-021)。 render 不足は見逃しでなく fail (fail-closed)、 constitution は advisory、 幾何対象を持たない図型 (sequence 等) は vacuous warning・.node は出すが flowchart でない図型 (state 等) は uncalibrated warning で可視化。 検出力は selftest fixture (kind 完全一致 + scale&lt;1 正規化を含む 8 case) が回帰固定し、 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保 (deterministic ゆえ blocking 適格)。"
+      },
+      {
+        "id": "REQ-VER-023",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-023",
+        "essence": "folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 2 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints (閾値は corpus 較正 2026-06-11)。 frozen は warn 除外・essence block は living spec/research のみ (stuck-RED 回避)。"
       },
       {
         "id": "REQ-XREF-001",
@@ -1905,6 +1953,14 @@
       },
       {
         "from": "spec/relations.html",
+        "to": "ADR-0035"
+      },
+      {
+        "from": "spec/relations.html",
+        "to": "ADR-0036"
+      },
+      {
+        "from": "spec/relations.html",
         "to": "P-1"
       },
       {
@@ -1938,6 +1994,10 @@
       {
         "from": "spec/rules.html",
         "to": "ADR-0034"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "ADR-0039"
       },
       {
         "from": "spec/rules.html",
@@ -2029,7 +2089,15 @@
       },
       {
         "from": "spec/verification.html",
+        "to": "ADR-0035"
+      },
+      {
+        "from": "spec/verification.html",
         "to": "ADR-0037"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0039"
       },
       {
         "from": "spec/verification.html",
@@ -2038,6 +2106,10 @@
       {
         "from": "spec/verification.html",
         "to": "P-13"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "P-14"
       },
       {
         "from": "spec/verification.html",
@@ -2062,6 +2134,14 @@
       {
         "from": "spec/verification.html",
         "to": "REQ-CI-011"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-CI-014"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-DA-STRUCT-1"
       },
       {
         "from": "spec/verification.html",

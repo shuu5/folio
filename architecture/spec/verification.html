@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="spec">
 <meta name="folio-layer" content="core">
 <meta name="folio-version" content="0.5.0-draft">
@@ -97,6 +98,7 @@
   <li class="toc--sub"><a href="#s3-5-ears-mapping">§3.5 EARS → Gherkin 1:1 mapping</a></li>
   <li class="toc--sub"><a href="#s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</a></li>
   <li class="toc--sub"><a href="#s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</a></li>
+  <li class="toc--sub"><a href="#s3-8-nav-req">§3.8 walkable-nav / chrome scenario REQ (REQ-NAV-001〜007)</a></li>
   <li><a href="#s4-implementation">§4. Implementation Phase</a></li>
   <li class="toc--sub"><a href="#s4-1-3step">§4.1 3-Step approach</a></li>
   <li class="toc--sub"><a href="#s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</a></li>
@@ -564,14 +566,24 @@ expect:
       <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-022</span>: <span class="ears-when">WHEN the CI render-gate job runs (push / pull_request)</span>, it <span class="ears-shall">SHALL</span> render every <code>architecture/spec/*.html</code> containing real <code>&lt;pre class="mermaid"&gt;</code> blocks (HTML コメント内・prose 内 escaped 言及は数えない) in headless chromium and probe the post-render DOM geometry, flagging four defect classes with non-zero exit (merge block): (1) <strong>cluster-label-multiline</strong> — subgraph タイトルの縦 overflow (rendered height を svg の viewBox→rendered 縦比 (scaleY) で intrinsic px に正規化し、 <code>useMaxWidth:true</code> の縮小 render でも閾値が scale に引きずられない — mermaid は uniform scale で render するため縦横比は同値); (2) <strong>label-over-foreign-node</strong> / <strong>cluster-label-over-node</strong> — text label が自分以外の node 矩形と交差 (面積比、 scale 不変); (3) <strong>node-over-node</strong> — layout collision; (4) <strong>content-clipped</strong> — 要素が svg 可視範囲を溢れて clip され読めない (svg overflow は既定 hidden。 判定は rendered px = 視覚上の clip 量で、 (1) の intrinsic 正規化とは意図的に非対称)。 It <span class="ears-shall">SHALL</span> fail-closed: render 不足 (rendered svg 数 &lt; 実 block 数) は見逃しでなく failure に倒す。 <code>constitution.html</code> (自身の <code>@type</code> が <code>FolioConstitution</code>) は advisory (表示のみ・exit 非影響、 編集禁止資産への blocking は frozen deadlock になるため。 floor の carve-out と同基準)。 coverage の穴は <span class="ears-shall">SHALL</span> emit a warning として可視化し silent pass にしない: 幾何対象 (<code>.node</code>/<code>.cluster</code>) を持たない図型 (sequenceDiagram 等) は <code>vacuous-coverage</code>、 <code>.node</code> は出すが図型 (<code>aria-roledescription</code>) が flowchart/graph でない型 (stateDiagram 等 — 構造だけでは flowchart と区別できない) は <code>uncalibrated-coverage</code> (幾何は測るが threshold は flowchart 較正)。 検出力は selftest (fixture 8 case、 violation kind の<strong>完全一致</strong>判定: detector (1)(2)(3)(4) 全 arm の発火 + scale&lt;1 での (1) 正規化発火 (mutation 捕捉を実証済) + clean の誤検出なし + vacuous/uncalibrated 分類。 (2)(3)(4) の単独 arm は mermaid が通常生成しない欠陥ゆえ mermaid と同 class 構造の合成 SVG で固定) が mermaid/chromium 版 drift への回帰ガード。 決定性は vendored mermaid + pinned playwright + pinned font (CI が <code>fonts-noto-cjk</code> を install) の三重 pin — deterministic ゆえ blocking 適格 (<a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> §2.3、 <a class="xref" href="../decisions/ADR-0028-prose-gate-mechanization.html" data-tooltip="forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実装は本 ADR 承認後)">ADR-0028</a> の LLM-ceiling 非決定性根拠は本 gate に適用されない)。 conformance は <code>tests/render-gate/check.py --selftest</code> + <code>.github/workflows/ci.yml</code> の <code>render-gate</code> job (browser 依存ゆえ sandbox scenario でなく CI-only dogfood — consumer の <code>folio validate</code> には入れない、 配布される floor は <a href="#req-ver-021">REQ-VER-021</a>)。 scope/二層化の決定は <a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> で trace。</p>
     </div>
   </details>
+  <details class="spec-row" id="req-ver-023" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-023</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio validate</code> は readability-floor gate を検査する (<a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a> の floor 層): <strong>block 3 系</strong> — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 <strong>warn 2 系</strong> — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints (閾値は corpus 較正 2026-06-11)。 frozen は warn 除外・essence block は living spec/research のみ (stuck-RED 回避)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-023</span>: <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> check a readability-floor gate (<a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.7、 P-14 floor) with three blocking arms and two warning arms: <strong>block (1) viewport</strong> — every scanned doc carries <code>&lt;meta name="viewport"&gt;</code> inside <code>&lt;head&gt;</code> (head-anchored 走査で body / <code>&lt;pre&gt;</code> の raw/escaped 言及に誤反応しない。 rules §4.6 MUST の機械化。 <a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.7 列挙の 3 block への追加 arm = chrome 注入 slice の独立 ceiling 指摘「生成 page のみ viewport を持つ非対称」の是正、 divergence trace は本 REQ); <strong>block (2) essence 非空</strong> — <code>data-audience="human"</code> requirement container が machine 対応部を持つのに人間向け要旨 (<code>class="essence"</code> / <code>"req__essence"</code>) が無い・空 = 孤立 EARS (<a class="xref" href="./rules.html#req-da-struct-1" data-tooltip="dual-audience を採用する spec の各 [data-audience=&quot;human&quot;] requirement container は [data-audience=&quot;machine&quot;] 子孫を持つ MUST (孤立 human の排除)。">REQ-DA-STRUCT-1</a> の対称拡張。 living spec/research のみ — frozen decisions/ は remediate 不可 = stuck-RED ゆえ除外、 glossary gate と同基準。 container 外の machine 要素検出は ceiling の領分); <strong>block (3) landing hero</strong> — 生成 index (<code>folio-generated</code> marker、 hand-authored は keystone skip) の <code>folio:landing-hero</code> curated region が非空で <code>&lt;a href&gt;</code> を 1 本以上持つ (空 hero は build の placeholder 再 emit により nav-regen-drift と併発し、 両 violation が同じ remediate = <code>folio build</code> を名指しする); <strong>warn (4) essence 句点数</strong> — essence 内の 「。」 が 4 個超 (日本語は語数の決定的計測が不能のため句点近似、 閾値 4 = corpus 較正 2026-06-11 実測 max 4); <strong>warn (5) 可視 prose 段落長</strong> — prose_only 可視域 (pre / code / aside.machine-readable / chrome 除外、 <code>class="ears"</code> 完全一致の EARS 全文も除外) の単一 <code>&lt;p&gt;</code> 段落が 2000 codepoints 超 (UTF-8 継続 byte 除去による locale 非依存の決定計測。 閾値 2000 = corpus 較正 2026-06-11: blob 実測 9545 / 次点 1429 (gate 同一計測の codepoints) — blob 再発のみ見張る)。 warn 2 系は doc-type=adr (frozen) を除外し、 exit code に影響しない (<a class="xref" href="./rules.html#req-ci-014" data-tooltip="EARS-coverage gate が well-formed EARS pattern を欠く requirement を検出したら CI は warning を出すが merge は許可する (§6)。">REQ-CI-014</a> と同じ warn channel)。 block violation は exit 1 + remediate tool/操作の名指し (ADR-0039 §2.9)。 warn 閾値の block 化は ceiling の指摘頻度を見て判断する (ADR-0039 §2.7)。 conformance は <code>scenarios/readability-floor.yaml</code> (block 2 arm + warn 2 arm + hero dead-end、 fix/build 済 fixture で他 gate clean = isolation) + <code>scenarios/readability-floor-hero.yaml</code> (hero 空 + nav-regen-drift 併発の対)。 意味的可読性 (文言の質) は floor の対象外 = ceiling (readability review lens、 ADR-0039 §2.8) の領分 (二層)。</p>
+    </div>
+  </details>
 </div>
 
 <h3 id="s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</h3>
 
-<p>§3 の各 REQ-VER-* を <strong>derives-from (派生元原則 / ADR) × scenario (検証 file) × verified</strong> で一覧する (trace matrix は <a href="constitution.html#p-13">P-13</a> ゆえ普遍、 verified/scenario 列は verification mapping を持つ本 spec の opt-in、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033 §2.6</a>)。 <code>folio validate</code> は link しか検査しないため、 <strong>scenario 列が空 = link は valid だが未検証 = validate が捕らない gap</strong> をこの列だけが一目で surface する。</p>
+<p>§3 の各 REQ-VER-* と <a href="#s3-8-nav-req">§3.8</a> の REQ-NAV-* を <strong>derives-from (派生元原則 / ADR) × scenario (検証 file) × verified</strong> で一覧する (trace matrix は <a href="constitution.html#p-13">P-13</a> ゆえ普遍、 verified/scenario 列は verification mapping を持つ本 spec の opt-in、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033 §2.6</a>)。 <code>folio validate</code> は link しか検査しないため、 <strong>scenario 列が空 = link は valid だが未検証 = validate が捕らない gap</strong> をこの列だけが一目で surface する。</p>
 
 <table>
-  <caption>verification-framework requirement coverage matrix (§3 の REQ-VER-*。 VER-005 は §4 のため除外)</caption>
+  <caption>verification-framework requirement coverage matrix (§3 の REQ-VER-* + §3.8 の REQ-NAV-*。 VER-005 は §4 のため除外)</caption>
   <thead><tr><th>REQ</th><th>EARS</th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead>
   <tbody>
     <tr><td><a class="cov-req" href="#req-ver-001"><span class="badge badge--req">VER-001</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a class="xref" href="../decisions/ADR-0013-verification-framework.html" data-tooltip="folio v0.4.2-draft">ADR-0013</a> / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
@@ -595,12 +607,97 @@ expect:
     <tr><td><a class="cov-req" href="#req-ver-020"><span class="badge badge--req">VER-020</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a class="xref" href="../decisions/ADR-0033-dual-audience-hub.html" data-tooltip="dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。">ADR-0033</a> §2.4 / rules §7.3</td><td><code>validate-violations</code> (da-violations) / <code>validate-clean.yaml</code></td><td>✓</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-021"><span class="badge badge--req">VER-021</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a class="xref" href="../decisions/ADR-0020-validate-scope.html" data-tooltip="forward (Track 3、 user 承認済、 実装は spawn)">ADR-0020</a> / rules §4.5</td><td><code>render-safety.yaml</code></td><td>✓</td></tr>
     <tr><td><a class="cov-req" href="#req-ver-022"><span class="badge badge--req">VER-022</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a class="xref" href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> / VER-021 (二層)</td><td><code>render-gate/check.py --selftest</code> + CI <code>render-gate</code> job (CI-only、 sandbox 被覆外)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-023"><span class="badge badge--req">VER-023</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.7 / P-14</td><td><code>readability-floor</code> / <code>-hero.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-001"><span class="badge badge--req">NAV-001</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../decisions/ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> §2.5</td><td><code>nav-validate-clean</code> / <code>-drift</code> / <code>-keystone.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-002"><span class="badge badge--req">NAV-002</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td><a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> §2.5</td><td><code>nav-validate-deadlink.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-003"><span class="badge badge--req">NAV-003</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0035 §2.5</td><td><code>nav-validate-reachability.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-004"><span class="badge badge--req">NAV-004</span></a></td><td><span class="req__ears req__ears--state">State</span></td><td>ADR-0035 §2.4 / ADR-0039 §2.2</td><td><code>nav-validate-curated-roundtrip.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-005"><span class="badge badge--req">NAV-005</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0035 §2.5</td><td><code>nav-validate-consumer-deadend.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-006"><span class="badge badge--req">NAV-006</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0035 §2.5 (link-rot)</td><td><code>nav-validate-readme-linkrot.yaml</code></td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-nav-007"><span class="badge badge--req">NAV-007</span></a></td><td><span class="req__ears req__ears--state">State</span></td><td><a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.3</td><td><code>chrome-validate-clean</code> / <code>-drift.yaml</code></td><td>✓</td></tr>
   </tbody>
 </table>
 
 <aside class="informative">
 <p><span class="badge badge--req">VER-006</span> は「<code>permissionDecision</code> を主軸にしない」 という SHOULD NOT 設計指針で、 これを直接 assert する scenario を持たない = <strong>link は valid だが未検証の gap</strong>。 <code>folio validate</code> は捕らず、 RTM の scenario 列だけがこの gap を surface する (= coverage RTM の具体的効用)。</p>
 </aside>
+
+<h3 id="s3-8-nav-req">§3.8 walkable-nav / chrome scenario REQ (REQ-NAV-001〜007)</h3>
+
+<p>walkable nav (生成 index、 <a href="../decisions/ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a>) と全ページ chrome (<a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.3) の検証 REQ。 実装時は scenario file を SSoT とする scenario-first 慣行で運用していたものを、 本節で定義 site (spec-row) に正式化する — 各 scenario の description は実装詳細 (fixture 構成・isolation 根拠) の SSoT として引き続き保持し、 本節は要件 (WHAT) の canonical 定義を担う。</p>
+
+<div class="spec-list">
+  <details class="spec-row" id="req-nav-001" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-001</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio validate</code> は <code>folio-generated</code> marker (head-anchored) を持つ生成 <code>index.html</code> を <code>folio build</code> の emit と byte 比較し drift を block する。 marker 無し (hand-authored) index は keystone skip — body の escaped 言及には反応しない。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-NAV-001</span>: <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs and a top-level <code>index.html</code> carrying <code>&lt;meta name="folio-generated" content="folio-build"&gt;</code> in its <code>&lt;head&gt;</code> exists</span>, it <span class="ears-shall">SHALL</span> byte-compare that index against the deterministic <code>folio build</code> emit and report any difference as a <code>[nav-regen-drift]</code> violation (exit 1、 remediate = <code>folio build</code>)。 marker を持たない index は検査対象外 (keystone) であり、 marker 判定は <code>&lt;head&gt;</code> の実 <code>&lt;meta&gt;</code> に anchor し body の escaped/prose 言及に誤反応しない <span class="ears-shall">SHALL</span>。 conformance: <code>scenarios/nav-validate-clean.yaml</code> (clean) / <code>nav-validate-drift.yaml</code> (drift 検出) / <code>nav-validate-keystone.yaml</code> (escaped-mention 誤発火なし)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-002" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-002</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">生成 index 内の <code>&lt;a href&gt;</code> が実在 file / anchor に解決しない場合、 <code>[nav-dead-link]</code> で block する (curated region の手書き link rot も被覆)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-NAV-002</span>: IF the generated <code>index.html</code> contains an <code>&lt;a href&gt;</code> whose relative target file does not exist or whose <code>#anchor</code> does not resolve to an <code>id</code> in the target, THEN <code>folio validate</code> <span class="ears-shall">SHALL</span> report a <code>[nav-dead-link]</code> violation (exit 1)。 external scheme / pure-anchor / stylesheet href は対象外。 regen-drift が curated region を往復保全するため、 curated 内の手書き link rot は本 gate だけが捕捉する。 conformance: <code>scenarios/nav-validate-deadlink.yaml</code>。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-003" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-003</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">cluster dir / README の graph scan (生成 index の有無に依存しない) が dead-end README・empty cluster を検出する。 self-root (FolioConstitution 保持) = block / consumer = warn。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-NAV-003</span>: IF an architecture cluster directory exists whose <code>README.html</code> has no outbound cross-cluster <code>&lt;a href&gt;</code> (dead-end) or which contains no scannable doc (empty cluster), THEN <code>folio validate</code> <span class="ears-shall">SHALL</span> report it via the <code>[cluster-reachability]</code> gate — as a blocking violation when the root is folio-self (spec/ に <code>@type</code> <code>FolioConstitution</code>)、 as a warning (exit 0) when the root is a consumer corpus。 本 gate は dir/README scan 由来であり生成 index の有無に gate しない (post-init / pre-build window でも検査される)。 conformance: <code>scenarios/nav-validate-reachability.yaml</code> (self-root block)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-004" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-004</span>
+      <span class="req__ears req__ears--state">State</span>
+      <span class="essence"><code>folio build</code> の curated region 往復保全は first-open / last-close 抽出で行い、 region 内の raw marker 言及 (<code>&lt;pre&gt;</code> 解説等) を内側として保全する — editorial の silent 切り捨てを構造的に防ぐ。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="state-driven"><span class="ears-id">REQ-NAV-004</span>: WHILE a curated region (<code>folio:nav-curated</code> / <code>folio:landing-hero</code>) contains raw marker mentions inside its editorial content, <code>folio build</code> <span class="ears-shall">SHALL</span> extract the region by first-open / last-close boundary (単純 state-machine の最初の close 終端ではなく) and round-trip the full editorial verbatim、 so that regeneration never silently drops content after a raw close-marker mention (#110/#116/#119 系譜の raw-mention 誤動作の回帰 guard)。 conformance: <code>scenarios/nav-validate-curated-roundtrip.yaml</code> (sentinel 保全を regen-drift [OK] で実証)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-005" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-005</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">consumer corpus (FolioConstitution 無し) の reachability findings は block でなく warn (exit 0) — validate-clean を壊さず authoring を nudge する。 生成 index 不在でも検査される。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-NAV-005</span>: IF the validate root is a consumer corpus (no <code>FolioConstitution</code> in spec/) and the <code>[cluster-reachability]</code> gate finds dead-end / empty-cluster / link-rot findings, THEN <code>folio validate</code> <span class="ears-shall">SHALL</span> emit them on the warning channel (exit code 非影響) instead of blocking — consumer の post-init / pre-build window で validate-clean 契約 (REQ-VER-014) を保ちながら気付きを与える。 conformance: <code>scenarios/nav-validate-consumer-deadend.yaml</code> (dead-end + dangling home link の 2 warn、 nav 系 gate は index 不在で [SKIP] のまま)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-006" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-006</span>
+      <span class="req__ears req__ears--unwanted">Unw.</span>
+      <span class="essence">cluster README body の static cross-nav link が解決しない (link rot) 場合、 <code>[cluster-reachability]</code> の link-rot 検査が捕捉する — link-integrity (JSON-LD のみ) と nav-dead-link (生成 index のみ) の未被覆領域を埋める。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="unwanted"><span class="ears-id">REQ-NAV-006</span>: IF a cluster <code>README.html</code> body contains an <code>&lt;a href&gt;</code> whose realpath-normalized relative target does not exist, THEN <code>folio validate</code> <span class="ears-shall">SHALL</span> report it via the <code>[cluster-reachability]</code> gate の link-rot 検査 (self-root = block / consumer = warn、 REQ-NAV-003/005 の振り分けと同一)。 JSON-LD relation しか見ない link-integrity と生成 index しか見ない nav-dead-link の両方が README body href を未被覆のため、 link rot は本検査だけが捕捉する。 conformance: <code>scenarios/nav-validate-readme-linkrot.yaml</code> (self-root block 側、 consumer warn 側は REQ-NAV-005 scenario が併せて固定)。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-nav-007" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-NAV-007</span>
+      <span class="req__ears req__ears--state">State</span>
+      <span class="essence">chrome marker (<code>folio:chrome-top/toc/bottom</code>) を持つ page の chrome 領域は render 再計算と byte 一致を保つ — drift は <code>[chrome-drift]</code> (nav-regen-drift gate 内包) で block、 marker 無し page は keystone skip。 remediate は <code>folio build</code>。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="state-driven"><span class="ears-id">REQ-NAV-007</span>: WHILE a scanned page carries chrome marker regions (<code>folio:chrome-top</code> / <code>chrome-toc</code> / <code>chrome-bottom</code>、 ADR-0039 §2.3 の build 所有領域), <code>folio validate</code> <span class="ears-shall">SHALL</span> verify that the page byte-equals its deterministic chrome re-render (<code>folio_chrome_render_doc</code> = strip → 再計算 → 挿入の純関数) and report any mismatch as a <code>[chrome-drift]</code> violation on the nav-regen-drift gate (exit 1、 remediate = <code>folio build</code> — §2.9 分業: 表示層 regen は build 所有)。 marker を持たない page は検査対象外 (keystone) <span class="ears-shall">SHALL</span>。 生成規則 (既存 id のみ 2 段 fallback 目次 / prev-next 順序 SSoT / BASE_URL 二段構え breadcrumb) は ADR-0039 §2.3 を SSoT とし、 committed fixture bytes が意味論を pin する。 conformance: <code>scenarios/chrome-validate-clean.yaml</code> (clean + 生成規則 pin) / <code>chrome-validate-drift.yaml</code> (改竄検出)。</p>
+    </div>
+  </details>
+</div>
 </section>
 
 <!-- ====================================================================

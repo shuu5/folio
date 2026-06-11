@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/nav-validate-consumer-deadend
 files checked: 2 · relations checked: 0
   [OK] internal link-integrity
@@ -17,6 +17,7 @@ files checked: 2 · relations checked: 0
   [WARN] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
+  [OK] readability-floor
 
 warnings (2):
   research/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)

@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="rules">
 <meta name="folio-layer" content="core">
 <meta name="folio-version" content="0.5.0-draft">
@@ -101,6 +102,9 @@
   <li class="toc--sub"><a href="#s10-1">§10.1 Spec Edit Caller Marker</a></li>
   <li class="toc--sub"><a href="#s10-2">§10.2 CI Gate Compliance</a></li>
   <li class="toc--sub"><a href="#s10-3">§10.3 ADR Worthiness</a></li>
+  <li><a href="#s11-presentation">§11. Human-First Presentation (P-14)</a></li>
+  <li class="toc--sub"><a href="#s11-1-readers">§11.1 ページ種別 × 主たる人間読者層 (定義)</a></li>
+  <li class="toc--sub"><a href="#s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -256,6 +260,8 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h3 id="s4-6-a11y">§4.6 Accessibility Minimum Rules (a11y, normative)</h3>
 
 <p>spec HTML 内の text および diagram 内 text は <strong>WCAG 2.2 SC 1.4.3 Level AA</strong> (normal text <code>4.5:1</code> / large text <code>3:1</code>) の contrast ratio を満たす <strong>MUST</strong> (<a href="https://www.w3.org/TR/WCAG22/#contrast-minimum">w3.org/TR/WCAG22/#contrast-minimum</a>)。</p>
+
+<p>spec HTML は <code>&lt;head&gt;</code> に <code>&lt;meta name="viewport" content="width=device-width, initial-scale=1"&gt;</code> を持つ <strong>MUST</strong> — viewport meta が無いと実機 mobile browser は仮想幅 (約 980px) で render して縮小表示し、 responsive CSS が発火せず可読性が崩れる (WCAG 2.2 SC 1.4.10 Reflow の前提)。 <code>folio init</code> seed と <code>folio build</code> 生成物 (index / glossary) は付与済で、 authored spec 側の欠落は <code>folio validate</code> の readability-floor gate (<a href="verification.html#req-ver-023">REQ-VER-023</a>) が機械強制する。</p>
 
 <p>mermaid 図表は以下を満たす <strong>MUST</strong>:</p>
 <ul>
@@ -530,9 +536,9 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <thead><tr><th>prefix</th><th>class</th><th>SSoT doc</th><th>定義 site / anchor</th></tr></thead>
   <tbody>
     <tr><td><code>P-N</code></td><td>principle</td><td><a href="./constitution.html">constitution.html</a></td><td><code>&lt;dt id="p-N"&gt;</code></td></tr>
-    <tr><td><code>REQ-VER-*</code></td><td>requirement</td><td><a href="verification.html">verification.html</a></td><td><code>id="req-ver-NNN"</code></td></tr>
+    <tr><td><code>REQ-VER-*</code> / <code>REQ-NAV-*</code></td><td>requirement</td><td><a href="verification.html">verification.html</a></td><td><code>id="req-ver-NNN"</code> / <code>id="req-nav-NNN"</code> (§3.6 / §3.8)</td></tr>
     <tr><td><code>REQ-REL-*</code></td><td>requirement</td><td><a href="relations.html">relations.html</a></td><td><code>id="req-rel-NNN"</code></td></tr>
-    <tr><td><code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-XREF-*</code> / <code>REQ-GLOSS-*</code></td><td>requirement</td><td>rules.html (本 file)</td><td><code>id="req-…"</code></td></tr>
+    <tr><td><code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-ADR-*</code> / <code>REQ-XREF-*</code> / <code>REQ-GLOSS-*</code></td><td>requirement</td><td>rules.html (本 file)</td><td><code>id="req-…"</code></td></tr>
     <tr><td><code>ADR-NNNN</code></td><td>decision</td><td><a href="../decisions/">decisions/ADR-NNNN-*.html</a></td><td>file 自体 (anchor 無し)</td></tr>
     <tr><td>rule §</td><td>rule</td><td>rules.html</td><td><code>&lt;h2 id="…"&gt;</code> (explicit-tier)</td></tr>
   </tbody>
@@ -897,6 +903,31 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <p>3 条件が<strong>すべて真の時のみ</strong> ADR を offer する (sparingly)。 いずれか 1 つでも偽なら ADR にしない — 可逆な決定 / context 無しで自明な決定 / trade-off の無い決定は spec 本文 (WHAT) や <code>vocabulary.yaml</code> に吸収し、 重厚な ADR (HTML+JSON-LD、 user 承認) を濫造しない。 folio の高コスト ADR と高い 3 条件 bar は相互補強する (少数精鋭に絞る価値が高い)。</p>
 </section>
 
+</section>
+
+<section id="s11-presentation" class="normative">
+<h2>§11. Human-First Presentation (P-14)</h2>
+
+<aside class="informative">
+<p>本 §11 は <a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a> (Human Readability) が rules へ委任する 2 点 — <strong>ページ種別ごとの主たる人間読者層の定義</strong>と<strong>表示層 remediate の分業</strong> — を定める (<a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.1 / §2.9)。 機械読者 (AI agent) への正確さは全ページ種別で維持する (dual-audience の machine 側は <a href="#s7-dual-audience">§7</a> のまま不変)。 提示に関わる判断 (見せる / 折る / 削る) は本節の読者層定義を物差しとする。</p>
+</aside>
+
+<h3 id="s11-1-readers">§11.1 ページ種別 × 主たる人間読者層 (定義)</h3>
+
+<table>
+  <caption>ページ種別ごとの主読者層と提示の力点 (P-14 委任の履行、 <a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.1)</caption>
+  <thead><tr><th>ページ種別</th><th>主たる人間読者層</th><th>提示の力点</th></tr></thead>
+  <tbody>
+    <tr><td>入口層 — landing (<code>index.html</code>) / cluster <code>README.html</code></td><td>folio を知らない<strong>初見の外部開発者</strong></td><td>hero 一文 + 読者別導線 + dead-end ゼロ (landing template、 ADR-0039 §2.2)。 専門用語は xref / glossary hover で即解決</td></tr>
+    <tr><td>spec 本文層 — <code>architecture/spec/*.html</code></td><td>folio を導入済みで仕様を<strong>参照・検索する既習 consumer 開発者</strong></td><td>essence・表・図が常時可視、 EARS 全文は fold (§7 dual-audience)。 ページ内目次 + prev-next で検索性</td></tr>
+    <tr><td>decisions 層 — <code>architecture/decisions/*.html</code></td><td>設計経緯を<strong>時系列で辿る維持者</strong></td><td>ADR 番号順の prev-next chain (決定的順序)。 frozen 本文は不変、 chrome のみ build が維持</td></tr>
+    <tr><td>glossary — <code>architecture/glossary.html</code></td><td>初見〜既習の<strong>横断参照</strong></td><td>vocabulary.yaml 由来の生成 view。 本文からは hover tooltip (§9.5) で遷移なし参照</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</h3>
+
+<p>表示層の regen は <code>folio build</code> が一元所有する <strong>MUST</strong> — index (landing) / glossary / 全ページ chrome の生成・維持 (「nav-regen-drift 系の violation は build で直す」)。 <code>folio fix</code> は graph の materialize 専任 — reverse-link (<a href="relations.html#s5-3-ears">REQ-REL-002</a>) / xref wrap (<a href="#s9-4-requirements">§9.4</a>) / tooltip 再生成。 <code>folio validate</code> の violation message は対応する remediate tool を名指しする <strong>MUST</strong> (どの違反をどちらで直すかの迷いを消す、 ADR-0039 §2.9 = folio-dd0 の解消)。 readability-floor (<a href="verification.html#req-ver-023">REQ-VER-023</a>) のうち landing 系は build が remediate し、 viewport / essence は authoring の責務 (機械 regen の対象外)。</p>
 </section>
 
 <!-- folio:chrome-bottom -->

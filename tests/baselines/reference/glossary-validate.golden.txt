@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/glossary-validate
 files checked: 1 · relations checked: 0
   [OK] internal link-integrity
@@ -17,6 +17,7 @@ files checked: 1 · relations checked: 0
   [OK] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
+  [OK] readability-floor
 
 violations (2):
   spec/t.html [glossary-stale-tooltip] term 'Alpha' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)

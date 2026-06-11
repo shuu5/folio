@@ -13,8 +13,8 @@ description: |
   実在 file 昇順隣接の欠番 skip (decisions: ADR-0001 の next = ADR-0003、 0002 不在) / README・
   chain 外 page の prev-next 省略。 build 出力 format が変われば本 scenario が drift を検出し fixture
   再生成を促す (build 出力安定性の golden 的 guard、 nav-validate-clean と同型)。
-  REQ-NAV-007 の spec-row 正式化は slice C の readability floor REQ 一括起票で行う
-  (REQ-NAV-001〜006 と同じ scenario-first 慣行)。
+  REQ-NAV-007 の定義 site は verification.html §3.8 (spec-row 正式化済)。 本 description は
+  fixture 構成・生成規則 pin の実装詳細 SSoT として保持する。
 
 command: ["validate", "--root", "tests/fixtures/chrome-inject"]
 capture: "stdout"

@@ -1,0 +1,29 @@
+schema_version: "0.1"
+req_id: "REQ-VER-023"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の readability-floor gate (gate q、 ADR-0039 §2.7 / P-14) が block 3 系 (4 違反) + warn 2 arm を
+  捕捉することを実証する。 fixture corpus (fix + build 済 = 他 16 gate は clean、 floor だけが赤 = isolation):
+    block (1) spec/no-viewport.html — <head> に <meta name="viewport"> 無し。 prose の escaped 言及 +
+        <pre> 内 raw 言及を併置し、 head-anchored 走査が誤反応しないことも固定 (#110/#116 keystone 系譜)。
+    block (2) spec/essence-bad.html req-rfl-901 / req-rfl-903 — machine 対応部 (EARS) を持つのに essence が
+        空 = 孤立 EARS (REQ-DA-STRUCT-1 の対称拡張)。 901 = spec-row 形 (details + span.essence)、
+        903 = verbose card 形 (section.req + p.req__essence) で、 esstext の span depth 分岐 / p 分岐 +
+        details / section 両 container handler を共に被覆する。 STRUCT-1〜5 は充足させ dual-audience gate が
+        [OK] のまま = floor が独立に捕捉することの isolation。
+    block (3) index.html — 生成 landing の hero (curated) が text のみで <a href> ゼロ = 入口 dead-end。
+        非空 hero は curated 往復保全で byte 一致のため nav-regen-drift は [OK] のまま = 本検査だけが捕捉。
+    warn (4) spec/essence-bad.html req-rfl-902 — essence 句点 5 個 (閾値 4 = corpus 較正 2026-06-11)。
+    warn (5) spec/long-para.html — 可視 prose 単一段落 2157 codepoints (閾値 2000 = corpus 較正 2026-06-11、
+        codepoint 計測は UTF-8 継続 byte 除去で locale 非依存)。
+  hero 空 (block) は readability-floor-hero.yaml が対で固定する。 spec-row 正式化は
+  verification.html §3.6 REQ-VER-023。 remediate: viewport/essence は authoring、 landing は folio build。
+
+command: ["validate", "--root", "tests/fixtures/readability-floor"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/readability-floor.golden.txt"
+
+expect:
+  exit_code: 1

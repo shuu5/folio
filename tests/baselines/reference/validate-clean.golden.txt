@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: architecture
 files checked: 41 · relations checked: 390
   [OK] internal link-integrity
@@ -17,5 +17,9 @@ files checked: 41 · relations checked: 390
   [OK] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
+  [WARN] readability-floor
+
+warnings (1):
+  decisions/README.html [readability-floor] 可視 prose 単一段落 9545 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
 
 clean: 0 violations

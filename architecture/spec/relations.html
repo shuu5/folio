@@ -2,6 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="spec">
 <meta name="folio-layer" content="core">
 <meta name="folio-version" content="0.5.0-draft">
@@ -540,6 +541,7 @@ flowchart TB
   <li><code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は <a class="xref" href="../decisions/ADR-0021-constitution-x4-amendment.html" data-tooltip="forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)">ADR-0021</a> で廃止)</li>
   <li>scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの</li>
   <li><strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 <a class="xref" href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html" data-tooltip="forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)">ADR-0023</a>)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)</li>
+  <li><strong>生成 view は scan 外</strong>: <code>folio build</code> が graph から導出する表示層 (<code>architecture/index.html</code> landing / <code>glossary.html</code>) は architecture 直下 (3 dir の外) に置かれ scan 対象に入らない — graph (SSoT) → view (派生) の一方向を保つ (<a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> / <a class="xref" href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" data-tooltip="folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は">ADR-0036</a> / <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a>。 view の鮮度は validate の nav-regen-drift / chrome-drift が検査)</li>
 </ul>
 
 <h4 id="s4-4-2-output">§4.4.2 Output path</h4>

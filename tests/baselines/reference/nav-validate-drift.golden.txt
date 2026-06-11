@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/nav-validate-drift
 files checked: 3 · relations checked: 0
   [OK] internal link-integrity
@@ -17,9 +17,11 @@ files checked: 3 · relations checked: 0
   [WARN] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
+  [FAIL] readability-floor
 
 warnings (1):
   spec/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
 
-violations (1):
+violations (2):
   index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)
+  index.html [readability-floor] landing hero (folio:landing-hero) が空 (入口の価値提案欠落、 REQ-VER-023 / ADR-0039 §2.2。 hero を author するか folio build で placeholder 再生成)

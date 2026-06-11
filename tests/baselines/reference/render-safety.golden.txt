@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/render-safety
 files checked: 1 · relations checked: 0
   [OK] internal link-integrity
@@ -17,6 +17,7 @@ files checked: 1 · relations checked: 0
   [OK] cluster-reachability
   [OK] ears-coverage
   [FAIL] render-safety
+  [OK] readability-floor
 
 violations (1):
   spec/multiline-subgraph.html [render-safety] subgraph の多行タイトル (<br>) は mermaid cluster-label が子ノードに overlap する: subgraph PF["<b>Phase F</b><br/>(7 並列固定)"] (単行タイトルにする、 REQ-VER-021 / rules §4.5)

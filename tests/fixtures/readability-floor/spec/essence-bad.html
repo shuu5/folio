@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="fixture">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer">
+<title>essence-bad spec</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./essence-bad.html",
+  "@type": "schema:TechArticle",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "dc:title": "essence-bad spec",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-rows">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">essence-bad</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+<header class="doc-header"><h1>essence-bad spec</h1><div class="meta">v0.1.0-draft &middot; status: draft &middot; essence 空 (block) + essence 句点過多 (warn) を seed する fixture</div></header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-rows">§1. Rows</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<section id="s1-rows" class="informative">
+<h2>§1. Rows</h2>
+<p>row 1 (REQ-RFL-901、 spec-row 形 = span.essence) は machine 対応部を持つのに essence が空 = 孤立 EARS (block)。 row 2 (REQ-RFL-902) は essence が句点 5 個 (warn、 閾値 4 超)。 row 3 (REQ-RFL-903、 verbose card 形 = section.req + p.req__essence) も essence 空 (block) — esstext の p 分岐と section handler を被覆する。 STRUCT-1〜5 は全 row が満たす (dual-audience gate は clean のまま = floor が独立に捕捉することの isolation)。</p>
+
+<div class="spec-list">
+  <details class="spec-row" id="req-rfl-901" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-RFL-901</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"></span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-RFL-901</span>: WHEN the fixture is validated, the gate <span class="ears-shall">SHALL</span> flag this row because its essence is empty。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-rfl-902" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-RFL-902</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">一文目。 二文目。 三文目。 四文目。 五文目。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-RFL-902</span>: WHEN the fixture is validated, the gate <span class="ears-shall">SHALL</span> warn because the essence has five sentences。</p>
+    </div>
+  </details>
+</div>
+
+<section class="req" id="req-rfl-903" data-audience="human">
+  <div class="req__card">
+    <span class="badge badge--req">REQ-RFL-903</span>
+    <span class="req__ears req__ears--event">Event</span>
+  </div>
+  <p class="req__essence"></p>
+  <details class="req__machine" data-audience="machine">
+    <summary>machine normative</summary>
+    <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-RFL-903</span>: WHEN the fixture is validated, the gate <span class="ears-shall">SHALL</span> flag this verbose card because its req__essence is empty (p 分岐 + section handler の被覆)。</p>
+  </details>
+</section>
+</section>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="no-viewport.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">no-viewport spec</span></a>
+  <a class="prevnext__next" href="long-para.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">long-para spec</span></a>
+</nav>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

@@ -1,0 +1,24 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/readability-floor-hero
+files checked: 1 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [FAIL] nav-regen-drift
+  [OK] nav-dead-link
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [FAIL] readability-floor
+
+violations (2):
+  index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)
+  index.html [readability-floor] landing hero (folio:landing-hero) が空 (入口の価値提案欠落、 REQ-VER-023 / ADR-0039 §2.2。 hero を author するか folio build で placeholder 再生成)

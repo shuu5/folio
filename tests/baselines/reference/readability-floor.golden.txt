@@ -1,0 +1,30 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/readability-floor
+files checked: 4 · relations checked: 6
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [OK] nav-regen-drift
+  [OK] nav-dead-link
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [FAIL] readability-floor
+
+warnings (2):
+  spec/essence-bad.html [readability-floor] req-rfl-902 の essence 句点 5 個 > 4 (要旨は数文に収める、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/long-para.html [readability-floor] 可視 prose 単一段落 2157 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+
+violations (4):
+  index.html [readability-floor] landing hero に <a href> が 1 本も無い (入口 dead-end、 hero curated region にカード/CTA の実 link を author する、 REQ-VER-023 / ADR-0039 §2.2)
+  spec/essence-bad.html [readability-floor] req-rfl-901 の essence (人間向け要旨) が無い/空 (孤立 EARS、 REQ-VER-023 / ADR-0039 §2.7。 essence を author する)
+  spec/essence-bad.html [readability-floor] req-rfl-903 の essence (人間向け要旨) が無い/空 (孤立 EARS、 REQ-VER-023 / ADR-0039 §2.7。 essence を author する)
+  spec/no-viewport.html [readability-floor] <head> に <meta name="viewport"> が無い (mobile responsive 不発火、 rules §4.6 / REQ-VER-023。 width=device-width, initial-scale=1 を追加)

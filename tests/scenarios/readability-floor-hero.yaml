@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-VER-023"
+ears_pattern: "unwanted-behavior"
+kind: "cli-golden"
+description: |
+  folio validate の readability-floor gate (gate q、 ADR-0039 §2.7 block (1)) が、 生成 landing の
+  hero curated region (folio:landing-hero) が空のとき [readability-floor] hero 空 violation を出す
+  ことを実証する。 空 hero は build が placeholder を再 emit するため nav-regen-drift も併発する —
+  両 violation が同じ remediate (folio build の自己修復) を名指しする整合を golden で固定する
+  (readability-floor.yaml の非空 hero dead-end 側と対: 空 = 両 gate / 非空 link 無し = floor のみ)。
+  hand-authored index (folio-generated marker 無し) は nav gate と同じ keystone skip で対象外
+  (nav-validate-keystone.yaml が固定済)。
+
+command: ["validate", "--root", "tests/fixtures/readability-floor-hero"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/readability-floor-hero.golden.txt"
+
+expect:
+  exit_code: 1

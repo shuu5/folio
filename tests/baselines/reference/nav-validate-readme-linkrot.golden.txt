@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety (ADR-0020/0025/0028/0033/0034/0035)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/nav-validate-readme-linkrot
 files checked: 4 · relations checked: 0
   [OK] internal link-integrity
@@ -17,6 +17,7 @@ files checked: 4 · relations checked: 0
   [FAIL] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
+  [OK] readability-floor
 
 violations (1):
   spec/README.html [cluster-reachability] README href "../research/README.html" -> ../research/README.html (link-rot: target not found)
