@@ -106,6 +106,7 @@
   <li><a href="#s11-presentation">§11. Human-First Presentation (P-14)</a></li>
   <li class="toc--sub"><a href="#s11-1-readers">§11.1 ページ種別 × 主たる人間読者層 (定義)</a></li>
   <li class="toc--sub"><a href="#s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</a></li>
+  <li class="toc--sub"><a href="#s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -499,6 +500,12 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
         (progressive enhancement), <span class="ears-shall">SHALL</span> vendor its libraries (no runtime CDN),
         and <span class="ears-shall">SHALL NOT</span> use ES modules with <code>fetch()</code>
         (file:// で null origin CORS により破綻、 verified)。
+        vendoring 違反のうち runtime-CDN script (<code>&lt;script src="http(s)://…"&gt;</code> および
+        protocol-relative <code>src="//…"</code>) は <code>folio validate</code> の dual-audience gate が
+        機械検出する (escaped 例・<code>&lt;pre&gt;</code> 内 raw 例は mask、 ADR-0039 §2.5)。 検出は
+        <strong>単一行 tag の試作 heuristic</strong> — 行跨ぎ tag は守備範囲外で、 網羅は ceiling の領分
+        (folio の corpus 慣習は単一行 script tag)。 conformance: <code>scenarios/validate-violations.yaml</code>
+        (<code>cdn-script.html</code> seed、 double/single-quote 両形)。
       </p>
     </div>
   </details>
@@ -929,12 +936,63 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 <h3 id="s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</h3>
 
 <p>表示層の regen は <code>folio build</code> が一元所有する <strong>MUST</strong> — index (landing) / glossary / 全ページ chrome の生成・維持 (「nav-regen-drift 系の violation は build で直す」)。 <code>folio fix</code> は graph の materialize 専任 — reverse-link (<a href="relations.html#s5-3-ears">REQ-REL-002</a>) / xref wrap (<a href="#s9-4-requirements">§9.4</a>) / tooltip 再生成。 <code>folio validate</code> の violation message は対応する remediate tool を名指しする <strong>MUST</strong> (どの違反をどちらで直すかの迷いを消す、 ADR-0039 §2.9 = folio-dd0 の解消)。 readability-floor (<a href="verification.html#req-ver-023">REQ-VER-023</a>) のうち landing 系は build が remediate し、 viewport / essence は authoring の責務 (機械 regen の対象外)。</p>
+
+<h3 id="s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</h3>
+
+<p>ページ種別ごとの<strong>既定表示</strong> (初見で何が見えるか) を次のとおり定める。 適用対象は living spec・生成物・新規 ADR template — <strong>frozen 文書の本文は不変</strong> (折り畳み化は本文改変のため適用しない):</p>
+
+<ul>
+  <li><strong>landing</strong> (index.html) — 全可視 (折り畳みゼロ)。 cluster 一覧の status group のみ量で畳む (&gt;8 entry)。</li>
+  <li><strong>spec 本文</strong> — essence・表・図・見出しは常時可視 / EARS 全文・経緯・運用注記は fold (§7.2 spec-row が体現)。</li>
+  <li><strong>新規 ADR template</strong> — Context・Decision 可視 / 詳細は fold。</li>
+  <li>fold のネストは <strong>2 段上限 MUST</strong>、 <code>&lt;summary&gt;</code> には<strong>要旨 1 文 MUST</strong> (空 summary・「詳細」のみの summary を禁止)。 この 2 つは現状機械 gate を持たない — authoring 規律 + Phase F review (ceiling) が担い、 違反頻度を見て floor 化を判断する (ADR-0039 §2.7 の warn→block と同じ昇格規律)。</li>
+  <li><strong>印刷時は全展開</strong> — chrome の inline script が <code>beforeprint</code> で閉じた <code>&lt;details&gt;</code> を一時 open し <code>afterprint</code> で復元する (author CSS では closed details の中身を描画できないため script が担う、 §8 read-only enhancement)。</li>
+</ul>
+
+<p><strong>audience toggle</strong> (ADR-0039 §2.5): chrome の inline script が、 <code>data-audience</code> 要素を持つ page にのみ「両方 / 人間向け / 機械向け」の 3 状態 toggle を生成する (no-JS では UI 自体が存在しない = progressive enhancement)。 実装は <strong>body class 切替のみ</strong> (<code>audience-human</code> = machine 精密部を隠す / <code>audience-machine</code> = human 派生 view を減光)・DOM 構造不変・<strong>永続なし</strong> (状態はページ内のみ)。 連続閲覧の煩わしさが実機 walk で実証されたら localStorage 昇格 (graceful degradation 付き) する片道を注記する。 closed <code>&lt;details&gt;</code> の中身は UA の rendering skip ゆえ author CSS では開けない — 開閉は読者操作に委ねる (toggle の設計境界)。</p>
 </section>
 
 <!-- folio:chrome-bottom -->
 <nav class="prevnext" aria-label="前後の文書">
   <a class="prevnext__next" href="folio-self-spec.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">folio — self-spec (v0.5.0-draft)</span></a>
 </nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
 <!-- /folio:chrome-bottom -->
 </body>
 </html>

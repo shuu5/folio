@@ -1227,3 +1227,52 @@ nav.prevnext .prevnext__title {
 }
 nav.prevnext a:hover .prevnext__title { text-decoration: underline; }
 nav.prevnext a.prevnext__next { margin-left: auto; text-align: right; }
+
+/* ========================================================================
+ * Audience toggle (ADR-0039 §2.5 / rules §11.3) — chrome の inline script が
+ * JS 有効時のみ生成する 3 状態 UI (両方 / 人間向け / 機械向け)。 body class
+ * 切替のみ・永続なし。 no-JS では UI 自体が存在しない (progressive enhancement)。
+ * ====================================================================== */
+nav.audience-toggle {
+  display: flex;
+  width: max-content;
+  margin: 0.6rem 0 0;
+  border: 1px solid var(--folio-border-default);
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 0.78rem;
+}
+nav.audience-toggle button {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.18rem 0.7rem;
+  background: transparent;
+  color: var(--folio-text-secondary);
+  border: 0;
+  cursor: pointer;
+}
+nav.audience-toggle button + button { border-left: 1px solid var(--folio-border-default); }
+nav.audience-toggle button[aria-pressed="true"] {
+  background: var(--folio-brand);
+  color: var(--folio-text-invert);
+}
+
+/* 人間向け: machine 精密部 (EARS 全文等) を隠し essence/表/図に集中 */
+body.audience-human [data-audience="machine"] { display: none; }
+
+/* 機械向け: human 派生 view (essence/badge) を減光し normative を主役に。
+ * closed details の中身は UA の rendering skip ゆえ author CSS では開けない —
+ * 開閉は読者操作のまま (ADR-0039 §2.5 = body class 切替のみの設計境界)。 */
+body.audience-machine .essence,
+body.audience-machine .req__essence,
+body.audience-machine .req__ears { opacity: 0.45; }
+
+/* 印刷: toggle 状態に関わらず全 audience を可視化し toggle UI は出さない。
+ * details の print 全展開 (rules §11.3) は chrome script の beforeprint handler が担う。 */
+@media print {
+  nav.audience-toggle { display: none; }
+  body.audience-human [data-audience="machine"] { display: revert; }
+  body.audience-machine .essence,
+  body.audience-machine .req__essence,
+  body.audience-machine .req__ears { opacity: 1; }
+}

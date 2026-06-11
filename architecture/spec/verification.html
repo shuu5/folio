@@ -544,7 +544,7 @@ expect:
       <span class="essence"><code>folio validate</code> は dual-audience-structural gate を検査する: <code>data-audience="human"</code> requirement container (verbose <code>section.req</code> + compact <code>details.spec-row</code> の両 form) の machine 対応部存在 (-1) / requirement-id 整合 (-2) / <span class="term" data-term="data-audience" data-tooltip="要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。">data-audience</span> 値域 (-3) / machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を強制し、 違反は exit 1。 意味的 fidelity は <span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span> 対象外 = <span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span> (<a href="folio-self-spec.html#s7-2-specialists">spec-review-fidelity</a> agent)。</span>
     </summary>
     <div class="spec-normative" data-audience="machine">
-      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-020</span>: <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> check a dual-audience-structural gate over each <code>data-audience="human"</code> requirement container — both the verbose <code>section.req</code> card and the compact <code>details.spec-row</code> form, keyed by <code>data-audience</code> semantic (container-class 非依存、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.5 / <a href="rules.html#s7-2-canonical-pattern">rules §7.2</a> 2-form) — enforcing the five structural safety invariants <a href="rules.html#s7-3-floor">REQ-DA-STRUCT-1..5</a>: (1) the presence of a <code>data-audience="machine"</code> 子孫 (孤立 human の排除); (2) requirement-id 整合 (container <code>id</code> ↔ badge ↔ machine <code>ears-id</code>); (3) <code>data-audience</code> 値域 (<code>machine</code> | <code>human</code> のみ); (4) machine 部に <code>aria-hidden</code> 不在 (AI / accessibility-tree からの可視性保全); (5) EARS-pattern 整合 (human badge ↔ machine <code>data-ears-pattern</code>)。 違反は report + 非ゼロ exit (block gate)。 意味的 fidelity (essence が machine normative を忠実要約か) は本 floor の<strong>対象外</strong>であり、 ceiling = Phase F の <a href="folio-self-spec.html#s7-2-specialists"><code>spec-review-fidelity</code></a> agent が担う (二層 enforcement、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4)。 conformance は <code>scenarios/validate-violations.yaml</code> (<code>da-violations.html</code> が -1〜-5 を <code>section.req</code> + <code>details.spec-row</code> の両 form で 1 card 1 違反 = 計 10 違反 seed、 exit 1 + report) + <code>scenarios/validate-clean.yaml</code> (real corpus の <span class="term" data-term="dual-audience" data-tooltip="1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。">dual-audience</span> dogfood が clean 側 keystone)。 scope 決定は <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4 で trace (<a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の validate scope を dual-audience floor に拡張)。</p>
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-020</span>: <span class="ears-when">WHEN the <code>folio validate</code> CLI subcommand runs</span>, it <span class="ears-shall">SHALL</span> check a dual-audience-structural gate over each <code>data-audience="human"</code> requirement container — both the verbose <code>section.req</code> card and the compact <code>details.spec-row</code> form, keyed by <code>data-audience</code> semantic (container-class 非依存、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.5 / <a href="rules.html#s7-2-canonical-pattern">rules §7.2</a> 2-form) — enforcing the five structural safety invariants <a href="rules.html#s7-3-floor">REQ-DA-STRUCT-1..5</a>: (1) the presence of a <code>data-audience="machine"</code> 子孫 (孤立 human の排除); (2) requirement-id 整合 (container <code>id</code> ↔ badge ↔ machine <code>ears-id</code>); (3) <code>data-audience</code> 値域 (<code>machine</code> | <code>human</code> のみ); (4) machine 部に <code>aria-hidden</code> 不在 (AI / accessibility-tree からの可視性保全); (5) EARS-pattern 整合 (human badge ↔ machine <code>data-ears-pattern</code>)。 違反は report + 非ゼロ exit (block gate)。 意味的 fidelity (essence が machine normative を忠実要約か) は本 floor の<strong>対象外</strong>であり、 ceiling = Phase F の <a href="folio-self-spec.html#s7-2-specialists"><code>spec-review-fidelity</code></a> agent が担う (二層 enforcement、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> / <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4)。 本 gate は追加 arm として runtime-CDN script 検出 (rules §8 <a class="xref" href="./rules.html#req-da-js-2" data-tooltip="JS 無効でも完全に読める MUST (progressive enhancement) ・ library は vendoring (runtime CDN 不可) ・ ES modules + fetch() は不使用 (file:// 破綻)。">REQ-DA-JS-2</a> の vendoring 違反、 ADR-0039 §2.5 = 単一行 heuristic) も担う — conformance は <code>validate-violations.yaml</code> の <code>cdn-script.html</code> seed。 conformance は <code>scenarios/validate-violations.yaml</code> (<code>da-violations.html</code> が -1〜-5 を <code>section.req</code> + <code>details.spec-row</code> の両 form で 1 card 1 違反 = 計 10 違反 seed、 exit 1 + report) + <code>scenarios/validate-clean.yaml</code> (real corpus の <span class="term" data-term="dual-audience" data-tooltip="1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。">dual-audience</span> dogfood が clean 側 keystone)。 scope 決定は <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.4 で trace (<a href="../decisions/ADR-0020-validate-scope.html">ADR-0020</a> の validate scope を dual-audience floor に拡張)。</p>
     </div>
   </details>
   <details class="spec-row" id="req-ver-021" data-audience="human">
@@ -877,6 +877,43 @@ window.addEventListener('DOMContentLoaded', async () => {
 <nav class="prevnext" aria-label="前後の文書">
   <a class="prevnext__prev" href="relations.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio — relations (v0.5.0-draft)</span></a>
 </nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
 <!-- /folio:chrome-bottom -->
 </body>
 </html>

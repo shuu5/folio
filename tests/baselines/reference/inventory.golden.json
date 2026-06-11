@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T06:30:04Z",
+  "generatedAt": "2026-06-11T08:10:27Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -2165,6 +2165,10 @@
       {
         "from": "spec/verification.html",
         "to": "REQ-CI-014"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "REQ-DA-JS-2"
       },
       {
         "from": "spec/verification.html",

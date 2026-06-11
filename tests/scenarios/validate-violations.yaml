@@ -3,7 +3,7 @@ req_id: "REQ-VER-013/015"
 ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
-  folio validate が seeded fixtures に対し 14 件の違反を検出し exit 1 + report を出すことを
+  folio validate が seeded fixtures に対し 16 件の違反を検出し exit 1 + report を出すことを
   実証する (ADR-0020 §2.1 を ADR-0025 §2.2 で 3-gate 化、 ADR-0033 で dual-audience gate 追加 /
   REQ-VER-013/015 + REQ-DA-STRUCT-1..5、 validate-clean.yaml = clean 側の violation-detection 対):
     - missing file ref : dc:references @id が実在しない file を指す (spec/missing-ref.html、 gate a)
@@ -18,6 +18,11 @@ description: |
                          (spec/da-violations.html、 gate g = REQ-DA-STRUCT-1..5、 ADR-0033 §2.5)。 孤立
                          human (-1) / id 不一致 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden
                          (-4) / EARS-pattern 不一致 (-5) を 2 form それぞれで生む = 10 dual-audience 違反。
+    - runtime-CDN      : head の <script src="https://…"> (double-quote) と
+                         <script src='//…'> (single-quote + protocol-relative) の 2 形が REQ-DA-JS-2
+                         vendoring 違反として block される (spec/cdn-script.html、 gate g の CDN arm =
+                         ADR-0039 §2.5 / folio-ea9)。 escaped 例と <pre> 内 raw 例は mask され素通り
+                         しないことも併置。
   検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation、
   cli-golden harness は command[] のみ渡すため flag で override)。 conformance は golden baseline
   との byte-exact diff で検証 (capture:stdout, compare:text、 REQ-VER-011)。

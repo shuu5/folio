@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="fixture">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer">
+<title>cdn-script fixture</title>
+<link rel="stylesheet" href="../../common.css">
+<script src="https://cdn.example.com/runtime-lib.min.js" defer></script>
+<script src='//cdn.example.com/protocol-relative.js' defer></script>
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./cdn-script.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "cdn-script fixture",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+<section id="s1-seed" class="informative"><h2>§1. Seed</h2>
+<p>head の runtime-CDN script が REQ-DA-JS-2 違反 (dual-audience gate の CDN arm) として 1 件 block されることを seed する。 escaped 例 <code>&lt;script src="https://x/y.js"&gt;</code> と下の pre 内 raw 例は無害 (mask):</p>
+<pre><code><script src="https://masked.example.com/never-flagged.js"></script></code></pre>
+</section>
+</body>
+</html>

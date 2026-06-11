@@ -1630,6 +1630,21 @@ folio_cmd_validate() {
       # gate (g) dual-audience structural — block (REQ-DA-STRUCT-1..5、 ADR-0033、 rules §7 floor)
       local dav
       while IFS= read -r dav; do [[ -n "$dav" ]] && { violations+=("$dav"); da_fail=1; }; done < <(folio_check_dual_audience "$body" "$rel")
+      # gate (g) 追加 arm: runtime-CDN script 検出 (REQ-DA-JS-2 / rules §8 vendoring、 ADR-0039 §2.5 =
+      # folio-ea9)。 head 含む全 file を走査 (実 script は head/body 末尾に置かれる)。 <pre> 内 raw 例示は
+      # mask、 escaped (&lt;script) は元から不一致。 REQ-DA namespace ゆえ dual-audience gate に乗せる
+      # (gate 数は 17 のまま)。 vendored 相対 src (../assets/ 等) は scheme を持たず対象外。
+      local cdnv
+      while IFS= read -r cdnv; do
+        [[ -z "$cdnv" ]] && continue
+        violations+=("${rel}"$'\t'"[dual-audience] runtime-CDN script ${cdnv} は vendoring 違反 (REQ-DA-JS-2 / rules §8。 assets/ へ vendor し相対 src で読み込む)")
+        da_fail=1
+      done < <(awk '
+        /<pre[ >]/{pre++}
+        pre==0 && match($0, /<script[^>]*[ \t]src[ \t]*=[ \t]*["'"'"'](https?:)?\/\/[^"'"'"']*["'"'"']/) { print substr($0, RSTART, RLENGTH) }
+        /<\/pre>/{if(pre>0)pre--}
+      ' "$f")   # decrement を match より後に置く: 単一行 <pre>…</pre> 内の raw 例示が「閉じてから match」で素通りするのを防ぐ。 quote は "/'"'"' 両対応 (single-quote src の fail-open 回避)
+      # 検出は単一行 tag の試作 heuristic (行跨ぎ tag・</pre> と同一行の実 script は守備範囲外、 rules §8 conformance に明記)。 protocol-relative //cdn も検出 ((https?:)?//)
       # gate (p) diagram-render-safety — mermaid subgraph 多行タイトル overlap (REQ-VER-021、 rules §4.5)
       local rsv
       while IFS= read -r rsv; do [[ -n "$rsv" ]] && { violations+=("$rsv"); render_safety_fail=1; }; done < <(folio_check_render_safety "$body" "$rel")
@@ -2809,21 +2824,67 @@ folio_chrome_toc_emit() {
 folio_chrome_bottom_emit() {
   local rel="$1" root_abs="$2" nb prev next t
   nb=$(folio_chrome_chain_neighbors "$rel" "$root_abs")
-  [[ -z "$nb" ]] && return 0
-  prev="${nb%%$'\t'*}"; next="${nb#*$'\t'}"
-  [[ -z "$prev" && -z "$next" ]] && return 0
-  printf '<nav class="prevnext" aria-label="前後の文書">\n'
-  if [[ -n "$prev" ]]; then
-    t=$(folio_extract_title "${root_abs}/${prev}"); [[ -z "$t" ]] && t="${prev##*/}"
-    printf '  <a class="prevnext__prev" href="%s"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">%s</span></a>\n' \
-      "$(folio_build_attresc "${prev##*/}")" "$(folio_build_htesc "$t")"
+  if [[ -n "$nb" ]]; then
+    prev="${nb%%$'\t'*}"; next="${nb#*$'\t'}"
+    if [[ -n "$prev" || -n "$next" ]]; then
+      printf '<nav class="prevnext" aria-label="前後の文書">\n'
+      if [[ -n "$prev" ]]; then
+        t=$(folio_extract_title "${root_abs}/${prev}"); [[ -z "$t" ]] && t="${prev##*/}"
+        printf '  <a class="prevnext__prev" href="%s"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">%s</span></a>\n' \
+          "$(folio_build_attresc "${prev##*/}")" "$(folio_build_htesc "$t")"
+      fi
+      if [[ -n "$next" ]]; then
+        t=$(folio_extract_title "${root_abs}/${next}"); [[ -z "$t" ]] && t="${next##*/}"
+        printf '  <a class="prevnext__next" href="%s"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">%s</span></a>\n' \
+          "$(folio_build_attresc "${next##*/}")" "$(folio_build_htesc "$t")"
+      fi
+      printf '</nav>\n'
+    fi
   fi
-  if [[ -n "$next" ]]; then
-    t=$(folio_extract_title "${root_abs}/${next}"); [[ -z "$t" ]] && t="${next##*/}"
-    printf '  <a class="prevnext__next" href="%s"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">%s</span></a>\n' \
-      "$(folio_build_attresc "${next##*/}")" "$(folio_build_htesc "$t")"
-  fi
-  printf '</nav>\n'
+  # audience toggle + print 全展開 (ADR-0039 §2.5 / rules §11.3、 rules §8 read-only enhancement)。
+  # inline classic script (asset 依存なし = consumer / file:// 安全)。 決定的 (全 page 同一 bytes)。
+  # toggle UI は [data-audience] を持つ page でのみ JS が生成 (no-JS では UI 自体出ない)。
+  # body class 切替のみ・永続なし (煩わしさが実機 walk で実証されたら localStorage 昇格 = ADR-0039 §2.5 片道)。
+  # beforeprint は閉じた details を一時 open し afterprint で復元 (印刷時全展開、 rules §11.3)。
+  cat <<'CHROME_JS'
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+CHROME_JS
 }
 
 # page の期待 content (chrome 注入済全文) を stdout。 $1=file $2=rel $3=root_abs $4=base_url。

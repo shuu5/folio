@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/validate-violations
-files checked: 5 · relations checked: 2
+files checked: 6 · relations checked: 2
   [FAIL] internal link-integrity
   [FAIL] jsonld structural
   [FAIL] broken-reverse
@@ -19,10 +19,12 @@ files checked: 5 · relations checked: 2
   [OK] render-safety
   [OK] readability-floor
 
-violations (14):
+violations (16):
   spec/bad-jsonld.html [jsonld-structural] @context must be object (new pattern), got string
   spec/broken-anchor.html [broken-reverse] dc:references -> spec/target.html (target missing reverse dc:isReferencedBy back to spec/broken-anchor.html)
   spec/broken-anchor.html [link-broken-anchor] dc:references -> spec/target.html#s9-nonexistent (anchor id not found in target)
+  spec/cdn-script.html [dual-audience] runtime-CDN script <script src="https://cdn.example.com/runtime-lib.min.js" は vendoring 違反 (REQ-DA-JS-2 / rules §8。 assets/ へ vendor し相対 src で読み込む)
+  spec/cdn-script.html [dual-audience] runtime-CDN script <script src='//cdn.example.com/protocol-relative.js' は vendoring 違反 (REQ-DA-JS-2 / rules §8。 assets/ へ vendor し相対 src で読み込む)
   spec/da-violations.html [dual-audience] EARS-pattern 不一致: human badge "ubiquitous" <-> machine data-ears-pattern "event-driven" (REQ-DA-STRUCT-5)
   spec/da-violations.html [dual-audience] EARS-pattern 不一致: human badge "ubiquitous" <-> machine data-ears-pattern "event-driven" (REQ-DA-STRUCT-5)
   spec/da-violations.html [dual-audience] data-audience 値 "bot" が不正 (machine|human のみ、 REQ-DA-STRUCT-3 / P-5)
