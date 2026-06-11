@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T08:10:27Z",
+  "generatedAt": "2026-06-11T13:37:58Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1784,7 +1784,7 @@
         "id": "REQ-VER-022",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-022",
-        "essence": "CI の render-gate job は、 実 mermaid 図を持つ spec を headless chromium で実 render し、 render 後の DOM 幾何から 4 class の欠陥 (多行 cluster-label / label-over-node / node-over-node / content-clipped) を検出して merge を block する (render-safety の ceiling 層、 floor = REQ-VER-021)。 render 不足は見逃しでなく fail (fail-closed)、 constitution は advisory、 幾何対象を持たない図型 (sequence 等) は vacuous warning・.node は出すが flowchart でない図型 (state 等) は uncalibrated warning で可視化。 検出力は selftest fixture (kind 完全一致 + scale&lt;1 正規化を含む 8 case) が回帰固定し、 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保 (deterministic ゆえ blocking 適格)。"
+        "essence": "CI の render-gate job は、 corpus 全 page (repo-root index.html + architecture 配下) を headless chromium で 3 viewport (375/768/1280) 実 render し、 render 後の DOM 幾何から mermaid 4 class (多行 cluster-label / label-over-node / node-over-node / content-clipped) + chrome 幾何 2 class (意図しない横スクロール horizontal-overflow / nav-over-content) を検出して merge を block する (render-safety の ceiling 層、 floor = REQ-VER-021 / REQ-VER-023)。 render 不足は見逃しでなく fail (fail-closed)、 constitution は advisory、 非 flowchart 図型は vacuous / uncalibrated warning で可視化し、 全 page × viewport の full-page screenshot を CI artifact 保存する (人間 review の補助 — golden 化しない)。 検出力は selftest fixture (kind 完全一致 + scale&lt;1 正規化 + viewport plumbing 対 + 意図された scroll container / closed-details phantom rect の clean ガードを含む 13 case) が回帰固定し、 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保 (deterministic ゆえ blocking 適格)。"
       },
       {
         "id": "REQ-VER-023",
