@@ -34,7 +34,7 @@
 <p>folio 自身の design-intent 空間 (P-7 3-domain、 self-host)。 cluster 一覧と各 doc は下記、 各 cluster の README.html が索引。 この index は <code>folio build</code> が graph から生成し、 この curated region のみ手で編集する。</p>
 <h2>Key documents</h2>
 <ul>
-  <li><a href="spec/constitution.html">constitution.html</a> — 不変 13 原則 (編集禁止、 graph 走査外ゆえ手 pin)</li>
+  <li><a href="spec/constitution.html">constitution.html</a> — 不変 14 原則 (編集禁止、 graph 走査外ゆえ手 pin)</li>
   <li><a href="spec/folio-self-spec.html">folio-self-spec.html</a> — Layer 0 architecture spec</li>
   <li><a href="spec/rules.html">rules.html</a> — Layer 1 consumer 向け universal rules</li>
   <li><a href="spec/verification.html">verification.html</a> — sandbox verification framework spec</li>
@@ -71,7 +71,7 @@
 </ul>
 </details>
 <details>
-<summary>accepted <span class="nav-count">(28)</span></summary>
+<summary>accepted <span class="nav-count">(30)</span></summary>
 <ul>
   <li><a href="decisions/ADR-0001-architecture-rules-split.html">ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)</a> <span class="nav-meta">adr</span></li>
   <li><a href="decisions/ADR-0003-plugin-architecture.html">ADR-0003 — folio plugin minimal architecture</a> <span class="nav-meta">adr</span></li>
@@ -101,11 +101,6 @@
   <li><a href="decisions/ADR-0035-walkable-architecture-nav-derive.html">ADR-0035 — walkable architecture nav-derive (graph から index/cluster-nav を生成、 golden 型 commit-in-place、 generated-view を interpretive-gap で授権、 DB/外置き 却下)</a> <span class="nav-meta">adr</span></li>
   <li><a href="decisions/ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036 — folio-vocabulary glossary derive + partition (folio-closed 語彙を canonical author→ship→consumer derive、 hover-only tooltip 描画、 completeness は best-effort で ADR-0034 §2.8 を extend)</a> <span class="nav-meta">adr</span></li>
   <li><a href="decisions/ADR-0037-render-safety-ceiling.html">ADR-0037 — render-safety verification の二層化 (static floor + deterministic browser ceiling、 後者は playwright で flowchart 幾何 overlap を CI 検出する folio dogfood)</a> <span class="nav-meta">adr</span></li>
-</ul>
-</details>
-<details open>
-<summary>proposed <span class="nav-count">(2)</span></summary>
-<ul>
   <li><a href="decisions/ADR-0038-constitution-p14-human-readability.html">ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)</a> <span class="nav-meta">adr</span></li>
   <li><a href="decisions/ADR-0039-presentation-template-layer.html">ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)</a> <span class="nav-meta">adr</span></li>
 </ul>

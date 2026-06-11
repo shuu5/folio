@@ -7,7 +7,7 @@
 
 ## 1. 必読
 
-- `architecture/spec/constitution.html` — folio の 13 不変原則。 **不変資産、 編集禁止**。
+- `architecture/spec/constitution.html` — folio の 14 不変原則。 **不変資産、 編集禁止**。
 - `architecture/decisions/ADR-0003-plugin-architecture.html` + `architecture/spec/verification.html` (試作 plugin 実装の規範)。
 - X4-C (ADR-0023) で `scratch/` 試作層を canonical layout (`architecture/` + repo-root `tests/`) へ物理移植済。 `scratch/` は存在しない。 X4-F (ADR-0026) で HOW-test dir を `verification/` → `tests/` に rename済 (概念「verification」は dir 名と独立、 §6 末尾注記)。
 

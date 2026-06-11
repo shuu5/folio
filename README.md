@@ -39,7 +39,7 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 
 | file / dir | role |
 |---|---|
-| [`architecture/spec/constitution.html`](./architecture/spec/constitution.html) | folio の 13 不変原則 (編集禁止) |
+| [`architecture/spec/constitution.html`](./architecture/spec/constitution.html) | folio の 14 不変原則 (編集禁止) |
 | [`architecture/`](./architecture/) | design-intent 空間 (spec / decisions / research / assets、 self-host) |
 | [`tests/`](./tests/) | sandbox verification framework (scenarios / fixtures / golden / runner.sh、 X4-F で verification/ から rename) |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions |

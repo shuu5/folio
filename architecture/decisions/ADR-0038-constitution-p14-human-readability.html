@@ -5,7 +5,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0038">
 <meta name="folio-adr-date" content="2026-06-11">
@@ -42,14 +42,14 @@
 
 <header class="doc-header">
   <h1>ADR-0038 — constitution P-14 (Human Readability) 新設 amendment</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-11 &middot; folio v0.5.0-draft &middot; constitution に第 14 原則 Human Readability を新設する amendment 提案。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは <a href="./ADR-0021-constitution-x4-amendment.html">ADR-0021</a> 前例 (番号 append・renumber なし・rationale aside 併記) を踏襲し、 user 承認 (本 ADR の accepted 化) と同時に constitution §2 へ追記する。 機構実装は ADR-0039 (presentation template layer) が担う。</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-11 &middot; folio v0.5.0-draft &middot; constitution に第 14 原則 Human Readability を新設する amendment。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは <a href="./ADR-0021-constitution-x4-amendment.html">ADR-0021</a> 前例 (番号 append・renumber なし・rationale aside 併記) を踏襲し、 user 承認 (本 ADR の accepted 化) と同時に constitution §2 へ追記する。 機構実装は ADR-0039 (presentation template layer) が担う。</div>
 </header>
 
 <aside class="machine-readable" aria-hidden="true">
   <dl>
     <dt>id</dt><dd>ADR-0038</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-06-11</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0021 (X4 amendment 内で P-13 を Always tier に append した principle-amendment 手続きの前例 = append・renumber なし・rationale aside・tier 分類・count-fix 同 commit)、 ADR-0028 (二層 enforcement = P-14 の検証を floor/ceiling 両層に割り当てる語彙)、 ADR-0030 §2.5 (constitution version は framework version と別 trace) / ADR-0032 (framework 1.0.0 の defer = WS5)、 constitution §2 (追記先) / §5 (versioning) / §6 P-10 (amendment 手続き)、 rules.html (読者層定義の委任先 = ADR-0039 §2.1 が新設)、 research/presentation-design-patterns.html (設計根拠調査)。 実装 ADR: ADR-0039。 bd: folio-nmy / epic folio-v8s。 同乗: folio-e2s (constitution 内 mermaid initialize 整合)</dd>
@@ -85,7 +85,7 @@
 
 <ul>
   <li><strong>user 承認</strong>: 本 ADR は status <code>proposed</code> で起票し、 user 承認をもって <code>accepted</code> へ昇格 + constitution 編集を実行する (<a href="../spec/constitution.html#s6-amendment">P-10</a>)。 文面・型は grill (2026-06-10〜11) で方向承認済、 最終承認は本 ADR の accept。</li>
-  <li><strong>追記形式</strong>: §2 の <code>dl</code> 末尾 (P-12 の後、 文書順) に <code>&lt;dt id="p-14"&gt;</code> + <code>&lt;dd&gt;</code> を append。 番号は append のみで renumber しない (既存 cross-ref + frozen ADR 参照の保護、 ADR-0021 前例)。 <code>dd</code> 内に <code>aside.ai-rationale</code> (hidden、 <code>data-adr="ADR-0038"</code>) で決定 metadata を併記。</li>
+  <li><strong>追記形式</strong>: constitution §2 は tier 別の <code>dl</code> 構造 (§2.1 Always / §2.2 Ask-First / §2.3 Never) のため、 <strong>§2.1 Always Tier の <code>dl</code> 末尾 (P-13 の後)</strong> に <code>&lt;dt id="p-14"&gt;</code> + <code>&lt;dd&gt;</code> を append (P-13 が同 tier 内 append された前例と同位置規則)。 番号は append のみで renumber しない (既存 cross-ref + frozen ADR 参照の保護、 ADR-0021 前例)。 <code>dd</code> 内に <code>aside.ai-rationale</code> (hidden、 <code>data-adr="ADR-0038"</code>) で決定 metadata を併記。</li>
   <li><strong>tier 帰属</strong>: Always tier (P-1〜P-7 + P-13 + P-14)。 tier は番号連続でなく分類で定義する (P-13 rationale の前例)。</li>
   <li><strong>連動 count-fix (同 commit、 ADR-0021 前例の踏襲)</strong>: P-14 追加で stale 化する constitution 内の原則数表記を同 commit で更新する — head JSON-LD の <code>principles</code> 13→14 と <code>tiers.Always</code> 8→9 / meta div の「13 immutable principles」/ §2 見出しの原則数 / §2.1 見出しの「Always Tier (P-1〜P-7 + P-13)」への P-14 追加 / 図2 (tier mermaid) の node label + accDescr の「8 原則」→「9 原則」。 取りこぼすと constitution が内部不整合になる (ADR-0021 が同種の count-fix を Negative consequence として捕捉した前例)。</li>
   <li><strong>同乗是正</strong>: 同じ amendment commit で constitution 内 mermaid initialize を living-spec pattern に整合させる (folio-e2s、 dormant 起票済の非整合。 P-10 承認を一度で済ませる)。 まとめると constitution への変更は (a) P-14 append、 (b) 連動 count-fix 群、 (c) e2s mermaid initialize 整合、 の 3 群で全て本 ADR が列挙する範囲に限る。</li>
@@ -126,7 +126,7 @@
   <li><strong>討論</strong>: criterion-c 徹底討論 (2026-06-10、 決定 6 件) + ADR grill (2026-06-11、 G1 = 2 本構成 / G2 = 構造要求型)。 独立 5-lens 監査 wf_8b14e53a が現状 evidence を実測。</li>
   <li><strong>調査</strong>: <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> (6 軸 41 パターン + gap-fill + blueprint)。</li>
   <li><strong>bd</strong>: folio-nmy (本 ADR) / epic folio-v8s。 同乗: folio-e2s。</li>
-  <li><strong>手続き状態</strong>: proposed (user 承認待ち)。 承認後: 本 ADR accepted 化 + constitution §2 へ P-14 append + e2s 同乗是正 + status-flip に伴う golden 再生成 (inventory / prime / validate-clean) を同 commit 系で実施。</li>
+  <li><strong>手続き状態</strong>: 2026-06-11 user 承認により accepted。 同 commit 系で constitution §2.1 へ P-14 append + 連動 count-fix + e2s 同乗是正 + constitution version 0.6.0-draft bump + golden 再生成を実施。</li>
 </ul>
 </section>
 

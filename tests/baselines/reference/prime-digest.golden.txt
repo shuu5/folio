@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 41 specs · folio 0.5.0-draft
+# 41 specs · folio 0.6.0-draft
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -169,12 +169,12 @@
 
 ## decisions/ADR-0038-constitution-p14-human-readability.html
 - title: ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)
-- doc-type: adr · status: proposed
-- summary: constitution に第 14 原則 Human Readability を新設する amendment 提案。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは
+- doc-type: adr · status: accepted
+- summary: constitution に第 14 原則 Human Readability を新設する amendment。 人間可読性を機械可読性と同格の検証対象とし、 各ページ種別に主たる人間読者層の定義が存在することを構造的に要求する (具体の読者割当は rules に委任)。 根拠は criterion-c 徹底討論で特定した root cause — 機械側の価値 (P-3 検証可能性 / P-6 リンク完全性) は原則化されているのに人間可読性の原則が無く、 agent が原則群に忠実であるほど機械 gate のある側だけが磨かれる「価値の非対称」。 16-gate 全 green の公開 architecture が初見の人間に読めなかった事実 (独立 5-lens 監査が実測) がその帰結。 amendment 手続きは
 
 ## decisions/ADR-0039-presentation-template-layer.html
 - title: ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)
-- doc-type: adr · status: proposed
+- doc-type: adr · status: accepted
 - summary: ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。
 
 ## decisions/README.html
@@ -207,7 +207,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 96 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 97 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -245,6 +245,7 @@ P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11
 P-12 [principle] spec/constitution.html#p-12
 P-13 [principle] spec/constitution.html#p-13
+P-14 [principle] spec/constitution.html#p-14
 P-2 [principle] spec/constitution.html#p-2
 P-3 [principle] spec/constitution.html#p-3
 P-4 [principle] spec/constitution.html#p-4

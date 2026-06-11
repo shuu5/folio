@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="folio-doc-type" content="constitution">
 <meta name="folio-layer" content="core">
-<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-version" content="0.6.0-draft">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
-<title>folio — constitution (v0.5.0-draft)</title>
+<title>folio — constitution (v0.6.0-draft)</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
   "@context": "https://folio.dev/schema",
   "@type": "FolioConstitution",
-  "version": "0.5.0-draft",
+  "version": "0.6.0-draft",
   "immutable": true,
-  "principles": 13,
-  "tiers": {"Always": 8, "AskFirst": 3, "Never": 2},
+  "principles": 14,
+  "tiers": {"Always": 9, "AskFirst": 3, "Never": 2},
   "stakeholderPerspectives": ["Developer", "AI Agent", "External Reviewer"]
 }
 </script>
@@ -26,7 +26,7 @@
 
 <header class="doc-header">
   <h1>folio constitution</h1>
-  <div class="meta">v0.5.0-draft &middot; status: draft &middot; 13 immutable principles, 3-tier boundary declarations</div>
+  <div class="meta">v0.6.0-draft &middot; status: draft &middot; 14 immutable principles, 3-tier boundary declarations</div>
 </header>
 
 <aside class="informative">
@@ -88,17 +88,17 @@ graph LR
 </section>
 
 <section id="s2-principles" class="normative">
-<h2>§2. Thirteen Immutable Principles</h2>
+<h2>§2. Fourteen Immutable Principles</h2>
 
-<p>folio は 13 の不変原則を <strong>3 tier</strong> に分類する。</p>
+<p>folio は 14 の不変原則を <strong>3 tier</strong> に分類する。</p>
 
 <figure class="diagram" data-diagram-type="principles-tier">
 <pre class="mermaid">
 %%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e'}}}%%
 graph TD
-  accTitle: 13 原則 3-tier 構造
-  accDescr: Always tier 8 原則 (P-1 から P-7 + P-13)、 Ask-first tier 3 原則 (P-8 から P-10)、 Never tier 2 原則 (P-11 から P-12)
-  A["<b>Always tier</b><br/>P-1〜P-7 + P-13 (8 原則)<br/><i>不変、 例外なし</i>"]
+  accTitle: 14 原則 3-tier 構造
+  accDescr: Always tier 9 原則 (P-1 から P-7 + P-13/P-14)、 Ask-first tier 3 原則 (P-8 から P-10)、 Never tier 2 原則 (P-11 から P-12)
+  A["<b>Always tier</b><br/>P-1〜P-7 + P-13/P-14 (9 原則)<br/><i>不変、 例外なし</i>"]
   B["<b>Ask-first tier</b><br/>P-8〜P-10 (3 原則)<br/><i>user 承認後変更可</i>"]
   C["<b>Never tier</b><br/>P-11〜P-12 (2 原則)<br/><i>絶対禁止</i>"]
   A --> B
@@ -107,10 +107,10 @@ graph TD
   style B fill:#fefbea,color:#08131a
   style C fill:#fdf3f3,color:#08131a
 </pre>
-<figcaption>図 2. 13 原則の 3-tier 構造。</figcaption>
+<figcaption>図 2. 14 原則の 3-tier 構造。</figcaption>
 </figure>
 
-<h3 id="s2-1-always">§2.1 Always Tier (P-1〜P-7 + P-13)</h3>
+<h3 id="s2-1-always">§2.1 Always Tier (P-1〜P-7 + P-13/P-14)</h3>
 
 <dl>
   <dt id="p-1"><strong>P-1: spec は未来理想の anchor である</strong></dt>
@@ -145,6 +145,12 @@ graph TD
   <dd>実装 (HOW) とその executable verification は design-intent 空間の外に置く (P-3 / P-11 と整合)。 WHAT (design-intent 文書中の要件) は安定した requirement ID を介して verification に束縛され、 この ID 束縛が WHAT↔HOW の単一の真実源 (SSoT) link となる。 verification は (a) spec 適合性 (design-intent 文書自身の well-formed 検証、 framework 提供・普遍) と (b) 実装適合性 (HOW が WHAT を満たすかの検証、 project 固有) の 2 層を含む。 requirement ID から spec / verification / 実装への trace は machine-navigable でなければならない。
     <aside class="ai-rationale" hidden data-decision="2026-05-25" data-adr="ADR-0021" data-decision-by="user-dig-session">
       ADR-0021 で新設 (Always tier)。 番号は append (renumber せず: P-8〜P-12 の cross-ref + frozen ADR 参照を保護)。 tier 帰属は番号連続でなく分類で定義 (Always = P-1〜P-7 + P-13)。 実装経験で reverse-engineer した WHAT/WHY/HOW + verification + REQ-ID traceability model の明文化。 原則追加 = MAJOR 級。
+    </aside>
+  </dd>
+  <dt id="p-14"><strong>P-14: Human Readability</strong></dt>
+  <dd>folio の design-intent 文書とその生成物は、 機械可読性と同格に人間可読性を保つ。 各ページ種別には主たる人間読者層が定義されていなければならず (具体の定義と割当は rules が規定する)、 ページはその読者が当該ページの仕事を果たせる形で提示される。 人間可読性は検証対象であり、 決定的 floor gate と review ceiling の二層で継続的に検証する。 機械可読性のための構造が人間への提示を損なうこと、 およびその逆を認めない。
+    <aside class="ai-rationale" hidden data-decision="2026-06-11" data-adr="ADR-0038" data-decision-by="user-grill-session">
+      ADR-0038 で新設 (Always tier)。 番号は append (renumber せず)。 根拠 = criterion-c 徹底討論で特定した価値の非対称 — 機械側の価値 (P-3/P-6) のみ原則化され gate の非対称として実体化し、 validate 全 green のまま人間に読めない生成物を許した。 構造要求型 (読者層定義の存在を要求し、 具体は rules へ委譲) で空殻化 (全委任) と P-10 硬直 (焼き込み) の両方を回避。 原則追加 = MAJOR 級 (0.6.0-draft)。
     </aside>
   </dd>
 </dl>
@@ -240,21 +246,31 @@ graph TD
 </section>
 
 <script>
-window.addEventListener('DOMContentLoaded', () => {
-  if (window.mermaid) {
-    mermaid.initialize({
-      startOnLoad: true,
-      securityLevel: 'antiscript',
-      theme: 'base',
-      themeVariables: {
-        primaryColor: '#2a4d6e',
-        primaryTextColor: '#ffffff',
-        lineColor: '#2a4d6e',
-        secondaryColor: '#5ac8b8',
-        tertiaryColor: '#f5f8fa'
-      }
-    });
-  }
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!window.mermaid) return;
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'antiscript',
+    theme: 'base',
+    flowchart: { useMaxWidth: false },
+    themeVariables: {
+      primaryColor: '#2a4d6e',
+      primaryTextColor: '#ffffff',
+      lineColor: '#2a4d6e',
+      secondaryColor: '#5ac8b8',
+      tertiaryColor: '#f5f8fa'
+    }
+  });
+  try { await mermaid.run(); } catch (e) {}
+  /* 横スクロールが発生した図のみ keyboard-focusable 化 (WCAG 2.2 SC 2.1.1、 rules §4.6) */
+  document.querySelectorAll('figure.diagram > pre.mermaid').forEach((p) => {
+    if (p.scrollWidth > p.clientWidth + 1) {
+      p.tabIndex = 0;
+      p.setAttribute('role', 'region');
+      const t = p.querySelector('svg title');
+      if (t && t.textContent) p.setAttribute('aria-label', t.textContent + ' (横スクロール可能な図)');
+    }
+  });
 });
 </script>
 
