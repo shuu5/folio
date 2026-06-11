@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-gate selftest — horizontal-overflow (BAD, 合成 page)</title>
+<style>
+  .wide { width: 600px; height: 40px; background: #dde; border: 1px solid #446; }
+</style>
+</head>
+<body>
+<!--
+  render-gate self-test fixture (BAD、 合成 page)。 chrome 幾何 detector(5) horizontal-overflow の
+  arm を検証する。 幅 600px 固定の要素が scroll container を持たずに置かれると、 375px viewport では
+  document 全体に意図しない横スクロールが発生する (= 欠陥)。 768px viewport では収まって clean — 同一
+  fixture を 2 viewport で走らせる selftest の対が viewport plumbing 自体の回帰ガードを兼ねる。
+  nav は置かない (detector(6) を誤発火させず、 (5) の単独検証にする)。
+-->
+<h1>横溢れ fixture</h1>
+<p>下の要素は幅 600px 固定で、 意図された scroll container (overflow-x:auto) を持たない。</p>
+<div class="wide">幅 600px 固定 — 375px viewport では document を溢れる</div>
+</body>
+</html>

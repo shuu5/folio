@@ -8,14 +8,17 @@
 #                           / nav-dead-link / cluster-reachability / ears-coverage / render-safety / readability-floor、
 #                           ADR-0020/0025/0028/0033/0034/0035/0037/0039)
 #   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
-#   (3) render-gate       = render-safety ceiling (playwright headless render の flowchart 幾何 overlap
-#                           + clip 検出、 verification.html REQ-VER-022 / tests/render-gate/README.md)。
-#                           (1) の render-safety gate (REQ-VER-021) は pure-bash で render 後 DOM を見れず
-#                           既知パターンしか lint できない floor。 本 job は実ブラウザ render で flowchart の
-#                           cluster/node/label 幾何欠陥 4 class を捕捉する deterministic ceiling = folio
-#                           dogfood (CI-only)。 非 flowchart 図は vacuous warning で可視化する。 決定性は
-#                           vendored mermaid + pinned playwright + pinned font (fonts-noto-cjk) で担保。
-#                           正式 decision 記録は ADR-0037。
+#   (3) render-gate       = render-safety ceiling (playwright headless render、 verification.html
+#                           REQ-VER-022 / tests/render-gate/README.md)。 corpus 全 page を 3 viewport
+#                           (375/768/1280) で render し、 flowchart の cluster/node/label 幾何欠陥
+#                           4 class + chrome 幾何 2 class (horizontal-overflow / nav-over-content、
+#                           ADR-0039 §2.8) を捕捉する deterministic ceiling = folio dogfood (CI-only)。
+#                           (1) の render-safety gate (REQ-VER-021) は pure-bash で render 後 DOM を
+#                           見れず既知パターンしか lint できない floor。 非 flowchart 図は vacuous
+#                           warning で可視化する。 全 page × viewport の screenshot を artifact 保存
+#                           (人間 review の補助、 golden 化しない)。 決定性は vendored mermaid +
+#                           pinned playwright + pinned font (fonts-noto-cjk) で担保。
+#                           正式 decision 記録は ADR-0037 (+ ADR-0039 §2.8 で 3 viewport / chrome arm 拡張)。
 #
 # LLM ceiling (Phase F review agent = REQ-CI-011 declarative-form / 012 what-only) は
 # 非決定的ゆえ CI 非搭載 (authoring advisory、 ADR-0028 §2.3)。 render-gate は決定的ゆえ blocking。
@@ -87,7 +90,7 @@ jobs:
   # browser 依存ゆえ別 job に隔離し、 fast な bash 検証を遅らせない。 deterministic ゆえ blocking。
   render-gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10   # install + 5 ファイル render は通常数分。 apt/DL hang で runner を長時間占有させない。
+    timeout-minutes: 20   # install ~3分 + 全 corpus (~49 page) × 3 viewport render + screenshot ~7分 + artifact upload (~170MB) 数分。 apt/DL hang で runner を長時間占有させない。
     steps:
       - name: Checkout
         uses: actions/checkout@v5   # node24 ランタイム
@@ -116,6 +119,22 @@ jobs:
       - name: render-gate self-test (detector 検出力の floor-proof)
         run: python3 tests/render-gate/check.py --selftest
 
-      # 全 spec を実ブラウザで render し flowchart 幾何 overlap + render 不足を検出。 1 件でも exit 1 で merge block。
-      - name: render-safety ceiling (全 spec の flowchart 幾何 overlap)
-        run: python3 tests/render-gate/check.py
+      # 全 corpus を実ブラウザ × 3 viewport で render し、 flowchart 幾何 overlap + chrome 崩れ
+      # (horizontal-overflow / nav-over-content) + render 不足を検出。 1 件でも exit 1 で merge block。
+      # screenshot は workspace 外 (RUNNER_TEMP) へ — リポジトリを汚さず .gitignore も要らない。
+      - name: render-safety ceiling (全 corpus × 3 viewport の幾何 sweep)
+        run: python3 tests/render-gate/check.py --screenshot-dir "$RUNNER_TEMP/render-shots"
+
+      # 全 page × viewport の full-page screenshot を artifact 保存 (ADR-0039 §2.8: 人間 review の
+      # 補助に充てるのみで golden 比較はしない — pixel golden は brittle)。 FAIL 時こそ目視材料が
+      # 要るため always()。 sweep 前に selftest で落ちた場合は dir 不在 → ignore で空 upload を許容。
+      # サイズ実測 ~170MB (JPEG q80、 縦長 page の full-page ゆえ) — public repo の artifact storage は
+      # 無料 + retention 14 日で自動失効するため完全性 (全 page 証拠) を優先する。
+      - name: Upload render screenshots (人間 review 補助、 golden ではない)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: render-screenshots
+          path: ${{ runner.temp }}/render-shots
+          if-no-files-found: ignore
+          retention-days: 14

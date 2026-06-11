@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-gate selftest — 意図された scroll container (GOOD)</title>
+<style>
+  pre.scroll { overflow-x: auto; border: 1px solid #888; padding: 8px; }
+  pre.scroll .inner { display: inline-block; width: 2000px; height: 40px; background: #ded; }
+</style>
+</head>
+<body>
+<!--
+  render-gate self-test fixture (GOOD、 合成 page)。 chrome 幾何 detector(5) の false-positive ガード。
+  wide 図の <pre> 横スクロール (#121 のパターン) は「意図された」横スクロール — 中身 (幅 2000px) は
+  overflow-x:auto の container 内部で scroll/clip され、 document の scrollWidth に寄与しない。
+  375px viewport でも horizontal-overflow を flag してはならない (clean)。
+  これが fail するなら detector(5) が意図された scroll container を欠陥と誤認している。
+-->
+<h1>意図された横スクロール fixture</h1>
+<p>下の wide content は overflow-x:auto の container 内 — document は溢れない。</p>
+<pre class="scroll"><span class="inner">幅 2000px の中身 (container 内部で scroll される)</span></pre>
+</body>
+</html>

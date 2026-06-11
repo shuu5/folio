@@ -107,6 +107,7 @@
   <li class="toc--sub"><a href="#s11-1-readers">§11.1 ページ種別 × 主たる人間読者層 (定義)</a></li>
   <li class="toc--sub"><a href="#s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</a></li>
   <li class="toc--sub"><a href="#s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</a></li>
+  <li class="toc--sub"><a href="#s11-4-review-procedure">§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -950,6 +951,17 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </ul>
 
 <p><strong>audience toggle</strong> (ADR-0039 §2.5): chrome の inline script が、 <code>data-audience</code> 要素を持つ page にのみ「両方 / 人間向け / 機械向け」の 3 状態 toggle を生成する (no-JS では UI 自体が存在しない = progressive enhancement)。 実装は <strong>body class 切替のみ</strong> (<code>audience-human</code> = machine 精密部を隠す / <code>audience-machine</code> = human 派生 view を減光)・DOM 構造不変・<strong>永続なし</strong> (状態はページ内のみ)。 連続閲覧の煩わしさが実機 walk で実証されたら localStorage 昇格 (graceful degradation 付き) する片道を注記する。 closed <code>&lt;details&gt;</code> の中身は UA の rendering skip ゆえ author CSS では開けない — 開閉は読者操作に委ねる (toggle の設計境界)。</p>
+
+<h3 id="s11-4-review-procedure">§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)</h3>
+
+<p>「読める」の検査は三層で行う。 下層 = 機械 (deterministic): readability floor (<a href="verification.html#req-ver-023">REQ-VER-023</a>) + render-gate ceiling (<a href="verification.html#req-ver-022">REQ-VER-022</a>、 幾何 detector 6 class × 3 viewport + screenshot artifact)。 幾何が clean でも読みにくい page はある — その上層 2 手続きを <strong>presentation 変更時の必須 step</strong> と定める (適用 trigger = ページ追加 / template・chrome・<code>common.css</code> の変更 / spec-row 等の表示構造変更):</p>
+
+<ul>
+  <li><strong>readability review lens (常設、 MUST)</strong> — 「初見の外部開発者として index から歩く」persona-based の LLM review を回す。 §11.1 の読者層定義と <a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a> を検査観点に持ち、 幾何でなく<strong>読書体験</strong> (導線が切れていないか・初見で迷子にならないか・既定表示で要旨が掴めるか) を検査する。 常設形態 = plugin root <code>agents/readability-walk.md</code> (spawn して使う。 本討論の監査 lens の常設化、 ADR-0039 §2.8)。</li>
+  <li><strong>user 実機 walk (MUST)</strong> — template 変更を含む presentation 変更は、 user の実機 walk (公開 site または local 配信での目視) を close/release 前の必須 step とする。 「読める」の最終検査器は人間であることを手続きとして認める (P-14 の限界認識と対)。 render-gate の screenshot artifact は walk の補助材料。</li>
+</ul>
+
+<p>この 2 手続きは LLM review + 人間の目視ゆえ非決定的で、 <strong>機械 gate (CI) を持たない</strong> (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 の LLM-ceiling 非搭載と同根拠)。 実施は authoring 規律 + Phase F / 独立 ceiling review が担保し、 違反 (lens/walk を踏まない presentation 変更の ship) を review が指摘する — §11.3 の fold 規律と同じ昇格規律 (違反頻度を見て floor 化を判断) に従う。</p>
 </section>
 
 <!-- folio:chrome-bottom -->

@@ -404,6 +404,24 @@ table {
   overflow: hidden;
   box-shadow: var(--folio-elev-1);
 }
+
+/* wide table の page 横スクロール防止 (render-gate chrome 幾何 arm が検出した実欠陥の fix):
+ * display:table は自身を scroll container 化できず、 min-content 幅が column を超えると box ごと
+ * viewport を溢れて document 全体に横スクロール (= chrome 崩れ) を生む。 body は max-width 940px
+ * (border-box、 横 padding 48px 内包) で頭打ち = 本文域は最大 892px。 988px (= 940 + 余裕 48px)
+ * 以下では viewport 縮小に伴い本文域が 892px から狭まっていくため、 figure.diagram pre と同じ
+ * width:max-content + max-width:100% idiom (#121) で table を block scroll container 化する —
+ * 小 table は tight に shrink-wrap、 wide table は column 幅で頭打ち + 内部横スクロール。
+ * desktop (>988px) は本文域 892px 固定で現 corpus の全 table が収まり (render-gate@1280 実測
+ * clean)、 従来の display:table のまま = 視覚不変。 print は下の @media print が本 rule を解除。 */
+@media (max-width: 988px) {
+  table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
 th, td {
   border-bottom: 1px solid var(--folio-border-default);
   padding: 0.625rem 0.875rem;
@@ -1035,8 +1053,11 @@ a.xref[data-tooltip]::after,
   text-align: left;
   text-decoration: none;
   white-space: normal;
+  /* 非 hover 時は display:none — visibility:hidden だと非描画でも layout に残り、 右端付近の
+   * term から viewport 外へ伸びた tooltip box が document の scrollable overflow に寄与して
+   * page 全体に常時横スクロールを生む (render-gate chrome 幾何 arm が検出した実欠陥)。 */
+  display: none;
   opacity: 0;
-  visibility: hidden;
   transition: opacity 0.12s ease-out;
   pointer-events: none;
 }
@@ -1044,8 +1065,18 @@ a.xref[data-tooltip]:hover::after,
 a.xref[data-tooltip]:focus-visible::after,
 .term[data-tooltip]:hover::after,
 .term[data-tooltip]:focus-visible::after {
+  display: block;
   opacity: 1;
-  visibility: visible;
+}
+/* display:none からの遷移は opacity transition が始点を持たない — @starting-style で fade-in を
+ * 温存する (未対応 browser は即時表示に degrade、 従来も fade-in のみで fade-out は無かった)。 */
+@starting-style {
+  a.xref[data-tooltip]:hover::after,
+  a.xref[data-tooltip]:focus-visible::after,
+  .term[data-tooltip]:hover::after,
+  .term[data-tooltip]:focus-visible::after {
+    opacity: 0;
+  }
 }
 
 /* ========================================================================
@@ -1275,4 +1306,10 @@ body.audience-machine .req__ears { opacity: 0.45; }
   body.audience-machine .essence,
   body.audience-machine .req__essence,
   body.audience-machine .req__ears { opacity: 1; }
+  /* print 時は table の block scroll-container 化 (上の max-width:988px rule) を解除する。
+   * print の media query 評価は用紙 page box 幅 (A4 縦 ≈ 794 CSS px) で行われ 988px が TRUE に
+   * なるが、 紙は scroll できない — block + width:max-content のままだと wide table が紙面右端で
+   * 切り落とされる (off-page content lost、 A4 PDF 実 render で実証)。 display:table + width:100%
+   * に戻せば auto-layout が column を用紙幅に shrink させ fit-to-page で全列が印刷される。 */
+  table { display: table; width: 100%; overflow: visible; }
 }

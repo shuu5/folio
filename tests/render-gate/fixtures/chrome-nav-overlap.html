@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-gate selftest — nav-over-content (BAD, 合成 page)</title>
+<style>
+  body { margin: 0; }
+  nav.broken { position: absolute; top: 0; left: 0; width: 100%; height: 120px; background: rgba(200, 0, 0, .15); }
+  h1, div.card { margin: 0; height: 40px; }
+</style>
+</head>
+<body>
+<!--
+  render-gate self-test fixture (BAD、 合成 page)。 chrome 幾何 detector(6) nav-over-content の
+  arm を検証する。 通常 flow の隣接 block は矩形が交差しない — overlap は position:absolute 化や
+  負 margin 等の chrome 注入事故でのみ生じる。 ここでは nav を absolute (height 120px) にして
+  本文 (h1 + div.card、 normal flow で y=0..80 に座る) へ完全に被せ、 NAV_OVERLAP_FRAC=0.15 を
+  確実に跨ぐ (本文 block は nav 矩形に全包含 = frac 1.0)。 本文側は semantic 要素 (h1) と
+  非 semantic wrapper (div) の両経路を置く — CONTENT_SEL が generic div を含まないと div 直下
+  テキストへの被りを取りこぼす (実証済 false negative) ことへの回帰ガード。 幅は 100% で
+  viewport に収まり detector(5) は発火しない。
+-->
+<nav class="broken" aria-label="壊れた nav">absolute 化して本文に被さる nav</nav>
+<h1>本文見出し (nav の下敷き)</h1>
+<div class="card">非 semantic な wrapper div 直下の本文 — nav 矩形に完全に覆われている。</div>
+</body>
+</html>
