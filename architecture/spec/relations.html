@@ -6,6 +6,7 @@
 <meta name="folio-doc-type" content="spec">
 <meta name="folio-layer" content="core">
 <meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-glossary-automark" content="enabled">
 <meta name="folio-status" content="draft">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-xref-completeness" content="enabled">
@@ -102,8 +103,8 @@
 <!-- /folio:chrome-toc -->
 
 <aside class="informative">
-<p>本文書は folio framework の <strong>関係性管理 spec (relation management spec)</strong>。 各 spec file 同士の関係 (置き換え / 参照 / 依存 / 拡張 等) を <strong>machine-readable</strong> に表現する規約を定める。</p>
-<p><strong>背景</strong>: HTML 仕様書群が増えると AI agent が全文を読まずに「どの spec がどう繋がっているか」 を把握する仕組みが必要。 本仕様は <a href="../research/spec-graph-management-research.html">spec-graph-management-research.html</a> (5 並列 researcher × 117 ソースの調査) の結論から、 Phase 1 採用と判断された 3 要素 (W3C 標準語彙 + JSON-LD + inventory schema) を規範化する。</p>
+<p>本文書は folio framework の <strong>関係性管理 <span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span> (relation management spec)</strong>。 各 spec file 同士の関係 (置き換え / 参照 / 依存 / 拡張 等) を <strong>machine-readable</strong> に表現する規約を定める。</p>
+<p><strong>背景</strong>: HTML 仕様書群が増えると AI agent が全文を読まずに「どの spec がどう繋がっているか」 を把握する仕組みが必要。 本仕様は <a href="../research/spec-graph-management-research.html">spec-graph-management-research.html</a> (5 並列 researcher × 117 ソースの調査) の結論から、 Phase 1 採用と判断された 3 要素 (W3C 標準語彙 + JSON-LD + <span class="term" data-term="inventory" data-tooltip="architecture 全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。">inventory</span> schema) を規範化する。</p>
 </aside>
 
 <aside class="informative">
@@ -133,7 +134,7 @@
 </aside>
 
 <aside class="reader-persona" data-persona="AI Agent">
-  <p>AI agent (spec edit を行う Claude Code 等) は、 spec 編集前に本 spec § 1〜§ 3 を必読する。 編集対象 spec の <code>&lt;head&gt;</code> JSON-LD を更新する際は §1〜§2 の語彙のみを使い、 独自命名を導入しない (MUST)。 不足する関係性は §5 経由で folio amendment ADR として提案する。</p>
+  <p>AI agent (spec edit を行う Claude Code 等) は、 spec 編集前に本 spec § 1〜§ 3 を必読する。 編集対象 spec の <code>&lt;head&gt;</code> JSON-LD を更新する際は §1〜§2 の語彙のみを使い、 独自命名を導入しない (MUST)。 不足する関係性は §5 経由で folio amendment <span class="term" data-term="ADR" data-tooltip="Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。">ADR</span> として提案する。</p>
 </aside>
 <figure class="diagram" data-diagram-type="relations-pipeline">
 <pre class="mermaid">
@@ -185,7 +186,7 @@ flowchart TB
       <td>subsection (一部である)</td>
       <td><code>dc:hasPart</code></td>
       <td><code>dc:isPartOf</code></td>
-      <td>cluster (例: decisions/) ↔ 個別 ADR</td>
+      <td><span class="term" data-term="cluster" data-tooltip="architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。">cluster</span> (例: decisions/) ↔ 個別 ADR</td>
     </tr>
     <tr>
       <td>requirement (要求事項)</td>
@@ -272,7 +273,7 @@ flowchart TB
 <h2>§2. folio Custom Vocabulary</h2>
 
 <aside class="informative">
-  <p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し constitution <a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a> に準じた user 承認を経る MUST。</p>
+  <p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し <span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> <a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a> に準じた user 承認を経る MUST。</p>
 </aside>
 
 <h3 id="s2-1-vocab-table">§2.1 folio 独自語彙 (規範定義)</h3>
@@ -390,7 +391,7 @@ flowchart TB
   <li><strong>同一 dir 内 spec</strong>: <code>"@id": "./&lt;filename&gt;"</code>。 例: <code>"./rules.html"</code>。</li>
   <li><strong>上位 dir spec</strong>: <code>"@id": "../&lt;path&gt;"</code>。 例: <code>"./constitution.html"</code>。</li>
   <li><strong>section anchor</strong>: <code>"@id": "&lt;path&gt;#&lt;section-id&gt;"</code>。 例: <code>"./rules.html#s4-format"</code>。</li>
-  <li><strong>絶対 URL 禁止</strong>: <code>architecture/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の vocabulary URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。</li>
+  <li><strong>絶対 URL 禁止</strong>: <code>architecture/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。">vocabulary</span> URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。</li>
 </ol>
 
 <h3 id="s3-4-conformance">§3.4 Conformance Level (Phase 1)</h3>
@@ -541,7 +542,7 @@ flowchart TB
   <li><code>architecture/spec/</code> + <code>architecture/decisions/</code> + <code>architecture/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は <a class="xref" href="../decisions/ADR-0021-constitution-x4-amendment.html" data-tooltip="forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)">ADR-0021</a> で廃止)</li>
   <li>scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの</li>
   <li><strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 <a class="xref" href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html" data-tooltip="forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)">ADR-0023</a>)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)</li>
-  <li><strong>生成 view は scan 外</strong>: <code>folio build</code> が graph から導出する表示層 (<code>architecture/index.html</code> landing / <code>glossary.html</code>) は architecture 直下 (3 dir の外) に置かれ scan 対象に入らない — graph (SSoT) → view (派生) の一方向を保つ (<a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> / <a class="xref" href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" data-tooltip="folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は">ADR-0036</a> / <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a>。 view の鮮度は validate の nav-regen-drift / chrome-drift が検査)</li>
+  <li><strong>生成 view は scan 外</strong>: <code>folio build</code> が graph から導出する表示層 (<code>architecture/index.html</code> <span class="term" data-term="landing" data-tooltip="architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。">landing</span> / <code>glossary.html</code>) は architecture 直下 (3 dir の外) に置かれ scan 対象に入らない — graph (<span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span>) → view (派生) の一方向を保つ (<a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> / <a class="xref" href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" data-tooltip="folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は">ADR-0036</a> / <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a>。 view の鮮度は validate の nav-regen-drift / chrome-drift が検査)</li>
 </ul>
 
 <h4 id="s4-4-2-output">§4.4.2 Output path</h4>
@@ -556,12 +557,12 @@ flowchart TB
   <thead><tr><th>失敗種別</th><th>動作</th></tr></thead>
   <tbody>
     <tr><td>JSON-LD parse error</td><td>該当 file を skip + stderr に warn、 inventory 全体生成は継続</td></tr>
-    <tr><td>stale 検出 (CI build 時)</td><td>CI failure (<a href="rules.html#s10-2">rules.html §10.2 REQ-CI-016</a> json-ld-validation gate と integration)</td></tr>
+    <tr><td>stale 検出 (CI build 時)</td><td>CI failure (<a href="rules.html#s10-2">rules.html §10.2 REQ-CI-016</a> json-ld-validation <span class="term" data-term="gate" data-tooltip="folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。">gate</span> と integration)</td></tr>
     <tr><td>file system access error</td><td>fatal exit、 stderr に error</td></tr>
   </tbody>
 </table>
 
-<p>本 §4.4 の規範を実機検証する scenario は、 試作段階では <a href="verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-010 / REQ-VER-011</a> の <code>tests/scenarios/inventory-gen.yaml</code> (kind: cli-golden、 <code>folio inventory</code> の生成出力を golden と byte-diff) に集約される。 完成形の auto-regen / stale 検出 (<a href="../research/plugin-sandbox-verification-research.html#s7-5-usecases">research §7.5</a> use case 7 <code>inventory-regen.yaml</code> / REQ-REL-004) は Phase X4+。</p>
+<p>本 §4.4 の規範を実機検証する scenario は、 試作段階では <a href="verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-010 / REQ-VER-011</a> の <code>tests/scenarios/inventory-gen.yaml</code> (kind: cli-golden、 <code>folio inventory</code> の生成出力を <span class="term" data-term="golden" data-tooltip="期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。">golden</span> と byte-diff) に集約される。 完成形の auto-regen / stale 検出 (<a href="../research/plugin-sandbox-verification-research.html#s7-5-usecases">research §7.5</a> use case 7 <code>inventory-regen.yaml</code> / REQ-REL-004) は Phase X4+。</p>
 </section>
 
 <!-- ====================================================================
@@ -571,7 +572,7 @@ flowchart TB
 <h2>§5. Bidirectional Reference</h2>
 
 <aside class="informative">
-  <p>本 §5 は forward relation を spec 中で記述する <strong>MUST</strong> 規範および、 reverse relation の auto-materialize 計画 (Phase X3+) を集約する。 構成: §5.1 dual 対象関係 (table)、 §5.2 precedent (informative aside)、 §5.3 EARS 規範要件 (REQ-REL-001〜004)。</p>
+  <p>本 §5 は forward relation を spec 中で記述する <strong>MUST</strong> 規範および、 reverse relation の auto-materialize 計画 (Phase X3+) を集約する。 構成: §5.1 dual 対象関係 (table)、 §5.2 precedent (informative aside)、 §5.3 <span class="term" data-term="EARS" data-tooltip="Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。">EARS</span> 規範要件 (REQ-REL-001〜004)。</p>
 </aside>
 
 <h3 id="s5-1-pattern">§5.1 双方向 dual の対象関係</h3>

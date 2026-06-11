@@ -8,6 +8,9 @@ description: |
   completeness = opt-in doc あり OK) で exit 0 + clean report を出すことを実証する
   (ADR-0034 §2.6、 REQ-VER-017、 xref-validate-violations.yaml = violation 側の対)。
   fixture sample は folio fix で canonical wrap 済 (3 xref: P-5 / REQ-VER-001 / ADR-0033)。
+  さらに sample.html §2 は data-tooltip 属性に token (REQ-NOPE-001/P-99) を持つ span を置き、
+  completeness scanner の属性 mask (tag 構文を space 置換し内側 text のみ scan) が退行したら
+  orphan-mention で exit 1 = RED 化することを pin する (ef4 slice B の F1 回帰 guard)。
 
 # --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/017) ---
 command: ["validate", "--root", "tests/fixtures/xref-validate-clean"]

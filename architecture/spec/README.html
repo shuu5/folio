@@ -6,6 +6,7 @@
 <meta name="folio-doc-type" content="cluster-readme">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-glossary-automark" content="enabled">
 <meta name="folio-status" content="active">
 <meta name="folio-xref-completeness" content="enabled">
 <title>folio — architecture/spec/ (framework spec index)</title>
@@ -66,7 +67,7 @@
 
 
 <aside class="informative">
-<p>本 dir (<code>architecture/spec/</code>) は folio framework の design-intent spec を集約する (constitution + rules + folio-self-spec + relations + verification)。 spec は draft 状態でブラッシュアップ対象、 constitution は不変資産 (scan 対象外)。 X4-C で <code>scratch/</code> から canonical layout へ物理移植済 (<a href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)。</p>
+<p>本 dir (<code>architecture/spec/</code>) は folio framework の design-intent <span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span> を集約する (<span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> + rules + folio-self-spec + relations + verification)。 spec は draft 状態でブラッシュアップ対象、 constitution は不変資産 (scan 対象外)。 X4-C で <code>scratch/</code> から canonical layout へ物理移植済 (<a href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)。</p>
 </aside>
 
 <!-- ====================================================================
@@ -75,7 +76,7 @@
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
 
-<p>本 README は <strong>spec/ cluster の index</strong>。 cluster 内 spec file 同士の関係を一望し、 reader (人間 / AI agent) のナビゲーションを支える。 repo-root <code>inventory.json</code> は <code>folio inventory</code> CLI で auto-generate される (<a href="relations.html#s4-inventory">relations.html §4</a>)、 本 README はその人手版 Tier 1 navigation index を兼ねる。</p>
+<p>本 README は <strong>spec/ <span class="term" data-term="cluster" data-tooltip="architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。">cluster</span> の index</strong>。 cluster 内 spec file 同士の関係を一望し、 reader (人間 / AI agent) のナビゲーションを支える。 repo-root <code>inventory.json</code> は <code>folio inventory</code> CLI で auto-generate される (<a href="relations.html#s4-inventory">relations.html §4</a>)、 本 README はその人手版 Tier 1 navigation index を兼ねる。</p>
 
 <p>constitution (不変資産、 spec graph scan 対象外の特別枠) は本 cluster の index 対象外。 編集禁止、 cross-ref のみ。</p>
 </section>
@@ -94,7 +95,7 @@
   <tbody>
     <tr>
       <td><a href="rules.html"><code>rules.html</code></a></td>
-      <td>Layer 1 consumer 向け universal rules (markup / naming / EARS / Mandatory Actions)</td>
+      <td>Layer 1 consumer 向け universal rules (markup / naming / <span class="term" data-term="EARS" data-tooltip="Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。">EARS</span> / Mandatory Actions)</td>
       <td>draft (v0.5.0)</td>
       <td><a href="./constitution.html"><code>./constitution.html</code></a></td>
       <td>—</td>
@@ -108,14 +109,14 @@
     </tr>
     <tr>
       <td><a href="relations.html"><code>relations.html</code></a></td>
-      <td>spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory schema)</td>
+      <td>spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + <span class="term" data-term="inventory" data-tooltip="architecture 全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。">inventory</span> schema)</td>
       <td>draft (v0.5.0)</td>
       <td><a href="rules.html"><code>rules.html</code></a></td>
       <td>—</td>
     </tr>
     <tr>
       <td><a href="verification.html"><code>verification.html</code></a></td>
-      <td>sandbox verification framework spec (機能単位 use case verification SSoT、 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜008)</td>
+      <td><span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> verification framework spec (機能単位 use case verification <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span>、 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜008)</td>
       <td>draft (v0.1.0)</td>
       <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
       <td>—</td>
@@ -167,7 +168,7 @@ graph TD
   classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#333333
   classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#333333
 </pre>
-<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (frozen・scan 対象外)、 spec/ 配下 4 file (rules / folio-self-spec / relations / verification) は draft (active editing)。</figcaption>
+<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (<span class="term" data-term="frozen" data-tooltip="accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。">frozen</span>・scan 対象外)、 spec/ 配下 4 file (rules / folio-self-spec / relations / verification) は draft (active editing)。</figcaption>
 </figure>
 </section>
 
@@ -182,8 +183,8 @@ graph TD
 <ol>
   <li><strong><a href="./constitution.html">constitution.html</a></strong> — folio の 14 不変原則 (前提知識、 全 spec の基底)</li>
   <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
-  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (harness / plugin / bindings、 §7.6 試作 minimal scope)</li>
-  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD vocabulary、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
+  <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (<span class="term" data-term="harness" data-tooltip="scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。">harness</span> / plugin / bindings、 §7.6 試作 minimal scope)</li>
+  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。">vocabulary</span>、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
   <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 Step 1〜4 完遂済 / 試作 plugin 実機検証の規範)</li>
 </ol>
 
@@ -196,7 +197,7 @@ graph TD
 <section id="s5-changelog" class="informative">
 <h2>§5. Change Log</h2>
 
-<p>初期 (2026-05-22〜24) の change log table は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §2</a> へ退避した (<a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.4 の作業ログ撤去、 2026-06-11)。 以後の変更履歴の SSoT は <strong>git log + 各 ADR + delta marker (<a href="rules.html#s5-delta">rules §5</a>)</strong> — 本 README には変更履歴を蓄積しない。</p>
+<p>初期 (2026-05-22〜24) の change log table は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §2</a> へ退避した (<a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.4 の作業ログ撤去、 2026-06-11)。 以後の変更履歴の SSoT は <strong>git log + 各 <span class="term" data-term="ADR" data-tooltip="Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。">ADR</span> + delta <span class="term" data-term="marker" data-tooltip="HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。">marker</span> (<a href="rules.html#s5-delta">rules §5</a>)</strong> — 本 README には変更履歴を蓄積しない。</p>
 </section>
 
 <section id="s6-todo" class="informative">
@@ -204,7 +205,7 @@ graph TD
 
 <h3 id="s6-1-dogfood">§6.1 Dogfood failure (frozen file、 user 判断待ち)</h3>
 
-<p>relations.html 導入に伴い既存 file に <strong>dogfood failure</strong> が残存:</p>
+<p>relations.html 導入に伴い既存 file に <strong><span class="term" data-term="dogfood" data-tooltip="folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。">dogfood</span> failure</strong> が残存:</p>
 
 <table>
   <thead><tr><th>file</th><th>問題</th><th>対応</th></tr></thead>
@@ -217,7 +218,7 @@ graph TD
     <tr>
       <td><a href="../decisions/ADR-0001-architecture-rules-split.html">ADR-0001</a> / <a href="../decisions/ADR-0002-scratch-layout.html">ADR-0002</a></td>
       <td>ADR-0001 は旧 <code>@context</code> 文字列形式だったが <strong>2026-05-25 に構造準拠化</strong> (folio validate が検出 → machine-readable block のみ object 化 + <code>@id</code> 追加、 commit 147674b、 user ratify 済)。 ADR-0002 は JSON-LD 自体なし。 新 ADR (0003/0013/0015 等) は <a href="relations.html#s3-2-full">relations §3.2</a> pattern (object 形式) を採用</td>
-      <td><a class="xref" href="../decisions/ADR-0001-architecture-rules-split.html" data-tooltip="folio v0.4.1-draft → v0.4.2-draft (PATCH bump)">ADR-0001</a> は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/prime golden 不変)。 <a class="xref" href="../decisions/ADR-0002-scratch-layout.html" data-tooltip="folio v0.4.2-draft">ADR-0002</a> は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
+      <td><a class="xref" href="../decisions/ADR-0001-architecture-rules-split.html" data-tooltip="folio v0.4.1-draft → v0.4.2-draft (PATCH bump)">ADR-0001</a> は machine-readable block を最小 touch で構造準拠化 (decision 本文・legacy key は frozen 不変、 inventory/<span class="term" data-term="prime" data-tooltip="inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。">prime</span> <span class="term" data-term="golden" data-tooltip="期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。">golden</span> 不変)。 <a class="xref" href="../decisions/ADR-0002-scratch-layout.html" data-tooltip="folio v0.4.2-draft">ADR-0002</a> は JSON-LD block 無しで validate/inventory 共に scan 対象外 (skip)。 旧 dogfood trace は本行に保持</td>
     </tr>
   </tbody>
 </table>
@@ -244,7 +245,7 @@ graph TD
     </tr>
     <tr>
       <td>hook 並列順序仕様</td><td>MEDIUM</td>
-      <td>hooks.json 内 2 つの PreToolUse hook (caller-marker + path-boundary) の実行順序 / 1 つが deny 時の他 hook 動作が Claude Code 公式仕様で未明示 (動作は OK 確認済)</td>
+      <td>hooks.json 内 2 つの PreToolUse hook (<span class="term" data-term="caller-marker" data-tooltip="spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。">caller-marker</span> + path-boundary) の実行順序 / 1 つが deny 時の他 hook 動作が Claude Code 公式仕様で未明示 (動作は OK 確認済)</td>
       <td>upstream docs 更新待ち or 実機検証</td>
     </tr>
     <tr>

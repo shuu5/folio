@@ -12,6 +12,8 @@
 # forbidden は意図的に載せない (vocabulary gate REQ-CI-013 の誤検出 risk を避ける = #110 D2)。
 # definition は単一行 (rules §3 schema)。 tooltip 機構は改行を扱わず、 HTML 特殊文字 (& < > ") は
 # folio fix が attribute-escape して data-tooltip に格納する。
+# definition に生の > / < を書かない (矢印は → / 比較は文章で表現): scan 系の tag 除去 (<[^>]*>) が
+# 属性内の生 > でタグ境界を誤認する latent を avoid する不変条件 (ef4 slice B ceiling)。
 terms:
   # --- 1.0.0 starter set: 中核 8 語 (folio-作法の最頻出語、 ADR-0036 §3 / #130 grill 確定) ---
   - canonical: "spec"
@@ -78,3 +80,40 @@ terms:
   - canonical: "caller-marker"
     domain: "folio-closed"
     definition: "spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。"
+  # --- 1.x 漸進 (ef4 jargon sweep 2026-06-11): 入口/検証/提示層の高頻度 folio-作法語 12 語 (ADR-0039 §2.4 + folio-a8y 吸収) ---
+  - canonical: "gate"
+    domain: "folio-closed"
+    definition: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。"
+  - canonical: "marker"
+    domain: "folio-closed"
+    definition: "HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。"
+  - canonical: "golden"
+    domain: "folio-closed"
+    definition: "期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。"
+  - canonical: "keystone"
+    domain: "folio-closed"
+    definition: "機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。"
+  - canonical: "frozen"
+    domain: "folio-closed"
+    definition: "accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。"
+  - canonical: "chrome"
+    domain: "folio-closed"
+    definition: "folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。"
+  - canonical: "curated region"
+    domain: "folio-closed"
+    definition: "marker の内側を人間が author し、 folio build が verbatim に往復保全する領域 (nav-curated / landing-hero)。 chrome と所有の向きが逆。"
+  - canonical: "remediate"
+    domain: "folio-closed"
+    definition: "validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。"
+  - canonical: "fold"
+    domain: "folio-closed"
+    definition: "details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。"
+  - canonical: "sandbox"
+    domain: "folio-closed"
+    definition: "tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。"
+  - canonical: "harness"
+    domain: "folio-closed"
+    definition: "scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。"
+  - canonical: "landing"
+    domain: "folio-closed"
+    definition: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。"

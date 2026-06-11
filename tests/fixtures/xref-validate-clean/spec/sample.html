@@ -15,5 +15,11 @@
 <h2>§1. 採用宣言</h2>
 <p>本 doc は <a class="xref" href="./constitution.html#p-5" data-tooltip="1 entity = 1 canonical name">P-5</a> に従い、 検証要件 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイルである。">REQ-VER-001</a> と設計判断 <a class="xref" href="../decisions/ADR-0033-fixture.html" data-tooltip="dual-audience hub fixture summary">ADR-0033</a> を参照する。</p>
 </section>
+<section id="s2" class="informative">
+<h2>§2. 属性内 token は裸言及にならない (F1 attr-mask pin)</h2>
+<p>下の span の data-tooltip 属性は token (<code>REQ-NOPE-001</code> / <code>P-99</code>) を含むが、 completeness scanner は tag 構文
+(属性込み) を mask するため orphan-mention に数えない: <span class="term" data-term="attr-mask-sample" data-tooltip="REQ-NOPE-001 と P-99 を含む definition 例 (属性 text は scan 対象外)">attr-mask-sample</span>。
+mask が退行すると本 doc が orphan-mention で exit 1 になり本 scenario が RED 化する (prose 側の token 言及は inline code mask で scan 対象外)。</p>
+</section>
 </body>
 </html>

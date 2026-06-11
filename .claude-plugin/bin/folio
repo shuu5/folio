@@ -890,7 +890,10 @@ folio_check_readability_floor_file() {
         return
       }
       if (isadr) return
-      n = gsub(/。/, "。", txt)
+      # 句点は tag 除去後の可視 text のみで数える (essence 内に auto-mark された <span class="term"
+      # data-tooltip="..."> の属性 text の 。 を数えない — tooltip は読者の本文ではない)。
+      plain2 = txt; gsub(/<[^>]*>/, "", plain2)
+      n = gsub(/。/, "。", plain2)
       if (n > 4) printf "W\t%s\t[readability-floor] %s の essence 句点 %d 個 > 4 (要旨は数文に収める、 REQ-VER-023 corpus 較正 2026-06-11)\n", rel, (secid != "" ? secid : "(container)"), n
     }
     /<(section|details)[^>]*data-audience="human"/ {
@@ -999,14 +1002,34 @@ folio_xref_essence() {
       ;;
     requirement)
       lid=$(printf '%s' "$token" | tr '[:upper:]' '[:lower:]')
+      # essence (span 形) は depth 追跡で閉じる: glossary auto-mark が essence 内に <span class="term">
+      # を nest しうるため、 最初の </span> 終端だと途中切断して tooltip text が変わる (stale-tooltip 誤検出
+      # + 派生 view の text 破壊、 ef4 slice B dogfood で実証)。 nested tag は folio_xref_plain が strip
+      # するため、 depth 抽出後の plain text は mark 前と byte 同一に保たれる。 p 形 (req__essence) は
+      # nested <p> 無しゆえ最初の </p> のまま。
       awk -v id="$lid" '
         index($0,"id=\"" id "\"")>0 && /<(details|section)/ && !cap { cap=1; ct=($0 ~ /<details/)?"</details>":"</section>"; buf="" }
         cap { buf=buf $0 "\n"; if(index($0,ct)>0 && !fin){ fin=1 } }
         fin {
-          pos=0; endtag=""
-          if(match(buf,/class="essence">/)){ pos=RSTART+RLENGTH; endtag="</span>" }
-          else if(match(buf,/class="req__essence">/)){ pos=RSTART+RLENGTH; endtag="</p>" }
-          if(pos>0){ rest=substr(buf,pos); if(match(rest,endtag)){ print substr(rest,1,RSTART-1) } else { print rest } }
+          pos=0; mode=""
+          if(match(buf,/class="essence">/)){ pos=RSTART+RLENGTH; mode="span" }
+          else if(match(buf,/class="req__essence">/)){ pos=RSTART+RLENGTH; mode="p" }
+          if(pos>0){
+            rest=substr(buf,pos)
+            if(mode=="p"){ if(match(rest,"</p>")){ print substr(rest,1,RSTART-1) } else { print rest } }
+            else {
+              depth=1; out=""
+              while(depth>0 && match(rest,/<\/?span[^>]*>/)){
+                out=out substr(rest,1,RSTART-1)
+                if(substr(rest,RSTART,2)=="</") depth--; else depth++
+                if(depth==0) break
+                out=out substr(rest,RSTART,RLENGTH)
+                rest=substr(rest,RSTART+RLENGTH)
+              }
+              if(depth>0) out=out rest
+              print out
+            }
+          }
           exit
         }' "$file" | folio_xref_plain
       ;;
@@ -1065,11 +1088,27 @@ folio_xref_scan_prose_tokens() {
   body=$(folio_extract_body "$file")
   selfdefs=$(folio_prose_only "$body" | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null \
     | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
+  # masking 2 層: (a) <a> 要素は anchor text ごと除去 (既 xref/link 済の言及)、 (b) その他の tag は
+  # tag 構文 (属性込み) のみ除去し内側 text は保持。 (b) が無いと <span class="term" data-tooltip="...">
+  # 等の属性内 text (definition が token を含む) を「裸の言及」と誤検出する — wrap は属性内を wrap
+  # できないため detect↔remediate parity が壊れ stuck-RED になる (ef4 slice B dogfood で実証、 #112 系の属性 hole)。
+  # 除去は空 drop でなく単一 space 置換 — 空 drop は隣接 text を連結し語境界を消して token 検出が
+  # false-negative になる (<td>Event</td><td>ADR-0017</td> → "EventADR-0017"、 ceiling 実証。 build_mask の space 置換と同 idiom)。
   folio_prose_only "$body" | grep -vP '<h[23][ >]' 2>/dev/null | awk '
     { line=$0; out=""
       while(length(line)>0){
-        if(ina){ q=index(line,"</a>"); if(q==0){ line="" } else { line=substr(line,q+4); ina=0 } }
-        else { p=index(line,"<a "); if(p==0){ out=out line; line="" } else { out=out substr(line,1,p-1); line=substr(line,p+3); ina=1 } } }
+        if(ina){ q=index(line,"</a>"); if(q==0){ line="" } else { line=substr(line,q+4); out=out " "; ina=0 } }
+        else if(intag){ q=index(line,">"); if(q==0){ line="" } else { line=substr(line,q+1); out=out " "; intag=0 } }
+        else {
+          p=index(line,"<")
+          if(p==0){ out=out line; line="" }
+          else {
+            out=out substr(line,1,p-1)
+            if(substr(line,p,3)=="<a " || substr(line,p,3)=="<a>"){ line=substr(line,p+3); ina=1 }
+            else { line=substr(line,p+1); intag=1 }
+          }
+        }
+      }
       print out }' \
     | grep -oP '(?<![-0-9A-Za-z])(P-[0-9]+|REQ(-[A-Z]+)+-[0-9]+|ADR-[0-9]{4})(?![-0-9A-Za-z])' 2>/dev/null \
     | LC_ALL=C sort -u | while IFS= read -r tk; do
@@ -1322,7 +1361,7 @@ folio_glossary_automark_doc() {
       if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
-      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[1-6][ >]/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)。 chrome 領域 (build 生成 view) も wrap しない (ADR-0039 §2.3、 prose_only と parity)
+      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[1-6][ >]/) && (line !~ /<div class="meta">/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)。 chrome 領域 (build 生成 view) も wrap しない (ADR-0039 §2.3、 prose_only と parity)。 div.meta (doc summary 行) も除外 — folio_extract_summary は最初の tag で切れる ([^<]*) ため mark が summary を破壊する (inventory/prime の 派生 SSoT、 ef4 slice B dogfood で実証)。 div.meta は単一行が corpus 規約 (line-based 判定ゆえ複数行 div.meta の継続行は除外されない)
       anc_in=ANC; incode_in=incode; intag_in=intag
       if(wrappable){
         for(ti=1; ti<=nt; ti++){

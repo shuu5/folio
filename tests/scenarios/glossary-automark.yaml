@@ -10,10 +10,11 @@ description: |
     (b) fix      が exit 0 で stale span を populate + prose ADR 初出を <span class="term"> に auto-mark
     (c) post-fix validate clean (exit 0) = 全 term mark が resolve + tooltip consistent
     (d) idempotency: 再 fix で exit 0 かつ tree sha256 不変 (初出 wrap 済 + tooltip 一致 = no-op)
-    (e) post_fix_require (3 literal): auto-mark の span 生成 (hover-only) + code/見出し skip を behavioral に捕捉
+    (e) post_fix_require (4 literal): auto-mark の span 生成 (hover-only) + code/見出し/div.meta skip を behavioral に捕捉
        - <span class="term" data-term="ADR" data-tooltip="…">ADR</span>   … prose 初出が span 化 (href なし)
        - <code>ADR</code>                                                  … code 内 ADR は wrap されず保全
        - §1. ADR は見出し                                                  … 見出し内 ADR は wrap されず保全
+       - <div class="meta">…ADR…</div>                                    … summary 行内は wrap されず保全 (summary 抽出 [^<]* の切断防止)
     (f) post_fix_forbid (1 literal): <a class="term" が post-fix tree に皆無 = anchor 形が完全撤去された (span 統一の mutation guard)
   consumer domain (python-thing) は folio-closed map 外ゆえ auto-mark 対象にならない (domain partition)。
   既 mark の "spec" は present skip (idempotent)。 非 opt-in doc では auto-mark は no-op (real corpus 不変 = keystone)。
@@ -27,6 +28,7 @@ post_fix_require:                       # post-fix tree に grep -F で全て残
   - '<span class="term" data-term="ADR" data-tooltip="decision record (auto-mark fixture)。">ADR</span>'
   - "<code>ADR</code>"
   - "§1. ADR は見出し"
+  - '<div class="meta">v0.1.0-draft &middot; ADR の auto-mark skip 検証 (div.meta は summary 抽出 SSoT ゆえ mark しない)</div>'
 
 post_fix_forbid:                        # span 統一後は auto-mark anchor 形が皆無 (transition 完了の mutation guard)
   - '<a class="term"'

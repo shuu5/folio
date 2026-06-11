@@ -49,10 +49,14 @@
   <dd>1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。</dd>
   <dt id="term-ceiling"><span class="term-name">ceiling</span></dt>
   <dd>LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。</dd>
+  <dt id="term-chrome"><span class="term-name">chrome</span></dt>
+  <dd>folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。</dd>
   <dt id="term-cluster"><span class="term-name">cluster</span></dt>
   <dd>architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。</dd>
   <dt id="term-constitution"><span class="term-name">constitution</span></dt>
   <dd>folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。</dd>
+  <dt id="term-curated-region"><span class="term-name">curated region</span></dt>
+  <dd>marker の内側を人間が author し、 folio build が verbatim に往復保全する領域 (nav-curated / landing-hero)。 chrome と所有の向きが逆。</dd>
   <dt id="term-data-audience"><span class="term-name">data-audience</span></dt>
   <dd>要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。</dd>
   <dt id="term-defined-object"><span class="term-name">defined-object</span></dt>
@@ -65,14 +69,34 @@
   <dd>defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。</dd>
   <dt id="term-floor"><span class="term-name">floor</span></dt>
   <dd>deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。</dd>
+  <dt id="term-fold"><span class="term-name">fold</span></dt>
+  <dd>details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。</dd>
+  <dt id="term-frozen"><span class="term-name">frozen</span></dt>
+  <dd>accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。</dd>
+  <dt id="term-gate"><span class="term-name">gate</span></dt>
+  <dd>folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。</dd>
+  <dt id="term-golden"><span class="term-name">golden</span></dt>
+  <dd>期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。</dd>
+  <dt id="term-harness"><span class="term-name">harness</span></dt>
+  <dd>scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。</dd>
   <dt id="term-invariant"><span class="term-name">invariant</span></dt>
   <dd>spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。</dd>
   <dt id="term-inventory"><span class="term-name">inventory</span></dt>
   <dd>architecture 全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。</dd>
+  <dt id="term-keystone"><span class="term-name">keystone</span></dt>
+  <dd>機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。</dd>
+  <dt id="term-landing"><span class="term-name">landing</span></dt>
+  <dd>architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。</dd>
+  <dt id="term-marker"><span class="term-name">marker</span></dt>
+  <dd>HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。</dd>
   <dt id="term-prime"><span class="term-name">prime</span></dt>
   <dd>inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。</dd>
   <dt id="term-progressive-disclosure"><span class="term-name">progressive disclosure</span></dt>
   <dd>情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。</dd>
+  <dt id="term-remediate"><span class="term-name">remediate</span></dt>
+  <dd>validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。</dd>
+  <dt id="term-sandbox"><span class="term-name">sandbox</span></dt>
+  <dd>tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。</dd>
   <dt id="term-spec"><span class="term-name">spec</span></dt>
   <dd>WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。</dd>
   <dt id="term-vocabulary"><span class="term-name">vocabulary</span></dt>

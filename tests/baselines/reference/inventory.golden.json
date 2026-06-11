@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-11T04:58:28Z",
+  "generatedAt": "2026-06-11T06:30:04Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1580,7 +1580,7 @@
         "id": "REQ-GLOSS-002",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-002",
-        "essence": "opt-in した living spec/research (folio-glossary-automark=enabled) では、 folio fix が domain: folio-closed 用語の doc 初出を best-effort で &lt;span class=\"term\" data-term=\"&lt;canonical&gt;\" data-tooltip=\"&lt;definition&gt;\"&gt; に auto-mark する (hover tooltip のみ・glossary.html へはリンクしない、 code/見出し/既 mark/consumer 用語は対象外、 全 occurrence は約束しない)。"
+        "essence": "opt-in した living spec/research (folio-glossary-automark=enabled) では、 folio fix が domain: folio-closed 用語の doc 初出を best-effort で &lt;span class=\"term\" data-term=\"&lt;canonical&gt;\" data-tooltip=\"&lt;definition&gt;\"&gt; に auto-mark する (hover tooltip のみ・glossary.html へはリンクしない、 code/見出し/div.meta (summary 行)/chrome 領域/既 mark/consumer 用語は対象外、 全 occurrence は約束しない)。"
       },
       {
         "id": "REQ-GLOSS-003",

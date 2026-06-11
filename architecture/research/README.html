@@ -6,6 +6,7 @@
 <meta name="folio-doc-type" content="cluster-readme">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-glossary-automark" content="enabled">
 <meta name="folio-status" content="active">
 <title>folio — architecture/research/</title>
 <link rel="stylesheet" href="../../common.css">
@@ -61,14 +62,14 @@
 <section id="s2-contents" class="informative">
 <h2>§2. Contents</h2>
 
-<p>本 cluster の実在 doc (exploration 領域ゆえ随時変動):</p>
+<p>本 <span class="term" data-term="cluster" data-tooltip="architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。">cluster</span> の実在 doc (exploration 領域ゆえ随時変動):</p>
 <ul>
   <li><a href="plugin-architecture-research.html"><code>plugin-architecture-research.html</code></a> — plugin 最小構成の業界調査 (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> の source)</li>
-  <li><a href="plugin-sandbox-verification-research.html"><code>plugin-sandbox-verification-research.html</code></a> — sandbox verification framework の調査 (<a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a> の source)</li>
-  <li><a href="spec-graph-management-research.html"><code>spec-graph-management-research.html</code></a> — spec graph (inventory / relations) 管理の調査</li>
-  <li><a href="presentation-design-patterns.html"><code>presentation-design-patterns.html</code></a> — human-first presentation layer の設計根拠調査 (grill 2026-06-10 決定 6 件の実装前提、 landing/chrome/開示/型システム 6 軸 + blueprint)</li>
+  <li><a href="plugin-sandbox-verification-research.html"><code>plugin-sandbox-verification-research.html</code></a> — <span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> verification framework の調査 (<a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a> の source)</li>
+  <li><a href="spec-graph-management-research.html"><code>spec-graph-management-research.html</code></a> — <span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span> graph (<span class="term" data-term="inventory" data-tooltip="architecture 全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。">inventory</span> / relations) 管理の調査</li>
+  <li><a href="presentation-design-patterns.html"><code>presentation-design-patterns.html</code></a> — human-first presentation layer の設計根拠調査 (grill 2026-06-10 決定 6 件の実装前提、 <span class="term" data-term="landing" data-tooltip="architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。">landing</span>/<span class="term" data-term="chrome" data-tooltip="folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。">chrome</span>/開示/型システム 6 軸 + blueprint)</li>
   <li><a href="x4-plan.html"><code>x4-plan.html</code></a> — Phase X4 分解 + 着手計画 (<strong>status=superseded</strong>、 履歴として保持)</li>
-  <li><a href="constitution-x4-amendment-proposal.html"><code>constitution-x4-amendment-proposal.html</code></a> — constitution X4 amendment 提案 (<strong>status=superseded</strong>、 履歴として保持)</li>
+  <li><a href="constitution-x4-amendment-proposal.html"><code>constitution-x4-amendment-proposal.html</code></a> — <span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> X4 amendment 提案 (<strong>status=superseded</strong>、 履歴として保持)</li>
   <li><a href="spec-readme-worklog-archive.html"><code>spec-readme-worklog-archive.html</code></a> — spec/README 作業ログ archive (2026-05 期 Change Log + Phase X3 解消済 defer 行、 <strong>status=superseded</strong>、 ADR-0039 §2.4 の撤去先)</li>
 </ul>
 
