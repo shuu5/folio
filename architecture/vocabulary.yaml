@@ -22,7 +22,7 @@ terms:
     definition: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。"
   - canonical: "constitution"
     domain: "folio-closed"
-    definition: "folio の不変原則 (P-1〜P-13) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。"
+    definition: "folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。"
   - canonical: "invariant"
     domain: "folio-closed"
     definition: "spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。"

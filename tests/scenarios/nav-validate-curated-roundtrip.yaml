@@ -4,7 +4,7 @@ ears_pattern: "state-driven"
 kind: "cli-golden"
 description: |
   生成 index.html の curated region が marker 構文を解説する <pre> 等で raw <!-- /folio:nav-curated -->
-  を含む場合でも、 folio build の curated 往復保全 (folio_build_extract_curated の first-open/last-close
+  を含む場合でも、 folio build の curated 往復保全 (folio_build_extract_region の first-open/last-close
   抽出) が region 内の raw marker 言及を内側として保全し、 以降の editorial を silent 切り捨てしないことの
   回帰 guard。 fixture の index は curated に raw close marker + sentinel (EDITORIAL-AFTER-RAW-MARKER) を
   含み build round-trip 済ゆえ、 nav-regen-drift gate が [OK] (emit == committed index) になる = 抽出が

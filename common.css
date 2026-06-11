@@ -1004,3 +1004,72 @@ dl.glossary dt:target {
   margin-top: 2rem;
   font-size: var(--folio-text-small, 0.875rem);
 }
+
+/* ========================================================================
+ * Landing hero 層 (ADR-0039 §2.2、 folio build が生成する architecture/index.html)。
+ *   4 層 template の (1) hero 一文 (2) 単一 CTA (3) 読者別 3 カード を様式化する。
+ *   型 (構造 = grid/card) は build が所有し、 文言は curated region folio:landing-hero に
+ *   人間が author する。 JS なし・CSS grid のみ・狭幅では auto-fit が 1 カラムに収束する。
+ *   CTA/card の文字色は --folio-text-invert を使う (dark mode は brand が明色に swap する
+ *   ため #fff 固定だと contrast 破綻、 rules §4.6 / WCAG 1.4.3)。
+ * ====================================================================== */
+.landing-hero { margin: 0 0 2.5rem; }
+.landing-tagline {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  max-width: var(--folio-width-narrative);
+}
+.landing-cta-row { margin: 1.25rem 0; }
+a.landing-cta {
+  display: inline-block;
+  background: var(--folio-brand);
+  color: var(--folio-text-invert);
+  padding: 0.65rem 1.4rem;
+  border-radius: var(--folio-radius-card);
+  text-decoration: none;
+  font-weight: 600;
+}
+a.landing-cta:hover {
+  box-shadow: var(--folio-elev-1);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+a.landing-cta:focus-visible {
+  outline: 2px solid var(--folio-border-focus);
+  outline-offset: 2px;
+}
+.reader-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.9rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+}
+a.reader-card {
+  display: block;
+  border: 1px solid var(--folio-border-default);
+  border-radius: var(--folio-radius-card);
+  padding: 1rem 1.1rem;
+  text-decoration: none;
+  background: var(--folio-surface-normal);
+}
+a.reader-card:hover {
+  border-color: var(--folio-brand);
+  box-shadow: var(--folio-elev-1);
+}
+a.reader-card:focus-visible {
+  outline: 2px solid var(--folio-border-focus);
+  outline-offset: 2px;
+}
+.reader-card__act {
+  display: block;
+  font-weight: 700;
+  color: var(--folio-brand);
+  margin-bottom: 0.3rem;
+}
+.reader-card__desc {
+  display: block;
+  color: var(--folio-text-secondary);
+  font-size: var(--folio-text-small);
+  line-height: 1.55;
+}

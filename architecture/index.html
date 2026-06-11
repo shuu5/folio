@@ -3,6 +3,7 @@
 <head>
 <!-- folio:generated source=folio-build do-not-edit -->
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="nav-index">
 <meta name="folio-generated" content="folio-build">
 <meta name="folio-status" content="active">
@@ -24,14 +25,20 @@
   <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
 </header>
 
-<aside class="informative">
-  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は下記 curated region に置きます。</p>
-</aside>
+<section class="landing-hero">
+<!-- folio:landing-hero -->
+<p class="landing-tagline">folio は、 人間と AI agent が<strong>同じ architecture spec を読み書きする</strong>ための spec-writing framework です。 仕様は HTML + JSON-LD で記述され、 機械検証 (<code>folio validate</code>) と人間可読性 (P-14) の両方を恒久ゲートで保ちます。</p>
+<p class="landing-cta-row"><a class="landing-cta" href="https://github.com/shuu5/folio#readme">まずここから — 導入手順 (repo README)</a></p>
+<nav class="reader-cards" aria-label="読者別の入口">
+  <a class="reader-card" href="https://github.com/shuu5/folio#readme"><span class="reader-card__act">初めて folio を使う →</span><span class="reader-card__desc">導入手順と全体像 (repo README)</span></a>
+  <a class="reader-card" href="spec/README.html"><span class="reader-card__act">仕様・要件を調べる →</span><span class="reader-card__desc">spec — rules / relations / verification (WHAT)</span></a>
+  <a class="reader-card" href="decisions/README.html"><span class="reader-card__act">設計の経緯を追う →</span><span class="reader-card__desc">decisions — Architecture Decision Records (WHY)</span></a>
+</nav>
+<!-- /folio:landing-hero -->
+</section>
 
 <!-- folio:nav-curated -->
 <section class="curated">
-<h2>はじめに</h2>
-<p>folio 自身の design-intent 空間 (P-7 3-domain、 self-host)。 cluster 一覧と各 doc は下記、 各 cluster の README.html が索引。 この index は <code>folio build</code> が graph から生成し、 この curated region のみ手で編集する。</p>
 <h2>Key documents</h2>
 <ul>
   <li><a href="spec/constitution.html">constitution.html</a> — 不変 14 原則 (編集禁止、 graph 走査外ゆえ手 pin)</li>
@@ -130,6 +137,10 @@
 </ul>
 </details>
 </section>
+
+<aside class="informative">
+  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は hero (<code>folio:landing-hero</code>) と curated region (<code>folio:nav-curated</code>) に置きます。</p>
+</aside>
 
 </body>
 </html>

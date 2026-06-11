@@ -1986,22 +1986,24 @@ folio_build_attresc() {
   printf '%s' "$1" | sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' -e 's/"/\&quot;/g'
 }
 
-# 生成 index ($1) の curated region <!-- folio:nav-curated --> ... <!-- /folio:nav-curated --> の
-# 内側 (両 marker 自身は除く) を verbatim に stdout 出力する (ADR-0035 §2.4 curated 隔離)。 file 不在・
+# 生成 doc ($1) の curated region <!-- <name> --> ... <!-- /<name> --> ($2 = marker 名、 例
+# folio:nav-curated / folio:landing-hero) の内側 (両 marker 自身は除く) を verbatim に stdout 出力する
+# (ADR-0035 §2.4 curated 隔離、 ADR-0039 §2.2 が landing-hero に同 idiom を再利用)。 file 不在・
 # marker 無し・region 空なら空文字。 build はこれを読み戻して再 emit し human-authored editorial を保つ
 # (curated 往復保全)。 cluster section は graph から再生成、 curated は人間 SoT として round-trip する。
 #
 # 境界は「最初の open 行」と「最後の close 行」で取る (first-open / last-close)。 単純な state-machine
 # (open で capture 開始 / close で停止) だと、 curated editorial 本文が marker を解説する <pre> 等で raw
-# <!-- /folio:nav-curated --> を含むとそこで早期終端し以降を silent に切り捨てる (= #110/#116/#119 と
+# close marker を含むとそこで早期終端し以降を silent に切り捨てる (= #110/#116/#119 と
 # 同型の raw-mention 誤動作、 ceiling 実機再現)。 first-open/last-close なら region 内の raw marker 言及を
 # 内側として保全する (structural な open は必ず最初・close は必ず最後ゆえ idempotent)。 escaped marker
-# (&lt;) は HTML comment にならず boundary regex に一致しないため元から無害。
-folio_build_extract_curated() {
-  local f="$1" open_ln close_ln
+# (&lt;) は HTML comment にならず boundary regex に一致しないため元から無害。 marker 名は [a-z:-] のみ
+# (regex メタ文字を含まない) を前提とする。
+folio_build_extract_region() {
+  local f="$1" name="$2" open_ln close_ln
   [[ -f "$f" ]] || return 0
-  open_ln=$(grep -nE '<!--[[:space:]]*folio:nav-curated[[:space:]]*-->' "$f" | head -1 | cut -d: -f1)
-  close_ln=$(grep -nE '<!--[[:space:]]*/folio:nav-curated[[:space:]]*-->' "$f" | tail -1 | cut -d: -f1)
+  open_ln=$(grep -nE "<!--[[:space:]]*${name}[[:space:]]*-->" "$f" | head -1 | cut -d: -f1)
+  close_ln=$(grep -nE "<!--[[:space:]]*/${name}[[:space:]]*-->" "$f" | tail -1 | cut -d: -f1)
   # close が open の直後 (隣接 = 空 region) なら内側ゼロ行ゆえ空を返す。 close_ln > open_ln+1 (= 間に
   # 最低 1 行) の時だけ sed する (sed の逆範囲 "N+1,N p" は GNU sed で line N+1 を出してしまう footgun 回避)。
   [[ -n "$open_ln" && -n "$close_ln" && "$close_ln" -gt "$((open_ln + 1))" ]] || return 0
@@ -2030,9 +2032,12 @@ folio_build_emit_index() {
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
-  # curated region 往復保全 (ADR-0035 §2.4): 既存 index の human-authored editorial を読み戻す。
+  # curated region 往復保全 (ADR-0035 §2.4 + ADR-0039 §2.2): 既存 index の human-authored
+  # editorial (nav-curated) と hero 文言 (landing-hero) を読み戻す。
   # build write path は temp→mv ゆえ emit 実行中も ${root_abs}/index.html は intact (truncate されない)。
-  local curated; curated=$(folio_build_extract_curated "${root_abs}/index.html")
+  local curated hero
+  curated=$(folio_build_extract_region "${root_abs}/index.html" "folio:nav-curated")
+  hero=$(folio_build_extract_region "${root_abs}/index.html" "folio:landing-hero")
 
   cat <<'HEAD'
 <!DOCTYPE html>
@@ -2040,6 +2045,7 @@ folio_build_emit_index() {
 <head>
 <!-- folio:generated source=folio-build do-not-edit -->
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="folio-doc-type" content="nav-index">
 <meta name="folio-generated" content="folio-build">
 <meta name="folio-status" content="active">
@@ -2061,15 +2067,36 @@ folio_build_emit_index() {
   <div class="meta">walkable nav (folio build が graph から生成、 ADR-0035)</div>
 </header>
 
-<aside class="informative">
-  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は下記 curated region に置きます。</p>
-</aside>
-
-<!-- folio:nav-curated -->
 HEAD
+
+  # --- landing hero 層 (ADR-0039 §2.2: hero 一文 → 単一 CTA → 読者別 card)。 型 (この section
+  # wrapper + 既定 placeholder の構造) は build が所有し、 文言は curated region folio:landing-hero
+  # に人間が author する (ADR-0033 co-author 境界と同じ線)。 region が空 (初回 build / 旧 index 移行)
+  # なら決定的な placeholder を書き込む — 以後は roundtrip が人間の編集を verbatim 保全する。
+  # placeholder の link は実在する cluster README のみ emit (nav-dead-link を out-of-box clean に保つ)。
+  # 単一 CTA (§2.2 (2)) は placeholder では意図的に省略する: build は consumer の repo README URL を
+  # 知り得ず、 相対 ../README.md は Pages で raw .md 配信・存在も非保証のため、 安全な決定的 default 先が
+  # 構築不能。 偽の行き先を置くのは §2.2 の「正直でない入口を作らない」方針に反する。 CTA は人間が
+  # curated region に author して 4 層を完成させる (folio-self の実例 = architecture/index.html)。 ---
+  printf '<section class="landing-hero">\n<!-- folio:landing-hero -->\n'
+  if [[ -n "$hero" ]]; then
+    printf '%s\n' "$hero"
+  else
+    printf '<p class="landing-tagline">この <code>architecture/</code> は本 project の design-intent 空間です (spec = WHAT / decisions = WHY / research = exploration)。 この hero 文言は <code>folio:landing-hero</code> region を編集して project の価値提案に書き換えられます。</p>\n'
+    printf '<nav class="reader-cards" aria-label="読者別の入口">\n'
+    [[ -f "${root_abs}/spec/README.html" ]] && \
+      printf '  <a class="reader-card" href="spec/README.html"><span class="reader-card__act">仕様・要件を調べる →</span><span class="reader-card__desc">spec — design intent (WHAT)</span></a>\n'
+    [[ -f "${root_abs}/decisions/README.html" ]] && \
+      printf '  <a class="reader-card" href="decisions/README.html"><span class="reader-card__act">設計の経緯を追う →</span><span class="reader-card__desc">decisions — Architecture Decision Records (WHY)</span></a>\n'
+    [[ -f "${root_abs}/research/README.html" ]] && \
+      printf '  <a class="reader-card" href="research/README.html"><span class="reader-card__act">探索・調査を見る →</span><span class="reader-card__desc">research — exploration</span></a>\n'
+    printf '</nav>\n'
+  fi
+  printf '<!-- /folio:landing-hero -->\n</section>\n\n'
 
   # curated editorial (verbatim round-trip)。 初回移行 = marker 無し / 空 region なら空文字 = 旧挙動を
   # 維持し golden 安定。 内側 line を再 emit し最後に閉じ marker を出すことで byte-exact round-trip。
+  printf '<!-- folio:nav-curated -->\n'
   [[ -n "$curated" ]] && printf '%s\n' "$curated"
   printf '<!-- /folio:nav-curated -->\n'
 
@@ -2126,7 +2153,17 @@ HEAD
     done
     printf '</section>\n\n'
   done
-  printf '</body>\n</html>\n'
+
+  # 保守者向け運用注記は末尾に置く (ADR-0039 §2.2 / P-14: 入口の最初の本文を維持者向け注記にしない —
+  # 監査 wf_8b14e53a の症状 (a) の再発防止。 内容は従来と同一、 位置のみ demote)。
+  cat <<'FOOT'
+<aside class="informative">
+  <p class="generated-note">この index は <code>folio build</code> が graph (各 spec の head metadata + @id path-prefix cluster 分類) から自動生成します。 <strong>手編集禁止</strong> — 内容を変えるには各 cluster の spec/ADR を編集して再 build してください。 編集可能な editorial 文は hero (<code>folio:landing-hero</code>) と curated region (<code>folio:nav-curated</code>) に置きます。</p>
+</aside>
+
+</body>
+</html>
+FOOT
 }
 
 # canonical 名 ($1) を glossary anchor 用 slug に変換 (lowercase / 非英数の連なりを単一 hyphen / 端の hyphen 除去)。
