@@ -127,6 +127,7 @@
      ==================================================================== -->
 <section id="s0-reader-guide" class="informative">
 <h2>§0. Reader's Guide</h2>
+<p class="section-essence" data-audience="human">本 spec は Layer 1 consumer と folio Layer 0 自身の双方に適用し、 各 spec が head JSON-LD で宣言した関係性を build 時に inventory へ集約する前提を共有する。 読む順序は §1 標準語彙 → §2 独自語彙 → §3 markup → §4 inventory → §5 双方向。</p>
 
 <aside class="reader-persona" data-persona="Developer">
   <p>本 spec は <strong>Layer 1 consumer project</strong> および <strong>folio Layer 0 自身</strong> の双方に適用する。 各 spec file が <code>&lt;head&gt;</code> JSON-LD で関係性を宣言し、 build 時に inventory が auto-generate される設計を前提とする。</p>
@@ -155,12 +156,14 @@ flowchart TB
      ==================================================================== -->
 <section id="s1-w3c-vocab" class="normative">
 <h2>§1. W3C Standard Vocabulary</h2>
+<p class="section-essence" data-audience="human">関係性は W3C 既存標準語彙 (dcterms / schema.org / PROV-O) を最優先で採用し、 表現できない関係のみ §2 で folio 独自語彙を定義する。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>folio relation は <strong>W3C 既存標準語彙を最優先</strong>とする (interoperability + 学習コスト削減)。 独自命名 (folio:* prefix) は §1 で表現できない関係に限り §2 で個別定義する。</p>
 </aside>
 
 <h3 id="s1-1-dcterms">§1.1 Dublin Core Terms (DCMI)</h3>
+<p class="section-essence" data-audience="human">文書間関係 (置換 / 参照 / 部分 / 要求 / 来歴) は dcterms 語彙を採用 MUST、 JSON-LD context に dc prefix を宣言する。</p>
 
 <p><a href="https://www.dublincore.org/specifications/dublin-core/dcmi-terms/">DCMI Metadata Terms</a> は文書間関係を表現する W3C 推奨語彙集である。 folio 規範では以下の語彙を採用する MUST。</p>
 
@@ -206,6 +209,7 @@ flowchart TB
 <p><strong>@context prefix</strong>: <code>"dc": "http://purl.org/dc/terms/"</code> を JSON-LD context で MUST 宣言する。</p>
 
 <h3 id="s1-2-schema-org">§1.2 schema.org (補完)</h3>
+<p class="section-essence" data-audience="human">dcterms で表せない型・記事メタデータは schema.org で補完し、 spec の base 型は schema:TechArticle とする。</p>
 
 <p>dcterms で表現できない型情報・記事メタデータは <a href="https://schema.org/">schema.org</a> で補完する。</p>
 
@@ -241,6 +245,7 @@ flowchart TB
 <p><strong>@context prefix</strong>: <code>"schema": "https://schema.org/"</code> を JSON-LD context で MUST 宣言する。</p>
 
 <h3 id="s1-3-prov-o">§1.3 PROV-O (履歴・派生)</h3>
+<p class="section-essence" data-audience="human">派生・生成の来歴は PROV-O (wasDerivedFrom / wasGeneratedBy) を、 使用時のみ採用する。</p>
 
 <p><a href="https://www.w3.org/TR/prov-o/">PROV-O</a> (W3C Provenance Ontology) は出所・派生・寄与関係を表現する。 folio では derived-from 系の関係に採用する。</p>
 
@@ -271,12 +276,14 @@ flowchart TB
      ==================================================================== -->
 <section id="s2-folio-vocab" class="normative">
 <h2>§2. folio Custom Vocabulary</h2>
+<p class="section-essence" data-audience="human">標準語彙で表せない folio 固有の関係のみ folio: prefix で独自定義し、 追加は user 承認の ADR を経る MUST。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し <span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> <a class="xref" href="./constitution.html#p-10" data-tooltip="Constitution 自身への変更前 user 確認">P-10</a> に準じた user 承認を経る MUST。</p>
 </aside>
 
 <h3 id="s2-1-vocab-table">§2.1 folio 独自語彙 (規範定義)</h3>
+<p class="section-essence" data-audience="human">folio:depends-on / extends / implements の 3 語を独自定義する (URI 実体は v1.0.0 で解決可能化予定の placeholder)。</p>
 
 <table>
   <caption>folio:* prefix で定義する独自語彙</caption>
@@ -308,6 +315,7 @@ flowchart TB
 <p><strong>@context prefix</strong>: <code>"folio": "https://folio.dev/spec/v1/"</code> を JSON-LD context で MUST 宣言する (使用時のみ)。 URI 実体は v1.0.0 リリース時に解決可能化予定 (現在 placeholder)。</p>
 
 <h3 id="s2-2-naming-rules">§2.2 命名規則 (standard 優先原則)</h3>
+<p class="section-essence" data-audience="human">新規関係は標準語彙 → 既存独自語彙 → 新規 folio: 語彙の順で採用判断し、 独自語彙の ADR には却下理由・逆語彙・使用例を含める MUST。</p>
 
 <p>新規関係を spec で導入する際は、 以下の順で採用語彙を決定する MUST。</p>
 
@@ -331,12 +339,14 @@ flowchart TB
      ==================================================================== -->
 <section id="s3-jsonld" class="normative">
 <h2>§3. JSON-LD Schema in <code>&lt;head&gt;</code></h2>
+<p class="section-essence" data-audience="human">各 spec は head に JSON-LD ブロックを 1 個 MUST 持ち、 その関係性表現 schema を本章が規定する。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>各 spec file は <code>&lt;head&gt;</code> 内に <code>&lt;script type="application/ld+json"&gt;</code> ブロックを 1 個 MUST 含む (<a href="rules.html#s4-format">rules.html §4.1</a>)。 ブロック内容の関係性表現 schema を本 §3 で規定する。</p>
 </aside>
 
 <h3 id="s3-1-minimal">§3.1 Minimal Example (関係性なし)</h3>
+<p class="section-essence" data-audience="human">関係性を持たない最小 spec の JSON-LD 例。 @type は schema:TechArticle を採用し、 独自型は使わない。</p>
 
 <p>関係性を持たない最小 spec の例 (constitution.html 等)。 <code>@type</code> は §1.2 推奨の <code>schema:TechArticle</code> を MUST 採用 (独自 <code>FolioSpec</code> 型は §2.2 命名規則に反するため使用しない)。 <code>dc:title</code> 等の dcterms 語彙を後から追加する場合は <code>@context</code> に <code>"dc": "http://purl.org/dc/terms/"</code> prefix の追加が MUST (§3.2 Full Example を参照):</p>
 
@@ -355,6 +365,7 @@ flowchart TB
 </code></pre>
 
 <h3 id="s3-2-full">§3.2 Full Example (関係性込み)</h3>
+<p class="section-essence" data-audience="human">複数の関係性 (references / depends-on 等) を宣言する spec の JSON-LD 例。</p>
 
 <p>複数の関係性を持つ spec の例 (本 relations.html を含む):</p>
 
@@ -383,6 +394,7 @@ flowchart TB
 </code></pre>
 
 <h3 id="s3-3-id-resolution">§3.3 <code>@id</code> Resolution Rules</h3>
+<p class="section-essence" data-audience="human">@id と参照値の記述規則 (自己 / 同一 dir / 上位 dir / section anchor の相対 path、 architecture 配下は絶対 URL 禁止)。</p>
 
 <p><code>@id</code> および参照値 (<code>{ "@id": "..." }</code>) は以下の規則で記述する MUST。</p>
 
@@ -395,6 +407,7 @@ flowchart TB
 </ol>
 
 <h3 id="s3-4-conformance">§3.4 Conformance Level (Phase 1)</h3>
+<p class="section-essence" data-audience="human">試作段階の遵守レベル: JSON-LD ブロックと標準語彙優先は MUST、 @id 自己参照と関係性宣言は次 Phase で MUST へ昇格する。</p>
 
 <p>本 §3 の遵守レベルは試作段階 (Phase X2) では以下とする:</p>
 
@@ -414,13 +427,15 @@ flowchart TB
      ==================================================================== -->
 <section id="s4-inventory" class="normative">
 <h2>§4. Inventory Schema</h2>
+<p class="section-essence" data-audience="human">全 spec を集約する inventory.json を auto-generate する設計の schema を規定する (実体 file は CLI 生成で手動作成禁止)。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>folio は全 spec の集約 index (<code>inventory.json</code>) を <strong>auto-generate</strong> する設計を採用する (将来の試作 plugin で実装予定)。 AI agent は inventory.json のみで全体構造を把握でき、 必要な spec だけ Read することで context window を効率的に使う。</p>
   <p>本 §4 では schema を規定する。 inventory.json の <strong>実体 file は作成しない</strong> (試作 plugin の <code>folio inventory</code> CLI で auto-generate される、 manual 作成は禁止)。</p>
 </aside>
 
 <h3 id="s4-1-structure">§4.1 inventory.json Structure</h3>
+<p class="section-essence" data-audience="human">inventory.json の構造と各 field の型・必須・source を定義する。</p>
 
 <pre><code>{
   "$schema": "https://folio.dev/inventory/v1.json",
@@ -465,8 +480,9 @@ flowchart TB
 </table>
 
 <h3 id="s4-2-tier">§4.2 Three-Tier Progressive Disclosure Model</h3>
+<p class="section-essence" data-audience="human">Anthropic Agent Skills の 3-tier loading に倣い、 Tier 1 (inventory) → Tier 2 (head + 要約) → Tier 3 (本文) で AI の context を効率化する。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>本モデルは <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">Anthropic Agent Skills</a> の 3-tier loading パターンに基づく (調査レポート §3.3)。 AI agent が必要分のみ読み込み、 context window を効率化する。</p>
 </aside>
 
@@ -520,6 +536,7 @@ flowchart TB
 </table>
 
 <h3 id="s4-3-generation">§4.3 Auto-Generation Timing</h3>
+<p class="section-essence" data-audience="human">inventory.json の生成・stale 検出のタイミングと Phase を定める (現 X2 は非生成、 X3 で auto-update + CI 検出)。</p>
 
 <table>
   <thead><tr><th>事象</th><th>generation 動作</th><th>Phase</th></tr></thead>
@@ -531,8 +548,9 @@ flowchart TB
 </table>
 
 <h3 id="s4-4-input-output">§4.4 Input / Output Behavior</h3>
+<p class="section-essence" data-audience="human">folio inventory CLI の WHAT (走査対象 dir・出力先・失敗モード) を規定し、 実装 HOW は folio-self-spec §9 に隔離する。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
 <p>本 §4.4 は <code>folio inventory</code> CLI (<a href="folio-self-spec.html#s7-6-phase-x3-minimal">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href="folio-self-spec.html#s9-bindings">folio-self-spec.html §9 Bindings</a> に隔離 (<a class="xref" href="./constitution.html#p-11" data-tooltip="design-intent 文書に HOW を書かない">P-11</a>)。</p>
 </aside>
 
@@ -570,12 +588,14 @@ flowchart TB
      ==================================================================== -->
 <section id="s5-bidirectional" class="normative">
 <h2>§5. Bidirectional Reference</h2>
+<p class="section-essence" data-audience="human">forward relation の記述 MUST と、 reverse relation を auto-materialize する計画 (Phase X3+) を集約する。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
   <p>本 §5 は forward relation を spec 中で記述する <strong>MUST</strong> 規範および、 reverse relation の auto-materialize 計画 (Phase X3+) を集約する。 構成: §5.1 dual 対象関係 (table)、 §5.2 precedent (informative aside)、 §5.3 <span class="term" data-term="EARS" data-tooltip="Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。">EARS</span> 規範要件 (REQ-REL-001〜004)。</p>
 </aside>
 
 <h3 id="s5-1-pattern">§5.1 双方向 dual の対象関係</h3>
+<p class="section-essence" data-audience="human">双方向 dual で記述する SHOULD の forward / reverse 対 (replaces / references / hasPart / depends-on / extends / implements)。</p>
 
 <p>以下の関係は双方向 dual で記述する SHOULD (片方を書いたら反対側も書く):</p>
 
@@ -609,12 +629,14 @@ flowchart TB
 </figure>
 
 <h3 id="s5-2-precedent">§5.2 Precedent (log4brains pattern)</h3>
+<p class="section-essence" data-audience="human">双方向 auto-materialize の precedent は log4brains の supersedeBy() で、 folio も同設計を Phase X3+ で採用予定。</p>
 
-<aside class="informative">
+<aside class="informative" data-audience="machine">
 <p>双方向 auto-materialize の precedent として <a href="https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts">log4brains <code>Adr.supersedeBy()</code></a> がある (ADR-A が ADR-B を supersede した際、 ADR-B 側に逆参照を自動追加するパターン)。 folio framework も同設計を採用予定 (具体的な CLI 構文 / 実装機構は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7 系</a> に集約予定、 Phase X3+)。 詳細は <a href="../research/spec-graph-management-research.html#s3-integrated">spec-graph-management-research.html §3</a> を参照。</p>
 </aside>
 
 <h3 id="s5-3-ears">§5.3 EARS 規範要件</h3>
+<p class="section-essence" data-audience="human">forward 宣言・reverse auto-materialize・X2 手動・broken-reverse 報告の 4 件を EARS 要件として規定する。</p>
 
 <div class="spec-list">
   <details class="spec-row" id="req-rel-001" data-audience="human">
@@ -665,6 +687,7 @@ flowchart TB
      ==================================================================== -->
 <section id="s6-refs" class="informative">
 <h2>§6. References</h2>
+<p class="section-essence" data-audience="human">本 spec が依拠する constitution / rules / 調査レポートと、 W3C 標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を列挙する。</p>
 
 <ul>
   <li><a href="./constitution.html">constitution.html</a> — folio の 14 不変原則 (本 spec は <a class="xref" href="./constitution.html#p-2" data-tooltip="format は HTML + common.css のみ">P-2</a> HTML SSoT、 <a class="xref" href="./constitution.html#p-7" data-tooltip="Content domain exclusivity">P-7</a> Content domain exclusivity に従う)</li>

@@ -68,6 +68,7 @@
 
 <aside class="informative">
 <p>本 dir (<code>architecture/spec/</code>) は folio framework の design-intent <span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span> を集約する (<span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> + rules + folio-self-spec + relations + verification)。 spec は draft 状態でブラッシュアップ対象、 constitution は不変資産 (scan 対象外)。 X4-C で <code>scratch/</code> から canonical layout へ物理移植済 (<a href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html">ADR-0023</a>)。</p>
+<p>本 cluster の各ページ (不変資産の constitution を除く) 上部には表示切替があり、 「人間向け (要旨中心) / 機械向け (EARS 全文と降格した地の文) / 両方」 を 1 操作で選べます (JavaScript 無効時は全文表示に graceful degrade)。</p>
 </aside>
 
 <!-- ====================================================================
@@ -75,6 +76,7 @@
      ==================================================================== -->
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
+<p class="section-essence" data-audience="human">本 README は spec/ cluster の index で、 cluster 内 spec file 同士の関係を一望し reader (人間 / AI) のナビゲーションを支える。 不変資産の constitution は index 対象外。</p>
 
 <p>本 README は <strong>spec/ <span class="term" data-term="cluster" data-tooltip="architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。">cluster</span> の index</strong>。 cluster 内 spec file 同士の関係を一望し、 reader (人間 / AI agent) のナビゲーションを支える。 repo-root <code>inventory.json</code> は <code>folio inventory</code> CLI で auto-generate される (<a href="relations.html#s4-inventory">relations.html §4</a>)、 本 README はその人手版 Tier 1 navigation index を兼ねる。</p>
 
@@ -86,6 +88,7 @@
      ==================================================================== -->
 <section id="s2-inventory" class="informative">
 <h2>§2. File Inventory</h2>
+<p class="section-essence" data-audience="human">spec/ cluster の現在 4 file (rules / folio-self-spec / relations / verification) と本 README の role・status・依存を一覧する。</p>
 
 <table>
   <caption>spec/ cluster の file 一覧 (現在 4 file)</caption>
@@ -137,6 +140,7 @@
      ==================================================================== -->
 <section id="s3-graph" class="informative">
 <h2>§3. Dependency Graph</h2>
+<p class="section-essence" data-audience="human">spec/ 配下 4 file と constitution の依存関係を図示する (実線 = strong dependency、 点線 = soft reference)。</p>
 
 <figure class="diagram">
 <pre class="mermaid">
@@ -177,6 +181,7 @@ graph TD
      ==================================================================== -->
 <section id="s4-reading-order" class="informative">
 <h2>§4. Reading Order</h2>
+<p class="section-essence" data-audience="human">新規 reader の推奨読書順 (constitution → rules → folio-self-spec → relations → verification) と、 編集種別ごとの必読範囲 MUST を示す。</p>
 
 <p>新規 reader (人間 / AI agent) は以下の順序で読む SHOULD。</p>
 
@@ -196,14 +201,17 @@ graph TD
      ==================================================================== -->
 <section id="s5-changelog" class="informative">
 <h2>§5. Change Log</h2>
+<p class="section-essence" data-audience="human">初期の change log は research の worklog archive へ退避済で、 以後の変更履歴 SSoT は git log + 各 ADR + delta marker。 本 README には蓄積しない。</p>
 
 <p>初期 (2026-05-22〜24) の change log table は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §2</a> へ退避した (<a class="xref" href="../decisions/ADR-0039-presentation-template-layer.html" data-tooltip="ADR-0038 (P-14 Human Readability) を実装する機構群の一括決定。 folio build が人間向け提示の「型」を所有する presentation template layer を新設する: landing template (hero 一文 → 単一 CTA → 読者別 3 カード → cluster 一覧)、 全ページへの chrome 注入 (skip-link / breadcrumb / ページ内目次 / prev-next、 目次は既存 id からのみ導出し本文へ id を注入しない)、 ページ種別 × 読者層の既定表示規範、 audience toggle (classic JS・永続なし)、 readability 二層 gate (validate 17-gate 化 + render-gate の 3 viewport / chrome detector 拡張 + readability review lens)。 意味 (essence / EARS / 理由) は従来どおり人間が co-author し (ADR-0033 不変)、 機械が所有するのは型と導出 view のみ。 設計は presentation-design-patterns research (6 軸 41 + gap-fill 17 パターン) に根拠付け、 grill G3〜G7 で確定。 ADR-0035 (nav-derive) の生成範囲を index から全ページ chrome へ、 ADR-0020 validate scope を readability floor へ、 ADR-0037 render ceiling を multi-viewport + chrome 幾何へ拡張する (frozen 本文不変、 reverse-link + prose で trace)。">ADR-0039</a> §2.4 の作業ログ撤去、 2026-06-11)。 以後の変更履歴の SSoT は <strong>git log + 各 <span class="term" data-term="ADR" data-tooltip="Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。">ADR</span> + delta <span class="term" data-term="marker" data-tooltip="HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。">marker</span> (<a href="rules.html#s5-delta">rules §5</a>)</strong> — 本 README には変更履歴を蓄積しない。</p>
 </section>
 
 <section id="s6-todo" class="informative">
 <h2>§6. Open TODO</h2>
+<p class="section-essence" data-audience="human">Phase X3 由来の未解消事項を 3 つに整理する — frozen file の dogfood failure (§6.1)・defer 事項 (§6.2)・ADR 起票候補 (§6.3)。</p>
 
 <h3 id="s6-1-dogfood">§6.1 Dogfood failure (frozen file、 user 判断待ち)</h3>
+<p class="section-essence" data-audience="human">relations.html 導入で生じた既存 frozen file の JSON-LD 旧パターン残存を、 user 指示により head 据え置きで trace する。</p>
 
 <p>relations.html 導入に伴い既存 file に <strong><span class="term" data-term="dogfood" data-tooltip="folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。">dogfood</span> failure</strong> が残存:</p>
 
@@ -226,6 +234,7 @@ graph TD
 <p><strong>解消済</strong>: folio-self-spec.html の <code>&lt;head&gt;</code> JSON-LD は前 commit (2026-05-22) で新規定 pattern に移行済 (<a href="../research/spec-readme-worklog-archive.html">作業ログ archive</a> §2 参照)。</p>
 
 <h3 id="s6-2-phase-x3-deferred">§6.2 Phase X3 進行中の defer 事項 (2026-05-24 集約)</h3>
+<p class="section-essence" data-audience="human">frozen ADR の divergence trace と未解消の既知制限のみを恒久保持する (解消済の作業記録は research archive へ退避)。</p>
 
 <p>Phase X3 起源の defer 事項のうち、 <strong>frozen ADR (ADR-0003) divergence trace と未解消の既知制限のみ</strong>を恒久保持する (frozen は P-10 で修正不可のため、 実装との乖離は本表が trace の SSoT)。 解消済の作業記録 7 行は <a href="../research/spec-readme-worklog-archive.html">research/spec-readme-worklog-archive.html §3</a> へ退避した (ADR-0039 §2.4、 2026-06-11):</p>
 
@@ -287,6 +296,7 @@ graph TD
 </table>
 
 <h3 id="s6-3-adr-candidates">§6.3 ADR 起票候補 (user 承認 MUST)</h3>
+<p class="section-essence" data-audience="human">Phase X3 進行中の ADR 起票候補を一覧する (自動起票禁止・user 承認 MUST、 起票済と未起票を区別)。</p>
 
 <p>Phase X3 進行中に逐次起票候補。 自動起票禁止 (<a href="../../CLAUDE.md">CLAUDE.md</a> §2)、 user 確認必須:</p>
 
