@@ -19,8 +19,10 @@ files checked: 3 · relations checked: 0
   [OK] render-safety
   [FAIL] readability-floor
 
-warnings (1):
+warnings (3):
   spec/README.html [cluster-reachability] cluster README is a dead-end (自 cluster 外への <a href> 無し、 他 cluster / ../index.html / home link を追加せよ)
+  spec/README.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/overview.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 violations (2):
   index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成、 ADR-0035 §2.5)

@@ -923,6 +923,78 @@ folio_check_readability_floor_file() {
       inp { par = par $0 "\n"; if (index($0, "</p>")) { inp = 0; flush() } }
     '
   fi
+
+  # (6)(7)(8) 人間層プレゼン圧縮 arm (番号は REQ-VER-023 normative の global 連番。 ADR-0040 / rules §11.5、
+  # すべて warn 始まり = §2.7 昇格規律) —
+  # 対象 = 圧縮対象ページ (living spec (subdir=spec、 constitution は scan 自体の対象外) + cluster README)。
+  # frozen ADR (remediate 不能) と research の非 README (一次資料層 = AI が読む原稿) は skip — 除外根拠
+  # 2 種の区別は rules §11.5。
+  #   warn (6) 人間層可視 prose 上限 — 既定表示で人間が読む量が上限 box (約 12,000 字 = 読了 20 分) を
+  #       超える。 計測 = data-audience="machine" subtree (降格部) と <table> (線形読書しない = 満重みに
+  #       しない、 v1 は 0 重み) を除去 → prose_only → tag 除去 → codepoint 数。 machine/table の除去は
+  #       行 granular (開始行〜閉じ行を丸ごと落とす = 同一行の前後 text も落ち undercount 方向 = warn が
+  #       鳴りにくい側に倒れる conservative、 prose_only の line-granular 流儀 (#112) と同じ)。 例外的に
+  #       inline <code> は prose_only が space 置換で残すため codepoint に算入される (over-count 側・
+  #       意図的 — inline code も読者が目を通す本文の一部)。 void 要素 (img 等) に data-audience を
+  #       付ける形は非対象 (閉じ tag が無く depth が解けない — §11.5 の降格対象は block prose のみ)。
+  #   warn (7) 章要旨不在 — h2 章を持つ living spec ページに <p class="section-essence"> が 1 つも無い
+  #       (v1 は page 単位の presence 検査。 章単位への昇格は migration 後の較正で判断)。
+  #   warn (8) 図ゼロ×長文 — 実 mermaid block ゼロかつ人間層可視 prose が目標 box (約 6,000 字) 超
+  #       (構造を図で先読みできない長文ページ)。 block 数は raw body への lenient grep (render-safety と
+  #       同 idiom = 属性順に頑健)。 HTML コメント内や machine 降格内の図も数えうるが、 overcount は
+  #       figs>0 方向 = warn 抑制側で conservative (machine 降格図は §11.5 MUST 違反として別途扱う前提)。
+  local is_target=0
+  if [[ "$dtype" != "adr" ]] && { [[ "$subdir" == "spec" ]] || [[ "$dtype" == "cluster-readme" ]]; }; then is_target=1; fi
+  if [[ "$is_target" == "1" ]]; then
+    local hvbody hv figs essn h2n
+    # 降格 subtree + table の除去: 同名 tag の depth 追跡で wrapper <div> 内の <div> 等を越えて閉じる。
+    # escaped 言及 (&lt;div data-audience=...) は raw "<tag" を要求する regex に match しない (head-anchored 鉄則の同類)。
+    hvbody=$(printf '%s\n' "$body" | LC_ALL=C awk '
+      BEGIN { skip = 0 }
+      {
+        if (skip) {
+          line = $0
+          d += gsub("<" tag "[ \t>]", "X", line)
+          d -= gsub("</" tag ">", "X", line)
+          if (d <= 0) skip = 0
+          next
+        }
+        if (match($0, /<[a-zA-Z][a-zA-Z0-9]*[^>]*data-audience="machine"/)) {
+          t = substr($0, RSTART + 1); sub(/[^a-zA-Z0-9].*$/, "", t); tag = t
+          line = $0
+          d = gsub("<" tag "[ \t>]", "X", line) - gsub("</" tag ">", "X", line)
+          if (d > 0) skip = 1
+          next
+        }
+        if (match($0, /<table[ \t>]/)) {
+          tag = "table"; line = $0
+          d = gsub(/<table[ \t>]/, "X", line) - gsub(/<\/table>/, "X", line)
+          if (d > 0) skip = 1
+          next
+        }
+        print
+      }')
+    hv=$(folio_prose_only "$hvbody" | LC_ALL=C awk '{ gsub(/<[^>]*>/, " "); gsub(/[\200-\277]/, ""); n += length($0) } END { print n + 0 }')
+    if [[ "$hv" -gt 12000 ]]; then
+      printf 'W\t%s\t[readability-floor] 人間層可視 prose %d codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)\n' "$rel" "$hv"
+    fi
+    figs=$(grep -cE '<pre[^>]*class="[^"]*mermaid' <<< "$body" || true)
+    if [[ "$figs" -eq 0 && "$hv" -gt 6000 ]]; then
+      printf 'W\t%s\t[readability-floor] 図ゼロのまま人間層可視 prose %d codepoints > 6000 (構造章に mermaid 章図を置く、 rules §11.5 / ADR-0040)\n' "$rel" "$hv"
+    fi
+    if [[ "$subdir" == "spec" ]]; then
+      h2n=$(grep -c '<h2[ >]' <<< "$body" || true)
+      # essn は prose_only 経由 (W(1) viewport / dual-audience -3 と同 idiom): raw $body の grep だと
+      # prose 内の <code> 例 (class="section-essence" が raw text で残る) を実体と誤認して essn>0 になり
+      # W が抑制される — 規約を定義する rules.html 自身だけが検査をすり抜けた実証済 false-negative。
+      # h2n/figs は raw のまま: <h2 / <pre は raw "<" を要求し escaped 例 (&lt;h2) に match しない上、
+      # figs の overcount は figs>0 = warn 抑制側 (conservative) で意図的 (上記 (7) 注記)。
+      essn=$(folio_prose_only "$body" | grep -c 'class="section-essence"' || true)
+      if [[ "$h2n" -gt 0 && "$essn" -eq 0 ]]; then
+        printf 'W\t%s\t[readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 %d 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)\n' "$rel" "$h2n"
+      fi
+    fi
+  fi
 }
 
 # ============================================================================

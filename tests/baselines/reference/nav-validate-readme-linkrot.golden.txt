@@ -17,7 +17,11 @@ files checked: 4 · relations checked: 0
   [FAIL] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
-  [OK] readability-floor
+  [WARN] readability-floor
+
+warnings (2):
+  spec/README.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/overview.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 violations (1):
   spec/README.html [cluster-reachability] README href "../research/README.html" -> ../research/README.html (link-rot: target not found)

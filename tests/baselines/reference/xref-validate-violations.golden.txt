@@ -17,7 +17,12 @@ files checked: 4 · relations checked: 0
   [OK] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
-  [OK] readability-floor
+  [WARN] readability-floor
+
+warnings (3):
+  spec/broken.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/orphan.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/stale.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 violations (3):
   spec/broken.html [xref-broken] class=xref -> spec/verification.html#req-ver-999 (xref anchor id not found in target)

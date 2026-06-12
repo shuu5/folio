@@ -17,7 +17,10 @@ files checked: 1 · relations checked: 0
   [OK] cluster-reachability
   [OK] ears-coverage
   [FAIL] render-safety
-  [OK] readability-floor
+  [WARN] readability-floor
+
+warnings (1):
+  spec/multiline-subgraph.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 violations (1):
   spec/multiline-subgraph.html [render-safety] subgraph の多行タイトル (<br>) は mermaid cluster-label が子ノードに overlap する: subgraph PF["<b>Phase F</b><br/>(7 並列固定)"] (単行タイトルにする、 REQ-VER-021 / rules §4.5)

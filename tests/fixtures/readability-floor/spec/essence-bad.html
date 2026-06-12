@@ -79,6 +79,7 @@
     <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-RFL-903</span>: WHEN the fixture is validated, the gate <span class="ears-shall">SHALL</span> flag this verbose card because its req__essence is empty (p 分岐 + section handler の被覆)。</p>
   </details>
 </section>
+<p>章要旨の正規形は <code>&lt;p class="section-essence" data-audience="human"&gt;</code> を使う (この code 例は当該 class 属性の文字列を raw text のまま含む — 計測が prose_only 経由でなく raw grep に退行すると本 page の W(章要旨不在) が消えて golden が RED になる回帰ガード)。</p>
 </section>
 <!-- folio:chrome-bottom -->
 <nav class="prevnext" aria-label="前後の文書">

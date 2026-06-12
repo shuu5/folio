@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-12T01:11:41Z",
+  "generatedAt": "2026-06-12T03:08:06Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1827,7 +1827,7 @@
         "id": "REQ-VER-023",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-023",
-        "essence": "folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 2 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints (閾値は corpus 較正 2026-06-11)。 frozen は warn 除外・essence block は living spec/research のみ (stuck-RED 回避)。"
+        "essence": "folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 5 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints / 人間層可視 prose &gt; 12,000 codepoints (上限 box、 ADR-0040) / 章要旨 (p.section-essence) 不在 / 図ゼロ×長文 (&gt; 6,000)。 frozen は warn 除外・essence block は living spec/research のみ・圧縮 3 arm は圧縮対象 (living spec + cluster README) のみ (stuck-RED 回避 + 一次資料層 skip)。"
       },
       {
         "id": "REQ-XREF-001",
@@ -2170,6 +2170,10 @@
       {
         "from": "spec/verification.html",
         "to": "ADR-0039"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0040"
       },
       {
         "from": "spec/verification.html",

@@ -3,8 +3,9 @@ req_id: "REQ-VER-023"
 ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
-  folio validate の readability-floor gate (gate q、 ADR-0039 §2.7 / P-14) が block 3 系 (4 違反) + warn 2 arm を
-  捕捉することを実証する。 fixture corpus (fix + build 済 = 他 16 gate は clean、 floor だけが赤 = isolation):
+  folio validate の readability-floor gate (gate q、 ADR-0039 §2.7 + ADR-0040 / P-14) が block 3 系 (4 違反) +
+  warn 5 arm (REQ-VER-023 の warn (4)〜(8)) を捕捉することを実証する。 fixture corpus (fix + build 済 =
+  他 gate は clean、 floor だけが赤 = isolation):
     block (1) spec/no-viewport.html — <head> に <meta name="viewport"> 無し。 prose の escaped 言及 +
         <pre> 内 raw 言及を併置し、 head-anchored 走査が誤反応しないことも固定 (#110/#116 keystone 系譜)。
     block (2) spec/essence-bad.html req-rfl-901 / req-rfl-903 — machine 対応部 (EARS) を持つのに essence が
@@ -17,8 +18,21 @@ description: |
     warn (4) spec/essence-bad.html req-rfl-902 — essence 句点 5 個 (閾値 4 = corpus 較正 2026-06-11)。
     warn (5) spec/long-para.html — 可視 prose 単一段落 2157 codepoints (閾値 2000 = corpus 較正 2026-06-11、
         codepoint 計測は UTF-8 継続 byte 除去で locale 非依存)。
+  加えて人間層プレゼン圧縮 arm (ADR-0040 / rules §11.5、 warn 始まり。 arm 番号は REQ-VER-023 の
+  global 連番 = warn (6) prose 上限 / (7) 章要旨不在 / (8) 図ゼロ×長文) をケースで被覆する:
+    ケース C-1 spec/compress-over.html — warn (6) 人間層可視 prose 14574 codepoints > 12000 と
+        warn (8) 図ゼロ×長文 (> 6000) の 2 warn。 section-essence を持つため warn (7) は発火しない
+        (arm 独立性)。
+    ケース C-2 spec/compress-demoted.html — 負例 (warn ゼロ)。 raw は同量だが 12 段落を
+        data-audience="machine" wrapper (nested div = 同名 tag depth 追跡の検証) へ降格 + 大 table
+        (満重みにしない) で人間層可視は box 内。 これが warn を出したら計測が降格部/table を数えている。
+    ケース C-3 warn (7) 章要旨 presence — h2 章を持つ spec ページに p.section-essence が無い
+        (README/essence-bad/long-para/no-viewport の 4 ページで発火、 v1 は page 単位)。 essence-bad の
+        <code> 例 (class 属性文字列を raw text に含む) は essn 計測の prose_only 退行を golden RED で
+        捕捉する回帰ガード。
   hero 空 (block) は readability-floor-hero.yaml が対で固定する。 spec-row 正式化は
-  verification.html §3.6 REQ-VER-023。 remediate: viewport/essence は authoring、 landing は folio build。
+  verification.html §3.6 REQ-VER-023。 remediate: viewport/essence は authoring、 landing は folio build、
+  圧縮 arm は migration (降格 + 章要旨 + 章図の author)。
 
 command: ["validate", "--root", "tests/fixtures/readability-floor"]
 capture: "stdout"

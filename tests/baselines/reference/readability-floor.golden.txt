@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/readability-floor
-files checked: 4 · relations checked: 6
+files checked: 6 · relations checked: 8
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -19,9 +19,15 @@ files checked: 4 · relations checked: 6
   [OK] render-safety
   [FAIL] readability-floor
 
-warnings (2):
+warnings (8):
+  spec/README.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/compress-over.html [readability-floor] 人間層可視 prose 14574 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
+  spec/compress-over.html [readability-floor] 図ゼロのまま人間層可視 prose 14574 codepoints > 6000 (構造章に mermaid 章図を置く、 rules §11.5 / ADR-0040)
   spec/essence-bad.html [readability-floor] req-rfl-902 の essence 句点 5 個 > 4 (要旨は数文に収める、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/essence-bad.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
   spec/long-para.html [readability-floor] 可視 prose 単一段落 2157 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/long-para.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+  spec/no-viewport.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 violations (4):
   index.html [readability-floor] landing hero に <a href> が 1 本も無い (入口 dead-end、 hero curated region にカード/CTA の実 link を author する、 REQ-VER-023 / ADR-0039 §2.2)
