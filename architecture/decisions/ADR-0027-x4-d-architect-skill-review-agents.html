@@ -206,6 +206,9 @@
     openedForPrint = [];
   });
   if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
   var bar = document.createElement('nav');
   bar.className = 'audience-toggle';
   bar.setAttribute('aria-label', '表示対象の切替');
@@ -215,7 +218,7 @@
       var b = document.createElement('button');
       b.type = 'button';
       b.textContent = label;
-      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
       b.addEventListener('click', function () {
         document.body.classList.remove('audience-human', 'audience-machine');
         if (mode !== 'both') document.body.classList.add('audience-' + mode);

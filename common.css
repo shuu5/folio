@@ -1288,14 +1288,37 @@ nav.audience-toggle button[aria-pressed="true"] {
   color: var(--folio-text-invert);
 }
 
-/* 人間向け: machine 精密部 (EARS 全文等) を隠し essence/表/図に集中 */
+/* 人間向け: machine 精密部 (EARS 全文・降格された informative 地の文) を隠し
+ * 章要旨/essence/表/図に集中 (既定 mode、 ADR-0040 / rules §11.3 人間プレゼン型)。 */
 body.audience-human [data-audience="machine"] { display: none; }
 
-/* 機械向け: human 派生 view (essence/badge) を減光し normative を主役に。
+/* 人間向けでは spec-row の中身 (machine 部) が隠れるため、 開いても何も出ない —
+ * 「▸ なのに空」の壊れた見えを防ぐ: fold marker を抑止して開閉 affordance を出さず、
+ * それでも開かれた場合は全文への経路を hint で案内する (CSS content による presentational
+ * guidance — content の SSoT ではない。 callout label (§4.5) と同系の既存 idiom。
+ * readability-walk lens 2026-06-12 が「空展開 = 機構の恒久特性」と判定した major の緩和)。 */
+body.audience-human .spec-row > summary::before { content: ""; }
+body.audience-human .spec-row[open]::after {
+  content: "EARS 全文は上部の表示切替 (両方 / 機械向け) で表示されます — 人間向け表示は要旨のみ。";
+  display: block;
+  font-size: var(--folio-text-small);
+  color: var(--folio-text-tertiary);
+  padding: 0.1rem 0.75rem 0.5rem;
+}
+
+/* 章要旨 (section-level essence、 rules §11.5 / ADR-0040): 章冒頭の 1〜3 文プレゼン要約。
+ * REQ essence (spec-row) より一段上の粒度。 lead として僅かに立て、 余白で図/本文と区切る。 */
+p.section-essence {
+  font-weight: 500;
+  margin: 0.75rem 0 1.25rem;
+}
+
+/* 機械向け: human 派生 view (essence/badge/章要旨) を減光し normative を主役に。
  * closed details の中身は UA の rendering skip ゆえ author CSS では開けない —
  * 開閉は読者操作のまま (ADR-0039 §2.5 = body class 切替のみの設計境界)。 */
 body.audience-machine .essence,
 body.audience-machine .req__essence,
+body.audience-machine .section-essence,
 body.audience-machine .req__ears { opacity: 0.45; }
 
 /* 印刷: toggle 状態に関わらず全 audience を可視化し toggle UI は出さない。
@@ -1303,8 +1326,13 @@ body.audience-machine .req__ears { opacity: 0.45; }
 @media print {
   nav.audience-toggle { display: none; }
   body.audience-human [data-audience="machine"] { display: revert; }
+  /* print では machine 部が復帰する (上) ため、 空展開ガードの hint と marker 抑止も解除 */
+  body.audience-human .spec-row[open]::after { content: none; }
+  body.audience-human .spec-row > summary::before { content: "\25B8"; }
+  body.audience-human .spec-row[open] > summary::before { content: "\25BE"; }
   body.audience-machine .essence,
   body.audience-machine .req__essence,
+  body.audience-machine .section-essence,
   body.audience-machine .req__ears { opacity: 1; }
   /* print 時は table の block scroll-container 化 (上の max-width:988px rule) を解除する。
    * print の media query 評価は用紙 page box 幅 (A4 縦 ≈ 794 CSS px) で行われ 988px が TRUE に

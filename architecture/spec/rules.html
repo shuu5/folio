@@ -109,6 +109,7 @@
   <li class="toc--sub"><a href="#s11-2-remediate">§11.2 表示層 remediate の分業 (build / fix)</a></li>
   <li class="toc--sub"><a href="#s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</a></li>
   <li class="toc--sub"><a href="#s11-4-review-procedure">§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)</a></li>
+  <li class="toc--sub"><a href="#s11-5-compression">§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -329,6 +330,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
   <li><strong><code>data-audience</code></strong> = closed 2 値 core (<code>machine</code> | <code>human</code>)、 canonical。 AI 抽出 (<code>[data-audience="machine"]</code>) の決定性と floor 検査の単純化のため 2 値固定。</li>
   <li>synonym (<code>data-reader</code> / <code>data-for</code> 等) は <a href="./constitution.html#p-5">P-5</a> (1 entity = 1 canonical name) により<strong>禁止</strong>。</li>
   <li>継承 (cascade) は<strong>無い</strong> = 明示付与のみ (fold 境界と 1:1 対応させ曖昧さを排除)。</li>
+  <li><code>data-audience</code> は requirement container (§7.2 の 2 form) 以外の <strong>presentation 要素にも明示付与できる</strong> — 例: 章要旨 <code>p.section-essence</code> (§11.5) への <code>human</code>、 informative 地の文の降格 wrapper への <code>machine</code> (ADR-0040)。 REQ-DA-STRUCT-1 の「machine 対応部 MUST」は requirement container (<code>&lt;section&gt;</code>/<code>&lt;details&gt;</code> 起点の floor 走査) にのみ適用され、 単独の presentation 要素には適用されない。</li>
 </ul>
 
 <h3 id="s7-2-canonical-pattern">§7.2 Canonical markup pattern (2 form)</h3>
@@ -945,13 +947,13 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 
 <ul>
   <li><strong>landing</strong> (index.html) — 全可視 (折り畳みゼロ)。 cluster 一覧の status group のみ量で畳む (&gt;8 entry)。</li>
-  <li><strong>spec 本文</strong> — essence・表・図・見出しは常時可視 / EARS 全文・経緯・運用注記は fold (§7.2 spec-row が体現)。</li>
+  <li><strong>spec 本文</strong> — 既定 = <strong>人間プレゼン型</strong> (<a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> が旧「バランス型」(ADR-0039 §2.4) を改訂): 見出し・章要旨 (§11.5)・図・表・REQ essence は可視 / EARS 全文 (§7.2 spec-row の machine 部) と <code>data-audience="machine"</code> へ降格された informative 地の文は既定で非表示 — audience toggle で全文へ 1 操作。 no-JS 環境は全文可視へ graceful degrade (§11.5)。</li>
   <li><strong>新規 ADR template</strong> — Context・Decision 可視 / 詳細は fold。</li>
   <li>fold のネストは <strong>2 段上限 MUST</strong>、 <code>&lt;summary&gt;</code> には<strong>要旨 1 文 MUST</strong> (空 summary・「詳細」のみの summary を禁止)。 この 2 つは現状機械 gate を持たない — authoring 規律 + Phase F review (ceiling) が担い、 違反頻度を見て floor 化を判断する (ADR-0039 §2.7 の warn→block と同じ昇格規律)。</li>
   <li><strong>印刷時は全展開</strong> — chrome の inline script が <code>beforeprint</code> で閉じた <code>&lt;details&gt;</code> を一時 open し <code>afterprint</code> で復元する (author CSS では closed details の中身を描画できないため script が担う、 §8 read-only enhancement)。</li>
 </ul>
 
-<p><strong>audience toggle</strong> (ADR-0039 §2.5): chrome の inline script が、 <code>data-audience</code> 要素を持つ page にのみ「両方 / 人間向け / 機械向け」の 3 状態 toggle を生成する (no-JS では UI 自体が存在しない = progressive enhancement)。 実装は <strong>body class 切替のみ</strong> (<code>audience-human</code> = machine 精密部を隠す / <code>audience-machine</code> = human 派生 view を減光)・DOM 構造不変・<strong>永続なし</strong> (状態はページ内のみ)。 連続閲覧の煩わしさが実機 walk で実証されたら localStorage 昇格 (graceful degradation 付き) する片道を注記する。 closed <code>&lt;details&gt;</code> の中身は UA の rendering skip ゆえ author CSS では開けない — 開閉は読者操作に委ねる (toggle の設計境界)。</p>
+<p><strong>audience toggle</strong> (ADR-0039 §2.5): chrome の inline script が、 <code>data-audience</code> 要素を持つ page にのみ「両方 / 人間向け / 機械向け」の 3 状態 toggle を生成する (no-JS では UI 自体が存在しない = progressive enhancement)。 <strong>初期状態は「人間向け」</strong> — script が toggle 生成と同時に body class <code>audience-human</code> を付与する (既定 = 人間プレゼン型、 <a class="xref" href="../decisions/ADR-0040-human-layer-presentation-compression.html" data-tooltip="人間層を「制限時間付きプレゼン」、 機械層を「無制限の原稿」と再定義する一括決定。 ADR-0039 の presentation template layer (型と導線) では解けなかった「人間向け表示でも本文が長大すぎ図が乏しい」を、 informative prose の audience 降格 (削除しない — AI は CSS 非依存で DOM 全文を読むため情報ゼロ損失) + 章要旨/章図の新設 + 既定表示の人間プレゼン化で解く。 time-box は目標 10 分 (約 6,000 字)/上限 20 分 (約 12,000 字)。 図の語彙は mermaid + 既存 CSS パターン (mermaid source は機械可読 = 図自体が dual-audience)、 inline SVG は ceiling review 必須の opt-in 例外。 道具は migration skill (batch 圧縮 + walk 検収) と folio-architect 恒久 phase の 2 系統で、 圧縮基準は rules に規範化して共有 SSoT とする。 gate は floor 新 arm (人間層可視 prose 上限/章要旨必須/図ゼロ×長文) を warn 始まりで設置し ADR-0039 §2.7 の昇格規律に乗せる。 scope は living spec + 入口群 — decisions/research は「一次資料層」(AI が読む原稿) としてプレゼン圧縮の対象外を明示する。 1.0.0 (criterion-c) は本 epic 完了後の user 再 walk を gate とする。 ADR-0039 §2.4 の既定表示「バランス型」は本 ADR が「人間プレゼン型」へ改訂する (frozen 本文不変、 本 ADR + rules が新規範)。 grill 2026-06-12 (全 6 論点) で確定。">ADR-0040</a>。 script 経由ゆえ no-JS では class が付かず全文可視 = graceful degrade。 static HTML / DOM は全文を保持し続けるため AI・検索・印刷への影響はない)。 実装は <strong>body class 切替のみ</strong> (<code>audience-human</code> = machine 精密部を隠す / <code>audience-machine</code> = human 派生 view を減光)・DOM 構造不変・<strong>永続なし</strong> (状態はページ内のみ)。 連続閲覧の煩わしさが実機 walk で実証されたら localStorage 昇格 (graceful degradation 付き) する片道を注記する。 closed <code>&lt;details&gt;</code> の中身は UA の rendering skip ゆえ author CSS では開けない — 開閉は読者操作に委ねる (toggle の設計境界)。</p>
 
 <h3 id="s11-4-review-procedure">§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)</h3>
 
@@ -963,6 +965,19 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </ul>
 
 <p>この 2 手続きは LLM review + 人間の目視ゆえ非決定的で、 <strong>機械 gate (CI) を持たない</strong> (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 の LLM-ceiling 非搭載と同根拠)。 実施は authoring 規律 + Phase F / 独立 ceiling review が担保し、 違反 (lens/walk を踏まない presentation 変更の ship) を review が指摘する — §11.3 の fold 規律と同じ昇格規律 (違反頻度を見て floor 化を判断) に従う。</p>
+
+<h3 id="s11-5-compression">§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)</h3>
+
+<p>人間層 (既定表示で可視の内容) は<strong>制限時間付きプレゼン</strong>、 機械層は<strong>無制限の原稿</strong>とする (<a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a>)。 本節が圧縮基準の単一 SSoT であり、 migration 道具と folio-architect の presentation pass の双方がここを参照する — 道具側に基準を複製しない。</p>
+
+<ul>
+  <li><strong>time-box</strong> — 人間層可視 prose は 1 ページ <strong>目標約 6,000 字 (読了 10 分) SHOULD / 上限約 12,000 字 (20 分) MUST</strong> (読速 500〜600 字/分で較正。 表中テキストは線形読書しないため満重みで数えない — 計測の詳細は floor 実装 (<a class="xref" href="./verification.html#req-ver-023" data-tooltip="folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 2 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints (閾値は corpus 較正 2026-06-11)。 frozen は warn 除外・essence block は living spec/research のみ (stuck-RED 回避)。">REQ-VER-023</a> へ<strong>追加予定</strong>の新 arm (folio-8mu、 warn 始まり — 本節の規範化時点では未実装で、 tooltip の現行 arm 一覧には含まれない) が定め、 migration 後の corpus 実測で再較正する)。</li>
+  <li><strong>章要旨</strong> — 各章 (h2/h3 単位、 構造章) の冒頭に <code>&lt;p class="section-essence" data-audience="human"&gt;</code> で 1〜3 文の要旨を置く MUST (living spec の圧縮対象ページ)。 章要旨は当該章の降格 prose の正確な要約であり、 REQ essence (requirement 単位、 §7.2) とは粒度の異なる入れ子 — fidelity (章要旨 ↔ 地の文) は Phase F review が検査する。</li>
+  <li><strong>章図</strong> — 構造 (依存・流れ・階層・状態) を持つ章は mermaid 図を持つ SHOULD。 図の語彙は <strong>mermaid (vendored) + §4.5 の HTML/CSS パターン (表・カード・callout・badge)</strong> に限る。 mermaid source はテキストとして機械可読 = 図自体が dual-audience。 手書き inline SVG は <strong>opt-in 例外</strong> (採用時は独立 ceiling review 必須 MUST — 幾何 gate 較正外のため)。 ラスター/外部生成画像は MUST NOT (SSoT 外で腐る、 P-2)。</li>
+  <li><strong>仕分け規律</strong> — 人間層に残す: 見出し / 章要旨 / 図 / 表 / REQ essence (spec-row summary)。 機械層へ降格 (<code>data-audience="machine"</code> の明示付与、 複数段落は wrapper <code>&lt;div&gt;</code> 可): informative 地の文・運用注記・歴史的経緯。 <code>aside.machine-readable</code> は降格<strong>対象外</strong> — aria-hidden 付き metadata block として既に別機構で機械専用であり、 <code>data-audience</code> を重ねない (2 機構を混同しない)。 mermaid 図 (<code>&lt;pre class="mermaid"&gt;</code>) は<strong>人間層に置き降格しない</strong> — render-gate の図数照合は static な block 数を期待するため、 machine 降格 (display:none) は render 不足 false-fail を生む。 <strong>削除は禁止 MUST</strong> — 圧縮は降格であり、 AI は CSS 表示状態に依存せず DOM 全文を読むため情報はゼロ損失。</li>
+  <li><strong>一次資料層</strong> — decisions (frozen ADR) と research は圧縮対象外。 除外根拠は 2 種を区別する: decisions = frozen (remediate 不能ゆえ stuck-RED 回避、 既存 floor の frozen 除外と同基準) / research = 一次資料そのもの (AI が読む原稿 — prose 上限系の新 arm に限り規範上の理由で skip。 既存 floor の他 arm は scan を継続する)。 constitution は <code>@type=FolioConstitution</code> として floor scan 対象外 (既存 carve-out)。</li>
+  <li><strong>検査</strong> — floor (prose 上限 / 章要旨必須 / 図ゼロ×長文の複合、 いずれも warn 始まり → ADR-0039 §2.7 の昇格規律) + Phase F fidelity 拡張 + §11.4 (lens + user walk)。 機械 gate 未設置の項 (章図の SHOULD・仕分けの適切さ) は §11.3 fold 規律と同じく ceiling 委譲。</li>
+</ul>
 </section>
 
 <!-- folio:chrome-bottom -->
@@ -982,6 +997,9 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
     openedForPrint = [];
   });
   if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
   var bar = document.createElement('nav');
   bar.className = 'audience-toggle';
   bar.setAttribute('aria-label', '表示対象の切替');
@@ -991,7 +1009,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
       var b = document.createElement('button');
       b.type = 'button';
       b.textContent = label;
-      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
       b.addEventListener('click', function () {
         document.body.classList.remove('audience-human', 'audience-machine');
         if (mode !== 'both') document.body.classList.add('audience-' + mode);
