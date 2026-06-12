@@ -19,17 +19,10 @@ files checked: 43 · relations checked: 404
   [OK] render-safety
   [WARN] readability-floor
 
-warnings (11):
+warnings (4):
   decisions/README.html [readability-floor] 人間層可視 prose 12793 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
   decisions/README.html [readability-floor] 図ゼロのまま人間層可視 prose 12793 codepoints > 6000 (構造章に mermaid 章図を置く、 rules §11.5 / ADR-0040)
   spec/README.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 6 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
-  spec/folio-self-spec.html [readability-floor] 人間層可視 prose 16539 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
-  spec/folio-self-spec.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 7 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
   spec/relations.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 7 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
-  spec/rules.html [readability-floor] 人間層可視 prose 33780 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
-  spec/rules.html [readability-floor] 図ゼロのまま人間層可視 prose 33780 codepoints > 6000 (構造章に mermaid 章図を置く、 rules §11.5 / ADR-0040)
-  spec/rules.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 11 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
-  spec/verification.html [readability-floor] 人間層可視 prose 18964 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
-  spec/verification.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 7 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
 
 clean: 0 violations

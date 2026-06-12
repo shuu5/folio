@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-12T03:08:06Z",
+  "generatedAt": "2026-06-12T14:38:48Z",
   "folioVersion": "0.6.0-draft",
   "specs": [
     {
@@ -1611,19 +1611,19 @@
         "id": "REQ-GLOSS-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-001",
-        "essence": "手動 (explicit) mark した glossary 用語の hover tooltip は &lt;span class=\"term\" data-term=\"&lt;canonical&gt;\"&gt; で表し、 data-term は vocabulary.yaml の canonical に解決し、 data-tooltip は その definition と一致する (folio-closed 語の folio fix auto-mark は REQ-GLOSS-002 の auto-mark span 形が担う。 Class B best-effort、 未 mark 言及は gap-lint しない)。"
+        "essence": "手動 (explicit) mark した glossary 用語は span.term[data-term] で表す MUST。 data-term は vocabulary.yaml canonical に解決、 data-tooltip はその escape 済 definition と一致。 Class B で未 mark は gap-lint せず。"
       },
       {
         "id": "REQ-GLOSS-002",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-002",
-        "essence": "opt-in した living spec/research (folio-glossary-automark=enabled) では、 folio fix が domain: folio-closed 用語の doc 初出を best-effort で &lt;span class=\"term\" data-term=\"&lt;canonical&gt;\" data-tooltip=\"&lt;definition&gt;\"&gt; に auto-mark する (hover tooltip のみ・glossary.html へはリンクしない、 code/見出し/div.meta (summary 行)/chrome 領域/既 mark/consumer 用語は対象外、 全 occurrence は約束しない)。"
+        "essence": "opt-in doc (folio-glossary-automark=enabled) では folio fix が folio-closed 用語の doc 初出を span.term に auto-mark (hover のみ・非リンク)。 code/見出し/summary/chrome/既 mark skip、 consumer 用語は対象外、 no-gaps 非保証。"
       },
       {
         "id": "REQ-GLOSS-003",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-003",
-        "essence": "生成 glossary.html の各 &lt;dt&gt; term id は canonical を slug 化した #term-&lt;slug&gt; で、 slug は 決定的 (lowercase / 非英数連→単一 hyphen / 端 hyphen 除去 / LC_ALL=C)・非空 (全非ASCII/全記号 canonical は決定的 x&lt;cksum&gt; fallback)・ページ内 一意。 slug 衝突 (異なる canonical が同一 slug) は folio build が fail-closed (glossary 非生成・exit 2)・folio validate が block ([glossary-slug]) する — glossary.html の有無と独立。 加えて用語 mark は span 統一ゆえ living spec/research prose の &lt;a class=\"term\"&gt; は anchor-residue として block する (detect-only、 hover-only 不可逆、 ADR-0036 §2.4)。"
+        "essence": "生成 glossary.html の各 dt id は canonical を slug 化した #term-&lt;slug&gt;。 slug は決定的 (lowercase / 非英数連→hyphen / LC_ALL=C)・非空・一意 な MUST。 衝突は fail-closed。 prose の a.term は anchor-residue として block。"
       },
       {
         "id": "REQ-NAV-001",
@@ -2053,6 +2053,10 @@
       },
       {
         "from": "spec/rules.html",
+        "to": "ADR-0028"
+      },
+      {
+        "from": "spec/rules.html",
         "to": "ADR-0033"
       },
       {
@@ -2074,6 +2078,10 @@
       {
         "from": "spec/rules.html",
         "to": "P-11"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-13"
       },
       {
         "from": "spec/rules.html",
@@ -2102,6 +2110,14 @@
       {
         "from": "spec/rules.html",
         "to": "P-7"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "P-8"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "REQ-VER-021"
       },
       {
         "from": "spec/rules.html",
