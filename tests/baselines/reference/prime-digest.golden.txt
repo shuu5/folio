@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 43 specs · folio 0.6.0-draft
+# 43 specs · folio 1.0.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -9,22 +9,22 @@
 
 ## spec/folio-self-spec.html
 - title: folio self-spec
-- doc-type: self-spec · status: draft
-- summary: folio Layer 0 framework 自身の architecture spec (provisional)
+- doc-type: self-spec · status: stable
+- summary: folio Layer 0 framework 自身の architecture spec
 
 ## spec/relations.html
 - title: folio relations spec
-- doc-type: spec · status: draft
+- doc-type: spec · status: active
 - summary: spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)
 
 ## spec/rules.html
 - title: folio rules
-- doc-type: rules · status: draft
+- doc-type: rules · status: active
 - summary: Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)
 
 ## spec/verification.html
 - title: folio verification spec
-- doc-type: spec · status: draft
+- doc-type: spec · status: active
 - summary: sandbox verification framework spec (機能単位 use case verification の SSoT)
 
 ## decisions/ADR-0001-architecture-rules-split.html

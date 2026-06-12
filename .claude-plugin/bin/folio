@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# folio CLI (Phase X3 試作)
+# folio CLI
 # 完成形は init / validate / inventory / prime / fix subcommands (ADR-0003 §2.1)
-# 試作段階は version / help / init / inventory / prime / validate / fix / build を実装
+# 実装済 subcommand: version / help / init / inventory / prime / validate / fix / build
 #
 # inventory subcommand (REQ-VER-010):
 #   relations.html §4.4.1 の scan 対象 (architecture/spec/ + architecture/decisions/ +
@@ -15,7 +15,7 @@
 
 set -uo pipefail
 
-VERSION="0.4.2-draft"
+VERSION="1.0.0"
 
 # ============================================================================
 # inventory helpers — HTML spec から field 抽出 (folio 自身の整った spec 群が対象)
@@ -2051,7 +2051,7 @@ folio_cmd_init() {
 
   # --- folio.config.yaml (§2.5 defaults、 P-2 YAML 例外) ---
   folio_init_write "${target}/folio.config.yaml" "$target" <<'YAML' || rc=1
-folio_version: "^0.5"
+folio_version: "^1.0"
 spec_path: "architecture/spec/"
 caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
 caller_marker_value: "folio-architect"
@@ -2377,7 +2377,7 @@ HEAD
   local cl row id ti dt st s
   local -A clname=([spec]="spec — design intent (WHAT)" [decisions]="decisions — ADR (WHY)" [research]="research — exploration")
   local -a clusters=(spec decisions research)
-  local -a status_pref=(active accepted draft proposed superseded deprecated)
+  local -a status_pref=(stable active accepted draft proposed superseded deprecated)
   for cl in "${clusters[@]}"; do
     local -a crows=()
     for row in ${rows[@]+"${rows[@]}"}; do
@@ -3199,11 +3199,11 @@ folio_nav_reachability() {
 
 case "${1:-version}" in
   version|--version|-V)
-    echo "folio v${VERSION} (Phase X3 試作)"
+    echo "folio v${VERSION}"
     ;;
   help|--help|-h)
     cat <<EOF
-folio v${VERSION} — Layer 0 META FRAMEWORK CLI (Phase X3 試作)
+folio v${VERSION} — Layer 0 META FRAMEWORK CLI
 
 Subcommands:
   version, --version       version 表示
@@ -3256,7 +3256,7 @@ EOF
     exit $?
     ;;
   *)
-    echo "folio: unknown subcommand '${1}' (Phase X3 試作では未実装)" >&2
+    echo "folio: unknown subcommand '${1}' (未実装)" >&2
     echo "Try 'folio help' for available subcommands." >&2
     exit 1
     ;;

@@ -1,8 +1,8 @@
 {
   "name": "folio",
-  "version": "0.6.0-draft",
+  "version": "1.0.0",
   "license": "MIT",
-  "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. Phase X3 試作実装 (minimal scope = ADR-0003/0007: 1 skill + 5 hook + 6 script + 1 CLI).",
+  "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. minimal scope = ADR-0003/0007: 1 skill + 5 hook + 6 script + 1 CLI.",
   "author": {
     "name": "shuu5",
     "url": "https://github.com/shuu5"

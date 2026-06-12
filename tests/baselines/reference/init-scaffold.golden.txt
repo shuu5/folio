@@ -4,7 +4,7 @@ architecture/research/README.html
 architecture/spec/README.html
 folio.config.yaml
 --- folio.config.yaml ---
-folio_version: "^0.5"
+folio_version: "^1.0"
 spec_path: "architecture/spec/"
 caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
 caller_marker_value: "folio-architect"
