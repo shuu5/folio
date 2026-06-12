@@ -80,7 +80,7 @@
 
 <figure class="diagram" data-diagram-type="adr-status-lifecycle">
 <pre class="mermaid">
-flowchart LR
+flowchart TB
   accTitle: ADR status lifecycle
   accDescr: ADR の status は proposed (draft・user 承認待ち) から始まり、 user 承認で accepted (適用済) になる。 accepted な ADR が後続 ADR に置換されると superseded (新 ADR が supersedes 属性で明示 trace) になり、 置換された古い ADR は deprecated (陳腐化) として扱う。 本 cluster の各 ADR の現 status は §3 table の status 列に対応する。
   P["proposed<br/>draft・承認待ち"]:::st
