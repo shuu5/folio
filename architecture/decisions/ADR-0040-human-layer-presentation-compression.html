@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="0.5.0-draft">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0040">
+<meta name="folio-adr-date" content="2026-06-12">
+<title>ADR-0040 — human-layer presentation compression (time-box 付き人間層プレゼン + 一次資料層 + 圧縮道具 2 系統)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0040-human-layer-presentation-compression.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0040 — human-layer presentation compression (time-box 付き人間層プレゼン + 一次資料層 + 圧縮道具 2 系統)",
+  "folio:version": "0.5.0-draft",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0038-constitution-p14-human-readability.html" },
+    { "@id": "./ADR-0039-presentation-template-layer.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" },
+    { "@id": "../research/presentation-design-patterns.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0040</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0040 — human-layer presentation compression</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-12 &middot; folio v0.5.0-draft &middot; 人間層を「制限時間付きプレゼン」、 機械層を「無制限の原稿」と再定義する一括決定。 ADR-0039 の presentation template layer (型と導線) では解けなかった「人間向け表示でも本文が長大すぎ図が乏しい」を、 informative prose の audience 降格 (削除しない — AI は CSS 非依存で DOM 全文を読むため情報ゼロ損失) + 章要旨/章図の新設 + 既定表示の人間プレゼン化で解く。 time-box は目標 10 分 (約 6,000 字)/上限 20 分 (約 12,000 字)。 図の語彙は mermaid + 既存 CSS パターン (mermaid source は機械可読 = 図自体が dual-audience)、 inline SVG は ceiling review 必須の opt-in 例外。 道具は migration skill (batch 圧縮 + walk 検収) と folio-architect 恒久 phase の 2 系統で、 圧縮基準は rules に規範化して共有 SSoT とする。 gate は floor 新 arm (人間層可視 prose 上限/章要旨必須/図ゼロ×長文) を warn 始まりで設置し ADR-0039 §2.7 の昇格規律に乗せる。 scope は living spec + 入口群 — decisions/research は「一次資料層」(AI が読む原稿) としてプレゼン圧縮の対象外を明示する。 1.0.0 (criterion-c) は本 epic 完了後の user 再 walk を gate とする。 ADR-0039 §2.4 の既定表示「バランス型」は本 ADR が「人間プレゼン型」へ改訂する (frozen 本文不変、 本 ADR + rules が新規範)。 grill 2026-06-12 (全 6 論点) で確定。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-timebox">§2.1 人間層プレゼン原則と time-box (grill 論点 1・5)</a></li>
+  <li class="toc--sub"><a href="#s2-2-one-dom">§2.2 住所 = 1-DOM 深化、 既定表示の改訂 (grill 論点 2)</a></li>
+  <li class="toc--sub"><a href="#s2-3-vocabulary">§2.3 図の表現語彙 (grill 論点 4)</a></li>
+  <li class="toc--sub"><a href="#s2-4-tools">§2.4 圧縮道具 2 系統 + 共有規範 (grill 論点 3)</a></li>
+  <li class="toc--sub"><a href="#s2-5-gates">§2.5 gate — 三層の見張り (grill 論点 5)</a></li>
+  <li class="toc--sub"><a href="#s2-6-scope">§2.6 scope — プレゼン層と一次資料層の区分 (grill 論点 6)</a></li>
+  <li class="toc--sub"><a href="#s2-7-v1-gate">§2.7 1.0.0 との関係 (grill 論点 6)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0040</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-12</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0038 (上位原則 P-14)、 ADR-0039 (presentation template layer — §2.4 既定表示を本 ADR が改訂、 §2.6 derive 境界・§2.7 昇格規律は継承)、 ADR-0033 (1-DOM co-author = 本 ADR の住所選定の根拠、 不変)、 rules.html (圧縮基準の規範化先)、 verification.html (floor 新 arm の REQ 追加先)、 research/presentation-design-patterns.html (表現語彙の根拠)。 bd: epic folio-8jy (子: pqo/434/u80/8mu/ecs/2qj/bqq/bfj)。 起点 = user criterion-c walk 2026-06-12 + grill 6 論点</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>ADR-0039 (presentation template layer) は入口・導線・既定折り畳み・audience toggle という「型」を整備したが、 user の criterion-c walk (2026-06-12) は 2 つの未解決を判定した: <strong>(a) toggle 不在ページ</strong> — dual-audience markup の実 attribute 適用が rules.html / verification.html (各 60 件超) と relations.html (8 件) の 3 本で止まり、 folio-self-spec.html・constitution.html 等は 2 層構造自体を持たないため toggle が出ない (機構は正しく、 適用が途中。 件数は 2026-06-12 時点の概数 snapshot)。 <strong>(b) 人間向け表示でも字が多すぎ図が少なすぎる</strong> — 人間層可視 prose の実測は rules 約 53,000 字 (図 0)・verification 約 57,000 字 (図 1)・folio-self-spec 約 37,000 字 (図 9)・relations 約 24,000 字 (図 2)。 読速 500〜600 字/分換算で rules は約 90 分 = 論文精読級であり、 「読める」の実用判断に達しない。</p>
+
+<p>核心の観察は 2 つ。 第一に、 corpus で最も図が多い folio-self-spec (9 枚) でも user は「字が多い」と判定した — 図の枚数では解けず、 <strong>informative prose の絶対量</strong>が原因である。 既存の fold/toggle 機構が隠すのは EARS 精密文だけで、 章の説明文・運用注記という地の文は誰の物とも分類されず全量可視のままだった。 第二に、 user の要求は「人間に対して限られた時間内でプレゼンを行うようなもの。 原稿や一次資料は AI 側が読むように保持し、 人間には必要な情報を圧縮して渡す」 — これは folio の 1-DOM dual-audience (ADR-0033) とちょうど同型に写像できる: <strong>DOM = 原稿 (AI が読む)、 既定表示 = プレゼン (人間が見る)</strong>。 AI agent は CSS の表示状態に依存せず DOM 全文を読むため、 既定表示をどれだけ圧縮しても機械層の情報は失われない。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-timebox">§2.1 人間層プレゼン原則と time-box (grill 論点 1・5)</h3>
+
+<p>人間層 (既定表示で可視の内容) を「制限時間付きプレゼン」と定義する: <strong>目標 10 分 (人間層可視 prose 約 6,000 字) / 上限 20 分 (約 12,000 字)</strong> (読速 500〜600 字/分で較正、 閾値は migration 後の corpus 実測で微調整可)。 機械層は無制限 — 精密さ・網羅性は従来どおり EARS/normative が担う (P-1 不変)。 圧縮の手段は<strong>削除ではなく降格</strong>: 人間の初見に不要な informative prose へ <code>data-audience="machine"</code> を付与して既定で隠す。 全文は audience toggle (ADR-0039 §2.5) で 1 操作で開く。</p>
+
+<h3 id="s2-2-one-dom">§2.2 住所 = 1-DOM 深化、 既定表示の改訂 (grill 論点 2)</h3>
+
+<p>プレゼンは別ページではなく<strong>同じページの既定表示</strong>として実現する (ADR-0033 の 1-DOM co-author を深化)。 各章 (h2/h3 単位) に <strong>章要旨 (1〜3 文) + 章図 (構造を持つ章)</strong> を新設し、 人間既定表示 = 見出し + 章要旨 + 図 + 表 + REQ essence、 地の文 = 機械層とする。 章要旨は当該章の降格される informative 地の文の人間向け要約であり、 既存の REQ essence (requirement 単位の要約、 ADR-0033) とは粒度の異なる二層 (章 = section / essence = requirement) — 二重要約ではなく入れ子の階層である。 これに伴い ADR-0039 §2.4 の既定表示「バランス型」(essence・表・図可視 / EARS fold) を「<strong>人間プレゼン型</strong>」(加えて informative prose も既定で隠す) へ<strong>改訂</strong>する — frozen である ADR-0039 本文は触らず、 本 ADR が改訂を宣言し rules (living) が新規範を持つ (P-10 の divergence trace 流儀)。 toggle 不在ページ問題 (Context (a)) は、 この markup 適用を folio-self-spec 等へ拡大することで同時に解消する。 スライド的な語り順・独自レイアウトは要件としない (user 確認済 — 圧縮とグラフィカル化が達成されればよい)。</p>
+
+<h3 id="s2-3-vocabulary">§2.3 図の表現語彙 (grill 論点 4)</h3>
+
+<p>図は <strong>mermaid (vendored) + 既存 HTML/CSS パターン (表・カード・callout・badge)</strong> を正とする。 根拠: (i) mermaid source はテキストとして機械可読 — 人間は描画を見て AI はソースを読む、 <strong>図自体が dual-audience</strong> で本 ADR の原稿/プレゼン対と同型。 (ii) render-gate (REQ-VER-022) が幾何崩れを 3 viewport で機械検査できる (較正済資産)。 (iii) spec の「必要な情報」は大半が構造 (依存・流れ・階層・状態) であり mermaid の得意領域。 手書き inline SVG は <strong>ceiling review 必須の opt-in 例外枠</strong>として許す (幾何 gate 較正外・fidelity 検証が LLM 頼みになるため濫用しない)。 ラスター画像・外部生成画像は不採用 (SSoT 外で必ず腐る、 P-2 の精神に反する)。</p>
+
+<h3 id="s2-4-tools">§2.4 圧縮道具 2 系統 + 共有規範 (grill 論点 3)</h3>
+
+<p>圧縮の実施は性質の異なる 2 道具で行う: <strong>(a) migration skill</strong> — 既存ページを対象に、 章要旨案・章図案・地の文の audience 仕分け案を batch 生成して適用し、 user の Pages walk で検収する (一括変換の道具)。 <strong>(b) folio-architect への恒久組み込み</strong> — spec 編集の正規路に presentation pass (新規/改訂章の章要旨・章図・仕分けの著述) を必須工程として足す (以後の編集で逆戻りさせない仕組み)。 両道具が参照する<strong>圧縮基準 (time-box・章要旨/章図の語彙・仕分け規律) は rules に規範化して単一 SSoT</strong> とする — 道具ごとに「プレゼンの定義」がぶれることを構造的に防ぐ。</p>
+
+<h3 id="s2-5-gates">§2.5 gate — 三層の見張り (grill 論点 5)</h3>
+
+<p><strong>floor (機械)</strong>: validate に warn 始まりの新 arm を設置する — (i) 人間層可視 prose が上限 (約 12,000 字) 超え、 (ii) dual-audience 構造を持つ spec の章に章要旨が無い、 (iii) 図ゼロかつ人間層 prose が多い複合条件。 migration 前の corpus は全ページ違反のため block 始まりは不可 — ADR-0039 §2.7 の昇格規律 (違反頻度を見て block 化) に乗せる。 <strong>ceiling (LLM)</strong>: Phase F の fidelity 軸を「章要旨 ↔ 地の文」「図 ↔ 本文」の drift 検査へ拡張する (essence ↔ EARS と同じ型)。 readability-walk lens (rules §11.4) は既定表示の圧縮後体験を検査する。 <strong>human</strong>: §11.4 の user 実機 walk (既存 MUST)。</p>
+
+<h3 id="s2-6-scope">§2.6 scope — プレゼン層と一次資料層の区分 (grill 論点 6)</h3>
+
+<p>プレゼン圧縮の対象 = <strong>living spec 5 本 (rules / verification / folio-self-spec / relations / spec README) + 入口群 (cluster README・landing・glossary)</strong>。 対象外を「<strong>一次資料層</strong>」として rules に明示する: <strong>decisions (frozen ADR)</strong> は編集禁止かつ読者が維持者 (歴史資料、 ADR-0039 §2.1 の層定義どおり)、 <strong>research</strong> は探索の原稿そのもの (AI が読む一次資料 — これを圧縮するのは原稿に蛍光ペンを引くようなもの)。 constitution は <code>@type=FolioConstitution</code> として floor scan の対象外 (字数に依らず schema-excluded、 既存 carve-out と同基準) かつ編集禁止。 一次資料層の床 gate 除外根拠は 2 種を区別する: <strong>decisions = frozen</strong> (remediate 不能ゆえ stuck-RED 回避、 readability-floor の既存 frozen 除外と同基準) / <strong>research = 一次資料層そのもの</strong> (frozen ではなく既存 floor の他 arm では scan され続ける — 本 ADR が新設する prose 上限系の新 arm に限り、 圧縮対象外という規範上の理由で skip する)。</p>
+
+<h3 id="s2-7-v1-gate">§2.7 1.0.0 との関係 (grill 論点 6)</h3>
+
+<p>本 epic (folio-8jy) を <strong>1.0.0 宣言の前提</strong>に置く。 user の criterion-c walk (2026-06-12) は「字が多すぎて読めない」= 実用判断の不合格であり、 この状態での 1.0.0 宣言は criterion-c の自己矛盾になる。 migration 完了後に user が再 walk し、 実用判断 (criterion-c) を経て folio-3s0 (1.0.0、 ADR-0030/0032) へ進む。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<ul>
+  <li><strong>得るもの</strong>: 人間の読了時間が論文精読級 (約 90 分) からプレゼン級 (10〜20 分) へ。 toggle 不在ページの解消 (markup 適用拡大)。 図の増加が「構造の先読み」を可能にする。 機械層は無傷 (AI への正確さ・網羅性ゼロ損失)。 圧縮規律が編集路に恒久化され、 新章で逆戻りしない。</li>
+  <li><strong>払うもの</strong>: 全 living spec の prose 仕分けという大規模 markup 作業 (migration)。 章要旨という新しい維持対象 (fidelity 検査対象が増える)。 既定表示の変更は既習読者の慣れを一度壊す (toggle で全文に戻れることが緩和策)。</li>
+  <li><strong>リスクと緩和</strong>: 圧縮の判断ミス (必要な情報を隠す) — 削除ではなく降格なので toggle で常に回復可能 + Phase F fidelity + user walk 検収。 章要旨の drift — fidelity 軸拡張が essence と同様に見張る。 warn 閾値の誤較正 — migration 後実測で再較正してから昇格判断。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+
+<ul>
+  <li><strong>B 案: 別ページのプレゼン view 導出</strong> — 不採用。 手書きなら二重 SSoT で必ず drift し (DITA 系が derive で構造保証している問題そのもの)、 drift させない導出には結局本文側の章要旨/章図の構造化 (= 本 ADR の作業) が前提になる。 1-DOM 深化完了後に「build が章要旨を束ねる導出ページ」を安く足せる片道は残る (ADR-0039 §2.6 の derive 拡大と整合)。</li>
+  <li><strong>削除による圧縮</strong> — 不採用。 機械層の網羅性 (P-1) と衝突し、 AI の参照する一次情報を失う。 降格 (audience 仕分け) は同じ視覚効果をゼロ損失で得る。</li>
+  <li><strong>図の全面解禁 (手書き SVG・画像)</strong> — 不採用 (SVG は opt-in 例外のみ)。 機械検証 (render-gate) と機械可読性 (fidelity 検証) を失う表現は、 dual-audience の片側を壊す。</li>
+  <li><strong>スライド UI / 独自レイアウト</strong> — 不採用。 user 確認により「圧縮 + グラフィカル」が要件で、 語り順の自由は不要。 文書の章順がそのままプレゼンの順序を兼ねる。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<p>上位原則: <a href="./ADR-0038-constitution-p14-human-readability.html">ADR-0038</a> (P-14)。 改訂対象: <a href="./ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.4 (既定表示バランス型 → 人間プレゼン型。 frozen 本文不変、 本 ADR が改訂を宣言)。 継承: ADR-0039 §2.5 (toggle)・§2.6 (derive 境界)・§2.7 (warn→block 昇格規律)、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (1-DOM co-author、 不変)。 規範化先: <a href="../spec/rules.html">rules.html</a> (圧縮基準・一次資料層・章要旨/章図語彙・SVG 例外枠)。 REQ 追加先: <a href="../spec/verification.html">verification.html</a> (floor 新 arm)。 表現語彙の根拠: <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a>。 追跡: bd epic folio-8jy (子 task: folio-pqo 本 ADR / folio-434 規範 / folio-u80 機構 / folio-8mu floor / folio-ecs migration skill / folio-2qj architect 恒久化 / folio-bqq migration 実走 / folio-bfj 再 walk)。 決定の経緯: user criterion-c walk 2026-06-12 + grill 全 6 論点 (本 ADR の各 § に対応)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0039-presentation-template-layer.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'both' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

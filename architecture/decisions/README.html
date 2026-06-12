@@ -304,6 +304,13 @@
       <td>—</td>
       <td>2026-06-11</td>
     </tr>
+    <tr>
+      <td><a href="ADR-0040-human-layer-presentation-compression.html">ADR-0040</a></td>
+      <td>human-layer presentation compression (人間層 = time-box 付きプレゼン 10〜20 分 / 機械層 = 無制限の原稿。 informative prose の audience 降格 + 章要旨/章図 + 既定表示の人間プレゼン化 + 圧縮道具 2 系統 + 一次資料層の区分。 ADR-0039 §2.4 既定表示を改訂)</td>
+      <td>accepted</td>
+      <td>—</td>
+      <td>2026-06-12</td>
+    </tr>
   </tbody>
 </table>
 
@@ -349,6 +356,8 @@
   <dd>ADR-0037 (render-safety 二層化) は 2026-06-04 に criterion-c で user が発見した folio-self-spec 図5 の subgraph 多行タイトル overlap への対応 (epic folio-l2g、 Slice A〜C SHIP) 後の retrospective decision として user 承認 (A 選択)・起票 (status <code>accepted</code>)。 <strong>floor</strong> (static bash lint、 全 consumer 配布、 <a href="../spec/verification.html#req-ver-021">REQ-VER-021</a>) + <strong>ceiling</strong> (playwright で flowchart 幾何 overlap を実 render 検出、 CI-only folio dogfood、 決定的ゆえ blocking) の二層を確定し、 <a href="ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の「ceiling = 非決定的ゆえ CI 非搭載」を <strong>LLM ceiling に限定</strong> (決定的 render ceiling を排除しない、 CI 採用基準=決定性) ・<a href="ADR-0020-validate-scope.html">ADR-0020</a> validate scope を render-safety ceiling に拡張 (frozen 本文不変、 reverse-link + prose で trace)。 独立 4-lens ceiling review が fail-open (render 不足の false-clean) / constitution frozen deadlock / font 未 pin / overclaim を捕捉し ship 前に反映、 専用 REQ-VER-022 trace + detector generality は follow-up (folio-w5z)。</dd>
   <dt>ADR-0038 / ADR-0039 — P-14 amendment + presentation template layer</dt>
   <dd>ADR-0038 (constitution P-14 amendment) と ADR-0039 (presentation template layer) は 2026-06-10〜11 に criterion-c 徹底討論 (根因 = 機械 gate のある価値のみ磨かれる非対称、 独立 5-lens 監査で実証) + <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> + ADR grill (G1〜G7) を承けた forward decision として起票し、 同日 user 承認で <code>accepted</code> 化 (同 commit 系で constitution へ P-14 append + count-fix + mermaid initialize 整合 + version 0.6.0-draft bump を実施)。 ADR-0038 が原則 (P-10 手続き) を、 ADR-0039 が機構を担う 2 本構成 (G1)。</dd>
+  <dt>ADR-0040 — human-layer presentation compression</dt>
+  <dd>2026-06-12 の user criterion-c walk 判定 (toggle 不在ページ + 人間向け表示でも字が多すぎ図が少なすぎる) を起点に、 grill 全 6 論点 (主軸 = 人間層圧縮 / 住所 = 1-DOM 深化 / 道具 = 2 系統 / 図の語彙 / gate + time-box 10〜20 分 / scope + 1.0.0 前提化) を user と解消した forward decision。 同日 user 承認で <code>accepted</code> 起票。 ADR-0039 の型 (template/chrome/toggle) の上に「中身の圧縮」を重ねる関係で、 §2.4 既定表示のみ改訂。 実装は epic folio-8jy。</dd>
 </dl>
 </section>
 

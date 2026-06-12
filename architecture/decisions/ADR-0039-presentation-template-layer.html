@@ -21,6 +21,9 @@
   },
   "@id": "./ADR-0039-presentation-template-layer.html",
   "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "./ADR-0040-human-layer-presentation-compression.html" }
+  ],
   "dc:title": "ADR-0039 — human-first presentation template layer (landing template + 全ページ chrome 注入 + 層別既定表示 + audience toggle + readability 二層 gate)",
   "folio:version": "0.5.0-draft",
   "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
@@ -187,6 +190,7 @@
 <!-- folio:chrome-bottom -->
 <nav class="prevnext" aria-label="前後の文書">
   <a class="prevnext__prev" href="ADR-0038-constitution-p14-human-readability.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0038 — constitution P-14 (Human Readability) 新設 amendment (構造要求型: 各ページ種別に主読者層の定義を要求し、 人間可読性を機械可読性と同格の検証対象とする)</span></a>
+  <a class="prevnext__next" href="ADR-0040-human-layer-presentation-compression.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0040 — human-layer presentation compression (time-box 付き人間層プレゼン + 一次資料層 + 圧縮道具 2 系統)</span></a>
 </nav>
 <script>
 (function () {
