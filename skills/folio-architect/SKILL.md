@@ -127,6 +127,16 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 - [ ] 編集した mermaid 図 / spec text が **a11y minimum rule** ([rules.html §4.6](../../architecture/spec/rules.html#s4-6-a11y)) を満たすか: (a) WCAG 2.2 SC 1.4.3 contrast 4.5:1 (normal) / 3:1 (large)、 (b) mermaid 図に `accTitle` / `accDescr` 付与、 (c) `classDef` / `style` で `fill` を override する場合 `color` paired 指定 (`primaryTextColor` 継承による白文字事故の防止)。 根拠 verbatim quote + paired override 正攻法は [refs/html-spec-craft.md](./refs/html-spec-craft.md) §1-§2 を参照。
 - [ ] mermaid を採用した spec の loader が **vendored** (`<script src="../assets/mermaid.min.js" defer></script>`) で、 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) を使っていない**か ([rules.html §8 REQ-DA-JS-2](../../architecture/spec/rules.html#s8-js-governance) vendoring MUST / no-cloud、 canonical loader pattern = [refs/html-spec-craft.md §2.0](./refs/html-spec-craft.md))。 consumer が `architecture/assets/mermaid.min.js` 未 vendoring でも raw `<pre class="mermaid">` は graceful degradation で可読。
 
+### presentation pass (ADR-0040 / rules §11.5、 圧縮対象ページの編集で MUST)
+
+living spec (+ cluster README) の章を新規作成・実質改訂したら、 **人間層プレゼン圧縮の規律を同じ編集内で適用する** (基準の SSoT は [rules.html §11.5](../../architecture/spec/rules.html#s11-5-compression) — 本 SKILL に基準を複製しない)。 これを怠ると新章から元の「字の壁」に逆戻りする (恒久規律、 ADR-0040 §2.4 — 既存 corpus の一括変換は別道具 **folio-compress** が担い、 本 pass はその後の維持を担う):
+
+- [ ] 章冒頭に **章要旨** `<p class="section-essence" data-audience="human">` (1〜3 文、 降格 prose の正確な要約) を置いたか
+- [ ] informative 地の文・運用注記・歴史的経緯を **`data-audience="machine"` へ降格**したか (削除は禁止 — 降格のみ。 仕分けの残す/降格は §11.5 仕分け規律)
+- [ ] 構造 (依存・流れ・階層・状態) を持つ章に **mermaid 章図**を置いたか (SHOULD)
+- [ ] **章要旨と降格を章ごとに同時に行ったか** (章要旨は降格分の要約 = 両者は同一編集単位という §11.5 の内在的依存。 片方だけだと「章の入口が要旨でも地の文でもない」空白が生じ、 readability-walk lens が体験不良として事後検出する)
+- [ ] `folio validate` の readability-floor warn (人間層可視 prose 上限 / 章要旨 / 図ゼロ×長文) が編集前より悪化していないか (warn は migration TODO の機械追跡 — 実 corpus 契約 golden (validate-clean) が変わる場合は regen を同梱)
+
 ### stale marker の cleanup
 
 異常終了等で `.folio/architect-active` が残留した場合、明示的に削除する: `rm -f .folio/architect-active`。
@@ -145,7 +155,7 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 | `folio:spec-review-vocabulary` | vocabulary | P-5 canonical name 違反 + forbidden synonym |
 | `folio:spec-review-ssot` | SSoT | P-7 content domain exclusivity + ADR/research 境界 |
 | `folio:spec-review-temporal` | temporal | P-4 declarative form + wave-specific narrative 検出 (REQ-CI-011 の LLM ceiling、 ADR-0028 §2.3) |
-| `folio:spec-review-fidelity` | fidelity | dual-audience の human essence ↔ machine normative 意味的 fidelity + EARS pattern semantic 一致 (ADR-0033 §2.4 ceiling = floor `REQ-DA-STRUCT` の意味層補完) |
+| `folio:spec-review-fidelity` | fidelity | human 派生 view ↔ machine canonical の意味的 fidelity 3 粒度 (REQ essence ↔ EARS / 章要旨 ↔ 章の地の文 (降格分含む、 ADR-0040) / mermaid 図 ↔ 本文構造) + EARS pattern semantic 一致 (ADR-0033 §2.4 + ADR-0040 §2.5 ceiling) |
 
 各 agent には **Phase E で編集した spec file の path 群** と「担当軸を review し構造化 findings (severity / location / rule / fix) を返せ」という指示を渡す。5 agent は read-only (自ら Edit しない) ため、並列で安全に走る。model は `review_model` (default opus)。`spec-review-fidelity` は dual-audience card (`data-audience`) を持つ spec でのみ実質的に働き、 無い spec では clean を返す。
 

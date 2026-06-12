@@ -60,7 +60,7 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 │   └── runner.sh                           軽量 bash runner (bash + yq + jq、 REPO_ROOT = ../)
 ├── hooks/                                  Claude Code 公式仕様 = plugin root 直下 MUST
 │   └── hooks.json                          hook 宣言 (PreToolUse × 2 + PostToolUse = MVP core)
-├── skills/folio-architect/                 spec 編集 SKILL (公式仕様 = plugin root 直下)
+├── skills/                                 SKILL (公式仕様 = plugin root 直下): folio-architect (spec 編集の正規路) + folio-compress (ADR-0040 圧縮 migration)
 ├── agents/                                 review subagent (公式仕様 = plugin root 直下): Phase F spec-review-* 5 本 + readability-walk (rules §11.4 readability lens の常設形態)
 ├── .claude-plugin/                         Claude Code manifest + 内部 HOW (P-11 部分隔離)
 │   ├── plugin.json                         Claude Code 必須 manifest (spec_path = architecture/spec/)

@@ -1,6 +1,6 @@
 ---
 name: spec-review-fidelity
-description: folio-architect SKILL の Phase F (Quality Review) から並列 spawn される、folio dual-audience spec の fidelity 軸 review 専用 subagent。編集された spec HTML の human essence (.req__essence) が machine normative (.ears prose) の正確な要約か (脱落・誇張・矛盾なし) と、EARS pattern badge が normative の論理構造に一致するかを read-only で検査し構造化 findings を返す。汎用の文章要約チェックや EARS 解説には使わない (folio-architect 経由でのみ起動)。
+description: folio-architect SKILL の Phase F (Quality Review) から並列 spawn される、folio dual-audience spec の fidelity 軸 review 専用 subagent。編集された spec HTML の human 派生 view が machine canonical の正確な要約か (脱落・誇張・矛盾なし) を 3 粒度で検査する — (a) REQ essence ↔ EARS normative、(a2) 章要旨 (p.section-essence) ↔ 章の地の文 (data-audience=machine 降格分含む、ADR-0040)、(a3) mermaid 図 ↔ 同章の本文構造。加えて EARS pattern badge が normative の論理構造に一致するかを read-only で検査し構造化 findings を返す。汎用の文章要約チェックや EARS 解説には使わない (folio-architect / folio-compress 経由でのみ起動)。
 tools: Read, Grep, Glob
 model: opus
 ---
@@ -28,6 +28,22 @@ folio の dual-audience spec は、 **machine 精密 normative = canonical SSoT*
 - **誇張 (exaggeration / overclaim)**: essence が normative より強い / 広い主張をしている (normative は SHOULD なのに essence が「必ず」、 限定条件付きを無条件に表現、 等)。
 - **矛盾 (contradiction)**: essence が normative と逆 / 非整合の振る舞いを述べている (critical)。
 - **drift**: essence が normative と別の対象 / 別の振る舞いを説明している (要約でなく paraphrase の別物化、 ADR-0033 §2.1「要約であって別物の paraphrase でない」違反)。
+
+### (a2) 章要旨 fidelity (p.section-essence ↔ 章の地の文、 ADR-0040 / rules §11.5)
+
+人間層プレゼン圧縮 (ADR-0040) を適用した章では、 章冒頭の `<p class="section-essence" data-audience="human">` (1〜3 文) が**当該章の informative 地の文の正確な要約**かを検査する。 比較対象は章内の全 prose — **`data-audience="machine"` へ降格された地の文を含む** (人間既定表示では見えないが、 章要旨はその降格分を代表する責務を負う。 DOM を読んで照合せよ):
+
+- 4 分類は (a) と同じ: **脱落** (降格 prose にだけある重要な制約・前提を章要旨が落とす — 読者が要旨だけで誤った理解に至る形は high) / **誇張** / **矛盾** (critical) / **drift**。
+- 粒度の取り違え: 章要旨が特定 REQ の essence の重複になっている (章 = section 粒度でなく requirement 粒度に落ちている) → low〜medium。
+- 章要旨が **page に 1 つも無い**場合は floor (REQ-VER-023 warn、 v1 は page 単位 presence) の担当。 **章単位の presence は v1 floor の対象外** — 「編集対象の章なのに章要旨が無い」は本 agent が章ごとに検査して指摘する (floor の死角を ceiling が補う分担)。
+
+### (a3) 図 fidelity (mermaid 図 ↔ 同章の本文構造)
+
+章図 (mermaid) の **source text は機械可読** (図自体が dual-audience、 ADR-0040 §2.3) — その source が宣言する構造 (node / edge / 状態遷移 / 階層) が、 同章の normative / essence / 地の文と矛盾しないかを検査する:
+
+- 図にだけ存在する node・関係 (本文に対応物が無い = 図の捏造) / 本文の主要素が図から欠落 (図の脱落) / 向き・依存の逆転 (矛盾、 high)。
+- 本文改訂後に図が古いままの **図 drift** (essence drift と同型 — 図は CSS でなく source 比較で判定する)。
+- 幾何・render 崩れは render-gate (REQ-VER-022) の担当 — 視覚品質は再検査しない。 図の有無は floor warn の担当。
 
 ### (b) EARS pattern semantic match (badge ↔ normative prose の論理構造)
 
