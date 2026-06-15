@@ -189,7 +189,7 @@
 
 ## decisions/ADR-0042-hybrid-generation-dense-table-readability.html
 - title: ADR-0042 — hybrid generation + dense-table readability strategy (機械SSoT 決定的組立 + opus prose 充填 + 密系部品 A/B 可読化)
-- doc-type: adr · status: proposed
+- doc-type: adr · status: accepted
 - summary: epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を
 
 ## decisions/README.html

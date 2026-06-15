@@ -6,7 +6,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="1.0.0">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0042">
 <meta name="folio-adr-date" content="2026-06-15">
@@ -46,7 +46,7 @@
 
 <header class="doc-header">
   <h1>ADR-0042 — hybrid generation + dense-table readability strategy</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-15 &middot; folio v1.0.0 (記録する実装到達版 = 1.1.0) &middot; epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を<strong>ハイブリッド</strong>化する — 構造 (要件表 / RTM グリッド / NFR 表) は構造化された機械 SSoT から<strong>決定的に組立</strong>て (トレースから各セルを導出 = 捏造原理的に不可能)、 opus は <strong>prose スロットのみ充填</strong>する (章リード / 「なぜ要る」根拠 / 専門語のやさしい併記 / 1 文サマリ)。 これは ADR-0041 §2.4 (LLM が構造も prose も生成) を refine する (EC proof で LLM 生成が元に無い RTM 行を捏造した 1 観測 + 構造生成の原理的捏造リスク)。 (2) 密系部品の<strong>非エンジニア可読化を A/B 戦略</strong>で assembler に織り込む — トレース監査系グリッド (rtm-grid register) は人間ビューで既定折りたたみ + 空不可の平易要約スロット (B)、 要件本体 / NFR 表は各行 plain-language スロット + 専門語自動併記で畳まない (A)、 元々平易な表は据置。 これは ADR-0041 §2.2 (視覚言語 — 高密度を人間 primary でそのまま読ませる前提) を refine する。 新スロットの非空は floor gate (S5 で実装) が測り、 可読性/忠実性は ceiling に留めて二層 (taxonomy §5.1) を保つ。 <strong>ADR-0041 §2.2 / §2.4 を partial-revise</strong> (γ scope §2.6・design system §2.1・2-gate §2.5・再提示原則 §2.3 は不変。 frozen 本文不変、 reverse-link + prose で trace、 ADR-0032 と同型)。 実装は S4 (folio-ruc) 以降。</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-15 &middot; folio v1.0.0 (記録する実装到達版 = 1.1.0) &middot; epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を<strong>ハイブリッド</strong>化する — 構造 (要件表 / RTM グリッド / NFR 表) は構造化された機械 SSoT から<strong>決定的に組立</strong>て (トレースから各セルを導出 = 捏造原理的に不可能)、 opus は <strong>prose スロットのみ充填</strong>する (章リード / 「なぜ要る」根拠 / 専門語のやさしい併記 / 1 文サマリ)。 これは ADR-0041 §2.4 (LLM が構造も prose も生成) を refine する (EC proof で LLM 生成が元に無い RTM 行を捏造した 1 観測 + 構造生成の原理的捏造リスク)。 (2) 密系部品の<strong>非エンジニア可読化を A/B 戦略</strong>で assembler に織り込む — トレース監査系グリッド (rtm-grid register) は人間ビューで既定折りたたみ + 空不可の平易要約スロット (B)、 要件本体 / NFR 表は各行 plain-language スロット + 専門語自動併記で畳まない (A)、 元々平易な表は据置。 これは ADR-0041 §2.2 (視覚言語 — 高密度を人間 primary でそのまま読ませる前提) を refine する。 新スロットの非空は floor gate (S5 で実装) が測り、 可読性/忠実性は ceiling に留めて二層 (taxonomy §5.1) を保つ。 <strong>ADR-0041 §2.2 / §2.4 を partial-revise</strong> (γ scope §2.6・design system §2.1・2-gate §2.5・再提示原則 §2.3 は不変。 frozen 本文不変、 reverse-link + prose で trace、 ADR-0032 と同型)。 実装は S4 (folio-ruc) 以降。</div>
 </header>
 <!-- folio:chrome-toc -->
 <nav class="toc" aria-label="ページ内目次">
@@ -68,7 +68,7 @@
   <dl>
     <dt>id</dt><dd>ADR-0042</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-06-15</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0041 (partial-revise 対象 — §2.4 生成方式を「LLM が構造も prose も生成」から「決定的構造組立 + opus prose 充填」へ、 §2.2 視覚言語を「高密度を人間 primary でそのまま読ませる前提」から「監査グリッドは平易要約の背後へ畳む」へ refine。 §2.1 design system・§2.3 再提示原則・§2.5 2-gate・§2.6 γ scope は不変)、 ADR-0040 (改訂連鎖 — 圧縮=隠蔽 → ADR-0041 視覚再提示 → 本 ADR ハイブリッド生成 + 可読化戦略)、 ADR-0033 (derive 原理 + ゼロ損失 DOM 保持 の継承 — 別ファイル生成の構造を決定的組立で具体化)、 ADR-0032 (partial-revise の先例 — revise 集合と不変集合を disjoint に保つ規律)、 ADR-0037 (二層 floor/ceiling 語彙の整合)、 rules.html (新規範 SSoT — A/B 部品 id allowlist + ハイブリッド生成 contract)、 verification.html (新 B/A スロットの非空を測る floor REQ を S5 で追加する規範化先)。 接地 = taxonomy (research/srs-component-taxonomy.html) §3 37 部品の register 分類 / §5 二層 done-condition。 bd: epic folio-c5g (S4 folio-ruc generator が本 ADR を実装規範とする)。 起点 = user grill 2026-06-15 (S4 着手前、 密系部品可読化を設計要件化) + EC checkout proof (LLM の RTM 行捏造 1 観測)</dd>
@@ -133,7 +133,7 @@
 
 <h3 id="s2-4-revisions">§2.4 ADR-0041 partial-revise 宣言</h3>
 
-<p>本 ADR は forward decision であり、 status = <code>proposed</code> (accepted への flip は user 承認 gate)。 <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> の <strong>§2.2 (視覚言語) と §2.4 (生成方式) を partial-revise</strong> する — frozen 本文は触らず、 本 ADR が divergence を宣言し <a href="../spec/rules.html">rules.html</a> (living) が新規範を持つ (<a href="../spec/constitution.html#p-10">P-10</a> の divergence trace 流儀。 <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> が <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> を partial-revise したのと同型)。</p>
+<p>本 ADR は forward decision であり、 status = <code>accepted</code> (2026-06-15 user 承認)。 <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> の <strong>§2.2 (視覚言語) と §2.4 (生成方式) を partial-revise</strong> する — frozen 本文は触らず、 本 ADR が divergence を宣言し <a href="../spec/rules.html">rules.html</a> (living) が新規範を持つ (<a href="../spec/constitution.html#p-10">P-10</a> の divergence trace 流儀。 <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> が <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> を partial-revise したのと同型)。</p>
 
 <p>revise 集合と不変集合は <strong>disjoint</strong> に保つ (ADR-0032 の規律): <strong>revise = §2.2 (視覚言語) + §2.4 (生成方式)</strong>、 <strong>不変 = §2.1 (design system) + §2.3 (再提示原則) + §2.5 (2-gate) + §2.6 (γ scope)</strong>。 ADR-0041 は <code>accepted</code> のまま据置 (epic の founding decision・design system / 2-gate / γ scope は不変)。 本 ADR は <a href="../research/srs-component-taxonomy.html">taxonomy (S2 folio-036)</a> §3 (37 部品の register 分類) / §5 (二層 done-condition) を実装の前提とし、 S4 (generator folio-ruc) の assembler 設計・S5 (2-gate folio-vhy)・S6 (rules folio-16y) を gate する。</p>
 </section>
