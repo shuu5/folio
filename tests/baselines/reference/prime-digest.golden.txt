@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 43 specs · folio 1.0.0
+# 44 specs · folio 1.0.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -182,6 +182,11 @@
 - doc-type: adr · status: accepted
 - summary: 人間層を「制限時間付きプレゼン」、 機械層を「無制限の原稿」と再定義する一括決定。 ADR-0039 の presentation template layer (型と導線) では解けなかった「人間向け表示でも本文が長大すぎ図が乏しい」を、 informative prose の audience 降格 (削除しない — AI は CSS 非依存で DOM 全文を読むため情報ゼロ損失) + 章要旨/章図の新設 + 既定表示の人間プレゼン化で解く。 time-box は目標 10 分 (約 6,000 字)/上限 20 分 (約 12,000 字)。 図の語彙は mermaid + 既存 CSS パターン (mermaid source は機械可読 = 図自体が dual-audience)、 inline SVG は ceiling review 必須の opt-in 例外。 道具は migration skill (batch 圧縮 + walk 検収) と folio-architect 恒久 phase の 2 系統で、 圧縮基準は rules に規範化して共有 SSoT とする。 gate は floor 新 arm (人間層可視 prose 上限/章要旨必須/図ゼロ×長文) を warn 始まりで設置し ADR-0039 §2.7 の昇格規律に乗せる。 scope は living spec + 入口群 — decisions/research は「一次資料層」(AI が読む原稿) としてプレゼン圧縮の対象外を明示する。 1.0.0 (criterion-c) は本 epic 完了後の user 再 walk を gate とする。 ADR-0039 §2.4 の既定表示「バランス型」は本 ADR が「人間プレゼン型」へ改訂する (frozen 本文不変、 本 ADR + rules が新規範)。 grill 2026-06-12 (全 6 論点) で確定。
 
+## decisions/ADR-0041-human-layer-visual-design-system.html
+- title: ADR-0041 — human-layer visual design system (要件定義書の汎用ビジュアル部品系 + 機械SSoTからの生成 + 2-gate検証)
+- doc-type: adr · status: proposed
+- summary: 人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。
+
 ## decisions/README.html
 - title: folio decisions index
 - doc-type: cluster-readme · status: active
@@ -217,7 +222,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 106 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 107 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -251,6 +256,7 @@ ADR-0037 [decision] decisions/ADR-0037-render-safety-ceiling.html
 ADR-0038 [decision] decisions/ADR-0038-constitution-p14-human-readability.html
 ADR-0039 [decision] decisions/ADR-0039-presentation-template-layer.html
 ADR-0040 [decision] decisions/ADR-0040-human-layer-presentation-compression.html
+ADR-0041 [decision] decisions/ADR-0041-human-layer-visual-design-system.html
 P-1 [principle] spec/constitution.html#p-1
 P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11

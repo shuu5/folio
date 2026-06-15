@@ -109,7 +109,7 @@ flowchart TB
 <section id="s3-adr-list" class="informative">
 <h2>§3. Current ADRs</h2>
 
-<p class="section-essence" data-audience="human">folio はこれまで 32 本の ADR (ADR-0001〜0040、 一部欠番) を記録してきた。 下表が ID・title・status・date の一覧。 番号割当と起票経緯の per-ADR 記録 (retrospective 追認 / forward decision / 予約・見送りの区別) は機械層に保持し、 toggle で全文へ展開できる。</p>
+<p class="section-essence" data-audience="human">folio はこれまで 33 本の ADR (ADR-0001〜0041、 一部欠番) を記録してきた。 下表が ID・title・status・date の一覧。 番号割当と起票経緯の per-ADR 記録 (retrospective 追認 / forward decision / 予約・見送りの区別) は機械層に保持し、 toggle で全文へ展開できる。</p>
 
 <table>
   <thead><tr><th>ID</th><th>title</th><th>status</th><th>revision</th><th>date</th></tr></thead>
@@ -338,6 +338,13 @@ flowchart TB
       <td>—</td>
       <td>2026-06-12</td>
     </tr>
+    <tr>
+      <td><a href="ADR-0041-human-layer-visual-design-system.html">ADR-0041</a></td>
+      <td>human-layer visual design system (人間層を「要件定義書の汎用ビジュアル design system」と再定義。 deck 帯 × 高密度の視覚言語 + 環境追従テーマ + 機械 SSoT からの別ファイル生成 + 2-gate 検証 (persona walk + fidelity)。 ADR-0040 の圧縮 = 隠蔽を「視覚再提示」へ改訂、 ADR-0033 Option A' derive を起動)</td>
+      <td>proposed</td>
+      <td>—</td>
+      <td>2026-06-15</td>
+    </tr>
   </tbody>
 </table>
 
@@ -385,6 +392,8 @@ flowchart TB
   <dd>ADR-0038 (constitution P-14 amendment) と ADR-0039 (presentation template layer) は 2026-06-10〜11 に criterion-c 徹底討論 (根因 = 機械 gate のある価値のみ磨かれる非対称、 独立 5-lens 監査で実証) + <a href="../research/presentation-design-patterns.html">presentation-design-patterns research</a> + ADR grill (G1〜G7) を承けた forward decision として起票し、 同日 user 承認で <code>accepted</code> 化 (同 commit 系で constitution へ P-14 append + count-fix + mermaid initialize 整合 + version 0.6.0-draft bump を実施)。 ADR-0038 が原則 (P-10 手続き) を、 ADR-0039 が機構を担う 2 本構成 (G1)。</dd>
   <dt>ADR-0040 — human-layer presentation compression</dt>
   <dd>2026-06-12 の user criterion-c walk 判定 (toggle 不在ページ + 人間向け表示でも字が多すぎ図が少なすぎる) を起点に、 grill 全 6 論点 (主軸 = 人間層圧縮 / 住所 = 1-DOM 深化 / 道具 = 2 系統 / 図の語彙 / gate + time-box 10〜20 分 / scope + 1.0.0 前提化) を user と解消した forward decision。 同日 user 承認で <code>accepted</code> 起票。 ADR-0039 の型 (template/chrome/toggle) の上に「中身の圧縮」を重ねる関係で、 §2.4 既定表示のみ改訂。 実装は epic folio-8jy。</dd>
+  <dt>ADR-0041 — human-layer visual design system</dt>
+  <dd>2026-06-15 の user grill (1.0.0 後に <a href="ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> の圧縮済 corpus を実機再評価し「読みづらい・専門用語多すぎ・全然グラフィカルでない」と判定) を起点に、 視覚サンプル反復 (会議室予約 → EC 決済) + EC checkout proof (persona = 合格 / fidelity = AI 捏造の RTM 行を検出) で設計確定した forward decision。 status <code>proposed</code> (方向は user 承認済、 ADR 本文レビュー後に <code>accepted</code> へ flip 予定)。 人間層を「要件定義書の汎用ビジュアル design system + 機械 SSoT からの生成 + 2-gate 検証」と再定義し、 ADR-0040 §2.1/§2.2 (圧縮 = 隠蔽) を「視覚再提示」へ改訂・<a href="ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.4 を design system 部品で具体化・<a href="ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 が残した derive 原理を別ファイル形態で起動 (Option A' の into-DOM 版は roadmap 据置。 frozen 本文不変、 reverse-link + prose で trace)。 floor を「長さ」から visual-first/用語被覆/renders-unbroken へ刷新、 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio の ADR/research/原則は拡張パック)。 実装は後方互換 MINOR (1.1.0)、 epic folio-c5g。</dd>
 </dl>
 </section>
 

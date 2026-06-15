@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0041">
+<meta name="folio-adr-date" content="2026-06-15">
+<title>ADR-0041 — human-layer visual design system (要件定義書の汎用ビジュアル部品系 + 機械SSoTからの生成 + 2-gate検証)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0041-human-layer-visual-design-system.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0041 — human-layer visual design system (要件定義書の汎用ビジュアル部品系 + 機械SSoTからの生成 + 2-gate検証)",
+  "folio:version": "1.0.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0038-constitution-p14-human-readability.html" },
+    { "@id": "./ADR-0040-human-layer-presentation-compression.html" },
+    { "@id": "./ADR-0039-presentation-template-layer.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "./ADR-0030-v1-stability-criteria.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0041</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0041 — human-layer visual design system</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-15 &middot; folio v1.0.0 &middot; 人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-design-system">§2.1 人間層 = 要件定義書のビジュアル design system (grill 論点 1〜3)</a></li>
+  <li class="toc--sub"><a href="#s2-2-visual-language">§2.2 視覚言語 = deck 帯 × 高密度 + 環境追従テーマ (grill 論点 4〜5)</a></li>
+  <li class="toc--sub"><a href="#s2-3-principle">§2.3 原則の精緻化 — 圧縮から再提示へ (grill 論点 6)</a></li>
+  <li class="toc--sub"><a href="#s2-4-generate">§2.4 生成方式 — 機械 SSoT から別ファイルを derive (grill 論点 7)</a></li>
+  <li class="toc--sub"><a href="#s2-5-gates">§2.5 検証 — 2-gate + floor 刷新</a></li>
+  <li class="toc--sub"><a href="#s2-6-scope">§2.6 適用範囲 — γ (SRS 核 + 拡張パック)</a></li>
+  <li class="toc--sub"><a href="#s2-7-revisions">§2.7 frozen 改訂宣言</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0041</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-06-15</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0038 (上位原則 P-14 — 本 ADR が P-14 を「視覚 design system + 生成 + 検証」で実装)、 ADR-0040 (改訂対象 — §2.2 の圧縮=隠蔽による既定表示モデルを「視覚 design system による再提示」へ改訂、 §2.1 の time-box 字数上限は floor 刷新で置換)、 ADR-0039 (継承 — §2.5 toggle / §2.7 昇格規律、 §2.4 既定表示を design system 部品で具体化)、 ADR-0033 (起動 — §2.3 が残した derive 原理を別ファイル形態で起動、 Option A' の into-DOM 版は §4(R) roadmap 据置、 co-author を生成へ移行)、 ADR-0030 (version — 実装は後方互換 MINOR = 1.1.0、 strict-SemVer)、 rules.html (新規範の SSoT)、 verification.html (2-gate + floor 刷新の REQ 追加先)。 接地 = ISO/IEC/IEEE 29148 (SRS 部品の完全性 anchor)。 bd: epic folio-c5g (子: 7rp ADR / 036 taxonomy / 8oc 部品庫 / ruc generator / vhy 2-gate / 16y rules / 94j proof / ym8 bump)。 起点 = user grill 2026-06-15 + 視覚サンプル反復 + EC checkout proof</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> は人間層を「制限時間付きプレゼン」と定義し、 informative prose を <code>data-audience="machine"</code> へ降格して既定表示から隠す圧縮で「字が多すぎる」を解こうとした。 epic folio-8jy 完了後の 1.0.0 宣言 (2026-06-13) を経て、 user は圧縮済みの corpus を実機で再評価し<strong>「量は多少減ったが、内容が依然読みづらい・専門用語が多すぎる・日本語が不自然・全然グラフィカルでない」</strong>と判定した。</p>
+
+<p>grill (2026-06-15) で根因を 2 つに切り分けた。 <strong>第一に、 標準と検証の非対称</strong>: <a href="./ADR-0038-constitution-p14-human-readability.html">P-14</a> は「読者がそのページの仕事を果たせる形で提示される」ことを要求するのに、 floor が測っていたのは人間可視 prose の<strong>長さ (字数)</strong>だけで、 <strong>「わかりやすさ・視覚性」は一度も検証していなかった</strong> — 「非エンジニアが頑張れば読める」という読者基準を定義も計測もしていなかった (validate が全 green でも読めない、 という ADR-0038 が指摘した価値の非対称の再発)。 <strong>第二に、 圧縮 (降格) は情報を「隠す」方向</strong>であり、 視覚言語そのものを設計していなかった — ADR-0040 §2.2 は「スライド的な語り順・独自レイアウトは要件としない」と<strong>プレゼン設計を明示的に scope 外に落とし</strong>、 「グラフィカル化」を「mermaid を数枚足す」に矮小化していた。 結果、 実装は圧縮はしたがプレゼン化はしていない。</p>
+
+<p>user の本来の要求は<strong>「非エンジニアが頑張れば読める、 プレゼンとして出来の良い成果物」</strong>であり、 これは ADR-0040 の「字を減らす」では届かない別の軸 — <strong>視覚デザインで意味を運ぶ (文字は最小、 構造・色・図・表が主役)</strong> — を求めている。 視覚サンプルの反復 (会議室予約 → EC 決済) で user は具体の視覚言語を判定でき、 機械的圧縮では解けないこの軸を design system で解く方針が確定した。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-design-system">§2.1 人間層 = 要件定義書のビジュアル design system (grill 論点 1〜3)</h3>
+
+<p>人間層 (既定表示で人間が見る内容) を「読める文書」ではなく<strong>「設計された視覚プレゼン」</strong>と再定義し、 その実体を<strong>「要件定義書のための汎用ビジュアル design system」</strong>とする。 北極星は folio 特化でなく<strong>「要件定義書として最適」</strong> — folio はその<strong>最初の consumer (dogfood)</strong> であって設計の地平線ではない。 これは folio の使命 (rules は元々 Layer 1 consumer 向け universal rules) と整合し、 再利用可能な資産になる。 design system は <strong>「大胆な帯」と「高密度の表」の両 register を持つ部品庫</strong>で、 要件定義書の各パーツ (スコープ / アクター / EARS 要件 / 非機能要件 / ユースケース / 受入基準 / 用語集 / トレーサビリティ等) を視覚コンポーネントに対応づける。 dual-audience の境界は<strong>部品単位</strong>に降りる: 各部品は「機械精密スロット」と「設計された人間の顔」を持つ。</p>
+
+<h3 id="s2-2-visual-language">§2.2 視覚言語 = deck 帯 × 高密度 + 環境追従テーマ (grill 論点 4〜5)</h3>
+
+<p>視覚言語は<strong>deck 寄りハイブリッド × 高密度</strong>とする (user 判定: 3 方向比較 → ハイブリッド → 密度 2 段階のうち高密度)。 各主要セクションを<strong>全幅の色帯</strong>(章番号の透かし + 大見出し + 短いリード) で開き (大胆な掴み)、 詳細は<strong>高密度コンポーネント</strong>(型色つき要件マトリクス / 本格 RTM 行列グリッド / 数値ヒーロー + メトリクステーブル / 密な 2 リスト / 定義テーブル) で<strong>情報量を保ったまま</strong>視覚整理する。 テーマは<strong>環境追従</strong> (<code>prefers-color-scheme</code> で CSS 変数を差し替え、 ライト/ダークいずれも意図的に設計) — ダーク固定にしない (ADR-0033 の ALLOW = dark-light 切替と整合)。 成果物は<strong>自己完結の static HTML + CSS + インライン SVG + vendored mermaid</strong> とし、 外部 URL/CDN/ES module に依存しない (no-build・AI 直読・file:// 動作を維持、 ADR-0033 / <a href="../spec/constitution.html#p-13">P-13</a>)。</p>
+
+<h3 id="s2-3-principle">§2.3 原則の精緻化 — 圧縮から再提示へ (grill 論点 6)</h3>
+
+<p>人間層の原則を<strong>「見やすい + わかりやすい言語 + 情報を落としすぎない」</strong>に精緻化する。 これは ADR-0040 の中核 (informative prose を降格して人間既定表示から<strong>隠す</strong>) を<strong>改訂</strong>する: 人間既定の情報量を減らして読みやすくするのではなく、 <strong>同じ情報を密度高く視覚的に「再提示」</strong>する (圧縮 = 量削減 → 再提示 = 見せ方の変換)。 ゆえに本 ADR の下では人間既定ビューの情報量は ADR-0040 より<strong>増える</strong>。 専門用語は消さず、 やさしい言い換え + 正確な用語を併記して情報を捨てない (例:「金額を仮押さえ (オーソリ)」)。</p>
+
+<h3 id="s2-4-generate">§2.4 生成方式 — 機械 SSoT から別ファイルを derive (grill 論点 7)</h3>
+
+<p>高密度に設計された人間プレゼンを機械精密文の隣で手 co-author するのは、 corpus 規模では維持不能 (ADR-0033 が受け入れた co-author の代償が高密度デザインで限界に達する)。 ゆえに人間プレゼンを<strong>機械 SSoT から別ファイルとして生成 (derive)</strong> する — これは <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 が roadmap に残した <strong>Option A' (derive) を起動</strong>するものである (ただし same-DOM への埋込でなく別ファイル生成を採る、 §4 参照)。 生成は高能力モデルが行い、 更新は<strong>変更差分 + 現行の人間プレゼン HTML を渡して再生成し、 更新日時で同期を追跡</strong>する (機械 SSoT が唯一の真実源、 人間プレゼンは派生)。 ADR-0033 が「co-author の consistency を enforcement で担保」したのに対し、 本 ADR は<strong>「生成物の consistency を検証で担保」</strong>する (§2.5)。</p>
+
+<h3 id="s2-5-gates">§2.5 検証 — 2-gate + floor 刷新</h3>
+
+<p>生成物を 2 つの gate で担保する。 <strong>(a) persona walk ceiling</strong> — 非エンジニア persona で人間プレゼンを歩き、 「やさしい言語か・不明用語/不自然な日本語はないか・読者がそのページの仕事を果たせるか」を判定する (P-14 の「読者が仕事を果たせる」の意味検証)。 <strong>(b) fidelity check</strong> — 人間可視内容を機械 SSoT と突き合わせ、 「情報の脱落・意味の歪曲・元に無い主張の捏造」を検出する (「情報を落としすぎない」の機械寄り検証)。 加えて <strong>floor を刷新</strong>する: 「人間可視 prose の長さ (字数)」から<strong>「visual-first (地の文偏重の禁止) / 用語被覆 (未説明の専門語ゼロ) / renders-unbroken (<a href="./ADR-0037-render-safety-ceiling.html">render-gate</a>)」</strong>へ — 長さでなく「視覚主・説明済み・破綻なし」を測る (ADR-0040 が長さしか測らなかった死角の是正)。 2-gate は EC 注文確定・決済の難要件で<strong>実証済</strong>: persona = 合格 (非エンジニアが読み通し要点を把握)、 fidelity = <strong>生成 AI が元に無い RTM 行 (FR7→AC2→NFR1) を捏造したのを検出</strong> — gate が飾りでなく load-bearing (生成は plausible-but-wrong を混ぜる、 検証がそれを止める) であることを実物で確認した。</p>
+
+<h3 id="s2-6-scope">§2.6 適用範囲 — γ (SRS 核 + 拡張パック)</h3>
+
+<p>design system の到達点 (「要件定義書を十分に構成しうる」の done-condition) は<strong>SRS 核を <a href="https://www.iso.org/standard/72089.html">ISO/IEC/IEEE 29148</a> で完全性錨留め</strong>することで定める (use-case / EARS と合成)。 folio 自身の corpus は SRS でない部分 (ADR = decision/WHY、 research = exploration、 constitution = 原則) を含むため、 これらは<strong>拡張パックとして後追い</strong>する (folio が自分の文書を組めない矛盾を避けつつ、「要件定義書として最適」の純度を核で保つ)。 部品 taxonomy の標準接地は epic 先頭 slice (folio-036) が担う。</p>
+
+<h3 id="s2-7-revisions">§2.7 frozen 改訂宣言</h3>
+
+<p>本 ADR は <a href="./ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> §2.1 (time-box 圧縮) / §2.2 (既定表示 = 人間プレゼン圧縮型) を<strong>「視覚 design system による再提示」へ改訂</strong>し、 <a href="./ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.4 (層別既定表示) を design system 部品で具体化する。 frozen である両 ADR の本文は触らず、 本 ADR が改訂を宣言し <a href="../spec/rules.html">rules</a> (living) が新規範を持つ (<a href="../spec/constitution.html#p-10">P-10</a> の divergence trace 流儀、 ADR-0040 自身がこの流儀を踏んだのと同型)。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> が roadmap に残した derive 原理を本 ADR が<strong>別ファイル形態</strong>で起動する (co-author → 生成への移行。 Option A' が想定した into-DOM 版は §4(R) で roadmap 据置)。 ADR-0040 の time-box (字数上限) は floor 刷新で置換され (長さ → visual-first 系)、 「一次資料層」(decisions/research を圧縮対象外とする区分、 ADR-0040 §2.6) は γ の「拡張パック後追い」に引き継がれる。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<ul>
+  <li><strong>得るもの</strong>: 難しい要件定義書 (専門用語・数値・例外が多い) でも、 やさしい言語のまま情報を落とさず視覚的に読める (EC proof で実証)。 これまで lip service だった「グラフィカル化」が design system で実体化する。 機械 SSoT から生成するため corpus 規模を手維持しない。 folio 特化でない汎用部品系ゆえ Layer 1 consumer にも再利用可能な資産になる。</li>
+  <li><strong>払うもの</strong>: design system (部品庫) + generator + 2-gate という新規実装 (大規模、 epic folio-c5g)。 co-author (ADR-0033) から生成への移行は機械 SSoT + 人間プレゼンの<strong>二成果物</strong>を生み、 同期 (更新日時 + fidelity gate) が新たな維持対象になる。 floor 刷新で既存の長さ gate の役割が変わる。</li>
+  <li><strong>リスクと緩和</strong>: 生成は plausible-but-wrong を捏造する (EC proof で RTM 行捏造を実証) → fidelity gate が load-bearing で止める (検証は装飾でなく構造の要)。 やさしい言い換えで意味が歪む → fidelity + persona walk の二面で捕捉。 drift → 機械 SSoT が唯一の真実源、 生成物は更新日時 + gate で同期 (ADR-0033 の double-SSoT 回避を「導出 + 検証」で踏襲)。 ADR-worthiness (<a href="../spec/rules.html#s10-3">rules §10.3</a>): hard-to-reverse (spec authoring の co-author→生成モデル転換 + 新 gate) / surprising (要件定義書の視覚 design system + 生成-not-author は前例の希少) / real-trade-off (生成 vs 手 co-author 〔§4 P〕 / 別ファイル生成 vs into-DOM 〔§4 R〕 / design-system vs bespoke 一点物 〔§4〕) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+
+<ul>
+  <li><strong>(P) 手で co-author 継続 (ADR-0033 現状)</strong> — 不採用。 高密度に設計された人間プレゼンを機械精密文の隣で全 corpus 手維持するのは破綻する。 標準と検証の欠落 (§1) が根因であり器 (1-DOM) は悪くないが、 高密度デザインの作り込みは手 co-author の維持コストを超える。</li>
+  <li><strong>(R) derive-into-DOM (同一 DOM へ生成、 ADR-0033 Option A' の DOM 版)</strong> — roadmap に残す。 1 ファイルで済むが、 build/生成ステップが no-build (<a href="../spec/constitution.html#p-13">P-13</a>) と緊張する。 本 ADR は別ファイル生成を採る (機械 SSoT を精密なまま保て、 人間プレゼンを純粋な設計成果物にできる) が、 将来 into-DOM へ寄せる片道は残る。</li>
+  <li><strong>bespoke 一点物デザイン</strong> — 不採用。 各ページを手作り designed artifact にすると最大の視覚品質は出るが、 機械検証不能・AI 再生成不能・drift 地獄になる。 design system (再利用部品) は品質を front-load (ライブラリを一度よく設計) して量産する定石であり、 検証可能性とも両立する。</li>
+  <li><strong>機械指標 floor 主体 (文長/漢字率で readability を数値 gate)</strong> — 主軸として不採用。 数値を満たしても読めないことがある (Goodhart 化 = 長さだけ測って読めなかった今回の失敗の同型)。 persona walk ceiling を主、 機械 floor (visual-first / 用語被覆) を従とする。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<p>上位原則: <a href="./ADR-0038-constitution-p14-human-readability.html">ADR-0038</a> (P-14 — 本 ADR が P-14 を「視覚 design system + 生成 + 2-gate 検証」で実装)。 改訂対象: <a href="./ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> §2.2 (圧縮 = 隠蔽の既定表示モデル → design system による再提示。 §2.1 の time-box 字数上限は floor 刷新で置換。 frozen 本文不変、 本 ADR が改訂を宣言)、 <a href="./ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.4 (層別既定表示を design system 部品で具体化)。 起動: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 が残した derive 原理を別ファイル形態で (Option A' の into-DOM 版は §4(R) roadmap 据置)、 co-author → 生成。 継承: ADR-0039 §2.5 (toggle)・§2.7 (warn→block 昇格規律)、 <a href="./ADR-0037-render-safety-ceiling.html">ADR-0037</a> (render-gate を floor 新 arm に流用)。 version: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> (実装は後方互換 MINOR = 1.1.0、 strict-SemVer)。 規範化先: <a href="../spec/rules.html">rules.html</a> (design system + 生成 + 2-gate + floor 刷新の新規範 SSoT)。 REQ 追加先: <a href="../spec/verification.html">verification.html</a> (2-gate + floor 刷新)。 完全性 anchor: ISO/IEC/IEEE 29148 (SRS 部品 taxonomy)。 追跡: bd epic folio-c5g (子 task: folio-7rp 本 ADR / folio-036 taxonomy 接地 / folio-8oc 部品庫 / folio-ruc generator / folio-vhy 2-gate / folio-16y rules 規範化 / folio-94j 実コンテンツ proof / folio-ym8 1.1.0 bump)。 実証: EC 注文確定・決済 proof 2026-06-15 (persona = 合格 / fidelity = AI 捏造 RTM 行を検出)。 決定の経緯: user grill 2026-06-15 (診断 A → 視覚プレゼン → design system → deck×高密度 → 環境追従 → 情報保持 → 別ファイル生成 → γ scope) + 視覚サンプル反復。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0040-human-layer-presentation-compression.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0040 — human-layer presentation compression (time-box 付き人間層プレゼン + 一次資料層 + 圧縮道具 2 系統)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
