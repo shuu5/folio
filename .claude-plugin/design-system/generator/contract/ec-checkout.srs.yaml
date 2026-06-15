@@ -1,0 +1,120 @@
+# folio S4 generator — 入力 contract インスタンス (ADR-0042 §2.1)
+#
+# これは「決定的 assembler が読む構造化データ」= 機械 SSoT の要件レコード。
+# 構造 (要件表・RTM・NFR 表) は assembler がこの contract から *決定的に* 組み立てる。
+# トレースの各セルは trace.backward / trace.acceptance から導出されるため、
+# assembler は元データに無い行・列・リンクを *生成できない* (捏造原理的に不可能)。
+#
+# prose スロット (章リード・「なぜ要る」根拠・1 文サマリ) は assembler が *空* で出し、
+# 後段 (step 3) で opus が rationale_source / glossary に接地して充填する。
+#
+# proof 用データ = EC 注文確定・決済 SRS (S3 example-srs と同題材)。
+
+meta:
+  doc_id: SRS-EC-CHECKOUT
+  title: EC 注文確定・決済 要件定義書
+  version: "1.0"
+
+# source-trace-origin (RTM backward 端点 = 上位ニーズの実体)
+upper_needs:
+  - id: N-1
+    need: チャージバックを減らし決済の信頼を守る
+    origin: 経営方針
+  - id: N-2
+    need: 売り越しによる欠品・機会損失をなくす
+    origin: 運営部
+  - id: N-3
+    need: 決済成功と注文記録を必ず一致させる
+    origin: 運営部
+
+# requirement-matrix-table (行 = ears-requirement-row) + RTM 行
+requirements:
+  - id: FR1
+    type: FR
+    ears: { pattern: event, condition: 確定ボタンを押したとき, response: 在庫を確保してから決済を実行する }
+    priority: must
+    vmethod: T
+    trace: { backward: [N-2], acceptance: [AC1] }
+    rationale_source: N-2
+  - id: FR2
+    type: FR
+    ears: { pattern: unwanted, condition: 確定ボタンが連打されたとき, response: 2 回目以降の確定要求を受け付けない }
+    priority: must
+    vmethod: T
+    trace: { backward: [N-1], acceptance: [AC2] }
+    rationale_source: N-1
+  - id: FR3
+    type: FR
+    ears: { pattern: event, condition: 決済成功の応答が返ったとき, response: 注文を確定し注文番号を発行する }
+    priority: must
+    vmethod: T
+    trace: { backward: [N-3], acceptance: [AC3] }
+    rationale_source: N-3
+  - id: FR4
+    type: FR
+    ears: { pattern: unwanted, condition: 決済処理が制限時間内に応答しないとき, response: 取引を取り消し在庫の確保を解放する }
+    priority: should
+    vmethod: A
+    trace: { backward: [N-3], acceptance: [AC4] }
+    rationale_source: N-3
+  - id: FR5
+    type: FR
+    ears: { pattern: state, condition: 在庫が確保されている間, response: 同一注文に対する二重の在庫確保を禁止する }
+    priority: must
+    vmethod: I
+    trace: { backward: [N-2], acceptance: [AC5] }
+    rationale_source: N-2
+
+# nfr-metrics-table (NFR = 測定可能な数値基準) + RTM 行
+nfr:
+  - id: NFR1
+    type: NFR
+    category: 性能
+    target: 注文確定応答の 95% が 1.0 秒以内
+    measure: 負荷試験で応答時間を計測
+    vmethod: T
+    trace: { backward: [N-1], acceptance: [AC6] }
+  - id: NFR2
+    type: NFR
+    category: セキュリティ
+    target: カード番号を自社環境に保持しない
+    measure: PCI DSS 準拠を第三者監査で確認
+    vmethod: I
+    trace: { backward: [N-1], acceptance: [AC7] }
+  - id: NFR3
+    type: NFR
+    category: 信頼性
+    target: 決済と注文記録の整合性を 99.99% 維持
+    measure: 整合性チェックの監査ログで計測
+    vmethod: A
+    trace: { backward: [N-3], acceptance: [AC8] }
+
+# 受入基準の正典集合 (RTM forward 端点 = acceptance の SSoT)。
+# requirements/nfr の trace.acceptance はこの id 集合からのみ参照でき、
+# assembler は集合外の AC id を fail-closed で拒否する (backward と対称の fabrication-free)。
+acceptance:
+  - id: AC1
+    criterion: 確定操作後に在庫が確保され二重販売が発生しないこと
+  - id: AC2
+    criterion: 確定ボタン連打時にも課金が 1 回のみであること
+  - id: AC3
+    criterion: 決済成功時に注文番号が発行され記録されること
+  - id: AC4
+    criterion: 決済タイムアウト時に在庫の確保が解放されること
+  - id: AC5
+    criterion: 在庫確保中の二重確保要求が拒否されること
+  - id: AC6
+    criterion: 注文確定応答の 95 パーセンタイルが 1.0 秒以内であること
+  - id: AC7
+    criterion: 監査でカード番号の非保持が確認されること
+  - id: AC8
+    criterion: 監査ログで決済と注文記録の整合性 99.99% が確認されること
+
+# 専門語 (opus が plain 併記を書く際の接地。本スライスでは未使用スロットの源)
+glossary:
+  - term: オーソリ
+    plain: 支払い能力の確認のため代金を一時的に仮押さえすること
+  - term: 在庫引当
+    plain: 注文に対し在庫を確保し他の注文に使われないようにすること
+  - term: 冪等
+    plain: 同じ操作を何度繰り返しても結果が 1 回分にしかならない性質
