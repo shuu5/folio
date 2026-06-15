@@ -6,7 +6,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="1.0.0">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0041">
 <meta name="folio-adr-date" content="2026-06-15">
@@ -48,7 +48,7 @@
 
 <header class="doc-header">
   <h1>ADR-0041 — human-layer visual design system</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-06-15 &middot; folio v1.0.0 &middot; 人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。</div>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-15 &middot; folio v1.0.0 &middot; 人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。</div>
 </header>
 <!-- folio:chrome-toc -->
 <nav class="toc" aria-label="ページ内目次">
@@ -73,7 +73,7 @@
   <dl>
     <dt>id</dt><dd>ADR-0041</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-06-15</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0038 (上位原則 P-14 — 本 ADR が P-14 を「視覚 design system + 生成 + 検証」で実装)、 ADR-0040 (改訂対象 — §2.2 の圧縮=隠蔽による既定表示モデルを「視覚 design system による再提示」へ改訂、 §2.1 の time-box 字数上限は floor 刷新で置換)、 ADR-0039 (継承 — §2.5 toggle / §2.7 昇格規律、 §2.4 既定表示を design system 部品で具体化)、 ADR-0033 (起動 — §2.3 が残した derive 原理を別ファイル形態で起動、 Option A' の into-DOM 版は §4(R) roadmap 据置、 co-author を生成へ移行)、 ADR-0030 (version — 実装は後方互換 MINOR = 1.1.0、 strict-SemVer)、 rules.html (新規範の SSoT)、 verification.html (2-gate + floor 刷新の REQ 追加先)。 接地 = ISO/IEC/IEEE 29148 (SRS 部品の完全性 anchor)。 bd: epic folio-c5g (子: 7rp ADR / 036 taxonomy / 8oc 部品庫 / ruc generator / vhy 2-gate / 16y rules / 94j proof / ym8 bump)。 起点 = user grill 2026-06-15 + 視覚サンプル反復 + EC checkout proof</dd>
