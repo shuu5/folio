@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-15T02:41:31Z",
+  "generatedAt": "2026-06-15T10:24:36Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -129,6 +129,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
           "decisions/ADR-0038-constitution-p14-human-readability.html",
@@ -183,6 +184,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
           "decisions/ADR-0039-presentation-template-layer.html",
@@ -864,6 +866,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
           "decisions/ADR-0039-presentation-template-layer.html",
@@ -1074,6 +1077,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html"
         ],
         "dc:references": [
@@ -1099,12 +1103,37 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html"
+        ],
         "dc:references": [
           "decisions/ADR-0038-constitution-p14-human-readability.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
           "decisions/ADR-0039-presentation-template-layer.html",
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0030-v1-stability-criteria.html",
+          "spec/rules.html",
+          "spec/verification.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+      "title": "ADR-0042 — hybrid generation + dense-table readability strategy (機械SSoT 決定的組立 + opus prose 充填 + 密系部品 A/B 可読化)",
+      "summary": "epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "1.0.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0040-human-layer-presentation-compression.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
           "spec/rules.html",
           "spec/verification.html"
         ]
@@ -1457,6 +1486,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0041-human-layer-visual-design-system.html",
         "essence": "人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。"
+      },
+      {
+        "id": "ADR-0042",
+        "class": "decision",
+        "ssot": "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+        "essence": "epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を"
       },
       {
         "id": "P-1",

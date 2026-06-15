@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0042">
+<meta name="folio-adr-date" content="2026-06-15">
+<title>ADR-0042 — hybrid generation + dense-table readability strategy (機械SSoT 決定的組立 + opus prose 充填 + 密系部品 A/B 可読化)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0042-hybrid-generation-dense-table-readability.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0042 — hybrid generation + dense-table readability strategy (機械SSoT 決定的組立 + opus prose 充填 + 密系部品 A/B 可読化)",
+  "folio:version": "1.0.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0041-human-layer-visual-design-system.html" },
+    { "@id": "./ADR-0040-human-layer-presentation-compression.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0042</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0042 — hybrid generation + dense-table readability strategy</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-06-15 &middot; folio v1.0.0 (記録する実装到達版 = 1.1.0) &middot; epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を<strong>ハイブリッド</strong>化する — 構造 (要件表 / RTM グリッド / NFR 表) は構造化された機械 SSoT から<strong>決定的に組立</strong>て (トレースから各セルを導出 = 捏造原理的に不可能)、 opus は <strong>prose スロットのみ充填</strong>する (章リード / 「なぜ要る」根拠 / 専門語のやさしい併記 / 1 文サマリ)。 これは ADR-0041 §2.4 (LLM が構造も prose も生成) を refine する (EC proof で LLM 生成が元に無い RTM 行を捏造した 1 観測 + 構造生成の原理的捏造リスク)。 (2) 密系部品の<strong>非エンジニア可読化を A/B 戦略</strong>で assembler に織り込む — トレース監査系グリッド (rtm-grid register) は人間ビューで既定折りたたみ + 空不可の平易要約スロット (B)、 要件本体 / NFR 表は各行 plain-language スロット + 専門語自動併記で畳まない (A)、 元々平易な表は据置。 これは ADR-0041 §2.2 (視覚言語 — 高密度を人間 primary でそのまま読ませる前提) を refine する。 新スロットの非空は floor gate (S5 で実装) が測り、 可読性/忠実性は ceiling に留めて二層 (taxonomy §5.1) を保つ。 <strong>ADR-0041 §2.2 / §2.4 を partial-revise</strong> (γ scope §2.6・design system §2.1・2-gate §2.5・再提示原則 §2.3 は不変。 frozen 本文不変、 reverse-link + prose で trace、 ADR-0032 と同型)。 実装は S4 (folio-ruc) 以降。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-hybrid">§2.1 生成方式 = ハイブリッド (決定的構造組立 + opus prose 充填)</a></li>
+  <li class="toc--sub"><a href="#s2-2-readability">§2.2 密系部品の可読化 = A/B 戦略</a></li>
+  <li class="toc--sub"><a href="#s2-3-two-layer">§2.3 二層 done-condition への接続 (Goodhart 再発の構造防止)</a></li>
+  <li class="toc--sub"><a href="#s2-4-revisions">§2.4 ADR-0041 partial-revise 宣言</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0042</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-06-15</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0041 (partial-revise 対象 — §2.4 生成方式を「LLM が構造も prose も生成」から「決定的構造組立 + opus prose 充填」へ、 §2.2 視覚言語を「高密度を人間 primary でそのまま読ませる前提」から「監査グリッドは平易要約の背後へ畳む」へ refine。 §2.1 design system・§2.3 再提示原則・§2.5 2-gate・§2.6 γ scope は不変)、 ADR-0040 (改訂連鎖 — 圧縮=隠蔽 → ADR-0041 視覚再提示 → 本 ADR ハイブリッド生成 + 可読化戦略)、 ADR-0033 (derive 原理 + ゼロ損失 DOM 保持 の継承 — 別ファイル生成の構造を決定的組立で具体化)、 ADR-0032 (partial-revise の先例 — revise 集合と不変集合を disjoint に保つ規律)、 ADR-0037 (二層 floor/ceiling 語彙の整合)、 rules.html (新規範 SSoT — A/B 部品 id allowlist + ハイブリッド生成 contract)、 verification.html (新 B/A スロットの非空を測る floor REQ を S5 で追加する規範化先)。 接地 = taxonomy (research/srs-component-taxonomy.html) §3 37 部品の register 分類 / §5 二層 done-condition。 bd: epic folio-c5g (S4 folio-ruc generator が本 ADR を実装規範とする)。 起点 = user grill 2026-06-15 (S4 着手前、 密系部品可読化を設計要件化) + EC checkout proof (LLM の RTM 行捏造 1 観測)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> は人間層を「要件定義書のための汎用ビジュアル design system + 機械 SSoT からの生成 + 2-gate 検証」と再定義した。 そのうち生成方式は §2.4 で<strong>「高能力モデルに変更差分 + 現行 HTML を渡して再生成」</strong> (= LLM が構造も prose も生成する)、 視覚言語は §2.2 で<strong>「deck 帯 (掴み) × 高密度コンポーネント (詳細) で情報量を保つ」</strong>と定めた。 epic folio-c5g の S2 (taxonomy <a href="../research/srs-component-taxonomy.html">folio-036</a>) と S3 (部品庫 folio-8oc) を実装した上で、 S4 (generator folio-ruc) の着手前 grill (2026-06-15) で 2 つの divergence が顕在化した。</p>
+
+<p><strong>第一に、 生成の信頼性</strong>。 ADR-0041 §2.5 の EC checkout proof で、 LLM 生成が元 SSoT に<strong>無い RTM 行 (FR7&rarr;AC2&rarr;NFR1) を捏造した</strong>のが 1 観測された。 これは単一事例だが、 LLM が構造 (RTM / トレース / 要件表) まで生成する方式は<strong>原理的に plausible-but-wrong な構造を混入しうる</strong>ことを示す。 その混入を「検証で事後に止める」しかない限り、 「情報を落とさない / 歪めない」北極星に対して fail-open の<em>窓</em> (検出漏れ) と<em>コスト</em> (生成のたびの re-review) が残る。 検証 (fidelity gate) は捏造を実際に止めた load-bearing な機構だが、 捏造を<em>起こさせない</em>構造の方が窓を 0 にできる。</p>
+
+<p><strong>第二に、 密系部品の可読性</strong>。 user が S3 の高密度成果を実機再評価し、 「密表 (RTM グリッド・要件マトリクス・NFR 表) が専門用語過多・日本語が不自然で、 <em>正規エンジニアがなんとか読める水準どまり</em>、 非エンジニアには読めない」と判定した。 ADR-0041 §2.2 は色帯 (掴み) と高密度コンポーネント (詳細) の two-register を定めるが、 密グリッドも非エンジニア primary view でそのまま読ませる前提に立つ。 トレース監査用の密グリッドを非エンジニアに直接読ませる前提自体が北極星 (<strong>非エンジニアが頑張れば読める</strong>) と緊張する。 「読みにくい prose」は生成側で、 「読ませる前提が無理な器」は提示側で、 別々に手当てが要る。</p>
+
+<p>本 ADR は S4 着手前にこの 2 点を設計決定として確定し、 ADR-0041 の該当 sub-decision (§2.2 / §2.4) を refine する。 frozen ADR 本文は触らず、 本 ADR が divergence を宣言する (<a href="../spec/constitution.html#p-10">P-10</a>)。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-hybrid">§2.1 生成方式 = ハイブリッド (決定的構造組立 + opus prose 充填)</h3>
+
+<p>人間プレゼンの生成を 2 段に decomposition する。 <strong>(a) 決定的 assembler</strong> が構造化された<em>入力 contract</em> (要件レコード = 一意 <code>id</code> / 型 (FR/NFR/CON/ASM) / EARS clause / トレース端点 (上位ニーズ &harr; 要件 &harr; 検証) / 根拠出所、 加えて NFR メトリクス・用語・上位ニーズ) を読み、 文書の<strong>構造</strong> (要件マトリクス表・NFR 表・RTM グリッド・優先度/検証バッジ・被覆) を <code>data-component</code> 付きで機械組立する。 RTM / トレースの各セルは<strong>トレースデータから決定的に導出</strong>するため、 元に無い行・列・リンクの捏造は<strong>原理的に不可能</strong>になる (構成上 fabrication-free)。 <strong>(b) opus</strong> は assembler が<em>空で残した prose スロット</em> (章リード / 「なぜ要る」根拠 / 専門語のやさしい併記 / 1 文サマリ) <strong>だけ</strong>を充填する。 決定的 assembler が入力 contract の表現力を超える内容 (非定型な制約・自由記述) は prose スロットへ逃がす (§3 リスク)。</p>
+
+<p>これは ADR-0041 §2.4 (LLM が構造も prose も生成) を refine する。 更新フロー (変更差分 + 現行 prose を渡して再生成し、 更新日時で同期を追跡) は <strong>prose 層で踏襲</strong>しつつ、 構造は SSoT から毎回決定的に再組立する (構造に「差分編集」を介在させない)。 帰結として fidelity gate (ADR-0041 §2.5(b)) の検査の重心は「構造の捏造検出」から「prose の忠実性」へ移る — ただし prose に移っても無検査ではなく、 特に B の要約スロット (§2.2) は折りたたんだ構造についての prose 主張ゆえ、 <strong>要約 &harr; 構造の整合を fidelity ceiling が突合する</strong> (§3 リスク参照)。 dogfood の入力源は folio 自身の spec graph (EARS normative + JSON-LD relations + RTM データ) とする。</p>
+
+<h3 id="s2-2-readability">§2.2 密系部品の可読化 = A/B 戦略</h3>
+
+<p>密系部品 (<em>dense table / list / grid の総称、 本書では「密表」とも書く</em>) を 2 つの可読化処理 + 据置に分け、 assembler が非エンジニア可読 affordance を<strong>構造的に保証</strong>する。 振り分けの決定性の出所は処理ごとに異なる — <strong>B は register 境界で機械判定</strong>でき、 <strong>A と据置は taxonomy §3 で確定する部品 id の明示集合 (allowlist) で判定</strong>する (allowlist は register をまたぐため register 境界では決まらない)。</p>
+
+<table>
+<thead><tr><th>処理</th><th>対象 (判定根拠)</th><th>assembler が必ず生成するもの (MUST スロット)</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>B = 畳む</strong></td>
+  <td><code>rtm-grid</code> register 全体 (<code>rtm-grid</code> MUST / <code>verification-method-grid</code> MUST / <code>requirement-attributes-rtm</code> SHOULD = トレース監査の道具)。 <strong>register-pure ゆえ機械判定</strong>。</td>
+  <td>人間ビューで<strong>既定折りたたみ</strong> (<code>details</code> 等) + 直前に<strong>空不可の平易要約スロット</strong> (例「全 N 件の要件が出所と検証に結びつくことを示す表」)。 図リードは任意。 全グリッドは<strong>保持</strong>し AI/印刷は展開 (情報は畳むだけで欠落しない)。 SHOULD 部品 <code>requirement-attributes-rtm</code> は出力に含まれる時のみ B 処理 MUST (<strong>MUST-when-present</strong>)。</td>
+</tr>
+<tr>
+  <td><strong>A = 噛み砕く</strong></td>
+  <td>明示集合 {<code>requirement-matrix-table</code> (dense-table) / <code>nfr-metrics-table</code> (dense-table) / <code>ears-requirement-row</code> (dense-list)} = 要件本体・NFR。 <strong>register をまたぐ allowlist</strong>。</td>
+  <td>各行に<strong>空不可の plain-language スロット</strong> (やさしい言い換え) + 専門語の <code>plain-language-term-inline</code> 自動併記。 <strong>畳まない</strong> (文書の本体ゆえ)。</td>
+</tr>
+<tr>
+  <td><strong>据置</strong></td>
+  <td>明示集合 {<code>glossary-term-table</code> / <code>references-list</code> / <code>revision-history-table</code> / <code>toc-navigator</code> / <code>source-trace-origin</code> / <code>supporting-info-appendix</code>}。</td>
+  <td>既存のまま、 軽い注釈のみ (plain スロットは SHOULD)。 <em><code>source-trace-origin</code> は dense-table・MUST だが、 id &harr; 上位ニーズの単純 lookup ゆえ cross-product の監査グリッドより平易と判断し据置 (B 候補だが grid でないため A/B いずれにも倒さない)。</em></td>
+</tr>
+</tbody>
+</table>
+
+<p><strong>本表は代表部品の例示であり exhaustive partition ではない</strong>。 taxonomy §3.2 の他の MUST dense 部品 (<code>interface-spec-table</code>・<code>actor-stakeholder-table</code>・<code>scope-summary-panel</code>・<code>ui-spec-block</code>・<code>product-functions-list</code>・<code>assumptions-constraints-list</code>・<code>acceptance-criteria-checklist</code> 等) を含む<strong>全 dense 部品の A/据置 完全カタログ (部品 id allowlist) は S6 (folio-16y) で凍結</strong>する。</p>
+
+<p>これは ADR-0041 §2.2 (視覚言語 — 色帯 + 高密度コンポーネントで詳細を保持) を refine する。 ADR-0041 §2.2 は密グリッドも非エンジニア primary view でそのまま読ませる前提に立つが、 本 ADR はその前提を<strong>「監査グリッドは平易要約の背後へ畳み、 要件本体は plain 行で噛み砕く」</strong>へ refine する。 高密度は<strong>fidelity の背骨</strong>として全 DOM 保持・展開可のまま残し、 <em>主役の配置だけ</em>変える (「読ませない部分は畳んで保持・読ませる部分は噛み砕く」)。</p>
+
+<h3 id="s2-3-two-layer">§2.3 二層 done-condition への接続 (Goodhart 再発の構造防止)</h3>
+
+<p>§2.1/§2.2 が導入する新規スロット (B 要約スロット・A plain 行・折りたたみ容器) の非空は <strong>floor で測れる設計とする</strong>。 ただし taxonomy <a href="../research/srs-component-taxonomy.html#s5-done-condition">§5.2</a> の gate G (no-TBD = 必須スロットの空/TODO = 0) は現状 <strong>(a)</strong> research domain の taxonomy にのみ存在し <a href="../spec/verification.html">verification.html</a> の REQ には未収録、 <strong>(b)</strong> taxonomy §7.2 が S5 (folio-vhy) へ申し送った<em>未実装</em> arm、 <strong>(c)</strong> 既存 scope = MUST 部品の必須スロット、 である。 よって本 ADR は規範化先 (rules / verification) に対し、 <strong>(i) 新 B/A スロットを部品の必須スロットとして taxonomy §3 へ登録し gate G の被覆対象に加える contract</strong>、 <strong>(ii) S5 でのその floor 実装</strong>、 を課す (SHOULD 部品 <code>requirement-attributes-rtm</code> のスロットは <strong>MUST-when-present</strong> = 出力に含まれる時のみ非空を hard-require)。</p>
+
+<p>登録・実装後、 スロットの<em>存在 / 非空</em>は floor、 要約の<em>質 / 原本忠実性</em>は ceiling (gate I persona walk + gate J fidelity)、 で二層 (taxonomy §5.1「<strong>floor 単独で GREEN 宣言不可</strong>」) を保つ。 これにより可読化 affordance の<em>存在</em>だけを測って<em>中身</em>を測らない Goodhart 再発 (<a href="./ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> が「長さだけ測って読めない」で犯した失敗の同型) を防ぐ — ただし<strong>測る floor 自体を S5 で建てることが前提</strong>であり、 本 ADR はそれを実装責務として課す。</p>
+
+<h3 id="s2-4-revisions">§2.4 ADR-0041 partial-revise 宣言</h3>
+
+<p>本 ADR は forward decision であり、 status = <code>proposed</code> (accepted への flip は user 承認 gate)。 <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> の <strong>§2.2 (視覚言語) と §2.4 (生成方式) を partial-revise</strong> する — frozen 本文は触らず、 本 ADR が divergence を宣言し <a href="../spec/rules.html">rules.html</a> (living) が新規範を持つ (<a href="../spec/constitution.html#p-10">P-10</a> の divergence trace 流儀。 <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> が <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a>/<a href="./ADR-0031-mattpocock-authoring-absorption.html">ADR-0031</a> を partial-revise したのと同型)。</p>
+
+<p>revise 集合と不変集合は <strong>disjoint</strong> に保つ (ADR-0032 の規律): <strong>revise = §2.2 (視覚言語) + §2.4 (生成方式)</strong>、 <strong>不変 = §2.1 (design system) + §2.3 (再提示原則) + §2.5 (2-gate) + §2.6 (γ scope)</strong>。 ADR-0041 は <code>accepted</code> のまま据置 (epic の founding decision・design system / 2-gate / γ scope は不変)。 本 ADR は <a href="../research/srs-component-taxonomy.html">taxonomy (S2 folio-036)</a> §3 (37 部品の register 分類) / §5 (二層 done-condition) を実装の前提とし、 S4 (generator folio-ruc) の assembler 設計・S5 (2-gate folio-vhy)・S6 (rules folio-16y) を gate する。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+
+<ul>
+  <li><strong>得るもの</strong>: 構造 (RTM/表) の捏造が<em>原理的に起こらない</em> generator になり、 「情報を落とさない/歪めない」を検証 (事後) でなく構成 (事前) で担保する。 fidelity gate が構造捏造検出から解放され prose に集中できる。 密系部品の非エンジニア可読性が assembler の<em>構造的保証</em>になり、 S7 で初めて REJECT される手戻りを防ぐ。 A/据置 の部品 id allowlist が S6 で凍結されれば判定は決定的になり再現可能。</li>
+  <li><strong>払うもの</strong>: 入力 contract (構造化された要件レコード形式) を新たに定義・維持する。 assembler (決定的組立) と opus prose 充填の 2 系統を実装・接続する (S4)。 折りたたみ + 要約スロット + plain 行という新スロットを部品庫 (catalog) へ登録し、 floor gate (no-TBD = 未実装 arm、 §2.3) を S5 で建て、 ceiling (要約の質) が一貫して扱う必要がある。 A/据置 allowlist の完全カタログ凍結は S6 の追加作業。</li>
+  <li><strong>リスクと緩和</strong>:
+    <ul>
+      <li><strong>折りたたみ (B) が情報を隠すのでは</strong> &rarr; 全グリッドを DOM 保持し AI/印刷/toggle で展開 (<a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> のゼロ損失原則)、 要約スロットは空不可 (floor) で必ず平易な入口を伴う。</li>
+      <li><strong>B 要約スロットが新たな捏造面になる</strong> (構造の捏造を消した代わりに「畳んだ構造を要約する prose」の捏造を導入 — opus が「全 N 件が結びつく」と書いても実際は孤立要件があり得る) &rarr; 要約のうち<em>検証可能な数値主張</em> (件数・孤立 0・未検証 0 等) は opus に書かせず <strong>floor の決定的集計 (gate C/D) から導出して埋める</strong>、 かつ要約 prose と grid の整合を <strong>fidelity ceiling が必ず突合する</strong>、 を S5 で contract 化する (§2.1 の「fidelity を prose に移す」はこの突合を含み、 「検査が軽くなる」の楽観に倒さない)。</li>
+      <li><strong>可読化 affordance の存在を floor が測ることが新たな Goodhart にならないか</strong> &rarr; §2.3 の通り<em>存在</em>は floor・<em>質</em>は ceiling に分離し floor 単独 GREEN を禁ずる (taxonomy §5.1)。 ただし測る floor (gate G) は未実装ゆえ S5 で建てることが前提。</li>
+    </ul>
+  </li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (generator architecture + 入力 contract は構築後の転換が高コスト) / <em>surprising</em> (ADR-0041 が記した全 LLM 生成・高密度を人間 primary でそのまま読ませる前提と<em>明確に異なる</em>方向) / <em>real-trade-off</em> (ハイブリッド vs 全 LLM 維持+fidelity 強化 〔§4 P/P&prime;〕 / 全機械 〔§4 Q〕、 A vs B vs 折衷 〔§4〕) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+
+<ul>
+  <li><strong>(P) 全 LLM 生成 (ADR-0041 §2.4 の字義・user 当初案)</strong> — 不採用。 LLM が構造も prose も生成する方式。 EC proof で構造 (RTM 行) の捏造を 1 観測しており (§1)、 検証の事後性に依存しすぎる。 ただし「検証で止まる」こと自体は ADR-0041 §2.5 が実証済ゆえ、 却下の精密な論拠は (P&prime;) で扱う。</li>
+  <li><strong>(P&prime;) 全 LLM 生成を維持しつつ fidelity gate を構造捏造検出まで強化</strong> — 不採用 (ただし最小変更の<em>真の対抗馬</em>)。 architecture 転換 (hard-to-reverse なコスト) を払わず北極星に近づく案。 ADR-0041 §2.5 の fidelity gate は実際に捏造を検出した実績があり「検証で止まる」は実証済。 しかし検証は (i) 生成のたびに re-review コストを払い、 (ii) 検出漏れ (fail-open) の窓が残る — 捏造を示したのと<em>同クラスのモデル</em>が検証も担うため。 決定的構造組立はこの窓を 0 にする (生成しないものは検証不要)。 すなわち「検証で事後に止める (窓あり・コスト毎回)」vs「構成で起こさせない (窓 0)」の量的トレードオフで後者を採る。 grill 論点 1 で戦略 C (折衷・B 寄り) を A/B の選択肢空間から選んだのも、 この「構造は固く・prose は柔く」の分担に基づく。</li>
+  <li><strong>(Q) 全機械生成 (prose も決定的に組立、 LLM なし)</strong> — 不採用。 これは user の元の不満そのもの — 機械的に組んだ prose は専門用語過多・日本語が不自然で「非エンジニアには読めない」。 prose の<em>やさしさ・自然さ</em>は決定的組立で出せず、 そこにこそ <strong>opus</strong> が要る。 ゆえに「構造 = 機械・prose = opus」の分担に帰着する。</li>
+  <li><strong>(A 単独) 全密表を噛み砕く (畳まず注釈で底上げ)</strong> — 不採用。 トレース監査グリッド (RTM 等) は注釈をどれだけ足しても器が「エンジニア向け」のまま重くなる。 非エンジニアに監査表を直接読ませる前提自体が北極星と合わない。</li>
+  <li><strong>(B 単独) 全密表を畳む (要約の背後へ)</strong> — 不採用。 要件本体・NFR は文書の<em>実質</em>であり、 これを畳むと人間 primary view が薄くなりすぎ「情報を落としすぎない」と緊張する。 本体は読ませ、 監査道具は畳む、 の出し分けが要る。</li>
+  <li><strong>register 規則なしの bespoke 可読化 (文書ごとに人手で按配)</strong> — 不採用。 最大の作り込みは出せるが、 機械検証不能・S6 ルール化不能・generator が再現できない。 部品 id allowlist で決定的に切るのは design-system の定石 (品質を front-load して量産)。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+
+<p>partial-revise 対象: <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.4 (生成方式 = 全 LLM &rarr; 決定的構造組立 + opus prose 充填)・§2.2 (視覚言語 — 高密度を人間 primary でそのまま読ませる前提 &rarr; 監査グリッドは平易要約の背後へ畳む)。 <strong>不変 (disjoint)</strong>: ADR-0041 §2.1 (design system) / §2.3 (再提示原則) / §2.5 (2-gate) / §2.6 (γ scope)。 frozen 本文不変、 本 ADR が divergence 宣言、 ADR-0041 は accepted 据置。 partial-revise の先例: <a href="./ADR-0032-v1-goal-refinement-defer.html">ADR-0032</a> (ADR-0030/0031 を partial-revise、 revise/不変 集合を disjoint に保つ)。 改訂連鎖: <a href="./ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> (圧縮 = 隠蔽 &rarr; ADR-0041 視覚再提示 &rarr; 本 ADR ハイブリッド生成 + A/B 可読化)。 継承: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (derive 原理 + ゼロ損失 DOM 保持 を別ファイル決定的組立で具体化)、 <a href="./ADR-0037-render-safety-ceiling.html">ADR-0037</a> (floor/ceiling 語彙 — 決定的 floor と LLM ceiling の分離を §2.3 が踏襲)。 接地: <a href="../research/srs-component-taxonomy.html">taxonomy (S2 folio-036)</a> §3 (37 部品の register 分類) / §5 (floor A&ndash;H + ceiling I&ndash;J)。 規範化先: <a href="../spec/rules.html">rules.html</a> (ハイブリッド生成 contract + A/B 部品 id allowlist + 入力 contract)。 floor 接続: <a href="../spec/verification.html">verification.html</a> (新 B/A スロットの非空を測る gate G no-TBD REQ を S5 で<em>追加</em>する — 現状未収録)。 version: <a href="./ADR-0030-v1-stability-criteria.html">ADR-0030</a> (本 ADR 自身の文書版 = 1.0.0、 記録する実装到達版 = 後方互換 MINOR 1.1.0、 strict-SemVer)。 追跡: bd epic folio-c5g (S4 folio-ruc generator が本 ADR を実装規範とする / S5 folio-vhy gate / S6 folio-16y rules)。 決定の経緯: user grill 2026-06-15 (S4 着手前 — 論点 1 戦略 C 折衷 / 論点 2 register-B + allowlist-A の出し分け / 論点 3 新 ADR で記録) + EC checkout proof (LLM の RTM 行捏造 1 観測)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0041-human-layer-visual-design-system.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0041 — human-layer visual design system (要件定義書の汎用ビジュアル部品系 + 機械SSoTからの生成 + 2-gate検証)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
