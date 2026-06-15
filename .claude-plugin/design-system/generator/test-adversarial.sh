@@ -32,7 +32,10 @@ cp "$BASE" "$TMP/inj.yaml"
 yq -i '.meta.title = "<script>alert(1)</script>注文書"' "$TMP/inj.yaml"
 yq -i '.upper_needs[0].need = "A<B & C 部門"' "$TMP/inj.yaml"
 bash "$ASM" "$TMP/inj.yaml" "$TMP/inj.html" >/dev/null 2>&1
-if grep -q '<script>alert' "$TMP/inj.html"; then ng "A1 HTML 注入が生で出力された"; else ok "A1 HTML 注入は escape 済 (生 <script> なし)"; fi
+# 否定: 生 <script> や back-ref 化け (<lt; 等) が無い / 肯定: 正規 entity &lt;script&gt; が出る
+if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/inj.html"; then ng "A1 escape 破綻 (生 markup か back-ref 化け)"
+elif grep -q '&lt;script&gt;alert' "$TMP/inj.html"; then ok "A1 HTML 注入を正規 entity に escape (&lt;script&gt; 出力・化けなし)"
+else ng "A1 正規 entity &lt;script&gt; が出ていない"; fi
 expect_verify_pass "A1b 注入 escape 後も構造健全で verify PASS" "$TMP/inj.yaml" "$TMP/inj.html"
 
 # A2. 値に改行 → @tsv 列ずれの源。validate abort
@@ -59,7 +62,7 @@ expect_abort "A6 未知 EARS pattern は abort" "$TMP/ears.yaml"
 bash "$ASM" "$BASE" "$TMP/good.html" >/dev/null 2>&1
 
 # A7. 生成後にサマリ数値を改竄 → verify が独立再計算で捕捉
-sed 's/req=8/req=999/' "$TMP/good.html" > "$TMP/tamper.html"
+sed -E 's/req=[0-9]+/req=999/' "$TMP/good.html" > "$TMP/tamper.html"
 expect_verify_fail "A7 サマリ数値の改竄を verify が捕捉" "$BASE" "$TMP/tamper.html"
 
 # A8. 生成後に ● トレースリンクを捏造追加 (最初の空セル) → verify が集合比較で捕捉

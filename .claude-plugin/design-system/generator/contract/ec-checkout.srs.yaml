@@ -1,120 +1,112 @@
 # folio S4 generator — 入力 contract インスタンス (ADR-0042 §2.1)
 #
-# これは「決定的 assembler が読む構造化データ」= 機械 SSoT の要件レコード。
-# 構造 (要件表・RTM・NFR 表) は assembler がこの contract から *決定的に* 組み立てる。
-# トレースの各セルは trace.backward / trace.acceptance から導出されるため、
-# assembler は元データに無い行・列・リンクを *生成できない* (捏造原理的に不可能)。
+# 決定的 assembler が読む構造化データ = 機械 SSoT。
+# 構造 + 内容 (要件/NFR/scope/actor/制約/用語/受入/goal/上位ニーズ) は全て contract から決定的に組立。
+# トレース (RTM の ● = backward / 受入 = acceptance) は集合から導出し、 集合外参照は fail-closed。
+# opus が後段 (③) で埋めるのは「読みやすさの足場」だけ = 章リード / plain やさしい言い換い /
+#   「なぜ要る」根拠 (rationale_source 接地) / 1 文サマリ (data-prose-slot で空出力)。
+# 内容は全て SSoT (作者の言葉) ゆえ contract に持つ。
 #
-# prose スロット (章リード・「なぜ要る」根拠・1 文サマリ) は assembler が *空* で出し、
-# 後段 (step 3) で opus が rationale_source / glossary に接地して充填する。
-#
-# proof 用データ = EC 注文確定・決済 SRS (S3 example-srs と同題材)。
+# proof: この contract から assembler が承認済み S3 example-srs.html 相当を *再生成* できることを示す。
 
 meta:
   doc_id: SRS-EC-CHECKOUT
-  title: EC 注文確定・決済 要件定義書
-  version: "1.0"
+  title: カートの商品を、 確実に・二重課金せず・売り越さず「注文確定」までやり切る仕組み
+  eyebrow_left: 要件定義書 (SRS)
+  eyebrow_right: EC サイト — 注文確定・決済
+  subtitle: 在庫の取り合いも、 決済の失敗も、 ボタン連打も起こりうる前提で設計する
+  version: "1.2"
+  date: "2026-06-15"
+  reader: EC 事業の事業責任者 — プログラミング・会計の専門知識は不要 (専門語は必ずやさしい言葉を併記)
 
-# source-trace-origin (RTM backward 端点 = 上位ニーズの実体)
+# 承認記録 (9.2.2 Front Matter)
+approval:
+  - role: 承認 (事業責任者)
+    who: 田中 葵
+    when: 2026-06-15 承認
+    stamp: 承認済
+  - role: レビュー (開発リード)
+    who: 佐藤 蓮
+    when: 2026-06-14 レビュー
+    stamp: レビュー済
+  - role: 作成 (要件定義)
+    who: 要件定義チーム
+    when: 2026-06-12 起票
+    stamp: 作成
+
+# 01 ゴール (section-lead-callout = 絶対に避けたい事故)
+goals:
+  - id: GOAL 1
+    headline: 二重課金しない
+    desc: ボタン連打や通信エラーの再送でも、 お客様のカードに 2 回請求しない。
+  - id: GOAL 2
+    headline: 売り越さない
+    desc: 在庫 1 個に 2 人が同時注文しても、 確定するのは 1 人だけ。
+  - id: GOAL 3
+    headline: 注文を取りこぼさない
+    desc: 決済が成功したのに注文が記録されない、 を起こさない。
+
+# 02 範囲 (scope-summary-panel)
+scope:
+  in:
+    - カート確認 → 在庫引当 → 決済 → 注文確定
+    - 二重送信・在庫競合・決済失敗時の挙動
+    - 注文番号の発行と確認メール
+  out:
+    - 商品検索・レコメンド
+    - 配送状況の追跡
+    - 返品・キャンセル後の返金処理
+
+# 02 アクター (actor-stakeholder-table)
+actors:
+  - { key: 購, name: 購入者,       role: 注文を確定する人,   external: false, tint: brand }
+  - { key: 運, name: 運営担当,     role: 在庫・注文を管理,   external: false, tint: violet }
+  - { key: 決, name: 決済代行,     role: カード決済を処理,   external: true,  tint: warn }
+  - { key: 倉, name: 在庫システム, role: 在庫数を管理,       external: true,  tint: info }
+
+# 03 上位ニーズ (source-trace-origin = RTM backward 端点)
 upper_needs:
-  - id: N-1
-    need: チャージバックを減らし決済の信頼を守る
-    origin: 経営方針
-  - id: N-2
-    need: 売り越しによる欠品・機会損失をなくす
-    origin: 運営部
-  - id: N-3
-    need: 決済成功と注文記録を必ず一致させる
-    origin: 運営部
+  - { id: N-1, need: クレーム・チャージバックを減らし、 決済の信頼を守る, origin: 経営方針 2026Q1, short: 二重課金防止 }
+  - { id: N-2, need: 在庫の売り越しによる欠品謝罪・機会損失をなくす,     origin: 運営部 要望,    short: 売り越し防止 }
+  - { id: N-3, need: 注文の取りこぼしゼロで売上を確実に計上する,         origin: 経理 要件,      short: 取りこぼし防止 }
 
-# requirement-matrix-table (行 = ears-requirement-row) + RTM 行
-requirements:
-  - id: FR1
-    type: FR
-    ears: { pattern: event, condition: 確定ボタンを押したとき, response: 在庫を確保してから決済を実行する }
-    priority: must
-    vmethod: T
-    trace: { backward: [N-2], acceptance: [AC1] }
-    rationale_source: N-2
-  - id: FR2
-    type: FR
-    ears: { pattern: unwanted, condition: 確定ボタンが連打されたとき, response: 2 回目以降の確定要求を受け付けない }
-    priority: must
-    vmethod: T
-    trace: { backward: [N-1], acceptance: [AC2] }
-    rationale_source: N-1
-  - id: FR3
-    type: FR
-    ears: { pattern: event, condition: 決済成功の応答が返ったとき, response: 注文を確定し注文番号を発行する }
-    priority: must
-    vmethod: T
-    trace: { backward: [N-3], acceptance: [AC3] }
-    rationale_source: N-3
-  - id: FR4
-    type: FR
-    ears: { pattern: unwanted, condition: 決済処理が制限時間内に応答しないとき, response: 取引を取り消し在庫の確保を解放する }
-    priority: should
-    vmethod: A
-    trace: { backward: [N-3], acceptance: [AC4] }
-    rationale_source: N-3
-  - id: FR5
-    type: FR
-    ears: { pattern: state, condition: 在庫が確保されている間, response: 同一注文に対する二重の在庫確保を禁止する }
-    priority: must
-    vmethod: I
-    trace: { backward: [N-2], acceptance: [AC5] }
-    rationale_source: N-2
-
-# nfr-metrics-table (NFR = 測定可能な数値基準) + RTM 行
-nfr:
-  - id: NFR1
-    type: NFR
-    category: 性能
-    target: 注文確定応答の 95% が 1.0 秒以内
-    measure: 負荷試験で応答時間を計測
-    vmethod: T
-    trace: { backward: [N-1], acceptance: [AC6] }
-  - id: NFR2
-    type: NFR
-    category: セキュリティ
-    target: カード番号を自社環境に保持しない
-    measure: PCI DSS 準拠を第三者監査で確認
-    vmethod: I
-    trace: { backward: [N-1], acceptance: [AC7] }
-  - id: NFR3
-    type: NFR
-    category: 信頼性
-    target: 決済と注文記録の整合性を 99.99% 維持
-    measure: 整合性チェックの監査ログで計測
-    vmethod: A
-    trace: { backward: [N-3], acceptance: [AC8] }
-
-# 受入基準の正典集合 (RTM forward 端点 = acceptance の SSoT)。
-# requirements/nfr の trace.acceptance はこの id 集合からのみ参照でき、
-# assembler は集合外の AC id を fail-closed で拒否する (backward と対称の fabrication-free)。
+# 受入基準の正典集合 (RTM forward 端点)。trace.acceptance はこの id からのみ参照可。
 acceptance:
-  - id: AC1
-    criterion: 確定操作後に在庫が確保され二重販売が発生しないこと
-  - id: AC2
-    criterion: 確定ボタン連打時にも課金が 1 回のみであること
-  - id: AC3
-    criterion: 決済成功時に注文番号が発行され記録されること
-  - id: AC4
-    criterion: 決済タイムアウト時に在庫の確保が解放されること
-  - id: AC5
-    criterion: 在庫確保中の二重確保要求が拒否されること
-  - id: AC6
-    criterion: 注文確定応答の 95 パーセンタイルが 1.0 秒以内であること
-  - id: AC7
-    criterion: 監査でカード番号の非保持が確認されること
-  - id: AC8
-    criterion: 監査ログで決済と注文記録の整合性 99.99% が確認されること
+  - { id: AC1, criterion: 在庫 1 個に同時 2 注文 → 確定は 1 件だけ、 もう 1 件は在庫切れ表示, metric_v: 1/2, metric_l: だけ成功, links: [FR1, FR4] }
+  - { id: AC2, criterion: 確定ボタン 10 連打 → 課金は 1 回だけ,                              metric_v: 1×,  metric_l: 課金回数, links: [FR2] }
+  - { id: AC3, criterion: 決済成功 → 注文番号発行まで 1 秒以内、 取りこぼし 0,               metric_v: "<1.0s", metric_l: 確定まで, links: [FR3, NFR1] }
 
-# 専門語 (opus が plain 併記を書く際の接地。本スライスでは未使用スロットの源)
+# 04 機能要件 (requirement-matrix-table、 行 = ears-requirement-row)
+requirements:
+  - { id: FR1, type: FR, label: 在庫引当, priority: must,   vmethod: T, rationale_source: N-2, trace: { backward: [N-2], acceptance: [AC1] },
+      ears: { pattern: event,    condition: 購入者が「注文確定」を押したとき, response: 在庫を確保 (引当) してから決済に進む } }
+  - { id: FR2, type: FR, label: 連打防止, priority: must,   vmethod: T, rationale_source: N-1, trace: { backward: [N-1], acceptance: [AC2] },
+      ears: { pattern: unwanted,  condition: 同じ注文ボタンが連打されたとき, response: 2 回目以降の確定要求は受け付けず 1 回だけ処理する } }
+  - { id: FR3, type: FR, label: 注文確定, priority: must,   vmethod: T, rationale_source: N-3, trace: { backward: [N-3], acceptance: [AC3] },
+      ears: { pattern: event,    condition: 決済代行から成功応答が返ったとき, response: 注文を確定し注文番号を発行する } }
+  - { id: FR4, type: FR, label: 在庫解放, priority: must,   vmethod: T, rationale_source: N-2, trace: { backward: [N-2], acceptance: [AC1] },
+      ears: { pattern: unwanted,  condition: 決済が失敗または応答なしのとき, response: 確保した在庫を解放し注文は作らない } }
+  - { id: FR5, type: FR, label: 確認メール, priority: should, vmethod: T, rationale_source: N-1, trace: { backward: [N-1], acceptance: [AC3] },
+      ears: { pattern: event,    condition: 注文が確定したとき, response: 確認メールを送る } }
+  - { id: FR6, type: FR, label: 注文不変, priority: must,   vmethod: T, rationale_source: N-3, trace: { backward: [N-3], acceptance: [AC3] },
+      ears: { pattern: ubiquitous, condition: 常時, response: 確定済みの注文内容は後から書き換えない } }
+
+# 05 非機能要件 (nfr-metrics-table + nfr-hero-metrics)。hero 付き = ヒーロー数字に featured。
+nfr:
+  - { id: NFR1, type: NFR, label: 応答速度, category: 性能,         target: 95% が 1.0 秒以内,        measure: 負荷試験で確定処理の応答時間を計測, vmethod: T, trace: { backward: [N-1], acceptance: [AC3] }, hero: { cat: 速さ,   big: "1.0",  unit: 秒,    qual: 確定ボタン押下→結果表示の 95% } }
+  - { id: NFR2, type: NFR, label: 稼働率, category: 可用性,       target: 稼働率 99.9% / 月,        measure: 監視ツールの月次稼働ログ,         vmethod: A, trace: { backward: [N-3], acceptance: [AC3] }, hero: { cat: 安定,   big: "99.9", unit: "%",   qual: 月間の稼働率 (約 43 分/月まで) } }
+  - { id: NFR3, type: NFR, label: 処理量, category: 性能,         target: 500 件/分,                measure: ピーク負荷シナリオで再現,         vmethod: T, trace: { backward: [N-2], acceptance: [AC1] }, hero: { cat: 処理量, big: "500",  unit: 件/分, qual: セール時のピーク注文 } }
+  - { id: NFR4, type: NFR, label: 非保持, category: セキュリティ, target: カード番号 非保持,        measure: 第三者のセキュリティ監査 PCI DSS, vmethod: I, trace: { backward: [N-1], acceptance: [AC2] }, hero: { cat: 安全,   big: "0",    unit: 件,    qual: カード番号の自社保持 } }
+
+# 08 制約・規制 (constraint-callout)
+constraints:
+  - { id: CON1, label: 決済方式,   text: カード情報は自社で持たず、 決済代行に委ねる, regulation: PCI DSS }
+  - { id: CON2, label: 個人情報,   text: 購入者情報の取得・保管は同意取得後のみ,     regulation: 個情法 }
+  - { id: CON3, label: 在庫連携,   text: 在庫数は既存の在庫システム (WMS) を唯一の出どころとする, regulation: "" }
+
+# 09 用語集 (glossary-term-table = 用語定義の SSoT)
 glossary:
-  - term: オーソリ
-    plain: 支払い能力の確認のため代金を一時的に仮押さえすること
-  - term: 在庫引当
-    plain: 注文に対し在庫を確保し他の注文に使われないようにすること
-  - term: 冪等
-    plain: 同じ操作を何度繰り返しても結果が 1 回分にしかならない性質
+  - { term: 在庫引当, en: stock allocation, def: 注文の瞬間に在庫を「この人の分」として押さえること。 押さえないと同じ 1 個を 2 人に売ってしまう。 }
+  - { term: 二重課金, en: double charge,    def: 同じ買い物で 2 回お金を請求してしまう事故。 連打や通信再送で起こりやすい。 }
+  - { term: WMS,      en: warehouse mgmt,   def: 倉庫の在庫を管理する既存システム。 在庫数の正しい出どころ。 }
+  - { term: PCI DSS,  en: card security std, def: カード情報を扱うときに守る世界共通の安全ルール。 違反すると決済できなくなる。 }
