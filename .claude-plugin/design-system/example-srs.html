@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注文確定・決済 要件定義書 — folio design system S3 中核デモ</title>
+<link rel="stylesheet" href="srs.css">
+</head>
+<body>
+<div class="page" data-component="requirement-type-color-tokens">
+
+  <!-- ===== doc-cover-band ===== -->
+  <header data-component="doc-cover-band">
+    <p class="cover-eyebrow"><span class="doc-type">要件定義書 (SRS)</span> <span>ECサイト — 注文確定・決済</span></p>
+    <h1>カートの商品を、確実に・二重課金せず・売り越さず「注文確定」までやり切る仕組み</h1>
+    <p class="cover-sub">在庫の取り合いも、決済の失敗も、ボタン連打も起こりうる前提で設計する</p>
+
+    <div class="summary-card">
+      <span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffe8a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+      <div>
+        <p class="lab">この文書が約束すること (1文サマリ)</p>
+        <p class="txt">購入者がカートの商品を、<b>在庫を確保しながら</b>決済し、<b>二重課金や売り越しを起こさず</b>に注文を確定できる。</p>
+      </div>
+    </div>
+
+    <div class="cover-meta">
+      <span class="m"><span class="k">機能要件</span><span class="v">6件 (FR1–FR6)</span></span>
+      <span class="m"><span class="k">非機能要件</span><span class="v">4件 (NFR1–NFR4)</span></span>
+      <span class="m"><span class="k">受入基準</span><span class="v">3件 (AC1–AC3)</span></span>
+      <span class="m"><span class="k">版</span><span class="v">v1.2 / 2026-06-15</span></span>
+    </div>
+
+    <!-- ===== approval-block (★critic補填) ===== -->
+    <div data-component="approval-block">
+      <div class="sign"><span class="role">承認 (事業責任者)</span><span class="who">田中 葵</span><span class="when">2026-06-15 承認</span><span class="stamp">承認済</span></div>
+      <div class="sign"><span class="role">レビュー (開発リード)</span><span class="who">佐藤 蓮</span><span class="when">2026-06-14 レビュー</span><span class="stamp self">レビュー済</span></div>
+      <div class="sign"><span class="role">作成 (要件定義)</span><span class="who">要件定義チーム</span><span class="when">2026-06-12 起票</span><span class="stamp self">作成</span></div>
+    </div>
+
+    <div class="reader-chip">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      想定読者: EC事業の<b style="margin:0 2px">事業責任者</b> — プログラミング・会計の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+    </div>
+  </header>
+
+  <!-- ===== 01 ゴール ===== -->
+  <section data-component="chapter-deck-band" class="tint-brand">
+    <span class="num">01</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg> ゴール / 絶対に避けたい3つの事故</span>
+    <h2>「これが起きたら失敗」を先に決める</h2>
+    <p class="lead">機能を足す前に、何を絶対に起こしてはいけないかを宣言する。以降のすべての要件は、この3つのゴールを守るために存在する。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="section-lead-callout">
+      <div class="card accent"><div class="cid">GOAL 1</div><p class="ct">二重課金しない</p><p class="cd">ボタン連打や通信エラーの再送でも、お客様のカードに2回請求しない。</p></div>
+      <div class="card accent"><div class="cid">GOAL 2</div><p class="ct">売り越さない</p><p class="cd">在庫1個に2人が同時注文しても、確定するのは1人だけ <span class="term en" data-component="plain-language-term-inline">在庫引当</span>。</p></div>
+      <div class="card accent"><div class="cid">GOAL 3</div><p class="ct">注文を取りこぼさない</p><p class="cd">決済が成功したのに注文が記録されない、を起こさない。</p></div>
+    </div>
+  </div>
+
+  <!-- ===== 02 範囲とアクター ===== -->
+  <section data-component="chapter-deck-band" class="tint-info">
+    <span class="num">02</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/></svg> 範囲 / だれが関わるか</span>
+    <h2>この文書が扱う範囲と、登場人物</h2>
+    <p class="lead">「カート確認」から「注文確定」までを扱う。商品の検索や配送追跡は別文書。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="scope-summary-panel">
+      <div class="scol in"><h3>✓ 扱う (in scope)</h3><ul>
+        <li><span class="b">●</span>カート確認 → 在庫引当 → 決済 → 注文確定</li>
+        <li><span class="b">●</span>二重送信・在庫競合・決済失敗時の挙動</li>
+        <li><span class="b">●</span>注文番号の発行と確認メール</li>
+      </ul></div>
+      <div class="scol out"><h3>✕ 扱わない (out of scope)</h3><ul>
+        <li><span class="b">●</span>商品検索・レコメンド</li>
+        <li><span class="b">●</span>配送状況の追跡</li>
+        <li><span class="b">●</span>返品・キャンセル後の返金処理</li>
+      </ul></div>
+    </div>
+    <div data-component="actor-stakeholder-table" style="margin-top:20px">
+      <div class="actor"><span class="av" style="background:var(--brand)">購</span><div><div class="nm">購入者</div><div class="role">注文を確定する人</div></div></div>
+      <div class="actor"><span class="av" style="background:var(--violet)">運</span><div><div class="nm">運営担当</div><div class="role">在庫・注文を管理</div></div></div>
+      <div class="actor"><span class="av" style="background:var(--warn)">決</span><div><div class="nm">決済代行<span class="ext-badge">外部</span></div><div class="role">カード決済を処理</div></div></div>
+      <div class="actor"><span class="av" style="background:var(--info)">倉</span><div><div class="nm">在庫システム<span class="ext-badge">外部</span></div><div class="role">在庫数を管理 <span class="term en">WMS</span></div></div></div>
+    </div>
+  </div>
+
+  <!-- ===== 03 上位ニーズ (★critic補填 source-trace-origin) ===== -->
+  <section data-component="chapter-deck-band" class="tint-violet">
+    <span class="num">03</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2v6m0 0L9 5m3 3l3-3"/><circle cx="12" cy="14" r="6"/></svg> 上位ニーズ / なぜこの要件群が要るか</span>
+    <h2>この文書の要件は、どの事業ニーズから来たか</h2>
+    <p class="lead">すべての機能要件は、下のいずれかの事業ニーズ (上位の出どころ) に紐づく。紐づかない要件は作らない。</p>
+  </section>
+  <div class="chapbody">
+    <div class="tbl-wrap">
+      <table data-component="source-trace-origin">
+        <thead><tr><th>ニーズID</th><th>事業ニーズ</th><th>出どころ</th></tr></thead>
+        <tbody>
+          <tr><td><span class="nid">N-1</span></td><td>クレーム・チャージバックを減らし、決済の信頼を守る</td><td><span class="origin">経営方針 2026Q1</span></td></tr>
+          <tr><td><span class="nid">N-2</span></td><td>在庫の売り越しによる欠品謝罪・機会損失をなくす</td><td><span class="origin">運営部 要望</span></td></tr>
+          <tr><td><span class="nid">N-3</span></td><td>注文の取りこぼしゼロで売上を確実に計上する</td><td><span class="origin">経理 要件</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 04 機能要件 ===== -->
+  <section data-component="chapter-deck-band" class="tint-brand">
+    <span class="num">04</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/></svg> 機能要件 / システムが必ずやること</span>
+    <h2>注文確定までに、システムが何をするか</h2>
+    <p class="lead">各要件は「いつ / 何を / なぜ」をセットで読める。色は要件のタイプ (恒常・きっかけ・状態・禁止)。</p>
+  </section>
+  <div class="chapbody">
+    <div class="ears-legend"><span class="lt">タイプ:</span>
+      <span class="ears trigger">きっかけ <span class="en">When</span></span>
+      <span class="ears state">状態 <span class="en">While</span></span>
+      <span class="ears forbid">禁止 <span class="en">If-Then</span></span>
+      <span class="ears always">恒常 <span class="en">Ubiq.</span></span>
+      <span class="lt" style="margin-left:8px">優先:</span><span class="prio must" data-component="priority-badge">必須</span><span class="prio should">推奨</span>
+      <span class="lt" style="margin-left:8px">検証:</span><span class="vmeth">T=テスト</span>
+    </div>
+    <div class="tbl-wrap">
+      <table data-component="requirement-matrix-table">
+        <thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする (+ なぜ要る)</th><th>優先/検証</th></tr></thead>
+        <tbody>
+          <tr><td><span class="fid">FR1</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">購入者が「注文確定」を押したとき</td><td class="resp">在庫を確保 (引当) してから決済に進む<span class="why">先に在庫を押さえないと売り越す (N-2)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+          <tr><td><span class="fid">FR2</span></td><td><span class="ears forbid">禁止</span></td><td class="cond">同じ注文ボタンが連打されたとき</td><td class="resp">2回目以降の確定要求は受け付けず、1回だけ処理する<span class="why">二重課金を防ぐ (N-1)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+          <tr><td><span class="fid">FR3</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">決済代行から成功応答が返ったとき</td><td class="resp">注文を確定し、注文番号を発行する<span class="why">決済成功と注文記録を必ず一致させる (N-3)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+          <tr><td><span class="fid">FR4</span></td><td><span class="ears forbid">禁止</span></td><td class="cond">決済が失敗 / 応答なしのとき</td><td class="resp">確保した在庫を解放し、注文は作らない<span class="why">幽霊の在庫押さえを残さない (N-2)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+          <tr><td><span class="fid">FR5</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">注文が確定したとき</td><td class="resp">確認メールを送る<span class="why">購入者に注文成立を伝える (N-1)</span></td><td><span class="prio should">推奨</span> <span class="vmeth">T</span></td></tr>
+          <tr><td><span class="fid">FR6</span></td><td><span class="ears always">恒常</span></td><td class="cond">常時</td><td class="resp">確定済みの注文内容は後から書き換えない<span class="why">経理の売上計上を守る (N-3)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 05 非機能要件 ===== -->
+  <section data-component="chapter-deck-band" class="tint-violet">
+    <span class="num">05</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg> 非機能要件 / 速さ・安定・安全の数値約束</span>
+    <h2>「どれくらい速く・落ちず・安全か」を数字で約束する</h2>
+    <p class="lead">あいまいな「速く」ではなく、測れる数字にする。測れない約束は守れているか判定できない。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="nfr-hero-metrics">
+      <div class="nfr-hero c1"><div class="cat">速さ</div><div class="big">1.0<span class="u">秒</span></div><div class="qual">確定ボタン押下→結果表示の95%</div></div>
+      <div class="nfr-hero c2"><div class="cat">安定</div><div class="big">99.9<span class="u">%</span></div><div class="qual">月間の稼働率 (約43分/月まで)</div></div>
+      <div class="nfr-hero c3"><div class="cat">処理量</div><div class="big">500<span class="u">件/分</span></div><div class="qual">セール時のピーク注文</div></div>
+      <div class="nfr-hero c4"><div class="cat">安全</div><div class="big">0<span class="u">件</span></div><div class="qual">カード番号の自社保持</div></div>
+    </div>
+    <div class="tbl-wrap">
+      <table data-component="nfr-metrics-table">
+        <thead><tr><th>ID</th><th>区分</th><th>目標値</th><th>測り方</th></tr></thead>
+        <tbody>
+          <tr><td><span class="nid">NFR1</span></td><td>性能</td><td><span class="tgt">95%が1.0秒以内</span></td><td class="meas">負荷試験で確定処理の応答時間を計測</td></tr>
+          <tr><td><span class="nid">NFR2</span></td><td>可用性</td><td><span class="tgt">稼働率99.9%/月</span></td><td class="meas">監視ツールの月次稼働ログ</td></tr>
+          <tr><td><span class="nid">NFR3</span></td><td>性能</td><td><span class="tgt">500件/分</span></td><td class="meas">ピーク負荷シナリオで再現</td></tr>
+          <tr><td><span class="nid">NFR4</span></td><td>セキュリティ</td><td><span class="tgt">カード番号 非保持</span></td><td class="meas">第三者のセキュリティ監査 <span class="term en">PCI DSS</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 06 受入基準 ===== -->
+  <section data-component="chapter-deck-band" class="tint-ok">
+    <span class="num">06</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> 受入基準 / 「できた」と言える条件</span>
+    <h2>これを満たせば「完成」と判定する</h2>
+    <p class="lead">実装が終わったかどうかは、開発者の感覚でなくこの基準で決める。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="acceptance-criteria-checklist">
+      <div class="ac"><div class="aid">AC1 ← FR1/FR4</div><p class="at">在庫1個に<b>同時2注文</b>→確定は<b>1件だけ</b>、もう1件は在庫切れ表示</p><div class="metric"><span class="v">1/2</span><span class="l">だけ成功</span></div></div>
+      <div class="ac"><div class="aid">AC2 ← FR2</div><p class="at">確定ボタン<b>10連打</b>→課金は<b>1回だけ</b></p><div class="metric"><span class="v">1×</span><span class="l">課金回数</span></div></div>
+      <div class="ac"><div class="aid">AC3 ← FR3/NFR1</div><p class="at">決済成功→注文番号発行まで<b>1秒以内</b>、取りこぼし0</p><div class="metric"><span class="v">&lt;1.0s</span><span class="l">確定まで</span></div></div>
+    </div>
+  </div>
+
+  <!-- ===== 07 トレーサビリティ (rtm-grid) ===== -->
+  <section data-component="chapter-deck-band" class="tint-info">
+    <span class="num">07</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg> トレーサビリティ / 抜け漏れチェック表</span>
+    <h2>事業ニーズ → 機能 → 検証 が全部つながっているか</h2>
+    <p class="lead">どの上位ニーズも機能で実現され、どの機能も検証される。空欄 (孤立) があれば抜け漏れのサイン。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="rtm-grid">
+      <table class="rtm">
+        <thead><tr><th>機能要件</th><th class="grp">N-1 二重課金防止</th><th class="grp">N-2 売り越し防止</th><th class="grp">N-3 取りこぼし防止</th><th>受入で検証</th></tr></thead>
+        <tbody>
+          <tr><th>FR1 <span class="lbl">在庫引当</span></th><td></td><td class="hit"><span class="dot">●</span></td><td></td><td class="hit"><span class="dot">AC1</span></td></tr>
+          <tr><th>FR2 <span class="lbl">連打防止</span></th><td class="hit"><span class="dot">●</span></td><td></td><td></td><td class="hit"><span class="dot">AC2</span></td></tr>
+          <tr><th>FR3 <span class="lbl">注文確定</span></th><td></td><td></td><td class="hit"><span class="dot">●</span></td><td class="hit"><span class="dot">AC3</span></td></tr>
+          <tr><th>FR4 <span class="lbl">在庫解放</span></th><td></td><td class="hit"><span class="dot">●</span></td><td></td><td class="hit"><span class="dot">AC1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ===== 08 制約・規制 (constraint-callout) ===== -->
+  <section data-component="chapter-deck-band" class="tint-warn">
+    <span class="num">08</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 制約・規制 / 守らねばならない外枠</span>
+    <h2>設計の前に決まっている制約と、法令</h2>
+    <p class="lead">これらは交渉の余地がない前提。特に法令 (赤) は違反すると事業が止まる。</p>
+  </section>
+  <div class="chapbody">
+    <table data-component="constraint-callout">
+      <tbody>
+        <tr><td class="cid2">CON1</td><td class="cl">決済方式</td><td>カード情報は自社で持たず、決済代行に委ねる <span class="reg-badge">法令 PCI DSS</span></td></tr>
+        <tr><td class="cid2">CON2</td><td class="cl">個人情報</td><td>購入者情報の取得・保管は同意取得後のみ <span class="reg-badge">法令 個情法</span></td></tr>
+        <tr><td class="cid2">CON3</td><td class="cl">在庫連携</td><td>在庫数は既存の在庫システム (WMS) を唯一の出どころとする</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== 09 用語集 (glossary-term-table = SSoT) ===== -->
+  <section data-component="chapter-deck-band" class="tint-brand">
+    <span class="num">09</span>
+    <span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> 用語集 / この文書で使う専門語</span>
+    <h2>本文に出てくる専門語のやさしい説明</h2>
+    <p class="lead">本文中の専門語は、ここに必ず登録されている (用語の唯一の出どころ)。</p>
+  </section>
+  <div class="chapbody">
+    <div data-component="glossary-term-table">
+      <div class="grow"><div class="gword">在庫引当<span class="en">stock allocation</span></div><div class="gdef">注文の瞬間に在庫を「この人の分」として押さえること。押さえないと同じ1個を2人に売ってしまう。</div></div>
+      <div class="grow"><div class="gword">二重課金<span class="en">double charge</span></div><div class="gdef">同じ買い物で2回お金を請求してしまう事故。連打や通信再送で起こりやすい。</div></div>
+      <div class="grow"><div class="gword">WMS<span class="en">warehouse mgmt</span></div><div class="gdef">倉庫の在庫を管理する既存システム。在庫数の正しい出どころ。</div></div>
+      <div class="grow"><div class="gword">PCI DSS<span class="en">card security std</span></div><div class="gdef">カード情報を扱うときに守る世界共通の安全ルール。違反すると決済できなくなる。</div></div>
+    </div>
+  </div>
+
+  <!-- ===== fidelity-sync-meta + footer ===== -->
+  <footer class="foot" data-component="fidelity-sync-meta">
+    <div class="ft-grid">
+      <div>機械SSoT: <b>ec-checkout.spec (machine)</b> &middot; 生成: <b>2026-06-15 14:00</b> &middot; 検証通過: <b>floor✓ + persona✓ + fidelity✓</b></div>
+      <div class="tags"><span>folio design system</span><span>deck × B2</span><span>ISO/IEC/IEEE 29148</span><span>S3 中核デモ</span></div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

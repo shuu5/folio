@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>folio SRS design system — 部品カタログ (folio-8oc / S3)</title>
+<link rel="stylesheet" href="srs.css">
+<style>
+/* catalog-only chrome (部品庫の枠。srs.css の上に重ねる) */
+.cat-head{background:linear-gradient(135deg,#15324a,#2a4d6e); color:#fff; padding:40px 48px 34px;}
+.cat-head h1{font-size:32px; margin:0 0 8px; font-weight:800;}
+.cat-head p{font-size:15px; opacity:.9; margin:0; max-width:880px; line-height:1.6;}
+.cat-head .stat{display:flex; gap:24px; margin-top:18px; font-size:13px; flex-wrap:wrap;}
+.cat-head .stat b{font-size:22px; display:block; font-weight:900;}
+.cat-body{max-width:1180px; margin:0 auto; padding:8px 28px 60px;}
+.reg-h{font-size:14px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft); margin:42px 0 6px; padding-bottom:8px; border-bottom:2px solid var(--line); display:flex; align-items:center; gap:10px;}
+.reg-h .cnt{font-size:11px; font-weight:700; background:var(--paper-3); color:var(--ink-faint); padding:2px 9px; border-radius:999px;}
+.comp{background:var(--paper); border:1px solid var(--line); border-radius:14px; margin:18px 0; box-shadow:var(--shadow); overflow:hidden;}
+.comp-head{display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:14px 20px; background:var(--paper-2); border-bottom:1px solid var(--line);}
+.comp-head .cid{font-family:ui-monospace,monospace; font-weight:800; font-size:14px; color:var(--brand);}
+.comp-head .reg{font-size:10.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:2px 9px; border-radius:6px; background:var(--brand-tint); color:var(--brand);}
+.comp-head .req{font-size:10.5px; font-weight:800; padding:2px 9px; border-radius:6px;}
+.comp-head .req.must{background:var(--bad); color:#fff;} .comp-head .req.should{background:var(--warn); color:#fff;} .comp-head .req.optional{background:var(--paper-3); color:var(--ink-soft); border:1px solid var(--line);}
+.comp-head .star{font-size:11px; font-weight:800; color:var(--ok);}
+.comp-head .use{font-size:12.5px; color:var(--ink-soft); flex:1 1 240px; min-width:0;}
+.comp-demo{padding:22px 24px; background:var(--paper-3);}
+.comp-demo.dark-host{background:#0d171e;}
+</style>
+</head>
+<body>
+
+<header class="cat-head">
+  <h1>folio SRS design system — 部品カタログ</h1>
+  <p>要件定義書 (SRS) ビジュアル design system の <b>部品庫</b>。 機械 SSoT から人間プレゼンを生成する generator (S4) と consumer がここを参照する。 各部品は <code>data-component</code> 属性で識別され、 floor gate A の存在検査対象。 taxonomy = <code>architecture/research/srs-component-taxonomy.html</code> / 視覚言語 = deck帯 × B2高密度 (ADR-0041) / テーマ = prefers-color-scheme 環境追従。</p>
+  <div class="stat">
+    <span><b>37</b>部品</span><span><b>27</b>MUST</span><span><b>8</b>SHOULD</span><span><b>2</b>OPTIONAL</span><span><b>9</b>register</span>
+  </div>
+</header>
+
+<div class="cat-body">
+
+<!-- ============ deck-band family ============ -->
+<div class="reg-h">deck-band — 掴みの帯 (主 register 1) <span class="cnt">4 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">doc-cover-band</span><span class="reg">deck-band</span><span class="req must">MUST</span><span class="use">表紙帯。 文書識別 (9.2.1) + 前付け一部。 タイトル/版/日付/発行/1文サマリ。</span></div>
+  <div class="comp-demo"><div data-component="doc-cover-band" style="border-radius:12px; padding:28px 30px;">
+    <p class="cover-eyebrow"><span class="doc-type">要件定義書 (SRS)</span> <span>例: ECサイト 注文確定</span></p>
+    <h1 style="font-size:26px">タイトル — この文書が約束する一文</h1>
+    <div class="cover-meta"><span class="m"><span class="k">版</span><span class="v">v1.2</span></span><span class="m"><span class="k">日付</span><span class="v">2026-06-15</span></span></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">chapter-deck-band</span><span class="reg">deck-band</span><span class="req must">MUST</span><span class="use">章開き色帯。 章の要旨を1行で掴ませ迷子を防ぐ。 組織化軸ラベルを担う。</span></div>
+  <div class="comp-demo"><section data-component="chapter-deck-band" class="tint-brand" style="border-radius:12px">
+    <span class="num">04</span><span class="kicker">機能要件</span><h2>章タイトル</h2><p class="lead">章の要旨を1行で。読者が「この章で何が分かるか」を即座に掴める。</p>
+  </section></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">nfr-hero-metrics</span><span class="reg">deck-band</span><span class="req should">SHOULD</span><span class="use">最重要 NFR を大数字でヒーロー表示 (性能/可用率)。</span></div>
+  <div class="comp-demo"><div data-component="nfr-hero-metrics" style="grid-template-columns:repeat(4,1fr)">
+    <div class="nfr-hero c1"><div class="cat">速さ</div><div class="big">1.0<span class="u">秒</span></div><div class="qual">95%が1秒以内</div></div>
+    <div class="nfr-hero c2"><div class="cat">安定</div><div class="big">99.9<span class="u">%</span></div><div class="qual">月間稼働率</div></div>
+    <div class="nfr-hero c3"><div class="cat">処理量</div><div class="big">500<span class="u">件/分</span></div><div class="qual">ピーク注文</div></div>
+    <div class="nfr-hero c4"><div class="cat">安全</div><div class="big">0<span class="u">件</span></div><div class="qual">カード非保持</div></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">approval-block</span><span class="reg">deck-band</span><span class="req must">MUST</span><span class="star">★補填</span><span class="use">承認証跡。 承認者/役割/承認日。 契約文書の必須。 変更者とは別。</span></div>
+  <div class="comp-demo dark-host"><div data-component="approval-block">
+    <div class="sign"><span class="role">承認 (事業責任者)</span><span class="who">田中 葵</span><span class="when">2026-06-15</span><span class="stamp">承認済</span></div>
+    <div class="sign"><span class="role">レビュー</span><span class="who">佐藤 蓮</span><span class="when">2026-06-14</span><span class="stamp self">レビュー済</span></div>
+  </div></div>
+</div>
+
+<!-- ============ dense-table family ============ -->
+<div class="reg-h">dense-table — 詳細の密表 (主 register 2) <span class="cnt">主要 6 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">requirement-matrix-table</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="use">要件本体表。 一意 data-req-id。 行=ears-requirement-row (いつ/何を/なぜ + 優先 + 検証)。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="requirement-matrix-table">
+    <thead><tr><th>ID</th><th>タイプ</th><th>いつ</th><th>何をする (+なぜ)</th><th>優先/検証</th></tr></thead>
+    <tbody>
+      <tr><td><span class="fid">FR1</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">確定を押したとき</td><td class="resp">在庫を確保してから決済<span class="why">先に押さえないと売り越す</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+      <tr><td><span class="fid">FR2</span></td><td><span class="ears forbid">禁止</span></td><td class="cond">連打されたとき</td><td class="resp">2回目以降は受け付けない<span class="why">二重課金を防ぐ</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">ears-requirement-row</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">EARS 構造の要件1文 (requirement-matrix-table の行)。 いつ/何を + <b>根拠 Rationale は空不可の必須スロット</b>。 各 &lt;tr&gt; が data-component を持つ。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="requirement-matrix-table">
+    <thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする (+ なぜ要る)</th><th>優先/検証</th></tr></thead>
+    <tbody>
+      <tr data-component="ears-requirement-row"><td><span class="fid">FR3</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">決済成功応答が返ったとき</td><td class="resp">注文を確定し番号を発行する<span class="why">決済成功と注文記録を必ず一致させる (N-3)</span></td><td><span class="prio must">必須</span> <span class="vmeth">T</span></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">nfr-metrics-table</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="use">NFR を測定可能な数値基準表に。 性能/ユーザビリティ/品質属性/標準適合。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="nfr-metrics-table">
+    <thead><tr><th>ID</th><th>区分</th><th>目標値</th><th>測り方</th></tr></thead>
+    <tbody>
+      <tr><td><span class="nid">NFR1</span></td><td>性能</td><td><span class="tgt">95%が1.0秒以内</span></td><td class="meas">負荷試験で応答時間計測</td></tr>
+      <tr><td><span class="nid">NFR4</span></td><td>セキュリティ</td><td><span class="tgt">カード番号 非保持</span></td><td class="meas">第三者監査 PCI DSS</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">source-trace-origin</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="star">★補填</span><span class="use">上位ニーズの実体 (StRS ID / business need)。 RTM backward 端点の置き場。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="source-trace-origin">
+    <thead><tr><th>ニーズID</th><th>事業ニーズ</th><th>出どころ</th></tr></thead>
+    <tbody>
+      <tr><td><span class="nid">N-1</span></td><td>チャージバックを減らし決済の信頼を守る</td><td><span class="origin">経営方針</span></td></tr>
+      <tr><td><span class="nid">N-2</span></td><td>売り越しによる欠品・機会損失をなくす</td><td><span class="origin">運営部</span></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">interface-spec-table</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="use">I/F 仕様一覧。 論理 I/F (製品視点) と詳細 I/F (要件) を data 属性で帰属区別。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="interface-spec-table">
+    <thead><tr><th>I/F</th><th>相手</th><th>方向</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td><span class="iid">IF-1</span></td><td>決済代行</td><td><span class="dir">→ 送信</span></td><td>決済要求 (金額・冪等キー)</td></tr>
+      <tr><td><span class="iid">IF-2</span></td><td>在庫システム (WMS)</td><td><span class="dir">↔ 双方</span></td><td>在庫引当・解放</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">actor-stakeholder-table</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="use">利用者グループ特性 + actor (9.6.6 + use-case)。</span></div>
+  <div class="comp-demo"><div data-component="actor-stakeholder-table">
+    <div class="actor"><span class="av" style="background:var(--brand)">購</span><div><div class="nm">購入者</div><div class="role">注文を確定する人</div></div></div>
+    <div class="actor"><span class="av" style="background:var(--warn)">決</span><div><div class="nm">決済代行<span class="ext-badge">外部</span></div><div class="role">カード決済</div></div></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">revision-history-table</span><span class="reg">dense-table</span><span class="req must">MUST</span><span class="use">版/日付/変更者/変更内容 (9.2.2)。 承認者とは別概念。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="revision-history-table">
+    <thead><tr><th>版</th><th>日付</th><th>変更者</th><th>変更内容</th></tr></thead>
+    <tbody>
+      <tr><td>v1.2</td><td>2026-06-15</td><td>要件定義チーム</td><td>NFR3 ピーク処理量を追加</td></tr>
+      <tr><td>v1.1</td><td>2026-06-10</td><td>要件定義チーム</td><td>FR4 在庫解放を明文化</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">data-requirements-block</span><span class="reg">dense-table</span><span class="req should">SHOULD</span><span class="use">論理 DB 要件 (9.6.15)。 エンティティ/関係/整合性/保持。</span></div>
+  <div class="comp-demo"><div class="tbl-wrap"><table data-component="data-requirements-block">
+    <thead><tr><th>エンティティ</th><th>保持</th><th>整合性制約</th></tr></thead>
+    <tbody>
+      <tr><td><span class="nid">注文</span></td><td>7年</td><td>注文番号は一意・確定後は不変</td></tr>
+      <tr><td><span class="nid">在庫引当</span></td><td>確定/解放まで</td><td>在庫数を超える引当は不可</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ============ dense-list family ============ -->
+<div class="reg-h">dense-list — 密リスト <span class="cnt">8 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">scope-summary-panel</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">範囲 (9.6.3)。 扱う/扱わない の2列。</span></div>
+  <div class="comp-demo"><div data-component="scope-summary-panel">
+    <div class="scol in"><h3>✓ 扱う</h3><ul><li><span class="b">●</span>カート確認→注文確定</li><li><span class="b">●</span>決済失敗時の挙動</li></ul></div>
+    <div class="scol out"><h3>✕ 扱わない</h3><ul><li><span class="b">●</span>商品検索</li><li><span class="b">●</span>配送追跡</li></ul></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">product-functions-list</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">主要機能の俯瞰リスト (9.6.5)。</span></div>
+  <div class="comp-demo"><ul data-component="product-functions-list">
+    <li><span class="li-key">F-1</span>カート内容を確認し合計金額を表示する</li>
+    <li><span class="li-key">F-2</span>在庫を引き当ててから決済に進む</li>
+    <li><span class="li-key">F-3</span>決済成功で注文を確定し番号を発行する</li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">ui-spec-block</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">UI 論理特性 (9.6.4.2)。 一貫性/アクセシビリティ等。</span></div>
+  <div class="comp-demo"><ul data-component="ui-spec-block">
+    <li><span class="li-key">UI-1</span>確定ボタンは処理中は無効化し連打を視覚的に防ぐ</li>
+    <li><span class="li-key">UI-2</span>エラーは何が起きたか・次に何をするかを日本語で示す</li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">assumptions-constraints-list</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">制約 (9.6.7) + 前提と依存 (9.6.8) + メモリ/運用/サイト適応。</span></div>
+  <div class="comp-demo"><ul data-component="assumptions-constraints-list">
+    <li><span class="li-tag">前提</span>決済代行サービスが常時利用可能であること</li>
+    <li><span class="li-tag">依存</span>在庫数は WMS を唯一の出どころとする</li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">acceptance-criteria-checklist</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">受入基準 (9.6.12 + 5.2.8 Fit Criterion)。 SSoT は本部品に一本化。</span></div>
+  <div class="comp-demo"><div data-component="acceptance-criteria-checklist">
+    <div class="ac"><div class="aid">AC1 ← FR1/FR4</div><p class="at">在庫1個に<b>同時2注文</b>→確定は<b>1件だけ</b></p><div class="metric"><span class="v">1/2</span><span class="l">だけ成功</span></div></div>
+    <div class="ac"><div class="aid">AC2 ← FR2</div><p class="at">確定ボタン<b>10連打</b>→課金<b>1回だけ</b></p><div class="metric"><span class="v">1×</span><span class="l">課金回数</span></div></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">use-case-card</span><span class="reg">dense-list</span><span class="req should">SHOULD</span><span class="use">actor/前提/フロー/事後のカード (9.6.5 + use-case)。</span></div>
+  <div class="comp-demo"><ul data-component="use-case-card">
+    <li><div class="uc-id">UC-1 注文確定 (actor: 購入者)</div>
+      <div class="uc-flow"><span class="stp">前提: カートに商品</span><span class="ar">→</span><span class="stp">在庫引当</span><span class="ar">→</span><span class="stp">決済</span><span class="ar">→</span><span class="stp">事後: 注文番号発行</span></div></li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">references-list</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">参照文書 (9.2.4)。 外部文書・上位仕様・標準。</span></div>
+  <div class="comp-demo"><ul data-component="references-list">
+    <li><span class="ref-n">[1]</span>PCI DSS v4.0 — カード情報セキュリティ基準</li>
+    <li><span class="ref-n">[2]</span>社内 StRS-2026 — EC事業ステークホルダー要求</li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">toc-navigator</span><span class="reg">dense-list</span><span class="req must">MUST</span><span class="use">文書目次ナビ (9.2.2 + 8.5.2 informative outline)。</span></div>
+  <div class="comp-demo"><ul data-component="toc-navigator">
+    <li><span class="tn">01</span>ゴール</li><li><span class="tn">02</span>範囲とアクター</li>
+    <li><span class="tn">03</span>上位ニーズ</li><li><span class="tn">04</span>機能要件</li>
+  </ul></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">supporting-info-appendix</span><span class="reg">dense-list</span><span class="req optional">OPTIONAL</span><span class="use">付帯情報 (9.6.20 + Annex A OpsCon / Annex C Tailoring)。</span></div>
+  <div class="comp-demo"><ul data-component="supporting-info-appendix">
+    <li><span class="li-key">付録A</span>運用シナリオ (OpsCon): 通常運用・障害時の復旧手順</li>
+  </ul></div>
+</div>
+
+<!-- ============ rtm-grid family ============ -->
+<div class="reg-h">rtm-grid — トレースの格子 <span class="cnt">3 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">rtm-grid</span><span class="reg">rtm-grid</span><span class="req must">MUST</span><span class="use">双方向トレーサビリティ + 孤立検出 (9.6.9/9.6.19/5.2.6)。 空欄=抜け漏れのサイン。</span></div>
+  <div class="comp-demo"><div data-component="rtm-grid"><table class="rtm">
+    <thead><tr><th>機能要件</th><th class="grp">N-1 二重課金防止</th><th class="grp">N-2 売り越し防止</th><th>受入で検証</th></tr></thead>
+    <tbody>
+      <tr><th>FR1<span class="lbl">在庫引当</span></th><td></td><td class="hit"><span class="dot">●</span></td><td class="hit"><span class="dot">AC1</span></td></tr>
+      <tr><th>FR2<span class="lbl">連打防止</span></th><td class="hit"><span class="dot">●</span></td><td></td><td class="hit"><span class="dot">AC2</span></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">verification-method-grid</span><span class="reg">rtm-grid</span><span class="req must">MUST</span><span class="use">検証手法分類 T/A/I/D (9.6.19 + 5.2.8)。 rtm-grid が「検証済か」を、本部品が「手法分類」を所有。</span></div>
+  <div class="comp-demo"><div data-component="verification-method-grid"><table>
+    <thead><tr><th>要件</th><th>Test</th><th>Analysis</th><th>Inspect</th><th>Demo</th></tr></thead>
+    <tbody>
+      <tr><td><span class="fid">FR1</span> 在庫引当</td><td>●</td><td></td><td></td><td></td></tr>
+      <tr><td><span class="nid">NFR1</span> 応答1秒</td><td>●</td><td>●</td><td></td><td></td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">requirement-attributes-rtm</span><span class="reg">rtm-grid</span><span class="req should">SHOULD</span><span class="use">属性束 (5.2.8): 優先度/出所/根拠/状態/手法/owner。</span></div>
+  <div class="comp-demo"><div data-component="requirement-attributes-rtm"><table>
+    <thead><tr><th>要件</th><th>優先</th><th>出所</th><th>状態</th><th>根拠</th></tr></thead>
+    <tbody>
+      <tr><td><span class="fid">FR1</span></td><td><span class="prio must">必須</span></td><td>N-2</td><td>承認済</td><td>売り越し防止</td></tr>
+    </tbody>
+  </table></div></div>
+</div>
+
+<!-- ============ callout family ============ -->
+<div class="reg-h">callout — 強調ブロック <span class="cnt">4 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">section-lead-callout</span><span class="reg">callout</span><span class="req must">MUST</span><span class="use">各章 what/why の導入 (9.6.2 目的 + 9.6.3 範囲要約)。</span></div>
+  <div class="comp-demo"><div data-component="section-lead-callout">
+    <div class="card accent"><div class="cid">GOAL 1</div><p class="ct">二重課金しない</p><p class="cd">連打や再送でも2回請求しない。</p></div>
+    <div class="card accent"><div class="cid">GOAL 2</div><p class="ct">売り越さない</p><p class="cd">在庫1個に2人でも確定は1人。</p></div>
+    <div class="card accent"><div class="cid">GOAL 3</div><p class="ct">取りこぼさない</p><p class="cd">決済成功で必ず注文記録。</p></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">constraint-callout</span><span class="reg">callout</span><span class="req must">MUST</span><span class="use">設計制約・標準適合・制限 (9.6.16/9.6.17/9.6.7)。 規制/法令 variant を持つ。</span></div>
+  <div class="comp-demo"><table data-component="constraint-callout">
+    <tbody>
+      <tr><td class="cid2">CON1</td><td class="cl">決済方式</td><td>カード情報は自社で持たない <span class="reg-badge">法令 PCI DSS</span></td></tr>
+      <tr><td class="cid2">CON2</td><td class="cl">個人情報</td><td>取得・保管は同意取得後のみ <span class="reg-badge">法令 個情法</span></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">quality-checklist-callout</span><span class="reg">callout</span><span class="req should">SHOULD</span><span class="use">要件品質の自己点検 (5.2.5 個別9特性 + 5.2.6 集合)。 検証自体は gate が担う。</span></div>
+  <div class="comp-demo"><div data-component="quality-checklist-callout">
+    <p class="qt">✓ 要件品質チェック</p>
+    <ul><li><span class="ck">✓</span>必要 (necessary)</li><li><span class="ck">✓</span>曖昧でない</li><li><span class="ck">✓</span>検証可能</li><li><span class="ck">✓</span>完全 (TBDなし)</li><li><span class="ck">✓</span>単一</li><li><span class="ck">✓</span>実現可能</li></ul>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">audience-toggle</span><span class="reg">callout</span><span class="req should">SHOULD</span><span class="use">人間向け/機械向け/両方の表示切替 (ADR-0033/0039)。</span></div>
+  <div class="comp-demo"><nav data-component="audience-toggle" aria-label="表示対象">
+    <button aria-pressed="true">人間向け</button><button aria-pressed="false">機械向け</button><button aria-pressed="false">両方</button>
+  </nav></div>
+</div>
+
+<!-- ============ diagram family ============ -->
+<div class="reg-h">diagram — 図 <span class="cnt">3 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">context-diagram</span><span class="reg">diagram</span><span class="req must">MUST</span><span class="use">システム境界 + 外部 actor/系/データフロー (9.6.4)。</span></div>
+  <div class="comp-demo"><figure data-component="context-diagram" style="margin:0">
+    <svg viewBox="0 0 520 150" width="100%" height="150" font-family="sans-serif" font-size="12">
+      <rect x="200" y="50" width="120" height="50" rx="10" fill="#2a4d6e"/><text x="260" y="80" fill="#fff" text-anchor="middle" font-weight="700">注文確定システム</text>
+      <rect x="20" y="55" width="100" height="40" rx="8" fill="#e8f0f7" stroke="#2a4d6e"/><text x="70" y="80" text-anchor="middle" fill="#2a4d6e">購入者</text>
+      <rect x="400" y="20" width="100" height="36" rx="8" fill="#fefbea" stroke="#916626"/><text x="450" y="43" text-anchor="middle" fill="#916626">決済代行</text>
+      <rect x="400" y="95" width="100" height="36" rx="8" fill="#fefbea" stroke="#916626"/><text x="450" y="118" text-anchor="middle" fill="#916626">在庫(WMS)</text>
+      <line x1="120" y1="75" x2="200" y2="75" stroke="#6b7a85" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="320" y1="65" x2="400" y2="40" stroke="#6b7a85" stroke-width="1.5" marker-end="url(#a)"/>
+      <line x1="320" y1="85" x2="400" y2="110" stroke="#6b7a85" stroke-width="1.5" marker-end="url(#a)"/>
+      <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#6b7a85"/></marker></defs>
+    </svg>
+    <figcaption>システムコンテキスト図 — 製品境界と外部依存</figcaption>
+  </figure></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">use-case-flow-diagram</span><span class="reg">diagram</span><span class="req should">SHOULD</span><span class="use">actor–system 相互作用シーケンス (9.6.5 + 9.6.12)。</span></div>
+  <div class="comp-demo"><figure data-component="use-case-flow-diagram" style="margin:0"><div class="uc-basic">
+    <div class="uc-step"><span class="sn">STEP 1</span><span class="st">カート確認</span><span class="sd">合計金額を表示</span></div>
+    <div class="uc-arrow">→</div>
+    <div class="uc-step"><span class="sn">STEP 2</span><span class="st">在庫引当</span><span class="sd">在庫を押さえる</span></div>
+    <div class="uc-arrow">→</div>
+    <div class="uc-step"><span class="sn">STEP 3</span><span class="st">決済</span><span class="sd">決済代行へ</span></div>
+    <div class="uc-arrow">→</div>
+    <div class="uc-step"><span class="sn">STEP 4</span><span class="st">注文確定</span><span class="sd">番号発行</span></div>
+  </div></figure></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">state-machine-diagram</span><span class="reg">diagram</span><span class="req optional">OPTIONAL</span><span class="use">状態を持つ対象の状態空間 (9.6.12)。</span></div>
+  <div class="comp-demo"><figure data-component="state-machine-diagram" style="margin:0">
+    <svg viewBox="0 0 520 80" width="100%" height="80" font-family="sans-serif" font-size="11">
+      <g text-anchor="middle">
+      <rect x="10" y="25" width="90" height="34" rx="17" fill="#e8f0f7" stroke="#2a4d6e"/><text x="55" y="47" fill="#2a4d6e">カート</text>
+      <rect x="150" y="25" width="90" height="34" rx="17" fill="#e8f0f7" stroke="#2a4d6e"/><text x="195" y="47" fill="#2a4d6e">在庫確保</text>
+      <rect x="290" y="25" width="90" height="34" rx="17" fill="#e8f0f7" stroke="#2a4d6e"/><text x="335" y="47" fill="#2a4d6e">決済中</text>
+      <rect x="430" y="25" width="80" height="34" rx="17" fill="#e6f6f2" stroke="#1e7b65"/><text x="470" y="47" fill="#1e7b65">確定</text>
+      <line x1="100" y1="42" x2="150" y2="42" stroke="#6b7a85" marker-end="url(#b)"/><line x1="240" y1="42" x2="290" y2="42" stroke="#6b7a85" marker-end="url(#b)"/><line x1="380" y1="42" x2="430" y2="42" stroke="#6b7a85" marker-end="url(#b)"/>
+      </g>
+      <defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#6b7a85"/></marker></defs>
+    </svg>
+    <figcaption>注文の状態遷移</figcaption>
+  </figure></div>
+</div>
+
+<!-- ============ badge family ============ -->
+<div class="reg-h">badge — 識別バッジ <span class="cnt">2 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">priority-badge</span><span class="reg">badge</span><span class="req must">MUST</span><span class="use">優先度 (MoSCoW/RFC2119) + EARS パターン識別の色バッジ。</span></div>
+  <div class="comp-demo" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+    <span class="prio must" data-component="priority-badge">必須</span><span class="prio should">推奨</span><span class="prio may">任意</span>
+    <span class="ears trigger">きっかけ <span class="en">When</span></span><span class="ears state">状態 <span class="en">While</span></span><span class="ears forbid">禁止 <span class="en">If-Then</span></span><span class="ears always">恒常 <span class="en">Ubiq.</span></span><span class="ears option">選択 <span class="en">Where</span></span>
+    <span class="vmeth">T=テスト</span>
+  </div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">informative-normative-label</span><span class="reg">badge</span><span class="req should">SHOULD</span><span class="use">normative/informative の区分バッジ (9 全般)。</span></div>
+  <div class="comp-demo" style="display:flex; gap:10px; align-items:center">
+    <span class="io-label normative" data-component="informative-normative-label">normative 規範</span><span class="io-label informative">informative 参考</span>
+  </div>
+</div>
+
+<!-- ============ glossary family ============ -->
+<div class="reg-h">glossary — 用語 <span class="cnt">2 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">glossary-term-table</span><span class="reg">glossary</span><span class="req must">MUST</span><span class="use">用語/略語の定義テーブル (9.2.3 + 9.2.5)。 用語定義の SSoT。</span></div>
+  <div class="comp-demo"><div data-component="glossary-term-table">
+    <div class="grow"><div class="gword">在庫引当<span class="en">stock allocation</span></div><div class="gdef">注文の瞬間に在庫を「この人の分」として押さえること。</div></div>
+    <div class="grow"><div class="gword">二重課金<span class="en">double charge</span></div><div class="gdef">同じ買い物で2回請求してしまう事故。</div></div>
+  </div></div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">plain-language-term-inline</span><span class="reg">glossary</span><span class="req must">MUST</span><span class="use">専門語の本文中 plain 併記。 glossary-term-table の派生ビュー (fidelity が一致検証)。</span></div>
+  <div class="comp-demo"><p style="font-size:14px; margin:0">在庫を確保 <span class="term en" data-component="plain-language-term-inline">在庫引当</span> してから決済に進む。本文の専門語には必ずやさしい言葉を併記する。</p></div>
+</div>
+
+<!-- ============ meta family ============ -->
+<div class="reg-h">meta — 一貫性層・出自 <span class="cnt">2 部品</span></div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">requirement-type-color-tokens</span><span class="reg">meta</span><span class="req must">MUST</span><span class="use">要件型 (FR/NFR/CON/ASM) の視覚カラートークン。 全 register が共有・両テーマ定義。</span></div>
+  <div class="comp-demo" data-component="requirement-type-color-tokens" style="display:flex; gap:14px; flex-wrap:wrap">
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700"><span style="width:20px;height:20px;border-radius:5px;background:var(--fr)"></span>FR 機能</span>
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700"><span style="width:20px;height:20px;border-radius:5px;background:var(--nfr)"></span>NFR 非機能</span>
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700"><span style="width:20px;height:20px;border-radius:5px;background:var(--con)"></span>CON 制約</span>
+    <span style="display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:700"><span style="width:20px;height:20px;border-radius:5px;background:var(--asm)"></span>ASM 前提</span>
+  </div>
+</div>
+
+<div class="comp">
+  <div class="comp-head"><span class="cid">fidelity-sync-meta</span><span class="reg">meta</span><span class="req must">MUST</span><span class="use">生成-検証アーキの出自 (ADR-0041 §2.4)。 生成日時/元SSoT/検証通過日時。</span></div>
+  <div class="comp-demo dark-host"><footer class="foot" data-component="fidelity-sync-meta" style="border-radius:12px">
+    <div class="ft-grid"><div>機械SSoT: <b>spec (machine)</b> &middot; 生成: <b>2026-06-15 14:00</b> &middot; 検証: <b>floor✓ + persona✓ + fidelity✓</b></div>
+    <div class="tags"><span>folio design system</span><span>29148</span></div></div>
+  </footer></div>
+</div>
+
+<p style="text-align:center; color:var(--ink-faint); font-size:12.5px; margin:48px 0 0">37 部品 / 9 register。 文脈での全体像は <a href="example-srs.html" style="color:var(--brand); font-weight:700">example-srs.html</a> を参照。</p>
+
+</div>
+</body>
+</html>
