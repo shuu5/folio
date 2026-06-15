@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-15T01:58:12Z",
+  "generatedAt": "2026-06-15T02:41:31Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -1227,6 +1227,16 @@
           "spec/README.html"
         ]
       }
+    },
+    {
+      "@id": "research/srs-component-taxonomy.html",
+      "title": "SRS 部品 taxonomy — 要件定義書ビジュアル design system の接地 (epic c5g / S2)",
+      "summary": "",
+      "doc-type": "research",
+      "status": "active",
+      "version": "1.0.0",
+      "stakeholders": [],
+      "relations": {}
     },
     {
       "@id": "research/x4-plan.html",

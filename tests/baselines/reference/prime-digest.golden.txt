@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 44 specs · folio 1.0.0
+# 45 specs · folio 1.0.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -216,6 +216,11 @@
 - title: spec/README 作業ログ archive
 - doc-type: research · status: superseded
 - summary: spec/README の dated 作業ログ (2026-05 期 Change Log + Phase X3 解消済 defer 行) を ADR-0039 §2.4 編集規範 (作業ログ類の人間面からの撤去) に従い verbatim 保存する歴史記録
+
+## research/srs-component-taxonomy.html
+- title: SRS 部品 taxonomy — 要件定義書ビジュアル design system の接地 (epic c5g / S2)
+- doc-type: research · status: active
+- summary: (none)
 
 ## research/x4-plan.html
 - title: folio Phase X4 分解 + 着手計画

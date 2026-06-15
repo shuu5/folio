@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="active">
+<meta name="folio-research-date" content="2026-06-15">
+<meta name="folio-research-session" content="wf-e7d142dc">
+<title>folio — SRS 部品 taxonomy (29148 接地 + 完全性 done-condition)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./srs-component-taxonomy.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "SRS 部品 taxonomy — 要件定義書ビジュアル design system の接地 (epic c5g / S2)",
+  "folio:version": "1.0.0"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-purpose">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">srs-component-taxonomy</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>SRS 部品 taxonomy — 要件定義書ビジュアル design system の接地</h1>
+  <div class="meta">
+    v1.0.0 &middot; 調査日 2026-06-15 &middot; session wf-e7d142dc &middot;
+    epic folio-c5g / S2 (folio-036) &middot;
+    接地基準: ISO/IEC/IEEE 29148:2018 (SRS) + use-case + EARS + RTM
+  </div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-purpose">§1. 目的とスコープ</a></li>
+  <li><a href="#s2-29148">§2. ISO/IEC/IEEE 29148:2018 SRS 構造の接地</a></li>
+  <li><a href="#s3-taxonomy">§3. 部品 taxonomy カタログ</a></li>
+  <li><a href="#s4-coverage">§4. 被覆マップ (完全性の証跡)</a></li>
+  <li><a href="#s5-done-condition">§5. 完全性 done-condition (二層: floor + ceiling)</a></li>
+  <li><a href="#s6-scope">§6. scope 境界 (&gamma; core と拡張パック)</a></li>
+  <li><a href="#s7-handoff">§7. 残論点と後続スライス申し送り</a></li>
+  <li><a href="#s8-provenance">§8. 出自 (調査・統合・敵対 critic)</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="informative">
+<p>本書は epic <strong>folio-c5g</strong> (人間層 = 要件定義書ビジュアル design system) の <strong>S2 = folio-036</strong> の成果物。 <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.6 が定める <strong>&gamma; scope (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め)</strong> を具体化し、 「要件定義書を<em>十分に構成しうる</em>」視覚部品の taxonomy と、 その完全性を判定する done-condition を確定する。 後続の S3 (部品庫実装) ・ S5 (2-gate 実装) ・ S6 (rules 規範化) はこの taxonomy を基盤にする。</p>
+<p>本書は <strong>探索ドメイン (research/)</strong> の一次資料であり folio rule に縛られない (markup 正規性・declarative form 不要)。 ただし後続スライスの設計台帳として機能するため、 規範化候補は §5 / §7 で明示する。 産出は 4 facet 並列調査 + 統合 + 敵対 critic の multi-agent workflow (§8) によるが、 <strong>critic が検出した重大欠陥 (done-condition の Goodhart 化・persona ceiling 脱落・29148 被覆漏れ) は本文に反映済</strong>。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. 目的とスコープ</h2>
+
+<h3>§1.1. 北極星と問題設定</h3>
+<p>ADR-0041 は人間層を <strong>「要件定義書 (SRS) として最適」な汎用ビジュアル design system</strong> と再定義した。 folio はその<strong>最初の consumer にすぎず</strong> (folio 特化禁止)、 機械 SSoT から人間プレゼン HTML を生成し、 2-gate (persona walk + fidelity) で検証する。 この器を満たすには、 <strong>「どの視覚部品が揃えば要件定義書を構成できるか」</strong> を業界標準に接地して列挙し、 完全性の合否境界を定義する必要がある。 これが本書の問い。</p>
+
+<h3>§1.2. なぜ 29148 か (&gamma; scope)</h3>
+<p>「十分に構成しうる」は主観では決まらない。 ISO/IEC/IEEE 29148:2018 <em>(Systems and software engineering &mdash; Life cycle processes &mdash; Requirements engineering)</em> は SRS の規範的内容 (Clause 9.6) ・ 要件属性 (Clause 5.2.8) ・ 要件品質特性 (Clause 5.2.5 個別 / 5.2.6 集合) を定める国際標準であり、 完全性の<strong>外部基準</strong>として機能する。 本書はこれを SRS 核 (&gamma;) の錨とし、 組織固有の資産 (folio 自身の ADR / research / constitution) は拡張パックで後追いする (&sect;6)。</p>
+
+<aside class="informative">
+<p><strong>信頼度の凡例</strong> (folio 全般の慣習): <code>verified</code> = 一次/公知ソースで確認 / <code>deduced</code> = 標準構造から導出 / <code>uncertain</code> = 出典差異あり。 29148 は有償規格だが SRS 文書骨格 (9.6.x) は広く公知で <code>verified</code> 級。 一部の sub-clause 番号 (要件属性が 5.2.4 か 5.2.8 か) は調査 agent 間で表記揺れがあり、 本書は標準の通称に従い <strong>5.2.8 = Requirements attributes</strong> を採る (該当箇所に注記)。</p>
+</aside>
+</section>
+
+<section id="s2-29148" class="informative">
+<h2>§2. ISO/IEC/IEEE 29148:2018 SRS 構造の接地</h2>
+
+<p>SRS は <strong>(a) 情報項目共通内容 (Clause 9.2、 全要件文書に適用)</strong> + <strong>(b) SRS 固有内容 (Clause 9.6、 9.6.1&ndash;9.6.20)</strong> の二層を持つ。 9.6 は 5 つの大分類に整理できる。 <em>(版注: 2018 年版は 2011 年版の &sect;9.5 系を &sect;9.6 系へ番号変更して構造を踏襲し、 9.6.4.9 「Interface with Services (SaaS/Cloud)」を新設した。 本書は 2018 版 &sect;9.6.x を canonical とする。 調査の一部に残る &sect;9.5.x 表記は同一内容の旧番号。)</em></p>
+
+<h3>§2.1. SRS 文書骨格 (Clause 9.2 共通 + 9.6 固有)</h3>
+<table>
+<thead><tr><th>大分類</th><th>Clause</th><th>セクション</th><th>必須度</th></tr></thead>
+<tbody>
+<tr><td rowspan="5">共通前付け<br>(9.2)</td><td>9.2.1</td><td>Identification 文書識別 (タイトル/版/日付/発行/機密)</td><td>MUST</td></tr>
+<tr><td>9.2.2</td><td>Front Matter 前付け (目次 / 変更履歴 / <strong>承認記録</strong>)</td><td>MUST</td></tr>
+<tr><td>9.2.3</td><td>Definitions 用語定義</td><td>MUST</td></tr>
+<tr><td>9.2.4</td><td>References 参照文書</td><td>MUST</td></tr>
+<tr><td>9.2.5</td><td>Acronyms and Abbreviations 略語集</td><td>MUST</td></tr>
+<tr><td rowspan="3">導入・概観</td><td>9.6.1</td><td>SRS Overview 概観</td><td>SHOULD</td></tr>
+<tr><td>9.6.2</td><td>Purpose 目的</td><td>MUST</td></tr>
+<tr><td>9.6.3</td><td>Scope 範囲</td><td>MUST</td></tr>
+<tr><td rowspan="6">製品概況</td><td>9.6.4 (.1&ndash;.9)</td><td>Product Perspective 製品視点 &mdash; 本体 + System(.1)/User(.2)/SW(.4) I/F = MUST、 HW(.3)/Comms(.5)/Memory(.6)/Operations(.7)/Services(.9) = SHOULD、 Site(.8) = OPTIONAL (§4 被覆表と整合)</td><td>MUST*</td></tr>
+<tr><td>9.6.5</td><td>Product Functions 製品機能</td><td>MUST</td></tr>
+<tr><td>9.6.6</td><td>User Characteristics ユーザー特性</td><td>MUST</td></tr>
+<tr><td>9.6.7</td><td>Limitations 制約 (規制/HW/監査/品質/<strong>安全/セキュリティ</strong>等 13 要素)</td><td>MUST</td></tr>
+<tr><td>9.6.8</td><td>Assumptions and Dependencies 前提と依存</td><td>MUST</td></tr>
+<tr><td>9.6.9</td><td>Apportioning of Requirements 要件配分</td><td>SHOULD</td></tr>
+<tr><td rowspan="9">詳細要件群</td><td>9.6.10</td><td>Specified Requirements 規定要件全般</td><td>MUST</td></tr>
+<tr><td>9.6.11</td><td>External Interfaces 外部 I/F 要件 (各 I/F に 10 属性)</td><td>MUST</td></tr>
+<tr><td>9.6.12</td><td>Functions 機能要件</td><td>MUST</td></tr>
+<tr><td>9.6.13</td><td>Usability Requirements ユーザビリティ (測定可能)</td><td>MUST</td></tr>
+<tr><td>9.6.14</td><td>Performance Requirements 性能 (静的/動的数値)</td><td>MUST</td></tr>
+<tr><td>9.6.15</td><td>Logical Database Requirements 論理 DB</td><td>SHOULD</td></tr>
+<tr><td>9.6.16</td><td>Design Constraints 設計制約</td><td>MUST</td></tr>
+<tr><td>9.6.17</td><td>Standards Compliance 標準/<strong>法令適合</strong></td><td>MUST</td></tr>
+<tr><td>9.6.18</td><td>Software System Attributes 品質属性 (信頼性/可用性/<strong>セキュリティ</strong>/保守性/移植性)</td><td>MUST</td></tr>
+<tr><td>検証</td><td>9.6.19</td><td>Verification 検証計画 (各要件に検証手法)</td><td>MUST</td></tr>
+<tr><td>付帯</td><td>9.6.20</td><td>Supporting Information 付帯情報 (Annex A OpsCon / Annex C Tailoring)</td><td>OPTIONAL</td></tr>
+</tbody>
+</table>
+
+<h3>§2.2. 要件単位の属性と品質特性</h3>
+<table>
+<thead><tr><th>Clause</th><th>内容</th><th>主な項目</th><th>必須度</th></tr></thead>
+<tbody>
+<tr><td>5.2.8</td><td>Requirements attributes 要件属性</td><td>一意識別子 (MUST) / 優先度 (MUST) / 出所 Source (MUST) / 検証手法 T·A·I·D (MUST) / 受入基準 Fit Criterion (MUST) / <strong>根拠 Rationale</strong> / 状態 Status / 依存リンク</td><td>属性枠=SHOULD<br>個別は左記</td></tr>
+<tr><td>5.2.5</td><td>個別要件の品質特性 (9)</td><td>necessary / unambiguous / verifiable / <strong>complete (TBD なし)</strong> / singular / feasible / correct / appropriate / conforming</td><td>MUST</td></tr>
+<tr><td>5.2.6</td><td>要件<em>集合</em>の品質特性</td><td><strong>completeness (集合の網羅)</strong> / <strong>consistency (要件間の無矛盾)</strong> / traceable / bounded</td><td>MUST</td></tr>
+</tbody>
+</table>
+<p><em>注 (出典差異): 個別属性の sub-clause を一部の調査が 5.2.4 と表記したが、 標準の通称に従い 5.2.8 (Requirements attributes) を採る。 内容 (識別子・優先度・出所・根拠・検証手法・受入基準) は一致。</em></p>
+
+<h3>§2.3. 振る舞いとトレーサビリティ (use-case / EARS / RTM)</h3>
+<ul>
+  <li><strong>Use-case / scenario</strong>: actor &middot; precondition &middot; main flow &middot; alternative/exception flow &middot; postcondition。 9.6.5 Product Functions の表現形態。</li>
+  <li><strong>EARS</strong> (Easy Approach to Requirements Syntax) 5 パターン + Complex: Ubiquitous (恒常) / Event-driven <em>When</em> / State-driven <em>While</em> / Unwanted <em>If&hellip;Then</em> / Optional <em>Where</em>。 9.6.12 機能要件文の構造化に適用 (folio 既採用)。</li>
+  <li><strong>RTM</strong> (Requirements Traceability Matrix): 上位ニーズ &harr; SRS 要件 &harr; 設計 &harr; 検証 の双方向トレース。 行=要件、 列=trace 先。 5.2.6 Traceable + 9.6.9 配分 + 9.6.19 検証を担う。 <strong>backward 端点 (上位ニーズの実体) を保持する部品が要る</strong> (&sect;3 critic 補填)。</li>
+</ul>
+</section>
+
+<section id="s3-taxonomy" class="informative">
+<h2>§3. 部品 taxonomy カタログ</h2>
+
+<p>SRS の全情報要素を担う視覚部品を register family ごとに列挙する。 ADR-0041 の視覚言語は <strong>2 つの<em>主</em> register family</strong> &mdash; <em>掴みの deck 帯</em> (色帯で章を開く) と <em>詳細の dense 系</em> (表 / RTM グリッド / 密リスト) &mdash; を骨格とし、 これに<strong>補助 register</strong> (callout / diagram / badge / glossary / meta) が従う。 <em>(critic 指摘の整合: ADR-0041 の「2 register」は<strong>主 family が 2</strong>の意であり、 実運用は補助を含め 9 register。 &sect;5 §B の register 整合 gate は「2 個存在」でなく「全 register が要件型カラートークンを共有し両テーマ定義を持つ一貫性」を測る。)</em></p>
+
+<p><strong>凡例</strong>: 必須度は<em>完全な SRS 提示</em>における要求度 (MUST=核に不可欠 / SHOULD=通常必要 / OPTIONAL=条件付き)。 <span class="badge-new">★</span> = 敵対 critic が被覆漏れとして補填した部品 (synthesis 初版に不在)。</p>
+
+<h3>§3.1. 主 register &mdash; deck 帯 (掴み)</h3>
+<table>
+<thead><tr><th>部品 id</th><th>必須</th><th>担当 (29148 / 接地)</th><th>表現意図</th></tr></thead>
+<tbody>
+<tr><td><code>doc-cover-band</code></td><td>MUST</td><td>9.2.1 文書識別 + 9.2.2 前付け一部</td><td>表紙帯。 タイトル/版/日付/発行/機密区分を一望。</td></tr>
+<tr><td><code>chapter-deck-band</code></td><td>MUST</td><td>9.6.1 概観 + 9.6 全章 wayfinding</td><td>章開き色帯。 章の要旨を 1 行で掴ませ迷子を防ぐ。 <strong>組織化軸 (機能別/利用者別/モード別) のラベルを担う</strong> (critic #4)。</td></tr>
+<tr><td><code>nfr-hero-metrics</code></td><td>SHOULD</td><td>9.6.14 性能最重要 + 9.6.18 可用率</td><td>最重要 NFR を大数字でヒーロー表示。</td></tr>
+<tr><td><code>approval-block</code> <span class="badge-new">★</span></td><td>MUST</td><td>9.2.2 Front Matter (承認)</td><td><strong>承認証跡帯</strong>。 承認者 / 役割 / 承認日。 契約・調達文書に必須。 <code>revision-history-table</code> の「変更者」とは別概念。 dogfood は <code>self-approved</code> placeholder を許すが属性存在は機械強制。</td></tr>
+</tbody>
+</table>
+
+<h3>§3.2. 主 register &mdash; dense 系 (詳細)</h3>
+<table>
+<thead><tr><th>部品 id</th><th>register</th><th>必須</th><th>担当 (29148 / 接地)</th><th>表現意図</th></tr></thead>
+<tbody>
+<tr><td><code>scope-summary-panel</code></td><td>dense-list</td><td>MUST</td><td>9.6.3 範囲</td><td>製品名/行うこと/適用領域/上位整合の 4 要素。</td></tr>
+<tr><td><code>interface-spec-table</code></td><td>dense-table</td><td>MUST</td><td>9.6.4.1/.3/.4/.5/.9 + 9.6.11</td><td>I/F 仕様一覧。 <em>論理 I/F (製品視点) と詳細 I/F (要件) は data 属性で clause 帰属を区別し「補完するが重複しない」を保つ</em> (critic redundancy #2、 S3 で具体化)。</td></tr>
+<tr><td><code>ui-spec-block</code></td><td>dense-list</td><td>MUST</td><td>9.6.4.2 + 9.6.11 UI</td><td>UI 論理特性 (一貫性/アクセシビリティ等)。</td></tr>
+<tr><td><code>product-functions-list</code></td><td>dense-list</td><td>MUST</td><td>9.6.5 製品機能</td><td>主要機能の俯瞰リスト。</td></tr>
+<tr><td><code>actor-stakeholder-table</code></td><td>dense-table</td><td>MUST</td><td>9.6.6 + use-case actor</td><td>利用者グループ特性 + actor。</td></tr>
+<tr><td><code>source-trace-origin</code> <span class="badge-new">★</span></td><td>dense-table</td><td>MUST</td><td>5.2.6 backward trace + StRS/BRS 橋渡し</td><td><strong>上位ニーズの実体</strong> (StRS 要求 ID / business need)。 RTM backward 列が指す親ノードの置き場。 これが無いと &sect;5 §C (backward 非空) が判定対象を欠く。 <strong>dogfood で上位 StRS 不在時は constitution 原則 / ADR を上位ニーズとして明示マップする (MUST、 N/A 不可)</strong> (critic #2 / openQ#2 規範決着、 S6 で確定)。</td></tr>
+<tr><td><code>assumptions-constraints-list</code></td><td>dense-list</td><td>MUST</td><td>9.6.7 制約 + 9.6.8 前提 + 9.6.4.6/.7/.8</td><td>制約・前提・依存・メモリ/運用/サイト適応。</td></tr>
+<tr><td><code>requirement-matrix-table</code></td><td>dense-table</td><td>MUST</td><td>9.6.10 + 9.6.12 + 5.2.8 識別子</td><td>要件本体表。 一意 <code>data-req-id</code>。 <strong>組織化軸でチャプタ分割可</strong> (フラット 1 表は数百要件で破綻、 critic #4)。</td></tr>
+<tr><td><code>ears-requirement-row</code></td><td>dense-list</td><td>MUST</td><td>9.6.12 + EARS + 5.2.5</td><td>EARS 構造の要件 1 文。 <strong>根拠 Rationale を空不可の必須スロットに格上げ</strong> (critic #3、 5.2.5 necessary を測れるように)。</td></tr>
+<tr><td><code>nfr-metrics-table</code></td><td>dense-table</td><td>MUST</td><td>9.6.13/.14/.16/.17/.18</td><td>NFR を<strong>測定可能</strong>な数値基準表に。 性能/ユーザビリティ/品質属性/設計制約/標準適合。</td></tr>
+<tr><td><code>data-requirements-block</code></td><td>dense-table</td><td>SHOULD</td><td>9.6.15 論理 DB</td><td>データエンティティ/関係/整合性/保持。</td></tr>
+<tr><td><code>rtm-grid</code></td><td>rtm-grid</td><td>MUST</td><td>9.6.9 + 9.6.19 + 5.2.6 Traceable</td><td>双方向トレーサビリティ + 孤立検出。 backward (出所) と verification の双方の列を所有。</td></tr>
+<tr><td><code>verification-method-grid</code></td><td>rtm-grid</td><td>MUST</td><td>9.6.19 + 5.2.8 検証手法 + 5.2.5 verifiable</td><td>検証手法分類 (T/A/I/D)。 <em>所有権: rtm-grid が「検証済か」の列を、 本部品が「手法の分類」を持つ (critic redundancy #3、 S6 で確定し重複検証列を禁止)。</em></td></tr>
+<tr><td><code>acceptance-criteria-checklist</code></td><td>dense-list</td><td>MUST</td><td>9.6.12 検証基準 + 5.2.8 Fit Criterion + 5.2.5 verifiable</td><td>受入基準。 <em>SSoT は本部品に一本化 (ears row.details / use-case 末尾への分散を避ける、 critic redundancy #4)。</em></td></tr>
+<tr><td><code>requirement-attributes-rtm</code></td><td>rtm-grid</td><td>SHOULD</td><td>5.2.8 属性指針</td><td>優先度/出所/根拠/状態/手法/難易度/owner/安定性の属性束。</td></tr>
+<tr><td><code>revision-history-table</code></td><td>dense-table</td><td>MUST</td><td>9.2.2 変更履歴</td><td>版/日付/変更者/変更内容。</td></tr>
+<tr><td><code>references-list</code></td><td>dense-list</td><td>MUST</td><td>9.2.4 参照文書</td><td>外部文書・上位仕様・標準への参照。</td></tr>
+<tr><td><code>toc-navigator</code></td><td>dense-list</td><td>MUST</td><td>9.2.2 目次 + 8.5.2 節構成</td><td>文書目次ナビ。</td></tr>
+<tr><td><code>supporting-info-appendix</code></td><td>dense-list</td><td>OPTIONAL</td><td>9.6.20 + Annex A/C</td><td>付帯情報 / OpsCon / Tailoring。 <em>(OpsCon は 29148 上 normative-but-optional の別文書ゆえ OPTIONAL 維持 &mdash; critic #10 への pushback。)</em></td></tr>
+</tbody>
+</table>
+
+<h3>§3.3. 補助 register (callout / diagram / badge / glossary / meta)</h3>
+<table>
+<thead><tr><th>部品 id</th><th>register</th><th>必須</th><th>担当 (29148 / 接地)</th><th>表現意図</th></tr></thead>
+<tbody>
+<tr><td><code>section-lead-callout</code></td><td>callout</td><td>MUST</td><td>9.6.2 目的 + 9.6.3 範囲要約</td><td>各章 what/why の導入強調ブロック。</td></tr>
+<tr><td><code>constraint-callout</code></td><td>callout</td><td>MUST</td><td>9.6.16 + 9.6.17 + 9.6.7</td><td>設計制約・標準適合・制限。 <strong>規制/法令 variant を持つ</strong> (Legal/Regulatory は核内、 critic #6、 &sect;6 訂正)。</td></tr>
+<tr><td><code>quality-checklist-callout</code></td><td>callout</td><td>SHOULD</td><td>5.2.5 個別 9 特性 + 5.2.6 集合特性</td><td>要件品質の自己点検 (提示)。 <em>検証そのものは &sect;5 floor/ceiling が担う。</em></td></tr>
+<tr><td><code>audience-toggle</code></td><td>callout</td><td>SHOULD</td><td>ADR-0033/0039 (29148 外)</td><td>人間向け/機械向け/両方の表示切替。</td></tr>
+<tr><td><code>context-diagram</code></td><td>diagram</td><td>MUST</td><td>9.6.4 製品視点</td><td>システム境界 + 外部 actor/系/データフロー。</td></tr>
+<tr><td><code>use-case-flow-diagram</code></td><td>diagram</td><td>SHOULD</td><td>9.6.5 + 9.6.12</td><td>actor&ndash;system 相互作用シーケンス。</td></tr>
+<tr><td><code>use-case-card</code></td><td>dense-list</td><td>SHOULD</td><td>9.6.5 + use-case 構成</td><td>actor/前提/フロー/事後のカード。</td></tr>
+<tr><td><code>state-machine-diagram</code></td><td>diagram</td><td>OPTIONAL</td><td>9.6.12 状態記述</td><td>状態を持つ対象の状態空間。</td></tr>
+<tr><td><code>priority-badge</code></td><td>badge</td><td>MUST</td><td>5.2.8 優先度 + RFC 2119</td><td>MoSCoW / MUST-SHOULD-MAY + EARS パターン識別の色バッジ。</td></tr>
+<tr><td><code>informative-normative-label</code></td><td>badge</td><td>SHOULD</td><td>9 全般 + 8.5.2</td><td>normative/informative の区分バッジ。</td></tr>
+<tr><td><code>glossary-term-table</code></td><td>glossary</td><td>MUST</td><td>9.2.3 用語 + 9.2.5 略語 + 5.2.6 一貫性</td><td>用語/略語の定義テーブル。 <strong>用語定義の SSoT</strong> (critic redundancy #5)。</td></tr>
+<tr><td><code>plain-language-term-inline</code></td><td>glossary</td><td>MUST</td><td>9.2.3 インライン形態 + 用語被覆 floor</td><td>専門語の本文中 plain 併記。 <strong><code>glossary-term-table</code> の<em>派生ビュー</em></strong>であり、 fidelity check が両者の定義一致を検証 (double-SSoT 回避)。</td></tr>
+<tr><td><code>requirement-type-color-tokens</code></td><td>meta</td><td>MUST</td><td>9.6 全般 (一貫性層)</td><td>要件型 (FR/NFR/CON/ASM) の視覚カラートークン。 全 register が共有 (両テーマ定義必須)。</td></tr>
+<tr><td><code>fidelity-sync-meta</code></td><td>meta</td><td>MUST</td><td>ADR-0041 §2.4 (29148 外)</td><td>生成-検証アーキの出自。 生成日時 / 元 SSoT / 検証通過日時。</td></tr>
+</tbody>
+</table>
+
+<p>部品総数 = <strong>37</strong> (synthesis 35 + critic 補填 2: <code>approval-block</code> / <code>source-trace-origin</code>)。 うち MUST = 27、 SHOULD = 8、 OPTIONAL = 2。</p>
+</section>
+
+<section id="s4-coverage" class="informative">
+<h2>§4. 被覆マップ (完全性の証跡)</h2>
+
+<p>29148 SRS の各 <strong>MUST</strong> 情報要素が必ずいずれかの部品に被覆されることを示す (孤立要素ゼロ = 完全性の証跡)。 SHOULD/OPTIONAL は省略可ゆえ被覆も任意。 下表は MUST 要素のみ抜粋 (全 61 被覆エントリの核)。</p>
+
+<table>
+<thead><tr><th>Clause</th><th>29148 MUST 要素</th><th>担当部品</th></tr></thead>
+<tbody>
+<tr><td>9.2.1</td><td>Identification 文書識別</td><td><code>doc-cover-band</code></td></tr>
+<tr><td>9.2.2</td><td>Front Matter (目次 / 変更履歴 / <strong>承認</strong>)</td><td><code>toc-navigator</code> / <code>revision-history-table</code> / <code>approval-block</code> ★</td></tr>
+<tr><td>9.2.3 / 9.2.5</td><td>Definitions / Acronyms 用語・略語</td><td><code>glossary-term-table</code></td></tr>
+<tr><td>9.2.4</td><td>References 参照文書</td><td><code>references-list</code></td></tr>
+<tr><td>9.6.2 / 9.6.3</td><td>Purpose / Scope 目的・範囲</td><td><code>section-lead-callout</code> / <code>scope-summary-panel</code></td></tr>
+<tr><td>9.6.4 (.1/.2/.4)</td><td>Product Perspective + System/User/SW I/F</td><td><code>context-diagram</code> / <code>interface-spec-table</code> / <code>ui-spec-block</code></td></tr>
+<tr><td>9.6.5 / 9.6.6</td><td>Product Functions / User Characteristics</td><td><code>product-functions-list</code> / <code>actor-stakeholder-table</code></td></tr>
+<tr><td>9.6.7 / 9.6.8</td><td>Limitations / Assumptions (規制・安全含む)</td><td><code>assumptions-constraints-list</code> / <code>constraint-callout</code></td></tr>
+<tr><td>9.6.10 / 9.6.12</td><td>Specified Requirements / Functions</td><td><code>requirement-matrix-table</code> / <code>ears-requirement-row</code></td></tr>
+<tr><td>9.6.11</td><td>External Interfaces 外部 I/F 要件</td><td><code>interface-spec-table</code></td></tr>
+<tr><td>9.6.13/.14/.16/.17/.18</td><td>Usability / Performance / Design Constraint / <strong>Standards Compliance</strong> / Quality Attributes</td><td><code>nfr-metrics-table</code> / <code>constraint-callout</code> (規制 variant)</td></tr>
+<tr><td>9.6.19</td><td>Verification 検証計画</td><td><code>verification-method-grid</code> / <code>rtm-grid</code></td></tr>
+<tr><td>5.2.5 / 5.2.6</td><td>個別品質 (complete=TBD なし) / 集合品質 (completeness/consistency/traceable)</td><td>&sect;5 floor §G/§C + <code>quality-checklist-callout</code> + <code>rtm-grid</code></td></tr>
+<tr><td>5.2.6</td><td>Traceable (双方向 + backward 端点)</td><td><code>rtm-grid</code> + <code>source-trace-origin</code> ★</td></tr>
+<tr><td>5.2.8</td><td>識別子 / 優先度 / 出所 / 検証手法 / 受入基準 / <strong>根拠</strong></td><td><code>requirement-matrix-table</code> / <code>priority-badge</code> / <code>source-trace-origin</code> / <code>verification-method-grid</code> / <code>acceptance-criteria-checklist</code> / <code>ears-requirement-row</code> (Rationale 必須スロット)</td></tr>
+</tbody>
+</table>
+<p><strong>結論</strong>: 29148 の SRS MUST 要素に部品被覆漏れは無い (critic 補填後)。 SHOULD/OPTIONAL は適用時に対応部品が存在する。</p>
+</section>
+
+<section id="s5-done-condition" class="informative">
+<h2>§5. 完全性 done-condition (二層: floor + ceiling)</h2>
+
+<aside class="informative">
+<p><strong>本節が S2 の核心</strong>。 敵対 critic は synthesis 初版の done-condition を <code>criterionTestable=false</code> と判定した &mdash; 部品の<em>存在</em>だけを測り中身の<em>読みやすさ・完全性</em>を測らない構造で、 これは <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> が犯した「長さだけ測って読めない」<strong>Goodhart 失敗の同型再発</strong>だった。 さらに ADR-0041 §2.5 が co-equal とする <strong>persona walk (ceiling) が done-condition から完全脱落</strong>していた。 本節はこれを是正し、 <strong>floor (機械判定) + ceiling (意味判定) の二層</strong>で再定義する。</p>
+</aside>
+
+<h3>§5.1. 判定式</h3>
+<p><strong>「SRS 核 (&gamma;) を構成しうる」= GREEN &hArr; (floor 全通過) <u>AND</u> (ceiling 合格)</strong>。 <strong>floor 単独で GREEN を宣言してはならない</strong> (ADR-0040 死角の再発防止 = 北極星整合の必須条件)。</p>
+
+<h3>§5.2. Floor &mdash; 機械判定 (bash + DOM 走査 + render-gate)</h3>
+<table>
+<thead><tr><th>gate</th><th>条件</th><th>判定手段</th></tr></thead>
+<tbody>
+<tr><td><strong>A. MUST 部品存在</strong></td><td>生成 HTML が &sect;3 の <strong>MUST 部品 (27)</strong> を各 1 個以上含む (<code>data-component</code> 属性で識別)。 ただし対象システムに非該当の<em>条件付き</em> MUST (例: 外部 I/F を持たない系の <code>interface-spec-table</code>、 UI を持たない系の <code>ui-spec-block</code>) は MUST-when-applicable とし、 floor が hard-require する<strong>確定 required-existence 集合は S5 で凍結</strong>する (29148 は当該節を該当時 MUST とする)。 確定カタログ = &sect;3 の MUST 行 (synthesis の 19/25 表記矛盾は &sect;3 の 37 部品 / MUST 27 で解消、 openQ#1 closed)。</td><td>属性存在チェック (hard-require 確定集合は S5 凍結)</td></tr>
+<tr><td><strong>B. register 整合</strong></td><td>deck-band family が 1 個以上 (<code>chapter-deck-band</code>) かつ dense 系が 1 個以上。 加えて<strong>全 register が <code>requirement-type-color-tokens</code> を参照し <code>prefers-color-scheme</code> 両モード定義を持つ</strong> (「2 個数える」でなく一貫性、 critic redundancy #1)。</td><td>DOM 走査 + CSS 検査</td></tr>
+<tr><td><strong>C. RTM 完全性</strong></td><td><code>rtm-grid</code> の全要件行が backward 列 (出所 = <code>source-trace-origin</code> 参照) と verification 列の双方に非空セルを持つ。 空セル=0、 孤立要件=0、 未検証要件=0。 <em>dogfood で上位 StRS 不在時は constitution/ADR を出所にマップ (N/A 不可、 critic #2)。</em></td><td>DOM 走査</td></tr>
+<tr><td><strong>D. 要件 ID 健全性</strong></td><td><code>requirement-matrix-table</code> 全要件行が一意 <code>data-req-id</code> (重複 0)、 各行に <code>priority-badge</code> と検証手法バッジ (T/A/I/D) が付与。</td><td>DOM 走査</td></tr>
+<tr><td><strong>E. 用語被覆</strong></td><td><strong><code>vocabulary.yaml</code> + <code>glossary.html</code> (ADR-0036 資産) に登録された語彙集合</strong>のうち、 本文出現語で inline 併記 (<code>plain-language-term-inline</code>) も glossary リンクも無いもの=0。 <em>「専門用語」を controlled vocabulary に接地し主観判定を排除 (critic criterionIssue #2)。</em></td><td>bash + vocab 突合</td></tr>
+<tr><td><strong>F. render 健全性</strong></td><td><a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> render-safety gate が全 viewport で要素 overlap / 横幅超過 / 不可視化を検出しない。 <em>閾値 (overlap 面積比 / 超過 px) の SSoT は ADR-0037 detector 定数を参照 (criterionIssue #5)。 本 gate は決定的 (幾何検査) ゆえ floor 層 &mdash; ADR-0037 が「ceiling」と呼ぶのは bash 検査に対する CI render 層の意で、 本書の floor(機械)/ceiling(LLM 意味) 軸とは別。</em></td><td>playwright render-gate</td></tr>
+<tr><td><strong>G. 内容完全性 (no-TBD)</strong> <span class="badge-new">★</span></td><td>MUST 部品の必須スロットに <code>TBD</code>/<code>TODO</code>/空必須セル=0。 <strong>部品の<em>存在</em>とは別 arm で<em>中身の完全性</em>を測る</strong> (5.2.5 complete / 5.2.6 completeness、 critic #7 = Goodhart 分離の要)。</td><td>bash 走査</td></tr>
+<tr><td><strong>H. fidelity meta 存在</strong></td><td><code>fidelity-sync-meta</code> に生成日時 / 元 SSoT / 検証通過日時の 3 項目が全て埋まる。</td><td>属性存在チェック</td></tr>
+</tbody>
+</table>
+
+<h3>§5.3. Ceiling &mdash; 意味判定 (LLM persona + fidelity)</h3>
+<table>
+<thead><tr><th>gate</th><th>条件</th><th>判定手段</th></tr></thead>
+<tbody>
+<tr><td><strong>I. persona walk</strong> <span class="badge-new">★</span></td><td><strong>非エンジニア persona</strong> が生成 HTML を index から歩いて「何が要件か・なぜ要るか・どう検証されるか」を<em>頑張れば読める</em>。 専門エンジニアがなんとか読める水準では不合格 (北極星)。</td><td>persona-walk ceiling (LLM review)</td></tr>
+<tr><td><strong>J. fidelity check</strong></td><td>生成 HTML が機械 SSoT の正確な要約 &mdash; 情報落ち / 歪み / <strong>捏造</strong> が無い。 派生ビュー (<code>plain-language-term-inline</code> 等) が SSoT と一致。 要件間 consistency (矛盾) もここで surface (5.2.6、 完全機械化は過剰主張ゆえ ceiling の領分、 critic #5 への配置判断)。</td><td>fidelity check (機械 SSoT 突合)</td></tr>
+</tbody>
+</table>
+
+<aside class="informative">
+<p><strong>EC proof で実証済</strong> (ADR-0041 grill): 難要件 (EC チェックアウト) の B2 生成で、 persona gate は合格 (非エンジニアが読めた) しつつ fidelity gate が <strong>AI 捏造 RTM 行</strong>を検出した。 floor (存在) は通っても ceiling (意味) が捏造を止める &mdash; 二層が load-bearing である証拠。</p>
+</aside>
+</section>
+
+<section id="s6-scope" class="informative">
+<h2>§6. scope 境界 (&gamma; core と拡張パック)</h2>
+
+<h3>§6.1. &gamma; core に<em>含む</em> (29148 SRS 規範内容)</h3>
+<p>&sect;3 の 37 部品 = SRS 核。 <strong>重要な訂正 (critic #6)</strong>: synthesis 初版は Legal/Regulatory を「29148 が必須としない補足」として拡張パックへ退避させたが、 これは<strong>誤り</strong>。 <strong>9.6.7 Limitations は規制・安全・セキュリティ・監査を 13 要素に含み、 9.6.17 Standards Compliance は法令適合を MUST の核要件とする</strong>。 よって Legal/Regulatory/Safety/Security は <code>constraint-callout</code> (規制 variant) と <code>nfr-metrics-table</code> で<strong>核内に被覆</strong>し、 done-condition でも属性存在を確認する。</p>
+
+<h3>§6.2. 拡張パックで<em>後追い</em> (組織固有・SRS 核の外)</h3>
+<ol>
+  <li><strong>ADR 部品系</strong> &mdash; decision/WHY を記録する ADR 構造 (status/context/decision/consequences/alternatives/trace) と ADR-worthiness 判定。 SRS でなく decision record。</li>
+  <li><strong>research/exploration 部品系</strong> &mdash; 業界調査・要望集約・superseded planning の自由形式探索表現。 規範要件でなく探索ドメイン。</li>
+  <li><strong>constitution/原則 部品系</strong> &mdash; folio 14 不変原則 (P-1&ndash;P-14) 等の immutable principle。 SRS でなく上位ガバナンス (別 schema <code>FolioConstitution</code>)。</li>
+  <li><strong>Annex A OpsCon / Annex C Tailoring の専用テンプレート部品</strong> &mdash; normative だが文書作成自体は任意ゆえ <code>supporting-info-appendix</code> で受けるに留め、 フル部品化は拡張。</li>
+</ol>
+<p>これら拡張パックは ADR-0041 §2.6 の通り SRS 核の純度を保ったまま後追いで追加する。 folio 自身の corpus (SRS でない ADR/research/constitution を含む) は<strong>最初の consumer</strong> だが、 core taxonomy はそれらに特化させない (folio 特化禁止の北極星)。</p>
+</section>
+
+<section id="s7-handoff" class="informative">
+<h2>§7. 残論点と後続スライス申し送り</h2>
+
+<p>本書で確定/決着した論点と、 後続スライスへ送る判断を整理する。</p>
+
+<h3>§7.1. 本書で決着</h3>
+<ul>
+  <li><strong>部品数の確定</strong> (openQ#1): &sect;3 の確定リスト = 37 部品 (MUST 27 / SHOULD 8 / OPTIONAL 2)。 19/25 表記矛盾を解消 (floor が hard-require する条件付き MUST の確定集合は S5 へ申し送り)。</li>
+  <li><strong>backward 端点</strong> (openQ#2 / critic #2): <code>source-trace-origin</code> を一級部品化。 dogfood で上位 StRS 不在時は constitution/ADR を出所にマップ (N/A 不可)。</li>
+  <li><strong>done-condition の二層化</strong> (critic #8 / #15): floor + ceiling。 floor 単独で GREEN 不可。</li>
+  <li><strong>用語被覆の controlled vocabulary 接地</strong> (criterionIssue #2): vocabulary.yaml/glossary に接地。</li>
+  <li><strong>Legal/Regulatory の core 復帰</strong> (critic #6): 9.6.7/9.6.17。</li>
+  <li><strong>double-SSoT 回避</strong> (redundancy #5): glossary-term-table=SSoT / inline=派生。</li>
+</ul>
+
+<h3>§7.2. 後続スライスへ申し送り</h3>
+<table>
+<thead><tr><th>論点</th><th>送り先</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td>interface-spec-table の clause 分割</td><td>S3 (部品庫 folio-8oc)</td><td>論理 I/F (製品視点) と詳細 I/F (要件) を data 属性で帰属区別 (complement but not duplicate、 redundancy #2)。</td></tr>
+<tr><td>verification-method-grid &harr; rtm-grid 所有権</td><td>S6 (rules folio-16y)</td><td>検証列=rtm-grid 所有 / 手法分類=verification-method-grid 所有を規範確定、 重複検証列禁止 (redundancy #3、 openQ#4)。</td></tr>
+<tr><td>floor gate の実装 (A&ndash;H)</td><td>S5 (2-gate folio-vhy)</td><td>属性存在 / DOM 走査 / vocab 突合 / render-gate / no-TBD の bash + playwright 実装。 §G no-TBD は新 arm。</td></tr>
+<tr><td>ceiling (persona + fidelity) の実装</td><td>S5 (2-gate folio-vhy)</td><td>persona-walk ceiling + fidelity check。 要件間 consistency の surface もここ。</td></tr>
+<tr><td>source-trace-origin の dogfood マッピング規範</td><td>S6 (rules folio-16y)</td><td>constitution/ADR を上位ニーズとする規約を rules 化。</td></tr>
+<tr><td>組織化軸 (機能別/利用者別/モード別)</td><td>S3 (部品庫) + S4 (generator folio-ruc)</td><td>chapter-deck-band の軸ラベルと requirement-matrix-table のチャプタ分割 (critic #4)。</td></tr>
+<tr><td>要件間 conflict の<em>視覚部品</em></td><td>S3 (部品庫 folio-8oc)</td><td>矛盾<em>検出</em>自体は ceiling fidelity (§5.3 J) が担うが、 surfacing する専用視覚部品 (conflict-callout 等) の要否は S3 で判断 &mdash; 本書 §3 では未部品化 (critic #5 の検出側は ceiling 吸収・視覚側は申し送り)。</td></tr>
+</tbody>
+</table>
+
+<h3>§7.3. 残 uncertain</h3>
+<ul>
+  <li>検証手法バッジ (T/A/I/D) の<em>妥当性</em> (例: 数値 NFR に Inspection を貼る偽装) は floor では測れず ceiling fidelity の領分 (criterionIssue #6)。</li>
+  <li>要件 Status (proposed/approved/implemented/verified) は SRS 核では SHOULD 維持 (critic #9 minor への pushback &mdash; 運用属性ゆえ拡張で強化)。</li>
+</ul>
+</section>
+
+<section id="s8-provenance" class="informative">
+<h2>§8. 出自 (調査・統合・敵対 critic)</h2>
+<p>本書は multi-agent dynamic workflow (<code>wf-e7d142dc</code>、 ultracode) の産物 &mdash; 4 facet 並列調査 (F1: 29148 SRS 構造 / F2: 要件 taxonomy・属性 / F3: use-case・EARS・RTM / F4: 視覚部品マッピング) &rarr; 統合 (35 部品 + 61 被覆) &rarr; <strong>敵対 critic</strong> (完全性・done-condition 検証可能性・register 整合・北極星整合)。</p>
+<p>critic は synthesis 初版を <code>isComplete=false</code> / <code>criterionTestable=false</code> と判定し、 blocker 2 (Approval Block / Source-Trace Origin 欠落) + major 6 + criterion の Goodhart 化を検出した。 <strong>本書はこれら指摘を adjudication した上で反映済</strong> &mdash; 妥当指摘 (二層 done-condition / 用語 controlled vocabulary / Legal core 復帰 / no-TBD gate / double-SSoT 解消 / 部品 2 補填) は採用、 一部 (Status 属性 SHOULD 維持 / OpsCon OPTIONAL 維持) は根拠を示して pushback した。 critic の最重要メタ指摘 &mdash; 「部品存在 (floor) だけを測れば ADR-0040 の Goodhart を構造継承する」 &mdash; は &sect;5 の二層判定式として恒久化した。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
