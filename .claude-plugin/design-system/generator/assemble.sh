@@ -72,8 +72,8 @@ in_csv() { local needle="$1" hay="${2-}" x; IFS=',' read -ra _a <<< "$hay"; for 
 CHAPN=0
 band() { # tint kicker heading icon_inner
   CHAPN=$((CHAPN+1)); local num; printf -v num '%02d' "$CHAPN"
-  printf '<section data-component="chapter-deck-band" class="tint-%s"><span class="num">%s</span><span class="kicker">%s %s</span><h2>%s</h2><p class="lead" data-prose-slot="chapter-lead"></p></section>\n<div class="chapbody">\n' \
-    "$1" "$num" "$(ico "$4")" "$(esc "$2")" "$(esc "$3")"
+  printf '<section data-component="chapter-deck-band" class="tint-%s"><span class="num">%s</span><span class="kicker">%s %s</span><h2>%s</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-%s"></p></section>\n<div class="chapbody">\n' \
+    "$1" "$num" "$(ico "$4")" "$(esc "$2")" "$(esc "$3")" "$num"
 }
 band_end() { printf '</div>\n'; }
 
@@ -90,7 +90,7 @@ emit_cover() {
   printf '<p class="cover-eyebrow"><span class="doc-type">%s</span> <span>%s</span></p>\n' "$(esc "$(q '.meta.eyebrow_left')")" "$(esc "$(q '.meta.eyebrow_right')")"
   printf '<h1>%s</h1>\n' "$(esc "$(q '.meta.title')")"
   printf '<p class="cover-sub">%s</p>\n' "$(esc "$(q '.meta.subtitle')")"
-  printf '<div class="summary-card"><span class="ic">%s</span><div><p class="lab">この文書が約束すること (1 文サマリ)</p><p class="txt" data-prose-slot="cover-summary"></p></div></div>\n' "$ICO_CHECK_BIG"
+  printf '<div class="summary-card"><span class="ic">%s</span><div><p class="lab">この文書が約束すること (1 文サマリ)</p><p class="txt" data-prose-slot="cover-summary" data-slot-id="cover-summary"></p></div></div>\n' "$ICO_CHECK_BIG"
   frng="$(q '.requirements | length')件 ($(esc "$(q '.requirements[0].id')")–$(esc "$(q '.requirements[-1].id')"))"
   nrng="$(q '.nfr | length')件 ($(esc "$(q '.nfr[0].id')")–$(esc "$(q '.nfr[-1].id')"))"
   arng="$(q '.acceptance | length')件 ($(esc "$(q '.acceptance[0].id')")–$(esc "$(q '.acceptance[-1].id')"))"
@@ -151,8 +151,8 @@ emit_req_table() {
   q '.requirements[] | [.id, .ears.pattern, .ears.condition, .ears.response, .priority, .vmethod, (.rationale_source // "")] | @tsv' \
   | while IFS=$'\t' read -r id pat cond resp prio vmeth rsrc; do
       [[ -n "$id" ]] || continue; src_attr=""; [[ -n "$rsrc" && "$rsrc" != "null" ]] && src_attr=" data-source=\"$(esc "$rsrc")\""
-      printf '<tr data-component="ears-requirement-row"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain"></span><span class="why" data-prose-slot="rationale"%s></span></td><td><span class="prio %s">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
-        "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(esc "$cond")" "$(esc "$resp")" "$src_attr" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
+      printf '<tr data-component="ears-requirement-row"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
+        "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(esc "$cond")" "$(esc "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
     done
   printf '</tbody></table></div>\n'
 }
@@ -169,7 +169,7 @@ emit_nfr_table() {
   printf '<div class="tbl-wrap"><table data-component="nfr-metrics-table"><thead><tr><th>ID</th><th>区分</th><th>目標値 (+ やさしい言い換え)</th><th>測り方</th></tr></thead><tbody>\n'
   q '.nfr[] | [.id, .category, .target, .measure] | @tsv' | while IFS=$'\t' read -r id categ tgt meas; do
     [[ -n "$id" ]] || continue
-    printf '<tr data-component="nfr-metric-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$categ")" "$(esc "$tgt")" "$(esc "$meas")"
+    printf '<tr data-component="nfr-metric-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$categ")" "$(esc "$tgt")" "$(esc "$id")" "$(esc "$meas")"
   done
   printf '</tbody></table></div>\n'
 }
@@ -192,7 +192,7 @@ emit_rtm_fold() {
   printf '<details data-component="rtm-collapse" class="rtm-fold"><summary>トレーサビリティ表 (RTM) を開く</summary>\n'
   printf '<p class="rtm-summary-derived" data-derived="req=%s;need=%s;link=%s;iso=%s;unv=%s">要件 %s 件 / 上位ニーズ %s 件 / トレースリンク %s 本 / 孤立要件 (出所なし) %s 件 / 未検証要件 (受入なし) %s 件</p>\n' \
     "$nreq" "$nneed" "$nlinks" "$niso" "$nunv" "$nreq" "$nneed" "$nlinks" "$niso" "$nunv"
-  printf '<p data-prose-slot="rtm-summary"></p>\n'
+  printf '<p data-prose-slot="rtm-summary" data-slot-id="rtm-summary"></p>\n'
   local -a NEEDS NSHORT; mapfile -t NEEDS < <(q '.upper_needs[].id'); mapfile -t NSHORT < <(q '.upper_needs[].short')
   printf '<div data-component="rtm-grid"><table class="rtm"><thead><tr><th>要件</th>'
   local k; for k in "${!NEEDS[@]}"; do printf '<th class="grp">%s %s</th>' "$(esc "${NEEDS[$k]}")" "$(esc "${NSHORT[$k]}")"; done

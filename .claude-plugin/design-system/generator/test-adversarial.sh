@@ -8,8 +8,10 @@
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ASM="$SCRIPT_DIR/assemble.sh"
+INJ="$SCRIPT_DIR/inject-prose.sh"
 VER="$SCRIPT_DIR/verify-fabrication-free.sh"
 BASE="$SCRIPT_DIR/contract/ec-checkout.srs.yaml"
+BASE_PROSE="$SCRIPT_DIR/prose/ec-checkout.prose.yaml"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
 ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); }
@@ -23,6 +25,15 @@ expect_verify_fail() { # label contract html  (verify が exit!=0 を期待)
 }
 expect_verify_pass() { # label contract html
   if bash "$VER" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (verify FAIL)"; fi
+}
+expect_inject_abort() { # label manifest assembled  (inject が exit!=0 を期待)
+  if bash "$INJ" "$2" "$3" "$TMP/o.html" >/dev/null 2>&1; then ng "$1 (abort されず注入された)"; else ok "$1"; fi
+}
+expect_verify_pass_filled() { # label manifest contract html
+  if bash "$VER" --filled "$2" "$3" "$4" >/dev/null 2>&1; then ok "$1"; else ng "$1 (--filled verify FAIL)"; fi
+}
+expect_verify_fail_filled() { # label manifest contract html  (--filled verify が exit!=0 を期待)
+  if bash "$VER" --filled "$2" "$3" "$4" >/dev/null 2>&1; then ng "$1 (--filled verify が PASS した)"; else ok "$1"; fi
 }
 
 echo "adversarial regression (fail-closed expected):"
@@ -72,6 +83,36 @@ expect_verify_fail "A8 捏造トレースリンクを verify が捕捉" "$BASE" 
 # A9. 受入リンクを捏造追加 → verify が acceptance 集合比較で捕捉
 sed '0,/data-acc-link="[^"]*"/{s#<td class="hit"><span class="dot ac" data-acc-link="\([^"]*\)">#<td class="hit"><span class="dot ac" data-acc-link="FR1__AC-FAKE">X</span><span class="dot ac" data-acc-link="\1">#}' "$TMP/good.html" > "$TMP/facc.html"
 expect_verify_fail "A9 捏造受入リンクを verify が捕捉" "$BASE" "$TMP/facc.html"
+
+echo
+echo "prose 層 (③ 注入) の fail-closed:"
+
+# 健全な充填物を 1 本 (good.html は A7 で生成済み)
+bash "$INJ" "$BASE_PROSE" "$TMP/good.html" "$TMP/good-filled.html" >/dev/null 2>&1
+
+# A10. HTML に対応スロットの無い manifest エントリ (orphan) → inject abort
+cp "$BASE_PROSE" "$TMP/orphan.yaml"; key="plain-FR999" yq -i '.slots[strenv(key)] = "捏造スロット"' "$TMP/orphan.yaml"
+expect_inject_abort "A10 orphan manifest エントリ (HTML に無い slot) は abort" "$TMP/orphan.yaml" "$TMP/good.html"
+
+# A11. manifest からスロット削除 (未充填 = 脱落) → inject abort
+cp "$BASE_PROSE" "$TMP/miss.yaml"; key="rtm-summary" yq -i 'del(.slots[strenv(key)])' "$TMP/miss.yaml"
+expect_inject_abort "A11 manifest 欠落スロット (未充填になる) は abort" "$TMP/miss.yaml" "$TMP/good.html"
+
+# A12. prose に HTML 注入 → escape されて生 markup が出ない / 構造健全 (--filled verify PASS)
+cp "$BASE_PROSE" "$TMP/injm.yaml"; key="cover-summary" yq -i '.slots[strenv(key)] = "<script>alert(1)</script> 約束"' "$TMP/injm.yaml"
+bash "$INJ" "$TMP/injm.yaml" "$TMP/good.html" "$TMP/injm.html" >/dev/null 2>&1
+if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/injm.html"; then ng "A12 prose escape 破綻 (生 markup か back-ref 化け)"
+elif grep -q '&lt;script&gt;alert' "$TMP/injm.html"; then ok "A12 prose の HTML 注入を正規 entity に escape"
+else ng "A12 正規 entity &lt;script&gt; が出ていない"; fi
+expect_verify_pass_filled "A12b prose escape 後も --filled verify PASS" "$TMP/injm.yaml" "$BASE" "$TMP/injm.html"
+
+# A13. prose に改行 → inject abort (validate)
+cp "$BASE_PROSE" "$TMP/nlp.yaml"; key="cover-summary" yq -i '.slots[strenv(key)] = "line1" + "\n" + "line2"' "$TMP/nlp.yaml"
+expect_inject_abort "A13 prose に改行を含む値は abort" "$TMP/nlp.yaml" "$TMP/good.html"
+
+# A14. 充填後にスロット内容を改竄 → --filled verify が注入忠実比較で捕捉
+sed 's#data-slot-id="cover-summary">[^<]*<#data-slot-id="cover-summary">改竄された別の約束<#' "$TMP/good-filled.html" > "$TMP/tamp-filled.html"
+expect_verify_fail_filled "A14 充填後の内容改竄を --filled verify が捕捉" "$BASE_PROSE" "$BASE" "$TMP/tamp-filled.html"
 
 echo
 echo "PASS=$pass FAIL=$fail"

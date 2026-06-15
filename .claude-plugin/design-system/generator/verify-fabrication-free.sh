@@ -8,15 +8,23 @@
 #     trace.backward / trace.acceptance と *集合として一致* (捏造 0 + 脱落 0、 両軸対称)。
 #   - 決定的サマリの数値 (要件/ニーズ/リンク/孤立/未検証) を contract から *独立再計算* して HTML と突合
 #     (assembler のロジックバグ・後段改竄も捕捉)。
-#   - prose スロットは存在しかつ全て空 (perl で要素単位判定 = ネストタグ/改行始まりも捕捉)。
+#   - prose スロット (既定 = pre-fill): 存在しかつ全て空 (perl で要素単位判定 = ネストタグ/改行始まりも捕捉)。
+#   - prose スロット (--filled <manifest> = post-fill): 全て非空 (no-TBD) かつ各 data-slot-id の内容が
+#     escape 済み manifest 値と完全一致 (注入忠実 = opus 散文の改竄・out-of-band 注入・脱落を捕捉)。
+#     構造チェック (1-7d) は両モードで不変 (注入は prose のみ充填し構造を触らない)。
 #
-# usage: verify-fabrication-free.sh <contract.yaml> <generated.html>
+# usage: verify-fabrication-free.sh [--filled <manifest.yaml>] <contract.yaml> <generated.html>
 
 set -uo pipefail
+# esc() の ${v//pat/repl} を bash 5.2+ patsub_replacement が壊す (< → <lt;) ため無効化。
+shopt -u patsub_replacement 2>/dev/null || true
 
-CONTRACT="${1:?usage: verify-fabrication-free.sh <contract.yaml> <generated.html>}"
-HTML="${2:?usage: verify-fabrication-free.sh <contract.yaml> <generated.html>}"
+FILLED_MANIFEST=""
+if [[ "${1:-}" == "--filled" ]]; then FILLED_MANIFEST="${2:?--filled requires <manifest.yaml>}"; shift 2; fi
+CONTRACT="${1:?usage: verify-fabrication-free.sh [--filled <manifest>] <contract.yaml> <generated.html>}"
+HTML="${2:?usage: verify-fabrication-free.sh [--filled <manifest>] <contract.yaml> <generated.html>}"
 [[ -f "$CONTRACT" && -f "$HTML" ]] || { echo "verify: input not found" >&2; exit 2; }
+[[ -z "$FILLED_MANIFEST" || -f "$FILLED_MANIFEST" ]] || { echo "verify: manifest not found: $FILLED_MANIFEST" >&2; exit 2; }
 
 # inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、
 # <style> ブロックを除去した body-only ビューで数える (S5 floor gate も同じ前提が要る)。
@@ -24,6 +32,8 @@ BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
 sed '/<style>/,/<\/style>/d' "$HTML" > "$BODY"
 
 q() { yq -r "$1" "$CONTRACT"; }
+# assemble.sh / inject-prose.sh と同一の escape 規律 (注入忠実比較に使う)。
+esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
 fail=0
 chk() { # label expected actual
   if [[ "$2" == "$3" ]]; then printf '  [OK]   %-44s %s\n' "$1" "$2"
@@ -93,7 +103,7 @@ chk "null セル漏れなし" "0" "$(grep -oE '>null<' "$BODY" | wc -l | tr -d '
 # 7d. esc 破綻 (patsub back-ref 化け) で壊れた entity が出ていないか
 chk "back-ref 化け entity なし (<lt; 等)" "0" "$(grep -oE '<(lt|gt|quot);' "$BODY" | wc -l | tr -d ' ')"
 
-# 8. prose スロット: 存在しかつ全て空 (perl で要素単位判定 = ネストタグ/改行/空白のみを正しく捕捉)
+# 8. prose スロット (perl で要素単位判定 = ネストタグ/改行/空白のみを正しく捕捉)
 slots="$(grep -oE 'data-prose-slot=' "$BODY" | wc -l | tr -d ' ')"
 filled="$(perl -0777 -ne '
   my $c=0;
@@ -103,8 +113,35 @@ filled="$(perl -0777 -ne '
   print $c;
 ' "$BODY")"
 if [[ "$slots" -gt 0 ]]; then printf '  [OK]   %-44s %s\n' "prose スロット存在" "$slots"; else printf '  [FAIL] %-44s\n' "prose スロットが無い"; fail=1; fi
-chk "prose スロットは全て空 (filled=0)" "0" "$filled"
+
+if [[ -z "$FILLED_MANIFEST" ]]; then
+  # pre-fill: assembler が prose を一切捏造しないことの証明 (全スロット空)
+  chk "prose スロットは全て空 (filled=0)" "0" "$filled"
+else
+  # post-fill: 全スロット非空 (no-TBD) + 各 data-slot-id の内容が escape 済み manifest 値と一致 (注入忠実)
+  chk "prose スロットは全て充填 (空=0)" "$slots" "$filled"
+  exp="$(mktemp)"; act="$(mktemp)"
+  while IFS= read -r key; do
+    [[ -n "$key" ]] || continue
+    printf '%s\t%s\n' "$key" "$(esc "$(key="$key" yq -r '.slots[strenv(key)]' "$FILLED_MANIFEST")")"
+  done < <(yq -r '.slots | keys | .[]' "$FILLED_MANIFEST") | sort > "$exp"
+  perl -0777 -ne 'while (/<([a-zA-Z]+)\b[^>]*\bdata-slot-id="([^"]+)"[^>]*>(.*?)<\/\1>/gs){ print "$2\t$3\n"; }' "$BODY" | sort > "$act"
+  if diff -q "$exp" "$act" >/dev/null 2>&1; then
+    printf '  [OK]   %-44s %s\n' "全スロット注入忠実 (内容==escape済 manifest)" "$(grep -c . "$exp")"
+  else
+    printf '  [FAIL] %-44s\n' "注入不一致 (slot-id 集合差 or 内容改竄)"
+    echo "    --- manifest 期待のみ (脱落/改竄前) ---"; comm -23 "$exp" "$act" | sed 's/^/      /'
+    echo "    --- HTML 実体のみ (orphan/改竄後) ---";   comm -13 "$exp" "$act" | sed 's/^/      /'
+    fail=1
+  fi
+  rm -f "$exp" "$act"
+fi
 
 echo
-if [[ "$fail" -eq 0 ]]; then echo "RESULT: fabrication-free PASS (構造は contract から完全導出・捏造 0、 backward/acceptance 両軸・派生数値・prose 空 を被覆)"; exit 0
-else echo "RESULT: FAIL"; exit 1; fi
+if [[ -n "$FILLED_MANIFEST" ]]; then
+  if [[ "$fail" -eq 0 ]]; then echo "RESULT: filled PASS (構造は contract から完全導出・捏造 0 + prose 全充填・注入忠実 = 改竄/脱落/out-of-band なし)"; exit 0
+  else echo "RESULT: FAIL"; exit 1; fi
+else
+  if [[ "$fail" -eq 0 ]]; then echo "RESULT: fabrication-free PASS (構造は contract から完全導出・捏造 0、 backward/acceptance 両軸・派生数値・prose 空 を被覆)"; exit 0
+  else echo "RESULT: FAIL"; exit 1; fi
+fi
