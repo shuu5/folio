@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+# folio verify-srs — 生成 SRS プレゼン HTML の *決定的 floor* (taxonomy §5.2: gate A-H + visual-first)。
+#
+# 生成と検証を分離した独立検証 (consumer が生成物を手編集しても再検証できる)。 入力は (contract, html) のみ
+# = manifest 不要 (生成時の注入忠実は verify-fabrication-free --filled が別途担う)。
+#
+# taxonomy §5.2 への忠実な実装 (gate letter は taxonomy 定義に一致):
+#   gate A  MUST 部品存在     : §3 MUST 部品の S5 凍結 required-existence 集合を各 1 個以上 (data-component)
+#   gate B  register 整合     : deck-band family ≥1 + dense系 ≥1 + requirement-type-color-tokens + prefers-color-scheme 両モード
+#   gate C  RTM 完全性        : 孤立要件 (出所なし) =0 かつ 未検証要件 (受入なし) =0 (RTM 集合一致は verify-fab が担保)
+#   gate D  要件 ID 健全性    : 一意 data-req-id (重複0) + 全要件行に priority-badge + 検証手法 (T/A/I/D)
+#   gate E  用語被覆          : term-inline (plain-language-term-inline) が glossary から正確に派生 = verify-fab §9 が担保
+#   gate F  render 健全性     : ★S5.3 (folio-vhy.3) で実装予定 = 本 floor では SKIP (overclaim しない)
+#   gate G  内容完全性(no-TBD): MUST 部品の必須スロット非空 (verify-fab --artifact) + placeholder トークン (TBD/未定 等) =0
+#   gate H  fidelity meta     : fidelity-sync-meta の 3 項目が *非空白* で埋まる
+#   visual-first              : 各章 (footer 除く) に非 prose 部品が ≥1 (字だけの章 =0)
+#
+# ★floor 通過しても GREEN を宣言しない: ceiling=PENDING を返す (taxonomy §5.1「floor 単独 GREEN 禁止」)。
+#   GREEN ⟺ (floor 全通過) AND (ceiling 合格)。 ceiling = persona-walk-srs + fidelity-srs (S5.2)。
+#   exit 0 は「floor PASS」を意味し「GREEN」ではない (caller は exit 0 を GREEN に流用してはならない)。
+#
+# usage: verify-srs.sh <contract.yaml> <generated.html>
+# exit:  0 = floor PASS (ceiling PENDING) / 1 = floor FAIL / 2 = tool error
+
+set -uo pipefail
+shopt -u patsub_replacement 2>/dev/null || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VFAB="$SCRIPT_DIR/verify-fabrication-free.sh"
+CONTRACT="${1:?usage: verify-srs.sh <contract.yaml> <generated.html>}"
+HTML="${2:?usage: verify-srs.sh <contract.yaml> <generated.html>}"
+[[ -f "$CONTRACT" && -f "$HTML" ]] || { echo "verify-srs: input not found" >&2; exit 2; }
+[[ -f "$VFAB" ]] || { echo "verify-srs: verify-fabrication-free.sh not found" >&2; exit 2; }
+command -v yq >/dev/null || { echo "verify-srs: yq required" >&2; exit 2; }
+
+BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
+sed '/<style>/,/<\/style>/d' "$HTML" > "$BODY"        # body-only (CSS セレクタ混入回避)
+q() { yq -r "$1" "$CONTRACT"; }
+fail=0
+chk() { if [[ "$2" == "$3" ]]; then printf '  [OK]   %-50s %s\n' "$1" "$2"; else printf '  [FAIL] %-50s expected %s, got %s\n' "$1" "$2" "$3"; fail=1; fi; }
+has() { local c; c="$(grep -c "data-component=\"$1\"" "$BODY")"; [[ "$c" -ge 1 ]] && echo 1 || echo 0; }
+
+echo "=========================================================================="
+echo "folio verify-srs — 生成 SRS プレゼン floor (taxonomy §5.2 gate A-H + visual-first)"
+echo "  html:     $HTML"
+echo "  contract: $CONTRACT"
+echo "=========================================================================="
+echo "--- 構造証明 (行数=contract導出 / gate E 用語被覆=term-inline / RTM 集合一致 / prose 充填) = verify-fabrication-free --artifact ---"
+if bash "$VFAB" --artifact "$CONTRACT" "$HTML"; then :; else fail=1; fi
+
+echo
+echo "--- gate A: MUST 部品存在 (S5 凍結 required-existence 集合・各 ≥1) ---"
+# 凍結集合 = この generator が *完全な SRS contract* に対し決定的に出力する MUST 部品 (taxonomy §3 MUST 行のうち assembler 出力分)。
+# 条件付き MUST (interface-spec-table / ui-spec-block 等) と未出力 MUST (revision-history-table 等) は本集合に含めない (MUST-when-applicable)。
+GATE_A_MUST=(doc-cover-band requirement-type-color-tokens chapter-deck-band section-lead-callout
+  scope-summary-panel actor-stakeholder-table source-trace-origin requirement-matrix-table
+  ears-requirement-row priority-badge nfr-hero-metrics nfr-metrics-table acceptance-criteria-checklist
+  rtm-collapse constraint-callout glossary-term-table fidelity-sync-meta)
+for comp in "${GATE_A_MUST[@]}"; do chk "gate A: $comp 存在" 1 "$(has "$comp")"; done
+
+echo
+echo "--- gate B: register 整合 ---"
+chk "gate B: deck-band family (chapter-deck-band) ≥1" 1 "$(has chapter-deck-band)"
+# dense 系 = 高密度 register (表/グリッド) のいずれか
+denseN=0; for d in requirement-matrix-table nfr-metrics-table rtm-grid actor-stakeholder-table; do [[ "$(has "$d")" == 1 ]] && denseN=$((denseN+1)); done
+chk "gate B: dense系部品 ≥1" 1 "$([[ "$denseN" -ge 1 ]] && echo 1 || echo 0)"
+chk "gate B: requirement-type-color-tokens 参照基底 存在" 1 "$(has requirement-type-color-tokens)"
+# dark media 定義 (light=既定)。 CSS コメント擬装 (/* prefers-color-scheme: dark */) を弾くため、 文字列でなく
+# @media 規則ブロックの存在を要求 (@media ... prefers-color-scheme: dark)。 BODY は <style> 除去済ゆえ HTML 全体を見る。
+chk "gate B: @media(prefers-color-scheme:dark) 規則 (light=既定)" 1 "$(grep -qzP '@media[^{]*prefers-color-scheme:\s*dark' "$HTML" && echo 1 || echo 0)"
+
+echo
+echo "--- gate C: RTM 完全性 (孤立0 / 未検証0) ---"
+chk "gate C: 孤立要件 (出所なし) == 0" 0 "$(q '[(.requirements + .nfr)[] | select((.trace.backward | length)==0)] | length')"
+chk "gate C: 未検証要件 (受入なし) == 0" 0 "$(q '[(.requirements + .nfr)[] | select((.trace.acceptance | length)==0)] | length')"
+
+echo
+echo "--- gate D: 要件 ID 健全性 (一意 data-req-id + priority-badge + T/A/I/D) ---"
+reqrows="$(grep -c 'data-component="ears-requirement-row"' "$BODY")"
+mapfile -t REQIDS < <(grep -oE 'data-req-id="[^"]*"' "$BODY" | sed 's/.*data-req-id="//; s/"$//')
+chk "gate D: data-req-id 数 == 要件行数" "$reqrows" "${#REQIDS[@]}"
+chk "gate D: data-req-id 重複 == 0" 0 "$(printf '%s\n' "${REQIDS[@]}" | sort | uniq -d | grep -c .)"
+chk "gate D: 全要件行に priority-badge" "$reqrows" "$(grep 'data-component="ears-requirement-row"' "$BODY" | grep -c 'data-component="priority-badge"')"
+chk "gate D: 全要件行に検証手法 (T/A/I/D) span" "$reqrows" "$(grep 'data-component="ears-requirement-row"' "$BODY" | grep -cE 'class="vmeth">[TAID]<')"
+chk "gate D: contract 全要件/NFR の vmethod ∈ {T,A,I,D}" 0 "$(q '[(.requirements + .nfr)[] | select((.vmethod // "") | test("^[TAID]$") | not)] | length')"
+# 可視 fid span == 同行 data-req-id (手編集での可視 ID 捏造を検出)
+chk "gate D: 可視 fid == data-req-id (id 乖離なし)" 0 "$(perl -ne 'while(/data-component="ears-requirement-row" data-req-id="([^"]*)".*?<span class="fid">([^<]*)<\/span>/g){ print "x\n" if $1 ne $2; }' "$BODY" | wc -l | tr -d ' ')"
+
+echo
+echo "--- gate G: 内容完全性 (no-TBD placeholder)。 prose 全充填は --artifact 済 ---"
+# placeholder トークンを *本文全体* で語境界マッチ (セル先頭に限らず prose 中段の TBD も捕捉)。
+# 語境界 = 前後が letter/number (\p{L}\p{N}) でない位置。 これで「TODOリスト管理」「未定義」「XXXL」等の語内包含は
+# 誤検出せず、 任意の句読点・空白・要素境界に接する placeholder のみ捕捉する (allowlist でなく negative 境界 = 網羅的)。
+ghits="$(perl -CSD -Mutf8 -0777 -ne 'my $c = () = /(?<![\p{L}\p{N}])(TBD|TODO|FIXME|TBA|TBC|XXX|未定|未記入|要追記|要確認)(?![\p{L}\p{N}])/gi; print $c;' < "$BODY")"
+chk "gate G: placeholder トークン (TBD/未定 等・語境界) == 0" 0 "$ghits"
+
+echo
+echo "--- gate H: fidelity-sync-meta 3 項目が非空白 ---"
+chk "gate H: sync-meta 部品 存在" 1 "$(has fidelity-sync-meta)"
+# -Mutf8: スクリプト内の日本語リテラルを char 化 (-CSD で decode 済み STDIN と一致させる、 byte/char 不一致回避)。
+# 空白除去は ASCII空白 + 全角空白(U+3000) + zero-width 系(U+200B-D, U+FEFF) を含める (不可視文字での空通過を塞ぐ)。
+synh="$(perl -CSD -Mutf8 -ne 'while(/(機械SSoT|生成|検証状態): <b>(.*?)<\/b>/g){ my $v=$2; $v=~s/[\s\x{3000}\x{200b}\x{200c}\x{200d}\x{feff}]//g; print "1\n" if length $v; }' < "$BODY" | wc -l | tr -d ' ')"
+chk "gate H: 3 項目が非空白で充填 (機械SSoT/生成/検証状態)" 3 "$synh"
+
+echo
+echo "--- visual-first: 各章 (footer 除く) に非 prose 部品 ≥1 ---"
+vf="$(perl -0777 -ne '
+  s{<footer\b.*?</footer>}{}gs;   # footer (fidelity-sync-meta) を章セグメントから除外
+  my @seg = split(/(?=<section data-component="chapter-deck-band")/, $_); shift @seg;
+  my $bad=0;
+  for my $s (@seg) {
+    my $has=0;
+    while ($s =~ /data-component="([^"]+)"/g) {
+      my $c=$1; next if $c eq "chapter-deck-band" || $c eq "plain-language-term-inline" || $c eq "priority-badge";
+      $has=1; last;
+    }
+    $bad++ unless $has;
+  }
+  print $bad;
+' "$BODY")"
+chk "visual-first: 字だけの章 (非prose部品なし) == 0" 0 "$vf"
+
+echo
+echo "--- gate F: render 健全性 ---"
+echo "  [SKIP] gate F (playwright render-gate) は S5.3 (folio-vhy.3) で実装予定 — 本 floor では未検査"
+
+echo
+echo "=========================================================================="
+if [[ "$fail" -eq 0 ]]; then
+  echo "RESULT: floor PASS (gate A-E,G,H + visual-first) — ただし CEILING=PENDING (*GREEN ではない*)"
+  echo "  gate F (render) は S5.3 で実装予定 / ceiling (persona-walk-srs + fidelity-srs) は S5.2 で配線予定。"
+  echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
+  exit 0
+else
+  echo "RESULT: floor FAIL — ceiling 以前に floor が不合格"
+  exit 1
+fi

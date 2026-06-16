@@ -52,8 +52,29 @@ prose.yaml ───────────────────────
 ./inject-prose.sh prose/ec-checkout.prose.yaml asm.html filled.html
 ./verify-fabrication-free.sh --filled prose/ec-checkout.prose.yaml contract/ec-checkout.srs.yaml filled.html  # post-fill: 構造捏造ゼロ + prose 全充填 + 注入忠実
 
-./test-adversarial.sh                                                            # A1-A17: assembler + prose 層 + term-inline 層の fail-closed/FAIL 捕捉を回帰
+# S5: 生成 SRS プレゼンの *成果物 floor* (生成と分離・手編集後も再検証可)。 CLI からも呼べる。
+./verify-srs.sh contract/ec-checkout.srs.yaml filled.html                        # floor PASS → ceiling=PENDING (GREEN でない)
+folio verify-srs filled.html contract/ec-checkout.srs.yaml                       # ← bin/folio 経由 (引数順は <html> <contract>)
+
+./test-adversarial.sh                                                            # A1-A33: assembler + prose + term-inline + verify-srs floor の fail-closed/FAIL 回帰
 ```
+
+## S5 floor: verify-srs (taxonomy §5.2 gate A-H + visual-first)
+
+`verify-srs.sh <contract> <html>` (CLI: `folio verify-srs <html> <contract>`) は生成 SRS プレゼンの **決定的 floor**。
+生成と検証を分離した独立検証 (manifest 不要 = 成果物入力)。 **gate letter は taxonomy §5.2 定義に一致**:
+- **gate A** MUST 部品存在: S5 凍結 required-existence 集合 (assembler が完全 SRS に対し決定的出力する MUST 部品) を各 ≥1。
+- **gate B** register 整合: deck-band ≥1 + dense系 ≥1 + requirement-type-color-tokens + prefers-color-scheme 両モード。
+- **gate C** RTM 完全性: 孤立要件 0 / 未検証要件 0 (集合一致は verify-fab が担保)。
+- **gate D** 要件 ID 健全性: 一意 `data-req-id` + 全要件行に priority-badge + 検証手法 (T/A/I/D)。
+- **gate E** 用語被覆: term-inline が glossary から正確派生 = `verify-fabrication-free --artifact §9` に委譲。
+- **gate F** render 健全性: ★**S5.3 (folio-vhy.3) で実装予定 = 本 floor では SKIP** (overclaim しない)。
+- **gate G** 内容完全性: 必須スロット非空 (--artifact) + placeholder トークン (TBD/未定 等・case-insensitive・日本語含む) =0。
+- **gate H** fidelity meta: fidelity-sync-meta の 3 項目が *非空白* で充填。
+- **visual-first**: 各章 (footer 除く) に非 prose 部品 ≥1。
+- ★**floor 通過でも GREEN を宣言せず `CEILING=PENDING` を返す** (taxonomy §5.1「floor 単独 GREEN 禁止」)。
+  GREEN ⟺ floor 全通過 ∧ ceiling (persona-walk-srs + fidelity-srs) 合格。 **exit 0 は floor PASS であって GREEN ではない**。
+  ceiling 制度化は S5.2。 敵対回帰 A22-A30 が各 gate の fail-closed を固定。
 
 ## 範囲 (S4 リッチ化スライス)
 

@@ -204,8 +204,8 @@ emit_req_table() {
   printf '<div class="tbl-wrap"><table data-component="requirement-matrix-table"><thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする (+ やさしい言い換え + なぜ要る)</th><th>優先/検証</th></tr></thead><tbody>\n'
   while IFS=$'\t' read -r id pat cond resp prio vmeth rsrc; do
       [[ -n "$id" ]] || continue; src_attr=""; [[ -n "$rsrc" && "$rsrc" != "null" ]] && src_attr=" data-source=\"$(esc "$rsrc")\""
-      printf '<tr data-component="ears-requirement-row"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
-        "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(mark_terms "$cond")" "$(mark_terms "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
+      printf '<tr data-component="ears-requirement-row" data-req-id="%s"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s" data-component="priority-badge">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
+        "$(esc "$id")" "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(mark_terms "$cond")" "$(mark_terms "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
     done < <(q '.requirements[] | [.id, .ears.pattern, .ears.condition, .ears.response, .priority, .vmethod, (.rationale_source // "")] | @tsv')
   printf '</tbody></table></div>\n'
 }

@@ -19,10 +19,12 @@ set -uo pipefail
 # esc() の ${v//pat/repl} を bash 5.2+ patsub_replacement が壊す (< → <lt;) ため無効化。
 shopt -u patsub_replacement 2>/dev/null || true
 
-FILLED_MANIFEST=""
-if [[ "${1:-}" == "--filled" ]]; then FILLED_MANIFEST="${2:?--filled requires <manifest.yaml>}"; shift 2; fi
-CONTRACT="${1:?usage: verify-fabrication-free.sh [--filled <manifest>] <contract.yaml> <generated.html>}"
-HTML="${2:?usage: verify-fabrication-free.sh [--filled <manifest>] <contract.yaml> <generated.html>}"
+FILLED_MANIFEST=""; ARTIFACT=""
+# --filled <manifest>: 注入忠実 (生成時)。 --artifact: prose 全充填のみ (manifest 不要、 成果物 floor = verify-srs gate G)。
+if [[ "${1:-}" == "--filled" ]]; then FILLED_MANIFEST="${2:?--filled requires <manifest.yaml>}"; shift 2
+elif [[ "${1:-}" == "--artifact" ]]; then ARTIFACT=1; shift; fi
+CONTRACT="${1:?usage: verify-fabrication-free.sh [--filled <manifest> | --artifact] <contract.yaml> <generated.html>}"
+HTML="${2:?usage: verify-fabrication-free.sh [--filled <manifest> | --artifact] <contract.yaml> <generated.html>}"
 [[ -f "$CONTRACT" && -f "$HTML" ]] || { echo "verify: input not found" >&2; exit 2; }
 [[ -z "$FILLED_MANIFEST" || -f "$FILLED_MANIFEST" ]] || { echo "verify: manifest not found: $FILLED_MANIFEST" >&2; exit 2; }
 
@@ -114,7 +116,10 @@ filled="$(perl -0777 -ne '
 ' "$BODY")"
 if [[ "$slots" -gt 0 ]]; then printf '  [OK]   %-44s %s\n' "prose スロット存在" "$slots"; else printf '  [FAIL] %-44s\n' "prose スロットが無い"; fail=1; fi
 
-if [[ -z "$FILLED_MANIFEST" ]]; then
+if [[ -n "$ARTIFACT" ]]; then
+  # artifact (成果物 floor): manifest 無しで prose 全充填のみ検査 (gate G の prose 部分)
+  chk "prose スロットは全て充填 (空=0)" "$slots" "$filled"
+elif [[ -z "$FILLED_MANIFEST" ]]; then
   # pre-fill: assembler が prose を一切捏造しないことの証明 (全スロット空)
   chk "prose スロットは全て空 (filled=0)" "0" "$filled"
 else
@@ -180,7 +185,10 @@ act_marks="$(printf '%s\n' "${MARKS[@]}" | grep . | sed -E 's/.*data-term="([^"]
 set_eq "term-inline 被覆 (マーク == markable 出現 glossary 語、 同一語境界)" "$exp_marks" "$act_marks"
 
 echo
-if [[ -n "$FILLED_MANIFEST" ]]; then
+if [[ -n "$ARTIFACT" ]]; then
+  if [[ "$fail" -eq 0 ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + term-inline 派生 + prose 全充填 = 成果物 floor の構造部)"; exit 0
+  else echo "RESULT: FAIL"; exit 1; fi
+elif [[ -n "$FILLED_MANIFEST" ]]; then
   if [[ "$fail" -eq 0 ]]; then echo "RESULT: filled PASS (構造は contract から完全導出・捏造 0 + prose 全充填・注入忠実 = 改竄/脱落/out-of-band なし)"; exit 0
   else echo "RESULT: FAIL"; exit 1; fi
 else

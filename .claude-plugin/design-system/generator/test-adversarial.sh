@@ -152,5 +152,53 @@ bash "$ASM" "$TMP/asc.yaml" "$TMP/asc.html" 2>/dev/null
 expect_verify_pass "A21b embedded ascii でも verify 偽FAIL なし (coverage parity)" "$TMP/asc.yaml" "$TMP/asc.html"
 
 echo
+echo "verify-srs floor (taxonomy §5 gate A-H + visual-first) の fail-closed:"
+SRS="$SCRIPT_DIR/verify-srs.sh"
+expect_srs_pass() { if bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (floor FAIL)"; fi; }
+expect_srs_fail() { if bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ng "$1 (floor PASS した)"; else ok "$1"; fi; }
+# 健全な充填済み artifact を 1 本
+bash "$INJ" "$BASE_PROSE" "$TMP/good.html" "$TMP/art.html" >/dev/null 2>&1
+
+# A22. 健全 artifact は floor PASS (ceiling PENDING = exit 0)
+expect_srs_pass "A22 健全 artifact は floor PASS (ceiling PENDING)" "$BASE" "$TMP/art.html"
+# A23. 空 prose スロット → gate G (prose 充填) で FAIL
+sed 's#\(data-slot-id="cover-summary">\)[^<]*#\1#' "$TMP/art.html" > "$TMP/empty.html"
+expect_srs_fail "A23 空 prose スロットを gate G が捕捉" "$BASE" "$TMP/empty.html"
+# A24. TBD/TODO マーカー → gate G
+sed 's#<td class="cond">#<td class="cond">TODO #' "$TMP/art.html" > "$TMP/tbd.html"
+expect_srs_fail "A24 TBD/TODO マーカーを gate G が捕捉" "$BASE" "$TMP/tbd.html"
+# A25. 孤立要件 (backward 空) → gate C-D
+cp "$BASE" "$TMP/orphreq.yaml"; yq -i '.requirements[0].trace.backward = []' "$TMP/orphreq.yaml"
+bash "$ASM" "$TMP/orphreq.yaml" "$TMP/oa.html" 2>/dev/null; bash "$INJ" "$BASE_PROSE" "$TMP/oa.html" "$TMP/of.html" 2>/dev/null
+expect_srs_fail "A25 孤立要件 (出所なし) を gate C-D が捕捉" "$TMP/orphreq.yaml" "$TMP/of.html"
+# A26. sync-meta 欠落 → gate H
+sed 's#data-component="fidelity-sync-meta"#data-component="zzz"#' "$TMP/art.html" > "$TMP/nometa.html"
+expect_srs_fail "A26 fidelity-sync-meta 欠落を gate H が捕捉" "$BASE" "$TMP/nometa.html"
+# A27. gate A 凍結集合の MUST 部品欠落 (actor-stakeholder-table) → gate A
+sed 's#data-component="actor-stakeholder-table"#data-component="zzz"#' "$TMP/art.html" > "$TMP/noactor.html"
+expect_srs_fail "A27 凍結 MUST 部品 (actor-stakeholder-table) 欠落を gate A が捕捉" "$BASE" "$TMP/noactor.html"
+# A28. gate H 値の空白化 (<b>  </b>) → gate H 非空白要求
+sed 's#機械SSoT: <b>[^<]*</b>#機械SSoT: <b>  </b>#' "$TMP/art.html" > "$TMP/wsmeta.html"
+expect_srs_fail "A28 sync-meta 値の空白化を gate H が捕捉" "$BASE" "$TMP/wsmeta.html"
+# A29. gate G 日本語 placeholder (セルまるごと 未定) → gate G
+sed 's#<td class="cond">[^<]*#<td class="cond">未定#' "$TMP/art.html" > "$TMP/jph.html"
+expect_srs_fail "A29 日本語 placeholder (未定) セルを gate G が捕捉" "$BASE" "$TMP/jph.html"
+# A30. gate D data-req-id 重複 → gate D
+sed '0,/data-req-id="FR2"/{s/data-req-id="FR2"/data-req-id="FR1"/}' "$TMP/art.html" > "$TMP/dupid.html"
+expect_srs_fail "A30 data-req-id 重複を gate D が捕捉" "$BASE" "$TMP/dupid.html"
+# A31. gate G prose *中段* の placeholder (語境界) → gate G (anchor 撤廃の回帰)
+sed 's#\(data-slot-id="cover-summary">\)[^<]*#\1この約束は TBD のため後日確定#' "$TMP/art.html" > "$TMP/midtbd.html"
+expect_srs_fail "A31 prose 中段の TBD (語境界) を gate G が捕捉" "$BASE" "$TMP/midtbd.html"
+# A31b. 語内包含 (TODOリスト管理) は誤検出しない (false-FAIL 回帰)
+sed 's#\(data-slot-id="cover-summary">\)[^<]*#\1注文のTODOリスト管理を扱う仕組み#' "$TMP/art.html" > "$TMP/notodo.html"
+expect_srs_pass "A31b 語内包含 (TODOリスト) は gate G 誤検出しない" "$BASE" "$TMP/notodo.html"
+# A32. gate D 可視 fid 捏造 (data-req-id と乖離) → gate D
+sed '0,/<span class="fid">FR1<\/span>/{s#<span class="fid">FR1</span>#<span class="fid">FR-NISE</span>#}' "$TMP/art.html" > "$TMP/fidfake.html"
+expect_srs_fail "A32 可視 fid 捏造 (data-req-id 乖離) を gate D が捕捉" "$BASE" "$TMP/fidfake.html"
+# A33. gate B 実 dark media をコメント擬装に置換 → gate B (@media 規則ブロックを要求・文字列擬装を弾く)
+perl -0777 -pe 's!\@media\s*\([^)]*prefers-color-scheme:\s*dark[^)]*\)\s*\{!/* prefers-color-scheme: dark is a TODO comment */ .x {!gs' "$TMP/art.html" > "$TMP/darkfake.html"
+expect_srs_fail "A33 dark media のコメント擬装を gate B が捕捉" "$BASE" "$TMP/darkfake.html"
+
+echo
 echo "PASS=$pass FAIL=$fail"
 [[ "$fail" -eq 0 ]] && { echo "RESULT: 全攻撃を fail-closed で捕捉"; exit 0; } || { echo "RESULT: 取りこぼしあり"; exit 1; }
