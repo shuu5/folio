@@ -53,10 +53,14 @@ prose.yaml ───────────────────────
 ./verify-fabrication-free.sh --filled prose/ec-checkout.prose.yaml contract/ec-checkout.srs.yaml filled.html  # post-fill: 構造捏造ゼロ + prose 全充填 + 注入忠実
 
 # S5: 生成 SRS プレゼンの *成果物 floor* (生成と分離・手編集後も再検証可)。 CLI からも呼べる。
-./verify-srs.sh contract/ec-checkout.srs.yaml filled.html                        # floor PASS → ceiling=PENDING (GREEN でない)
+./verify-srs.sh contract/ec-checkout.srs.yaml filled.html                        # gate A-F floor (renderer 在で gate F 自動実行) → ceiling=PENDING
 folio verify-srs filled.html contract/ec-checkout.srs.yaml                       # ← bin/folio 経由 (引数順は <html> <contract>)
 
-./test-adversarial.sh                                                            # A1-A33: assembler + prose + term-inline + verify-srs floor の fail-closed/FAIL 回帰
+# gate F (render 健全性) を単体で。 host は pip 不在ゆえ uv 経由 (CI は pip playwright)。
+uv run --with playwright==1.60.0 python render-gate-srs.py filled.html           # 実 SRS を light/dark × 3 viewport で検査
+uv run --with playwright==1.60.0 python render-gate-srs.py --selftest            # detector の検出力を fixture で自己検証
+
+./test-adversarial.sh                                                            # A1-A34: assembler + prose + term-inline + verify-srs floor + gate F selftest の回帰
 ```
 
 ## S5 floor: verify-srs (taxonomy §5.2 gate A-H + visual-first)
@@ -68,13 +72,13 @@ folio verify-srs filled.html contract/ec-checkout.srs.yaml                      
 - **gate C** RTM 完全性: 孤立要件 0 / 未検証要件 0 (集合一致は verify-fab が担保)。
 - **gate D** 要件 ID 健全性: 一意 `data-req-id` + 全要件行に priority-badge + 検証手法 (T/A/I/D)。
 - **gate E** 用語被覆: term-inline が glossary から正確派生 = `verify-fabrication-free --artifact §9` に委譲。
-- **gate F** render 健全性: ★**S5.3 (folio-vhy.3) で実装予定 = 本 floor では SKIP** (overclaim しない)。
+- **gate F** render 健全性: `render-gate-srs.py` (playwright・**light/dark × 3 viewport**) で **low-contrast (WCAG AA) / horizontal-overflow / component-overlap** を検出 (S3 の dark-contrast 崩壊型を gate 化)。 幾何定数は `tests/render-gate/probe.js` (ADR-0037) の値を複製 (drift は A35 が検知)。 **重い playwright ゆえ renderer 在環境で実行・不在は honest SKIP** (PASS と詐称せず floor 不完全と明示)。 `SRS_SKIP_RENDER=1` で bash-only 高速 floor に。
 - **gate G** 内容完全性: 必須スロット非空 (--artifact) + placeholder トークン (TBD/未定 等・case-insensitive・日本語含む) =0。
 - **gate H** fidelity meta: fidelity-sync-meta の 3 項目が *非空白* で充填。
 - **visual-first**: 各章 (footer 除く) に非 prose 部品 ≥1。
 - ★**floor 通過でも GREEN を宣言せず `CEILING=PENDING` を返す** (taxonomy §5.1「floor 単独 GREEN 禁止」)。
   GREEN ⟺ floor 全通過 ∧ ceiling (persona-walk-srs + fidelity-srs) 合格。 **exit 0 は floor PASS であって GREEN ではない**。
-  ceiling 制度化は S5.2。 敵対回帰 A22-A30 が各 gate の fail-closed を固定。
+  ceiling は **S5.2 で制度化済** (`agents/persona-walk-srs` = gate I / `agents/fidelity-srs` = gate J)。 敵対回帰 A22-A33 が各 bash gate の fail-closed を、 A34 (= `render-gate-srs.py --selftest`) が gate F detector の検出力を固定。
 
 ## 範囲 (S4 リッチ化スライス)
 

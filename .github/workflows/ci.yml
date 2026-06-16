@@ -125,6 +125,28 @@ jobs:
       - name: render-safety ceiling (全 corpus × 3 viewport の幾何 sweep)
         run: python3 tests/render-gate/check.py --screenshot-dir "$RUNNER_TEMP/render-shots"
 
+      # ---- SRS render-gate (gate F、 taxonomy §5.2) — 生成 SRS プレゼンの low-contrast /
+      #      horizontal-overflow / component-overlap を light/dark × 3 viewport で検出。 既存 folio
+      #      render-gate (mermaid 専用) とは別系統。 detector は probe.js の定数 SSoT を流用。 ----
+      - name: SRS render-gate self-test (detector 検出力の floor-proof)
+        run: python3 .claude-plugin/design-system/generator/render-gate-srs.py --selftest
+
+      # 生成 SRS dogfood corpus を build (assemble → inject) し gate F をかける。 srs.css の
+      # contrast 退行 (dark accent への白文字崩れ等) を CI で blocking 捕捉する。 yq は SRS build の
+      # 依存ゆえ verify job と同 version を install (jq/perl は ubuntu-latest 標準)。
+      - name: Install yq (SRS build 依存、 mikefarah v4.x)
+        run: |
+          YQ_VERSION=v4.53.2
+          sudo wget -qO /usr/local/bin/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          sudo chmod +x /usr/local/bin/yq
+      - name: SRS gate F (dogfood artifact を build して render-gate にかける)
+        run: |
+          gen=.claude-plugin/design-system/generator
+          bash "$gen/assemble.sh"     "$gen/contract/ec-checkout.srs.yaml" "$RUNNER_TEMP/srs-asm.html"
+          bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
+          python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
+
       # 全 page × viewport の full-page screenshot を artifact 保存 (ADR-0039 §2.8: 人間 review の
       # 補助に充てるのみで golden 比較はしない — pixel golden は brittle)。 FAIL 時こそ目視材料が
       # 要るため always()。 sweep 前に selftest で落ちた場合は dir 不在 → ignore で空 upload を許容。

@@ -154,8 +154,10 @@ expect_verify_pass "A21b embedded ascii でも verify 偽FAIL なし (coverage p
 echo
 echo "verify-srs floor (taxonomy §5 gate A-H + visual-first) の fail-closed:"
 SRS="$SCRIPT_DIR/verify-srs.sh"
-expect_srs_pass() { if bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (floor FAIL)"; fi; }
-expect_srs_fail() { if bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ng "$1 (floor PASS した)"; else ok "$1"; fi; }
+# gate A-E,G,H (bash) の fail-closed を検査する arm ゆえ重い gate F (playwright) は SRS_SKIP_RENDER で外す
+# (gate F の回帰は末尾の render-gate-srs --selftest arm が別途担う)。
+expect_srs_pass() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (floor FAIL)"; fi; }
+expect_srs_fail() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ng "$1 (floor PASS した)"; else ok "$1"; fi; }
 # 健全な充填済み artifact を 1 本
 bash "$INJ" "$BASE_PROSE" "$TMP/good.html" "$TMP/art.html" >/dev/null 2>&1
 
@@ -200,5 +202,45 @@ perl -0777 -pe 's!\@media\s*\([^)]*prefers-color-scheme:\s*dark[^)]*\)\s*\{!/* p
 expect_srs_fail "A33 dark media のコメント擬装を gate B が捕捉" "$BASE" "$TMP/darkfake.html"
 
 echo
+echo "gate F (render-gate-srs) detector の検出力 (selftest):"
+# A34. gate F detector — low-contrast/overflow/overlap × light/dark の kind 完全一致発火を fixture で検証。
+# 重い playwright ゆえ renderer 在環境でのみ実行 (CI=pip / host=uv)。 不在なら honest SKIP (count しない)。
+RGRUN=""
+if python3 -c "import playwright" >/dev/null 2>&1; then RGRUN="python3"
+elif command -v uv >/dev/null 2>&1; then RGRUN="uv run --with playwright==1.60.0 python"
+elif [[ -x "$HOME/.local/bin/uv" ]]; then RGRUN="$HOME/.local/bin/uv run --with playwright==1.60.0 python"
+fi
+gateF_skipped=0
+if [[ -z "$RGRUN" ]]; then
+  echo "  [SKIP] A34 gate F detector selftest (playwright renderer 不在 — CI/uv で実行)"; gateF_skipped=1
+elif $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --selftest >/dev/null 2>&1; then
+  ok "A34 gate F detector selftest (low-contrast/overflow/overlap × light/dark) 全 PASS"
+else
+  ng "A34 gate F detector selftest が FAIL"
+fi
+
+# A35. probe-srs.js の幾何定数が probe.js (ADR-0037 SSoT) と一致するか (literal 複製の drift 検知)。
+REF_PROBE="$SCRIPT_DIR/../../../tests/render-gate/probe.js"
+if [[ -f "$REF_PROBE" ]]; then
+  ref_htol=$(grep -oE 'H_OVERFLOW_TOL = [0-9.]+' "$REF_PROBE" | grep -oE '[0-9.]+$')
+  ref_frac=$(grep -oE 'NAV_OVERLAP_FRAC = [0-9.]+' "$REF_PROBE" | grep -oE '[0-9.]+$')
+  srs_htol=$(grep -oE 'H_OVERFLOW_TOL = [0-9.]+' "$SCRIPT_DIR/probe-srs.js" | grep -oE '[0-9.]+$')
+  srs_frac=$(grep -oE 'OVERLAP_FRAC = [0-9.]+' "$SCRIPT_DIR/probe-srs.js" | head -1 | grep -oE '[0-9.]+$')
+  if [[ -n "$ref_htol" && "$ref_htol" == "$srs_htol" && "$ref_frac" == "$srs_frac" ]]; then
+    ok "A35 probe-srs.js の幾何定数が probe.js と一致 (H_OVERFLOW_TOL=$srs_htol / overlap-frac=$srs_frac)"
+  else
+    ng "A35 幾何定数 drift (probe.js htol=$ref_htol frac=$ref_frac / srs htol=$srs_htol frac=$srs_frac)"
+  fi
+else
+  echo "  [SKIP] A35 probe.js 不在で定数 drift 未検査"
+fi
+
+echo
 echo "PASS=$pass FAIL=$fail"
-[[ "$fail" -eq 0 ]] && { echo "RESULT: 全攻撃を fail-closed で捕捉"; exit 0; } || { echo "RESULT: 取りこぼしあり"; exit 1; }
+if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi
+if [[ "$gateF_skipped" -eq 1 ]]; then
+  echo "RESULT: bash 攻撃を fail-closed で捕捉 (ただし gate F selftest=A34 は renderer 不在で未検査・CI/uv で要実行)"
+else
+  echo "RESULT: 全攻撃を fail-closed で捕捉"
+fi
+exit 0

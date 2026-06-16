@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: low-contrast (dark のみ)</title>
+<style>
+  /* S3 で手検出した崩壊型: 背景トークンは dark override を持つが、 text トークンの dark override を
+     "漏らした" 結果、 light では健全 (#222 on #fff ≈ 14:1) だが dark で破綻 (#222 on #111 ≈ 1.1:1)。
+     dark を実際に emulate しないと捕れない = gate F が light/dark 直積で回る理由の実証 fixture。 */
+  :root{ --bg:#ffffff; --fg:#222222; }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#111111; }   /* ← --fg の dark override を意図的に欠落 */
+  }
+  body{ margin:0; padding:24px; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<section data-component="scope-summary-panel">
+  <p>この段落は light では読めるが、 dark 背景では文字色が暗いまま残り読めなくなる。</p>
+</section>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: low-contrast (light)</title>
+<style>
+  /* light で低コントラスト (#aaa on #fff ≈ 2.3:1 < AA 4.5)。 contrast arm の基本検出を固定する。 */
+  body{ margin:0; padding:24px; background:#ffffff; color:#aaaaaa; font:16px/1.6 system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<section data-component="scope-summary-panel">
+  <p>この段落は薄い灰色で、 白背景に対しコントラストが不足している。</p>
+</section>
+</body>
+</html>

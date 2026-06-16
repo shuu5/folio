@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: clean</title>
+<style>
+  /* light/dark 両方で全 text が WCAG AA を満たす clean fixture。 token に dark override を備える。 */
+  :root{ --bg:#ffffff; --fg:#111418; --badge-bg:#15324a; --badge-fg:#ffffff; }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#0d171e; --fg:#e8eef2; --badge-bg:#7db8e8; --badge-fg:#08131a; }
+  }
+  body{ margin:0; padding:24px; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, sans-serif; }
+  h1{ font-size:26px; }
+  .badge{ display:inline-block; padding:4px 10px; border-radius:6px; background:var(--badge-bg); color:var(--badge-fg); font-weight:700; }
+  section{ margin:16px 0; }
+</style>
+</head>
+<body>
+<h1 data-component="doc-cover-band">要件定義書サンプル（健全）</h1>
+<section data-component="scope-summary-panel">
+  <p>このシステムは注文を受け付け、 在庫を確認し、 支払いを処理する。 <span class="badge">必須</span></p>
+</section>
+<section data-component="requirement-matrix-table">
+  <p>要件 FR1: 利用者が商品を選ぶと、 システムは在庫数を表示しなければならない。</p>
+</section>
+</body>
+</html>

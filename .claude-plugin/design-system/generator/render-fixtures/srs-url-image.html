@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: url() image background (skip 経路)</title>
+<style>
+  /* url() image 背景は停止色を抽出できず contrast 評価を skip し件数を disclose する (best-effort tier)。
+     その skip 経路が live であることを selftest で pin する。 別に通常 text を 1 つ置き textChecked>0 を
+     満たし (= fail-closed の broken-render と取り違えない)、 image 上 text のみが gradientSkipped に乗る。 */
+  body{ margin:0; padding:0; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  .band{ padding:32px; color:#ffffff;
+    background:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="%23cccccc"/></svg>'); }
+  .plain{ padding:16px; background:#ffffff; }
+</style>
+</head>
+<body>
+<p class="plain" data-component="scope-summary-panel">通常背景の本文 (黒字白背景・contrast 検査対象)。</p>
+<section class="band" data-component="doc-cover-band">
+  <p>画像背景に乗った白文字 (停止色抽出不能ゆえ contrast 評価対象外 = gradientSkipped)。</p>
+</section>
+</body>
+</html>

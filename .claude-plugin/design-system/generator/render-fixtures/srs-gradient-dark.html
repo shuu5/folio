@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: gradient dark-only low-contrast</title>
+<style>
+  /* gradient 経路の dark emulation を pin する fixture: light では暗い勾配で白文字が読めるが、
+     dark で勾配停止色だけ明色化し文字色を据置く崩れ (gradient×dark の交差を selftest で証明)。 */
+  body{ margin:0; }
+  .cover{ padding:32px; color:#ffffff;
+    background:linear-gradient(135deg,#0c1f30 0%,#173a57 100%); }
+  @media (prefers-color-scheme: dark){
+    .cover{ background:linear-gradient(135deg,#cfe0f0 0%,#e8f0f8 100%); } /* ← 文字色は #fff のまま */
+  }
+</style>
+</head>
+<body>
+<section class="cover" data-component="doc-cover-band">
+  <h1>白文字が dark で明色グラデーションに乗り読めなくなる</h1>
+  <p>light では暗い紺で読めるが、 dark では背景が明るくなり白文字が埋もれる。</p>
+</section>
+</body>
+</html>

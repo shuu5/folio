@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: gradient clean (no false-positive)</title>
+<style>
+  /* 白文字を *暗い* gradient に乗せた健全な hero。 半透明白オーバーレイがあっても暗色のまま合成され
+     白文字が読める。 detector の gradient 合成が暗勾配を誤検出 (白on白等) しないことを固定する
+     (複数レイヤー合成の回帰ガード)。 */
+  body{ margin:0; }
+  .cover{ padding:32px; color:#ffffff;
+    background:
+      radial-gradient(800px 400px at 88% -10%, rgba(255,255,255,.08), transparent 60%),
+      linear-gradient(135deg,#0c1f30 0%,#143049 48%,#173a57 100%); }
+</style>
+</head>
+<body>
+<section class="cover" data-component="doc-cover-band">
+  <h1>白文字が暗い紺のグラデーションに乗り、 十分に読める</h1>
+  <p>薄い白のハイライトが重なっても暗色のままで、 コントラストは保たれる。</p>
+</section>
+</body>
+</html>

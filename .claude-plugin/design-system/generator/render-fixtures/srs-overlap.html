@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: component-overlap</title>
+<style>
+  /* 2 つの data-component card を absolute で重ねる → component-overlap。 互いに包含関係でなく
+     矩形交差が OVERLAP_FRAC を超える。 text は黒字白背景で contrast arm を黙らせる。 */
+  body{ margin:0; padding:0; background:#ffffff; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  .stack{ position:relative; height:120px; }
+  .card{ position:absolute; width:240px; height:90px; padding:12px; box-sizing:border-box;
+         background:#ffffff; color:#111418; border:1px solid #111418; }
+  .c1{ top:0; left:0; }
+  .c2{ top:24px; left:24px; }   /* c1 に大きく被さる */
+</style>
+</head>
+<body>
+<section class="stack" data-component="scope-summary-panel">
+  <div class="card c1" data-component="constraint-callout">制約カード1のテキスト。</div>
+  <div class="card c2" data-component="actor-stakeholder-table">関係者カード2のテキスト。</div>
+</section>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: horizontal-overflow</title>
+<style>
+  /* 600px 固定幅要素。 375 viewport では document を溢れ横スクロール発生 → horizontal-overflow。
+     1280 では溢れず clean = viewport plumbing の証明。 text は高コントラストで contrast arm を黙らせる。 */
+  body{ margin:0; padding:0; background:#ffffff; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  .wide{ width:600px; padding:16px; background:#ffffff; }
+</style>
+</head>
+<body>
+<section data-component="requirement-matrix-table">
+  <div class="wide">この要素は幅 600px 固定で、 狭い画面では右に溢れて意図しない横スクロールを生む。</div>
+</section>
+</body>
+</html>

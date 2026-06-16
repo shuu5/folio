@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: gradient low-contrast (攻撃クラス)</title>
+<style>
+  /* 白文字を *薄い* gradient に乗せた崩れ (ceiling が実証した攻撃: cover 勾配を light 化すると
+     白文字が判読不能になるが、 gradient skip だと素通りする型)。 detector が gradient 停止色を
+     worst-case 評価し、 これを low-contrast で捕捉することを固定する。 */
+  body{ margin:0; }
+  .cover{ padding:32px; color:#ffffff;
+    background:linear-gradient(135deg,#fdf0c0 0%,#ffce6e 100%); }
+</style>
+</head>
+<body>
+<section class="cover" data-component="doc-cover-band">
+  <h1>白文字が薄い黄色のグラデーションに乗り、 ほとんど読めない</h1>
+  <p>本文も白で、 薄い背景に対してコントラストが全く足りない。</p>
+</section>
+</body>
+</html>

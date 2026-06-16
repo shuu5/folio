@@ -10,7 +10,9 @@
 #   gate C  RTM 完全性        : 孤立要件 (出所なし) =0 かつ 未検証要件 (受入なし) =0 (RTM 集合一致は verify-fab が担保)
 #   gate D  要件 ID 健全性    : 一意 data-req-id (重複0) + 全要件行に priority-badge + 検証手法 (T/A/I/D)
 #   gate E  用語被覆          : term-inline (plain-language-term-inline) が glossary から正確に派生 = verify-fab §9 が担保
-#   gate F  render 健全性     : ★S5.3 (folio-vhy.3) で実装予定 = 本 floor では SKIP (overclaim しない)
+#   gate F  render 健全性     : render-gate-srs.py (playwright・light/dark × 3 viewport) で low-contrast /
+#                               horizontal-overflow / component-overlap を検出。 renderer 在環境で実行し、
+#                               不在環境では honest SKIP (PASS と詐称しない・floor 不完全と明示)。
 #   gate G  内容完全性(no-TBD): MUST 部品の必須スロット非空 (verify-fab --artifact) + placeholder トークン (TBD/未定 等) =0
 #   gate H  fidelity meta     : fidelity-sync-meta の 3 項目が *非空白* で埋まる
 #   visual-first              : 各章 (footer 除く) に非 prose 部品が ≥1 (字だけの章 =0)
@@ -120,14 +122,40 @@ vf="$(perl -0777 -ne '
 chk "visual-first: 字だけの章 (非prose部品なし) == 0" 0 "$vf"
 
 echo
-echo "--- gate F: render 健全性 ---"
-echo "  [SKIP] gate F (playwright render-gate) は S5.3 (folio-vhy.3) で実装予定 — 本 floor では未検査"
+echo "--- gate F: render 健全性 (playwright: low-contrast / horizontal-overflow / component-overlap) ---"
+# gate F = render-gate-srs.py (light/dark × 3 viewport)。 重い playwright 検査ゆえ renderer 在環境で
+# のみ実行し、 不在環境では honest SKIP (floor 不完全と明示・PASS と詐称しない)。 bash-only の高速 floor
+# が要るとき (敵対スイート等) は SRS_SKIP_RENDER=1 で明示的に外す。 gateF = pass | fail | skip。
+RENDER_GATE="$SCRIPT_DIR/render-gate-srs.py"
+gateF="skip"
+if [[ "${SRS_SKIP_RENDER:-0}" == "1" ]]; then
+  echo "  [SKIP] gate F (SRS_SKIP_RENDER=1 — bash floor のみ。 render-gate-srs.py を別途実行せよ)"
+elif [[ ! -f "$RENDER_GATE" ]]; then
+  echo "  [SKIP] gate F (render-gate-srs.py 不在)"
+else
+  RUNNER=""
+  if python3 -c "import playwright" >/dev/null 2>&1; then RUNNER="python3"
+  elif command -v uv >/dev/null 2>&1; then RUNNER="uv run --with playwright==1.60.0 python"
+  elif [[ -x "$HOME/.local/bin/uv" ]]; then RUNNER="$HOME/.local/bin/uv run --with playwright==1.60.0 python"
+  fi
+  if [[ -z "$RUNNER" ]]; then
+    echo "  [SKIP] gate F (playwright renderer 不在 — CI または uv 環境で render-gate-srs.py を実行)"
+  else
+    echo "  render-gate-srs.py を実行 ($RUNNER)..."
+    if $RUNNER "$SCRIPT_DIR/render-gate-srs.py" "$HTML" 2>&1 | sed 's/^/    /'; then gateF="pass"; else gateF="fail"; fail=1; fi
+  fi
+fi
 
 echo
 echo "=========================================================================="
 if [[ "$fail" -eq 0 ]]; then
-  echo "RESULT: floor PASS (gate A-E,G,H + visual-first) — ただし CEILING=PENDING (*GREEN ではない*)"
-  echo "  gate F (render) は S5.3 で実装予定 / ceiling (persona-walk-srs + fidelity-srs) は S5.2 で配線予定。"
+  if [[ "$gateF" == "pass" ]]; then
+    echo "RESULT: floor PASS (gate A-F + visual-first) — ただし CEILING=PENDING (*GREEN ではない*)"
+  else
+    echo "RESULT: floor PASS (gate A-E,G,H + visual-first / gate F 未実行) — ただし CEILING=PENDING (*GREEN ではない*)"
+    echo "  ※ gate F (render) は未実行 (renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
+  fi
+  echo "  ceiling = persona-walk-srs + fidelity-srs (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
   echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
   exit 0
 else

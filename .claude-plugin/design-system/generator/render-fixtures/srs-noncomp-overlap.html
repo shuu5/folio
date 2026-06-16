@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: non-component overlap</title>
+<style>
+  /* 非 [data-component] の装飾オーバーレイが [data-component] に被さる崩れ。 両側 data-component
+     限定の旧 detector では見逃すが、 片側を広い block 集合に取る修正で捕捉することを固定する
+     (probe.js nav-over-content の『semantic 限定は false-negative』先例に整合)。 */
+  body{ margin:0; padding:0; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  .stack{ position:relative; height:120px; }
+  .comp{ position:absolute; top:0; left:0; width:240px; height:90px; padding:12px; box-sizing:border-box;
+         background:#fff; border:1px solid #111418; }
+  .decoration{ position:absolute; top:24px; left:24px; width:240px; height:90px; padding:12px; box-sizing:border-box;
+               background:#fff; border:1px solid #111418; }  /* ← data-component を持たない装飾 */
+</style>
+</head>
+<body>
+<div class="stack">
+  <section class="comp" data-component="requirement-matrix-table">要件表コンポーネントのテキスト。</section>
+  <div class="decoration">非コンポーネントの装飾オーバーレイが要件表に被さっている。</div>
+</div>
+</body>
+</html>
