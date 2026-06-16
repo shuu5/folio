@@ -33,6 +33,54 @@ declare -A EARS_CLASS=( [ubiquitous]=always [event]=trigger [state]=state [unwan
 declare -A EARS_LABEL=( [ubiquitous]=恒常 [event]=きっかけ [state]=状態 [unwanted]=禁止 [optional]=機能 )
 declare -A PRIO_LABEL=( [must]=必須 [should]=推奨 [may]=任意 )
 
+# ---- plain-language-term-inline 自動併記 (ADR-0042 §2.2 A / glossary 派生ビュー) ----
+# glossary 語が本文の flowing 読み取り系フィールドに first-occurrence で現れたら、 その直後に
+# plain_short (やさしい言い換え) を .term バッジで *併記* する (本文の専門語は SSoT ゆえ残し、 平易語を足す)。
+# 適用先は呼び出し側で限定 (タイトル/短い headline=goals.headline/ラベル/glossary 表/RTM セルは対象外
+#  = pill 断片化回避)。 flowing 出現が無い語 (EC では 二重課金) は glossary 章で被覆。
+# once-per-doc は LEDGER *ファイル* で担保する: $(mark_terms ...) は command-substitution subshell ゆえ
+# shell 変数 (連想配列) では状態が親へ伝播しない。 ファイル書き込みは subshell を越えて永続する。
+# ascii 略語 (WMS/PCI DSS) は語境界でのみマッチ (WMSXYZ 中の WMS を誤マーク・トークン破断しない)。
+GMAP_FILE="$(mktemp)"; TERM_LEDGER="$(mktemp)"
+trap 'rm -f "$GMAP_FILE" "$TERM_LEDGER"' EXIT
+# GMAP: te_esc <TAB> plain_esc <TAB> ascii(1/0)。 照合・出力とも escape 済み (verify と esc 対称)。
+while IFS=$'\t' read -r term plain; do
+  [[ -n "$term" ]] || continue
+  [[ -n "$plain" && "$plain" != "null" ]] || plain="$term"
+  a=1; case "$term" in *[!\ -~]*) a=0 ;; esac
+  printf '%s\t%s\t%s\n' "$(esc "$term")" "$(esc "$plain")" "$a"
+done < <(q '.glossary[] | [.term, (.plain_short // "")] | @tsv') > "$GMAP_FILE"
+# mark_terms <raw text> → escape 済みテキスト。 未マーク glossary 語の初出直後に plain_short バッジを併記。
+mark_terms() {
+  local e; e="$(esc "${1-}")"
+  # -CSD: GMAP/LEDGER/STDIN を UTF-8 decode (CJK 語境界 \p{Han} 判定のため)。 print も UTF-8 encode。
+  printf '%s' "$e" | GMAP="$GMAP_FILE" LEDGER="$TERM_LEDGER" perl -CSD -0777 -e '
+    # -0777 は $/ を slurp に固定する。 GMAP/LEDGER の行読みは local $/="\n" で囲む
+    # (素の while(<$fh>) は ファイル全体を 1 行として読み @g が壊れる = inject-prose と同じ gotcha)。
+    my %marked;
+    { local $/="\n"; if (open(my $lf,"<",$ENV{LEDGER})) { while (my $l=<$lf>){ chomp $l; $marked{$l}=1 if length $l; } close $lf; } }
+    my @g;
+    { local $/="\n"; open(my $gf,"<",$ENV{GMAP}) or die "gmap: $!";
+      while (my $l=<$gf>){ chomp $l; next unless length $l; my @f=split(/\t/,$l,3); push @g,\@f; } close $gf; }
+    local $/; my $text=<STDIN>; $text="" unless defined $text;
+    my @newly;
+    for my $r (@g) {
+      my ($te,$plain,$ascii)=@$r;
+      next if $marked{$te};
+      my $badge="<span class=\"term\" data-component=\"plain-language-term-inline\" data-term=\"$te\">$plain</span>";
+      # ascii 略語は前後が英数字でない位置のみ (WMSXYZ 中の WMS を誤マークしない)。
+      # CJK 語は前後が漢字でない位置のみ (在庫引当金 など漢字複合語の内部に gloss を誤付与しない。
+      #   かな/記号/英数字に隣接する正当な出現は許可)。 完全な形態素境界ではない軽量ヒューリスティック。
+      my $pat = ($ascii eq "1")
+        ? qr/(?<![A-Za-z0-9])\Q$te\E(?![A-Za-z0-9])/
+        : qr/(?<!\p{Han})\Q$te\E(?!\p{Han})/;
+      if ($text =~ s/$pat/$& . $badge/e) { $marked{$te}=1; push @newly,$te; }
+    }
+    print $text;
+    if (@newly) { open(my $lw,">>",$ENV{LEDGER}) or die; print $lw "$_\n" for @newly; close $lw; }
+  '
+}
+
 # ---- icon SVG (静的資産) ----
 ICO_TARGET='<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>'
 ICO_BOX='<path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/>'
@@ -64,6 +112,12 @@ validate() {
   for p in $(q '.requirements[].ears.pattern'); do [[ -v EARS_CLASS[$p] ]] || { echo "assemble: 未知の EARS pattern: $p" >&2; errs=1; }; done
   for p in $(q '.requirements[].priority');     do [[ -v PRIO_LABEL[$p] ]] || { echo "assemble: 未知の priority: $p" >&2; errs=1; }; done
   for p in $(q '.actors[].tint'); do case "$p" in brand|violet|warn|info|ok|bad) ;; *) echo "assemble: 未知の actor tint (CSS allowlist 外): $p" >&2; errs=1 ;; esac; done
+  # glossary 語どうしの部分文字列ペアを拒否 (term-inline のネスト span / 誤帰属を防ぐ fail-closed)。
+  local -a _gt; mapfile -t _gt < <(q '.glossary[].term'); local i j
+  for i in "${!_gt[@]}"; do for j in "${!_gt[@]}"; do
+    [[ "$i" != "$j" && -n "${_gt[$i]}" && "${_gt[$i]}" != "${_gt[$j]}" && "${_gt[$j]}" == *"${_gt[$i]}"* ]] \
+      && { echo "assemble: glossary 語 '${_gt[$i]}' が '${_gt[$j]}' の部分文字列 (term-inline 曖昧化のため禁止)" >&2; errs=1; }
+  done; done
   [[ "$errs" -eq 0 ]] || { echo "assemble: contract validation FAILED (fail-closed)" >&2; exit 1; }
 }
 
@@ -108,37 +162,37 @@ emit_cover() {
 
 emit_goals() {
   printf '<div data-component="section-lead-callout">\n'
-  q '.goals[] | [.id, .headline, .desc] | @tsv' | while IFS=$'\t' read -r id head desc; do
+  while IFS=$'\t' read -r id head desc; do
     [[ -n "$id" ]] || continue
-    printf '<div class="card accent"><div class="cid">%s</div><p class="ct">%s</p><p class="cd">%s</p></div>\n' "$(esc "$id")" "$(esc "$head")" "$(esc "$desc")"
-  done
+    printf '<div class="card accent"><div class="cid">%s</div><p class="ct">%s</p><p class="cd">%s</p></div>\n' "$(esc "$id")" "$(esc "$head")" "$(mark_terms "$desc")"
+  done < <(q '.goals[] | [.id, .headline, .desc] | @tsv')
   printf '</div>\n'
 }
 
 emit_scope() {
   printf '<div data-component="scope-summary-panel"><div class="scol in"><h3>✓ 扱う (in scope)</h3><ul>\n'
-  q '.scope.in[]' | while IFS= read -r item; do [[ -n "$item" ]] && printf '<li><span class="b">●</span>%s</li>\n' "$(esc "$item")"; done
+  while IFS= read -r item; do [[ -n "$item" ]] && printf '<li><span class="b">●</span>%s</li>\n' "$(mark_terms "$item")"; done < <(q '.scope.in[]')
   printf '</ul></div><div class="scol out"><h3>✕ 扱わない (out of scope)</h3><ul>\n'
-  q '.scope.out[]' | while IFS= read -r item; do [[ -n "$item" ]] && printf '<li><span class="b">●</span>%s</li>\n' "$(esc "$item")"; done
+  while IFS= read -r item; do [[ -n "$item" ]] && printf '<li><span class="b">●</span>%s</li>\n' "$(mark_terms "$item")"; done < <(q '.scope.out[]')
   printf '</ul></div></div>\n'
 }
 
 emit_actors() {
   printf '<div data-component="actor-stakeholder-table" style="margin-top:20px">\n'
-  q '.actors[] | [.key, .name, .role, .external, .tint] | @tsv' | while IFS=$'\t' read -r key name role ext tint; do
+  while IFS=$'\t' read -r key name role ext tint; do
     [[ -n "$key" ]] || continue; extb=""; [[ "$ext" == "true" ]] && extb='<span class="ext-badge">外部</span>'
     printf '<div class="actor"><span class="av" style="background:var(--%s)">%s</span><div><div class="nm">%s%s</div><div class="role">%s</div></div></div>\n' \
-      "$(esc "$tint")" "$(esc "$key")" "$(esc "$name")" "$extb" "$(esc "$role")"
-  done
+      "$(esc "$tint")" "$(esc "$key")" "$(esc "$name")" "$extb" "$(mark_terms "$role")"
+  done < <(q '.actors[] | [.key, .name, .role, .external, .tint] | @tsv')
   printf '</div>\n'
 }
 
 emit_origin_table() {
   printf '<div class="tbl-wrap"><table data-component="source-trace-origin"><thead><tr><th>ニーズID</th><th>事業ニーズ</th><th>出どころ</th></tr></thead><tbody>\n'
-  q '.upper_needs[] | [.id, .need, .origin] | @tsv' | while IFS=$'\t' read -r id need origin; do
+  while IFS=$'\t' read -r id need origin; do
     [[ -n "$id" ]] || continue
-    printf '<tr data-component="source-trace-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="origin">%s</span></td></tr>\n' "$(esc "$id")" "$(esc "$need")" "$(esc "$origin")"
-  done
+    printf '<tr data-component="source-trace-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="origin">%s</span></td></tr>\n' "$(esc "$id")" "$(mark_terms "$need")" "$(esc "$origin")"
+  done < <(q '.upper_needs[] | [.id, .need, .origin] | @tsv')
   printf '</tbody></table></div>\n'
 }
 
@@ -148,12 +202,11 @@ emit_legend() {
 
 emit_req_table() {
   printf '<div class="tbl-wrap"><table data-component="requirement-matrix-table"><thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする (+ やさしい言い換え + なぜ要る)</th><th>優先/検証</th></tr></thead><tbody>\n'
-  q '.requirements[] | [.id, .ears.pattern, .ears.condition, .ears.response, .priority, .vmethod, (.rationale_source // "")] | @tsv' \
-  | while IFS=$'\t' read -r id pat cond resp prio vmeth rsrc; do
+  while IFS=$'\t' read -r id pat cond resp prio vmeth rsrc; do
       [[ -n "$id" ]] || continue; src_attr=""; [[ -n "$rsrc" && "$rsrc" != "null" ]] && src_attr=" data-source=\"$(esc "$rsrc")\""
       printf '<tr data-component="ears-requirement-row"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
-        "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(esc "$cond")" "$(esc "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
-    done
+        "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(mark_terms "$cond")" "$(mark_terms "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
+    done < <(q '.requirements[] | [.id, .ears.pattern, .ears.condition, .ears.response, .priority, .vmethod, (.rationale_source // "")] | @tsv')
   printf '</tbody></table></div>\n'
 }
 
@@ -167,19 +220,19 @@ emit_nfr_hero() {
 
 emit_nfr_table() {
   printf '<div class="tbl-wrap"><table data-component="nfr-metrics-table"><thead><tr><th>ID</th><th>区分</th><th>目標値 (+ やさしい言い換え)</th><th>測り方</th></tr></thead><tbody>\n'
-  q '.nfr[] | [.id, .category, .target, .measure] | @tsv' | while IFS=$'\t' read -r id categ tgt meas; do
+  while IFS=$'\t' read -r id categ tgt meas; do
     [[ -n "$id" ]] || continue
-    printf '<tr data-component="nfr-metric-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$categ")" "$(esc "$tgt")" "$(esc "$id")" "$(esc "$meas")"
-  done
+    printf '<tr data-component="nfr-metric-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$categ")" "$(mark_terms "$tgt")" "$(esc "$id")" "$(mark_terms "$meas")"
+  done < <(q '.nfr[] | [.id, .category, .target, .measure] | @tsv')
   printf '</tbody></table></div>\n'
 }
 
 emit_acceptance() {
   printf '<div data-component="acceptance-criteria-checklist">\n'
-  q '.acceptance[] | [.id, (.links | join("/")), .criterion, (.metric_v // ""), (.metric_l // "")] | @tsv' | while IFS=$'\t' read -r id links crit mv ml; do
+  while IFS=$'\t' read -r id links crit mv ml; do
     [[ -n "$id" ]] || continue
-    printf '<div class="ac"><div class="aid">%s ← %s</div><p class="at">%s</p><div class="metric"><span class="v">%s</span><span class="l">%s</span></div></div>\n' "$(esc "$id")" "$(esc "$links")" "$(esc "$crit")" "$(esc "$mv")" "$(esc "$ml")"
-  done
+    printf '<div class="ac"><div class="aid">%s ← %s</div><p class="at">%s</p><div class="metric"><span class="v">%s</span><span class="l">%s</span></div></div>\n' "$(esc "$id")" "$(esc "$links")" "$(mark_terms "$crit")" "$(esc "$mv")" "$(esc "$ml")"
+  done < <(q '.acceptance[] | [.id, (.links | join("/")), .criterion, (.metric_v // ""), (.metric_l // "")] | @tsv')
   printf '</div>\n'
 }
 
@@ -215,10 +268,10 @@ emit_rtm_fold() {
 
 emit_constraints() {
   printf '<table data-component="constraint-callout"><tbody>\n'
-  q '.constraints[] | [.id, .label, .text, (.regulation // "")] | @tsv' | while IFS=$'\t' read -r id label text reg; do
+  while IFS=$'\t' read -r id label text reg; do
     [[ -n "$id" ]] || continue; rb=""; [[ -n "$reg" ]] && rb=" <span class=\"reg-badge\">法令 $(esc "$reg")</span>"
-    printf '<tr><td class="cid2">%s</td><td class="cl">%s</td><td>%s%s</td></tr>\n' "$(esc "$id")" "$(esc "$label")" "$(esc "$text")" "$rb"
-  done
+    printf '<tr><td class="cid2">%s</td><td class="cl">%s</td><td>%s%s</td></tr>\n' "$(esc "$id")" "$(esc "$label")" "$(mark_terms "$text")" "$rb"
+  done < <(q '.constraints[] | [.id, .label, .text, (.regulation // "")] | @tsv')
   printf '</tbody></table>\n'
 }
 

@@ -104,9 +104,10 @@ constraints:
   - { id: CON2, label: 個人情報,   text: 購入者情報の取得・保管は同意取得後のみ,     regulation: 個情法 }
   - { id: CON3, label: 在庫連携,   text: 在庫数は既存の在庫システム (WMS) を唯一の出どころとする, regulation: "" }
 
-# 09 用語集 (glossary-term-table = 用語定義の SSoT)
+# 09 用語集 (glossary-term-table = 用語定義の SSoT)。 plain_short = 本文中の専門語に併記する短いやさしい言い換え
+# (plain-language-term-inline バッジの表示語。 def の要約・捏造禁止)。 glossary 語どうしは部分文字列禁止 (assemble が拒否)。
 glossary:
-  - { term: 在庫引当, en: stock allocation, def: 注文の瞬間に在庫を「この人の分」として押さえること。 押さえないと同じ 1 個を 2 人に売ってしまう。 }
-  - { term: 二重課金, en: double charge,    def: 同じ買い物で 2 回お金を請求してしまう事故。 連打や通信再送で起こりやすい。 }
-  - { term: WMS,      en: warehouse mgmt,   def: 倉庫の在庫を管理する既存システム。 在庫数の正しい出どころ。 }
-  - { term: PCI DSS,  en: card security std, def: カード情報を扱うときに守る世界共通の安全ルール。 違反すると決済できなくなる。 }
+  - { term: 在庫引当, en: stock allocation, plain_short: 在庫の取り置き,    def: 注文の瞬間に在庫を「この人の分」として押さえること。 押さえないと同じ 1 個を 2 人に売ってしまう。 }
+  - { term: 二重課金, en: double charge,    plain_short: 2 回請求,          def: 同じ買い物で 2 回お金を請求してしまう事故。 連打や通信再送で起こりやすい。 }
+  - { term: WMS,      en: warehouse mgmt,   plain_short: 倉庫の在庫管理,    def: 倉庫の在庫を管理する既存システム。 在庫数の正しい出どころ。 }
+  - { term: PCI DSS,  en: card security std, plain_short: カード安全基準,   def: カード情報を扱うときに守る世界共通の安全ルール。 違反すると決済できなくなる。 }
