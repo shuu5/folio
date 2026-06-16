@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-15T12:10:06Z",
+  "generatedAt": "2026-06-16T08:02:09Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -1914,6 +1914,24 @@
         "essence": "folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 5 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints / 人間層可視 prose &gt; 12,000 codepoints (上限 box、 ADR-0040) / 章要旨 (p.section-essence) 不在 / 図ゼロ×長文 (&gt; 6,000)。 frozen は warn 除外・essence block は living spec/research のみ・圧縮 3 arm は圧縮対象 (living spec + cluster README) のみ (stuck-RED 回避 + 一次資料層 skip)。"
       },
       {
+        "id": "REQ-VER-024",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-024",
+        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render は REQ-VER-025、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+      },
+      {
+        "id": "REQ-VER-025",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-025",
+        "essence": "gate F (render 健全性、 render-gate-srs.py) は生成 SRS を light/dark × 3 viewport で実 render し、 WCAG AA low-contrast / horizontal-overflow / component-overlap を検出する (gradient は停止色 worst-case 評価、 fail-closed)。 重い playwright ゆえ renderer 在環境で実行・不在は honest SKIP (PASS と詐称せず floor 不完全と明示)。 検出器・定数は machine 部。"
+      },
+      {
+        "id": "REQ-VER-026",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-026",
+        "essence": "生成 SRS が GREEN ⟺ (floor 全通過: REQ-VER-024 + 025) AND (ceiling 合格: persona-walk-srs gate I + fidelity-srs gate J)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保)。 gate I = 非エンジニア persona walk (北極星)、 gate J = fidelity (捏造/情報落ち/派生ビュー一致を機械 SSoT と突合)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層。"
+      },
+      {
         "id": "REQ-XREF-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-xref-001",
@@ -2274,6 +2292,10 @@
       {
         "from": "spec/verification.html",
         "to": "ADR-0040"
+      },
+      {
+        "from": "spec/verification.html",
+        "to": "ADR-0041"
       },
       {
         "from": "spec/verification.html",

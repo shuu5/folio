@@ -3239,7 +3239,7 @@ Subcommands:
         [--check]          全 page に chrome (skip-link/breadcrumb/目次/prev-next) を注入・維持 (ADR-0035/0036/0039、
                            決定的・idempotent、 --check で drift 検査 exit 0=ok/1=drift、 既定 write 0=ok/2=error)
   verify-srs <html>        生成 SRS プレゼン HTML の決定的 floor 検査 (taxonomy §5.2 gate A-E,G,H + visual-first、
-             <contract>    gate F render は S5.3 予定、 ADR-0041/0042)。 floor 通過でも GREEN にせず CEILING=PENDING を返す
+             <contract>    gate F render は renderer 在で実行・不在は SKIP、 ADR-0041/0042)。 floor 通過でも GREEN にせず CEILING=PENDING を返す
                            (floor 単独 GREEN 禁止)。 GREEN には ceiling (persona-walk-srs + fidelity-srs) 合格が必須。
                            exit 0=floor PASS (≠GREEN) / 1=floor FAIL / 2=tool error
 
