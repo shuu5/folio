@@ -197,7 +197,7 @@ emit_origin_table() {
 }
 
 emit_legend() {
-  printf '<div class="ears-legend"><span class="lt">タイプ:</span> <span class="ears trigger">きっかけ <span class="en">When</span></span> <span class="ears state">状態 <span class="en">While</span></span> <span class="ears forbid">禁止 <span class="en">If-Then</span></span> <span class="ears always">恒常 <span class="en">Ubiq.</span></span> <span class="lt" style="margin-left:8px">優先:</span><span class="prio must" data-component="priority-badge">必須</span><span class="prio should">推奨</span> <span class="lt" style="margin-left:8px">検証:</span><span class="vmeth">T=テスト</span></div>\n'
+  printf '<div class="ears-legend"><span class="lt">タイプ:</span> <span class="ears trigger">きっかけ <span class="en">When</span></span> <span class="ears state">状態 <span class="en">While</span></span> <span class="ears forbid">禁止 <span class="en">If-Then</span></span> <span class="ears always">恒常 <span class="en">Ubiq.</span></span> <span class="lt" style="margin-left:8px">優先:</span><span class="prio must" data-component="priority-badge">必須</span><span class="prio should">推奨</span> <span class="lt" style="margin-left:8px">検証:</span><span class="vmeth">T=テスト</span> <span class="vmeth">A=分析</span> <span class="vmeth">I=目視確認</span> <span class="vmeth">D=実演</span></div>\n'
 }
 
 emit_req_table() {
