@@ -50,8 +50,10 @@ SRS generator の機構を **別 doc-type (ADR / 設計判断記録)** へ適用
   cross-doc 照会解決 / verdict 整合 / escape 健全 / prose 空|充填|注入忠実 / term-inline fidelity+被覆)。
 - **2-gate ceiling** = ADR-pack fidelity (機械 SSoT 突合 = verify-adr + fidelity-srs 相当) + persona-walk (非エンジニア可読)。
   ★ADR 専用 ceiling agent (persona-walk-adr / fidelity-adr) の制度化は core 抽出後の follow-up。
-- **敵対回帰** = `test-adversarial-adr.sh` (A1-A21: cross-doc dangling/doc_id/不在・role/verdict/status・id 重複・改行・
-  glossary 部分文字列・HTML 偽 justify 注入・行数削除・prose 改竄・term 改竄・chosen 捏造・inject 集合不一致・escape)。
+- **敵対回帰** = `test-adversarial-adr.sh` (A1-A26: cross-doc dangling/doc_id/不在・role/verdict/status・id 重複・改行・
+  glossary 部分文字列・HTML 偽 justify 注入・行数削除・prose 改竄・term 改竄・chosen 捏造・inject 集合不一致・escape・
+  ★role 別 role 改竄 (req,role ペア)・★verdict バッジ付け替え (opt-id,verdict ペア)・
+  ★既存 justify edge 重複注入 (count anchor)・★verdict 可視ラベルのみ改竄・★principle.id/supersession.status/superseded_by 改竄)。
   ★abort 系は **stderr 理由を検証**し「別原因の誤 abort」= false-pass を弾く (S4 の A1 否定検証 false-pass 教訓)。
 
 ```bash

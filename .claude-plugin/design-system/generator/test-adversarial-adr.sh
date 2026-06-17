@@ -120,6 +120,40 @@ cp "$TMP/base-filled.html" "$TMP/a17.html"
 perl -0777 -i -pe 's#class="opt-verdict rejected"#class="opt-verdict chosen"#' "$TMP/a17.html"
 expect_verify_fail_filled "A17 可視 chosen バッジ捏造 (2 個) を捕捉" "$BASE_PROSE" "$BASE" "$TMP/a17.html"
 
+# A22. ★HTML 改竄: 照会 role を allowlist 内の別 role へ改竄 (claim→rationale) → (req,role) ペア不一致 FAIL
+#      (allowlist 内別 role への偽装は role 数だけでは素通り = fail-open。 ペア集合突合で捕捉する)。
+cp "$TMP/base-filled.html" "$TMP/a22.html"
+perl -0777 -i -pe 's#(data-justifies-req="FR2" data-justifies-role=)"claim"#${1}"rationale"#' "$TMP/a22.html"
+expect_verify_fail_filled "A22 ★照会 role を allowlist 内別 role へ改竄を (req,role) ペアで捕捉" "$BASE_PROSE" "$BASE" "$TMP/a22.html"
+
+# A23. ★HTML 改竄: chosen/rejected バッジを別カードへ付け替え (chosen 総数 1 のまま) → (opt-id,verdict) ペア不一致 FAIL
+#      (件数保存型の採用カード偽装は総数==1 だけでは素通り = fail-open。 id↔verdict ペア突合で捕捉する)。
+cp "$TMP/base-filled.html" "$TMP/a23.html"
+perl -0777 -i -pe 's#(<span class="opt-id">OPT1</span><span class="opt-name">.*?</span><span class="opt-verdict )chosen#${1}rejected#s' "$TMP/a23.html"
+perl -0777 -i -pe 's#(<span class="opt-id">OPT2</span><span class="opt-name">.*?</span><span class="opt-verdict )rejected#${1}chosen#s' "$TMP/a23.html"
+expect_verify_fail_filled "A23 ★verdict バッジ付け替え (総数不変) を (opt-id,verdict) ペアで捕捉" "$BASE_PROSE" "$BASE" "$TMP/a23.html"
+
+# A24. ★HTML 改竄: 既存 justify edge (FR2 row) を重複注入 (req 集合は不変) → count anchor で FAIL
+#      (set_eq は sort -u で重複を潰すため集合不変=fail-open。 count chk とペアで二重 cross-doc 照会を捕捉)。
+cp "$TMP/base-filled.html" "$TMP/a24.html"
+perl -0777 -i -pe 's#(<div class="justify-row"><span class="justify-req" data-justifies-req="FR2".*?</div>)#$1$1#s' "$TMP/a24.html"
+expect_verify_fail_filled "A24 ★既存 justify edge の重複注入 (集合不変) を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a24.html"
+
+# A25. ★HTML 改竄: verdict バッジの class は正 (chosen) のまま可視ラベルだけ改竄 (採用→不採用) → 可視ラベル整合で FAIL
+#      (非エンジニアが読むのは class でなく可視文字。 class 突合だけでは fail-open)。
+cp "$TMP/base-filled.html" "$TMP/a25.html"
+perl -0777 -i -pe 's#(<span class="opt-verdict chosen">)採用(</span>)#${1}不採用${2}#' "$TMP/a25.html"
+expect_verify_fail_filled "A25 ★verdict バッジの可視ラベルのみ改竄 (class は正) を捕捉" "$BASE_PROSE" "$BASE" "$TMP/a25.html"
+
+# A26. ★HTML 改竄: principle.id 改竄 / supersession.status 偽装 / superseded_by 捏造 → 終端章の構造検証で FAIL
+#      (assembler が emit する supersession/principle を fabrication-free 対象に拡張)。
+cp "$TMP/base-filled.html" "$TMP/a26a.html"; perl -0777 -i -pe 's#PRIN-SAFETY-FIRST#PRIN-FORGED#' "$TMP/a26a.html"
+expect_verify_fail_filled "A26a ★principle.id 改竄を捕捉" "$BASE_PROSE" "$BASE" "$TMP/a26a.html"
+cp "$TMP/base-filled.html" "$TMP/a26b.html"; perl -0777 -i -pe 's#(改訂状態</span>)current#${1}superseded#' "$TMP/a26b.html"
+expect_verify_fail_filled "A26b ★supersession.status 偽装を捕捉" "$BASE_PROSE" "$BASE" "$TMP/a26b.html"
+cp "$TMP/base-filled.html" "$TMP/a26c.html"; perl -0777 -i -pe 's#(置き換えられた</span>)なし \(現行\)#${1}ADR-Z#' "$TMP/a26c.html"
+expect_verify_fail_filled "A26c ★superseded_by 捏造リンクを捕捉" "$BASE_PROSE" "$BASE" "$TMP/a26c.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort
