@@ -113,6 +113,7 @@
   <li class="toc--sub"><a href="#s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</a></li>
   <li class="toc--sub"><a href="#s11-4-review-procedure">§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)</a></li>
   <li class="toc--sub"><a href="#s11-5-compression">§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)</a></li>
+  <li><a href="#s12-srs-design-system">§12. 要件定義書 design system (機械 SSoT 生成 + 2-gate 検証)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -272,7 +273,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </aside>
 
 <h3 id="s4-6-a11y">§4.6 Accessibility Minimum Rules (a11y, normative)</h3>
-<p class="section-essence" data-audience="human">text と diagram text は WCAG 2.2 SC 1.4.3 AA の contrast を満たす MUST、 head は viewport meta を持つ MUST、 mermaid 図は accTitle/accDescr 付与・fill override 時の color paired・overflow scroll の focusable 化を満たす MUST。</p>
+<p class="section-essence" data-audience="human">text・diagram text は WCAG 2.2 SC 1.4.3 AA contrast、 head は viewport meta、 mermaid 図は accTitle/accDescr・fill override 時の color paired・overflow scroll の focusable 化を満たす MUST。</p>
 
 <p data-audience="machine">spec HTML 内の text および diagram 内 text は <strong>WCAG 2.2 SC 1.4.3 Level AA</strong> (normal text <code>4.5:1</code> / large text <code>3:1</code>) の contrast ratio を満たす <strong>MUST</strong> (<a href="https://www.w3.org/TR/WCAG22/#contrast-minimum">w3.org/TR/WCAG22/#contrast-minimum</a>)。</p>
 
@@ -332,7 +333,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 
 <section id="s7-dual-audience" class="normative">
 <h2>§7. Dual-Audience Markup (data-audience taxonomy)</h2>
-<p class="section-essence" data-audience="human">spec を機械向け (精密 normative = SSoT) と人間向け (essence + 図) の双方へ 1 HTML に co-author する markup。 採用は任意だが採用 spec は §7.3 invariant 遵守 MUST = conditional-normative。 consistency は二層 enforcement (floor=validate / ceiling=spec-review-fidelity)。</p>
+<p class="section-essence" data-audience="human">spec を機械向け (精密 normative = SSoT) と人間向け (essence + 図) の双方へ 1 HTML に co-author する markup。 採用は任意だが採用 spec は §7.3 invariant 遵守 MUST (conditional-normative)。 consistency は二層 enforcement (floor / ceiling) で担保。</p>
 
 <aside class="informative" data-audience="machine">
   <p>本 §7 は spec を <strong>machine (精密 normative = canonical SSoT) と human (essence + graphical = 派生 view)</strong> の双方に向けて 1 HTML artifact に co-author する <strong>dual-audience pattern</strong> の markup 規約を定める (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a>、 <a href="./constitution.html#p-2">P-2</a> HTML)。 採用は<strong>任意 (opt-in)</strong> だが、 <strong>採用する spec は本 §7 の safety <span class="term" data-term="invariant" data-tooltip="spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。">invariant</span> (REQ-DA-STRUCT-1〜5) を遵守する MUST</strong> = conditional-normative。 consistency は<strong>機械的導出でなく enforcement</strong> で担保する (1-DOM co-author は prior art 無しの novelty、 <a class="xref" href="../decisions/ADR-0033-dual-audience-hub.html" data-tooltip="dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。">ADR-0033</a> §2.4): <span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span> = <code>folio validate</code> の dual-audience 構造検査 (本 §7.3 の REQ-DA-STRUCT)、 <span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span> = Phase F の <code>spec-review-fidelity</code> agent (意味的 fidelity)。</p>
@@ -348,7 +349,7 @@ review_model: "opus"                   # optional、 Phase F specialist の mode
 </ul>
 
 <h3 id="s7-2-canonical-pattern">§7.2 Canonical markup pattern (2 form)</h3>
-<p class="section-essence" data-audience="human">requirement は 2 form (card / spec-row) のいずれかで human essence と machine normative を data-audience + fold で co-author。 machine 部は DOM 常在・aria-hidden 無し・視覚のみ畳む。 requirement-id は id・badge・ears-id 一致、 EARS は data-ears-pattern SSoT。</p>
+<p class="section-essence" data-audience="human">requirement は 2 form (card / spec-row) で human essence と machine normative を data-audience + fold で co-author。 machine 部は DOM 常在・aria-hidden 無し・視覚のみ畳む。 id・badge・ears-id は一致、 EARS pattern は data-ears-pattern が SSoT。</p>
 <p data-audience="machine">dual-audience の 1 requirement は <strong>2 つの正規 form</strong> のいずれかを採る。 いずれも human (派生 view、 既定可視) と machine normative (canonical SSoT) を <code>data-audience</code> + <code>&lt;details&gt;</code> 視覚 fold で 1 unit に co-author し、 <strong>machine 部は DOM に常在</strong> (AI / accessibility-tree / find-in-page に可視) して視覚的初期表示のみ畳む。 <strong><code>aria-hidden</code> を machine 部に付けない</strong> (accessibility-tree から消すと Playwright 等 AI からも不可視となり「AI は読める」目的に反する、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.2 verified)。 floor は container class でなく <code>data-audience="human"</code> semantic で両 form を一律に被覆する (ADR-0033 §2.5、 §7.3)。</p>
 
 <p data-audience="machine"><strong>form 1 — verbose card</strong> (<code>&lt;section class="req"&gt;</code>。 essence を常時可視に展開、 解説密度が要る個別要件向け):</p>
@@ -573,7 +574,7 @@ flowchart TB
 </pre>
 <figcaption>図 §9: xref のライフサイクル (in-band id = SSoT → fix が materialize → gate・tooltip・AI-graph が派生)。</figcaption>
 </figure>
-<p class="section-essence" data-audience="human">architecture 内の defined-object への in-band cross-reference と no-JS hover tooltip・完全性 enforcement を hybrid で定める (in-band の id が SSoT、 lint・AI-graph・glossary はその projection)。 穴は folio fix が materialize、 完全性は validate。 採用は opt-in。</p>
+<p class="section-essence" data-audience="human">architecture 内 defined-object の in-band cross-reference・no-JS hover tooltip・完全性 enforcement を hybrid で定める (in-band id が SSoT、 lint/AI-graph/glossary は projection)。 穴は folio fix が materialize・完全性は validate・採用は opt-in。</p>
 
 <aside class="informative" data-audience="machine">
   <p>本 §9 は architecture 内の <strong><span class="term" data-term="defined-object" data-tooltip="一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。">defined-object</span></strong> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) への <strong>in-band cross-reference</strong> markup 規約と、 その <strong>no-JS hover tooltip</strong> + <strong>完全性 enforcement</strong> を定める (<a href="../decisions/ADR-0034-object-term-xref-system.html">ADR-0034</a>、 <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> dual-audience hub の object 参照網への拡張)。 architecture は <strong>hybrid</strong> = canonical 定義は各 object の in-band HTML 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph、 <a href="#s10-2">REQ-CI</a> 系の deterministic floor) を<strong>生成</strong>する (DB-as-SSoT 却下、 <a href="./constitution.html#p-2">P-2</a> HTML / <a href="./constitution.html#p-13">P-13</a> no-build と整合)。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (<a href="verification.html#s3-ears">REQ-VER-017/018</a>) が担う。 採用は <strong>opt-in/conditional-normative</strong> (REQ-XREF-002) — completeness gate を有効化した spec のみ orphan-mention を block する。</p>
@@ -988,10 +989,10 @@ flowchart TB
 
 <section id="s11-presentation" class="normative">
 <h2>§11. Human-First Presentation (P-14)</h2>
-<p class="section-essence" data-audience="human">本章は P-14 委任の 2 点 — ページ種別の人間読者層 (§11.1) と表示層 remediate の build / fix 分業 (§11.2)。 regen は <code>folio build</code> 一元所有 MUST、 graph は <code>folio fix</code>、 violation message は対応 tool を名指す MUST。</p>
+<p class="section-essence" data-audience="human">本章は P-14 (Human Readability) を実装する presentation 規律 — 人間読者層 (§11.1)・表示層 remediate の build/fix 分業 (§11.2)・既定表示 (§11.3)・検査手続き (§11.4)・圧縮 (§11.5) を定める。 生成 SRS の design system は §12。</p>
 
 <aside class="informative" data-audience="machine">
-<p>本 §11 は <a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a> (Human Readability) が rules へ委任する 2 点 — <strong>ページ種別ごとの主たる人間読者層の定義</strong>と<strong>表示層 <span class="term" data-term="remediate" data-tooltip="validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。">remediate</span> の分業</strong> — を定める (<a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.1 / §2.9)。 機械読者 (AI agent) への正確さは全ページ種別で維持する (dual-audience の machine 側は <a href="#s7-dual-audience">§7</a> のまま不変)。 提示に関わる判断 (見せる / 折る / 削る) は本節の読者層定義を物差しとする。</p>
+<p>本 §11 は <a class="xref" href="./constitution.html#p-14" data-tooltip="Human Readability">P-14</a> (Human Readability) が rules へ委任する presentation 規律を定める。 核は<strong>ページ種別ごとの主たる人間読者層の定義</strong>と<strong>表示層 <span class="term" data-term="remediate" data-tooltip="validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。">remediate</span> の分業</strong> (<a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.1 / §2.9) で、 これに既定表示 (§11.3)・検査手続き (§11.4)・人間層圧縮 (§11.5、 <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a>) が連なる。 機械読者 (AI agent) への正確さは全ページ種別で維持する (dual-audience の machine 側は <a href="#s7-dual-audience">§7</a> のまま不変)。 提示に関わる判断 (見せる / 折る / 削る) は本節の読者層定義を物差しとする。</p>
 </aside>
 
 <h3 id="s11-1-readers">§11.1 ページ種別 × 主たる人間読者層 (定義)</h3>
@@ -1014,7 +1015,7 @@ flowchart TB
 <p data-audience="machine">表示層の regen は <code>folio build</code> が一元所有する <strong>MUST</strong> — index (landing) / glossary / 全ページ chrome の生成・維持 (「nav-regen-drift 系の violation は build で直す」)。 <code>folio fix</code> は graph の materialize 専任 — reverse-link (<a href="relations.html#s5-3-ears">REQ-REL-002</a>) / xref wrap (<a href="#s9-4-requirements">§9.4</a>) / tooltip 再生成。 <code>folio validate</code> の violation message は対応する remediate tool を名指しする <strong>MUST</strong> (どの違反をどちらで直すかの迷いを消す、 ADR-0039 §2.9 = folio-dd0 の解消)。 readability-floor (<a href="verification.html#req-ver-023">REQ-VER-023</a>) のうち landing 系は build が remediate し、 viewport / essence は authoring の責務 (機械 regen の対象外)。</p>
 
 <h3 id="s11-3-defaults">§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)</h3>
-<p class="section-essence" data-audience="human">no-JS では class が付かず全文可視へ graceful degrade し、 AI・検索・印刷に影響はない。 fold ネストは 2 段上限 MUST、 <code>&lt;summary&gt;</code> には要旨 1 文 MUST (空・「詳細」のみ禁止)、 印刷時は script が閉じた <code>&lt;details&gt;</code> を全展開する MUST。 frozen 本文は不変。</p>
+<p class="section-essence" data-audience="human">no-JS では class 無しで全文可視へ graceful degrade (AI・検索・印刷は不変)。 fold ネスト 2 段上限・<code>&lt;summary&gt;</code> 要旨 1 文・印刷時全展開は MUST。 生成 SRS プレゼンの既定表示は <a href="#s12-srs-design-system">§12</a> が定める。</p>
 
 <p data-audience="machine">ページ種別ごとの<strong>既定表示</strong> (初見で何が見えるか) を次のとおり定める。 適用対象は living spec・生成物・新規 ADR template — <strong>frozen 文書の本文は不変</strong> (折り畳み化は本文改変のため適用しない):</p>
 
@@ -1044,7 +1045,7 @@ flowchart TB
 </pre>
 <figcaption>図 §11.4: 「読める」の三層検査 (機械 → readability lens → user 実機 walk)。</figcaption>
 </figure>
-<p class="section-essence" data-audience="human">「読める」検査は三層 (floor + render-gate ceiling / readability review lens / user 実機 walk)。 上層 2 手続き (lens + walk) を presentation 変更時の必須 step とする。 非決定的ゆえ機械 gate を持たず Phase F / 独立 ceiling review が担保。</p>
+<p class="section-essence" data-audience="human">「読める」検査は三層 (機械 floor + render-gate / readability lens / user 実機 walk)。 上層 2 手続き (lens + walk) は presentation 変更時の必須 step。 非決定的ゆえ機械 gate なし (Phase F / 独立 ceiling review が担保)。</p>
 
 <p data-audience="machine">「読める」の検査は三層で行う。 下層 = 機械 (deterministic): readability floor (<a href="verification.html#req-ver-023">REQ-VER-023</a>) + render-gate ceiling (<a href="verification.html#req-ver-022">REQ-VER-022</a>、 幾何 detector 6 class × 3 viewport + screenshot artifact)。 幾何が clean でも読みにくい page はある — その上層 2 手続きを <strong>presentation 変更時の必須 step</strong> と定める (適用 trigger = ページ追加 / template・chrome・<code>common.css</code> の変更 / spec-row 等の表示構造変更):</p>
 
@@ -1056,9 +1057,9 @@ flowchart TB
 <p data-audience="machine">この 2 手続きは LLM review + 人間の目視ゆえ非決定的で、 <strong>機械 gate (CI) を持たない</strong> (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 の LLM-ceiling 非搭載と同根拠)。 実施は authoring 規律 + Phase F / 独立 ceiling review が担保し、 違反 (lens/walk を踏まない presentation 変更の ship) を review が指摘する — §11.3 の fold 規律と同じ昇格規律 (違反頻度を見て floor 化を判断) に従う。</p>
 
 <h3 id="s11-5-compression">§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)</h3>
-<p class="section-essence" data-audience="human">人間層を制限時間付きプレゼン、 機械層を無制限の原稿、 圧縮基準 SSoT は本節 (複製しない)。 可視 prose は目標 6,000 字 SHOULD / 上限 12,000 MUST、 各章に章要旨 MUST、 構造章は mermaid 章図 SHOULD。 地の文は machine へ降格し削除しない MUST (decisions / research は対象外)。</p>
+<p class="section-essence" data-audience="human">人間層 = 制限時間付きプレゼン / 機械層 = 無制限の原稿。 各章に章要旨 MUST・地の文は machine へ降格 (削除しない MUST)・可視 prose は約 12,000 字を time-box 上限とする。 生成 SRS プレゼンの圧縮は <a href="#s12-srs-design-system">§12</a> が改訂・置換する。</p>
 
-<p data-audience="machine">人間層 (既定表示で可視の内容) は<strong>制限時間付きプレゼン</strong>、 機械層は<strong>無制限の原稿</strong>とする (<a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a>)。 本節が圧縮基準の単一 SSoT であり、 migration 道具と folio-architect の presentation pass の双方がここを参照する — 道具側に基準を複製しない。</p>
+<p data-audience="machine">人間層 (既定表示で可視の内容) は<strong>制限時間付きプレゼン</strong>、 機械層は<strong>無制限の原稿</strong>とする (<a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a>)。 本節が圧縮基準 (folio 自身の living spec 対象) の単一 SSoT であり、 migration 道具と folio-architect の presentation pass の双方がここを参照する — 道具側に基準を複製しない。 <strong>適用範囲の改訂</strong>: <strong>生成 SRS プレゼン</strong> (consumer が機械 SSoT から生成する要件定義書) には本節の長さ基準でなく <a href="#s12-srs-design-system">§12</a> の design system 生成 + floor 刷新 (visual-first) が適用される (<a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.5 / <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> が <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> を改訂)。 folio 自身の living spec (本 rules を含む) の人間層は <a class="xref" href="../decisions/ADR-0041-human-layer-visual-design-system.html" data-tooltip="人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。">ADR-0041</a> 適用範囲の拡張パックが後追いするまで本節の規律下に留まる。</p>
 
 <ul data-audience="machine">
   <li><strong>time-box</strong> — 人間層可視 prose は 1 ページ <strong>目標約 6,000 字 (読了 10 分) SHOULD / 上限約 12,000 字 (20 分) MUST</strong> (読速 500〜600 字/分で較正。 表中テキストは線形読書しないため満重みで数えない — 計測の詳細は floor 実装 (<a class="xref" href="./verification.html#req-ver-023" data-tooltip="folio validate は readability-floor gate を検査する (P-14 の floor 層): block 3 系 — viewport meta 欠落 / 孤立 EARS (machine 対応部があるのに essence が空) / 生成 landing hero の空・link ゼロ (dead-end)、 warn 5 系 — essence 句点数 &gt; 4 / 可視 prose 単一段落 &gt; 2000 codepoints / 人間層可視 prose &gt; 12,000 codepoints (上限 box、 ADR-0040) / 章要旨 (p.section-essence) 不在 / 図ゼロ×長文 (&gt; 6,000)。 frozen は warn 除外・essence block は living spec/research のみ・圧縮 3 arm は圧縮対象 (living spec + cluster README) のみ (stuck-RED 回避 + 一次資料層 skip)。">REQ-VER-023</a> へ<strong>追加予定</strong>の新 arm (folio-8mu、 warn 始まり — 本節の規範化時点では未実装で、 tooltip の現行 arm 一覧には含まれない) が定め、 migration 後の corpus 実測で再較正する)。</li>
@@ -1068,6 +1069,46 @@ flowchart TB
   <li><strong>一次資料層</strong> — decisions (frozen ADR — cluster README は除く = 圧縮対象) と research の非 README は圧縮対象外。 除外根拠は 2 種を区別する: decisions = frozen (remediate 不能ゆえ stuck-RED 回避、 既存 floor の frozen 除外と同基準) / research = 一次資料そのもの (AI が読む原稿 — prose 上限系の新 arm に限り規範上の理由で skip。 既存 floor の他 arm は scan を継続する)。 constitution は <code>@type=FolioConstitution</code> として floor scan 対象外 (既存 carve-out)。</li>
   <li><strong>検査</strong> — floor (prose 上限 / 章要旨必須 / 図ゼロ×長文の複合、 いずれも warn 始まり → ADR-0039 §2.7 の昇格規律) + Phase F fidelity 拡張 + §11.4 (lens + user walk)。 機械 gate 未設置の項 (章図の SHOULD・仕分けの適切さ) は §11.3 fold 規律と同じく ceiling 委譲。</li>
 </ul>
+</section>
+
+<section id="s12-srs-design-system" class="normative">
+<h2>§12. 要件定義書 design system (機械 SSoT 生成 + 2-gate 検証)</h2>
+<p class="section-essence" data-audience="human">要件定義書 (SRS) の人間プレゼンを<strong>機械 SSoT から生成し 2-gate (floor ∧ ceiling) で検証する</strong> regime。 規律を普遍コア (core) と SRS 固有パック (srs-pack) に分ける。</p>
+
+<aside class="informative" data-audience="machine">
+  <p>本 §12 は <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> (要件定義書のための汎用ビジュアル design system + 機械 SSoT からの生成 + 2-gate 検証) と <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (ハイブリッド生成 + 密系部品の A/B 可読化) が rules (living) へ委ねた新規範の SSoT であり、 <a href="./constitution.html#p-14">P-14</a> (Human Readability) を「視覚 design system + 生成 + 検証」で実装する。 両 ADR は frozen な <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> §2.1 / §2.2 (圧縮 = informative prose の audience 降格による既定表示・time-box 字数上限) と <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.4 (層別既定表示) を改訂し、 「情報を隠す圧縮」から「機械 SSoT から密度高く視覚的に再提示する生成」へ転換する (frozen 本文不変、 ADR が改訂を宣言し本 §12 が新規範を持つ = <a href="./constitution.html#p-10">P-10</a> divergence trace の流儀)。 適用範囲は<strong>生成 SRS プレゼン</strong> (γ scope = 29148 接地) であり、 folio 自身の living spec (本 rules を含む) の人間層は ADR-0041 適用範囲の拡張パックが後追いするまで <a href="#s11-presentation">§11</a> の規律下に留まる (一次資料層 = decisions / research も同様)。 dual-audience の machine 側精度は <a href="#s7-dual-audience">§7</a> のまま不変で、 本章は dual-audience の境界を部品単位へ降ろす。</p>
+</aside>
+
+<p data-audience="machine"><strong><code>data-doc-scope</code> による engine / pack 標識</strong>: 本章が導入する規律は <code>data-doc-scope</code> 属性で標識する。 値は closed 2 値 (<code>core</code> | <code>srs-pack</code>)、 canonical (synonym は <a href="./constitution.html#p-5">P-5</a> 禁止、 <code>data-audience</code> と直交する別 taxonomy — 本値 <code>core</code> は <a href="#s7-1-taxonomy">§7.1</a> の <code>data-audience</code> を指す「closed 2 値 core」とは別 entity の標識値)。 <code>core</code> = doc-type 非依存の<strong>普遍メタ規律</strong> (エンジンコア候補)、 <code>srs-pack</code> = SRS 核 (γ) 固有の規律・部品 (SRS 核の<em>外</em>を後追いする「拡張パック」とは別概念 — 前者は核内、 後者は核外)。 <code>grep data-doc-scope="core"</code> は<strong>普遍コア抽出の地図</strong>であり、 core 規律の普遍化が要る doc-type が現れた際 (rule of three) の抽出単位を標識する。 既存 §1〜§11 は本属性を持たない。</p>
+
+<div data-doc-scope="core">
+<p data-audience="machine"><strong>エンジンコア規律 (普遍メタ、 doc-type 非依存)</strong>:</p>
+<ul data-audience="machine">
+  <li><strong>機械 SSoT からの生成 (derive)</strong> — 設計された高密度の人間プレゼンを corpus 規模で手 co-author するのは維持不能なため、 人間プレゼンは<strong>機械 SSoT から別ファイルとして生成</strong>する (<a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 が roadmap に残した Option A' derive を別ファイル形態で起動)。 機械 SSoT が唯一の真実源・人間プレゼンは派生 view であり、 同期は<strong>更新日時 + fidelity gate</strong> で追跡する (co-author = enforcement から生成 = 検証への移行)。</li>
+  <li><strong>ハイブリッド生成</strong> (<a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> §2.1) — <strong>決定的 assembler</strong> が構造化された入力 contract (要件レコード = 一意 id / 型 (FR/NFR/CON/ASM) / EARS clause / トレース端点 / 根拠出所、 加えて NFR メトリクス・用語・上位ニーズ) を読み、 文書の<strong>構造</strong> (要件マトリクス・NFR 表・RTM グリッド・優先度/検証バッジ・被覆) を <code>data-component</code> 付きで組立てる。 RTM / トレースの各セルはトレースデータから<strong>決定的に導出</strong>するため、 元に無い行・列・リンクの捏造は構成上不可能になる (fabrication-free-by-construction)。 高能力モデルは assembler が空で残した <strong>prose スロットのみ</strong>充填する (章リード / 「なぜ要る」根拠 / 専門語のやさしい併記 / 1 文サマリ)。 構造は SSoT から毎回決定的に再組立し、 構造に差分編集を介在させない (更新は prose 層でのみ差分再生成する)。</li>
+  <li><strong>成果物の自己完結性</strong> — 生成プレゼンは<strong>自己完結の static HTML + CSS + inline SVG + vendored mermaid</strong> とし、 外部 URL / CDN / ES module に依存しない (no-build・AI 直読・<code>file://</code> 動作、 <a href="#s8-js-governance">§8</a> JS governance / <a href="./constitution.html#p-13">P-13</a> と整合)。</li>
+  <li><strong>2-gate 検証 + floor 刷新</strong> — done-condition は二層で判定する: <strong>GREEN ⟺ (floor 全通過) AND (ceiling 合格)</strong>。 <strong>floor 単独で GREEN を宣言しない</strong> (存在だけ測って中身を測らない Goodhart 再発の構造防止 = <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> の「長さだけ測って読めない」死角の是正)。 <strong>floor 刷新</strong> (<a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.5): 人間層 floor を「人間可視 prose の長さ (字数)」から<strong>「visual-first (地の文偏重の禁止) / 用語被覆 (未説明の専門語ゼロ) / renders-unbroken (render-gate)」</strong>+ 構造の存在・完全性へ刷新する (長さ time-box は本 floor が置換)。 floor = 決定的 (機械判定・blocking)、 ceiling = LLM (<strong>persona walk</strong> = 非エンジニアが頑張れば読めるか〔専門エンジニア水準では不合格〕 / <strong>fidelity check</strong> = 機械 SSoT との突合で情報落ち・歪み・捏造を検出)。 二層は <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の enforcement 二層と同型。 <strong>gate の形式化 SSoT は verification.html</strong> (<a href="verification.html#req-ver-024">REQ-VER-024</a>〜<a href="verification.html#req-ver-026">REQ-VER-026</a>: <code>folio verify-srs</code> が floor 通過時に <code>CEILING=PENDING</code> を返す機械担保を含む)。 本章は WHAT 規律を定め、 gate を個別列挙しない (<a href="./constitution.html#p-7">P-7</a>、 gate 詳細は verification に集約)。</li>
+</ul>
+</div>
+
+<div data-doc-scope="srs-pack">
+<p data-audience="machine"><strong>SRS doc-type パック規律 (29148 接地・SRS 固有)</strong>:</p>
+<p data-audience="machine">design system は<strong>再利用可能な部品庫</strong>で、 dual-audience の境界が<strong>部品単位</strong>へ降りる (各部品が機械精密スロットと設計された人間の顔を持つ)。 SRS 核 (γ scope) は <a href="https://www.iso.org/standard/72089.html">ISO/IEC/IEEE 29148</a> で完全性を錨留めし、 部品 taxonomy の設計 SSoT は <a href="../research/srs-component-taxonomy.html">srs-component-taxonomy.html</a> (37 部品の register 分類)、 部品庫の HOW 実装は design-system catalog が持つ (folio 自身の ADR / research / 原則は拡張パックで後追い)。</p>
+<p data-audience="machine"><strong>密系部品の非エンジニア可読化</strong>は assembler が 3 戦略に振り分けて構造的に保証する (<a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> §2.2)。 高密度は fidelity の背骨として全 DOM 保持・展開可のまま残し、 主役の配置のみを変える:</p>
+<table>
+  <caption>密系部品の可読化 3 戦略 (assembler が MUST スロットを保証、 部品 id allowlist の SSoT は catalog / taxonomy)</caption>
+  <thead><tr><th>戦略</th><th>対象 (判定根拠)</th><th>assembler が必ず生成する affordance</th></tr></thead>
+  <tbody>
+    <tr><td><strong>B = 畳む</strong></td><td>rtm-grid register 全体 (トレース監査の道具、 register-pure ゆえ機械判定)</td><td>人間ビューで既定折りたたみ + 直前に<strong>空不可の平易要約スロット</strong>。 全グリッドは保持し AI / 印刷で展開 (情報は畳むだけで欠落しない)。</td></tr>
+    <tr><td><strong>A = 噛み砕く</strong></td><td>要件本体・NFR の明示 allowlist (register をまたぐ部品 id 集合)</td><td>各行に<strong>空不可の plain-language スロット</strong> (やさしい言い換え) + 専門語の inline 併記。 文書の本体ゆえ畳まない。</td></tr>
+    <tr><td><strong>据置</strong></td><td>元々平易な部品 (用語表・参照一覧・改訂履歴 等) の明示集合</td><td>既存のまま、 軽い注釈のみ (plain スロットは SHOULD)。</td></tr>
+  </tbody>
+</table>
+<ul data-audience="machine">
+  <li><strong>allowlist の SSoT は catalog / taxonomy</strong> — 全 dense 部品の A / 据置 完全カタログ (部品 id allowlist) の SSoT は design-system catalog / taxonomy とし、 rules は振り分けの WHAT 規律のみ定め部品 id 列を複製しない (<a href="./constitution.html#p-7">P-7</a>)。 SHOULD 部品のスロットは MUST-when-present (出力に含まれる時のみ非空を hard-require)。</li>
+  <li><strong>用語被覆</strong> — 専門語の本文中 plain 併記 (<code>plain-language-term-inline</code>) は用語定義表 (<code>glossary-term-table</code>) の<strong>派生ビュー</strong>であり、 両者の定義一致を fidelity が検証する (double-SSoT 回避、 <a href="#s9-5-glossary">§9.5</a> glossary 機構と整合・用語定義 SSoT は <code>vocabulary.yaml</code>)。</li>
+</ul>
+</div>
 </section>
 
 <script>
