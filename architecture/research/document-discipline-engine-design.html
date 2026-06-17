@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="active">
+<title>folio — 文書規律エンジン (C) B0 設計 design-of-record</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./document-discipline-engine-design.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "文書規律エンジン (C) B0 設計 design-of-record",
+  "folio:version": "1.0.0"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-purpose">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">document-discipline-engine-design</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>文書規律エンジン (C) — B0 設計 design-of-record</h1>
+  <div class="meta">v1.0.0 &middot; status: active &middot; folio 規律を一般化した汎用文書一式生成エンジンの設計記録 (epic folio-0dv / B0=folio-9ay 合意 + B1=folio-bwc 実証)</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-purpose">§1. 目的とロードマップ上の位置づけ</a></li>
+  <li><a href="#s2-three-layers">§2. 論点1 — エンジンの 3 層構造</a></li>
+  <li><a href="#s3-cross-ref-roles">§3. 論点2 — 照会 (inter-doc cross-ref) = 抽象ロール graph</a></li>
+  <li><a href="#s4-how-outside">§4. 論点3 — HOW を外側へ (enforcement は 3-tier)</a></li>
+  <li><a href="#s5-constitution">§5. 論点4 — constitution = optional-but-special</a></li>
+  <li><a href="#s6-versioning">§6. 論点5 — versioning = 単一版ライン (additive)</a></li>
+  <li><a href="#s7-instance2">§7. 論点6 + B1 実証 — instance#2 (ADR-pack) が炙り出した core / pack 境界</a></li>
+  <li><a href="#s8-next">§8. 次の一手</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="informative">
+<p>本 doc は北極星 <strong>「非エンジニア × 機械 両対応の完璧な文書を任意プロジェクト向けに生成する汎用ツール」</strong> (folio-7wn) を実装する <strong>文書規律エンジン (C)</strong> の設計記録である。 B0 設計 grill (folio-9ay) で合意した 6 論点を design-of-record として残し、 B1 (folio-bwc) で得た instance#2 (ADR-pack) の実証を併記する。 これは <strong>探索領域 (research/) の記録</strong>であり、 確定した engine architecture は後段で正式 ADR (P-10 user 承認) へ昇格させる (路線「い」: research doc + bd notes に留め B1 実証後に ADR 化)。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. 目的とロードマップ上の位置づけ</h2>
+<p>folio は当初「自分自身を規律する META FRAMEWORK」として作られたが、 そこで磨いた文書規律 (dual-audience / EARS / RTM / declarative / 1 名 1 語 / HOW を外側へ / 3-domain 分離 / inter-doc 照会) は folio 固有ではなく <strong>あらゆる文書一式に効く一般原理</strong>である。 文書規律エンジン (C) はこの規律を抽出し、 任意プロジェクト向けに「完璧な文書一式」を生成する道具にする試みである。</p>
+<p>進め方は <strong>抽出主導 (rule-of-three)</strong>: 全列挙で設計するのではなく、 folio を強い事前知識として ~3 例の実物を作り、 共通項を core として後から抽出する。 SRS-pack (epic folio-c5g) が一例目、 本 B1 の ADR-pack が二例目 (instance#2)。 止め時は「新しい doc-type が core を一切変えずに純粋な pack として挿さった」とき。 抽出は可逆 (誤って core に置いた物は pack へ降格できる)。 endgame は folio 自身をこのエンジンで dogfood すること。</p>
+<table class="data-table">
+  <thead><tr><th>フェーズ</th><th>bd</th><th>内容</th><th>状態</th></tr></thead>
+  <tbody>
+    <tr><td>B0</td><td>folio-9ay</td><td>設計 grill (6 論点合意)</td><td>完了</td></tr>
+    <tr><td>B1</td><td>folio-bwc</td><td>instance#2 = clinic ADR 生成 + 本 design-of-record</td><td>本 doc</td></tr>
+    <tr><td>B2+</td><td>(後続別 bd)</td><td>core 抽出 (非破壊) → research/principle pack → 照会/HOW-outside 機構 → folio self dogfood</td><td>未着手</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s2-three-layers" class="informative">
+<h2>§2. 論点1 — エンジンの 3 層構造</h2>
+<p>engine は次の 3 層 + 別軸の constitution に分かれる。 「機構 (どう生成・検証するか)」と「規律 (何が良い文書か)」と「中身 (各 doc-type 固有の部品)」を分離するのが要点で、 これが core / pack 境界を引く基準になる。</p>
+<table class="data-table">
+  <thead><tr><th>層</th><th>役割</th><th>具体 (folio の現状から)</th></tr></thead>
+  <tbody>
+    <tr><td>plumbing core (機構)</td><td>doc-type 非依存の生成・検証の足回り</td><td>現 §12 の 4 機構: ①機械 SSoT から生成 ②決定的 assembler + opus prose ③自己完結 (single-file inline) ④2-gate (floor 機械 ∧ ceiling LLM)</td></tr>
+    <tr><td>普遍規律層 (著作規律)</td><td>どの文書にも効く「良い文書」の規律</td><td>dual-audience / declarative / 1 名 1 語 (canonical name) / HOW を外側へ / domain 分離 / inter-doc 照会</td></tr>
+    <tr><td>doc-type pack (中身)</td><td>その文書型固有の schema + 部品 + gate 詳細</td><td>SRS: EARS・RTM・37 部品 / ADR: context・options・decision・consequences・supersession</td></tr>
+    <tr><td>(別軸) constitution</td><td>採用時のみ効く不変原則 (§5)</td><td>optional-but-special</td></tr>
+  </tbody>
+</table>
+<p>core⟷pack の境界判定 = <strong>「その機構を新 doc-type に持ち込んだとき改変が要るか」</strong>。 改変ゼロで再利用できれば core、 doc-type 固有なら pack。 B1 の実物がこの判定を初めて検証した (§7)。</p>
+</section>
+
+<section id="s3-cross-ref-roles" class="informative">
+<h2>§3. 論点2 — 照会 (inter-doc cross-ref) = 抽象ロール graph</h2>
+<p>文書間・文書内の「主張 → 根拠 → … → 終端」のつながり (照会) を、 doc-type 固有語ではなく <strong>抽象ロール</strong>で定義する。 core が次の抽象役割と普遍 edge「主張 → 根拠 → 探索 → … → 終端」を定義し、 各 pack が具体語をこの役割へ写像する。</p>
+<table class="data-table">
+  <thead><tr><th>抽象ロール</th><th>意味</th><th>SRS-pack の写像</th><th>ADR-pack の写像</th></tr></thead>
+  <tbody>
+    <tr><td>claim</td><td>主張・約束されるもの</td><td>要件 (FR/NFR)</td><td>decision (採用した判断)</td></tr>
+    <tr><td>rationale</td><td>なぜそれが要るか</td><td>上位ニーズ (N-x)</td><td>context (背景・力学)</td></tr>
+    <tr><td>exploration</td><td>検討した選択肢</td><td>(SRS では薄い)</td><td>options (選択肢 + 利点/欠点)</td></tr>
+    <tr><td>verification</td><td>満たせたと確かめる基準</td><td>受入基準 (AC)</td><td>(検証手法バッジ)</td></tr>
+    <tr><td>principle</td><td>遡らない終端原則</td><td>(constitution あれば)</td><td>principle (照会終端)</td></tr>
+    <tr><td>implementation</td><td>HOW 側 (外部化)</td><td>tests / コード (照会リンク)</td><td>実装方式 (decision が指す)</td></tr>
+  </tbody>
+</table>
+<p>照会終端の規約 = <strong>principle があれば principle、 無ければ top-rationale</strong> で止める。 既存の folio JSON-LD graph (relations / xref) を描画・格納の基盤に再利用し、 1 名 1 語 (P-5) を保つことで文書横断クエリが可能になる。</p>
+<p><strong>★B1 で実証した最難関 edge = cross-doc 照会</strong>: ADR の decision (claim) が別文書である SRS の要件 FR2 (予約受付) / FR3 (競合拒否) を正当化する edge を機械 SSoT に持たせ、 参照先 SRS に当該要件 ID が実在することを fail-closed で検証した (§7)。</p>
+</section>
+
+<section id="s4-how-outside" class="informative">
+<h2>§4. 論点3 — HOW を外側へ (enforcement は 3-tier)</h2>
+<p>design-intent (WHAT/WHY) と実装・検証 (HOW) を content として分離し、 HOW へは照会リンクで繋ぐ (本文に HOW を埋めない)。 これを守らせる enforcement は core 同梱の 3-tier:</p>
+<ul>
+  <li><strong>tier 1 — SessionStart 注入</strong>: 照会 map の digest (Tier-1 小) を毎セッション文脈へ注入する (shaping)。</li>
+  <li><strong>tier 2 — PreToolUse 編集 gate</strong>: 編集時に content 境界を hook で gate する (shaping)。</li>
+  <li><strong>tier 3 — CI floor ∧ ceiling</strong>: ★<strong>guarantee はここだけ</strong>。 hook は vim 直編集・opt-in・コストで保証にならないため、 最終的な担保は CI gate が負う。</li>
+</ul>
+<p>照会 graph が tier 1 の注入物になる。 これは folio の ADR-0007 (context injection) / ADR-0028 (2-gate enforcement) を一般化したものである。</p>
+</section>
+
+<section id="s5-constitution" class="informative">
+<h2>§5. 論点4 — constitution = optional-but-special</h2>
+<p>constitution (不変の最上位原則) は <strong>必須ではない</strong>。 採用したプロジェクトに対してのみ、 core が (a) 不変性、 (b) 改訂 gate (P-10 一般化: 改訂は ADR 経由で照会記録を残す)、 (c) 照会終端としての役割、 を保証する。 採用しないプロジェクトでは照会は top-rationale で終端する (§3)。 「必須でないが、 採用時だけ特別扱い」という非対称が要点。</p>
+</section>
+
+<section id="s6-versioning" class="informative">
+<h2>§6. 論点5 — versioning = 単一版ライン (additive)</h2>
+<p>engine は <strong>単一の版ライン</strong>で進める (folio の plugin.json 1 版)。 SRS-gen は 1.1.0、 core 抽出 + ADR-pack は後続 MINOR、 と <strong>追記式</strong>に積む。 pack は「電池同梱」で folio と版が連動する。 MAJOR (2.0) は contract schema を破壊するときだけ。</p>
+<p><strong>★設計制約 (B1 から守る)</strong>: core 抽出は <strong>既存 SRS contract schema を不変に保つ</strong> (抽象ロールへの写像は pack 側に置く) ことで、 非破壊の MINOR に収める。 B1 の ADR-pack はこの制約を守って作った (SRS contract に一切触れず、 ADR から SRS を照会する片方向で実装)。</p>
+</section>
+
+<section id="s7-instance2" class="informative">
+<h2>§7. 論点6 + B1 実証 — instance#2 (ADR-pack) が炙り出した core / pack 境界</h2>
+<p>B1 (folio-bwc) は clinic SRS の FR2/FR3 (二重予約防止) を正当化する <strong>clinic ADR を機械 SSoT から生成</strong>し、 同一ドメインで SRS + ADR の文書ペアを成立させた。 実物 (<code>.claude-plugin/design-system/generator/</code>) で得た core / pack の切り分けは次の通り。</p>
+<table class="data-table">
+  <thead><tr><th>要素</th><th>SRS との関係</th><th>判定</th></tr></thead>
+  <tbody>
+    <tr><td><code>inject-prose.sh</code> (prose 注入)</td><td><strong>無改変で共用</strong> (data-slot-id ベースで doc-type 非依存)</td><td>core 候補 (強)</td></tr>
+    <tr><td>esc / mark_terms / band / cover / glossary / footer の語彙</td><td>idiom を共用 (関数を流用)</td><td>core 候補</td></tr>
+    <tr><td>2-gate (floor 機械 ∧ ceiling LLM) の型</td><td>同型 (verify-adr が verify-fab と同じ規律)</td><td>core 候補</td></tr>
+    <tr><td>fabrication-free 規律 (行数=contract導出 / escape / 集合一致 / fail-closed)</td><td>同型だが対象 schema が違う</td><td>core 規律 + pack 適用</td></tr>
+    <tr><td>contract schema (context/options/decision/...)</td><td>SRS と全く別</td><td>pack 固有</td></tr>
+    <tr><td>section emitter (options card / decision panel / cross-doc justify)</td><td>SRS と別構造</td><td>pack 固有</td></tr>
+    <tr><td>cross-doc 照会の解決 (justifies → 別 contract の req 実在)</td><td>SRS には無い新軸</td><td>core 機構 (照会) の pack 適用</td></tr>
+  </tbody>
+</table>
+<p><strong>一次証拠</strong>: prose injector が 1 byte も変えずに ADR で動いたこと、 2-gate と fabrication-free の規律がそのまま移ったことが「SRS-pack ∩ ADR-pack = core」を具体的に示す。 一方 assembler 本体は doc-type 固有の section 構造ゆえ fork が要った (= pack)。 core 抽出 (後続別 bd) は <strong>inject-prose.sh + 2-gate 型 + fabrication-free 規律 + 照会機構</strong>を core へ引き上げ、 assemble の共通 idiom (esc/mark_terms/band/cover/glossary/footer) を共有ライブラリ化する方向になる。</p>
+<p>非目標 (rule-of-three の経済性): フル ADR generator 化・複数 ADR・独立版は作らない。 B1 は最小の extraction-probe に留める。</p>
+</section>
+
+<section id="s8-next" class="informative">
+<h2>§8. 次の一手</h2>
+<ul>
+  <li><strong>core 抽出 (非破壊)</strong>: §7 の core 候補を共有層へ引き上げる。 既存 SRS contract schema 不変 (§6 制約) を守る。</li>
+  <li><strong>research / principle pack</strong>: 三例目以降の doc-type で core の安定を確かめる (止め時の判定)。</li>
+  <li><strong>照会 / HOW-outside 機構</strong>: 抽象ロール graph の格納・描画・3-tier enforcement を core 機構として実装。</li>
+  <li><strong>ADR 専用 ceiling agent</strong>: persona-walk-adr / fidelity-adr の制度化 (SRS の S5.2 = persona-walk-srs / fidelity-srs と同型) を core 抽出後に検討。</li>
+  <li><strong>folio self dogfood</strong>: endgame として folio 自身の architecture/ をこのエンジンで生成・検証する。</li>
+  <li><strong>正式 ADR 化</strong>: 本 design-of-record で固めた engine architecture を、 実証が十分に積まれた段階で正式 ADR (P-10 user 承認) へ昇格させる。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

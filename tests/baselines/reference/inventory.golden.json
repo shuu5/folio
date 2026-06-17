@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-16T14:15:51Z",
+  "generatedAt": "2026-06-17T07:02:20Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -1181,6 +1181,16 @@
           "research/x4-plan.html"
         ]
       }
+    },
+    {
+      "@id": "research/document-discipline-engine-design.html",
+      "title": "文書規律エンジン (C) B0 設計 design-of-record",
+      "summary": "folio 規律を一般化した汎用文書一式生成エンジンの設計記録 (epic folio-0dv / B0=folio-9ay 合意 + B1=folio-bwc 実証)",
+      "doc-type": "research",
+      "status": "active",
+      "version": "1.0.0",
+      "stakeholders": [],
+      "relations": {}
     },
     {
       "@id": "research/plugin-sandbox-verification-research.html",
