@@ -298,7 +298,7 @@ build() {
   band brand  "ゴール / 絶対に避けたい 3 つの事故"      "「これが起きたら失敗」を先に決める"          "$ICO_TARGET";        emit_goals;                  band_end
   band info   "範囲 / だれが関わるか"                    "この文書が扱う範囲と、 登場人物"            "$ICO_BOX";           emit_scope; emit_actors;     band_end
   band violet "上位ニーズ / なぜこの要件群が要るか"      "この文書の要件は、 どの事業ニーズから来たか" "$ICO_FLOW";          emit_origin_table;           band_end
-  band brand  "機能要件 / システムが必ずやること"        "注文確定までに、 システムが何をするか"      "$ICO_CHECKSQ";       emit_legend; emit_req_table;  band_end
+  band brand  "機能要件 / システムが必ずやること"        "「いつ・何をするか」を一つずつ決める"      "$ICO_CHECKSQ";       emit_legend; emit_req_table;  band_end
   band violet "非機能要件 / 速さ・安定・安全の数値約束"  "「どれくらい速く・落ちず・安全か」を数字で約束する" "$ICO_BOLT";   emit_nfr_hero; emit_nfr_table; band_end
   band ok     "受入基準 / 「できた」と言える条件"        "これを満たせば「完成」と判定する"          "$ICO_CHECKSHIELD";   emit_acceptance;             band_end
   band info   "トレーサビリティ / 抜け漏れチェック表"    "事業ニーズ → 機能 → 検証 が全部つながっているか" "$ICO_ARROW";     emit_rtm_fold;               band_end
