@@ -1,0 +1,151 @@
+# folio engine B1 (folio-bwc) — ADR-pack 入力 contract インスタンス (instance#2 / rule-of-three)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT と同一ドメイン)。
+# doc-type = ADR (設計判断記録)。SRS generator と同型の機構 (決定的 assembler + opus prose + 2-gate)
+# を ADR-pack schema (context / options / decision / consequences / supersession) へ適用する。
+#
+# ★この ADR の核 = cross-doc 照会 (inter-doc cross-ref): decision (claim) が
+#   SRS-CLINIC-APPT の FR2 (予約受付) / FR3 (競合拒否) を *正当化* する edge を機械 SSoT に持ち、
+#   verify-adr.sh が参照先 SRS contract に当該要件 ID が実在することを fail-closed で確かめる
+#   (B0 论点2 抽象ロール graph: decision=claim / options=exploration / context→rationale / 原則=終端)。
+#
+# 読者 = クリニックの事業責任者 + 開発リード (専門語は必ずやさしい言葉を併記)。
+
+meta:
+  doc_id: ADR-CLINIC-0001
+  title: 同じ診療枠への二重予約を、 アプリ側の確認でなく「枠の取り合いに強い確定方式」で防ぐ
+  eyebrow_left: 設計判断記録 (ADR)
+  eyebrow_right: クリニック — 二重予約防止
+  subtitle: 複数の患者がほぼ同時に同じ枠を申し込んでも、 確定するのは 1 件だけにする方式を選ぶ
+  adr_status: accepted
+  version: "1.0"
+  date: "2026-06-17"
+  reader: クリニックの事業責任者 + 開発リード — 医療コーディングの専門知識は不要 (専門語はやさしい言葉を併記)
+
+# 承認記録 (SRS と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-17 承認
+    stamp: 承認済
+  - role: レビュー (開発リード)
+    who: 佐藤 健
+    when: 2026-06-16 レビュー
+    stamp: レビュー済
+  - role: 作成 (システム設計)
+    who: 設計チーム
+    when: 2026-06-16 起票
+    stamp: 作成
+
+# ★cross-doc 照会の解決先 (verify-adr.sh が参照先 SRS contract を読み込み、 decision.justifies の
+#   要件 ID 実在を確かめる)。srs_contract は contract/ dir 起点の相対パス。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_title: 診療予約システム SRS (診療の予約を空き枠どおり・二重予約なく受け付ける仕組み)
+
+# 01 背景・なぜこの判断が要るか (context = rationale role。 「いま何が問題か」の力学)
+context:
+  - id: CTX1
+    summary: 同時申込はふつうに起きる
+    detail: 予約開始直後や人気の枠では、 複数の患者がほぼ同じ瞬間に同じ空き枠を申し込む。 確定の仕方が甘いと両方とも通り、 ダブルブッキングになる。
+  - id: CTX2
+    summary: アプリ側の事前確認だけでは漏れる
+    detail: 「申し込む直前に空きを確認してから確定する」二段構えは、 確認と確定の間に別の申込が割り込むと二重予約が漏れる (確認と確定が分かれている隙)。
+  - id: CTX3
+    summary: 速さと安全を同時に満たす必要がある
+    detail: 予約受付開始時のピークでも素早く応答しつつ (SRS NFR1/NFR3)、 二重予約は一件も許されない (SRS GOAL 1)。 安全のために遅く・固くしすぎると現場が回らない。
+
+# 02 判断を縛る力 (drivers = この判断を評価する軸。 SRS の上位ニーズ・NFR に接地)
+drivers:
+  - id: DR1
+    driver: 二重予約は一件も許されない (来院した患者を待たせる・断る事故に直結する)
+    grounds: SRS GOAL 1 / 上位ニーズ N-1
+  - id: DR2
+    driver: 予約受付開始直後のピーク (1 分あたり 200 件・95% を 2 秒以内) でも詰まらない
+    grounds: SRS NFR1 / NFR3
+  - id: DR3
+    driver: 競合に負けた申込は、 はっきり「満枠」として患者に返す (黙って失敗させない)
+    grounds: SRS FR3 / AC1
+
+# 03 検討した選択肢 (options = exploration role)。 verdict ∈ {chosen, rejected, deferred}。
+options:
+  - id: OPT1
+    name: 楽観的な確定 (確定時に残数を条件付きで 1 だけ減らす)
+    summary: 申込の確定処理で「残数が 1 以上のときだけ残数を 1 減らす」という条件付きの更新を一回で行う。 成功すれば確定、 残数 0 で失敗すれば満枠。
+    pros:
+      - 確認と確定が一つの操作になり、 割り込みの隙が無い (二重予約が構造的に 0)
+      - 競合中の枠だけが一瞬だけ調整され、 待ち時間が短くピーク負荷に強い
+      - 既存のデータ層 (条件付き更新・トランザクション) で素直に実装できる
+    cons:
+      - 競合に負けた側は確定が失敗する (満枠として返す UX 設計が要る)
+    verdict: chosen
+  - id: OPT2
+    name: 悲観ロック (枠を選んだ時点で確保し続ける)
+    summary: 患者が枠を選んだ瞬間にその枠をロックし、 予約完了かタイムアウトまで他の人を入れない。
+    pros:
+      - 確定するまで他者が入れず、 二重予約は起きない
+    cons:
+      - 患者が迷って離脱すると枠が長時間ふさがり、 実際には空いているのに申し込めない
+      - 人気の枠でロック待ちが連鎖し、 ピーク時のスループットが落ちる
+    verdict: rejected
+  - id: OPT3
+    name: 枠ごとの直列キュー (申込を一列に並べて順番に処理)
+    summary: 枠単位で申込を一つの待ち行列に入れ、 先頭から一件ずつ確定可否を判定する。
+    pros:
+      - 同じ枠への申込が原理的に同時実行されず、 二重予約は起きない
+    cons:
+      - 人気の枠に待ち行列が集中し (ホットスポット)、 応答が遅れる
+      - キュー基盤の運用が増え、 最小構成 (rule-of-three の経済性) から外れる
+    verdict: rejected
+
+# 04 採用した判断 (decision = claim role)。 ★justifies = cross-doc 照会 edge。
+decision:
+  chosen: OPT1
+  statement: 予約の確定は「空き枠の確保」と一体の単一操作とし、 確定時に『残数が 1 以上のときだけ残数を 1 減らす』条件付き更新を行う。 成功した一件だけを確定し、 残数 0 で失敗した申込は満枠として確定させず断る。
+  # ★decision (claim) が正当化する SRS 要件 (cross-doc 照会の終端側)。
+  #   role ∈ {claim, rationale, exploration, principle, verification, implementation} (B0 抽象ロール)。
+  #   req は cross_doc.srs_contract の .requirements[].id / .nfr[].id に実在すること (verify が fail-closed)。
+  justifies:
+    - req: FR2
+      role: claim
+      note: 「その枠を 1 件だけ確保して予約を確定する」= 条件付き残数更新の成功side。 本判断が FR2 の実現方式を与える。
+    - req: FR3
+      role: claim
+      note: 「満枠として断る」= 条件付き更新が残数 0 で失敗した side。 本判断が FR3 の発火条件を構造的に保証する。
+
+# 05 結果 (consequences = 判断の帰結。 positive / negative 両軸)
+consequences:
+  positive:
+    - id: CSQ-P1
+      text: 同じ枠への二重予約が構造的に 0 件になる (確認と確定の隙が消えるため)
+    - id: CSQ-P2
+      text: 競合する枠だけが一瞬調整されるので、 ピーク負荷でも応答が速いまま保てる
+  negative:
+    - id: CSQ-N1
+      text: 競合に負けた申込は確定が失敗するため、 「満枠です・別の枠へ」と分かりやすく案内する UX が別途要る
+    - id: CSQ-N2
+      text: 残数の条件付き更新を正しく支えるデータ層 (トランザクション境界) が前提になり、 そこが弱いと保証が崩れる
+
+# 06 改訂・置換関係 (supersession = 単一版ライン・additive の終端規約。 B0 论点5)
+supersession:
+  status: current
+  supersedes: []
+  superseded_by: []
+  note: 本 ADR は現行。 将来 予約方式を変える場合は新しい ADR を起票し、 本 ADR を superseded に切り替える (単一版ライン・追記式)。
+
+# 07 原則終端 (principle = 照会 graph の終端。 B0 论点4: principle あれば principle で止める)
+principle:
+  id: PRIN-SAFETY-FIRST
+  text: 患者の安全と予約の信頼を、 性能より優先する。 ただし両立できる最小の機構を選ぶ。
+  note: 本 ADR の判断はこの原則に行き着く (これ以上は遡らない照会終端)。
+
+# 08 用語集 (glossary = 用語の SSoT。 plain_short = 本文の専門語に併記するやさしい言い換え)
+glossary:
+  - { term: ダブルブッキング, en: double booking, plain_short: 二重予約, def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 楽観ロック, en: optimistic locking, plain_short: ぶつかったら気づく方式, def: 普段はロックせず処理を進め、 確定の瞬間にだけ「他とぶつかっていないか」を条件で確かめる方式。 ぶつかった側だけが失敗する。 }
+  - { term: 悲観ロック, en: pessimistic locking, plain_short: 先に押さえる方式, def: 処理の前から対象を確保し、 終わるまで他の人を入れない方式。 確実だが押さえている間ふさがる。 }
+  - { term: 条件付き更新, en: conditional update, plain_short: 条件を満たすときだけ書き換え, def: 「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。 }
+  - { term: 満枠, en: fully booked, plain_short: 空きなし, def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: トランザクション, en: transaction, plain_short: ひとまとめの処理, def: 「全部成功」か「全部やらなかった」かのどちらかになる、 分けられない一塊の処理。 }
+  - { term: ホットスポット, en: hot spot, plain_short: 集中する一点, def: 申込や処理が一箇所に集中して詰まりやすくなる場所。 人気の枠などで起きる。 }
