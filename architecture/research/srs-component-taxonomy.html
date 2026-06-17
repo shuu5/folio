@@ -199,6 +199,32 @@
 </table>
 
 <p>部品総数 = <strong>37</strong> (synthesis 35 + critic 補填 2: <code>approval-block</code> / <code>source-trace-origin</code>)。 うち MUST = 27、 SHOULD = 8、 OPTIONAL = 2。</p>
+
+<h3>§3.4. generator 導入の行マーカー / 折りたたみ容器 / prose スロット (ADR-0042 §2.3 登録)</h3>
+<p>S4 generator (<a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> ハイブリッド生成 + A/B 可読化) は、 §3.1&ndash;§3.3 の 37 部品を<strong>行粒度のマーカー</strong>・<strong>B 折りたたみ容器</strong>・<strong>opus 充填 prose スロット</strong>で<em>精緻化</em>する。 これらは新たな 29148 情報要素ではなく既存部品の実装 affordance ゆえ、 <strong>SRS 核 37 部品の数は不変</strong> (本節は別カテゴリの追加登録)。 <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html#s2-3-two-layer">ADR-0042 §2.3(i)</a> 「新 B/A スロットを部品の必須スロットとして taxonomy §3 へ登録し gate G の被覆対象に加える contract」を本節で履行する。 部品庫の凍結登録先 = <code>.claude-plugin/design-system/catalog.html</code> (folio-ctv / S6)。</p>
+
+<table>
+<thead><tr><th>id</th><th>種別</th><th>register / 親部品</th><th>必須スロット (空不可)</th><th>担当 (ADR-0042 / floor)</th></tr></thead>
+<tbody>
+<tr><td><code>rtm-collapse</code></td><td>B 折りたたみ容器 (<code>&lt;details&gt;</code>)</td><td>rtm-grid / <code>rtm-grid</code> を内包</td><td><code>rtm-summary</code> (平易要約)</td><td>§2.2 B。 監査グリッドを既定折りたたみ + 直前に空不可の平易要約。 全グリッドは DOM 保持し展開可。 <strong><code>rtm-grid</code> (表本体) とは別部品</strong>。 floor gate A 凍結集合 + gate G。</td></tr>
+<tr><td><code>nfr-metric-row</code></td><td>行マーカー</td><td>dense-table / <code>nfr-metrics-table</code> の <code>&lt;tr&gt;</code></td><td><code>plain</code> (A やさしい言い換え)</td><td>§2.2 A。 NFR 各行に空不可 plain スロット + term-inline 自動併記。 floor gate G (no-TBD plain スロット) 被覆 (gate D は requirement-matrix-table 行=ears-requirement-row 専用ゆえ NFR 行には掛からない)。</td></tr>
+<tr><td><code>source-trace-row</code></td><td>行マーカー</td><td>dense-table / <code>source-trace-origin</code> の <code>&lt;tr&gt;</code></td><td>&mdash; (据置・plain は SHOULD)</td><td>RTM backward 端点 (ニーズ ID) を行単位で識別し gate C 出所突合を可能にする。 据置部品ゆえ畳まず噛み砕かず。</td></tr>
+</tbody>
+</table>
+
+<p><strong>prose スロット (opus 充填の必須スロット・register でない)</strong>。 決定的 assembler が<em>空で出力</em>し opus が後段で充填する。 構造は機械 SSoT から決定的組立 (捏造原理的に不可能)、 自然な日本語のやさしさのみ opus が担う (§2.1)。 全スロット<strong>空不可</strong>で floor §5.2 gate G (no-TBD) 被覆対象、 忠実性は ceiling §5.3 gate J が突合する。</p>
+<table>
+<thead><tr><th><code>data-prose-slot</code></th><th>担当部品</th><th>doc-scope</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>cover-summary</code></td><td><code>doc-cover-band</code></td><td>core</td><td>文書が約束する 1 文サマリ</td></tr>
+<tr><td><code>chapter-lead</code></td><td><code>chapter-deck-band</code></td><td>core</td><td>各章の要旨 1 行 (迷子防止)</td></tr>
+<tr><td><code>plain</code> (A)</td><td><code>ears-requirement-row</code> / <code>nfr-metric-row</code></td><td>srs-pack</td><td>専門語を残し平易語を足すやさしい言い換え</td></tr>
+<tr><td><code>rationale</code></td><td><code>ears-requirement-row</code></td><td>srs-pack</td><td>「なぜ要る」根拠 (5.2.5 necessary)</td></tr>
+<tr><td><code>rtm-summary</code> (B)</td><td><code>rtm-collapse</code></td><td>srs-pack</td><td>折りたたんだ RTM の空不可・平易要約 (数値主張は <code>data-derived</code> から決定的集計・opus に書かせない)</td></tr>
+</tbody>
+</table>
+
+<p><strong>data-doc-scope ラベル (将来のエンジン抽出地図)</strong>。 北極星 (<a href="../decisions/ADR-0041-human-layer-visual-design-system.html">folio-7wn</a> = 汎用「完璧文書」生成ツール) に向け、 catalog の全部品に <code>data-doc-scope</code> を付与する &mdash; <strong>core</strong> = doc-type 非依存の薄コア (cover / deck 帯 / toggle / TOC / 参照 / 変更履歴 / 承認 / glossary / 章リード等の content 非依存 chrome)、 <strong>srs-pack</strong> = 要件 (29148 / EARS / RTM / 受入 / トレース) 固有の電池同梱パック。 判定原理 = 「部品の意味が要件語彙 (FR/NFR/EARS/RTM/acceptance/trace) を符号化するなら srs-pack、 doc-type 非依存の提示 chrome なら core」。 SRS は薄コア + doc-type パックの<em>一実例</em>であり、 本ラベルが後続のエンジン抽出 (core 昇格) の地図になる。</p>
 </section>
 
 <section id="s4-coverage" class="informative">
@@ -249,7 +275,7 @@
 <tr><td><strong>D. 要件 ID 健全性</strong></td><td><code>requirement-matrix-table</code> 全要件行が一意 <code>data-req-id</code> (重複 0)、 各行に <code>priority-badge</code> と検証手法バッジ (T/A/I/D) が付与。</td><td>DOM 走査</td></tr>
 <tr><td><strong>E. 用語被覆</strong></td><td><strong><code>vocabulary.yaml</code> + <code>glossary.html</code> (ADR-0036 資産) に登録された語彙集合</strong>のうち、 本文出現語で inline 併記 (<code>plain-language-term-inline</code>) も glossary リンクも無いもの=0。 <em>「専門用語」を controlled vocabulary に接地し主観判定を排除 (critic criterionIssue #2)。</em></td><td>bash + vocab 突合</td></tr>
 <tr><td><strong>F. render 健全性</strong></td><td><a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> render-safety gate が全 viewport で要素 overlap / 横幅超過 / 不可視化を検出しない。 <em>閾値 (overlap 面積比 / 超過 px) の SSoT は ADR-0037 detector 定数を参照 (criterionIssue #5)。 本 gate は決定的 (幾何検査) ゆえ floor 層 &mdash; ADR-0037 が「ceiling」と呼ぶのは bash 検査に対する CI render 層の意で、 本書の floor(機械)/ceiling(LLM 意味) 軸とは別。</em></td><td>playwright render-gate</td></tr>
-<tr><td><strong>G. 内容完全性 (no-TBD)</strong> <span class="badge-new">★</span></td><td>MUST 部品の必須スロットに <code>TBD</code>/<code>TODO</code>/空必須セル=0。 <strong>部品の<em>存在</em>とは別 arm で<em>中身の完全性</em>を測る</strong> (5.2.5 complete / 5.2.6 completeness、 critic #7 = Goodhart 分離の要)。</td><td>bash 走査</td></tr>
+<tr><td><strong>G. 内容完全性 (no-TBD)</strong> <span class="badge-new">★</span></td><td>MUST 部品の必須スロットに <code>TBD</code>/<code>TODO</code>/空必須セル=0。 <strong>§3.4 で登録した ADR-0042 §2.3 の新 B/A prose スロット (<code>cover-summary</code> / <code>chapter-lead</code> / <code>plain</code> (A) / <code>rationale</code> / <code>rtm-summary</code> (B)) を被覆対象に含める</strong> (SHOULD 部品由来のスロットは MUST-when-present)。 <strong>部品の<em>存在</em>とは別 arm で<em>中身の完全性</em>を測る</strong> (5.2.5 complete / 5.2.6 completeness、 critic #7 = Goodhart 分離の要)。</td><td>bash 走査</td></tr>
 <tr><td><strong>H. fidelity meta 存在</strong></td><td><code>fidelity-sync-meta</code> に生成日時 / 元 SSoT / 検証通過日時の 3 項目が全て埋まる。</td><td>属性存在チェック</td></tr>
 </tbody>
 </table>
