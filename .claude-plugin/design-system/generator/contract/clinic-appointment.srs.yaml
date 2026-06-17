@@ -1,0 +1,126 @@
+# folio S4 generator — 入力 contract インスタンス (ADR-0042 §2.1)
+#
+# ドメイン: クリニックの診療予約システム。
+# 機械 SSoT = 決定的 assembler が読む構造化データ。構造 + 内容 (要件/NFR/scope/actor/制約/用語/受入/goal/上位ニーズ)
+# は全て contract から決定的に組立。トレース (RTM の ● = backward / 受入 = acceptance) は集合から導出し、
+# 集合外参照は fail-closed。opus が後段 (③) で埋めるのは「読みやすさの足場」(章リード/plain/根拠/RTM要約/1文サマリ) だけ。
+#
+# 読者 = クリニックの事業責任者 (医療コーディング・IT の専門知識なし。専門語は必ずやさしい言葉を併記)。
+
+meta:
+  doc_id: SRS-CLINIC-APPT
+  title: 診療の予約を、 空き枠どおりに・二重予約させず・取り違えなく「受け付ける」仕組み
+  eyebrow_left: 要件定義書 (SRS)
+  eyebrow_right: クリニック — 診療予約
+  subtitle: 同じ枠の取り合いも、 直前のキャンセルも、 来院忘れも起こりうる前提で設計する
+  version: "1.0"
+  date: "2026-06-15"
+  reader: クリニックの事業責任者 — 医療コーディングや IT の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+
+# 承認記録 (9.2.2 Front Matter)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-15 承認
+    stamp: 承認済
+  - role: レビュー (事務長)
+    who: 鈴木 大輔
+    when: 2026-06-14 レビュー
+    stamp: レビュー済
+  - role: 作成 (受付業務担当)
+    who: 受付チーム
+    when: 2026-06-12 起票
+    stamp: 作成
+
+# 01 ゴール (section-lead-callout = 絶対に避けたい事故)
+goals:
+  - id: GOAL 1
+    headline: ダブルブッキングしない
+    desc: 同じ診療枠に 2 人を入れてしまい、 来院した患者を待たせたり断ったりしない。
+  - id: GOAL 2
+    headline: 来院忘れを減らす
+    desc: 予約したのに来ない無断キャンセルを、 リマインド通知で減らす。
+  - id: GOAL 3
+    headline: 患者を取り違えない
+    desc: 予約や受付の段階で本人確認を行い、 別人の予約として処理しない。
+
+# 02 範囲 (scope-summary-panel)
+scope:
+  in:
+    - 空き枠の確認 → 予約受付 → 予約変更・キャンセル → 当日の受付 (チェックイン)
+    - 同一枠競合・診療時間外・本人確認の挙動
+    - 予約確定とリマインド通知の送付
+  out:
+    - 診察内容・カルテの記録
+    - 会計・診療報酬の請求
+    - 検査結果の通知・オンライン診療
+
+# 02 アクター (actor-stakeholder-table)
+actors:
+  - { key: 患, name: 患者,         role: 予約を取り受診する人,     external: false, tint: brand }
+  - { key: 受, name: 受付スタッフ, role: 予約と来院受付を管理,     external: false, tint: violet }
+  - { key: 医, name: 医師,         role: 診療枠を持ち診察する人,   external: false, tint: ok }
+  - { key: 通, name: 通知サービス, role: リマインド通知を送る,     external: true,  tint: warn }
+  - { key: 暦, name: 診療カレンダー, role: 診療枠と休診日を管理,   external: true,  tint: info }
+
+# 03 上位ニーズ (source-trace-origin = RTM backward 端点)
+upper_needs:
+  - { id: N-1, need: 受付の混乱とクレームを減らし、 予約の信頼を守る,     origin: 院長方針 2026, short: 二重予約防止 }
+  - { id: N-2, need: 無断キャンセルによる空き枠の損失と待ち時間をなくす, origin: 事務部 要望,    short: 来院忘れ削減 }
+  - { id: N-3, need: 患者の取り違えによる医療事故・情報漏えいを防ぐ,     origin: 安全管理 要件,  short: 本人確認 }
+  - { id: N-4, need: 診療時間外や休診日の予約による現場混乱をなくす,     origin: 運用部 要望,    short: 枠外予約防止 }
+
+# 受入基準の正典集合 (RTM forward 端点)。trace.acceptance はこの id からのみ参照可。
+acceptance:
+  - { id: AC1, criterion: 同じ枠に同時 2 予約 → 確定は 1 件だけ、 もう 1 件は満枠表示, metric_v: 1/2, metric_l: だけ確定, links: [FR1, FR2, FR3, NFR1, NFR3] }
+  - { id: AC2, criterion: 予約の前日リマインド送付率 100% → 無断キャンセル率を下げる, metric_v: 100%, metric_l: 送付率, links: [FR6, NFR2] }
+  - { id: AC3, criterion: 本人確認に通らない予約・受付 → 確定させず差し戻す,        metric_v: 0件, metric_l: 取り違え, links: [FR7, NFR4] }
+  - { id: AC4, criterion: 診療時間外・休診日への予約要求 → すべて拒否,             metric_v: 0件, metric_l: 枠外確定, links: [FR4] }
+  - { id: AC5, criterion: 予約のキャンセル・変更 → 空いた枠がすぐ再予約可能になる, metric_v: 即時, metric_l: 枠開放, links: [FR5] }
+
+# 04 機能要件 (requirement-matrix-table、 行 = ears-requirement-row)
+requirements:
+  - { id: FR1, type: FR, label: 空き確認, priority: must,   vmethod: T, rationale_source: N-1, trace: { backward: [N-1], acceptance: [AC1] },
+      ears: { pattern: event,      condition: 患者が日時を選んで空きを問い合わせたとき, response: その枠の空き枠の数を確認して表示する } }
+  - { id: FR2, type: FR, label: 予約受付, priority: must,   vmethod: T, rationale_source: N-1, trace: { backward: [N-1], acceptance: [AC1] },
+      ears: { pattern: event,      condition: 患者が空いている枠を選んで予約を申し込んだとき, response: その枠を 1 件だけ確保して予約を確定する } }
+  - { id: FR3, type: FR, label: 競合拒否, priority: must,   vmethod: T, rationale_source: N-1, trace: { backward: [N-1], acceptance: [AC1] },
+      ears: { pattern: unwanted,   condition: すでに埋まった枠に予約を申し込もうとしたとき, response: 予約を確定させず満枠として断る } }
+  - { id: FR4, type: FR, label: 枠外拒否, priority: must,   vmethod: T, rationale_source: N-4, trace: { backward: [N-4], acceptance: [AC4] },
+      ears: { pattern: unwanted,   condition: 診療時間外または休診日の枠に予約しようとしたとき, response: 予約を受け付けず受診可能な日時を案内する } }
+  - { id: FR5, type: FR, label: 予約変更, priority: should, vmethod: T, rationale_source: N-2, trace: { backward: [N-2], acceptance: [AC5] },
+      ears: { pattern: state,      condition: 予約済みの状態にあるとき, response: 予約日時の変更とキャンセルを受け付け空いた枠を開放する } }
+  - { id: FR6, type: FR, label: リマインド, priority: should, vmethod: T, rationale_source: N-2, trace: { backward: [N-2], acceptance: [AC2] },
+      ears: { pattern: event,      condition: 予約日の前日になったとき, response: 患者にリマインド通知を送り来院を促す } }
+  - { id: FR7, type: FR, label: 本人確認, priority: must,   vmethod: I, rationale_source: N-3, trace: { backward: [N-3], acceptance: [AC3] },
+      ears: { pattern: ubiquitous, condition: 常時, response: 予約と当日受付の本人確認を行い別人の予約として処理しない } }
+
+# 05 非機能要件 (nfr-metrics-table + nfr-hero-metrics)。hero 付き = ヒーロー数字に featured。
+nfr:
+  - { id: NFR1, type: NFR, label: 応答速度, category: 性能,         target: 95% が 2.0 秒以内,        measure: 負荷試験で空き照会の応答時間を計測, vmethod: T, trace: { backward: [N-1], acceptance: [AC1] }, hero: { cat: 速さ,   big: "2.0",  unit: 秒,    qual: 空き照会→結果表示の 95% } }
+  - { id: NFR2, type: NFR, label: 稼働率,   category: 可用性,       target: 稼働率 99.5% / 月,        measure: 監視ツールの月次稼働ログ,         vmethod: A, trace: { backward: [N-2], acceptance: [AC2] }, hero: { cat: 安定,   big: "99.5", unit: "%",   qual: 月間の稼働率 (約 3.6 時間/月まで) } }
+  - { id: NFR3, type: NFR, label: 同時処理, category: 性能,         target: 200 件/分,                measure: 予約開始直後のピーク負荷で再現,   vmethod: T, trace: { backward: [N-1], acceptance: [AC1] }, hero: { cat: 処理量, big: "200",  unit: 件/分, qual: 予約受付開始時のピーク } }
+  - { id: NFR4, type: NFR, label: 情報保護, category: セキュリティ, target: 通信は暗号化・閲覧は権限者のみ, measure: 第三者の脆弱性診断と権限監査,     vmethod: I, trace: { backward: [N-3], acceptance: [AC3] }, hero: { cat: 安全,   big: "0",    unit: 件,    qual: 患者情報の漏えい } }
+
+# 08 制約・規制 (constraint-callout)
+constraints:
+  - { id: CON1, label: 個人情報, text: 患者情報の取得・保管は同意取得後のみとし目的外に使わない, regulation: 個情法 }
+  - { id: CON2, label: 要配慮情報, text: 受診歴などの要配慮個人情報は本人同意のもとで厳重に扱う, regulation: 個情法 }
+  - { id: CON3, label: 通知手段, text: リマインド通知は患者が事前に同意した連絡先にのみ送る,     regulation: 特定電子メール法 }
+  - { id: CON4, label: 枠管理,   text: 診療枠と休診日は既存の診療カレンダーを唯一の出どころとする, regulation: "" }
+
+# 09 用語集 (glossary-term-table = 用語定義の SSoT)。 plain_short = 本文中の専門語に併記する短いやさしい言い換え
+# (plain-language-term-inline バッジの表示語。 def の要約・捏造禁止)。 glossary 語どうしは部分文字列禁止 (assemble が拒否)。
+glossary:
+  - { term: 診療枠,         en: appointment slot,  plain_short: 予約できる時間帯,   def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
+  - { term: ダブルブッキング, en: double booking,    plain_short: 二重予約,          def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 満枠,           en: fully booked,      plain_short: 空きなし,          def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: 無断キャンセル,  en: no-show,           plain_short: 連絡なく来ないこと,        def: 予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。 }
+  - { term: リマインド通知,  en: reminder,          plain_short: 思い出し通知,      def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: チェックイン,    en: check-in,          plain_short: 来院の受付・記録,        def: 予約した患者が来院し、 受付を済ませて「来ました」と記録すること。 }
+  - { term: 本人確認,        en: identity check,    plain_short: 本人かの確かめ,    def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 休診日,          en: closed day,        plain_short: 診療しない日,      def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
+  - { term: 診療時間外,      en: off hours,         plain_short: 診療していない時間, def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
+  - { term: 要配慮個人情報,  en: sensitive data,    plain_short: 特に守る情報,      def: 受診歴や病歴など、 漏れると不利益が大きいため特に慎重に扱う個人情報。 }
+  - { term: 診療カレンダー,  en: clinic calendar,   plain_short: 診療予定表,        def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
+  - { term: 個情法,          en: privacy act,       plain_short: 個人情報の法律,    def: 個人情報の取り扱いルールを定めた日本の法律 (個人情報保護法)。 }
