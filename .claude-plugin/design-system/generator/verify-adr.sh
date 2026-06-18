@@ -67,34 +67,59 @@ chk_empty "consequence id 一意" "$(q '(.consequences.positive + .consequences.
 
 # 3. ★cross-doc 照会 (本 pack の核)
 SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
-if [[ ! -f "$SRS_ABS" ]]; then
-  printf '  [FAIL] %-48s 参照先 SRS contract 不在: %s\n' "cross-doc: 照会先 SRS contract 実在" "$SRS_REL"; fail=1
-else
-  printf '  [OK]   %-48s %s\n' "cross-doc: 照会先 SRS contract 実在" "${SRS_REL}"
-  # (c) doc_id 一致
-  chk "cross-doc: srs_doc_id == SRS .meta.doc_id" "$(yq -r '.meta.doc_id' "$SRS_ABS")" "$(q '.cross_doc.srs_doc_id')"
-  # (a) decision.justifies の req 集合 == HTML data-justifies-req 集合
-  #     + count anchor: |justifies| == HTML 照会 edge 数 (set_eq は sort -u で重複を潰すため、
-  #       既存 edge の重複注入は集合不変=fail-open になる。 count を必ずペアにして二重 cross-doc 照会を捕捉
-  #       〔option-card/chosen バッジと同じ count+set_eq 二重保守〕)。
-  chk "cross-doc: justifies count == |justifies|" "$(q '.decision.justifies | length')" "$(grep -o 'data-justifies-req=' "$BODY" | wc -l | tr -d ' ')"
-  exp_j="$(q '.decision.justifies[].req' | sort -u)"
-  act_j="$(grep -oE 'data-justifies-req="[^"]+"' "$BODY" | sed 's/.*data-justifies-req="//; s/"$//' | sort -u)"
-  set_eq "cross-doc: justifies req SET (contract == HTML)" "$exp_j" "$act_j"
-  # (b) ★dangling 照会 0: justifies の req が参照先 SRS の要件 ID に実在
-  dangling="$(comm -23 <(q '.decision.justifies[].req' | sort -u) <(yq -r '(.requirements[].id, .nfr[].id)' "$SRS_ABS" | sort -u))"
-  chk_empty "cross-doc: dangling 照会 (SRS に無い req)" "$(printf '%s' "$dangling" | tr '\n' ' ' | sed 's/ *$//')"
-  # (d) role allowlist (HTML 側 data-justifies-role)
-  badrole="$(grep -oE 'data-justifies-role="[^"]+"' "$BODY" | sed 's/.*data-justifies-role="//; s/"$//' | sort -u \
-    | grep -vxE 'claim|rationale|exploration|principle|verification|implementation' | tr '\n' ' ')"
-  chk_empty "cross-doc: 照会 role が抽象 allowlist 内" "$badrole"
-  # (d') ★(req,role) ペア一致: HTML の各照会の role が contract の role と一致する
-  #     (allowlist 内別 role への改竄 = 照会 graph の意味偽装を捕捉。 allowlist だけでは fail-open)。
-  exp_jr="$(q '.decision.justifies[] | [.req, .role] | @tsv' | sort -u)"
-  act_jr="$(grep -oE 'data-justifies-req="[^"]+" data-justifies-role="[^"]+"' "$BODY" \
-    | sed -E 's/data-justifies-req="([^"]+)" data-justifies-role="([^"]+)"/\1\t\2/' | sort -u)"
-  set_eq "cross-doc: justifies (req,role) ペア (contract == HTML)" "$exp_jr" "$act_jr"
-fi
+# 共通スケルトン (照会先実在/doc_id/count/SET/dangling/★空値ガード/role allowlist/(key,role)ペア) は ds8 で core 昇格。
+# ★空値ガード (key 全件非空) は helper が両 pack へ無料配布する = ADR が従来欠いていた fail-open 穴を ds8 で塞ぐ
+#   (empty-value バグは assemble-adr validate でも実在を修正済・本 verify 側は helper が二重に担保)。
+verify_cross_doc_refs \
+  --label-prefix "cross-doc" --target-label "SRS" \
+  --target-abs "$SRS_ABS" --target-rel "$SRS_REL" \
+  --key-attr "data-justifies-req" --role-attr "data-justifies-role" \
+  --keys-expr '.decision.justifies[].req' \
+  --count-expr '.decision.justifies | length' \
+  --nonempty-count-expr '[.decision.justifies[] | select((.req // "") != "")] | length' \
+  --pair-expr '.decision.justifies[] | [.req, .role] | @tsv' \
+  --target-ids-expr '(.requirements[].id, .nfr[].id)' \
+  --contract-docid-expr '.cross_doc.srs_doc_id' \
+  --target-docid-expr '.meta.doc_id'
+
+# 3b. ★Part 2b: ADR cross-doc 可視 echo の堅牢検証 (research round-2/4 ceiling template を ADR の 3 可視 echo へ横展開)。
+#   非エンジニアが実際に読むのは attr でなく *可視テキスト*。 attr 突合 (上の helper) だけでは可視文字の偽装が素通る fail-open。
+#   各 echo ブロックは固定個数 (ブロックごと削除すると while が回らず @bad 空で素通る fail-open を count anchor で塞ぐ)。
+chk "cross-doc: ref-chip ブロック == 1"          "1" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
+chk "cross-doc: justify-tgt ブロック == 1"        "1" "$(grep -c 'class="justify-tgt"' "$BODY")"
+chk "cross-doc: justify-req span == |justifies|" "$(q '.decision.justifies | length')" "$(grep -oE '<span class="justify-req"' "$BODY" | wc -l | tr -d ' ')"
+srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
+srs_join_e="$(esc "$(q '[.decision.justifies[].req] | join("・")')")"
+srs_title_e="$(esc "$(q '.cross_doc.srs_title')")"
+# ★可視テキスト厳密一致 (round-4 不動点): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
+#   タグ併記 (<b> の外に偽 id)・平文併記・swap・第2<b> 注入・別タグ注入 を一括封鎖する (echo は固定テンプレ=自由文なし)。
+#   ref-chip は <b> ちょうど 2 本 (srs_doc_id, join(req,・))・justify-tgt は <b> 無し平文・justify-req は attr==可視。
+adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" perl -CSD -Mutf8 -0777 -ne '
+  my $exp=$ENV{EXP}; utf8::decode($exp); my $join=$ENV{JOIN}; utf8::decode($join); my $title=$ENV{TITLE}; utf8::decode($title);
+  my @bad;
+  # (h) 表紙 cross-doc-ref-chip: <b> ちょうど 2 本 (b1=srs_doc_id / b2=join(req,・))・可視テキスト厳密一致
+  #     (先頭の ICO_USER svg は全タグ除去で消えるが直後の半角空白は可視テキストに残る = テンプレ先頭に空白)。
+  while (/<div\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/div>/gs) {
+    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+    if (@bs!=2){push @bad,"ref-chip:".scalar(@bs)."B"; next}
+    push @bad,"ref-chip:b1\x{2260}$bs[0]" if $bs[0] ne $exp;
+    push @bad,"ref-chip:b2\x{2260}$bs[1]" if $bs[1] ne $join;
+    my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"ref-chip:VIS" if $vis ne " 正当化する要件: $exp の $join";
+  }
+  # (j) 照会先 footnote justify-tgt: <b> 無し・平文ゆえ可視テキスト全体が固定テンプレと一致
+  while (/<p\b[^>]*\bclass="justify-tgt"[^>]*>(.*?)<\/p>/gs) {
+    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+    if (@bs!=0){push @bad,"justify-tgt:".scalar(@bs)."B"; next}
+    my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"justify-tgt:VIS" if $vis ne "照会先: $exp \x{2014} $title";
+  }
+  # (k) within-doc 可視 req == data-justifies-req (attr-vs-visible 厳密一致。 可視 req だけ改竄し attr 温存を封鎖。
+  #     justify-note は別 span ゆえ干渉せず・justify-req span 内は req id のみ = [^<]* で安全に抽出)。
+  while (/<span\b[^>]*\bclass="justify-req"[^>]*\bdata-justifies-req="([^"]*)"[^>]*>([^<]*)<\/span>/gs) {
+    my ($attr,$vis)=($1,$2); push @bad,"justify-req:$attr\x{2260}$vis" if $vis ne $attr;
+  }
+  print join(" ", @bad);
+' "$BODY")"
+chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 (平文/タグ併記封鎖)" "$adr_echo_bad"
 
 # 4. verdict 整合 (chosen ちょうど 1 + decision.chosen 一致)
 chk "verdict=chosen はちょうど 1 件" "1" "$(q '[.options[] | select(.verdict=="chosen")] | length')"

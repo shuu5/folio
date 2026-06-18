@@ -71,6 +71,11 @@ validate() {
     echo "assemble-adr: decision.chosen '$dec_chosen' が options に無い" >&2; errs=1; fi
   # decision.justifies[].role allowlist (抽象ロール graph)
   for p in $(q '.decision.justifies[].role'); do [[ -v ROLE_OK[$p] ]] || { echo "assemble-adr: 未知の照会 role: $p (claim|rationale|exploration|principle|verification|implementation)" >&2; errs=1; }; done
+  # ★空/null の justifies[].req は dangling 判定 (comm -23) が空行を空 missing に畳んで素通すため明示拒否する
+  #   (空文字列は「SRS 要件に繋がらない壊れた後方参照」= 本 pack の核の壊れ方そのもの。 research assemble-research と同型 idiom・ds8 横展開)。
+  local n_just n_req
+  n_just="$(q '.decision.justifies | length')"; n_req="$(q '[.decision.justifies[] | select((.req // "") != "")] | length')"
+  [[ "$n_just" == "$n_req" ]] || { echo "assemble-adr: ★cross-doc 照会の空 req (有効 $n_req/$n_just 件・空/null は壊れた後方参照ゆえ禁止)" >&2; errs=1; }
   # ★cross-doc 照会の終端解決: 参照先 SRS contract 実在 + decision.justifies[].req が SRS の要件 ID に実在
   local srs_rel srs_abs srs_docid expect_docid
   srs_rel="$(q '.cross_doc.srs_contract')"

@@ -81,61 +81,50 @@ chk_empty "research_status allowlist {open,concluded}" "$(q '.meta.research_stat
 
 # 3. ★cross-doc 前方照会 (本 pack の核 = research → ADR)
 ADR_REL="$(q '.cross_doc.adr_contract')"; ADR_ABS="${CONTRACT_DIR}/${ADR_REL}"
-if [[ ! -f "$ADR_ABS" ]]; then
-  printf '  [FAIL] %-48s 参照先 ADR contract 不在: %s\n' "cross-doc: 照会先 ADR contract 実在" "$ADR_REL"; fail=1
-else
-  printf '  [OK]   %-48s %s\n' "cross-doc: 照会先 ADR contract 実在" "${ADR_REL}"
-  # (c) doc_id 一致 + outcome.resolved_by == adr_doc_id (照会終端側の整合)
-  chk "cross-doc: adr_doc_id == ADR .meta.doc_id" "$(yq -r '.meta.doc_id' "$ADR_ABS")" "$(q '.cross_doc.adr_doc_id')"
-  chk "cross-doc: outcome.resolved_by == adr_doc_id" "$(q '.cross_doc.adr_doc_id')" "$(q '.outcome.resolved_by')"
-  # (a) approaches の leads_to 集合 == HTML data-leads-to 集合 + count anchor (重複注入を count で捕捉)
-  chk "cross-doc: leads count == |approaches|" "$(q '.approaches | length')" "$(grep -o 'data-leads-to=' "$BODY" | wc -l | tr -d ' ')"
-  exp_l="$(q '.approaches[].leads_to' | sort -u)"
-  act_l="$(grep -oE 'data-leads-to="[^"]+"' "$BODY" | sed 's/.*data-leads-to="//; s/"$//' | sort -u)"
-  set_eq "cross-doc: leads_to SET (contract == HTML)" "$exp_l" "$act_l"
-  # (b) ★dangling 照会 0: leads_to が参照先 ADR の option ID に実在
-  dangling="$(comm -23 <(q '.approaches[].leads_to' | sort -u) <(yq -r '.options[].id' "$ADR_ABS" | sort -u))"
-  chk_empty "cross-doc: dangling 照会 (ADR に無い option)" "$(printf '%s' "$dangling" | tr '\n' ' ' | sed 's/ *$//')"
-  # (i') ★空 leads_to ガード: comm -23 は空行を空 missing に畳むため dangling check が空文字列を素通す fail-open。
-  #      contract 側で leads_to 全件非空を明示要求して塞ぐ (assemble validate と対称・空照会キーは壊れた前方参照)。
-  chk "cross-doc: leads_to 全て非空 (空照会キー禁止)" "$(q '.approaches | length')" "$(q '[.approaches[] | select((.leads_to // "") != "")] | length')"
-  # (d) role allowlist (HTML 側 data-leads-role)
-  badrole="$(grep -oE 'data-leads-role="[^"]+"' "$BODY" | sed 's/.*data-leads-role="//; s/"$//' | sort -u \
-    | grep -vxE 'claim|rationale|exploration|principle|verification|implementation' | tr '\n' ' ')"
-  chk_empty "cross-doc: 照会 role が抽象 allowlist 内" "$badrole"
-  # (d') ★(leads_to,role) ペア一致: allowlist 内別 role への改竄 = 照会 graph の意味偽装を捕捉
-  exp_lr="$(q '.approaches[] | [.leads_to, .role] | @tsv' | sort -u)"
-  act_lr="$(grep -oE 'data-leads-to="[^"]+" data-leads-role="[^"]+"' "$BODY" \
-    | sed -E 's/data-leads-to="([^"]+)" data-leads-role="([^"]+)"/\1\t\2/' | sort -u)"
-  set_eq "cross-doc: (leads_to,role) ペア (contract == HTML)" "$exp_lr" "$act_lr"
-  # (e') ★(ap-id,leads_to) ペア一致: どの方式がどの option へ繋がるかの edge 付け替え偽装を捕捉
-  #      (leads_to 集合保存型の付け替え = 集合 + count では素通り = fail-open。 id↔leads_to ペア突合で捕捉)。
-  exp_al="$(q '.approaches[] | [.id, .leads_to] | @tsv' | sort -u)"
-  act_al="$(grep -oE 'data-ap-id="[^"]+" data-leads-to="[^"]+"' "$BODY" \
-    | sed -E 's/data-ap-id="([^"]+)" data-leads-to="([^"]+)"/\1\t\2/' | sort -u)"
-  set_eq "cross-doc: (ap-id,leads_to) ペア (contract == HTML)" "$exp_al" "$act_al"
-  # (f') ★可視 id 整合 (堅牢版・round-2 ceiling 反映): チップ内の <b> を *全列挙* し ちょうど 1 本かつ
-  #      data-leads-to と一致を要求。 first-<b> マッチだと正規 <b> の直後に 2 つ目の偽 <b> を注入する追加方向が
-  #      素通る (削除方向 R25 の対称兄弟 = round-2 が実証した fail-open)。 @bs 全列挙 + 本数!=1 検出で
-  #      追加 (>1)・削除 (0)・改竄 (!=期待) の全方向を一つの判定で塞ぐ。
-  # ★可視テキスト厳密一致 (round-4 ceiling): チップ inner の全タグを除去した *可視テキスト* が
-  #   固定テンプレ「→ つながる判断 <leads>」と完全一致を要求。 <b> 列挙+残留タグ検査は『タグ無しの平文で
-  #   偽 id を併記する経路 (つながる判断 OPT1 実は OPT9)』を取り逃す fail-open だった。 可視テキスト全体の
-  #   厳密一致は タグ併記・平文併記・swap・任意注入 を一括封鎖する *不動点* (チップは固定テンプレで自由文なし)。
-  lvis_bad="$(perl -CSD -Mutf8 -0777 -ne '
-    my @bad;
-    while (/<span\b[^>]*\bdata-component="cross-doc-leads-chip"[^>]*>(.*?)<\/span>/gs) {
-      my ($chip,$in)=($&,$1); my ($l)=$chip=~/\bdata-leads-to="([^"]*)"/; $l="" unless defined $l;
-      my @bs=$in=~/<b>([^<]*)<\/b>/g;
-      if (@bs!=1){push @bad,"$l:".scalar(@bs)."B"; next}
-      if ($bs[0] ne $l){push @bad,"$l:b\x{2260}$bs[0]"}
-      my $vis=$in; $vis=~s/<[^>]+>//g;
-      push @bad,"$l:VIS" if $vis ne "\x{2192} つながる判断 $l";
-    }
-    print join(" ", @bad);
-  ' "$BODY")"
-  chk_empty "cross-doc: チップ可視テキスト == テンプレ+leads (平文/タグ併記封鎖)" "$lvis_bad"
-fi
+# 共通スケルトン (照会先実在/doc_id/count/SET/dangling/★空値ガード/role allowlist/(key,role)ペア) は ds8 で core 昇格。
+# expr は逐語で渡す (合成しない = 非破壊の証明を直截に保つ。 研究 49/49 緑が「昇格でスケルトンが弱化していない」一次証拠)。
+verify_cross_doc_refs \
+  --label-prefix "cross-doc" --target-label "ADR" \
+  --target-abs "$ADR_ABS" --target-rel "$ADR_REL" \
+  --key-attr "data-leads-to" --role-attr "data-leads-role" \
+  --keys-expr '.approaches[].leads_to' \
+  --count-expr '.approaches | length' \
+  --nonempty-count-expr '[.approaches[] | select((.leads_to // "") != "")] | length' \
+  --pair-expr '.approaches[] | [.leads_to, .role] | @tsv' \
+  --target-ids-expr '.options[].id' \
+  --contract-docid-expr '.cross_doc.adr_doc_id' \
+  --target-docid-expr '.meta.doc_id'
+# ↓ ここから research-pack 固有 (core に上げない)。 いずれも research contract/BODY のみ参照ゆえ照会先不在でも
+#   安全に走る (上の helper が不在を FAIL 済 → overall FAIL は保存される)。
+# outcome.resolved_by == adr_doc_id (照会終端側の整合・research 固有)
+chk "cross-doc: outcome.resolved_by == adr_doc_id" "$(q '.cross_doc.adr_doc_id')" "$(q '.outcome.resolved_by')"
+# (e') ★(ap-id,leads_to) ペア一致: どの方式がどの option へ繋がるかの edge 付け替え偽装を捕捉
+#      (leads_to 集合保存型の付け替え = 集合 + count では素通り = fail-open。 id↔leads_to ペア突合で捕捉)。
+exp_al="$(q '.approaches[] | [.id, .leads_to] | @tsv' | sort -u)"
+act_al="$(grep -oE 'data-ap-id="[^"]+" data-leads-to="[^"]+"' "$BODY" \
+  | sed -E 's/data-ap-id="([^"]+)" data-leads-to="([^"]+)"/\1\t\2/' | sort -u)"
+set_eq "cross-doc: (ap-id,leads_to) ペア (contract == HTML)" "$exp_al" "$act_al"
+# (f') ★可視 id 整合 (堅牢版・round-2 ceiling 反映): チップ内の <b> を *全列挙* し ちょうど 1 本かつ
+#      data-leads-to と一致を要求。 first-<b> マッチだと正規 <b> の直後に 2 つ目の偽 <b> を注入する追加方向が
+#      素通る (削除方向 R25 の対称兄弟 = round-2 が実証した fail-open)。 @bs 全列挙 + 本数!=1 検出で
+#      追加 (>1)・削除 (0)・改竄 (!=期待) の全方向を一つの判定で塞ぐ。
+# ★可視テキスト厳密一致 (round-4 ceiling): チップ inner の全タグを除去した *可視テキスト* が
+#   固定テンプレ「→ つながる判断 <leads>」と完全一致を要求。 <b> 列挙+残留タグ検査は『タグ無しの平文で
+#   偽 id を併記する経路 (つながる判断 OPT1 実は OPT9)』を取り逃す fail-open だった。 可視テキスト全体の
+#   厳密一致は タグ併記・平文併記・swap・任意注入 を一括封鎖する *不動点* (チップは固定テンプレで自由文なし)。
+lvis_bad="$(perl -CSD -Mutf8 -0777 -ne '
+  my @bad;
+  while (/<span\b[^>]*\bdata-component="cross-doc-leads-chip"[^>]*>(.*?)<\/span>/gs) {
+    my ($chip,$in)=($&,$1); my ($l)=$chip=~/\bdata-leads-to="([^"]*)"/; $l="" unless defined $l;
+    my @bs=$in=~/<b>([^<]*)<\/b>/g;
+    if (@bs!=1){push @bad,"$l:".scalar(@bs)."B"; next}
+    if ($bs[0] ne $l){push @bad,"$l:b\x{2260}$bs[0]"}
+    my $vis=$in; $vis=~s/<[^>]+>//g;
+    push @bad,"$l:VIS" if $vis ne "\x{2192} つながる判断 $l";
+  }
+  print join(" ", @bad);
+' "$BODY")"
+chk_empty "cross-doc: チップ可視テキスト == テンプレ+leads (平文/タグ併記封鎖)" "$lvis_bad"
 
 # 4. outcome 整合 (HTML data-resolved-by == contract .outcome.resolved_by = 終端 identity の偽装を捕捉)
 act_resolved="$(grep -oE 'data-resolved-by="[^"]+"' "$BODY" | sed 's/.*data-resolved-by="//; s/"$//')"

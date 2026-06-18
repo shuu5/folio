@@ -154,6 +154,53 @@ expect_verify_fail_filled "A26b ★supersession.status 偽装を捕捉" "$BASE_P
 cp "$TMP/base-filled.html" "$TMP/a26c.html"; perl -0777 -i -pe 's#(置き換えられた</span>)なし \(現行\)#${1}ADR-Z#' "$TMP/a26c.html"
 expect_verify_fail_filled "A26c ★superseded_by 捏造リンクを捕捉" "$BASE_PROSE" "$BASE" "$TMP/a26c.html"
 
+# === ds8: cross-doc helper core 昇格 + research 堅牢化の ADR 横展開 (Part 2a 空値ガード / Part 2b 可視 echo 厳密一致) ===
+
+# A27. ★空 justifies[].req (comm -23 が空行を空 missing に畳む dangling fail-open の兄弟) → 生成前 abort (assemble 側ガード = 実バグ修正)
+cp "$BASE" "$TMP/a27.yaml"; yq -i '.decision.justifies[0].req = ""' "$TMP/a27.yaml"
+expect_abort "A27 ★空 justifies req (dangling fail-open 兄弟) を生成前 abort" "$TMP/a27.yaml" "空 req"
+
+# A28. ★表紙 ref-chip に平文で偽 id を併記 → 可視テキスト厳密一致で FAIL (research R43/R44 平文併記の ADR 版・attr/<b> は正のまま)
+cp "$TMP/base-filled.html" "$TMP/a28.html"
+perl -0777 -i -pe 's#(data-component="cross-doc-ref-chip"[^>]*>.*?<b>FR2・FR3</b>)#${1} 実は FR9#s' "$TMP/a28.html"
+expect_verify_fail_filled "A28 ★表紙 ref-chip 平文偽id併記を可視テキスト厳密一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a28.html"
+
+# A29. ★表紙 ref-chip に第2 <b> を追加 → <b> ちょうど 2 本要求 (MULTI-B) で FAIL (research R30/R32 追加方向・first-<b> 素通り封鎖)
+cp "$TMP/base-filled.html" "$TMP/a29.html"
+perl -0777 -i -pe 's#(data-component="cross-doc-ref-chip"[^>]*>.*?<b>SRS-CLINIC-APPT</b>)#${1} <b>SRS-FAKE</b>#s' "$TMP/a29.html"
+expect_verify_fail_filled "A29 ★表紙 ref-chip 第2<b> 追加を <b> 本数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a29.html"
+
+# A30. ★表紙 ref-chip に別タグ <strong> で偽 id を併記 → 全タグ除去後の可視テキスト厳密一致で FAIL (research R38/R39 別タグ注入の ADR 版)
+cp "$TMP/base-filled.html" "$TMP/a30.html"
+perl -0777 -i -pe 's#(data-component="cross-doc-ref-chip"[^>]*>.*?<b>FR2・FR3</b>)#${1} <strong>FR9</strong>#s' "$TMP/a30.html"
+expect_verify_fail_filled "A30 ★表紙 ref-chip <strong> 偽id併記を可視テキスト厳密一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a30.html"
+
+# A31. ★表紙 ref-chip の b1<->b2 swap (両 <b> は正規値・位置だけ入替) → 位置別 <b> 突合 (b1==srs_doc_id) で FAIL
+cp "$TMP/base-filled.html" "$TMP/a31.html"
+perl -0777 -i -pe 's#<b>SRS-CLINIC-APPT</b> の <b>FR2・FR3</b>#<b>FR2・FR3</b> の <b>SRS-CLINIC-APPT</b>#' "$TMP/a31.html"
+expect_verify_fail_filled "A31 ★表紙 ref-chip b1<->b2 swap を位置別 <b> 突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a31.html"
+
+# A32. ★照会先 footnote justify-tgt の可視 srs_doc_id を偽 id へ改竄 (<b> 無し平文) → 可視テキスト全体一致で FAIL
+cp "$TMP/base-filled.html" "$TMP/a32.html"
+perl -0777 -i -pe 's#(class="justify-tgt">照会先: )SRS-CLINIC-APPT#${1}SRS-PHANTOM#' "$TMP/a32.html"
+expect_verify_fail_filled "A32 ★justify-tgt 平文 srs_doc_id 改竄を可視テキスト全体一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a32.html"
+
+# A33. ★justify-tgt をブロックごと削除 → ブロック==1 count anchor で FAIL (while が回らず @bad 空の素通りを塞ぐ・research と同じ規律)
+cp "$TMP/base-filled.html" "$TMP/a33.html"
+perl -0777 -i -pe 's#<p class="justify-tgt">.*?</p>##s' "$TMP/a33.html"
+expect_verify_fail_filled "A33 ★justify-tgt ブロック削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a33.html"
+
+# A34. ★justify-row の可視 req を改竄 (data-justifies-req 属性は正) → attr-vs-visible 厳密一致で FAIL
+#      (research R24/within-doc (k') の ADR 版。 非エンジニアが読む可視 req だけ捏造し attr 温存する経路を封鎖)。
+cp "$TMP/base-filled.html" "$TMP/a34.html"
+perl -0777 -i -pe 's#(data-justifies-req="FR2" data-justifies-role="claim">)FR2(</span>)#${1}FR9${2}#' "$TMP/a34.html"
+expect_verify_fail_filled "A34 ★justify-row 可視 req 改竄 (attr 正) を attr-vs-visible で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a34.html"
+
+# A35. ★justify-req span を 1 枚削除 → justify-req span == |justifies| count anchor で FAIL (cross-doc count とも二重に捕捉)
+cp "$TMP/base-filled.html" "$TMP/a35.html"
+perl -0777 -i -pe 's#<span class="justify-req" data-justifies-req="FR3".*?</span>##s' "$TMP/a35.html"
+expect_verify_fail_filled "A35 ★justify-req span 削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a35.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort
