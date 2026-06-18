@@ -80,7 +80,7 @@ approaches:
     leads_to: OPT1
     role: exploration
   - id: AP2
-    name: 悲観ロック (先に押さえる)
+    name: 悲観ロック (確保して待つ)
     summary: 患者が枠を選んだ瞬間にその枠をロックし、 予約完了かタイムアウトまで他の人を入れない。
     assessment: 確実に二重予約を防ぐが、 悲観ロックは患者が迷って離脱すると枠が長くふさがり、 ピーク時のスループットが落ちる。
     leads_to: OPT2

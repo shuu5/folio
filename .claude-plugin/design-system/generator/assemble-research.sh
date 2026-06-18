@@ -73,6 +73,11 @@ validate() {
     [[ "$adr_docid" == "$expect_docid" ]] || { echo "assemble-research: cross_doc.adr_doc_id ($expect_docid) が ADR contract の doc_id ($adr_docid) と不一致" >&2; errs=1; }
     resolved="$(q '.outcome.resolved_by')"
     [[ "$resolved" == "$expect_docid" ]] || { echo "assemble-research: outcome.resolved_by ($resolved) が cross_doc.adr_doc_id ($expect_docid) と不一致" >&2; errs=1; }
+    # ★空/null の leads_to は dangling 判定 (comm -23) が空行を空 missing に畳んで素通すため明示拒否する
+    #   (空文字列は「option に繋がらない壊れた前方参照」= 本 pack の核の壊れ方そのもの。 ADR pack も同型 idiom)。
+    local n_app n_leads
+    n_app="$(q '.approaches | length')"; n_leads="$(q '[.approaches[] | select((.leads_to // "") != "")] | length')"
+    [[ "$n_app" == "$n_leads" ]] || { echo "assemble-research: ★cross-doc 前方照会の空 leads_to (有効 $n_leads/$n_app 件・空/null は壊れた前方参照ゆえ禁止)" >&2; errs=1; }
     missing="$(comm -23 <(q '.approaches[].leads_to' | sort -u) <(yq -r '.options[].id' "$adr_abs" | sort -u))"
     [[ -z "$missing" ]] || { echo "assemble-research: ★cross-doc 前方照会の dangling: approaches の leads_to が ADR option に実在しない: $missing" >&2; errs=1; }
   fi
@@ -195,7 +200,7 @@ emit_outcome() {
   printf '<p class="oc-resolved" data-resolved-by="%s">この調査は <b>%s</b> で決着しました</p>\n' "$(esc "$(q '.outcome.resolved_by')")" "$(esc "$(q '.outcome.resolved_by')")"
   printf '<span class="oc-plain" data-prose-slot="plain" data-slot-id="outcome-plain"></span>\n'
   printf '<span class="oc-note">%s</span>\n' "$(mark_terms "$(q '.outcome.note')")"
-  printf '<p class="oc-tgt">照会先 (前方参照): %s — %s</p>\n' "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
+  printf '<p class="oc-tgt">照会先 (前方参照): <b>%s</b> — %s</p>\n' "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
   printf '</div>\n'
 }
 

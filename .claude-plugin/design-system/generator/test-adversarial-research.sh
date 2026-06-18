@@ -88,6 +88,10 @@ expect_abort "R10 改行を含む値を abort" "$TMP/r10.yaml" "tab/改行"
 cp "$BASE" "$TMP/r11.yaml"; yq -i '.glossary += [{"term":"ロック","en":"lock","plain_short":"錠","def":"錠の説明。"}]' "$TMP/r11.yaml"
 expect_abort "R11 glossary 部分文字列ペア (ロック ⊂ 楽観ロック) を abort" "$TMP/r11.yaml" "部分文字列"
 
+# R26. ★空文字列 leads_to (comm -23 が空行を空 missing に畳む dangling fail-open の兄弟) → 生成前 abort
+cp "$BASE" "$TMP/r26.yaml"; yq -i '.approaches[0].leads_to = ""' "$TMP/r26.yaml"
+expect_abort "R26 ★空 leads_to (dangling fail-open 兄弟) を生成前 abort" "$TMP/r26.yaml" "空 leads_to"
+
 # === HTML 改竄 (生成後 fail-closed = verify-research) ===
 
 # R12. HTML に偽 data-leads-to を注入 → verify set/count/dangling 不一致 FAIL
@@ -146,6 +150,129 @@ expect_verify_fail_filled "R24 ★チップ可視 id のみ改竄 (attr は正) 
 cp "$TMP/base-filled.html" "$TMP/r25.html"
 perl -0777 -i -pe 's#(data-ap-id="AP1" data-leads-to="OPT1"[^>]*>)[^<]*<b>OPT1</b>#${1}つながる判断 OPT_FAKE#' "$TMP/r25.html"
 expect_verify_fail_filled "R25 ★チップ <b> 欠落 + 可視平文偽 id (attr は正) を vis 整合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r25.html"
+
+# R27. ★outcome 可視 <b> のみ改竄 (attr data-resolved-by は正) → outcome 可視 id 整合で FAIL
+#      (R19 は attr 改竄。 本ケースは attr 正・可視 <b> だけ捏造 = チップ (f')/R24 の outcome 版兄弟。
+#       「この調査は <b>偽ADR</b> で決着」と文書最重要事実〔どの ADR に決着〕を偽装する経路を回帰固定)。
+cp "$TMP/base-filled.html" "$TMP/r27.html"
+perl -0777 -i -pe 's#(data-resolved-by="ADR-CLINIC-0001">[^<]*<b>)ADR-CLINIC-0001(</b>)#${1}ADR-FORGED-FAKE${2}#' "$TMP/r27.html"
+expect_verify_fail_filled "R27 ★outcome 可視 <b> のみ改竄 (attr は正) を vis 整合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r27.html"
+
+# R28. ★表紙 cross-doc-ref-chip 可視 <b> を改竄 → cover ref-chip 可視 id 整合で FAIL
+#      (表紙=読者が最初に見るカードの「行き先」doc id 偽装。 これまで検証属性すら無い完全死角だった)。
+cp "$TMP/base-filled.html" "$TMP/r28.html"
+perl -0777 -i -pe 's#(data-component="cross-doc-ref-chip"[^>]*>.*?<b>)ADR-CLINIC-0001(</b>)#${1}ADR-NONSENSE${2}#s' "$TMP/r28.html"
+expect_verify_fail_filled "R28 ★表紙 ref-chip 可視 id 改竄を cover 整合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r28.html"
+
+# R29. ★oc-tgt 照会先 footnote の可視 <b> id を偽 id へ改竄 (assemble で <b> 包みに統一済) → echo 整合で FAIL
+cp "$TMP/base-filled.html" "$TMP/r29.html"
+perl -0777 -i -pe 's#(class="oc-tgt"[^>]*>照会先 \(前方参照\): <b>)ADR-CLINIC-0001(</b>)#${1}ADR-PHANTOM${2}#' "$TMP/r29.html"
+expect_verify_fail_filled "R29 ★oc-tgt 可視 <b> id 改竄を echo 整合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r29.html"
+
+# R30. ★round-2 ceiling: 正規 <b> の直後に 2 つ目の偽 <b> を *追加* (outcome) → 全<b>列挙 MULTI-B で FAIL
+#      (first-<b> マッチ版は「この調査は ADR-CLINIC-0001 (実は ADR-FORGED)」が読者に見えるのに素通った fail-open)。
+cp "$TMP/base-filled.html" "$TMP/r30.html"
+perl -0777 -i -pe 's#(class="oc-resolved"[^>]*>[^<]*<b>ADR-CLINIC-0001</b>)#${1} (実は <b>ADR-FORGED</b>)#' "$TMP/r30.html"
+expect_verify_fail_filled "R30 ★outcome 第2 <b> 追加 (追加方向) を全<b>列挙で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r30.html"
+
+# R31. ★チップに第2 <b> を追加 (leads) → 全<b>列挙 MULTI-B で FAIL
+cp "$TMP/base-filled.html" "$TMP/r31.html"
+perl -0777 -i -pe 's#(data-ap-id="AP1" data-leads-to="OPT1"[^>]*>[^<]*<b>OPT1</b>)#${1}<b>OPT9</b>#' "$TMP/r31.html"
+expect_verify_fail_filled "R31 ★チップ第2 <b> 追加 (追加方向) を全<b>列挙で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r31.html"
+
+# R32. ★表紙 ref-chip に第2 <b> を追加 → 全<b>列挙 MULTI-B で FAIL
+cp "$TMP/base-filled.html" "$TMP/r32.html"
+perl -0777 -i -pe 's#(data-component="cross-doc-ref-chip"[^>]*>.*?<b>ADR-CLINIC-0001</b>)#${1} <b>ADR-FAKE</b>#s' "$TMP/r32.html"
+expect_verify_fail_filled "R32 ★表紙 ref-chip 第2 <b> 追加を全<b>列挙で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r32.html"
+
+# R33. ★within-doc 可視 ap-id を改竄 (data-ap-id 属性は正) → (k') 可視 id set_eq で FAIL
+cp "$TMP/base-filled.html" "$TMP/r33.html"
+perl -0777 -i -pe 's#<span class="ap-id">AP1</span>#<span class="ap-id">AP99</span>#' "$TMP/r33.html"
+expect_verify_fail_filled "R33 ★可視 ap-id 改竄 (属性正) を within-doc set_eq で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r33.html"
+
+# R34. ★within-doc 可視 fnid を改竄 → (k') FAIL
+cp "$TMP/base-filled.html" "$TMP/r34.html"
+perl -0777 -i -pe 's#<span class="fnid">FND1</span>#<span class="fnid">FND99</span>#' "$TMP/r34.html"
+expect_verify_fail_filled "R34 ★可視 fnid 改竄を within-doc set_eq で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r34.html"
+
+# R35. ★within-doc 可視 oqid を改竄 → (k') FAIL
+cp "$TMP/base-filled.html" "$TMP/r35.html"
+perl -0777 -i -pe 's#<span class="oqid">OQ1</span>#<span class="oqid">OQ99</span>#' "$TMP/r35.html"
+expect_verify_fail_filled "R35 ★可視 oqid 改竄を within-doc set_eq で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r35.html"
+
+# R36. ★表紙 cover-meta の件数を捏造 (わかったこと N件→99件) → (l') 集計再導出で FAIL
+cp "$TMP/base-filled.html" "$TMP/r36.html"
+perl -0777 -i -pe 's#(<span class="k">わかったこと</span><span class="v">)[0-9]+件#${1}99件#' "$TMP/r36.html"
+expect_verify_fail_filled "R36 ★cover-meta 件数捏造を集計再導出で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r36.html"
+
+# R37. ★表紙 cover-meta の方式範囲を捏造 (末尾 AP3→AP9) → (l') 範囲再導出で FAIL
+cp "$TMP/base-filled.html" "$TMP/r37.html"
+perl -0777 -i -pe 's#(検討した方式</span><span class="v">[0-9]+件 \([^)]*)AP3#${1}AP9#' "$TMP/r37.html"
+expect_verify_fail_filled "R37 ★cover-meta 方式範囲捏造を範囲再導出で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r37.html"
+
+# R38. ★round-3 ceiling: 正規 <b> を残し兄弟 <strong> で偽 id を併記 (outcome) → 残留タグ検査で FAIL
+#      (全<b>列挙は <b> リテラルのみ見るため <strong>/<em>/<span> 併記が素通った fail-open)。
+cp "$TMP/base-filled.html" "$TMP/r38.html"
+perl -0777 -i -pe 's#(class="oc-resolved"[^>]*>[^<]*<b>ADR-CLINIC-0001</b>)#${1} (実は <strong>ADR-FORGED</strong>)#' "$TMP/r38.html"
+expect_verify_fail_filled "R38 ★outcome <strong> 偽id併記 (別タグ注入) を残留タグ検査で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r38.html"
+
+# R39. ★チップに兄弟 <em> で偽 id を併記 → 残留タグ検査で FAIL
+cp "$TMP/base-filled.html" "$TMP/r39.html"
+perl -0777 -i -pe 's#(data-ap-id="AP1" data-leads-to="OPT1"[^>]*>[^<]*<b>OPT1</b>)#${1} <em>OPT_EM</em>#' "$TMP/r39.html"
+expect_verify_fail_filled "R39 ★チップ <em> 偽id併記を残留タグ検査で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r39.html"
+
+# R40. ★属性付き偽 ap-id span を *追加* (正規 bare span は維持) → 順序付き within-doc 列で FAIL
+#      (bare-class 限定 grep は属性付き span を見逃した fail-open。 属性許容 grep + 順序比較で捕捉)。
+cp "$TMP/base-filled.html" "$TMP/r40.html"
+perl -0777 -i -pe 's#(<span class="ap-id">AP1</span>)#${1}<span class="ap-id" data-x="1">AP_EXTRA</span>#' "$TMP/r40.html"
+expect_verify_fail_filled "R40 ★属性付き偽 ap-id span 追加を順序付き within-doc で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r40.html"
+
+# R41. ★可視 ap-id を多重度保存 swap (AP1↔AP2・属性は不変) → 順序付き within-doc 列で FAIL
+#      (multiset set_eq は {AP1,AP2,AP3} 保存ゆえ素通った binding fail-open。 文書順比較が入替を捕捉)。
+cp "$TMP/base-filled.html" "$TMP/r41.html"
+perl -0777 -i -pe 's#(<span class="ap-id">)AP1(</span>)#${1}__SWAP__${2}#; s#(<span class="ap-id">)AP2(</span>)#${1}AP1${2}#; s#(<span class="ap-id">)__SWAP__(</span>)#${1}AP2${2}#' "$TMP/r41.html"
+expect_verify_fail_filled "R41 ★可視 ap-id 多重度保存 swap を順序付き within-doc で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r41.html"
+
+# R42. ★可視 fnid を多重度保存 swap (FND1↔FND2) → 順序付き within-doc 列で FAIL
+cp "$TMP/base-filled.html" "$TMP/r42.html"
+perl -0777 -i -pe 's#(<span class="fnid">)FND1(</span>)#${1}__SWAP__${2}#; s#(<span class="fnid">)FND2(</span>)#${1}FND1${2}#; s#(<span class="fnid">)__SWAP__(</span>)#${1}FND2${2}#' "$TMP/r42.html"
+expect_verify_fail_filled "R42 ★可視 fnid 多重度保存 swap を順序付き within-doc で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r42.html"
+
+# R43. ★round-4 ceiling: <b> の外に *タグ無しの平文* で偽 id を併記 (outcome) → 可視テキスト厳密一致で FAIL
+#      (残留タグ検査はタグ無し平文を取り逃した。 全タグ除去後の可視テキスト==テンプレ で平文併記も封鎖)。
+cp "$TMP/base-filled.html" "$TMP/r43.html"
+perl -0777 -i -pe 's#(class="oc-resolved"[^>]*>[^<]*<b>ADR-CLINIC-0001</b>)#${1} (実は ADR-FORGED)#' "$TMP/r43.html"
+expect_verify_fail_filled "R43 ★outcome 平文偽id併記 (タグ無し) を可視テキスト厳密一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r43.html"
+
+# R44. ★チップに平文で偽 leads を併記 (つながる判断 OPT1 実は OPT9) → 可視テキスト厳密一致で FAIL
+cp "$TMP/base-filled.html" "$TMP/r44.html"
+perl -0777 -i -pe 's#(data-leads-to="OPT1"[^>]*>[^<]*<b>OPT1</b>)#${1} 実は OPT9#' "$TMP/r44.html"
+expect_verify_fail_filled "R44 ★チップ平文偽id併記を可視テキスト厳密一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r44.html"
+
+# R45. ★within-doc 可視 id span の直後に平文偽 id を後置 (AP1</span> AP99) → 隣接構造件数で FAIL
+cp "$TMP/base-filled.html" "$TMP/r45.html"
+perl -0777 -i -pe 's#(<span class="ap-id">AP1</span>)#${1} AP99#' "$TMP/r45.html"
+expect_verify_fail_filled "R45 ★ap-id span 後置平文偽id を隣接構造で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r45.html"
+
+# R46. ★表紙 cover-meta の状態バッジを捏造 → 状態 allowlist 写像再導出で FAIL
+cp "$TMP/base-filled.html" "$TMP/r46.html"
+perl -0777 -i -pe 's#(<span class="k">状態</span><span class="v">)[^<]*#${1}捏造状態#' "$TMP/r46.html"
+expect_verify_fail_filled "R46 ★cover-meta 状態捏造を写像再導出で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r46.html"
+
+# R47. ★round-5 ceiling: scope 項目 (<li>) を 1 件削除 → scope items 件数突合で FAIL (唯一カウント漏れだった決定的リスト)
+cp "$TMP/base-filled.html" "$TMP/r47.html"
+perl -0777 -i -pe 's#<li><span class="b">.*?</li>##s' "$TMP/r47.html"
+expect_verify_fail_filled "R47 ★scope 項目脱落を件数突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r47.html"
+
+# R48. ★cover-meta 版 KV を捏造 → 版 再導出で FAIL
+cp "$TMP/base-filled.html" "$TMP/r48.html"
+perl -0777 -i -pe 's#(<span class="k">版</span><span class="v">)[^<]*#${1}v9.9 / 偽日付#' "$TMP/r48.html"
+expect_verify_fail_filled "R48 ★cover-meta 版捏造を再導出で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r48.html"
+
+# R49. ★cover-meta に重複 KV ペアを後置注入 → KV 総数==4 基数アンカーで FAIL (head -1 単一ペア依存の fail-open)
+cp "$TMP/base-filled.html" "$TMP/r49.html"
+perl -0777 -i -pe 's#(<span class="m"><span class="k">版</span>)#<span class="m"><span class="k">版</span><span class="v">vDUP</span></span>${1}#' "$TMP/r49.html"
+expect_verify_fail_filled "R49 ★cover-meta 重複 KV 注入を基数アンカーで捕捉" "$BASE_PROSE" "$BASE" "$TMP/r49.html"
 
 # === inject fail-closed ===
 
