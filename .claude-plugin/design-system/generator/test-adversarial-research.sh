@@ -292,6 +292,18 @@ cp "$TMP/base-filled.html" "$TMP/r52.html"
 perl -0777 -i -pe 's#<p(\b[^>]*\bclass="oc-resolved"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</div>"#se' "$TMP/r52.html"
 expect_verify_fail_filled "R52 ★oc-resolved wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r52.html"
 
+# === ds8 ceiling round-2 反映: nested-same-tag early-match / hyphen-tag ===
+
+# R53. ★oc-tgt に空 <p></p> を入れ子注入し (.*?) を早期終端 → 群外に偽 adr_doc_id を可視追記 → nested-same-tag reject で FAIL
+cp "$TMP/base-filled.html" "$TMP/r53.html"
+perl -0777 -i -pe 's#(<p class="oc-tgt">.*?)</p>#${1}<p></p></p> 実は ADR-EVIL が行き先#s' "$TMP/r53.html"
+expect_verify_fail_filled "R53 ★oc-tgt nested-tag early-match+群外偽id を nested-reject で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r53.html"
+
+# R54. ★ref-chip の hyphen-tag swap (<div>→<my-tag>) + <b> 内 adr_doc_id 偽装 → marker-keyed [A-Za-z][\w-]* で捕捉して FAIL
+cp "$TMP/base-filled.html" "$TMP/r54.html"
+perl -0777 -i -pe 's#<div(\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>)(.*?)</div>#"<my-tag".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</my-tag>"#se' "$TMP/r54.html"
+expect_verify_fail_filled "R54 ★ref-chip hyphen-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r54.html"
+
 # === inject fail-closed ===
 
 # R20. manifest から 1 スロットを削除 → 集合不一致 abort

@@ -237,6 +237,35 @@ cp "$TMP/base-filled.html" "$TMP/a41.html"
 perl -0777 -i -pe 's#<p(\b[^>]*\bclass="justify-tgt"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{SRS-CLINIC-APPT}{SRS-PHANTOM}r)."</div>"#se' "$TMP/a41.html"
 expect_verify_fail_filled "A41 ★justify-tgt wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a41.html"
 
+# === ds8 ceiling round-2 反映: nested-same-tag early-match / hyphen-tag / identity echo (dec-kick/prin-id) ===
+
+# A42. ★jh に空 <p></p> を入れ子注入し (.*?) を早期終端 → 捕捉群外に偽 provenance を可視追記 → nested-same-tag reject で FAIL
+#      (round-2 blocker: marker-keyed backreference の最深兄弟。 早期終端の痕跡 <p> が捕捉群に残るのを reject する不動点)。
+cp "$TMP/base-filled.html" "$TMP/a42.html"
+perl -0777 -i -pe 's#(<p class="jh">[^<]*)</p>#${1}<p></p></p> 実は SRS-EVIL が正当化#' "$TMP/a42.html"
+expect_verify_fail_filled "A42 ★jh nested-tag early-match+群外偽provenance を nested-reject で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a42.html"
+
+# A43. ★ref-chip に空 <div></div> を入れ子注入し早期終端 → 群外に偽要件を可視追記 → nested-same-tag reject で FAIL
+cp "$TMP/base-filled.html" "$TMP/a43.html"
+perl -0777 -i -pe 's#(<div class="reader-chip" data-component="cross-doc-ref-chip">.*?)</div>#${1}<div></div></div> 実は SRS-EVIL の正当化要件#s' "$TMP/a43.html"
+expect_verify_fail_filled "A43 ★ref-chip nested-tag early-match+群外偽要件 を nested-reject で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a43.html"
+
+# A44. ★justify-tgt の hyphen-tag swap (<p>→<my-tag>) + 偽 id → marker-keyed の [A-Za-z][\w-]* がハイフンタグを捕捉して FAIL
+#      (round-2 blocker: \w+ だとハイフンタグを取りこぼし count anchor も backstop にならなかった)。
+cp "$TMP/base-filled.html" "$TMP/a44.html"
+perl -0777 -i -pe 's#<p(\b[^>]*\bclass="justify-tgt"[^>]*>)(.*?)</p>#"<my-tag".$1.($2 =~ s{SRS-CLINIC-APPT}{SRS-PHANTOM}r)."</my-tag>"#se' "$TMP/a44.html"
+expect_verify_fail_filled "A44 ★justify-tgt hyphen-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a44.html"
+
+# A45. ★dec-kick (採用見出し) の可視 chosen を偽 id へ改竄 → 可視テキスト厳密一致で FAIL (round-2: identity echo の列挙漏れ是正)
+cp "$TMP/base-filled.html" "$TMP/a45.html"
+perl -0777 -i -pe 's#(<p class="dec-kick">採用 — )[^<]*#${1}OPT-EVIL#' "$TMP/a45.html"
+expect_verify_fail_filled "A45 ★dec-kick chosen 改竄を可視テキスト厳密一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a45.html"
+
+# A46. ★prin-id を duplicate-decoy (隠し正規 <p> を残し可視偽 <p> を付け足し) → prin-id 行==1 count anchor で FAIL (round-2 major)
+cp "$TMP/base-filled.html" "$TMP/a46.html"
+perl -0777 -i -pe 's#(<p class="prin-id">[^<]*</p>)#${1}<p class="prin-id">原則 — PRIN-FORGED</p>#' "$TMP/a46.html"
+expect_verify_fail_filled "A46 ★prin-id duplicate-decoy を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a46.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort

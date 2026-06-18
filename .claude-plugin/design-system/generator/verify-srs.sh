@@ -101,10 +101,11 @@ chk "gate G: placeholder トークン (TBD/未定 等・語境界) == 0" 0 "$ghi
 echo
 echo "--- gate H: fidelity-sync-meta (機械SSoT/検証状態=厳密一致・生成=timestamp 非空) ---"
 chk "gate H: sync-meta 部品 存在" 1 "$(has fidelity-sync-meta)"
-# ★ds8 ceiling: 機械SSoT (= contract basename・決定的) と 検証状態 (固定2状態・決定的) は *完全決定的* ブロックゆえ
-#   厳密一致を要求。 「非空のみ」だと別 contract への偽 provenance や偽『全 gate PASS・GREEN 認定済』検証状態が floor を素通る
-#   fail-open だった (verify-adr の可視 echo 厳密一致と同クラスを SRS footer の決定的2項目へ横展開)。 生成 (timestamp) のみ
-#   非決定的ゆえ非空判定を維持。 3 項目の存在も要求 (欠落を緑にしない)。 -CSD -Mutf8 + utf8::decode で日本語テンプレ比較。
+# ★ds8 ceiling round-2: footer (fidelity-sync-meta) の sync-meta div を *ブロックごと* 捕捉し、全タグ除去後の可視テキストが
+#   固定テンプレ (機械SSoT=basename / 生成=timestamp / 検証状態=固定2状態) と厳密一致を要求する。 値 (<b> 内) のみ照合だと
+#   </b> 外・</div> 前への可視追記 (偽『全 gate GREEN・出荷承認』等) が死角になる fail-open だった (round-1 の value-only 照合の穴)。
+#   block-scoped で value-tamper + </b>外追記 + sibling div + 欠落 を一括封鎖 (cross-doc echo の可視テキスト厳密一致と同規律を footer へ)。
+#   生成 (timestamp) のみ非決定的ゆえ \d{4}-\d\d-\d\d \d\d:\d\d の placeholder で許容、 残り (basename/区切り/検証状態) は厳密一致。
 gH_ssot_e="$(esc "${CONTRACT##*/}")"
 gH_bad="$(SSOT="$gH_ssot_e" \
   STPRE='structure ✓ fabrication-free / prose 未充填 (opus 待ち)' \
@@ -112,17 +113,18 @@ gH_bad="$(SSOT="$gH_ssot_e" \
   perl -CSD -Mutf8 -0777 -ne '
   my $ssot=$ENV{SSOT}; utf8::decode($ssot);
   my $pre=$ENV{STPRE}; utf8::decode($pre); my $post=$ENV{STPOST}; utf8::decode($post);
-  my %seen; my @bad;
-  while (/(機械SSoT|生成|検証状態): <b>(.*?)<\/b>/g) {
-    my ($k,$v)=($1,$2); $seen{$k}=1;
-    if ($k eq "機械SSoT") { push @bad,"機械SSoT\x{2260}$v" if $v ne $ssot; }
-    elsif ($k eq "検証状態") { push @bad,"検証状態\x{2260}$v" if ($v ne $pre && $v ne $post); }
-    else { my $t=$v; $t=~s/[\s\x{3000}\x{200b}\x{200c}\x{200d}\x{feff}]//g; push @bad,"生成:空" unless length $t; }
+  my @bad; my $n=0;
+  while (/<div>機械SSoT:(.*?)<\/div>/gs) {
+    my $in=$1; $n++;
+    push @bad,"sync-meta:NESTED" if $in=~/<div\b/;
+    my $vis="機械SSoT:".$in; $vis=~s/<[^>]+>//g;
+    unless ($vis=~/^機械SSoT: \Q$ssot\E &middot; 生成: \d{4}-\d\d-\d\d \d\d:\d\d &middot; 検証状態: (.*)$/) { push @bad,"sync-meta:VIS"; next; }
+    my $state=$1; push @bad,"検証状態\x{2260}固定2状態" if ($state ne $pre && $state ne $post);
   }
-  for my $k ("機械SSoT","生成","検証状態") { push @bad,"$k:欠落" unless $seen{$k}; }
+  push @bad,"sync-meta:count=$n" if $n!=1;
   print join(" ", @bad);
 ' < "$BODY")"
-chk_empty "gate H: 機械SSoT==basename・検証状態∈固定2状態・生成 非空 (偽 provenance/検証状態 封鎖)" "$gH_bad"
+chk_empty "gate H: sync-meta 可視テキスト == テンプレ (basename/ts/固定2状態・</b>外追記封鎖)" "$gH_bad"
 
 echo
 echo "--- visual-first: 各章 (footer 除く) に非 prose 部品 ≥1 ---"

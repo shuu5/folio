@@ -91,43 +91,58 @@ chk "cross-doc: justify-tgt ブロック == 1"        "1" "$(grep -c 'class="jus
 #   Part 2b が ref-chip/justify-tgt/justify-req の 3 echo のみを列挙し jh を見落としていた = 機械的完全性照合 (全可視 echo の enumeration) の漏れ。
 chk "cross-doc: jh 見出しブロック == 1"           "1" "$(grep -c 'class="jh"' "$BODY")"
 chk "cross-doc: justify-req span == |justifies|" "$(q '.decision.justifies | length')" "$(grep -c 'class="justify-req"' "$BODY")"
+# ★ds8 ceiling round-2: dec-kick (採用見出し) は identity echo だが round-1 では未検証 (jh と同型の列挙漏れ)。可視テキストは下の perl で照合・ここで個数固定。
+chk "dec-kick ブロック == 1" "1" "$(grep -c 'class="dec-kick"' "$BODY")"
 srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
 srs_join_e="$(esc "$(q '[.decision.justifies[].req] | join("・")')")"
 srs_title_e="$(esc "$(q '.cross_doc.srs_title')")"
-# ★可視テキスト厳密一致 (round-4 不動点 + ds8 ceiling 深化): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
-#   ★while-regex は *marker-keyed* (<(\w+)\b ... marker ...>(.*?)</\1>) = data-component/class マーカーを担持する任意 wrapper タグを捕捉する。
-#   tag 固定 (<div>/<p>) だと wrapper-tag swap (<div>→<span> や <pX> 注入) で while がスキップし可視検査を逃れる fail-open があった
-#   (ds8 ceiling 検出・B3 research にも潜在=「可視テキスト厳密一致」の不動点が wrapper-tag 選択で兄弟経路を残していた)。 marker-only count anchor (上) と
-#   marker-keyed while で selector パリティを取り、 swap・別タグ注入・第2<b>・平文併記・タグ併記・削除 を一括封鎖する。
-#   ref-chip は <b> ちょうど 2 本 (srs_doc_id, join(req,・))・jh と justify-tgt は <b> 無し平文・justify-req は attr==可視。
-adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" perl -CSD -Mutf8 -0777 -ne '
+# ★可視テキスト厳密一致 (round-4 不動点 + ds8 ceiling round-2 深化): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
+#   ★while-regex は *marker-keyed* (<([A-Za-z][\w-]*)\b ... marker ...>(.*?)</\1>) = marker を担持する任意 wrapper タグ (ハイフン入り <my-tag> 含む) を捕捉。
+#   tag 固定 (<div>/<p>) や \w+ だと wrapper-tag swap / hyphen タグで while がスキップし可視検査を逃れる fail-open があった (round-2 ceiling)。
+#   加えて ★nested-same-tag reject (捕捉内容 $in に同名 open タグ <$tag があれば即 FAIL): 非貪欲 (.*?) が内側同名 close で *早期終端* し
+#   捕捉群外へ偽情報を逃がす経路 (空 <div></div> 注入) を構造的に封じる (round-2 ceiling 検出の blocker・B3「不動点」が残した最深の兄弟)。
+#   ★floor が封じるのは *決定的 echo 要素自体* の改竄: wrapper-tag swap / 別タグ / 第2<b> / 平文・タグ併記 / nested 早期終端 / ブロック削除・重複 (count anchor)。
+#   ★floor の対象外 (= ceiling 領域・two-gate 境界): echo の *外側* の自由文へ偽 provenance を注入する経路 (marker 無し sibling・自由文中の偽 doc_id 言及)。
+#   これは prose 中の正当な doc_id 言及 (例 別 ADR への参照 ADR-0041) と構造的に区別できず、 floor で追うと正当 prose を誤 FAIL する = 内容 fidelity ゆえ
+#   fidelity ceiling agent / persona-walk が担保 (verify-research.sh の floor/ceiling 注記・two-gate モデル S5.1)。 floor は「決定的構造の改竄検出」に限定する。
+#   ref-chip は <b> ちょうど 2 本 (srs_doc_id, join(req,・))・jh と justify-tgt は <b> 無し平文・justify-req は attr==可視・dec-kick は 採用 — chosen。
+adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" CHOSEN="$(esc "$(q '.decision.chosen')")" perl -CSD -Mutf8 -0777 -ne '
   my $exp=$ENV{EXP}; utf8::decode($exp); my $join=$ENV{JOIN}; utf8::decode($join); my $title=$ENV{TITLE}; utf8::decode($title);
+  my $chosen=$ENV{CHOSEN}; utf8::decode($chosen);
   my @bad;
   # (h) 表紙 cross-doc-ref-chip: <b> ちょうど 2 本 (b1=srs_doc_id / b2=join(req,・))・可視テキスト厳密一致
   #     (先頭の ICO_USER svg は全タグ除去で消えるが直後の半角空白は可視テキストに残る = テンプレ先頭に空白)。
-  while (/<(\w+)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
-    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<([A-Za-z][\w-]*)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
+    my ($tag,$in)=($1,$2); push @bad,"ref-chip:NESTED" if $in=~/<\Q$tag\E\b/;
+    my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=2){push @bad,"ref-chip:".scalar(@bs)."B"; next}
     push @bad,"ref-chip:b1\x{2260}$bs[0]" if $bs[0] ne $exp;
     push @bad,"ref-chip:b2\x{2260}$bs[1]" if $bs[1] ne $join;
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"ref-chip:VIS" if $vis ne " 正当化する要件: $exp の $join";
   }
   # (i) jh 見出し (ds8 ceiling 是正・第4の可視 cross-doc echo): <b> 無し平文・可視テキスト全体が固定テンプレと一致。
-  while (/<(\w+)\b[^>]*\bclass="jh"[^>]*>(.*?)<\/\1>/gs) {
-    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<([A-Za-z][\w-]*)\b[^>]*\bclass="jh"[^>]*>(.*?)<\/\1>/gs) {
+    my ($tag,$in)=($1,$2); push @bad,"jh:NESTED" if $in=~/<\Q$tag\E\b/;
+    my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=0){push @bad,"jh:".scalar(@bs)."B"; next}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"jh:VIS" if $vis ne "この判断が正当化する要件 (cross-doc 照会 \x{2192} $exp)";
   }
   # (j) 照会先 footnote justify-tgt: <b> 無し・平文ゆえ可視テキスト全体が固定テンプレと一致
-  while (/<(\w+)\b[^>]*\bclass="justify-tgt"[^>]*>(.*?)<\/\1>/gs) {
-    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<([A-Za-z][\w-]*)\b[^>]*\bclass="justify-tgt"[^>]*>(.*?)<\/\1>/gs) {
+    my ($tag,$in)=($1,$2); push @bad,"justify-tgt:NESTED" if $in=~/<\Q$tag\E\b/;
+    my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=0){push @bad,"justify-tgt:".scalar(@bs)."B"; next}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"justify-tgt:VIS" if $vis ne "照会先: $exp \x{2014} $title";
   }
   # (k) within-doc 可視 req == data-justifies-req (attr-vs-visible 厳密一致。 可視 req だけ改竄し attr 温存を封鎖。
   #     marker-keyed: class="justify-req" を担持する任意タグを捕捉・justify-req span 内は req id のみ = [^<]* で安全に抽出)。
-  while (/<(\w+)\b[^>]*\bclass="justify-req"[^>]*\bdata-justifies-req="([^"]*)"[^>]*>([^<]*)<\/\1>/gs) {
+  while (/<([A-Za-z][\w-]*)\b[^>]*\bclass="justify-req"[^>]*\bdata-justifies-req="([^"]*)"[^>]*>([^<]*)<\/\1>/gs) {
     my ($attr,$vis)=($2,$3); push @bad,"justify-req:$attr\x{2260}$vis" if $vis ne $attr;
+  }
+  # (l) dec-kick 採用見出し (ds8 ceiling round-2 是正・identity echo の列挙漏れ): <b> 無し平文・可視テキスト == 採用 — {chosen}
+  while (/<([A-Za-z][\w-]*)\b[^>]*\bclass="dec-kick"[^>]*>(.*?)<\/\1>/gs) {
+    my ($tag,$in)=($1,$2); push @bad,"dec-kick:NESTED" if $in=~/<\Q$tag\E\b/;
+    my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"dec-kick:VIS" if $vis ne "採用 \x{2014} $chosen";
   }
   print join(" ", @bad);
 ' "$BODY")"
@@ -159,6 +174,12 @@ chk_empty "HTML verdict バッジの可視ラベルが verdict と整合" "$bad_
 #     (SRS-pack の verify-fabrication-free と「同型」を謳う以上、 emit する全章は contract 導出を証明する)。
 chk "adr-supersession ブロック == 1"       "1" "$(grep -c 'data-component="adr-supersession"' "$BODY")"
 chk "adr-principle ブロック == 1"          "1" "$(grep -c 'data-component="adr-principle"' "$BODY")"
+# ★ds8 ceiling round-2: prin-id / 各 ss-row を *個数固定* (duplicate-decoy = 隠し正規 <p> + 可視偽 <div> の付け足しを count で捕捉。
+#   round-1 では tag固定 grep 抽出のみで wrapper-swap は mismatch で捕捉できたが duplicate-decoy が素通っていた = round-2 ceiling 指摘)。
+chk "prin-id 行 == 1"            "1" "$(grep -c 'class="prin-id"' "$BODY")"
+chk "ss-row 改訂状態 == 1"        "1" "$(grep -c '<span class="ss-k">改訂状態</span>' "$BODY")"
+chk "ss-row 置き換える ADR == 1"  "1" "$(grep -c '<span class="ss-k">置き換える ADR</span>' "$BODY")"
+chk "ss-row 置き換えられた == 1"  "1" "$(grep -c '<span class="ss-k">置き換えられた</span>' "$BODY")"
 # (b) principle.id == contract .principle.id (照会終端の identity 偽装を捕捉)
 act_prin="$(grep -oE '<p class="prin-id">[^<]*</p>' "$BODY" | sed -E 's#.*— ([^<]*)</p>#\1#')"
 chk "principle.id == contract .principle.id" "$(esc "$(q '.principle.id')")" "$act_prin"
