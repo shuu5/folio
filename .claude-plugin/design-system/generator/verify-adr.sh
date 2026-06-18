@@ -26,6 +26,7 @@
 
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FILLED_MANIFEST=""; ARTIFACT=""
 if [[ "${1:-}" == "--filled" ]]; then FILLED_MANIFEST="${2:?--filled requires <manifest.yaml>}"; shift 2
@@ -37,23 +38,14 @@ HTML="${2:?usage: verify-adr.sh [--filled <manifest> | --artifact] <adr-contract
 command -v yq >/dev/null || { echo "verify-adr: yq required" >&2; exit 2; }
 
 CONTRACT_DIR="$(cd "$(dirname "$CONTRACT")" && pwd)"
-BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-sed '/<style>/,/<\/style>/d' "$HTML" > "$BODY"      # body-only (inline CSS の data-component 混入回避)
-
-q() { yq -r "$1" "$CONTRACT"; }
-esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
+# ---- core 共通層 (q/esc/chk/chk_empty/set_eq/make_body/verify_term_inline)。 chk 整列幅は %-48s ----
+# 新依存 lib/verify-common.sh を fail-closed guard する (欠落/source 失敗を false-green に倒さない。
+# set -e 無しゆえ source rc=1 でも継続し helper が command-not-found 化する)。
+LVC="$SCRIPT_DIR/lib/verify-common.sh"
+[[ -f "$LVC" ]] || { echo "verify-adr: lib/verify-common.sh not found" >&2; exit 2; }
+CHKW=48; source "$LVC" || { echo "verify-adr: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
-chk() { if [[ "$2" == "$3" ]]; then printf '  [OK]   %-48s %s\n' "$1" "$2"; else printf '  [FAIL] %-48s expected %s, got %s\n' "$1" "$2" "$3"; fail=1; fi; }
-chk_empty() { if [[ -z "$2" ]]; then printf '  [OK]   %-48s\n' "$1"; else printf '  [FAIL] %-48s 重複: %s\n' "$1" "$2"; fail=1; fi; }
-set_eq() {
-  if [[ "$2" == "$3" ]]; then printf '  [OK]   %-48s %s\n' "$1" "識別"
-  else
-    printf '  [FAIL] %-48s\n' "$1"
-    echo "    --- contract のみ (脱落) ---"; comm -23 <(printf '%s\n' "$2") <(printf '%s\n' "$3") | sed 's/^/      /'
-    echo "    --- HTML のみ (捏造) ---";     comm -13 <(printf '%s\n' "$2") <(printf '%s\n' "$3") | sed 's/^/      /'
-    fail=1
-  fi
-}
+make_body "$HTML"      # body-only ($BODY、 inline CSS の data-component 混入回避)
 
 echo "ADR-pack fabrication-free + cross-doc 照会 proof: $HTML"
 echo "  contract: $CONTRACT"
@@ -177,41 +169,12 @@ else
   rm -f "$exp" "$act"
 fi
 
-# 7. plain-language-term-inline fidelity + 用語被覆 (assemble-adr と同一語境界規律)
-declare -A GPLAIN GALL GASCII
-while IFS=$'\t' read -r gterm gplain; do
-  [[ -n "$gterm" ]] || continue
-  [[ -n "$gplain" && "$gplain" != "null" ]] || gplain="$gterm"
-  gte="$(esc "$gterm")"; GALL[$gte]=1; GPLAIN[$gte]="$(esc "$gplain")"
-  a=1; case "$gterm" in *[!\ -~]*) a=0 ;; esac; GASCII[$gte]="$a"
-done < <(q '.glossary[] | [.term, (.plain_short // "")] | @tsv')
-mapfile -t MARKS < <(grep -oE '<span class="term" data-component="plain-language-term-inline" data-term="[^"]*">[^<]*</span>' "$BODY")
-tfail=0; declare -A TSEEN
-for m in "${MARKS[@]}"; do
-  dt="$(printf '%s' "$m" | sed -E 's/.*data-term="([^"]*)".*/\1/')"
-  ct="$(printf '%s' "$m" | sed -E 's#.*">([^<]*)</span>#\1#')"
-  [[ -n "${GALL[$dt]:-}" ]] || { echo "  [FAIL] term-inline data-term '$dt' が glossary に無い (捏造)"; tfail=1; fail=1; }
-  [[ -z "${GALL[$dt]:-}" || "$ct" == "${GPLAIN[$dt]}" ]] || { echo "  [FAIL] term-inline '$dt' 併記が plain_short と不一致 (期待 '${GPLAIN[$dt]}' 実 '$ct')"; tfail=1; fail=1; }
-  [[ -z "${TSEEN[$dt]:-}" ]] || { echo "  [FAIL] term-inline data-term '$dt' が重複マーク"; tfail=1; fail=1; }
-  TSEEN[$dt]=1
-done
-[[ "$tfail" -eq 0 ]] && printf '  [OK]   %-48s %s\n' "term-inline 派生・一意 (data-term∈glossary・併記==plain_short)" "${#MARKS[@]}"
-# 用語被覆: マーク集合 == markable フィールド出現 glossary 語 (assemble-adr の mark_terms 適用先と二重保守)。
-MKF="$(mktemp)"; GF2="$(mktemp)"
-esc "$(q '.context[].summary, .context[].detail, .drivers[].driver, .options[].name, .options[].summary, .options[].pros[], .options[].cons[], .decision.statement, .decision.justifies[].note, .consequences.positive[].text, .consequences.negative[].text, .supersession.note, .principle.text, .principle.note')" > "$MKF"
-for gte in "${!GALL[@]}"; do printf '%s\t%s\n' "$gte" "${GASCII[$gte]}"; done > "$GF2"
-exp_marks="$(MKF="$MKF" GF2="$GF2" perl -CSD -e '
-  local $/; open(my $mf,"<",$ENV{MKF}) or die; my $m=<$mf>; close $mf; $m="" unless defined $m;
-  my @out;
-  { local $/="\n"; open(my $gf,"<",$ENV{GF2}) or die;
-    while (my $l=<$gf>){ chomp $l; next unless length $l; my ($te,$a)=split(/\t/,$l,2);
-      my $pat=($a eq "1")?qr/(?<![A-Za-z0-9])\Q$te\E(?![A-Za-z0-9])/:qr/(?<!\p{Han})\Q$te\E(?!\p{Han})/;
-      push @out,$te if $m=~$pat; } close $gf; }
-  print "$_\n" for sort @out;
-')"
-rm -f "$MKF" "$GF2"
-act_marks="$(printf '%s\n' "${MARKS[@]}" | grep . | sed -E 's/.*data-term="([^"]*)".*/\1/' | sort -u)"
-set_eq "term-inline 被覆 (マーク == markable 出現 glossary 語)" "$exp_marks" "$act_marks"
+# 7. plain-language-term-inline fidelity + 用語被覆 (assemble-adr と同一語境界規律)。
+#    実装は core (verify-common.sh の verify_term_inline)。 markable フィールド集合は ADR-pack 固有ゆえ
+#    ここで yq 式を渡す (★この yq リストは assemble-adr の mark_terms 呼出先と二重保守。 detect↔remediate parity)。
+verify_term_inline \
+  '.context[].summary, .context[].detail, .drivers[].driver, .options[].name, .options[].summary, .options[].pros[], .options[].cons[], .decision.statement, .decision.justifies[].note, .consequences.positive[].text, .consequences.negative[].text, .supersession.note, .principle.text, .principle.note' \
+  "term-inline 被覆 (マーク == markable 出現 glossary 語)"
 
 echo
 if [[ "$fail" -eq 0 ]]; then

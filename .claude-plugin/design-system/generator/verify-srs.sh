@@ -34,11 +34,14 @@ HTML="${2:?usage: verify-srs.sh <contract.yaml> <generated.html>}"
 [[ -f "$VFAB" ]] || { echo "verify-srs: verify-fabrication-free.sh not found" >&2; exit 2; }
 command -v yq >/dev/null || { echo "verify-srs: yq required" >&2; exit 2; }
 
-BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-sed '/<style>/,/<\/style>/d' "$HTML" > "$BODY"        # body-only (CSS セレクタ混入回避)
-q() { yq -r "$1" "$CONTRACT"; }
+# ---- core 共通層 (q/esc/chk/chk_empty/set_eq/make_body/verify_term_inline)。 chk 整列幅は %-50s ----
+# 新依存 lib/verify-common.sh は $VFAB と同じ流儀で fail-closed guard する (欠落/source 失敗を
+# false-green に倒さない。 set -e 無しゆえ source rc=1 でも継続し helper が command-not-found 化する)。
+LVC="$SCRIPT_DIR/lib/verify-common.sh"
+[[ -f "$LVC" ]] || { echo "verify-srs: lib/verify-common.sh not found" >&2; exit 2; }
+CHKW=50; source "$LVC" || { echo "verify-srs: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
-chk() { if [[ "$2" == "$3" ]]; then printf '  [OK]   %-50s %s\n' "$1" "$2"; else printf '  [FAIL] %-50s expected %s, got %s\n' "$1" "$2" "$3"; fail=1; fi; }
+make_body "$HTML"        # body-only ($BODY、 CSS セレクタ混入回避)
 has() { local c; c="$(grep -c "data-component=\"$1\"" "$BODY")"; [[ "$c" -ge 1 ]] && echo 1 || echo 0; }
 
 echo "=========================================================================="

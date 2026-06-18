@@ -104,5 +104,5 @@ severity 目安: **critical** = 捏造 (存在しない理由・要件・RTM 行
 
 - [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate J (fidelity check) / §5.3 末尾 aside (EC proof = 捏造 RTM 行検出) / §7.3 (検証手法妥当性 = ceiling 領分)
 - [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
-- generator: `.claude-plugin/design-system/generator/` (`assemble.sh` / `inject-prose.sh` / `verify-srs.sh` floor / `verify-fabrication-free.sh --filled` 注入忠実)
+- generator: `.claude-plugin/design-system/generator/` (`assemble-srs.sh` / `inject-prose.sh` / `verify-srs.sh` floor / `verify-fabrication-free.sh --filled` 注入忠実)
 - [persona-walk-srs](persona-walk-srs.md) (ceiling のもう片翼 = gate I) / [spec-review-fidelity](spec-review-fidelity.md) (folio 自身用・対象が異なる)

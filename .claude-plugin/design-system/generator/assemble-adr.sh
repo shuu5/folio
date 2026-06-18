@@ -2,17 +2,17 @@
 # folio engine B1 (folio-bwc) — ADR-pack 決定的 assembler (instance#2 / rule-of-three)
 #
 # 入力 ADR contract (YAML) → 人間プレゼン HTML (srs.css inline、 自己完結)。
-# SRS generator (assemble.sh) と *同型* の機構を ADR-pack schema へ適用する:
+# SRS generator (assemble-srs.sh) と *同型* の機構を ADR-pack schema へ適用する:
 #   - 内容・構造 (cover/context/drivers/options/decision/consequences/supersession/principle/glossary)
 #     は contract から決定的組立。 元データに無い行・選択肢・照会 edge を生成できない。
 #   - ★cross-doc 照会 edge: decision.justifies[].req が参照先 SRS contract の要件 ID に実在することを
 #     validate() が *生成前に* fail-closed で確かめる (B0 论点2 抽象ロール graph の終端解決)。
 #   - 全自由記述値は HTML escape してから注入。 集合外参照・id 重複・tab/改行・未知 role/verdict/status は拒否。
 #   - prose スロット (章リード / plain / 判断根拠 / 1 文サマリ) は *空* で出力し ③ inject-prose.sh が充填。
-#   - 専門語 plain_short 併記 (mark_terms) は assemble.sh と同一実装を流用 (= term-inline 機構は pack 非依存=core 候補)。
+#   - 専門語 plain_short 併記 (mark_terms) は lib/common.sh (core) を共用 (= term-inline 機構は pack 非依存)。
 #
 # inject-prose.sh は SRS と共通 (data-slot-id ベースで pack 非依存)。 ★この共通化が rule-of-three の
-# 「SRS-pack ∩ ADR-pack = core」を炙る一次証拠 (後続 別 bd で core 抽出)。
+# 「SRS-pack ∩ ADR-pack = core」を炙る一次証拠 (B2/folio-5ua で lib/ へ core 抽出済)。
 #
 # usage: assemble-adr.sh <adr-contract.yaml> [out.html]
 
@@ -28,8 +28,11 @@ CSS="$SCRIPT_DIR/../srs.css"
 command -v yq >/dev/null || { echo "assemble-adr: yq required" >&2; exit 1; }
 
 CONTRACT_DIR="$(cd "$(dirname "$CONTRACT")" && pwd)"
-q() { yq -r "$1" "$CONTRACT"; }
-esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
+# ---- core 共通層 (q/esc/mark_terms/ico/band/cover骨格/glossary/footer/finalize) ----
+# B2 (folio-5ua): SRS-pack と共通の idiom は lib/common.sh から source。 本 file は ADR-pack 固有
+# (cross-doc 照会 / context/options/decision/consequences/supersession emitter) を残す。
+source "$SCRIPT_DIR/lib/common.sh"
+core_init_term_inline
 
 # 抽象ロール (B0 论点2 照会 graph) / verdict / adr_status の allowlist。
 declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [verification]=1 [implementation]=1 )
@@ -37,57 +40,17 @@ declare -A VERDICT_OK=( [chosen]=1 [rejected]=1 [deferred]=1 )
 declare -A STATUS_OK=( [proposed]=1 [accepted]=1 [superseded]=1 [deprecated]=1 )
 declare -A VERDICT_LABEL=( [chosen]=採用 [rejected]=不採用 [deferred]=保留 )
 
-# ---- plain-language-term-inline 自動併記 (assemble.sh と同一実装 = pack 非依存の core 候補) ----
-GMAP_FILE="$(mktemp)"; TERM_LEDGER="$(mktemp)"
-trap 'rm -f "$GMAP_FILE" "$TERM_LEDGER"' EXIT
-while IFS=$'\t' read -r term plain; do
-  [[ -n "$term" ]] || continue
-  [[ -n "$plain" && "$plain" != "null" ]] || plain="$term"
-  a=1; case "$term" in *[!\ -~]*) a=0 ;; esac
-  printf '%s\t%s\t%s\n' "$(esc "$term")" "$(esc "$plain")" "$a"
-done < <(q '.glossary[] | [.term, (.plain_short // "")] | @tsv') > "$GMAP_FILE"
-mark_terms() {
-  local e; e="$(esc "${1-}")"
-  printf '%s' "$e" | GMAP="$GMAP_FILE" LEDGER="$TERM_LEDGER" perl -CSD -0777 -e '
-    my %marked;
-    { local $/="\n"; if (open(my $lf,"<",$ENV{LEDGER})) { while (my $l=<$lf>){ chomp $l; $marked{$l}=1 if length $l; } close $lf; } }
-    my @g;
-    { local $/="\n"; open(my $gf,"<",$ENV{GMAP}) or die "gmap: $!";
-      while (my $l=<$gf>){ chomp $l; next unless length $l; my @f=split(/\t/,$l,3); push @g,\@f; } close $gf; }
-    local $/; my $text=<STDIN>; $text="" unless defined $text;
-    my @newly;
-    for my $r (@g) {
-      my ($te,$plain,$ascii)=@$r;
-      next if $marked{$te};
-      my $badge="<span class=\"term\" data-component=\"plain-language-term-inline\" data-term=\"$te\">$plain</span>";
-      my $pat = ($ascii eq "1")
-        ? qr/(?<![A-Za-z0-9])\Q$te\E(?![A-Za-z0-9])/
-        : qr/(?<!\p{Han})\Q$te\E(?!\p{Han})/;
-      if ($text =~ s/$pat/$& . $badge/e) { $marked{$te}=1; push @newly,$te; }
-    }
-    print $text;
-    if (@newly) { open(my $lw,">>",$ENV{LEDGER}) or die; print $lw "$_\n" for @newly; close $lw; }
-  '
-}
-
-# ---- icon SVG (静的資産・assemble.sh と共用語彙) ----
-ICO_FLOW='<path d="M12 2v6m0 0L9 5m3 3l3-3"/><circle cx="12" cy="14" r="6"/>'
+# ---- icon SVG (ADR-pack 固有。 共用 icon=ICO_FLOW/SHIELD/BOOK/CHECK_BIG/USER + ico() は lib/common.sh) ----
 ICO_SCALE='<path d="M12 3v18"/><path d="M5 7l-3 6h6z"/><path d="M19 7l-3 6h6z"/><path d="M3 21h18"/>'
 ICO_FORK='<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M8.5 6H13a3 3 0 0 1 3 3v.5M8.5 18H13a3 3 0 0 0 3-3v-.5"/>'
 ICO_GAVEL='<path d="M14 4l6 6-3 3-6-6z"/><path d="M11 7L4 14l3 3 7-7"/><path d="M3 21h10"/>'
 ICO_BALANCE='<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'
 ICO_CLOCK='<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
-ICO_SHIELD='<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
-ICO_BOOK='<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
-ICO_CHECK_BIG='<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffe8a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>'
-ICO_USER='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'
-ico() { printf '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">%s</svg>' "$1"; }
 
 # ---- fail-closed contract validation ----
 validate() {
   local errs=0 d p
-  if [[ "$(yq '[.. | select(tag=="!!str") | test("[\t\n]")] | any' "$CONTRACT")" == "true" ]]; then
-    echo "assemble-adr: contract の文字列に tab/改行が含まれます (列ずれ防止のため禁止)" >&2; errs=1; fi
+  core_validate_strings "assemble-adr" || errs=1
   # id 一意性 (context / drivers / options / consequences)
   d="$(q '.context[].id' | sort | uniq -d)";  [[ -z "$d" ]] || { echo "assemble-adr: context id 重複: $d" >&2; errs=1; }
   d="$(q '.drivers[].id' | sort | uniq -d)";  [[ -z "$d" ]] || { echo "assemble-adr: driver id 重複: $d" >&2; errs=1; }
@@ -122,22 +85,11 @@ validate() {
     missing="$(comm -23 <(q '.decision.justifies[].req' | sort -u) <(yq -r '(.requirements[].id, .nfr[].id)' "$srs_abs" | sort -u))"
     [[ -z "$missing" ]] || { echo "assemble-adr: ★cross-doc 照会の dangling: decision.justifies の要件が SRS に実在しない: $missing" >&2; errs=1; }
   fi
-  # glossary 語どうしの部分文字列ペアを拒否 (term-inline のネスト span 防止、 assemble.sh と同一)
-  local -a _gt; mapfile -t _gt < <(q '.glossary[].term'); local i j
-  for i in "${!_gt[@]}"; do for j in "${!_gt[@]}"; do
-    [[ "$i" != "$j" && -n "${_gt[$i]}" && "${_gt[$i]}" != "${_gt[$j]}" && "${_gt[$j]}" == *"${_gt[$i]}"* ]] \
-      && { echo "assemble-adr: glossary 語 '${_gt[$i]}' が '${_gt[$j]}' の部分文字列 (term-inline 曖昧化のため禁止)" >&2; errs=1; }
-  done; done
+  core_validate_glossary_substring "assemble-adr" || errs=1
   [[ "$errs" -eq 0 ]] || { echo "assemble-adr: contract validation FAILED (fail-closed)" >&2; exit 1; }
 }
 
-CHAPN=0
-band() { # tint kicker heading icon_inner
-  CHAPN=$((CHAPN+1)); local num; printf -v num '%02d' "$CHAPN"
-  printf '<section data-component="chapter-deck-band" class="tint-%s"><span class="num">%s</span><span class="kicker">%s %s</span><h2>%s</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-%s"></p></section>\n<div class="chapbody">\n' \
-    "$1" "$num" "$(ico "$4")" "$(esc "$2")" "$(esc "$3")" "$num"
-}
-band_end() { printf '</div>\n'; }
+# band / band_end (chapter-deck-band) は lib/common.sh (core) を使う。
 
 # ---- ADR 固有 CSS (srs.css token を流用。 dark は token 経由で自動追従) ----
 emit_adr_css() {
@@ -205,11 +157,7 @@ emit_head() {
 }
 
 emit_cover() {
-  printf '<header data-component="doc-cover-band">\n'
-  printf '<p class="cover-eyebrow"><span class="doc-type">%s</span> <span>%s</span></p>\n' "$(esc "$(q '.meta.eyebrow_left')")" "$(esc "$(q '.meta.eyebrow_right')")"
-  printf '<h1>%s</h1>\n' "$(esc "$(q '.meta.title')")"
-  printf '<p class="cover-sub">%s</p>\n' "$(esc "$(q '.meta.subtitle')")"
-  printf '<div class="summary-card"><span class="ic">%s</span><div><p class="lab">この判断が約束すること (1 文サマリ)</p><p class="txt" data-prose-slot="cover-summary" data-slot-id="cover-summary"></p></div></div>\n' "$ICO_CHECK_BIG"
+  core_emit_cover_head "この判断が約束すること (1 文サマリ)"
   local nopt ncsq jr
   nopt="$(q '.options | length')件 ($(esc "$(q '.options[0].id')")–$(esc "$(q '.options[-1].id')"))"
   ncsq="良い $(q '.consequences.positive | length') / トレードオフ $(q '.consequences.negative | length')"
@@ -218,14 +166,8 @@ emit_cover() {
   printf '<div class="cover-meta"><span class="m"><span class="k">状態</span><span class="v">%s</span></span><span class="m"><span class="k">選択肢</span><span class="v">%s</span></span><span class="m"><span class="k">結果</span><span class="v">%s</span></span><span class="m"><span class="k">版</span><span class="v">v%s / %s</span></span></div>\n' \
     "$(esc "$(q '.meta.adr_status')")" "$nopt" "$(esc "$ncsq")" "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
   printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s 正当化する要件: <b>%s</b> の <b>%s</b></div>\n' "$ICO_USER" "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$jr")"
-  printf '<div data-component="approval-block">\n'
-  q '.approval[] | [.role, .who, .when, .stamp] | @tsv' | while IFS=$'\t' read -r role who when stamp; do
-    [[ -n "$role" ]] || continue; sc=""; [[ "$stamp" != "承認済" ]] && sc=" self"
-    printf '<div class="sign"><span class="role">%s</span><span class="who">%s</span><span class="when">%s</span><span class="stamp%s">%s</span></div>\n' "$(esc "$role")" "$(esc "$who")" "$(esc "$when")" "$sc" "$(esc "$stamp")"
-  done
-  printf '</div>\n'
-  printf '<div class="reader-chip">%s 想定読者: %s</div>\n' "$ICO_USER" "$(esc "$(q '.meta.reader')")"
-  printf '</header>\n'
+  core_emit_approval_block
+  core_emit_cover_tail
 }
 
 emit_context() {
@@ -310,20 +252,11 @@ emit_supersession() {
   printf '</div>\n'
 }
 
-emit_glossary() {
-  printf '<div data-component="glossary-term-table">\n'
-  q '.glossary[] | [.term, (.en // ""), .def] | @tsv' | while IFS=$'\t' read -r term en def; do
-    [[ -n "$term" ]] || continue; enb=""; [[ -n "$en" ]] && enb="<span class=\"en\">$(esc "$en")</span>"
-    printf '<div class="grow"><div class="gword">%s%s</div><div class="gdef">%s</div></div>\n' "$(esc "$term")" "$enb" "$(esc "$def")"
-  done
-  printf '</div>\n'
-}
+# emit_glossary (glossary-term-table) は lib/common.sh (core) を使う。
 
+# footer は core_emit_footer に ADR-pack 別のタグ列を渡す (本文 SSoT 行は共通)。
 emit_footer() {
-  printf '<footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">\n'
-  printf '<div>機械SSoT: <b>%s</b> &middot; 生成: <b>%s</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose 未充填 (opus 待ち)</b></div>\n' "$(esc "${CONTRACT##*/}")" "$(date -u '+%Y-%m-%d %H:%M')"
-  printf '<div class="tags"><span>folio design system</span><span>ADR-pack</span><span>folio engine B1 (instance#2)</span><span>cross-doc 照会</span></div>\n'
-  printf '</div></footer>\n'
+  core_emit_footer '<span>folio design system</span><span>ADR-pack</span><span>folio engine B1 (instance#2)</span><span>cross-doc 照会</span>'
 }
 
 build() {
@@ -343,5 +276,4 @@ build() {
 }
 
 validate
-tmp="$(mktemp)"; build > "$tmp"
-if [[ "$OUT" == "/dev/stdout" ]]; then cat "$tmp"; rm -f "$tmp"; else mv "$tmp" "$OUT"; echo "assemble-adr: wrote $OUT" >&2; fi
+core_finalize "assemble-adr"

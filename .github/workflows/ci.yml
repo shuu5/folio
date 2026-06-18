@@ -143,7 +143,7 @@ jobs:
       - name: SRS gate F (dogfood artifact を build して render-gate にかける)
         run: |
           gen=.claude-plugin/design-system/generator
-          bash "$gen/assemble.sh"     "$gen/contract/ec-checkout.srs.yaml" "$RUNNER_TEMP/srs-asm.html"
+          bash "$gen/assemble-srs.sh" "$gen/contract/ec-checkout.srs.yaml" "$RUNNER_TEMP/srs-asm.html"
           bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
           python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
 

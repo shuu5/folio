@@ -18,6 +18,7 @@
 set -uo pipefail
 # esc() の ${v//pat/repl} を bash 5.2+ patsub_replacement が壊す (< → <lt;) ため無効化。
 shopt -u patsub_replacement 2>/dev/null || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 FILLED_MANIFEST=""; ARTIFACT=""
 # --filled <manifest>: 注入忠実 (生成時)。 --artifact: prose 全充填のみ (manifest 不要、 成果物 floor = verify-srs gate G)。
@@ -29,31 +30,15 @@ HTML="${2:?usage: verify-fabrication-free.sh [--filled <manifest> | --artifact] 
 [[ -z "$FILLED_MANIFEST" || -f "$FILLED_MANIFEST" ]] || { echo "verify: manifest not found: $FILLED_MANIFEST" >&2; exit 2; }
 
 # inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、
-# <style> ブロックを除去した body-only ビューで数える (S5 floor gate も同じ前提が要る)。
-BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-sed '/<style>/,/<\/style>/d' "$HTML" > "$BODY"
-
-q() { yq -r "$1" "$CONTRACT"; }
-# assemble.sh / inject-prose.sh と同一の escape 規律 (注入忠実比較に使う)。
-esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
+# <style> ブロックを除去した body-only ビュー ($BODY) で数える (make_body が用意・S5 floor gate も同じ前提)。
+# ---- core 共通層 (q/esc/chk/chk_empty/set_eq/make_body/verify_term_inline)。 chk 整列幅は %-44s ----
+# 新依存 lib/verify-common.sh を fail-closed guard する (欠落/source 失敗を false-green に倒さない。
+# set -e 無しゆえ source rc=1 でも継続し helper が command-not-found 化する)。
+LVC="$SCRIPT_DIR/lib/verify-common.sh"
+[[ -f "$LVC" ]] || { echo "verify-fabrication-free: lib/verify-common.sh not found" >&2; exit 2; }
+CHKW=44; source "$LVC" || { echo "verify-fabrication-free: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
-chk() { # label expected actual
-  if [[ "$2" == "$3" ]]; then printf '  [OK]   %-44s %s\n' "$1" "$2"
-  else printf '  [FAIL] %-44s expected %s, got %s\n' "$1" "$2" "$3"; fail=1; fi
-}
-chk_empty() { # label value(空であるべき)
-  if [[ -z "$2" ]]; then printf '  [OK]   %-44s\n' "$1"
-  else printf '  [FAIL] %-44s 重複: %s\n' "$1" "$2"; fail=1; fi
-}
-set_eq() { # label expected-multiline actual-multiline
-  if [[ "$2" == "$3" ]]; then printf '  [OK]   %-44s %s\n' "$1" "識別"
-  else
-    printf '  [FAIL] %-44s\n' "$1"
-    echo "    --- contract のみ (脱落) ---"; comm -23 <(printf '%s\n' "$2") <(printf '%s\n' "$3") | sed 's/^/      /'
-    echo "    --- HTML のみ (捏造) ---";     comm -13 <(printf '%s\n' "$2") <(printf '%s\n' "$3") | sed 's/^/      /'
-    fail=1
-  fi
-}
+make_body "$HTML"
 
 echo "fabrication-free proof: $HTML"
 echo "  contract: $CONTRACT"
@@ -143,46 +128,11 @@ else
 fi
 
 # 9. plain-language-term-inline (glossary 派生ビュー、 ADR-0042 §2.2 A) の fidelity + 用語被覆 (両モード共通)。
-#    バッジ構造: <span class="term" data-component="plain-language-term-inline" data-term="TE">PLAIN</span>
-#    照合は assemble と同じ esc() 済みで行う (esc 非対称による偽 FAIL を避ける = §8 と同じ規律)。
-declare -A GPLAIN GALL GASCII
-while IFS=$'\t' read -r gterm gplain; do
-  [[ -n "$gterm" ]] || continue
-  [[ -n "$gplain" && "$gplain" != "null" ]] || gplain="$gterm"
-  gte="$(esc "$gterm")"; GALL[$gte]=1; GPLAIN[$gte]="$(esc "$gplain")"
-  a=1; case "$gterm" in *[!\ -~]*) a=0 ;; esac; GASCII[$gte]="$a"   # assemble と同じ ascii 判定
-done < <(q '.glossary[] | [.term, (.plain_short // "")] | @tsv')
-mapfile -t MARKS < <(grep -oE '<span class="term" data-component="plain-language-term-inline" data-term="[^"]*">[^<]*</span>' "$BODY")
-tfail=0; declare -A TSEEN
-for m in "${MARKS[@]}"; do
-  dt="$(printf '%s' "$m" | sed -E 's/.*data-term="([^"]*)".*/\1/')"
-  ct="$(printf '%s' "$m" | sed -E 's#.*">([^<]*)</span>#\1#')"
-  # (a) fidelity: data-term ∈ glossary かつ 併記 == その語の plain_short
-  [[ -n "${GALL[$dt]:-}" ]] || { echo "  [FAIL] term-inline data-term '$dt' が glossary に無い (捏造)"; tfail=1; fail=1; }
-  [[ -z "${GALL[$dt]:-}" || "$ct" == "${GPLAIN[$dt]}" ]] || { echo "  [FAIL] term-inline '$dt' 併記が plain_short と不一致 (期待 '${GPLAIN[$dt]}' 実 '$ct')"; tfail=1; fail=1; }
-  # (b) uniqueness: 各 data-term 1 回
-  [[ -z "${TSEEN[$dt]:-}" ]] || { echo "  [FAIL] term-inline data-term '$dt' が重複マーク"; tfail=1; fail=1; }
-  TSEEN[$dt]=1
-done
-[[ "$tfail" -eq 0 ]] && printf '  [OK]   %-44s %s\n' "term-inline 派生・一意 (data-term∈glossary・併記==plain_short)" "${#MARKS[@]}"
-# (c) 用語被覆: マーク data-term 集合 == markable フィールドに出現する glossary 語 (assemble と *同一の語境界規律* で再導出)。
-#     markable は assemble.sh の mark_terms 適用先と一致 (★この yq リストは assemble の mark_terms 呼出先と二重保守。
-#     片方更新時はもう片方も合わせること = detect↔remediate parity)。 照合は ascii=英数境界 / CJK=漢字非隣接 (perl -CSD)。
-MKF="$(mktemp)"; GF2="$(mktemp)"
-esc "$(q '.goals[].desc, .scope.in[], .scope.out[], .actors[].role, .upper_needs[].need, .requirements[].ears.condition, .requirements[].ears.response, .nfr[].target, .nfr[].measure, .acceptance[].criterion, .constraints[].text')" > "$MKF"
-for gte in "${!GALL[@]}"; do printf '%s\t%s\n' "$gte" "${GASCII[$gte]}"; done > "$GF2"
-exp_marks="$(MKF="$MKF" GF2="$GF2" perl -CSD -e '
-  local $/; open(my $mf,"<",$ENV{MKF}) or die; my $m=<$mf>; close $mf; $m="" unless defined $m;
-  my @out;
-  { local $/="\n"; open(my $gf,"<",$ENV{GF2}) or die;
-    while (my $l=<$gf>){ chomp $l; next unless length $l; my ($te,$a)=split(/\t/,$l,2);
-      my $pat=($a eq "1")?qr/(?<![A-Za-z0-9])\Q$te\E(?![A-Za-z0-9])/:qr/(?<!\p{Han})\Q$te\E(?!\p{Han})/;
-      push @out,$te if $m=~$pat; } close $gf; }
-  print "$_\n" for sort @out;
-')"
-rm -f "$MKF" "$GF2"
-act_marks="$(printf '%s\n' "${MARKS[@]}" | grep . | sed -E 's/.*data-term="([^"]*)".*/\1/' | sort -u)"
-set_eq "term-inline 被覆 (マーク == markable 出現 glossary 語、 同一語境界)" "$exp_marks" "$act_marks"
+#    実装は core (verify-common.sh の verify_term_inline)。 markable フィールド集合は SRS-pack 固有ゆえ
+#    ここで yq 式を渡す (★この yq リストは assemble-srs の mark_terms 呼出先と二重保守。 detect↔remediate parity)。
+verify_term_inline \
+  '.goals[].desc, .scope.in[], .scope.out[], .actors[].role, .upper_needs[].need, .requirements[].ears.condition, .requirements[].ears.response, .nfr[].target, .nfr[].measure, .acceptance[].criterion, .constraints[].text' \
+  "term-inline 被覆 (マーク == markable 出現 glossary 語、 同一語境界)"
 
 echo
 if [[ -n "$ARTIFACT" ]]; then

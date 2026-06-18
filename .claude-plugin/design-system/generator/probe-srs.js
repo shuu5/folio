@@ -10,7 +10,7 @@
  *   (3) low-contrast        — text と実効背景の WCAG コントラスト比が AA 未満 (S3 で手検出した
  *       dark-contrast 崩壊型を gate 化)。 caller が light / dark 両 color-scheme で本 probe を呼ぶ。
  *
- * 決定性: 生成 SRS は CSS を inline 同梱 (assemble.sh) し自己完結ゆえ font 以外の外部依存がない。
+ * 決定性: 生成 SRS は CSS を inline 同梱 (assemble-srs.sh) し自己完結ゆえ font 以外の外部依存がない。
  * CI は font を pin (fonts-noto-cjk) し playwright も pin (requirements.txt) するため layout が固定される。
  *
  * Playwright の page.evaluate() から `__folioSrsRenderProbe()` として呼ぶ。

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # folio S4 generator — 決定的 prose injector (ADR-0042 §2.1 の③)
 #
-# 空の prose スロット (assemble.sh が data-slot-id 付きで出力) へ、 prose manifest の散文を
+# 空の prose スロット (assemble-srs.sh / assemble-adr.sh が data-slot-id 付きで出力) へ、 prose manifest の散文を
 # HTML escape して注入する。 opus が書くのは manifest だけ。 注入は機械的で fabrication-free を
 # prose 層でも保つ (任意 markup は escape され構造を壊せない)。
 #

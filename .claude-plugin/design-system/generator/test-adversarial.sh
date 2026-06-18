@@ -7,7 +7,7 @@
 
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ASM="$SCRIPT_DIR/assemble.sh"
+ASM="$SCRIPT_DIR/assemble-srs.sh"
 INJ="$SCRIPT_DIR/inject-prose.sh"
 VER="$SCRIPT_DIR/verify-fabrication-free.sh"
 BASE="$SCRIPT_DIR/contract/ec-checkout.srs.yaml"
