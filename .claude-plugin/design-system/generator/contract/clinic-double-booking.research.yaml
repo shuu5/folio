@@ -1,0 +1,116 @@
+# folio engine B3 (folio-ar1) — research-pack 入力 contract インスタンス (instance#3 / rule-of-three)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT / ADR-CLINIC-0001 と同一ドメイン)。
+# doc-type = research (調査記録 = 「何を検討したか」doc)。SRS/ADR generator と同型の機構
+# (決定的 assembler + opus prose + 2-gate) を research-pack schema
+# (question / findings / approaches / open_questions / outcome) へ適用する。
+#
+# ★この research の核 = cross-doc 照会 (inter-doc cross-ref)、 ただし前方参照 (research → ADR):
+#   approaches[].leads_to が後続 decision (ADR-CLINIC-0001) の .options[].id に *実在* することを
+#   assembler validate と verify-research.sh が二重に fail-closed で確かめる (dangling 0)。
+#   ADR が SRS 要件 ID を後方照会したのと「同じパターン」を別ターゲット (ADR option id) へ適用する
+#   = 照会機構が doc-type 非依存に再利用できることの実証。 これで research → ADR → SRS の照会トリロジー完成。
+#
+# 構造差 (research の hallmark): verdict が無い (探索は決めない) / open_questions を持つ (結論しない) /
+#   cross_doc が前方参照 (research → ADR)。
+#
+# 読者 = クリニックの事業責任者 + 開発リード (専門語は必ずやさしい言葉を併記)。
+
+meta:
+  doc_id: RES-CLINIC-0001
+  title: 同じ診療枠への二重予約をどう防ぐか — 確定方式の比較調査
+  eyebrow_left: 調査記録 (Research)
+  eyebrow_right: クリニック — 二重予約防止の方式調査
+  subtitle: 安全 (二重予約ゼロ) と速さ (ピーク応答) を両立する確定方式を、 決めずに洗い出す
+  research_status: concluded       # allowlist {open, concluded}。探索は「採用」しない。concluded=後続 ADR で決着済
+  version: "1.0"
+  date: "2026-06-17"
+  reader: クリニックの事業責任者 + 開発リード — 医療コーディングの専門知識は不要 (専門語はやさしい言葉を併記)
+
+# 承認記録 (SRS / ADR と同じ approval-block。core 共用)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-15 承認
+    stamp: 承認済
+  - role: レビュー (開発リード)
+    who: 佐藤 健
+    when: 2026-06-14 レビュー
+    stamp: レビュー済
+  - role: 作成 (調査担当)
+    who: 設計チーム
+    when: 2026-06-12 起票
+    stamp: 作成
+
+# ★cross-doc 照会 (前方参照): この調査が feed した decision (ADR)。verify-research.sh が参照先 ADR contract を
+#   読み込み、 approaches[].leads_to の option ID 実在を確かめる。adr_contract は contract/ dir 起点の相対パス。
+cross_doc:
+  adr_contract: clinic-double-booking.adr.yaml
+  adr_doc_id: ADR-CLINIC-0001
+  adr_title: 同じ診療枠への二重予約を「枠の取り合いに強い確定方式」で防ぐ (ADR)
+
+# 01 調査の問い・範囲 (単一の問い + in/out scope)
+question:
+  summary: 複数の患者がほぼ同時に同じ診療枠を申し込んでも二重予約させない確定方式は何か。 安全 (二重予約ゼロ) と速さ (ピーク応答) を両立できるか。
+  in_scope:
+    - 予約確定の同時実行制御 (楽観 / 悲観 / 直列の比較)
+    - 予約受付ピーク時のスループットと応答時間への影響
+  out_scope:
+    - 予約画面の UI/UX 設計 (本調査の対象外・別途検討)
+    - 決済・キャンセル待ちの扱い (本調査の対象外)
+
+# 02 わかったこと (findings = 観察。id/summary/detail。★verdict なし = 探索は決めない)
+findings:
+  - id: FND1
+    summary: 同時申込はピーク時に普通に起きる
+    detail: 予約受付開始直後や人気の枠では、 複数の患者がほぼ同じ瞬間に同じ空き枠を申し込む。 発生頻度は無視できず、 確定方式が甘いとダブルブッキングに直結する。
+  - id: FND2
+    summary: アプリ側の事前確認だけでは隙が残る
+    detail: 「空きを確認してから確定する」二段構えは、 確認と確定の間に別の申込が割り込むと二重予約が漏れる。 確認と確定が分かれている限りこの隙は消えない。
+  - id: FND3
+    summary: 安全に倒すと速さを失いやすい
+    detail: 確実さを優先して枠を長く押さえたり一列に並べたりすると、 ピーク時のスループットと応答時間が悪化する。 安全と速さはそのままでは綱引きになる。
+
+# 03 検討した方式 (approaches = exploration role。★verdict なし。leads_to で後続 ADR option へ前方照会)
+approaches:
+  - id: AP1
+    name: 楽観的な確定 (条件付き残数更新)
+    summary: 確定処理で「残数が 1 以上のときだけ残数を 1 減らす」という条件付き更新を一回で行い、 成功すれば確定、 残数 0 なら満枠とする。
+    assessment: 確認と確定が一体で割り込みの隙が無く、 競合した枠だけが一瞬調整されるため速い。 楽観ロックの考え方で、 負けた側に満枠を返す UX が要る。
+    leads_to: OPT1
+    role: exploration
+  - id: AP2
+    name: 悲観ロック (先に押さえる)
+    summary: 患者が枠を選んだ瞬間にその枠をロックし、 予約完了かタイムアウトまで他の人を入れない。
+    assessment: 確実に二重予約を防ぐが、 悲観ロックは患者が迷って離脱すると枠が長くふさがり、 ピーク時のスループットが落ちる。
+    leads_to: OPT2
+    role: exploration
+  - id: AP3
+    name: 枠ごとの直列キュー (申込を一列に並べる)
+    summary: 枠単位で申込を一つの待ち行列に入れ、 先頭から一件ずつ確定可否を判定する。
+    assessment: 原理的に同時実行されず二重予約は起きないが、 人気の枠でホットスポットになり応答が遅れ、 キュー基盤の運用も増える。
+    leads_to: OPT3
+    role: exploration
+
+# 04 未解決の問い (open_questions = research の hallmark。★結論しない)
+open_questions:
+  - id: OQ1
+    text: 競合に負けた申込をどの粒度で「満枠」と案内するか (枠単位 / 時間帯単位) は未確定。
+  - id: OQ2
+    text: データ層のトランザクション境界が弱い既存環境での移行コストは未測定。
+
+# 05 この調査の行き先 (outcome = 照会終端側。どの decision に決着したか)
+outcome:
+  resolved_by: ADR-CLINIC-0001     # ★cross_doc.adr_doc_id と一致 (verify が突合)
+  note: 本調査は ADR-CLINIC-0001 で OPT1 (楽観的な確定) を採用として決着した。 未解決の問い (OQ1/OQ2) は ADR の結果章・後続課題へ引き継ぐ。
+
+# 06 用語集 (glossary = 用語の SSoT。core 共用。clinic 用語を流用。plain_short = 本文に併記するやさしい言い換え)
+#    ★glossary 語は互いに部分文字列にしない (term-inline 曖昧化防止。core_validate_glossary_substring が拒否)。
+glossary:
+  - { term: ダブルブッキング, en: double booking, plain_short: 二重予約, def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 楽観ロック, en: optimistic locking, plain_short: ぶつかったら気づく方式, def: 普段はロックせず処理を進め、 確定の瞬間にだけ「他とぶつかっていないか」を条件で確かめる方式。 ぶつかった側だけが失敗する。 }
+  - { term: 悲観ロック, en: pessimistic locking, plain_short: 先に押さえる方式, def: 処理の前から対象を確保し、 終わるまで他の人を入れない方式。 確実だが押さえている間ふさがる。 }
+  - { term: 条件付き更新, en: conditional update, plain_short: 条件を満たすときだけ書き換え, def: 「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。 }
+  - { term: 満枠, en: fully booked, plain_short: 空きなし, def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: ホットスポット, en: hot spot, plain_short: 集中する一点, def: 申込や処理が一箇所に集中して詰まりやすくなる場所。 人気の枠などで起きる。 }
+  - { term: スループット, en: throughput, plain_short: さばける処理量, def: 一定の時間にさばける処理の量。 大きいほどピーク時に詰まりにくい。 }

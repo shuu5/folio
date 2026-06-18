@@ -65,6 +65,48 @@ SRS generator の機構を **別 doc-type (ADR / 設計判断記録)** へ適用
 ./test-adversarial-adr.sh
 ```
 
+## research-pack = instance#3 (folio engine B3 / folio-ar1 / rule-of-three 止め時判定)
+
+SRS/ADR generator の機構を **3 例目の doc-type (research / 調査記録 = 「何を検討したか」doc)** へ適用した三例目。
+狙い = **★B2 で抽出した core (`lib/common.sh` + `lib/verify-common.sh`) を 1 バイトも変えず、 純粋 pack として挿さるか**を
+実証する (rule-of-three の止め時判定)。 挿されば core 確定 = 抽出完了。 **挿さった = core / pack 境界が実物で確定**
+(`git diff --stat lib/` 空 + `inject-prose.sh` 無改変共用 + 既存 SRS/ADR pack 非回帰)。 同一ドメイン (クリニック二重予約防止) で
+**research → ADR → SRS の照会トリロジー**を完成させる。
+
+- **入力 contract** (`contract/clinic-double-booking.research.yaml`) — research-pack schema: meta(research_status) / approval /
+  cross_doc / question(in/out scope) / findings / approaches(leads_to/role・★verdict なし) / open_questions / outcome / glossary。
+  ★構造差 (research の hallmark): **verdict が無い** (探索は決めない) / **open_questions を持つ** (結論しない) /
+  cross_doc が **前方参照** (research → ADR)。
+- **決定的 assembler** (`assemble-research.sh`) — `assemble-srs.sh` / `assemble-adr.sh` と共に `lib/common.sh` (core) を source。
+  cover骨格/glossary/footer/term-inline (mark_terms)/band/esc/finalize は共用 (core)、 question/findings/approaches/open_questions/outcome は
+  research 固有 emitter。 research 固有 CSS は srs.css token を流用 (dark は token 経由で自動追従)。
+- **★cross-doc 前方照会 (本 pack の核)** — `approaches[].leads_to` が後続 ADR contract (`cross_doc.adr_contract`) の
+  `.options[].id` に実在することを assembler validate と `verify-research.sh` が **二重に fail-closed** で確かめる (dangling 0)。
+  ADR が SRS 要件 ID を後方照会したのと **同じパターンを別ターゲット (ADR option id) へ適用** = 照会機構が doc-type 非依存に
+  再利用できることの実証。 加えて adr_doc_id 一致 / outcome.resolved_by == adr_doc_id (照会終端側) / role 抽象 allowlist /
+  (leads_to,role)・(ap-id,leads_to) ペア集合一致 / 可視 id 整合 / count anchor で改竄を多面的に捕捉。
+- **prose injector は SRS/ADR と無改変共用** (`inject-prose.sh`) — `data-slot-id` ベースで pack 非依存。
+  ★3 例目でも無改変で挿さった = rule-of-three の「core 確定」一次証拠の再現。
+- **floor** = `verify-research.sh [--filled <manifest> | --artifact] <research-contract> <html>` (行数=contract導出 / id 一意 /
+  cross-doc 前方照会解決 / outcome 整合 / escape 健全 / prose 空|充填|注入忠実 / term-inline fidelity+被覆)。
+- **敵対回帰** = `test-adversarial-research.sh` (R1-R25: cross-doc dangling/doc_id/不在・role allowlist 外・resolved_by 不一致・
+  research_status・id 重複 (finding/approach/open-question)・改行・glossary 部分文字列・HTML 偽 leads-to 注入・card 削除・
+  prose 改竄・term 改竄・★role 別 role 改竄 (leads_to,role ペア)・★edge 付け替え (ap-id,leads_to ペア)・★leads chip 重複 (count anchor)・
+  ★可視 id のみ改竄 = `<b>` 保持で中身改竄 (vis 整合)・★`<b>` 欠落 + 可視平文偽 id = R25 (NO-B 検出 + 可視 `<b>` 本数 count anchor)・
+  ★outcome resolved-by 改竄・inject 集合不一致・escape)。 ★abort 系は **stderr 理由を検証**し
+  「別原因の誤 abort」= false-pass を弾く。 ★R17/R18/R24/R25 は各々 **(ap-id,leads_to) / count / vis (`<b>` 保持改竄) / vis (`<b>` 欠落 = NO-B+本数 count)**
+  のみが捕捉する設計 (各 robustness check が冗長でなく必要であることを実証。 vis 整合は全 chip 列挙ゆえ `<b>` マッチ前提の
+  fail-open を持たない = cell-quality WF round1 の major 指摘を反映)。
+- **cross-doc 解決 helper の core 昇格は本 issue 範囲外** (候補として bd notes 記録のみ)。 ★cross-doc 解決ブロックは
+  ADR・research 両 pack に各 ~10 行で **3 度目の重複** = helper 自身の rule-of-three。 実際の core 昇格判断は admin が別 issue で行う。
+
+```bash
+./assemble-research.sh contract/clinic-double-booking.research.yaml asm.html
+./inject-prose.sh prose/clinic-double-booking.research.prose.yaml asm.html filled.html   # ← SRS/ADR と同じ injector
+./verify-research.sh --filled prose/clinic-double-booking.research.prose.yaml contract/clinic-double-booking.research.yaml filled.html
+./test-adversarial-research.sh
+```
+
 ## engine core 抽出 (B2 / folio-5ua / rule-of-three)
 
 SRS-pack (instance#1) ∩ ADR-pack (instance#2) の共通項を **共有ライブラリ層 `lib/`** へ引き上げた非破壊リファクタ
