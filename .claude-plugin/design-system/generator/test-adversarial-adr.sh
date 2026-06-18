@@ -201,6 +201,12 @@ cp "$TMP/base-filled.html" "$TMP/a35.html"
 perl -0777 -i -pe 's#<span class="justify-req" data-justifies-req="FR3".*?</span>##s' "$TMP/a35.html"
 expect_verify_fail_filled "A35 ★justify-req span 削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a35.html"
 
+# A36. ★表紙 ref-chip をブロックごと削除 → ブロック==1 count anchor で FAIL (可視テキスト厳密一致は while 空回りで素通る=
+#      設計が名指しする fail-open。 88行 count anchor が唯一の guard ゆえ A33/justify-tgt・A35/justify-req と対称に固定する)。
+cp "$TMP/base-filled.html" "$TMP/a36.html"
+perl -0777 -i -pe 's#<div class="reader-chip" data-component="cross-doc-ref-chip">.*?</div>##s' "$TMP/a36.html"
+expect_verify_fail_filled "A36 ★表紙 ref-chip ブロック削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a36.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort
