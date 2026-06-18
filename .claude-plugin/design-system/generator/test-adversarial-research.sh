@@ -274,6 +274,24 @@ cp "$TMP/base-filled.html" "$TMP/r49.html"
 perl -0777 -i -pe 's#(<span class="m"><span class="k">版</span>)#<span class="m"><span class="k">版</span><span class="v">vDUP</span></span>${1}#' "$TMP/r49.html"
 expect_verify_fail_filled "R49 ★cover-meta 重複 KV 注入を基数アンカーで捕捉" "$BASE_PROSE" "$BASE" "$TMP/r49.html"
 
+# === ds8 ceiling 反映: wrapper-tag swap (marker-keyed parity)。 B3 の「可視テキスト厳密一致=不動点」が wrapper-tag 選択で
+#     兄弟経路を残していた = tag 固定 while だと swap で可視検査を回避できる fail-open。 marker-keyed while で封鎖する。 ===
+
+# R50. ★outcome oc-tgt の wrapper-tag swap (<p>→<div>) + <b> 内 adr_doc_id 偽装 → marker-keyed while で FAIL
+cp "$TMP/base-filled.html" "$TMP/r50.html"
+perl -0777 -i -pe 's#<p(\b[^>]*\bclass="oc-tgt"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</div>"#se' "$TMP/r50.html"
+expect_verify_fail_filled "R50 ★oc-tgt wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r50.html"
+
+# R51. ★表紙 ref-chip の wrapper-tag swap (<div>→<span>) + <b> 内 adr_doc_id 偽装 → marker-keyed while で FAIL
+cp "$TMP/base-filled.html" "$TMP/r51.html"
+perl -0777 -i -pe 's#<div(\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>)(.*?)</div>#"<span".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</span>"#se' "$TMP/r51.html"
+expect_verify_fail_filled "R51 ★ref-chip wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r51.html"
+
+# R52. ★outcome oc-resolved の wrapper-tag swap (<p>→<div>) + <b> 内 adr_doc_id 偽装 → marker-keyed while で FAIL
+cp "$TMP/base-filled.html" "$TMP/r52.html"
+perl -0777 -i -pe 's#<p(\b[^>]*\bclass="oc-resolved"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</div>"#se' "$TMP/r52.html"
+expect_verify_fail_filled "R52 ★oc-resolved wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r52.html"
+
 # === inject fail-closed ===
 
 # R20. manifest から 1 スロットを削除 → 集合不一致 abort

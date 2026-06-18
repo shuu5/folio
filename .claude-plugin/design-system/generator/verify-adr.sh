@@ -87,39 +87,51 @@ verify_cross_doc_refs \
 #   各 echo ブロックは固定個数 (ブロックごと削除すると while が回らず @bad 空で素通る fail-open を count anchor で塞ぐ)。
 chk "cross-doc: ref-chip ブロック == 1"          "1" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
 chk "cross-doc: justify-tgt ブロック == 1"        "1" "$(grep -c 'class="justify-tgt"' "$BODY")"
-chk "cross-doc: justify-req span == |justifies|" "$(q '.decision.justifies | length')" "$(grep -oE '<span class="justify-req"' "$BODY" | wc -l | tr -d ' ')"
+# ★ds8 ceiling: jh 見出し (assemble-adr emit の第4の可視 cross-doc echo・srs_doc_id を可視補間) も突合する。
+#   Part 2b が ref-chip/justify-tgt/justify-req の 3 echo のみを列挙し jh を見落としていた = 機械的完全性照合 (全可視 echo の enumeration) の漏れ。
+chk "cross-doc: jh 見出しブロック == 1"           "1" "$(grep -c 'class="jh"' "$BODY")"
+chk "cross-doc: justify-req span == |justifies|" "$(q '.decision.justifies | length')" "$(grep -c 'class="justify-req"' "$BODY")"
 srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
 srs_join_e="$(esc "$(q '[.decision.justifies[].req] | join("・")')")"
 srs_title_e="$(esc "$(q '.cross_doc.srs_title')")"
-# ★可視テキスト厳密一致 (round-4 不動点): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
-#   タグ併記 (<b> の外に偽 id)・平文併記・swap・第2<b> 注入・別タグ注入 を一括封鎖する (echo は固定テンプレ=自由文なし)。
-#   ref-chip は <b> ちょうど 2 本 (srs_doc_id, join(req,・))・justify-tgt は <b> 無し平文・justify-req は attr==可視。
+# ★可視テキスト厳密一致 (round-4 不動点 + ds8 ceiling 深化): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
+#   ★while-regex は *marker-keyed* (<(\w+)\b ... marker ...>(.*?)</\1>) = data-component/class マーカーを担持する任意 wrapper タグを捕捉する。
+#   tag 固定 (<div>/<p>) だと wrapper-tag swap (<div>→<span> や <pX> 注入) で while がスキップし可視検査を逃れる fail-open があった
+#   (ds8 ceiling 検出・B3 research にも潜在=「可視テキスト厳密一致」の不動点が wrapper-tag 選択で兄弟経路を残していた)。 marker-only count anchor (上) と
+#   marker-keyed while で selector パリティを取り、 swap・別タグ注入・第2<b>・平文併記・タグ併記・削除 を一括封鎖する。
+#   ref-chip は <b> ちょうど 2 本 (srs_doc_id, join(req,・))・jh と justify-tgt は <b> 無し平文・justify-req は attr==可視。
 adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" perl -CSD -Mutf8 -0777 -ne '
   my $exp=$ENV{EXP}; utf8::decode($exp); my $join=$ENV{JOIN}; utf8::decode($join); my $title=$ENV{TITLE}; utf8::decode($title);
   my @bad;
   # (h) 表紙 cross-doc-ref-chip: <b> ちょうど 2 本 (b1=srs_doc_id / b2=join(req,・))・可視テキスト厳密一致
   #     (先頭の ICO_USER svg は全タグ除去で消えるが直後の半角空白は可視テキストに残る = テンプレ先頭に空白)。
-  while (/<div\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/div>/gs) {
-    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<(\w+)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
+    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=2){push @bad,"ref-chip:".scalar(@bs)."B"; next}
     push @bad,"ref-chip:b1\x{2260}$bs[0]" if $bs[0] ne $exp;
     push @bad,"ref-chip:b2\x{2260}$bs[1]" if $bs[1] ne $join;
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"ref-chip:VIS" if $vis ne " 正当化する要件: $exp の $join";
   }
+  # (i) jh 見出し (ds8 ceiling 是正・第4の可視 cross-doc echo): <b> 無し平文・可視テキスト全体が固定テンプレと一致。
+  while (/<(\w+)\b[^>]*\bclass="jh"[^>]*>(.*?)<\/\1>/gs) {
+    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+    if (@bs!=0){push @bad,"jh:".scalar(@bs)."B"; next}
+    my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"jh:VIS" if $vis ne "この判断が正当化する要件 (cross-doc 照会 \x{2192} $exp)";
+  }
   # (j) 照会先 footnote justify-tgt: <b> 無し・平文ゆえ可視テキスト全体が固定テンプレと一致
-  while (/<p\b[^>]*\bclass="justify-tgt"[^>]*>(.*?)<\/p>/gs) {
-    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<(\w+)\b[^>]*\bclass="justify-tgt"[^>]*>(.*?)<\/\1>/gs) {
+    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=0){push @bad,"justify-tgt:".scalar(@bs)."B"; next}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"justify-tgt:VIS" if $vis ne "照会先: $exp \x{2014} $title";
   }
   # (k) within-doc 可視 req == data-justifies-req (attr-vs-visible 厳密一致。 可視 req だけ改竄し attr 温存を封鎖。
-  #     justify-note は別 span ゆえ干渉せず・justify-req span 内は req id のみ = [^<]* で安全に抽出)。
-  while (/<span\b[^>]*\bclass="justify-req"[^>]*\bdata-justifies-req="([^"]*)"[^>]*>([^<]*)<\/span>/gs) {
-    my ($attr,$vis)=($1,$2); push @bad,"justify-req:$attr\x{2260}$vis" if $vis ne $attr;
+  #     marker-keyed: class="justify-req" を担持する任意タグを捕捉・justify-req span 内は req id のみ = [^<]* で安全に抽出)。
+  while (/<(\w+)\b[^>]*\bclass="justify-req"[^>]*\bdata-justifies-req="([^"]*)"[^>]*>([^<]*)<\/\1>/gs) {
+    my ($attr,$vis)=($2,$3); push @bad,"justify-req:$attr\x{2260}$vis" if $vis ne $attr;
   }
   print join(" ", @bad);
 ' "$BODY")"
-chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 (平文/タグ併記封鎖)" "$adr_echo_bad"
+chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 (marker-keyed・swap/平文/タグ併記封鎖)" "$adr_echo_bad"
 
 # 4. verdict 整合 (chosen ちょうど 1 + decision.chosen 一致)
 chk "verdict=chosen はちょうど 1 件" "1" "$(q '[.options[] | select(.verdict=="chosen")] | length')"

@@ -114,8 +114,8 @@ set_eq "cross-doc: (ap-id,leads_to) ペア (contract == HTML)" "$exp_al" "$act_a
 #   厳密一致は タグ併記・平文併記・swap・任意注入 を一括封鎖する *不動点* (チップは固定テンプレで自由文なし)。
 lvis_bad="$(perl -CSD -Mutf8 -0777 -ne '
   my @bad;
-  while (/<span\b[^>]*\bdata-component="cross-doc-leads-chip"[^>]*>(.*?)<\/span>/gs) {
-    my ($chip,$in)=($&,$1); my ($l)=$chip=~/\bdata-leads-to="([^"]*)"/; $l="" unless defined $l;
+  while (/<(\w+)\b[^>]*\bdata-component="cross-doc-leads-chip"[^>]*>(.*?)<\/\1>/gs) {
+    my ($chip,$in)=($&,$2); my ($l)=$chip=~/\bdata-leads-to="([^"]*)"/; $l="" unless defined $l;
     my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=1){push @bad,"$l:".scalar(@bs)."B"; next}
     if ($bs[0] ne $l){push @bad,"$l:b\x{2260}$bs[0]"}
@@ -138,24 +138,27 @@ adr_id_e="$(esc "$(q '.cross_doc.adr_doc_id')")"
 # (g') oc-resolved 内 <b> == 各ブロックの data-resolved-by / (h') cover ref-chip 内 <b> == adr_doc_id /
 # (j') oc-tgt 内 <b> == adr_doc_id (assemble で <b> 包みに統一)。 いずれも 全<b>列挙 + ちょうど1本 == 期待で
 #      追加 (第2 <b> 注入)・削除・改竄・併記の全方向を塞ぐ (round-2: substring/first-match は併記/追加に脆弱)。
-# ★可視テキスト厳密一致 (round-4 ceiling): 各 echo ブロックの全タグ除去後の可視テキストが固定テンプレ+id(+title)と
+# ★可視テキスト厳密一致 (round-4 ceiling + ds8 ceiling 深化): 各 echo ブロックの全タグ除去後の可視テキストが固定テンプレ+id(+title)と
 #   完全一致を要求。 これらは prose スロットも自由文も無い *完全決定的* ブロックゆえ可視テキスト全体を厳密照合でき、
-#   タグ併記・平文併記 (<b> の外に「実は ADR-FORGED」)・swap・任意注入 を一括封鎖する *不動点* (兄弟経路が無い)。
+#   タグ併記・平文併記 (<b> の外に「実は ADR-FORGED」)・swap・任意注入 を一括封鎖する *不動点*。
+#   ★while-regex は marker-keyed (<(\w+)\b ... marker ...>(.*?)</\1>) = マーカーを担持する任意 wrapper タグを捕捉する。
+#   tag 固定 (<p>/<div>) だと wrapper-tag swap (例 <p class="oc-tgt"> → <div class="oc-tgt">) で while がスキップし可視検査を
+#   逃れる fail-open が残っていた (ds8 ceiling 検出・B3 の「不動点」が wrapper-tag 選択で兄弟経路を残していた)。 marker-only count anchor (上) とパリティを取る。
 echo_bad="$(EXP="$adr_id_e" TITLE="$(esc "$(q '.cross_doc.adr_title')")" perl -CSD -Mutf8 -0777 -ne '
   my $exp=$ENV{EXP}; utf8::decode($exp); my $title=$ENV{TITLE}; utf8::decode($title); my @bad;
-  while (/<p\b[^>]*\bclass="oc-resolved"[^>]*>(.*?)<\/p>/gs) {
-    my ($blk,$in)=($&,$1); my ($rb)=$blk=~/\bdata-resolved-by="([^"]*)"/; $rb="" unless defined $rb;
+  while (/<(\w+)\b[^>]*\bclass="oc-resolved"[^>]*>(.*?)<\/\1>/gs) {
+    my ($blk,$in)=($&,$2); my ($rb)=$blk=~/\bdata-resolved-by="([^"]*)"/; $rb="" unless defined $rb;
     my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=1){push @bad,"oc-resolved:".scalar(@bs)."B"; next} if($bs[0] ne $rb){push @bad,"oc-resolved:b\x{2260}$bs[0]"}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"oc-resolved:VIS" if $vis ne "この調査は $rb で決着しました";
   }
-  while (/<div\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/div>/gs) {
-    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<(\w+)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
+    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=1){push @bad,"ref-chip:".scalar(@bs)."B"; next} if($bs[0] ne $exp){push @bad,"ref-chip:b\x{2260}$bs[0]"}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"ref-chip:VIS" if $vis ne " この調査の行き先: $exp \x{2014} $title";
   }
-  while (/<p\b[^>]*\bclass="oc-tgt"[^>]*>(.*?)<\/p>/gs) {
-    my $in=$1; my @bs=$in=~/<b>([^<]*)<\/b>/g;
+  while (/<(\w+)\b[^>]*\bclass="oc-tgt"[^>]*>(.*?)<\/\1>/gs) {
+    my $in=$2; my @bs=$in=~/<b>([^<]*)<\/b>/g;
     if (@bs!=1){push @bad,"oc-tgt:".scalar(@bs)."B"; next} if($bs[0] ne $exp){push @bad,"oc-tgt:b\x{2260}$bs[0]"}
     my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"oc-tgt:VIS" if $vis ne "照会先 (前方参照): $exp \x{2014} $title";
   }

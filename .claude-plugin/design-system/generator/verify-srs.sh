@@ -99,12 +99,30 @@ ghits="$(perl -CSD -Mutf8 -0777 -ne 'my $c = () = /(?<![\p{L}\p{N}])(TBD|TODO|FI
 chk "gate G: placeholder トークン (TBD/未定 等・語境界) == 0" 0 "$ghits"
 
 echo
-echo "--- gate H: fidelity-sync-meta 3 項目が非空白 ---"
+echo "--- gate H: fidelity-sync-meta (機械SSoT/検証状態=厳密一致・生成=timestamp 非空) ---"
 chk "gate H: sync-meta 部品 存在" 1 "$(has fidelity-sync-meta)"
-# -Mutf8: スクリプト内の日本語リテラルを char 化 (-CSD で decode 済み STDIN と一致させる、 byte/char 不一致回避)。
-# 空白除去は ASCII空白 + 全角空白(U+3000) + zero-width 系(U+200B-D, U+FEFF) を含める (不可視文字での空通過を塞ぐ)。
-synh="$(perl -CSD -Mutf8 -ne 'while(/(機械SSoT|生成|検証状態): <b>(.*?)<\/b>/g){ my $v=$2; $v=~s/[\s\x{3000}\x{200b}\x{200c}\x{200d}\x{feff}]//g; print "1\n" if length $v; }' < "$BODY" | wc -l | tr -d ' ')"
-chk "gate H: 3 項目が非空白で充填 (機械SSoT/生成/検証状態)" 3 "$synh"
+# ★ds8 ceiling: 機械SSoT (= contract basename・決定的) と 検証状態 (固定2状態・決定的) は *完全決定的* ブロックゆえ
+#   厳密一致を要求。 「非空のみ」だと別 contract への偽 provenance や偽『全 gate PASS・GREEN 認定済』検証状態が floor を素通る
+#   fail-open だった (verify-adr の可視 echo 厳密一致と同クラスを SRS footer の決定的2項目へ横展開)。 生成 (timestamp) のみ
+#   非決定的ゆえ非空判定を維持。 3 項目の存在も要求 (欠落を緑にしない)。 -CSD -Mutf8 + utf8::decode で日本語テンプレ比較。
+gH_ssot_e="$(esc "${CONTRACT##*/}")"
+gH_bad="$(SSOT="$gH_ssot_e" \
+  STPRE='structure ✓ fabrication-free / prose 未充填 (opus 待ち)' \
+  STPOST='structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)' \
+  perl -CSD -Mutf8 -0777 -ne '
+  my $ssot=$ENV{SSOT}; utf8::decode($ssot);
+  my $pre=$ENV{STPRE}; utf8::decode($pre); my $post=$ENV{STPOST}; utf8::decode($post);
+  my %seen; my @bad;
+  while (/(機械SSoT|生成|検証状態): <b>(.*?)<\/b>/g) {
+    my ($k,$v)=($1,$2); $seen{$k}=1;
+    if ($k eq "機械SSoT") { push @bad,"機械SSoT\x{2260}$v" if $v ne $ssot; }
+    elsif ($k eq "検証状態") { push @bad,"検証状態\x{2260}$v" if ($v ne $pre && $v ne $post); }
+    else { my $t=$v; $t=~s/[\s\x{3000}\x{200b}\x{200c}\x{200d}\x{feff}]//g; push @bad,"生成:空" unless length $t; }
+  }
+  for my $k ("機械SSoT","生成","検証状態") { push @bad,"$k:欠落" unless $seen{$k}; }
+  print join(" ", @bad);
+' < "$BODY")"
+chk_empty "gate H: 機械SSoT==basename・検証状態∈固定2状態・生成 非空 (偽 provenance/検証状態 封鎖)" "$gH_bad"
 
 echo
 echo "--- visual-first: 各章 (footer 除く) に非 prose 部品 ≥1 ---"

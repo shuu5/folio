@@ -182,6 +182,13 @@ expect_srs_fail "A27 凍結 MUST 部品 (actor-stakeholder-table) 欠落を gate
 # A28. gate H 値の空白化 (<b>  </b>) → gate H 非空白要求
 sed 's#機械SSoT: <b>[^<]*</b>#機械SSoT: <b>  </b>#' "$TMP/art.html" > "$TMP/wsmeta.html"
 expect_srs_fail "A28 sync-meta 値の空白化を gate H が捕捉" "$BASE" "$TMP/wsmeta.html"
+# A28b. ★ds8 ceiling: 機械SSoT を別 contract 名へ偽装 (非空だが偽 provenance) → gate H 厳密一致 (==basename) で捕捉
+#       (非空のみ照合だと別ソースからの生成と詐称できる fail-open。 verify-adr の可視 echo 厳密一致を SRS 決定的 footer へ横展開)。
+sed 's#機械SSoT: <b>[^<]*</b>#機械SSoT: <b>totally-different-source.yaml</b>#' "$TMP/art.html" > "$TMP/fakessot.html"
+expect_srs_fail "A28b ★偽 機械SSoT (別 contract 名) を gate H 厳密一致で捕捉" "$BASE" "$TMP/fakessot.html"
+# A28c. ★ds8 ceiling: 検証状態を固定2状態外の偽値へ詐称 (『全 gate PASS・GREEN 認定済』) → gate H 厳密一致 (∈固定2状態) で捕捉
+sed 's#検証状態: <b>[^<]*</b>#検証状態: <b>全 gate PASS・GREEN 認定済み (ウソ)</b>#' "$TMP/art.html" > "$TMP/fakevstate.html"
+expect_srs_fail "A28c ★偽 検証状態 (固定2状態外) を gate H 厳密一致で捕捉" "$BASE" "$TMP/fakevstate.html"
 # A29. gate G 日本語 placeholder (セルまるごと 未定) → gate G
 sed 's#<td class="cond">[^<]*#<td class="cond">未定#' "$TMP/art.html" > "$TMP/jph.html"
 expect_srs_fail "A29 日本語 placeholder (未定) セルを gate G が捕捉" "$BASE" "$TMP/jph.html"

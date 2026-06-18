@@ -207,6 +207,36 @@ cp "$TMP/base-filled.html" "$TMP/a36.html"
 perl -0777 -i -pe 's#<div class="reader-chip" data-component="cross-doc-ref-chip">.*?</div>##s' "$TMP/a36.html"
 expect_verify_fail_filled "A36 ★表紙 ref-chip ブロック削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a36.html"
 
+# === ds8 ceiling 反映: jh 見出し (第4の可視 cross-doc echo) + wrapper-tag swap (marker-keyed parity) ===
+
+# A37. ★jh 見出しの可視 srs_doc_id を偽 id へ改竄 (tag 維持・<b> 無し平文) → 可視テキスト全体一致で FAIL
+#      (ds8 ceiling 検出: Part 2b が jh を列挙し忘れ偽 doc_id が素通っていた = 機械的完全性照合の漏れ是正)。
+cp "$TMP/base-filled.html" "$TMP/a37.html"
+perl -0777 -i -pe 's#(class="jh">.*?)SRS-CLINIC-APPT#${1}SRS-PHANTOM#s' "$TMP/a37.html"
+expect_verify_fail_filled "A37 ★jh 見出し平文 srs_doc_id 改竄を可視テキスト全体一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a37.html"
+
+# A38. ★jh 見出しの wrapper-tag swap (<p>→<div>) + 偽 id → marker-keyed while が任意タグを捕捉して FAIL
+#      (tag 固定だと <p> 以外へ swap で while スキップ→可視検査回避の fail-open。 marker-keyed で封鎖)。
+cp "$TMP/base-filled.html" "$TMP/a38.html"
+perl -0777 -i -pe 's#<p(\b[^>]*\bclass="jh"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{SRS-CLINIC-APPT}{SRS-PHANTOM}r)."</div>"#se' "$TMP/a38.html"
+expect_verify_fail_filled "A38 ★jh wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a38.html"
+
+# A39. ★jh 見出しをブロックごと削除 → jh ブロック==1 count anchor で FAIL (while 空回り素通りを塞ぐ・A33/A36 と対称)
+cp "$TMP/base-filled.html" "$TMP/a39.html"
+perl -0777 -i -pe 's#<p class="jh">.*?</p>##s' "$TMP/a39.html"
+expect_verify_fail_filled "A39 ★jh ブロック削除を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a39.html"
+
+# A40. ★表紙 ref-chip の wrapper-tag swap (<div>→<span>) + <b> 内 srs_doc_id 偽装 → marker-keyed while で FAIL
+#      (ds8 ceiling major: count anchor は marker-only だが while が tag 固定 = selector 非パリティで swap が可視検査を逃れていた)。
+cp "$TMP/base-filled.html" "$TMP/a40.html"
+perl -0777 -i -pe 's#<div(\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>)(.*?)</div>#"<span".$1.($2 =~ s{<b>SRS-CLINIC-APPT</b>}{<b>SRS-PHANTOM</b>}r)."</span>"#se' "$TMP/a40.html"
+expect_verify_fail_filled "A40 ★ref-chip wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a40.html"
+
+# A41. ★justify-tgt の wrapper-tag swap (<p>→<div>) + 偽 id → marker-keyed while で FAIL
+cp "$TMP/base-filled.html" "$TMP/a41.html"
+perl -0777 -i -pe 's#<p(\b[^>]*\bclass="justify-tgt"[^>]*>)(.*?)</p>#"<div".$1.($2 =~ s{SRS-CLINIC-APPT}{SRS-PHANTOM}r)."</div>"#se' "$TMP/a41.html"
+expect_verify_fail_filled "A41 ★justify-tgt wrapper-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a41.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort
