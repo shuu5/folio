@@ -13,6 +13,9 @@
 #   - source 後に core_init_term_inline を呼ぶ (mark_terms の GMAP/LEDGER を構築)。
 
 # ---- contract query / HTML escape (doc-type 非依存) ----
+# patsub_replacement (bash 5.2+ 既定 ON) は esc() の ${v//&/..} を壊す (< → <lt;)。 source 側 pack が
+# shopt を忘れても esc を堅牢化するため lib 自身でも無効化する (caller も冒頭で設定済=defense-in-depth)。
+shopt -u patsub_replacement 2>/dev/null || true
 q() { yq -r "$1" "$CONTRACT"; }
 esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
 

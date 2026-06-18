@@ -13,6 +13,8 @@
 #   - chk 系の整列幅は $CHKW で決まる (既定 48。 各 verify は元の幅に合わせて設定: fab=44/adr=48/srs=50)。
 #   - make_body 後は $BODY (style 除去 body-only view) が使える。
 
+# patsub_replacement (bash 5.2+) は esc() の ${v//&/..} を壊す。 source 側が忘れても lib 自身で無効化し堅牢化。
+shopt -u patsub_replacement 2>/dev/null || true
 CHKW="${CHKW:-48}"
 
 q() { yq -r "$1" "$CONTRACT"; }
