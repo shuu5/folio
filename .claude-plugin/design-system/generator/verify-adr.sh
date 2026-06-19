@@ -153,6 +153,9 @@ chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 
 #   (research は (k')(l') で突合済 = parity gap)。 cxid/drid は plain (esc) ゆえ [^<]* で安全抽出・opt-name は mark_terms で nested ゆえ対象外。
 chk "within-doc: 可視 cxid 列 == .context[].id (順序)" "$(q '.context[].id')" "$(grep -oE '<span class="cxid">[^<]*</span>' "$BODY" | sed -E 's#<span class="cxid">([^<]*)</span>#\1#')"
 chk "within-doc: 可視 drid 列 == .drivers[].id (順序)"  "$(q '.drivers[].id')"  "$(grep -oE 'class="drid">[^<]*</td>' "$BODY" | sed -E 's#class="drid">([^<]*)</td>#\1#')"
+# ★ds8 ceiling round-4: 可視 justify-role 列 == .decision.justifies[].role (順序)。 round-2 で可視 req==attr は強制したが role の可視を漏らし、
+#   allowlist 内 role の *可視* swap (claim→rationale・attr は正) が素通る fail-open だった (cross-doc edge の可視 fidelity parity 漏れ)。 role は esc plain。
+chk "within-doc: 可視 justify-role 列 == .decision.justifies[].role (順序)" "$(q '.decision.justifies[].role')" "$(grep -oE '<span class="justify-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="justify-role">([^<]*)</span>#\1#')"
 # 表紙 cover-meta 4 KV (状態/選択肢/結果/版) の決定的再導出突合 (research (l') と同型)。
 adr_meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
 chk "cover-meta 状態 == adr_status"          "$(esc "$(q '.meta.adr_status')")" "$(printf '%s\n' "$adr_meta_kv" | grep -F '状態' | head -1 | cut -f2)"

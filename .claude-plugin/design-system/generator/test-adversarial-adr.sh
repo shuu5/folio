@@ -283,6 +283,12 @@ cp "$TMP/base-filled.html" "$TMP/a49.html"
 perl -0777 -i -pe 's#(class="drid">)DR1#${1}DR-PHANTOM#' "$TMP/a49.html"
 expect_verify_fail_filled "A49 ★可視 drid 改竄を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a49.html"
 
+# A50. ★round-4: 可視 justify-role を allowlist 内別 role へ swap (claim→rationale・data-justifies-role attr は正) → within-doc 順序突合で FAIL
+#      (round-2 で可視 req==attr は強制したが role の可視を漏らした parity 漏れ = cross-doc edge の可視 fidelity)
+cp "$TMP/base-filled.html" "$TMP/a50.html"
+perl -0777 -i -pe 's#(<span class="justify-role">)claim#${1}rationale#' "$TMP/a50.html"
+expect_verify_fail_filled "A50 ★可視 justify-role swap を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a50.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort
