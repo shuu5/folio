@@ -141,6 +141,43 @@ exp_ds="$(q '.requirements[] | select((.rationale_source // "") != "") | [.id, .
 act_ds="$(perl -CSD -0777 -ne 'while (/data-prose-slot="rationale" data-source="([^"]*)" data-slot-id="rationale-([^"]+)"/g){ print "$2\t$1\n"; }' "$BODY" | sort)"
 set_eq "within-doc: (req-id, data-source) == 非空 rationale_source (集合)" "$exp_ds" "$act_ds"
 
+# 7f. ★dty round-2 (独立 ceiling の完全列挙反映): §7e が *部分列挙* で残した決定的可視/attr フィールドを全突合する。
+#    ds8 教訓#2「機械的完全性照合は全可視 echo を *列挙* せよ」の再適用 — ceiling が 9 種の fail-open を実証検出した:
+#    要件 ID 本体 (fid/data-req-id の consistent rename が floor も verify-srs gate D も貫通 = blocker)・EARS 種別 (class+label)・
+#    priority ラベル・vmethod・nfr 表の nid/category・constraint label/法令名・rtm 行ラベル・actor tint。 全て row-scope 抽出 + 順序突合で塞ぐ。
+#    ★vmeth/prio/ears は legend (emit_legend) と class 共有ゆえ **必ず ears-requirement-row 内に scope** して抽出する (legend を拾うと count 不一致)。
+#    ★EARS_CLASS/EARS_LABEL/PRIO_LABEL は assemble-srs の同名連想配列と二重保守 (detect↔remediate parity・mark_terms yq リストと同じ規律)。
+declare -A DTY_EARS_CLASS=( [ubiquitous]=always [event]=trigger [state]=state [unwanted]=forbid [optional]=option )
+declare -A DTY_EARS_LABEL=( [ubiquitous]=恒常 [event]=きっかけ [state]=状態 [unwanted]=禁止 [optional]=機能 )
+declare -A DTY_PRIO_LABEL=( [must]=必須 [should]=推奨 [may]=任意 )
+# (h) ★要件行の主要識別子+意味種別を 1 タプルで row-scope 突合: data-req-id・fid・ears(class,label)・priority(class,label)・vmethod。
+#     ★blocker 封鎖: fid/data-req-id を contract id と突合し 可視↔attr↔contract の三者一致を強制 (consistent rename = FR1→FR99 を封鎖)。
+exp_reqrow="$(q '.requirements[] | [.id, .ears.pattern, .priority, .vmethod] | @tsv' | while IFS=$'\t' read -r _id _pat _pr _vm; do
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$_id")" "$(esc "$_id")" "${DTY_EARS_CLASS[$_pat]}" "${DTY_EARS_LABEL[$_pat]}" "$_pr" "${DTY_PRIO_LABEL[$_pr]}" "$(esc "$_vm")"; done)"
+act_reqrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="ears-requirement-row" data-req-id="([^"]*)"><td><span class="fid">([^<]*)<\/span><\/td><td><span class="ears ([a-z]+)">([^<]*)<\/span><\/td>.*?<span class="prio ([a-z]+)" data-component="priority-badge">([^<]*)<\/span> <span class="vmeth">([^<]*)<\/span><\/td><\/tr>/g){ print "$1\t$2\t$3\t$4\t$5\t$6\t$7\n"; }' "$BODY")"
+chk "within-doc: 要件行 (req-id,fid,ears,prio,vmethod) == .requirements (順序)" "$exp_reqrow" "$act_reqrow"
+# (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
+exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
+act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"
+chk "within-doc: nfr 行 (nid, category) == .nfr (順序)" "$exp_nfrrow" "$act_nfrrow"
+# (j) rtm 行ラベル (span.lbl) == 非空 .label ((requirements+nfr) 順) — plain leaf。 §7e(d) は列見出し th.grp のみで行ラベルを漏らしていた。
+chk "within-doc: rtm 行ラベル (lbl) == 非空 .label (順序)" "$(qesc '(.requirements + .nfr)[] | select((.label // "") != "") | .label')" "$(grep -oE '<span class="lbl">[^<]*</span>' "$BODY" | sed -E 's#<span class="lbl">([^<]*)</span>#\1#')"
+# (k) constraint: 可視 id (cid2) + label (cl) — plain leaf / 規制バッジ (reg-badge=「法令 {reg}」) — 非空 regulation のみ compound。 §7e は 7b で件数のみだった。
+chk "within-doc: constraint.id (cid2) == .constraints[].id (順序)"    "$(qesc '.constraints[].id')"    "$(grep -oE '<td class="cid2">[^<]*</td>' "$BODY" | sed -E 's#<td class="cid2">([^<]*)</td>#\1#')"
+chk "within-doc: constraint.label (cl) == .constraints[].label (順序)" "$(qesc '.constraints[].label')" "$(grep -oE '<td class="cl">[^<]*</td>' "$BODY" | sed -E 's#<td class="cl">([^<]*)</td>#\1#')"
+exp_reg="$(q '.constraints[] | select((.regulation // "") != "") | .regulation' | while IFS= read -r _r; do printf '法令 %s\n' "$(esc "$_r")"; done)"
+act_reg="$(grep -oE '<span class="reg-badge">[^<]*</span>' "$BODY" | sed -E 's#<span class="reg-badge">([^<]*)</span>#\1#')"
+chk "within-doc: 規制バッジ (reg-badge) == 「法令 {reg}」 非空 (順序)" "$exp_reg" "$act_reg"
+# (l) actor tint (可視色を駆動する attr var(--TINT)・CSS allowlist 限定) — (key, tint) 対で順序突合 (§7e(b) は key/name のみ)。
+exp_tint="$(q '.actors[] | [.key, .tint] | @tsv' | while IFS=$'\t' read -r _k _t; do printf '%s\t%s\n' "$(esc "$_k")" "$(esc "$_t")"; done)"
+act_tint="$(perl -CSD -0777 -ne 'while (/<span class="av" style="background:var\(--([^)]*)\)">([^<]*)<\/span>/g){ print "$2\t$1\n"; }' "$BODY")"
+chk "within-doc: actor (key, tint) == .actors (順序)" "$exp_tint" "$act_tint"
+# ★scope 境界 (no silent caps): §7e+§7f で SRS *本体* (body) の決定的可視/attr フィールド値は完全列挙・突合済。
+#   一方 core 共通 chrome (cover-head の eyebrow/title/subtitle/reader・approval-block の role/who/when/stamp・glossary-term-table の term/en/def) は
+#   lib/common.sh が全 pack 同一構造で emit する決定的値だが、 現状なお 7b 相当の *件数のみ* 検証 (= ADR/research も同じ穴を持つ cross-pack gap)。
+#   これは body field (pack 固有=本 issue scope) でなく core chrome (cross-pack) ゆえ、 verify_core_chrome を core 昇格し SRS+ADR+research へ
+#   一括適用する専用 follow-up へ繰延する (ds8 教訓#4: 無関係な broad pre-existing gap を bolt-on せず追跡 follow-up へ)。 → bd: 下記コミット参照。
+
 # 8. prose スロット (perl で要素単位判定 = ネストタグ/改行/空白のみを正しく捕捉)
 slots="$(grep -oE 'data-prose-slot=' "$BODY" | wc -l | tr -d ' ')"
 filled="$(perl -0777 -ne '
