@@ -229,15 +229,32 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
 - **core**: `lib/verify-common.sh` に `qesc` (yq 式の各行を esc して出力する複数行 esc) + `attr_values` (属性値を quote 構文・属性名 case・数値文字参照 非依存に列挙・count_attr_token の値版) を追加 (純追加・両 pack 共用)。
 - **★scope 境界 (no silent caps・round-2 ceiling で honest 後退)**: dty は SRS 本体の **識別子・構造・数値・統制値** フィールド (id/fid/data-req-id/EARS/priority/
   vmethod/nid/category/metric/cid2/label/regulation/rtm 見出し+行ラベル/tint/origin/headline/key/name) を順序突合 + marker 占有数パリティで完全列挙・突合する。
-  以下 2 つは scope 外として *明示繰延* (誠実開示・gate J が暫定 backstop):
-  - **body prose テキスト値** (mark_terms 系自由文: ears.condition/response・nfr.target/measure・acceptance.criterion・upper_needs.need・goals.desc・scope・
-    actor.role・constraint.text) — 決定的だが本文 prose ゆえ value 突合は別カテゴリ (goals.headline は突合済だが goals.desc は未=非対称)。 strip-term-badge 突合の floor 化は **bd folio-4cf**。
+  body prose テキスト値は **folio-4cf (§7g) で回収済** (下記)。 残る scope 外 *明示繰延* は:
   - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) — lib/common.sh が全 pack 同一構造で emit
-    (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。
-  (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造は floor・本文 prose 内容は ceiling 寄り)。
-- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→96→102** (round-1 A36-A46 + round-2 A47-A57 +
-  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖] + round-8 A84-A87 [rtm-summary 可視数値 + dot/novel の quote-robust 化] + round-9 A88-A93 [rtm-summary single/unquoted decoy・acc-dot single-quote 可視 id 捏造・凡例 ears/prio/vmeth ラベル swap])・**ADR 52→53** (A51: drg)。
+    (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。 凡例 en/lt は folio-czo (§7f) で被覆済・glossary 表の en は folio-mk9。
+  (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造/本文 prose は floor・gate J=content fidelity ceiling)。
+- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→96→102→118** (… + round-9 A88-A93 +
+  **folio-4cf/czo A94-A109** [body prose 10 フィールド改竄・scope bullet 無し偽 li・cond single-quote decoy 占有数パリティ・凡例 en/lt ラベル改竄+en 位置 swap・ears.response slot 後ろ text-node 追記])・**ADR 52→53** (A51: drg)。
   全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
+
+### folio-4cf: SRS body prose テキスト値の floor 突合 (dty round-2 ceiling wf_997ee765 繰延の回収)
+
+dty が「本文 prose ゆえ別カテゴリ」と明示繰延した mark_terms 系自由文フィールドを floor 化する。 全て決定的 (esc + mark_terms) ゆえ
+floor 検証可能 — gate J (content fidelity ceiling) の暫定 backstop に依存せず機械で守る (識別子/構造と同じ強度)。
+
+- **`verify-fabrication-free.sh` §7g**: term-inline バッジ (内容は `verify_term_inline` §9 が別途検証) を *legit double-quote 形のみ* strip した
+  working body を作り、 各セルの可視テキストを抽出 → `esc(contract値)` と **順序突合** する (mark_terms の語境界ロジックは複製せず plain-text 等価比較)。
+  バッジ strip 後は body prose 値に生 `<` が無い (esc 済) ゆえ全セルが `[^<]*` で取れる。 対象 10 フィールド:
+  goals.desc (`p.cd`)・scope.in/out (`scol in/out` の全 `<li>`・bullet 無し偽 li も拾う)・actor.role (`div.role`・approval の `span.role` とタグで区別)・
+  upper_needs.need (source-trace 2nd td)・ears.condition (`td.cond`)・ears.response (`td.resp` 全体を取り出し prose-slot span を strip した残余・
+  slot 前/間/後ろのどこへの text-node 追記も残余不一致で捕捉)・nfr.target (`span.tgt`)・nfr.measure (`td.meas`)・acceptance.criterion (`p.at`)・constraint.text (3rd td・reg-badge 前)。
+- **二層 (ds8/dty 不動点の再適用)**: 順序突合は double-quote 抽出ゆえ *値/順序の改竄* と *bullet 無し偽 li の追加* を捕捉。 single-quote/case-drop した
+  偽セルの **decoy-add** は §7f vcount 占有数パリティ (`cd/cond/resp/meas/at/role/b` を `count_attr_token` で `|contract|` binding・quote/case 非依存) が封鎖。
+  → これら 7 class を **EXEMPT → COUNTED** へ移動 (class-token 機械的網羅と整合)。
+- **strip の安全性**: バッジ strip は legit double-quote 形のみ正規化するため、 quote 逸脱/追加した偽バッジは strip されず残って突合 FAIL = tamper は必ず落ちる。
+- **folio-czo (同梱)**: 凡例 (emit_legend) の en (When/While/If-Then/Ubiq.) と lt (タイプ:/優先:/検証:) を §7f legend-scope の (class,label) SET に追加し
+  R9 主ラベル突合と *対称化* (round-9 までは EXEMPT で未突合だった非対称を解消)。 en は親 ears chip の class と対 (位置 swap も捕捉)・lt は単独ラベル。
+  ★en は glossary 表とも class 共有ゆえ legendblk scope で SET 突合 (global vcount 化しない = glossary en は folio-mk9 の領分)・EXEMPT 維持。
 - **two-gate 境界 (確定)**: 識別子・構造・数値・統制値 = floor (機械検証・本 issue)。 本文 prose 内容 + opus prose スロット (cover-summary/plain/rationale 等) の
   content fidelity = ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 識別子/統制値は区別可能ゆえ floor、 自由 prose は ceiling 寄り。
   legend (emit_legend) は静的デザイン資産 (icon/CSS と同様 contract 由来でない) ゆえ contract-fidelity floor の対象外 (静的テンプレ完全性は別概念)。

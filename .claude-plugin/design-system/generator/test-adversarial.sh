@@ -587,6 +587,67 @@ o='<div class=\"ears-legend\">'; assert o in d
 open('$TMP/g_rtmuq.html','w').write(d.replace(o,'<p class=rtm-summary-derived>fake</p>'+o,1))
 " 2>/dev/null; then expect_verify_fail "A93 ★rtm-summary unquoted decoy を quote-robust 占有数パリティで捕捉" "$BASE" "$TMP/g_rtmuq.html"; else ng "A93 setup 失敗"; fi
 
+# ---- A94-A108: body prose テキスト値 floor 突合 (folio-4cf §7g) + 凡例 en/lt SET (folio-czo) ----
+# 共通 helper: good.html 内の literal 部分文字列 $2 を $3 へ置換した tamper を作り、 verify FAIL を期待 (mid-value 改竄=順序突合が捕捉)。
+body_tamper_fail() { # label needle replacement
+  if python3 -c "
+d=open('$TMP/good.html').read()
+o='''$2'''; assert o in d, 'needle not found'
+open('$TMP/bp.html','w').write(d.replace(o,'''$3''',1))
+" 2>/dev/null; then expect_verify_fail "$1" "$BASE" "$TMP/bp.html"; else ng "$1 setup 失敗"; fi
+}
+# A94. goals.desc (cd) 本文改竄 (約束の意味反転: 請求しない→請求する) → §7g(a) 順序突合
+body_tamper_fail "A94 ★body prose goals.desc 改竄 (cd) を順序突合で捕捉" "2 回請求しない" "2 回請求する"
+# A95. scope.in item 改竄 → §7g(b)
+body_tamper_fail "A95 ★body prose scope.in 改竄を順序突合で捕捉" "注文番号の発行と確認メール" "詐欺スコープ"
+# A96. scope.in に bullet 無し偽 li を追加 (全 li 抽出ゆえ余分行→不一致) → §7g(b)
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<div class=\"scol in\"><h3>✓ 扱う (in scope)</h3><ul>'; assert o in d
+open('$TMP/bp96.html','w').write(d.replace(o,o+'<li>偽スコープ項目</li>',1))
+" 2>/dev/null; then expect_verify_fail "A96 ★scope.in bullet 無し偽 li 追加を全 li 抽出で捕捉" "$BASE" "$TMP/bp96.html"; else ng "A96 setup 失敗"; fi
+# A97. actor.role (div.role) 改竄 → §7g(c) (approval の span.role はタグで区別)
+body_tamper_fail "A97 ★body prose actor.role 改竄 (div.role) を順序突合で捕捉" "注文を確定する人" "偽ロール"
+# A98. upper_needs.need (source-trace 2nd td) 改竄 → §7g(d)
+body_tamper_fail "A98 ★body prose upper_needs.need 改竄を順序突合で捕捉" "クレーム・チャージバックを減らし" "捏造ニーズを増やし"
+# A99. ears.condition (td.cond) 改竄 → §7g(e)
+body_tamper_fail "A99 ★body prose ears.condition 改竄 (td.cond) を順序突合で捕捉" "「注文確定」を押したとき" "偽条件のとき"
+# A100. ears.response (td.resp の slot 前) 改竄 → §7g(f)
+body_tamper_fail "A100 ★body prose ears.response 改竄 (td.resp) を順序突合で捕捉" "在庫を確保 (引当) してから決済に進む" "詐欺応答"
+# A101. nfr.target (span.tgt) 改竄 (1.0 秒→99 秒) → §7g(g)
+body_tamper_fail "A101 ★body prose nfr.target 改竄 (span.tgt) を順序突合で捕捉" "95% が 1.0 秒以内" "1% が 99 秒以内"
+# A102. nfr.measure (td.meas) 改竄 → §7g(h)
+body_tamper_fail "A102 ★body prose nfr.measure 改竄 (td.meas) を順序突合で捕捉" "負荷試験で確定処理の応答時間を計測" "詐欺測定"
+# A103. acceptance.criterion (p.at) 改竄 (1 件→999 件) → §7g(i)
+body_tamper_fail "A103 ★body prose acceptance.criterion 改竄 (p.at) を順序突合で捕捉" "確定は 1 件だけ" "確定は 999 件"
+# A104. constraint.text (3rd td・reg-badge 前) 改竄 (意味反転) → §7g(j)
+body_tamper_fail "A104 ★body prose constraint.text 改竄 (3rd td) を順序突合で捕捉" "カード情報は自社で持たず" "カード情報は自社で持ち"
+# A105. cond セル single-quote decoy 追加 (順序突合は double-quote 抽出ゆえ素通るが vcount 占有数パリティが捕捉) → §7f×§7g 二層
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"cond\">購入者が「注文確定」を押したとき</td>'; assert o in d
+open('$TMP/bp105.html','w').write(d.replace(o,o+\"<td class='cond'>偽の条件セル</td>\",1))
+" 2>/dev/null; then expect_verify_fail "A105 ★cond single-quote decoy 追加を vcount 占有数パリティで捕捉 (二層)" "$BASE" "$TMP/bp105.html"; else ng "A105 setup 失敗"; fi
+# A106. 凡例 en (folio-czo) 改竄 (When→Whatever・class 不変) → legend-scope SET 値突合
+body_tamper_fail "A106 ★凡例 en ラベル改竄 (folio-czo) を legend SET で捕捉" "<span class=\"en\">When</span>" "<span class=\"en\">Whatever</span>"
+# A107. 凡例 lt (folio-czo) 改竄 (タイプ:→詐欺:) → legend-scope SET 値突合
+body_tamper_fail "A107 ★凡例 lt ラベル改竄 (folio-czo) を legend SET で捕捉" "<span class=\"lt\">タイプ:</span>" "<span class=\"lt\">詐欺:</span>"
+# A108. 凡例 en の位置 swap (folio-czo・When↔While・親 ears class と対ゆえ swap も捕捉) → legend-scope SET
+if python3 -c "
+d=open('$TMP/good.html').read()
+a='class=\"ears trigger\">きっかけ <span class=\"en\">When</span>'; b='class=\"ears state\">状態 <span class=\"en\">While</span>'
+assert a in d and b in d
+d=d.replace(a,'class=\"ears trigger\">きっかけ <span class=\"en\">While</span>',1).replace(b,'class=\"ears state\">状態 <span class=\"en\">When</span>',1)
+open('$TMP/bp108.html','w').write(d)
+" 2>/dev/null; then expect_verify_fail "A108 ★凡例 en 位置 swap (folio-czo・親 ears 対) を legend SET で捕捉" "$BASE" "$TMP/bp108.html"; else ng "A108 setup 失敗"; fi
+# A109. ★ears.response の prose-slot 後ろ・</td> 前へ可視 text-node を post-gen 追記 (slot 前のみ抽出だと素通る residual gap) → td.resp 全体 strip 突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+o='<span class=\"why\" data-prose-slot=\"rationale\" data-source=\"N-2\" data-slot-id=\"rationale-FR1\"></span></td>'; assert o in d, 'why-slot 末尾 not found'
+open('$TMP/g_resptail.html','w').write(d.replace(o,'<span class=\"why\" data-prose-slot=\"rationale\" data-source=\"N-2\" data-slot-id=\"rationale-FR1\"></span>詐欺の追記応答</td>',1))
+" 2>/dev/null; then expect_verify_fail "A109 ★ears.response slot 後ろ text-node 追記を td.resp 全体 strip 突合で捕捉" "$BASE" "$TMP/g_resptail.html"; else ng "A109 setup 失敗"; fi
+
 echo
 echo "PASS=$pass FAIL=$fail"
 if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi
