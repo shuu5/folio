@@ -289,6 +289,12 @@ cp "$TMP/base-filled.html" "$TMP/a50.html"
 perl -0777 -i -pe 's#(<span class="justify-role">)claim#${1}rationale#' "$TMP/a50.html"
 expect_verify_fail_filled "A50 ★可視 justify-role swap を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a50.html"
 
+# A51. ★dty (folio-dty): 可視 drg (driver grounds バッジ) を改竄 → within-doc drg 順序突合で FAIL。
+#      round-4 で drid (driver id) は突合したが grounds の可視テキストを漏らした fail-open (drid/cxid と同型・SRS 7e と parity)。
+cp "$TMP/base-filled.html" "$TMP/a51.html"
+perl -0777 -i -pe 's#(<span class="drg">)SRS GOAL 1#${1}捏造の根拠 — 元は#' "$TMP/a51.html"
+expect_verify_fail_filled "A51 ★可視 drg (driver grounds) 改竄を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a51.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort

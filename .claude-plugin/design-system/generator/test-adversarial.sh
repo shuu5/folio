@@ -250,6 +250,44 @@ else
 fi
 
 echo
+echo "within-doc 決定的フィールド値 (dty / folio-dty) の fail-closed:"
+# ★ds8 round-4 で繰延した SRS floor の決定的可視フィールド値完全性。 7b の件数のみ検証では値改竄が件数保存のまま
+#   素通った fail-open を、 7e の順序付き再導出突合 (cxid/drid と同型) が捕捉することを回帰確認する。 good.html は A7 で生成済み。
+# A36. goals.headline 改竄 (ゴール文の捏造) → 7e (a)
+sed 's#<p class="ct">二重課金しない</p>#<p class="ct">詐欺してもよい</p>#' "$TMP/good.html" > "$TMP/g_head.html"
+expect_verify_fail "A36 goals.headline 改竄を 7e が捕捉" "$BASE" "$TMP/g_head.html"
+# A37. actor.name 改竄 → 7e (b)
+sed 's#<div class="nm">購入者#<div class="nm">攻撃者#' "$TMP/good.html" > "$TMP/g_name.html"
+expect_verify_fail "A37 actor.name 改竄を 7e が捕捉" "$BASE" "$TMP/g_name.html"
+# A38. 外部バッジ除去 (external 真偽の詐称) → 7e (b) compound 再構築
+sed 's#決済代行<span class="ext-badge">外部</span>#決済代行#' "$TMP/good.html" > "$TMP/g_ext.html"
+expect_verify_fail "A38 外部バッジ除去 (external 詐称) を 7e が捕捉" "$BASE" "$TMP/g_ext.html"
+# A39. upper_needs.origin 改竄 (出所の捏造) → 7e (c)
+sed 's#<span class="origin">経営方針 2026Q1</span>#<span class="origin">捏造の出所</span>#' "$TMP/good.html" > "$TMP/g_origin.html"
+expect_verify_fail "A39 upper_needs.origin 改竄を 7e が捕捉" "$BASE" "$TMP/g_origin.html"
+# A40. rtm-grid 列見出し改竄 → 7e (d)
+sed 's#<th class="grp">N-1 二重課金防止</th>#<th class="grp">N-1 ニセ見出し</th>#' "$TMP/good.html" > "$TMP/g_grp.html"
+expect_verify_fail "A40 rtm 列見出し改竄を 7e が捕捉" "$BASE" "$TMP/g_grp.html"
+# A41. acceptance.metric_v 改竄 (合否しきい値の捏造『1/2 だけ成功』→『999/9』) → 7e (e)
+sed 's#<span class="v">1/2</span>#<span class="v">999/9</span>#' "$TMP/good.html" > "$TMP/g_mv.html"
+expect_verify_fail "A41 acceptance 合否しきい値 (metric_v) 改竄を 7e が捕捉" "$BASE" "$TMP/g_mv.html"
+# A42. acceptance.links 改竄 (aid の検証対象要件すり替え) → 7e (e)
+sed 's#<div class="aid">AC1 ← FR1/FR4</div>#<div class="aid">AC1 ← FR99/FR98</div>#' "$TMP/good.html" > "$TMP/g_aid.html"
+expect_verify_fail "A42 acceptance.links (aid) 改竄を 7e が捕捉" "$BASE" "$TMP/g_aid.html"
+# A43. nfr-hero big 改竄 (表紙 hero 数値『1.0秒』→『99.0秒』) → 7e (f)
+sed 's#<div class="big">1.0<span class="u">秒</span>#<div class="big">99.0<span class="u">秒</span>#' "$TMP/good.html" > "$TMP/g_hero.html"
+expect_verify_fail "A43 nfr-hero 数値 (big) 改竄を 7e が捕捉" "$BASE" "$TMP/g_hero.html"
+# A44. nfr-hero cat 改竄 (区分『速さ』→『遅さ』) → 7e (f)
+sed 's#<div class="cat">速さ</div>#<div class="cat">遅さ</div>#' "$TMP/good.html" > "$TMP/g_cat.html"
+expect_verify_fail "A44 nfr-hero 区分 (cat) 改竄を 7e が捕捉" "$BASE" "$TMP/g_cat.html"
+# A45. data-source (rationale_source 接地メタ) 改竄 → 7e (g) 集合突合
+sed 's#data-source="N-2" data-slot-id="rationale-FR1"#data-source="N-99" data-slot-id="rationale-FR1"#' "$TMP/good.html" > "$TMP/g_ds.html"
+expect_verify_fail "A45 data-source 改竄を 7e (集合突合) が捕捉" "$BASE" "$TMP/g_ds.html"
+# A46. ★wrapper-tag swap で偽値を隠す試み (ct→span) → 値が抽出列から脱落し順序不一致で捕捉 (ds8 不動点の検証)
+sed 's#<p class="ct">二重課金しない</p>#<span class="ct">詐欺してよい</span>#' "$TMP/good.html" > "$TMP/g_swap.html"
+expect_verify_fail "A46 wrapper-tag swap (ct→span)+偽値を 7e 順序突合が捕捉" "$BASE" "$TMP/g_swap.html"
+
+echo
 echo "PASS=$pass FAIL=$fail"
 if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi
 if [[ "$gateF_skipped" -eq 1 ]]; then

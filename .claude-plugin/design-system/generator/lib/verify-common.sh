@@ -20,6 +20,10 @@ CHKW="${CHKW:-48}"
 q() { yq -r "$1" "$CONTRACT"; }
 # assemble / inject-prose と同一の escape 規律 (注入忠実・term-inline 照合に使う)。
 esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; s="${s//\"/&quot;}"; printf '%s' "$s"; }
+# qesc — yq 式 $1 の各行を esc して 1 行ずつ出力 (順序付き決定的フィールド値の HTML 突合用)。
+# within-doc 可視フィールド値の順序付き突合 (cxid/drid 同型) で、 contract 側を HTML と同じ escape 規律へ
+# 揃える複数行 esc。 値は core_validate_strings が tab/改行を拒否済ゆえ 1 値 = 1 行で安全。
+qesc() { q "$1" | while IFS= read -r _v; do esc "$_v"; printf '\n'; done; }
 
 chk() { # label expected actual
   if [[ "$2" == "$3" ]]; then printf '  [OK]   %-'"$CHKW"'s %s\n' "$1" "$2"

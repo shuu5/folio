@@ -153,6 +153,9 @@ chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 
 #   (research は (k')(l') で突合済 = parity gap)。 cxid/drid は plain (esc) ゆえ [^<]* で安全抽出・opt-name は mark_terms で nested ゆえ対象外。
 chk "within-doc: 可視 cxid 列 == .context[].id (順序)" "$(q '.context[].id')" "$(grep -oE '<span class="cxid">[^<]*</span>' "$BODY" | sed -E 's#<span class="cxid">([^<]*)</span>#\1#')"
 chk "within-doc: 可視 drid 列 == .drivers[].id (順序)"  "$(q '.drivers[].id')"  "$(grep -oE 'class="drid">[^<]*</td>' "$BODY" | sed -E 's#class="drid">([^<]*)</td>#\1#')"
+# ★dty (folio-dty): 可視 drg (driver grounds バッジ) == 非空 .drivers[].grounds (順序)。 round-4 で drid は突合したが
+#   grounds (根拠の可視テキスト・grounds 非空時のみ emit) を漏らし、 値改竄が素通る fail-open だった。 drg は esc plain leaf。
+chk "within-doc: 可視 drg 列 == 非空 .drivers[].grounds (順序)" "$(qesc '.drivers[] | select((.grounds // "") != "") | .grounds')" "$(grep -oE '<span class="drg">[^<]*</span>' "$BODY" | sed -E 's#<span class="drg">([^<]*)</span>#\1#')"
 # ★ds8 ceiling round-4: 可視 justify-role 列 == .decision.justifies[].role (順序)。 round-2 で可視 req==attr は強制したが role の可視を漏らし、
 #   allowlist 内 role の *可視* swap (claim→rationale・attr は正) が素通る fail-open だった (cross-doc edge の可視 fidelity parity 漏れ)。 role は esc plain。
 chk "within-doc: 可視 justify-role 列 == .decision.justifies[].role (順序)" "$(q '.decision.justifies[].role')" "$(grep -oE '<span class="justify-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="justify-role">([^<]*)</span>#\1#')"

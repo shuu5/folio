@@ -99,6 +99,48 @@ chk "null セル漏れなし" "0" "$(grep -oE '>null<' "$BODY" | wc -l | tr -d '
 # 7d. esc 破綻 (patsub back-ref 化け) で壊れた entity が出ていないか
 chk "back-ref 化け entity なし (<lt; 等)" "0" "$(grep -oE '<(lt|gt|quot);' "$BODY" | wc -l | tr -d ' ')"
 
+# 7e. ★dty (folio-dty): within-doc 決定的可視フィールド値の順序付き突合 (ds8 round-4 ceiling 繰延・cxid/drid/cover-meta と同型・全 pack parity)。
+#    7b の *件数のみ* 検証では 決定的フィールド値の改竄 (見出し『二重課金しない』→詐欺文・hero『1.0秒』→『99.0秒』・出所『経営方針』→捏造・
+#    合否しきい値『1/2』→『999/9』) が件数保存のまま素通る fail-open だった。 これらは全て esc 済決定的値ゆえ floor 検証可能。
+#    ★抽出の分類 (ds8 round-4 不動点の適用):
+#      - plain leaf (esc 済 [^<]*・nested 不能) = grep+sed 順序突合 (cxid/drid と同型)。 wrapper-tag swap は値が抽出列から脱落
+#        → 順序リスト不一致で FAIL。 escape 済ゆえ nested-same-tag 早期終端は起こりえず marker-keyed 重機構は不要 (過剰=偽 FAIL 源)。
+#      - compound (固定 nested 構造 = 外部バッジ span / u span / metric の v·l) = structured-regex 順序突合 (literal nested タグで leaf 抽出)。
+#    順序リストの厳密一致 (chk) は値・順序・件数を同時に被覆する (= echo block 専用の marker-keyed+nested-reject とは別レイヤ)。
+# (a) goals: id (cid) + headline (ct) — plain leaf・順序 = .goals[] 配列順
+chk "within-doc: 可視 goals.id 列 == .goals[].id (順序)"            "$(qesc '.goals[].id')"       "$(grep -oE '<div class="cid">[^<]*</div>' "$BODY" | sed -E 's#<div class="cid">([^<]*)</div>#\1#')"
+chk "within-doc: 可視 goals.headline 列 == .goals[].headline (順序)" "$(qesc '.goals[].headline')" "$(grep -oE '<p class="ct">[^<]*</p>' "$BODY" | sed -E 's#<p class="ct">([^<]*)</p>#\1#')"
+# (b) actors: key (av) — plain leaf / name+外部バッジ (nm) — compound (固定 ext-badge span を含めて決定的再構築)
+chk "within-doc: 可視 actors.key 列 == .actors[].key (順序)" "$(qesc '.actors[].key')" "$(grep -oE '<span class="av"[^>]*>[^<]*</span>' "$BODY" | sed -E 's#<span class="av"[^>]*>([^<]*)</span>#\1#')"
+exp_nm="$(q '.actors[] | [.name, .external] | @tsv' | while IFS=$'\t' read -r _nm _ext; do
+  _b=""; [[ "$_ext" == "true" ]] && _b='<span class="ext-badge">外部</span>'; printf '%s%s\n' "$(esc "$_nm")" "$_b"; done)"
+act_nm="$(perl -CSD -0777 -ne 'while (/<div class="nm">(.*?)<\/div>/g){ print "$1\n"; }' "$BODY")"
+chk "within-doc: actors.nm (name+外部バッジ) 列 == 再構築 (順序)" "$exp_nm" "$act_nm"
+# (c) upper_needs: origin は class="origin" 一意。 nid は nfr 表と class 共有ゆえ source-trace-row 内に scope し (id, origin) を対で取る
+exp_st="$(q '.upper_needs[] | [.id, .origin] | @tsv' | while IFS=$'\t' read -r _id _og; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_og")"; done)"
+act_st="$(perl -CSD -0777 -ne 'while (/data-component="source-trace-row">.*?<span class="nid">([^<]*)<\/span>.*?<span class="origin">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
+chk "within-doc: source-trace (id, origin) 列 == .upper_needs (順序)" "$exp_st" "$act_st"
+# (d) rtm-grid 列見出し (th.grp = esc(id) 半角空白 esc(short)) — plain leaf
+exp_grp="$(q '.upper_needs[] | [.id, .short] | @tsv' | while IFS=$'\t' read -r _id _sh; do printf '%s %s\n' "$(esc "$_id")" "$(esc "$_sh")"; done)"
+act_grp="$(grep -oE '<th class="grp">[^<]*</th>' "$BODY" | sed -E 's#<th class="grp">([^<]*)</th>#\1#')"
+chk "within-doc: rtm 列見出し == .upper_needs[].id+short (順序)" "$exp_grp" "$act_grp"
+# (e) acceptance: aid (id ← join('/',links)) — plain leaf / metric (v, l) — compound (class="metric" に scope)
+exp_aid="$(q '.acceptance[] | [.id, (.links | join("/"))] | @tsv' | while IFS=$'\t' read -r _id _lk; do printf '%s ← %s\n' "$(esc "$_id")" "$(esc "$_lk")"; done)"
+act_aid="$(grep -oE '<div class="aid">[^<]*</div>' "$BODY" | sed -E 's#<div class="aid">([^<]*)</div>#\1#')"
+chk "within-doc: acceptance.aid (id ← links) 列 == 再構築 (順序)" "$exp_aid" "$act_aid"
+exp_metric="$(q '.acceptance[] | [(.metric_v // ""), (.metric_l // "")] | @tsv' | while IFS=$'\t' read -r _v _l; do printf '%s\t%s\n' "$(esc "$_v")" "$(esc "$_l")"; done)"
+act_metric="$(perl -CSD -0777 -ne 'while (/<div class="metric"><span class="v">([^<]*)<\/span><span class="l">([^<]*)<\/span><\/div>/g){ print "$1\t$2\n"; }' "$BODY")"
+chk "within-doc: acceptance.metric (合否しきい値 v, l) 列 == .acceptance (順序)" "$exp_metric" "$act_metric"
+# (f) nfr-hero (表紙ダッシュボード hero 数値): cat / big / unit / qual — structured (big は text + u span の compound)
+exp_hero="$(q '.nfr[] | select(.hero) | [(.hero.cat // ""), (.hero.big // ""), (.hero.unit // ""), (.hero.qual // "")] | @tsv' | while IFS=$'\t' read -r _c _bg _u _ql; do printf '%s\t%s\t%s\t%s\n' "$(esc "$_c")" "$(esc "$_bg")" "$(esc "$_u")" "$(esc "$_ql")"; done)"
+act_hero="$(perl -CSD -0777 -ne 'while (/<div class="nfr-hero c\d+"><div class="cat">([^<]*)<\/div><div class="big">([^<]*)<span class="u">([^<]*)<\/span><\/div><div class="qual">([^<]*)<\/div><\/div>/g){ print "$1\t$2\t$3\t$4\n"; }' "$BODY")"
+chk "within-doc: nfr-hero (cat,big,unit,qual) 列 == .nfr(hero) (順序)" "$exp_hero" "$act_hero"
+# (g) data-source attr (= rationale_source 接地メタ・非可視ゆえ severity 低): (req-id, data-source) を非空 rationale_source と集合突合
+#     (ADR の data-justifies-role attr 突合と parity。 重複/捏造は requirement-row 件数 anchor 〔上記 1-3〕が backstop)。
+exp_ds="$(q '.requirements[] | select((.rationale_source // "") != "") | [.id, .rationale_source] | @tsv' | while IFS=$'\t' read -r _id _rs; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_rs")"; done | sort)"
+act_ds="$(perl -CSD -0777 -ne 'while (/data-prose-slot="rationale" data-source="([^"]*)" data-slot-id="rationale-([^"]+)"/g){ print "$2\t$1\n"; }' "$BODY" | sort)"
+set_eq "within-doc: (req-id, data-source) == 非空 rationale_source (集合)" "$exp_ds" "$act_ds"
+
 # 8. prose スロット (perl で要素単位判定 = ネストタグ/改行/空白のみを正しく捕捉)
 slots="$(grep -oE 'data-prose-slot=' "$BODY" | wc -l | tr -d ' ')"
 filled="$(perl -0777 -ne '
