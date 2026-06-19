@@ -351,6 +351,73 @@ n='<td class=\"resp\"><span class=\"nid\">N-捏造</span>'
 assert o in d
 open('$TMP/g_gnid.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A60 ★ghost nid バッジ注入を global nid 占有数パリティが捕捉" "$BASE" "$TMP/g_gnid.html"; else ng "A60 setup 失敗"; fi
+# ★dty round-3 ceiling (wf_97d52cb2) が看破した count anchor 自身の兄弟 + 後退 scope の漏れ。
+# A61. ★single-quote ghost fid (class='fid') — double-quote literal grep を素通る → quote 非依存 occurrence で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\\'fid\\'>FR99</span>'
+assert o in d and \"class='fid'\" in n
+open('$TMP/g_sqfid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A61 ★single-quote ghost fid を quote 非依存 占有数で捕捉" "$BASE" "$TMP/g_sqfid.html"; else ng "A61 setup 失敗"; fi
+# A62. ★single-quote ghost nid
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\\'nid\\'>N-99</span>'
+assert o in d
+open('$TMP/g_sqnid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A62 ★single-quote ghost nid を quote 非依存 占有数で捕捉" "$BASE" "$TMP/g_sqnid.html"; else ng "A62 setup 失敗"; fi
+# A63. ★chrome (req-row|legend 外) への ghost priority-badge — row-scope の死角 → global occurrence で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='</h1>'; n='</h1><span class=\"prio must\" data-component=\"priority-badge\">必須</span>'
+assert o in d
+open('$TMP/g_chprio.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A63 ★chrome への ghost priority-badge を global 占有数で捕捉" "$BASE" "$TMP/g_chprio.html"; else ng "A63 setup 失敗"; fi
+# A64. ★chrome への ghost vmeth
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='</h1>'; n='</h1><span class=\"vmeth\">D</span>'
+assert o in d
+open('$TMP/g_chvm.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A64 ★chrome への ghost vmeth を global 占有数で捕捉" "$BASE" "$TMP/g_chvm.html"; else ng "A64 setup 失敗"; fi
+# A65. ★rtm 行見出しの可視要件 id (FR1→FR99・fid は据置=tuple 非該当) → rtm 行見出し突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<tr><th>FR1 <span class=\"lbl\">'; n='<tr><th>FR99 <span class=\"lbl\">'
+assert o in d
+open('$TMP/g_rtmid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A65 ★rtm 行見出し id 改竄を行見出し突合が捕捉" "$BASE" "$TMP/g_rtmid.html"; else ng "A65 setup 失敗"; fi
+# A66. ★受入ドット可視テキスト (AC1→AC999・data-acc-link attr 据置) → attr↔可視 echo 突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='data-acc-link=\"FR1__AC1\">AC1</span>'; n='data-acc-link=\"FR1__AC1\">AC999</span>'
+assert o in d
+open('$TMP/g_accv.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A66 ★受入ドット可視改竄を attr↔可視 echo 突合が捕捉" "$BASE" "$TMP/g_accv.html"; else ng "A66 setup 失敗"; fi
+# A67. ★自己予見の兄弟: delete-legend + add-row (count 保存攻撃) — legend chip を 1 個消し req 行へ偽 badge を足すと
+#   global occurrence 不変・tuple は末尾を拾い素通る → *要件行内* occurrence パリティ (legend と独立) で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+leg='<span class=\"prio must\" data-component=\"priority-badge\">必須</span>'
+o='<td class=\"resp\">'
+n='<td class=\"resp\"><span class=\"prio should\" data-component=\"priority-badge\">推奨</span>'
+assert leg in d and o in d
+open('$TMP/g_dla.html','w').write(d.replace(leg,'',1).replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A67 ★delete-legend+add-row (count 保存) を 要件行内 占有数で捕捉" "$BASE" "$TMP/g_dla.html"; else ng "A67 setup 失敗"; fi
+# A68. ★unquoted ghost fid (class=fid・有効 HTML・ブラウザ描画) — quote literal grep を素通る → token-match で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=fid>FR99</span>'
+assert o in d
+open('$TMP/g_uqfid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A68 ★unquoted ghost fid を token-match 占有数で捕捉" "$BASE" "$TMP/g_uqfid.html"; else ng "A68 setup 失敗"; fi
+# A69. ★multi-class ghost fid (class=\"y fid\"・.fid 適用) — fid が 2 番目 class でも token-match で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\"y fid\">FR99</span>'
+assert o in d
+open('$TMP/g_mcfid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A69 ★multi-class ghost fid を token-match 占有数で捕捉" "$BASE" "$TMP/g_mcfid.html"; else ng "A69 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"

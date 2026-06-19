@@ -156,23 +156,44 @@ exp_reqrow="$(q '.requirements[] | [.id, .ears.pattern, .priority, .vmethod] | @
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$_id")" "$(esc "$_id")" "${DTY_EARS_CLASS[$_pat]}" "${DTY_EARS_LABEL[$_pat]}" "$_pr" "${DTY_PRIO_LABEL[$_pr]}" "$(esc "$_vm")"; done)"
 act_reqrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="ears-requirement-row" data-req-id="([^"]*)"><td><span class="fid">([^<]*)<\/span><\/td><td><span class="ears ([a-z]+)">([^<]*)<\/span><\/td>.*?<span class="prio ([a-z]+)" data-component="priority-badge">([^<]*)<\/span> <span class="vmeth">([^<]*)<\/span><\/td><\/tr>/g){ print "$1\t$2\t$3\t$4\t$5\t$6\t$7\n"; }' "$BODY")"
 chk "within-doc: 要件行 (req-id,fid,ears,prio,vmethod) == .requirements (順序)" "$exp_reqrow" "$act_reqrow"
-# ★dty round-2 ceiling (wf_997ee765): marker 占有数パリティ (ds8 不動点)。 (h) の row-scope タプルは非貪欲 .*? ゆえ
-#   resp セルへデコイ (第2の prio/vmeth/fid 対) を注入すると末尾の正規対を拾い可視虚偽を素通す (second-element-injection)。
-#   ★occurrence 数で突合する (grep -c は複数同一行を 1 と数える line-count gotcha = legend の 4 ears 等を過少計上)。
-#   fid/nid は legend に出ない → global occurrence で『どこへ注入されても』捕捉。 prio-badge/vmeth/ears は legend と共有 →
-#   要件行 *内* occurrence に scope して legend を除外しつつ in-row decoy を捕捉 (legend 静的本数への結合を避ける)。
+# ★marker 占有数パリティ (ds8 不動点)。 (h) の row-scope タプルは非貪欲 .*? ゆえ resp セルへデコイ (第2 prio/vmeth/fid 対) を
+#   注入すると末尾の正規対を拾い可視虚偽を素通す (second-element-injection)。 占有数で塞ぐ。 ★occurrence で数える (grep -c は
+#   複数同一行を 1 と数える line-count gotcha = legend の 4 ears 等を過少計上 → grep -oE | wc -l)。
+#   ★round-3 ceiling (wf_97d52cb2) 反映: (a) ★quote 非依存 — assembler は double-quote のみ emit ゆえ single-quote ghost
+#   (class='fid') は tamper の証拠だが double-quote literal grep を素通る → char class [\"'] で両受容。 (b) ★統制値も global —
+#   prio-badge/vmeth/ears を要件行内 scope にすると req-row|legend 以外の chrome (h2 等) への ghost 注入を見逃す (fid/nid global との
+#   非対称) → legend 静的 chip 数 (prio-badge 1 / vmeth 4 / ears 4 = emit_legend の固定本数・detect↔remediate parity) を足した global occurrence で突合。
+# ★count は core の count_attr_token (quote 構文非依存の token-match)。 grep "class=\"fid\"" は single-quote/unquoted/
+#   multi-class の ghost を素通す (round-4 ceiling 兄弟)。 token-match は attr 値を空白分割して完全一致を数える = 不動点。
+nreq="$(q '.requirements | length')"
+chk "marker: fid 占有 == |requirements| (token global)"        "$nreq"                                            "$(count_attr_token class fid < "$BODY")"
+chk "marker: nid 占有 == |upper_needs|+|nfr| (token global)"    "$(q '(.upper_needs | length) + (.nfr | length)')"  "$(count_attr_token class nid < "$BODY")"
+chk "marker: priority-badge 占有 == |requirements|+1(legend, global)" "$((nreq + 1))"                              "$(count_attr_token data-component priority-badge < "$BODY")"
+chk "marker: vmeth 占有 == |requirements|+4(legend, global)"          "$((nreq + 4))"                              "$(count_attr_token class vmeth < "$BODY")"
+chk "marker: ears 占有 == |requirements|+4(legend, global)"           "$((nreq + 4))"                              "$(count_attr_token class ears < "$BODY")"
+# ★統制値は global (chrome ghost) に加え *要件行内* occurrence も == |requirements| で二重に縛る。 global だけだと
+#   『legend chip を 1 個削除し req 行へ偽 badge を 1 個足す』count 保存攻撃 (global 不変・tuple は末尾を拾う) を素通す
+#   (round-4 自己予見の兄弟)。 row-scope は legend と独立に req 行側を binding し add-row を必ず捕捉する。
 reqrows="$(grep 'data-component="ears-requirement-row"' "$BODY")"
-chk "marker: fid 占有 == |requirements| (global)"          "$(q '.requirements | length')"                 "$(grep -o 'class="fid"' "$BODY" | wc -l | tr -d ' ')"
-chk "marker: nid 占有 == |upper_needs|+|nfr| (global)"      "$(q '(.upper_needs | length) + (.nfr | length)')" "$(grep -o 'class="nid"' "$BODY" | wc -l | tr -d ' ')"
-chk "marker: 要件行内 priority-badge 占有 == |requirements|" "$(q '.requirements | length')"                 "$(printf '%s\n' "$reqrows" | grep -o 'data-component="priority-badge"' | wc -l | tr -d ' ')"
-chk "marker: 要件行内 vmeth 占有 == |requirements|"          "$(q '.requirements | length')"                 "$(printf '%s\n' "$reqrows" | grep -o 'class="vmeth"' | wc -l | tr -d ' ')"
-chk "marker: 要件行内 ears 占有 == |requirements|"           "$(q '.requirements | length')"                 "$(printf '%s\n' "$reqrows" | grep -o 'class="ears ' | wc -l | tr -d ' ')"
+chk "marker: 要件行内 priority-badge 占有 == |requirements|" "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token data-component priority-badge)"
+chk "marker: 要件行内 vmeth 占有 == |requirements|"          "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token class vmeth)"
+chk "marker: 要件行内 ears 占有 == |requirements|"           "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token class ears)"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
 exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
 act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"
 chk "within-doc: nfr 行 (nid, category) == .nfr (順序)" "$exp_nfrrow" "$act_nfrrow"
-# (j) rtm 行ラベル (span.lbl) == 非空 .label ((requirements+nfr) 順) — plain leaf。 §7e(d) は列見出し th.grp のみで行ラベルを漏らしていた。
-chk "within-doc: rtm 行ラベル (lbl) == 非空 .label (順序)" "$(qesc '(.requirements + .nfr)[] | select((.label // "") != "") | .label')" "$(grep -oE '<span class="lbl">[^<]*</span>' "$BODY" | sed -E 's#<span class="lbl">([^<]*)</span>#\1#')"
+# (j) rtm 行見出し: 可視要件 id + 行ラベル (span.lbl) を結合して順序突合 ((requirements+nfr) 順)。
+#   ★round-3 ceiling: 旧 (j) は span.lbl のみ突合し rtm 行見出しの *要件 id* (emit_rtm_fold の <tr><th>{id}{lbl}</th>) を漏らし、
+#   FR1→FR99 (RTM 表だけ別 id) が素通っていた。 行見出し全体 (id + 任意 lbl) を再構築し突合する (id と label を同時被覆)。
+#   ★thead の <tr><th>要件</th> は </th> の後が <th class="grp"> ゆえ </th><td アンカーで除外 (tbody 行のみ捕捉)。
+exp_rtmh="$(q '(.requirements + .nfr)[] | [.id, (.label // "")] | @tsv' | while IFS=$'\t' read -r _id _lb; do
+  _l=""; [[ -n "$_lb" ]] && _l=" <span class=\"lbl\">$(esc "$_lb")</span>"; printf '%s%s\n' "$(esc "$_id")" "$_l"; done)"
+act_rtmh="$(perl -CSD -0777 -ne 'while (/<tr><th>(.*?)<\/th><td/g){ print "$1\n"; }' "$BODY")"
+chk "within-doc: rtm 行見出し (id+ラベル) == (requirements+nfr) (順序)" "$exp_rtmh" "$act_rtmh"
+# (j2) rtm 受入ドットの可視テキスト == data-acc-link の末尾 (__ 後) セグメント (ds8 不動点: attr と可視 echo の両方を列挙)。
+#   ★round-3 ceiling: §5-6 は data-acc-link attr のみ set 突合し、 ドットの可視 id (AC1→AC999) を見ていなかった (attr↔可視の非対称)。
+acc_vis_bad="$(perl -CSD -0777 -ne 'while (/<span class="dot ac" data-acc-link="[^"]*__([^"]*)">([^<]*)<\/span>/g){ push @b,"$1\x{2260}$2" if $1 ne $2; } END{ print join(" ",@b); }' "$BODY")"
+chk_empty "within-doc: 受入ドット可視 == data-acc-link suffix" "$acc_vis_bad"
 # (k) constraint: 可視 id (cid2) + label (cl) — plain leaf / 規制バッジ (reg-badge=「法令 {reg}」) — 非空 regulation のみ compound。 §7e は 7b で件数のみだった。
 chk "within-doc: constraint.id (cid2) == .constraints[].id (順序)"    "$(qesc '.constraints[].id')"    "$(grep -oE '<td class="cid2">[^<]*</td>' "$BODY" | sed -E 's#<td class="cid2">([^<]*)</td>#\1#')"
 chk "within-doc: constraint.label (cl) == .constraints[].label (順序)" "$(qesc '.constraints[].label')" "$(grep -oE '<td class="cl">[^<]*</td>' "$BODY" | sed -E 's#<td class="cl">([^<]*)</td>#\1#')"
@@ -185,8 +206,8 @@ act_tint="$(perl -CSD -0777 -ne 'while (/<span class="av" style="background:var\
 chk "within-doc: actor (key, tint) == .actors (順序)" "$exp_tint" "$act_tint"
 # ★scope 境界 (no silent caps・round-2 ceiling wf_997ee765 で honest 後退): §7e+§7f は SRS 本体の
 #   *識別子・構造・数値・統制値* フィールド (id/fid/data-req-id/ears class+label/priority class+label/vmethod/nid/category/
-#   metric_v·l/nfr-hero 数値/cid2/label/regulation/rtm 列見出し+行ラベル/tint/origin/goals headline+id/actor key+name) を
-#   順序突合 + marker 占有数パリティで完全列挙・突合する。 ★ただし以下 2 つは本 issue scope 外として *明示繰延* する:
+#   metric_v·l/nfr-hero 数値/cid2/label/regulation/rtm 列見出し+行見出し id+行ラベル/受入ドット可視/tint/origin/goals headline+id/actor key+name) を
+#   順序突合 + marker 占有数パリティ (quote 非依存・global・統制値は legend 定数込み) で完全列挙・突合する。 ★ただし以下 2 つは本 issue scope 外として *明示繰延* する:
 #   (1) **body prose テキスト値** (mark_terms 系の自由文: ears.condition/response・nfr.target/measure・acceptance.criterion・
 #       upper_needs.need・goals.desc・scope.in/out・actor.role・constraint.text) — 決定的だが本文 prose ゆえ value 突合は別カテゴリ。
 #       gate J (agents/fidelity-srs) が content fidelity を暫定 backstop。 strip-term-badge 突合の floor 化は専用 follow-up (bd folio-4cf)。
