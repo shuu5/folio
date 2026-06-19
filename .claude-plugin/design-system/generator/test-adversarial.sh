@@ -325,6 +325,33 @@ expect_verify_fail "A56 rtm 行ラベル (lbl) 改竄を 7f(j) が捕捉" "$BASE
 perl -0777 -pe 's#(class="av" style="background:var\(--)brand(\)")#${1}bad${2}# if !$d++' "$TMP/good.html" > "$TMP/g_tint.html"
 expect_verify_fail "A57 actor tint (可視色 attr) 改竄を 7f(l) が捕捉" "$BASE" "$TMP/g_tint.html"
 
+# ★dty round-2 ceiling (wf_997ee765) が看破した §7f 自身の兄弟欠陥 (count parity 欠落 / decoy 注入) の回帰。
+#   perl の Japanese-text 置換は silent fail しうる (ceiling が偽陽性を踏んだ) ため python で landed を assert してから検査する。
+# A58. ★priority/vmeth decoy 注入: §7f(h) の非貪欲 .*? が末尾の正規対を拾い、可視の虚偽 prio/vmeth を素通す穴 → marker 占有数パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'
+n='<td class=\"resp\"><span class=\"prio should\" data-component=\"priority-badge\">推奨</span> <span class=\"vmeth\">D</span>'
+assert o in d
+open('$TMP/g_decoy.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A58 ★priority/vmeth decoy 注入を marker 占有数パリティが捕捉" "$BASE" "$TMP/g_decoy.html"; else ng "A58 setup 失敗"; fi
+# A59. ★ghost 要件IDバッジ (fid) を自由文セルへ注入 → global fid 占有数 == |requirements| パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'
+n='<td class=\"resp\"><span class=\"fid\">FR-捏造</span>'
+assert o in d
+open('$TMP/g_gfid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A59 ★ghost fid バッジ注入を global fid 占有数パリティが捕捉" "$BASE" "$TMP/g_gfid.html"; else ng "A59 setup 失敗"; fi
+# A60. ★ghost ニーズIDバッジ (nid) を注入 → global nid 占有数 == |upper_needs|+|nfr| パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'
+n='<td class=\"resp\"><span class=\"nid\">N-捏造</span>'
+assert o in d
+open('$TMP/g_gnid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A60 ★ghost nid バッジ注入を global nid 占有数パリティが捕捉" "$BASE" "$TMP/g_gnid.html"; else ng "A60 setup 失敗"; fi
+
 echo
 echo "PASS=$pass FAIL=$fail"
 if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi

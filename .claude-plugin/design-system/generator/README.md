@@ -208,16 +208,23 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   脱落し順序不一致で FAIL・escape 済ゆえ nested-same-tag 早期終端は起こりえない)。 compound (固定 nested = 外部バッジ/u span/metric v·l) や複数フィールドの row = structured-regex
   順序突合。 **marker-keyed+nested-reject の重機構は echo block (テンプレ prose 含む) 専用ゆえ決定的フィールド値には用いない** (過剰 = 偽 FAIL 源)。
   順序リストの厳密一致 (`chk`) は値・順序・件数を同時に被覆する。 EARS_CLASS/EARS_LABEL/PRIO_LABEL は assemble-srs と二重保守 (detect↔remediate parity)。
+- **`verify-fabrication-free.sh` §7f marker 占有数パリティ (round-3 = ★round-2 ceiling 反映)**: round-2 ceiling (wf_997ee765) が §7f(h) の
+  非貪欲 `.*?` タプル regex の **decoy 注入** (resp セルへ第2の prio/vmeth 対を入れると末尾の正規対を拾い可視虚偽を素通す) と、 **fid/nid の件数パリティ欠落**
+  (自由文セルへ ghost ID バッジを注入すると素通す) を実弾で看破した。 ds8 不動点 *marker-only count parity* で封鎖: fid/nid は global occurrence (legend に出ない)・
+  prio-badge/vmeth/ears は要件行内 occurrence (legend 除外) を `|requirements|`(+派生) と突合。 ★`grep -c` の line-count gotcha を避け occurrence は `grep -o | wc -l`。
 - **core**: `lib/verify-common.sh` に `qesc` (yq 式の各行を esc して出力する複数行 esc) を追加 (純追加・両 pack 共用)。
-- **★scope 境界 (no silent caps)**: dty は SRS *本体 (body)* の決定的フィールド値を完全化する。 一方 **core 共通 chrome** (cover-head の eyebrow/title/subtitle/reader・
-  approval-block の role/who/when/stamp・glossary-term-table の term/en/def) は lib/common.sh が全 pack 同一構造で emit する決定的値だが、 なお件数のみ検証で
-  ADR/research も同じ穴を持つ **cross-pack gap**。 これは body field (pack 固有=本 issue scope) でなく core chrome (cross-pack) ゆえ、 `verify_core_chrome` を core 昇格し
-  3 pack 一括適用する専用 follow-up (**bd folio-mk9**) へ繰延する (ds8 教訓#4: broad pre-existing gap を bolt-on せず追跡 follow-up へ)。
-- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66** (round-1 A36-A46 + round-2 A47-A57:
-  要件 ID consistent rename/EARS/nfr-nid/行内 priority/vmethod/nfr-category/constraint id·label/法令名/rtm 行ラベル/tint)・**ADR 52→53** (A51: drg)。
-  全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
-- **two-gate 境界 (確定)**: 決定的フィールド値 = floor (機械検証)。 prose スロット (cover-summary/plain/rationale 等) の自由文 content fidelity =
-  ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 決定的構造値は区別可能ゆえ floor、 自由文は区別不能ゆえ ceiling。
+- **★scope 境界 (no silent caps・round-2 ceiling で honest 後退)**: dty は SRS 本体の **識別子・構造・数値・統制値** フィールド (id/fid/data-req-id/EARS/priority/
+  vmethod/nid/category/metric/cid2/label/regulation/rtm 見出し+行ラベル/tint/origin/headline/key/name) を順序突合 + marker 占有数パリティで完全列挙・突合する。
+  以下 2 つは scope 外として *明示繰延* (誠実開示・gate J が暫定 backstop):
+  - **body prose テキスト値** (mark_terms 系自由文: ears.condition/response・nfr.target/measure・acceptance.criterion・upper_needs.need・goals.desc・scope・
+    actor.role・constraint.text) — 決定的だが本文 prose ゆえ value 突合は別カテゴリ (goals.headline は突合済だが goals.desc は未=非対称)。 strip-term-badge 突合の floor 化は **bd folio-4cf**。
+  - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) — lib/common.sh が全 pack 同一構造で emit
+    (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。
+  (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造は floor・本文 prose 内容は ceiling 寄り)。
+- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69** (round-1 A36-A46 + round-2 A47-A57 +
+  round-3 A58-A60: priority/vmeth decoy・ghost fid・ghost nid)・**ADR 52→53** (A51: drg)。 全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
+- **two-gate 境界 (確定)**: 識別子・構造・数値・統制値 = floor (機械検証・本 issue)。 本文 prose 内容 + opus prose スロット (cover-summary/plain/rationale 等) の
+  content fidelity = ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 識別子/統制値は区別可能ゆえ floor、 自由 prose は ceiling 寄り。
   legend (emit_legend) は静的デザイン資産 (icon/CSS と同様 contract 由来でない) ゆえ contract-fidelity floor の対象外 (静的テンプレ完全性は別概念)。
 
 ## A/B 可読化 (ADR-0042 §2.2)
@@ -251,7 +258,7 @@ folio verify-srs filled.html contract/ec-checkout.srs.yaml                      
 uv run --with playwright==1.60.0 python render-gate-srs.py filled.html           # 実 SRS を light/dark × 3 viewport で検査
 uv run --with playwright==1.60.0 python render-gate-srs.py --selftest            # detector の検出力を fixture で自己検証
 
-./test-adversarial.sh                                                            # 66 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty within-doc body フィールド値 (§7e+§7f) の回帰
+./test-adversarial.sh                                                            # 69 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty 識別子/構造値 (§7e+§7f+marker count) の回帰
 ```
 
 ## S5 floor: verify-srs (taxonomy §5.2 gate A-H + visual-first)
