@@ -448,6 +448,48 @@ n='<span CLASS=\"dot ac\" data-acc-link=\"FR1__AC1\">AC999</span>'
 assert o in d
 open('$TMP/g_adcase.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A73 ★acc-dot CLASS 大文字化+可視改竄を data-acc-link アンカーで捕捉" "$BASE" "$TMP/g_adcase.html"; else ng "A73 setup 失敗"; fi
+# ★round-5 ceiling (wf_ad9f22bc) が看破した HTML 属性構文 robustness の残り 4 兄弟 (round-6 で封鎖)。
+# A74. ★acc-dot nested-content (<b>AC999</b>) — [^<]* が空縮退し要素脱落 → marker-keyed nested-reject で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<span class=\"dot ac\" data-acc-link=\"FR1__AC1\">AC1</span>'; n='<span class=\"dot ac\" data-acc-link=\"FR1__AC1\"><b>AC999</b></span>'
+assert o in d
+open('$TMP/g_accnest.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A74 ★acc-dot nested-content (<b>) を nested-reject で捕捉" "$BASE" "$TMP/g_accnest.html"; else ng "A74 setup 失敗"; fi
+# A75. ★値 grep case-drop+decoy (goals.headline ct): 偽 class=\"CT\" の <p> で詐欺文を描画 + 同値 class=\"ct\" decoy で列保存 → ct count-parity で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+m=re.search(r'<p class=\"ct\">[^<]*</p>', d); assert m
+frag=m.group(0)
+n='<p class=\"CT\">詐欺:'+frag[len('<p class=\"ct\">'):-4]+'</p>'+frag
+open('$TMP/g_ctdrop.html','w').write(d.replace(frag,n,1))
+" 2>/dev/null; then expect_verify_fail "A75 ★ct case-drop+decoy (可視詐欺文) を ct count-parity で捕捉" "$BASE" "$TMP/g_ctdrop.html"; else ng "A75 setup 失敗"; fi
+# A76. ★値 grep case-drop+decoy (constraint.label cl)
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+m=re.search(r'<td class=\"cl\">[^<]*</td>', d); assert m
+frag=m.group(0)
+n='<td class=\"CL\">捏造制約ラベル</td>'+frag
+open('$TMP/g_cldrop.html','w').write(d.replace(frag,n,1))
+" 2>/dev/null; then expect_verify_fail "A76 ★cl case-drop+decoy を cl count-parity で捕捉" "$BASE" "$TMP/g_cldrop.html"; else ng "A76 setup 失敗"; fi
+# A77. ★legend chip 削除 + chrome 注入 (count-conservation): global/row-scope 保存だが legend-scope drop で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+m=re.search(r'<span class=\"vmeth\">[^<]*</span>', d); assert m
+leg=m.group(0)
+d2=d.replace(leg,'',1).replace('</h1>','</h1><span class=\"vmeth\">X=偽検証法</span>',1)
+open('$TMP/g_legreloc.html','w').write(d2)
+" 2>/dev/null; then expect_verify_fail "A77 ★legend削除+chrome注入 (count保存) を legend-scope binding で捕捉" "$BASE" "$TMP/g_legreloc.html"; else ng "A77 setup 失敗"; fi
+# A78. ★entity-encoded class ghost (&#102;id → .fid 描画) — count_attr_token の数値文字参照 decode で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\"&#102;id\">FRX-GHOST</span>'
+assert o in d
+open('$TMP/g_entity.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A78 ★entity-encoded class ghost (&#102;id) を文字参照 decode で捕捉" "$BASE" "$TMP/g_entity.html"; else ng "A78 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"

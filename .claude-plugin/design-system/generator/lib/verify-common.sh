@@ -30,15 +30,21 @@ qesc() { q "$1" | while IFS= read -r _v; do esc "$_v"; printf '\n'; done; }
 # single-quote (class='fid') / unquoted (class=fid) / multi-class (class="x fid") / 大文字属性名 (CLASS=/Class=) は
 # 全て tamper だが、 素朴な grep 'class="fid"' を素通る (round-4 ceiling 兄弟・case 版は不完全 ceiling の唯一完走 lens が検出)。
 # 本 helper は attr="..." / attr='...' / attr=unquoted を全 parse し、 値を空白でトークン分割して $2 *完全一致* を数える。
-# ★属性名は (?i:) で case 非依存 (HTML 仕様で属性名は case-insensitive・ブラウザは小文字化して描画)。 値トークンは
-# case-sensitive 維持 (class 値は CSS で case-sensitive ゆえ FID は .fid 非適用 = 偽バッジを描画しない)。 chr(39) で single-quote 回避。
+# ★属性名・値トークンとも case 非依存 (lc 比較)。 属性名は HTML 仕様で case-insensitive。 値トークンも:
+# assembler は小文字 ASCII class のみ emit ゆえ大文字 class (class="CT") は tamper で、 .ct 非適用でも
+# *無 style の可視要素として詐欺テキストを描画する* (round-5 ceiling: case-drop した偽 <p> + 同値小文字 decoy で
+# 抽出列を保存したまま可視捏造を素通せた)。 占有数は case 込みで数えて偽要素の add を必ず捕捉する。 chr(39) で single-quote 回避。
 count_attr_token() { # $1=attr $2=token ; HTML は stdin
   ATTR="$1" TOK="$2" perl -CSD -0777 -e '
-    my ($attr,$tok)=($ENV{ATTR},$ENV{TOK}); my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
+    my ($attr,$tok)=($ENV{ATTR},$ENV{TOK}); my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt; my $tl=lc $tok;
     my $c=0;
     while ($txt =~ /\b(?i:\Q$attr\E)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
       my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
-      $c++ if grep { $_ eq $tok } split(/\s+/, $v);
+      # ★HTML 数値文字参照を decode (round-5 ceiling: <span class="&#102;id"> は .fid 描画されるが
+      #   未 decode だと token に一致せず ghost を見逃す)。 assembler は literal ASCII class のみ emit。
+      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge;
+      $v =~ s/&#(\d+);/chr($1)/ge;
+      $c++ if grep { lc($_) eq $tl } split(/\s+/, $v);
     }
     print $c;
   '
