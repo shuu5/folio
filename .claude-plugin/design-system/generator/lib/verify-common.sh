@@ -25,16 +25,18 @@ esc() { local s="${1-}"; s="${s//&/&amp;}"; s="${s//</&lt;}"; s="${s//>/&gt;}"; 
 # 揃える複数行 esc。 値は core_validate_strings が tab/改行を拒否済ゆえ 1 値 = 1 行で安全。
 qesc() { q "$1" | while IFS= read -r _v; do esc "$_v"; printf '\n'; done; }
 
-# count_attr_token — stdin の HTML から、 属性 $1 の値に トークン $2 が現れる occurrence 数を *quote 構文非依存* で数える。
-# marker 占有数パリティ用。 assembler は double-quote のみ emit ゆえ single-quote (class='fid') / unquoted (class=fid) /
-# multi-class (class="x fid") は全て tamper だが、 素朴な grep 'class="fid"' を素通る (round-4 ceiling 兄弟欠陥)。
-# 本 helper は attr="..." / attr='...' / attr=unquoted を全て parse し、 値を空白でトークン分割して $2 完全一致を数える
-# = HTML 属性構文の揺れに対し堅牢 (不動点)。 単一引用符をソースに直書きせず chr(39) で組む (bash single-quote 衝突回避)。
+# count_attr_token — stdin の HTML から、 属性 $1 の値に トークン $2 が現れる occurrence 数を
+# *quote 構文・属性名 case 非依存* で数える。 marker 占有数パリティ用。 assembler は小文字 double-quote のみ emit ゆえ
+# single-quote (class='fid') / unquoted (class=fid) / multi-class (class="x fid") / 大文字属性名 (CLASS=/Class=) は
+# 全て tamper だが、 素朴な grep 'class="fid"' を素通る (round-4 ceiling 兄弟・case 版は不完全 ceiling の唯一完走 lens が検出)。
+# 本 helper は attr="..." / attr='...' / attr=unquoted を全 parse し、 値を空白でトークン分割して $2 *完全一致* を数える。
+# ★属性名は (?i:) で case 非依存 (HTML 仕様で属性名は case-insensitive・ブラウザは小文字化して描画)。 値トークンは
+# case-sensitive 維持 (class 値は CSS で case-sensitive ゆえ FID は .fid 非適用 = 偽バッジを描画しない)。 chr(39) で single-quote 回避。
 count_attr_token() { # $1=attr $2=token ; HTML は stdin
   ATTR="$1" TOK="$2" perl -CSD -0777 -e '
     my ($attr,$tok)=($ENV{ATTR},$ENV{TOK}); my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
     my $c=0;
-    while ($txt =~ /\b\Q$attr\E\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
+    while ($txt =~ /\b(?i:\Q$attr\E)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
       my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
       $c++ if grep { $_ eq $tok } split(/\s+/, $v);
     }

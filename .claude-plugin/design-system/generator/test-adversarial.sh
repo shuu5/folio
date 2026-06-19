@@ -418,6 +418,36 @@ o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\"y fid\">FR99</span>
 assert o in d
 open('$TMP/g_mcfid.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A69 ★multi-class ghost fid を token-match 占有数で捕捉" "$BASE" "$TMP/g_mcfid.html"; else ng "A69 setup 失敗"; fi
+# ★round-4 ceiling (不完全=session limit で 1/5 完走) の唯一 lens + admin 自力点検が看破した case / class-prio 兄弟。
+# A70. ★大文字属性名 ghost (CLASS="fid"・Class=fid) — HTML 属性名は case-insensitive ゆえブラウザ描画される → count_attr_token (?i:) で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span CLASS=\"fid\">FR99</span>'
+assert o in d
+open('$TMP/g_CLfid.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A70 ★大文字属性名 CLASS=fid ghost を case 非依存 token-match で捕捉" "$BASE" "$TMP/g_CLfid.html"; else ng "A70 setup 失敗"; fi
+# A71. ★class-prio-only ghost (data-component 無し・legend 推奨と同型で .prio 描画) — data-component count を素通る → 可視 class prio count で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\"prio must\">必須</span>'
+assert o in d
+open('$TMP/g_cponly.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A71 ★class-prio-only ghost (data-comp 無し) を 可視 class prio 占有数で捕捉" "$BASE" "$TMP/g_cponly.html"; else ng "A71 setup 失敗"; fi
+# A72. ★大文字 DATA-COMPONENT + 大文字属性名の統制値 ghost (CLASS="ears forbid") を case 非依存 token-match で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; n='<td class=\"resp\"><span CLASS=\"ears forbid\">禁止</span>'
+assert o in d
+open('$TMP/g_CLears.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A72 ★大文字 CLASS=ears ghost を case 非依存 token-match で捕捉" "$BASE" "$TMP/g_CLears.html"; else ng "A72 setup 失敗"; fi
+# A73. ★acc-dot の class を大文字化して可視チェックを回避 + 可視改竄 (data-acc-link 据置で set_eq 通過) → data-acc-link アンカーで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<span class=\"dot ac\" data-acc-link=\"FR1__AC1\">AC1</span>'
+n='<span CLASS=\"dot ac\" data-acc-link=\"FR1__AC1\">AC999</span>'
+assert o in d
+open('$TMP/g_adcase.html','w').write(d.replace(o,n,1))
+" 2>/dev/null; then expect_verify_fail "A73 ★acc-dot CLASS 大文字化+可視改竄を data-acc-link アンカーで捕捉" "$BASE" "$TMP/g_adcase.html"; else ng "A73 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"
