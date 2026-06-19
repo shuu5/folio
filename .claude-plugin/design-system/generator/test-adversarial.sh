@@ -549,6 +549,43 @@ d=open('$TMP/good.html').read()
 o='<td class=\"resp\">'; assert o in d
 open('$TMP/g_novelsq.html','w').write(d.replace(o,o+'<span class=\\'zzznovelsq\\'>x</span>',1))
 " 2>/dev/null; then expect_verify_fail "A87 ★single-quote novel-class を quote-robust 機械的網羅で捕捉" "$BASE" "$TMP/g_novelsq.html"; else ng "A87 setup 失敗"; fi
+# ★round-9 ceiling (wf_a2a3db7c): R8 が dot/novel で達成した quote-robust 不動点を *未適用* の兄弟 3 種。
+# A88. ★rtm-summary single-quote decoy-append (real 無傷 + 偽 <p class='rtm-summary-derived'>999件 併置・EXEMPT で占有数パリティ無し) → COUNTED 化 count==1 で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<div class=\"ears-legend\">'; assert o in d
+open('$TMP/g_rtmdecoy.html','w').write(d.replace(o,'<p class=\\'rtm-summary-derived\\'>孤立要件 999 件</p>'+o,1))
+" 2>/dev/null; then expect_verify_fail "A88 ★rtm-summary single-quote decoy を占有数パリティ(count==1)で捕捉" "$BASE" "$TMP/g_rtmdecoy.html"; else ng "A88 setup 失敗"; fi
+# A89. ★acc-dot single-quote decoy (class=\"dot ac\" double-quote + data-acc-link single-quote・可視 id 捏造 suffix≠visible) → quote-robust attr_values/acc_vis_bad で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"hit\">'; assert o in d
+open('$TMP/g_accsq.html','w').write(d.replace(o,o+'<span class=\"dot ac\" data-acc-link=\\'FR1__AC1\\'>AC999</span>',1))
+" 2>/dev/null; then expect_verify_fail "A89 ★acc-dot single-quote 可視 id 捏造を quote-robust data-acc-link 突合で捕捉" "$BASE" "$TMP/g_accsq.html"; else ng "A89 setup 失敗"; fi
+# A90. ★凡例 ears ラベル改竄 (class=ears trigger 不変・きっかけ→誤訳) → (class,label) SET 値突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<span class=\"ears trigger\">きっかけ '; assert o in d
+open('$TMP/g_legears.html','w').write(d.replace(o,'<span class=\"ears trigger\">誤訳 ',1))
+" 2>/dev/null; then expect_verify_fail "A90 ★凡例 ears ラベル改竄を (class,label) 値突合で捕捉" "$BASE" "$TMP/g_legears.html"; else ng "A90 setup 失敗"; fi
+# A91. ★凡例 prio ラベル swap (推奨→必須・class 不変) → (class,label) SET 値突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<span class=\"prio should\">推奨</span>'; assert o in d
+open('$TMP/g_legprio.html','w').write(d.replace(o,'<span class=\"prio should\">必須</span>',1))
+" 2>/dev/null; then expect_verify_fail "A91 ★凡例 prio ラベル改竄を (class,label) 値突合で捕捉" "$BASE" "$TMP/g_legprio.html"; else ng "A91 setup 失敗"; fi
+# A92. ★凡例 vmeth ラベル捏造 (T=テスト→T=捏造) → (class,label) SET 値突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<span class=\"vmeth\">T=テスト</span>'; assert o in d
+open('$TMP/g_legvm.html','w').write(d.replace(o,'<span class=\"vmeth\">T=捏造</span>',1))
+" 2>/dev/null; then expect_verify_fail "A92 ★凡例 vmeth ラベル捏造を (class,label) 値突合で捕捉" "$BASE" "$TMP/g_legvm.html"; else ng "A92 setup 失敗"; fi
+# A93. ★rtm-summary unquoted decoy (class=rtm-summary-derived 無引用) → count_attr_token unquoted 分岐 + 占有数パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<div class=\"ears-legend\">'; assert o in d
+open('$TMP/g_rtmuq.html','w').write(d.replace(o,'<p class=rtm-summary-derived>fake</p>'+o,1))
+" 2>/dev/null; then expect_verify_fail "A93 ★rtm-summary unquoted decoy を quote-robust 占有数パリティで捕捉" "$BASE" "$TMP/g_rtmuq.html"; else ng "A93 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"

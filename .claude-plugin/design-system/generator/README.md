@@ -220,7 +220,13 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   (d) **rtm 行見出し id** (`<tr><th>` は class-less ゆえ `/gi` で偽行を抽出列へ)・**受入ドット可視** (marker-keyed nested-reject = `<b>AC999</b>` ネストでの脱落を封じる)。
   (e) ★**class-token 機械的網羅** (round-6 ceiling 根本 fix): body の全 class token は COUNTED (占有数パリティ済) か EXEMPT (構造/modifier/繰延 prose·chrome) に *機械分類* されねばならず、
   未分類トークン (将来の value class 追加 = vcount allowlist drift) を必ず FAIL し count-parity 追加を強制する = 6 round 通底の partial-enumeration を構造封鎖。 ★occurrence は token 単位。
-- **core**: `lib/verify-common.sh` に `qesc` (yq 式の各行を esc して出力する複数行 esc) を追加 (純追加・両 pack 共用)。
+- **`verify-fabrication-free.sh` round-9 (= ★round-8 ceiling wf_a2a3db7c の反映)**: R8 が dot/novel で達成した「quote-robust helper を *全箇所* 再利用」の不動点を
+  **未適用だった兄弟 3 種**を塞ぐ (R8 自身が新規追加した chk が double-quote 固定 inline perl で穴を再導入していた = admin が自分の gate 修正を self-certify しない実例):
+  - ★**blocker** rtm-summary 可視 5 数値: R8 の値突合 chk が `<p class="rtm-summary-derived"` で double-quote 固定 + `rtm-summary-derived` を **EXEMPT に残した** (占有数パリティ無し) ため、
+    real を無傷に残し `<p class='rtm-summary-derived'>孤立要件 999件</p>` を併置する single-quote decoy が網羅検査も値突合も素通した → **COUNTED へ移し count_attr_token 占有数 == 1** を強制 + 値抽出を 3 分岐 quote-robust 化。
+  - 受入ドット可視 id: acc_vis_bad と §5/§6 link 集合が `data-acc-link="..."` で double-quote 固定 → single-quote decoy で可視 id (AC1→AC999) を捏造できた → **core `attr_values`** (count_attr_token の値版・quote-robust) へ載せ替え + acc_vis_bad の data-acc-link を 3 分岐 parse 化。
+  - 凡例 chip 可視ラベル: legend-scope が占有数 (2/4/4) のみ縛りラベルテキスト未突合 → きっかけ↔禁止 swap 等が素通した → **(class,label) SET 値突合**を追加 (ears/prio は DTY_*_LABEL から再導出・detect↔remediate parity)。
+- **core**: `lib/verify-common.sh` に `qesc` (yq 式の各行を esc して出力する複数行 esc) + `attr_values` (属性値を quote 構文・属性名 case・数値文字参照 非依存に列挙・count_attr_token の値版) を追加 (純追加・両 pack 共用)。
 - **★scope 境界 (no silent caps・round-2 ceiling で honest 後退)**: dty は SRS 本体の **識別子・構造・数値・統制値** フィールド (id/fid/data-req-id/EARS/priority/
   vmethod/nid/category/metric/cid2/label/regulation/rtm 見出し+行ラベル/tint/origin/headline/key/name) を順序突合 + marker 占有数パリティで完全列挙・突合する。
   以下 2 つは scope 外として *明示繰延* (誠実開示・gate J が暫定 backstop):
@@ -229,8 +235,8 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) — lib/common.sh が全 pack 同一構造で emit
     (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。
   (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造は floor・本文 prose 内容は ceiling 寄り)。
-- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→96** (round-1 A36-A46 + round-2 A47-A57 +
-  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖] + round-8 A84-A87 [rtm-summary 可視数値 + dot/novel の quote-robust 化])・**ADR 52→53** (A51: drg)。
+- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→96→102** (round-1 A36-A46 + round-2 A47-A57 +
+  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖] + round-8 A84-A87 [rtm-summary 可視数値 + dot/novel の quote-robust 化] + round-9 A88-A93 [rtm-summary single/unquoted decoy・acc-dot single-quote 可視 id 捏造・凡例 ears/prio/vmeth ラベル swap])・**ADR 52→53** (A51: drg)。
   全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
 - **two-gate 境界 (確定)**: 識別子・構造・数値・統制値 = floor (機械検証・本 issue)。 本文 prose 内容 + opus prose スロット (cover-summary/plain/rationale 等) の
   content fidelity = ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 識別子/統制値は区別可能ゆえ floor、 自由 prose は ceiling 寄り。

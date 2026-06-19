@@ -55,13 +55,15 @@ chk_empty "受入 id 一意"     "$(q '.acceptance[].id' | sort | uniq -d | tr '
 
 # 5. backward (●) リンク集合 == contract (要件ごと unique = assembler の 1 セル意味論に一致)
 exp_b="$(q '(.requirements + .nfr)[] | .id as $i | (.trace.backward | unique)[] | $i + "__" + .' | sort)"
-act_b="$(grep -oE 'data-trace-link="[^"]+"' "$BODY" | sed 's/.*data-trace-link="//; s/"$//' | sort)"
+# ★round-9 ceiling: data-*-link 抽出は quote-robust な attr_values で (旧 grep 'attr="[^"]+"' は single-quote/unquoted の
+#   偽 link を素通し、 acc-dot single-quote decoy で受入トレースを捏造できた = round-8 ceiling 実証)。
+act_b="$(attr_values data-trace-link < "$BODY" | sort)"
 chk     "backward link count == Σ unique backward" "$(printf '%s\n' "$exp_b" | grep -c .)" "$(printf '%s\n' "$act_b" | grep -c .)"
 set_eq  "backward link SET == contract" "$exp_b" "$act_b"
 
 # 6. acceptance (受入) リンク集合 == contract (backward と対称)
 exp_a="$(q '(.requirements + .nfr)[] | .id as $i | (.trace.acceptance | unique)[] | $i + "__" + .' | sort)"
-act_a="$(grep -oE 'data-acc-link="[^"]+"' "$BODY" | sed 's/.*data-acc-link="//; s/"$//' | sort)"
+act_a="$(attr_values data-acc-link < "$BODY" | sort)"
 chk     "acceptance link count == Σ unique acceptance" "$(printf '%s\n' "$exp_a" | grep -c .)" "$(printf '%s\n' "$act_a" | grep -c .)"
 set_eq  "acceptance link SET == contract" "$exp_a" "$act_a"
 
@@ -190,6 +192,19 @@ legendblk="$(grep 'class="ears-legend"' "$BODY")"
 chk "legend-scope: prio == 2 (must+should)" "2" "$(printf '%s\n' "$legendblk" | count_attr_token class prio)"
 chk "legend-scope: vmeth == 4 (T/A/I/D)"    "4" "$(printf '%s\n' "$legendblk" | count_attr_token class vmeth)"
 chk "legend-scope: ears == 4 (4 type chip)" "4" "$(printf '%s\n' "$legendblk" | count_attr_token class ears)"
+# ★round-9 ceiling: 凡例 chip の *可視ラベル* を (class,label) 対で SET 突合 (round-8 までは占有数 2/4/4 のみ縛り、
+#   ラベルテキスト未突合ゆえ きっかけ↔禁止 swap・必須↔推奨・vmeth ラベル捏造が素通った = partial-enumeration の穴)。
+#   凡例は静的デザイン資産 (emit_legend) ゆえ ears/prio は DTY_*_LABEL から再導出し detect↔remediate parity、 vmeth は固定。
+exp_legend="$( { for _pat in event state unwanted ubiquitous; do printf 'ears %s\t%s\n' "${DTY_EARS_CLASS[$_pat]}" "${DTY_EARS_LABEL[$_pat]}"; done
+  printf 'prio must\t%s\n' "${DTY_PRIO_LABEL[must]}"; printf 'prio should\t%s\n' "${DTY_PRIO_LABEL[should]}"
+  printf 'vmeth\tT=テスト\nvmeth\tA=分析\nvmeth\tI=目視確認\nvmeth\tD=実演\n'; } | sort)"
+act_legend="$(printf '%s\n' "$legendblk" | perl -CSD -0777 -e '
+  my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @o;
+  while ($t =~ /class\s*=\s*["$q]?ears\s+([a-z]+)["$q]?\s*>([^<]*?)\s*<span/g){ push @o,"ears $1\t$2"; }
+  while ($t =~ /class\s*=\s*["$q]?prio\s+([a-z]+)["$q]?[^>]*>([^<]*)<\/span>/g){ push @o,"prio $1\t$2"; }
+  while ($t =~ /class\s*=\s*["$q]?vmeth["$q]?\s*>([^<]*)<\/span>/g){ push @o,"vmeth\t$1"; }
+  print "$_\n" for sort @o;')"
+set_eq "legend-scope: chip 可視ラベル (class,label) == 凡例期待 (swap/捏造封鎖)" "$exp_legend" "$act_legend"
 # ★dty round-5 ceiling (wf_ad9f22bc): value-internal class の count-parity (count_attr_token = case/quote/entity 非依存)。
 #   下の ordered 値突合 (§7e/§7f) は小文字 class grep ゆえ『case-drop (class="CT") した偽要素 + 同値 decoy (class="ct")』で
 #   抽出列を保存したまま可視捏造を素通せた (round-5 ceiling blocker)。 占有数 (decoy=+1・entity ghost=+1) を robust counter で
@@ -228,21 +243,27 @@ chk "vcount: l == |acceptance| (metric_l)" "$nacc" "$(count_attr_token class l <
 #   body の全 class token は COUNTED (占有数パリティ済の value class) か EXEMPT (構造/modifier/繰延 prose·chrome) のいずれかに *機械的に* 分類されねばならない。
 #   未分類トークン = 将来の value class 追加 (enumeration drift) を必ず FAIL し count-parity 追加 (COUNTED 登録) を強制する = allowlist drift を構造的に検出。
 #   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (body prose=folio-4cf: cd/at/resp/cond/meas/role/why/plain・chrome=folio-mk9: when/who/stamp/sign/grow/gword/gdef/en/term)。
-COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac"
-# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose=folio-4cf / chrome=folio-mk9)。 ★rtm-summary-derived は可視 contract 値 (派生 5 数値) を
-#   運ぶゆえ EXEMPT でなく下の専用 chk で可視突合する (round-7 ceiling misclassification 是正)。
-EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-eyebrow cover-meta cover-sub doc-type reader-chip summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold rtm-summary-derived scol ears-legend lt m b ext-badge nfr-hero cd at resp cond meas role why plain term en gword gdef grow when who stamp sign"
+COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac rtm-summary-derived"
+# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose=folio-4cf / chrome=folio-mk9)。
+# ★round-9 ceiling: rtm-summary-derived は可視 contract 値 (派生 5 数値) を運ぶゆえ EXEMPT から外し COUNTED へ移した。
+#   round-8 は値突合 chk (下) は追加したが EXEMPT に残したため占有数パリティが無く、 single-quote decoy の偽 <p> 追記
+#   (real を無傷に残し別 <p class='rtm-summary-derived'>孤立要件 999件</p> を併置) を網羅検査も値突合 (double-quote 固定) も素通した。
+#   COUNTED 化で count_attr_token 占有数 == 1 を強制し decoy-append を quote 非依存に封鎖する。
+EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-eyebrow cover-meta cover-sub doc-type reader-chip summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold scol ears-legend lt m b ext-badge nfr-hero cd at resp cond meas role why plain term en gword gdef grow when who stamp sign"
 # ★quote-robust: class_tokens 経由 (旧 inline perl は double-quote 固定で single/unquoted novel token を分類漏れ = drift 構造封鎖の overclaim)。
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $COUNTED $EXEMPT | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
 # ★round-7 ceiling: rtm-summary-derived の *可視* 5 数値 (要件/上位ニーズ/トレースリンク/孤立/未検証) を再導出突合 (§7 は data-derived
 #   *属性* のみ・可視テキストはどの層も突合せず EXEMPT で素通った misclassification = 決定的 contract 値の捏造が可能だった)。
+# ★round-9 ceiling: 占有数パリティ (count_attr_token == 1・quote 非依存) で偽 <p> 追記を封鎖 + 値抽出を quote-robust 化
+#   (旧 <p class="rtm-summary-derived" は double-quote 固定で single-quote real を見失い、 decoy 併置を素通した)。
 rtm_nreq="$(q '(.requirements + .nfr) | length')"; rtm_nneed="$(q '.upper_needs | length')"
 rtm_nlinks="$(q '[(.requirements + .nfr)[].trace.backward[]] | length')"
 rtm_niso="$(q '[(.requirements + .nfr)[] | select((.trace.backward | length)==0)] | length')"
 rtm_nunv="$(q '[(.requirements + .nfr)[] | select((.trace.acceptance | length)==0)] | length')"
 exp_rtmsum="要件 ${rtm_nreq} 件 / 上位ニーズ ${rtm_nneed} 件 / トレースリンク ${rtm_nlinks} 本 / 孤立要件 (出所なし) ${rtm_niso} 件 / 未検証要件 (受入なし) ${rtm_nunv} 件"
-act_rtmsum="$(perl -CSD -0777 -ne 'while (/<p class="rtm-summary-derived"[^>]*>(.*?)<\/p>/gs){ print $1 }' "$BODY")"
+chk "vcount: rtm-summary-derived == 1 (decoy 追記封鎖)" "1" "$(count_attr_token class rtm-summary-derived < "$BODY")"
+act_rtmsum="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; while ($t =~ /<p\b[^>]*\bclass\s*=\s*(?:"rtm-summary-derived"|${q}rtm-summary-derived${q}|rtm-summary-derived(?=[\s>]))[^>]*>(.*?)<\/p>/gs){ print $1 }' < "$BODY")"
 chk "within-doc: rtm-summary 可視 5 数値 == 再導出 (data-derived 属性の可視版)" "$exp_rtmsum" "$act_rtmsum"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
 exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
@@ -263,8 +284,10 @@ chk "within-doc: rtm 行見出し (id+ラベル) == (requirements+nfr) (順序)"
 #   ★アンカーは class でなく *data-acc-link* (set_eq §6 が検証済の attr ゆえ件数も §6 が anchor)。 class 構文に非依存。
 #   ★round-5 ceiling: 可視を [^<]* で取ると <b>AC999</b> ネストで空に縮退し </span> マッチ失敗 → 要素脱落 → chk_empty 未検査=pass。
 #   marker-keyed (.*?) で span 全体を捕捉し『可視に < があれば NESTED=FAIL』で nested-content 偽装を構造的に封じる (ds8 不動点)。
-acc_vis_bad="$(perl -CSD -0777 -ne 'while (/data-acc-link="[^"]*__([^"]*)"[^>]*>(.*?)<\/span>/gs){ my ($s,$v)=($1,$2); push @b,"NESTED:$s" if $v=~/</; push @b,"$s\x{2260}$v" if $v ne $s; } END{ print join(" ",@b); }' "$BODY")"
-chk_empty "within-doc: 受入ドット可視 == data-acc-link suffix (class 非依存・nested-reject)" "$acc_vis_bad"
+# ★round-9 ceiling: data-acc-link を quote-robust に parse (旧 data-acc-link="..." は double-quote 固定で、 single-quote decoy
+#   <span class="dot ac" data-acc-link='FR1__AC1'>AC999</span> の可視 id 捏造 (suffix≠visible) を素通した = round-8 ceiling 実証)。
+acc_vis_bad="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @b; while ($t =~ /\bdata-acc-link\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))[^>]*>(.*?)<\/span>/gs){ my $lk=defined $1?$1:(defined $2?$2:$3); my $v=$4; my ($s)=$lk=~/^.*__(.*)$/; $s="" unless defined $s; push @b,"NESTED:$s" if $v=~/</; push @b,"$s\x{2260}$v" if $v ne $s; } print join(" ",@b);' < "$BODY")"
+chk_empty "within-doc: 受入ドット可視 == data-acc-link suffix (quote 非依存・nested-reject)" "$acc_vis_bad"
 # (k) constraint: 可視 id (cid2) + label (cl) — plain leaf / 規制バッジ (reg-badge=「法令 {reg}」) — 非空 regulation のみ compound。 §7e は 7b で件数のみだった。
 chk "within-doc: constraint.id (cid2) == .constraints[].id (順序)"    "$(qesc '.constraints[].id')"    "$(grep -oE '<td class="cid2">[^<]*</td>' "$BODY" | sed -E 's#<td class="cid2">([^<]*)</td>#\1#')"
 chk "within-doc: constraint.label (cl) == .constraints[].label (順序)" "$(qesc '.constraints[].label')" "$(grep -oE '<td class="cl">[^<]*</td>' "$BODY" | sed -E 's#<td class="cl">([^<]*)</td>#\1#')"

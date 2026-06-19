@@ -64,6 +64,21 @@ count_attr_token() { # $1=attr $2=token ; HTML は stdin
   '
 }
 
+# attr_values — stdin HTML から属性 $1 の各 occurrence の *値* を quote 構文・属性名 case・数値文字参照 非依存に 1 行ずつ出力。
+# count_attr_token の値版 (data-*-link 等の集合/件数突合を quote-robust に行うため。 旧 grep -oE 'attr="[^"]+"' は
+# single-quote/unquoted の偽属性を素通す = round-8 ceiling が acc-dot single-quote decoy で実証した穴)。 値内の tab/改行は空白へ畳む。
+attr_values() { # $1=attr ; HTML は stdin
+  ATTR="$1" perl -CSD -0777 -e '
+    my $attr=$ENV{ATTR}; my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
+    while ($txt =~ /\b(?i:\Q$attr\E)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
+      my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
+      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $v =~ s/&#(\d+);/chr($1)/ge;
+      $v =~ s/[\t\n]/ /g;
+      print "$v\n";
+    }
+  '
+}
+
 chk() { # label expected actual
   if [[ "$2" == "$3" ]]; then printf '  [OK]   %-'"$CHKW"'s %s\n' "$1" "$2"
   else printf '  [FAIL] %-'"$CHKW"'s expected %s, got %s\n' "$1" "$2" "$3"; fail=1; fi
