@@ -266,6 +266,23 @@ cp "$TMP/base-filled.html" "$TMP/a46.html"
 perl -0777 -i -pe 's#(<p class="prin-id">[^<]*</p>)#${1}<p class="prin-id">原則 — PRIN-FORGED</p>#' "$TMP/a46.html"
 expect_verify_fail_filled "A46 ★prin-id duplicate-decoy を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a46.html"
 
+# === ds8 ceiling round-3 反映: ADR identity echo parity (cover-meta / cxid / drid) ===
+
+# A47. ★表紙 cover-meta の 結果 KV を可視改竄 → 決定的再導出突合で FAIL (round-2 まで ADR cover-meta は皆無検証 = research (l') との parity gap)
+cp "$TMP/base-filled.html" "$TMP/a47.html"
+perl -0777 -i -pe 's#(<span class="k">結果</span><span class="v">)[^<]*#${1}良い 9 / トレードオフ 9#' "$TMP/a47.html"
+expect_verify_fail_filled "A47 ★cover-meta 結果 改竄を再導出突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a47.html"
+
+# A48. ★可視 cxid (context id) を改竄 (attr/contract 一意性は不変) → within-doc 順序突合で FAIL (research (k') との parity)
+cp "$TMP/base-filled.html" "$TMP/a48.html"
+perl -0777 -i -pe 's#(<span class="cxid">)CTX1#${1}CTX-PHANTOM#' "$TMP/a48.html"
+expect_verify_fail_filled "A48 ★可視 cxid 改竄を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a48.html"
+
+# A49. ★可視 drid (driver id) を改竄 → within-doc 順序突合で FAIL
+cp "$TMP/base-filled.html" "$TMP/a49.html"
+perl -0777 -i -pe 's#(class="drid">)DR1#${1}DR-PHANTOM#' "$TMP/a49.html"
+expect_verify_fail_filled "A49 ★可視 drid 改竄を within-doc 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a49.html"
+
 # === inject fail-closed ===
 
 # A18. manifest から 1 スロットを削除 → 集合不一致 abort

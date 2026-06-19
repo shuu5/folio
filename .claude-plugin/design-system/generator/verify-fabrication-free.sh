@@ -75,6 +75,15 @@ chk "summary link == Σ backward"        "$(q '[(.requirements + .nfr)[].trace.b
 chk "summary iso == 出所なし要件数"     "$(q '[(.requirements + .nfr)[] | select((.trace.backward | length)==0)] | length')" "${D[iso]:-MISSING}"
 chk "summary unv == 受入なし要件数"     "$(q '[(.requirements + .nfr)[] | select((.trace.acceptance | length)==0)] | length')" "${D[unv]:-MISSING}"
 
+# 7a. ★ds8 ceiling round-3: 表紙 cover-meta 4 KV (機能要件/非機能要件/受入基準/版) を決定的再導出突合 (ADR/research と parity・全 pack 共通の identity echo gap)。
+#    round-2 まで SRS cover-meta は皆無検証で 可視 KV 改竄 (機能要件 6件→999件) が素通る fail-open だった。 acceptance metric の class="v" は class="k" 非隣接ゆえ非該当。
+srs_meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
+chk "cover-meta 機能要件 == |req|+範囲"     "$(q '.requirements | length')件 ($(esc "$(q '.requirements[0].id')")–$(esc "$(q '.requirements[-1].id')"))" "$(printf '%s\n' "$srs_meta_kv" | grep -F '機能要件' | grep -vF '非機能' | head -1 | cut -f2)"
+chk "cover-meta 非機能要件 == |nfr|+範囲"   "$(q '.nfr | length')件 ($(esc "$(q '.nfr[0].id')")–$(esc "$(q '.nfr[-1].id')"))" "$(printf '%s\n' "$srs_meta_kv" | grep -F '非機能要件' | head -1 | cut -f2)"
+chk "cover-meta 受入基準 == |acceptance|+範囲" "$(q '.acceptance | length')件 ($(esc "$(q '.acceptance[0].id')")–$(esc "$(q '.acceptance[-1].id')"))" "$(printf '%s\n' "$srs_meta_kv" | grep -F '受入基準' | head -1 | cut -f2)"
+chk "cover-meta 版 == vX / date"           "v$(q '.meta.version') / $(q '.meta.date')" "$(printf '%s\n' "$srs_meta_kv" | grep -F '版' | head -1 | cut -f2)"
+chk "cover-meta KV 総数 == 4"              "4" "$(printf '%s\n' "$srs_meta_kv" | grep -c .)"
+
 # 7b. 内容部品の行数 (contract 要素数と一致 = 捏造/脱落なし、 全て独立した行マーカーで table-scoped)
 chk "goals == |goals|"             "$(q '.goals | length')"                               "$(grep -c 'class="card accent"' "$BODY")"
 chk "scope items == |in|+|out|"    "$(q '(.scope.in | length) + (.scope.out | length)')"  "$(grep -c 'class="b">' "$BODY")"

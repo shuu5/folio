@@ -148,6 +148,19 @@ adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" CHOSEN="
 ' "$BODY")"
 chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 (marker-keyed・swap/平文/タグ併記封鎖)" "$adr_echo_bad"
 
+# 3c. ★ds8 ceiling round-3: ADR identity echo の parity (research within-doc (k') / cover-meta (l') と対称)。
+#   round-2 まで ADR は cxid/drid 可視 id 列・cover-meta を皆無検証で、 可視 id 改竄 (CTX1→CTX-PHANTOM)・cover-meta 改竄が素通る fail-open だった
+#   (research は (k')(l') で突合済 = parity gap)。 cxid/drid は plain (esc) ゆえ [^<]* で安全抽出・opt-name は mark_terms で nested ゆえ対象外。
+chk "within-doc: 可視 cxid 列 == .context[].id (順序)" "$(q '.context[].id')" "$(grep -oE '<span class="cxid">[^<]*</span>' "$BODY" | sed -E 's#<span class="cxid">([^<]*)</span>#\1#')"
+chk "within-doc: 可視 drid 列 == .drivers[].id (順序)"  "$(q '.drivers[].id')"  "$(grep -oE 'class="drid">[^<]*</td>' "$BODY" | sed -E 's#class="drid">([^<]*)</td>#\1#')"
+# 表紙 cover-meta 4 KV (状態/選択肢/結果/版) の決定的再導出突合 (research (l') と同型)。
+adr_meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
+chk "cover-meta 状態 == adr_status"          "$(esc "$(q '.meta.adr_status')")" "$(printf '%s\n' "$adr_meta_kv" | grep -F '状態' | head -1 | cut -f2)"
+chk "cover-meta 選択肢 == |options|+範囲"     "$(q '.options | length')件 ($(esc "$(q '.options[0].id')")–$(esc "$(q '.options[-1].id')"))" "$(printf '%s\n' "$adr_meta_kv" | grep -F '選択肢' | head -1 | cut -f2)"
+chk "cover-meta 結果 == 良い/トレードオフ件数"  "$(esc "良い $(q '.consequences.positive | length') / トレードオフ $(q '.consequences.negative | length')")" "$(printf '%s\n' "$adr_meta_kv" | grep -F '結果' | head -1 | cut -f2)"
+chk "cover-meta 版 == vX / date"             "v$(q '.meta.version') / $(q '.meta.date')" "$(printf '%s\n' "$adr_meta_kv" | grep -F '版' | head -1 | cut -f2)"
+chk "cover-meta KV 総数 == 4"                "4" "$(printf '%s\n' "$adr_meta_kv" | grep -c .)"
+
 # 4. verdict 整合 (chosen ちょうど 1 + decision.chosen 一致)
 chk "verdict=chosen はちょうど 1 件" "1" "$(q '[.options[] | select(.verdict=="chosen")] | length')"
 chk "decision.chosen == verdict=chosen option" "$(q '[.options[] | select(.verdict=="chosen")][0].id // "MISSING"')" "$(q '.decision.chosen')"
