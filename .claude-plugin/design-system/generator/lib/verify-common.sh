@@ -34,6 +34,20 @@ qesc() { q "$1" | while IFS= read -r _v; do esc "$_v"; printf '\n'; done; }
 # assembler は小文字 ASCII class のみ emit ゆえ大文字 class (class="CT") は tamper で、 .ct 非適用でも
 # *無 style の可視要素として詐欺テキストを描画する* (round-5 ceiling: case-drop した偽 <p> + 同値小文字 decoy で
 # 抽出列を保存したまま可視捏造を素通せた)。 占有数は case 込みで数えて偽要素の add を必ず捕捉する。 chr(39) で single-quote 回避。
+# class_tokens — stdin HTML の各 class 属性のトークン集合を 1 行ずつ出力 (quote 構文・属性名 case・数値文字参照 非依存・値は lc)。
+# joint-token 占有数 (RTM dot) や class-token 機械的網羅を *quote-robust* に走査するため (count_attr_token と同じ 3 分岐 parse)。
+class_tokens() { # HTML は stdin
+  perl -CSD -0777 -e '
+    my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
+    while ($txt =~ /\b(?i:class)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
+      my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
+      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $v =~ s/&#(\d+);/chr($1)/ge;
+      my @t = grep { length } map { lc } split(/\s+/, $v);
+      print "@t\n" if @t;
+    }
+  '
+}
+
 count_attr_token() { # $1=attr $2=token ; HTML は stdin
   ATTR="$1" TOK="$2" perl -CSD -0777 -e '
     my ($attr,$tok)=($ENV{ATTR},$ENV{TOK}); my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt; my $tl=lc $tok;

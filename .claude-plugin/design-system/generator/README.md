@@ -229,8 +229,8 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) — lib/common.sh が全 pack 同一構造で emit
     (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。
   (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造は floor・本文 prose 内容は ceiling 寄り)。
-- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→92** (round-1 A36-A46 + round-2 A47-A57 +
-  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖])・**ADR 52→53** (A51: drg)。
+- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→96** (round-1 A36-A46 + round-2 A47-A57 +
+  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖] + round-8 A84-A87 [rtm-summary 可視数値 + dot/novel の quote-robust 化])・**ADR 52→53** (A51: drg)。
   全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
 - **two-gate 境界 (確定)**: 識別子・構造・数値・統制値 = floor (機械検証・本 issue)。 本文 prose 内容 + opus prose スロット (cover-summary/plain/rationale 等) の
   content fidelity = ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 識別子/統制値は区別可能ゆえ floor、 自由 prose は ceiling 寄り。
@@ -267,7 +267,7 @@ folio verify-srs filled.html contract/ec-checkout.srs.yaml                      
 uv run --with playwright==1.60.0 python render-gate-srs.py filled.html           # 実 SRS を light/dark × 3 viewport で検査
 uv run --with playwright==1.60.0 python render-gate-srs.py --selftest            # detector の検出力を fixture で自己検証
 
-./test-adversarial.sh                                                            # 92 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty 識別子/構造値 (§7e+§7f+marker count) の回帰
+./test-adversarial.sh                                                            # 96 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty 識別子/構造値 (§7e+§7f+marker count) の回帰
 ```
 
 ## S5 floor: verify-srs (taxonomy §5.2 gate A-H + visual-first)

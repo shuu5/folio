@@ -219,17 +219,31 @@ chk "vcount: cover-meta v + metric v == 4+|acceptance|" "$((4 + nacc))" "$(count
 chk "vcount: tgt == |nfr|"           "$(q '.nfr | length')" "$(count_attr_token class tgt < "$BODY")"
 # RTM 可視ドット: data-*-link 属性 absent の偽ドット (class だけで .dot.ac 緑 pill 描画) を封鎖。 §5/§6 は attr のみ anchor ゆえ素通った。
 #   joint-token: dot∧ac == data-acc-link 出現数 (受入) / dot∧¬ac == data-trace-link 出現数 (後方●)。 ('ac' 単独は受入カード class="ac" と衝突ゆえ joint 必須)
-chk "vcount: dot∧ac == |data-acc-link|" "$(grep -o 'data-acc-link=' "$BODY" | wc -l | tr -d ' ')" "$(perl -CSD -0777 -ne 'my $c=0; while (/\bclass\s*=\s*"([^"]*)"/gi){ my %t=map{lc($_)=>1} split /\s+/,$1; $c++ if $t{dot}&&$t{ac}; } print $c;' "$BODY")"
-chk "vcount: dot∧¬ac == |data-trace-link|" "$(grep -o 'data-trace-link=' "$BODY" | wc -l | tr -d ' ')" "$(perl -CSD -0777 -ne 'my $c=0; while (/\bclass\s*=\s*"([^"]*)"/gi){ my %t=map{lc($_)=>1} split /\s+/,$1; $c++ if $t{dot}&&!$t{ac}; } print $c;' "$BODY")"
+# ★round-7 ceiling: dot joint-token は quote-robust な class_tokens 経由で数える (旧 inline perl は double-quote 固定ゆえ
+#   single-quote/unquoted の偽 dot を素通した — .rtm td .dot.ac は class 名 match=quote 非依存ゆえ偽緑 pill が実描画される)。
+chk "vcount: dot∧ac == |data-acc-link|"   "$(grep -o 'data-acc-link=' "$BODY" | wc -l | tr -d ' ')"   "$(class_tokens < "$BODY" | awk '{d=a=0;for(i=1;i<=NF;i++){if($i=="dot")d=1;if($i=="ac")a=1}if(d&&a)c++}END{print c+0}')"
+chk "vcount: dot∧¬ac == |data-trace-link|" "$(grep -o 'data-trace-link=' "$BODY" | wc -l | tr -d ' ')" "$(class_tokens < "$BODY" | awk '{d=a=0;for(i=1;i<=NF;i++){if($i=="dot")d=1;if($i=="ac")a=1}if(d&&!a)c++}END{print c+0}')"
 chk "vcount: l == |acceptance| (metric_l)" "$nacc" "$(count_attr_token class l < "$BODY")"
 # ★round-6 ceiling 根本 fix: vcount allowlist drift の *構造封鎖*。 上の vcount は手選別ゆえ drift する (origin/k/v/dot が漏れていた)。
 #   body の全 class token は COUNTED (占有数パリティ済の value class) か EXEMPT (構造/modifier/繰延 prose·chrome) のいずれかに *機械的に* 分類されねばならない。
 #   未分類トークン = 将来の value class 追加 (enumeration drift) を必ず FAIL し count-parity 追加 (COUNTED 登録) を強制する = allowlist drift を構造的に検出。
 #   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (body prose=folio-4cf: cd/at/resp/cond/meas/role/why/plain・chrome=folio-mk9: when/who/stamp/sign/grow/gword/gdef/en/term)。
 COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac"
+# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose=folio-4cf / chrome=folio-mk9)。 ★rtm-summary-derived は可視 contract 値 (派生 5 数値) を
+#   運ぶゆえ EXEMPT でなく下の専用 chk で可視突合する (round-7 ceiling misclassification 是正)。
 EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-eyebrow cover-meta cover-sub doc-type reader-chip summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold rtm-summary-derived scol ears-legend lt m b ext-badge nfr-hero cd at resp cond meas role why plain term en gword gdef grow when who stamp sign"
-unknown_cls="$(KNOWN="$COUNTED $EXEMPT" perl -CSD -0777 -ne 'my %k=map{$_=>1} split /\s+/,$ENV{KNOWN}; my %seen; while (/\bclass\s*=\s*"([^"]*)"/gi){ for (split /\s+/,$1){ my $t=lc; next unless length; $seen{$t}=1 unless $k{$t}; } } print join(" ", sort keys %seen);' "$BODY")"
+# ★quote-robust: class_tokens 経由 (旧 inline perl は double-quote 固定で single/unquoted novel token を分類漏れ = drift 構造封鎖の overclaim)。
+unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $COUNTED $EXEMPT | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
+# ★round-7 ceiling: rtm-summary-derived の *可視* 5 数値 (要件/上位ニーズ/トレースリンク/孤立/未検証) を再導出突合 (§7 は data-derived
+#   *属性* のみ・可視テキストはどの層も突合せず EXEMPT で素通った misclassification = 決定的 contract 値の捏造が可能だった)。
+rtm_nreq="$(q '(.requirements + .nfr) | length')"; rtm_nneed="$(q '.upper_needs | length')"
+rtm_nlinks="$(q '[(.requirements + .nfr)[].trace.backward[]] | length')"
+rtm_niso="$(q '[(.requirements + .nfr)[] | select((.trace.backward | length)==0)] | length')"
+rtm_nunv="$(q '[(.requirements + .nfr)[] | select((.trace.acceptance | length)==0)] | length')"
+exp_rtmsum="要件 ${rtm_nreq} 件 / 上位ニーズ ${rtm_nneed} 件 / トレースリンク ${rtm_nlinks} 本 / 孤立要件 (出所なし) ${rtm_niso} 件 / 未検証要件 (受入なし) ${rtm_nunv} 件"
+act_rtmsum="$(perl -CSD -0777 -ne 'while (/<p class="rtm-summary-derived"[^>]*>(.*?)<\/p>/gs){ print $1 }' "$BODY")"
+chk "within-doc: rtm-summary 可視 5 数値 == 再導出 (data-derived 属性の可視版)" "$exp_rtmsum" "$act_rtmsum"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
 exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
 act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"

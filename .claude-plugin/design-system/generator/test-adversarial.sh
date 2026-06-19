@@ -523,6 +523,32 @@ d=open('$TMP/good.html').read()
 o='<td class=\"resp\">'; assert o in d
 open('$TMP/g_novel.html','w').write(d.replace(o,o+'<span class=\"zzznovelclass\">捏造</span>',1))
 " 2>/dev/null; then expect_verify_fail "A83 ★novel-class drift を class-token 機械的網羅で捕捉" "$BASE" "$TMP/g_novel.html"; else ng "A83 setup 失敗"; fi
+# ★round-7 ceiling (wf_5cd6b11d): EXEMPT misclassification + dot/novel の quote-syntax 穴 (round-8 で封鎖)。
+# A84. ★rtm-summary-derived の *可視* 派生数値 (孤立要件 0→999件) を改竄 (data-derived 属性は無傷) → 可視 5 数値突合で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='孤立要件 (出所なし) 0 件'
+assert o in d
+open('$TMP/g_rtmsum.html','w').write(d.replace(o,'孤立要件 (出所なし) 999 件',1))
+" 2>/dev/null; then expect_verify_fail "A84 ★rtm-summary 可視派生数値 改竄を可視 5 数値突合で捕捉" "$BASE" "$TMP/g_rtmsum.html"; else ng "A84 setup 失敗"; fi
+# A85. ★dot ac single-quote attr-absent 偽ドット (.dot.ac 緑 pill 描画・data-acc-link 無し) → quote-robust dot joint-token で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"hit\">'; assert o in d
+open('$TMP/g_dotsq.html','w').write(d.replace(o,o+'<span class=\\'dot ac\\'>AC9</span>',1))
+" 2>/dev/null; then expect_verify_fail "A85 ★dot ac single-quote attr-absent を quote-robust joint-token で捕捉" "$BASE" "$TMP/g_dotsq.html"; else ng "A85 setup 失敗"; fi
+# A86. ★dot 後方● unquoted attr-absent → quote-robust dot∧¬ac で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"hit\">'; assert o in d
+open('$TMP/g_dotuq.html','w').write(d.replace(o,o+'<span class=dot>●</span>',1))
+" 2>/dev/null; then expect_verify_fail "A86 ★dot 後方● unquoted attr-absent を quote-robust joint-token で捕捉" "$BASE" "$TMP/g_dotuq.html"; else ng "A86 setup 失敗"; fi
+# A87. ★novel-class を single-quote で書いた drift → quote-robust class-token 機械的網羅で捕捉 (double-quote 固定の overclaim 是正)
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; assert o in d
+open('$TMP/g_novelsq.html','w').write(d.replace(o,o+'<span class=\\'zzznovelsq\\'>x</span>',1))
+" 2>/dev/null; then expect_verify_fail "A87 ★single-quote novel-class を quote-robust 機械的網羅で捕捉" "$BASE" "$TMP/g_novelsq.html"; else ng "A87 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"
