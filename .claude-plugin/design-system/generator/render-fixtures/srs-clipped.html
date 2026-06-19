@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: clipped-content (mobile-clip)</title>
+<style>
+  /* overflow:hidden な wrap が min-width:560px の dense table を内包する。 375 viewport では wrap が
+     列を切り落とし scroll もできない (clipped-content 発火)。 1280 では table が収まり clip しない (clean)
+     = viewport plumbing の証明。 wrap は width:100% ゆえ document 自体は溢れない (= horizontal-overflow
+     ではなく intra-element clip だけが起きる = mobile-clip 盲点の再現)。 text は高コントラストで contrast
+     arm を黙らせる。 */
+  body{ margin:0; padding:0; background:#ffffff; color:#111418; font:14px/1.6 system-ui, sans-serif; }
+  .wrap{ width:100%; overflow:hidden; border:1px solid #cccccc; border-radius:8px; }
+  table{ width:100%; min-width:560px; border-collapse:collapse; }
+  th,td{ padding:9px 13px; border:1px solid #dddddd; color:#111418; text-align:left; }
+  th{ background:#15324a; color:#ffffff; }
+</style>
+</head>
+<body>
+<section data-component="requirement-matrix-table">
+  <div class="wrap">
+    <table>
+      <thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする</th><th>優先</th></tr></thead>
+      <tbody>
+        <tr><td>FR1</td><td>きっかけ</td><td>注文確定を押したとき</td><td>在庫を確保してから決済へ進む</td><td>必須</td></tr>
+        <tr><td>FR2</td><td>禁止</td><td>連打されたとき</td><td>二回目以降は受け付けない</td><td>必須</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</body>
+</html>

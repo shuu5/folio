@@ -2,9 +2,10 @@
 """folio SRS render-gate (taxonomy §5.2 gate F) — 生成 SRS プレゼン HTML の決定的 render 健全性検査。
 
 verify-srs.sh (gate A-E,G,H + visual-first) は pure-bash で render 後の DOM を見れないため、 本 gate が
-headless chromium で実 render し、 probe-srs.js で 3 class を検出する:
+headless chromium で実 render し、 probe-srs.js で 4 class を検出する:
   (1) horizontal-overflow — 意図しない document 横スクロール
   (2) component-overlap   — data-component block 同士の矩形交差
+  (2b) clipped-content    — overflow-x:hidden/clip 要素が中身を横に切り落とし scroll 不能 (mobile-clip 盲点・folio-276 #2)
   (3) low-contrast        — text↔実効背景の WCAG AA 未満 (S3 で手検出した dark-contrast 崩壊型)
 検査は **light / dark 両 color-scheme × 3 viewport (375/768/1280)** の直積で行う。 dark 専用の崩れ
 (色トークンの dark override 漏れ等) は dark を実際に emulate しないと捕れない (S3 の実欠陥がこの class)。
@@ -13,10 +14,11 @@ headless chromium で実 render し、 probe-srs.js で 3 class を検出する:
 本 gate は単一 SRS HTML を対象にし、 生成 SRS 固有の color/overflow/overlap を見る。 幾何定数 (横溢れ許容・
 overlap 面積比) は probe.js (ADR-0037) の値を probe-srs.js が複製する (drift は test-adversarial A35 が検知)。
 
-被覆限界 (honest disclosure): taxonomy §5.2 gate F は「overlap / 横幅超過 / 不可視化」を掲げるが、 本実装の
-「不可視化」検出は **low-contrast (読めない=実質不可視) のみ**。 clip / visibility:hidden / overflow:hidden に
-よる *物理的* invisibility (mermaid probe.js の content-clipped 相当) は未対応 — 必須部品が CSS バグで丸ごと
-不可視化しても violation でなく検査対象外になる (visible() を除外 filter として使うため)。 これは ADR-0037 が
+被覆限界 (honest disclosure): taxonomy §5.2 gate F は「overlap / 横幅超過 / 不可視化」を掲げる。 「不可視化」の
+うち (a) low-contrast (読めない=実質不可視)、 (b) overflow-x:hidden/clip による *横方向* の content clip
+(clipped-content arm・folio-276 #2) を捕捉する。 残る未対応: 縦方向 clip / visibility:hidden / overflow:hidden に
+よる *完全* invisibility (mermaid probe.js の content-clipped 相当) — 必須部品が CSS バグで丸ごと不可視化しても
+violation でなく検査対象外になる (visible() を除外 filter として使うため)。 これは ADR-0037 が
 best-effort tier とし folio-w5z 系列へ漸進としたのと同じ posture。 gradient/image 背景のうち色不明な image
 (url()) も同様に skip され、 件数を gradient skip として disclose する (停止色のある gradient は worst-case 評価)。
 
@@ -156,6 +158,14 @@ def run_selftest(base_url: str) -> int:
         # 横溢れ: 375 で発火・1280 で clean = viewport plumbing の証明
         ("srs-h-overflow.html", 375, "light", {"horizontal-overflow"}),
         ("srs-h-overflow.html", 1280, "light", set()),
+        # mobile-clip: overflow:hidden wrap 内 min-width table の列潰れ。 375 で clipped-content 発火・
+        # 1280 で table が収まり clean = viewport plumbing の証明 + 横 clip が document overflow と別物で
+        # ある (= horizontal-overflow でなく clipped-content で鳴る) ことを kind 完全一致で固定する。
+        # dark でも同じ幾何で発火させ、 新 arm が gate の light/dark 直積方針と非対称でない (color に依らず
+        # clip を捕捉する) ことを pin する。
+        ("srs-clipped.html", 375, "light", {"clipped-content"}),
+        ("srs-clipped.html", 375, "dark", {"clipped-content"}),
+        ("srs-clipped.html", 1280, "light", set()),
         # overlap: 両 data-component (srs-overlap) と 非 data-component 装飾の被さり (noncomp-overlap) の双方を捕捉
         ("srs-overlap.html", 1280, "light", {"component-overlap"}),
         ("srs-noncomp-overlap.html", 1280, "light", {"component-overlap"}),

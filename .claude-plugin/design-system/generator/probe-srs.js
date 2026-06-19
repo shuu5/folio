@@ -2,11 +2,14 @@
  * folio SRS render-gate probe — 生成 SRS プレゼン HTML の in-browser 幾何 + 色 detector (gate F)。
  *
  * taxonomy §5.2 gate F (render 健全性) の SRS 版。 既存 folio render-gate (tests/render-gate、 mermaid
- * flowchart 専用) とは別系統で、 生成 SRS プレゼンに固有の 3 class を render 後の DOM から検出する:
+ * flowchart 専用) とは別系統で、 生成 SRS プレゼンに固有の 4 class を render 後の DOM から検出する:
  *   (1) horizontal-overflow — 本文が viewport を溢れ document 全体に意図しない横スクロール
  *       (probe.js (5) と同一ロジック・同一定数値 H_OVERFLOW_TOL を複製。 drift は test-adversarial A35 が検知)
  *   (2) component-overlap   — data-component block が「別の」 data-component と矩形交差 (絶対配置・
  *       負 margin 等の崩れ。 probe.js (6) の overlap-frac 定数値 0.15 を複製、 A35 で drift 検知)
+ *   (2b) clipped-content    — overflow-x:hidden/clip な要素が中身を横に溢れ、 読めない上に scroll も
+ *       できない (狭幅で dense table が列潰れ → wrap が clip する mobile-clip 盲点。 folio-276 #2)。
+ *       (1) は overflow 非 visible 祖先を「内部 scroll」と除外するため clip された中身を素通りする。
  *   (3) low-contrast        — text と実効背景の WCAG コントラスト比が AA 未満 (S3 で手検出した
  *       dark-contrast 崩壊型を gate 化)。 caller が light / dark 両 color-scheme で本 probe を呼ぶ。
  *
@@ -207,6 +210,34 @@ window.__folioSrsRenderProbe = function (scheme) {
         frac: +frac.toFixed(2),
       });
     }
+  }
+
+  /* === (2b) clipped-content (mobile-clip) — overflow-x:hidden/clip な要素が中身を横に溢れさせ、
+     読めない上に scroll もできない盲点を捕捉する (folio-276 #2)。 狭幅 (375-390px) で dense table を
+     内包する .tbl-wrap 等が列を潰し clip する型。 horizontal-overflow (1) は overflow 非 visible の祖先を
+     「内部 scroll で document へ伝播しない」と見なし除外するため、 clip された中身は document overflow に
+     ならず (1) を素通りする (= mobile-clip 盲点)。 overflow-x:auto/scroll (= 横スクロールで到達可能) は
+     健全ゆえ対象外 — hidden/clip で *到達不能に切り落とされた* 中身だけが欠陥。 === */
+  const CLIP_TOL = H_OVERFLOW_TOL; // 横 clip の許容 px。 H_OVERFLOW_TOL を直接参照し drift 不能にする
+                                   // (別リテラルだと A35 drift 検査の対象外で「同値」コメントが静かに腐る)
+  const CLIP_MAX_CULPRITS = 5;
+  const clipCands = [];
+  for (const el of (document.body ? document.body.querySelectorAll('*') : [])) {
+    if (!visible(el)) continue;
+    const ox = getComputedStyle(el).overflowX;
+    if (ox !== 'hidden' && ox !== 'clip') continue;      // auto/scroll は到達可能ゆえ健全
+    const over = el.scrollWidth - el.clientWidth;         // clip された中身の溢れ量 (clientWidth=内容ボックス幅)
+    if (over <= CLIP_TOL) continue;
+    if (area(rect(el)) < 16) continue;
+    clipCands.push({ el, over });
+  }
+  // clip 要素が別の clip 要素に入れ子なら最外だけ報告 (二重計上回避、 (1) と同形)
+  const topClip = clipCands.filter((c) => !clipCands.some((o) => o !== c && o.el.contains(c.el)));
+  topClip.sort((a, b) => b.over - a.over).slice(0, CLIP_MAX_CULPRITS).forEach((c) => {
+    violations.push({ kind: 'clipped-content', text: `<${c.el.tagName.toLowerCase()}> ${snippet(c.el)}`, clipPx: Math.round(c.over) });
+  });
+  if (topClip.length > CLIP_MAX_CULPRITS) {
+    violations.push({ kind: 'clipped-content', text: `(他 ${topClip.length - CLIP_MAX_CULPRITS} 要素)`, clipPx: 0 });
   }
 
   /* === (3) low-contrast — text ↔ 実効背景の WCAG AA === */
