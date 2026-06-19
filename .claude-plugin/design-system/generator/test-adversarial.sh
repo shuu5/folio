@@ -490,6 +490,39 @@ o='<td class=\"resp\">'; n='<td class=\"resp\"><span class=\"&#102;id\">FRX-GHOS
 assert o in d
 open('$TMP/g_entity.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A78 ★entity-encoded class ghost (&#102;id) を文字参照 decode で捕捉" "$BASE" "$TMP/g_entity.html"; else ng "A78 setup 失敗"; fi
+# ★round-6 ceiling (wf_15affdca): vcount allowlist drift (origin/cover-meta/RTM dot 漏れ) + 構造的 drift 封鎖 (round-7)。
+# A79. ★origin case-drop+decoy (vcount allowlist 漏れ) → origin count-parity で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+m=re.search(r'<span class=\"origin\">[^<]*</span>', d); assert m; frag=m.group(0)
+open('$TMP/g_origin.html','w').write(d.replace(frag,'<span class=\"ORIGIN\">捏造出所</span>'+frag,1))
+" 2>/dev/null; then expect_verify_fail "A79 ★origin case-drop+decoy を origin count-parity で捕捉" "$BASE" "$TMP/g_origin.html"; else ng "A79 setup 失敗"; fi
+# A80. ★cover-meta k/v case-drop+decoy (機能要件 6件→999件 = round-5 が名指しした fraud) → k/v count-parity で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+import re
+m=re.search(r'<span class=\"k\">[^<]*</span><span class=\"v\">[^<]*</span>', d); assert m; kv=m.group(0)
+open('$TMP/g_kv.html','w').write(d.replace(kv,'<span class=\"K\">機能要件</span><span class=\"V\">999件</span>'+kv,1))
+" 2>/dev/null; then expect_verify_fail "A80 ★cover-meta k/v case-drop+decoy を k/v count-parity で捕捉" "$BASE" "$TMP/g_kv.html"; else ng "A80 setup 失敗"; fi
+# A81. ★RTM dot ac (受入) の data-acc-link attr-absent 偽ドット (.dot.ac 緑 pill 描画) → dot∧ac 占有数パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"hit\">'; assert o in d
+open('$TMP/g_dotac.html','w').write(d.replace(o,o+'<span class=\"dot ac\">AC999</span>',1))
+" 2>/dev/null; then expect_verify_fail "A81 ★dot ac attr-absent 偽ドットを dot∧ac 占有数で捕捉" "$BASE" "$TMP/g_dotac.html"; else ng "A81 setup 失敗"; fi
+# A82. ★RTM dot 後方● の data-trace-link attr-absent 偽ドット → dot∧¬ac 占有数パリティで捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"hit\">'; assert o in d
+open('$TMP/g_dotb.html','w').write(d.replace(o,o+'<span class=\"dot\">●</span>',1))
+" 2>/dev/null; then expect_verify_fail "A82 ★dot 後方● attr-absent 偽ドットを dot∧¬ac 占有数で捕捉" "$BASE" "$TMP/g_dotb.html"; else ng "A82 setup 失敗"; fi
+# A83. ★novel-class drift: 未分類の新 class token を持つ ghost → class-token 機械的網羅 (構造的 drift 封鎖) で捕捉
+if python3 -c "
+d=open('$TMP/good.html').read()
+o='<td class=\"resp\">'; assert o in d
+open('$TMP/g_novel.html','w').write(d.replace(o,o+'<span class=\"zzznovelclass\">捏造</span>',1))
+" 2>/dev/null; then expect_verify_fail "A83 ★novel-class drift を class-token 機械的網羅で捕捉" "$BASE" "$TMP/g_novel.html"; else ng "A83 setup 失敗"; fi
 
 echo
 echo "PASS=$pass FAIL=$fail"

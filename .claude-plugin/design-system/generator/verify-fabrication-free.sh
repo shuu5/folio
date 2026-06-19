@@ -210,6 +210,26 @@ chk "vcount: aid == |acceptance|"    "$nacc"  "$(count_attr_token class aid < "$
 chk "vcount: metric == |acceptance|" "$nacc"  "$(count_attr_token class metric < "$BODY")"
 chk "vcount: cat == |nfr(hero)|"     "$nhero" "$(count_attr_token class cat < "$BODY")"
 chk "vcount: qual == |nfr(hero)|"    "$nhero" "$(count_attr_token class qual < "$BODY")"
+chk "vcount: big == |nfr(hero)|"     "$nhero" "$(count_attr_token class big < "$BODY")"
+chk "vcount: u == |nfr(hero)|"       "$nhero" "$(count_attr_token class u < "$BODY")"
+# ★round-6 ceiling: vcount allowlist の drift で漏れていた origin/cover-meta(k/v)/RTM dot を追加 (case-drop+decoy / attr-absent 偽 dot を封鎖)。
+chk "vcount: origin == |upper_needs|" "$nun" "$(count_attr_token class origin < "$BODY")"
+chk "vcount: cover-meta k == 4"       "4"    "$(count_attr_token class k < "$BODY")"
+chk "vcount: cover-meta v + metric v == 4+|acceptance|" "$((4 + nacc))" "$(count_attr_token class v < "$BODY")"
+chk "vcount: tgt == |nfr|"           "$(q '.nfr | length')" "$(count_attr_token class tgt < "$BODY")"
+# RTM 可視ドット: data-*-link 属性 absent の偽ドット (class だけで .dot.ac 緑 pill 描画) を封鎖。 §5/§6 は attr のみ anchor ゆえ素通った。
+#   joint-token: dot∧ac == data-acc-link 出現数 (受入) / dot∧¬ac == data-trace-link 出現数 (後方●)。 ('ac' 単独は受入カード class="ac" と衝突ゆえ joint 必須)
+chk "vcount: dot∧ac == |data-acc-link|" "$(grep -o 'data-acc-link=' "$BODY" | wc -l | tr -d ' ')" "$(perl -CSD -0777 -ne 'my $c=0; while (/\bclass\s*=\s*"([^"]*)"/gi){ my %t=map{lc($_)=>1} split /\s+/,$1; $c++ if $t{dot}&&$t{ac}; } print $c;' "$BODY")"
+chk "vcount: dot∧¬ac == |data-trace-link|" "$(grep -o 'data-trace-link=' "$BODY" | wc -l | tr -d ' ')" "$(perl -CSD -0777 -ne 'my $c=0; while (/\bclass\s*=\s*"([^"]*)"/gi){ my %t=map{lc($_)=>1} split /\s+/,$1; $c++ if $t{dot}&&!$t{ac}; } print $c;' "$BODY")"
+chk "vcount: l == |acceptance| (metric_l)" "$nacc" "$(count_attr_token class l < "$BODY")"
+# ★round-6 ceiling 根本 fix: vcount allowlist drift の *構造封鎖*。 上の vcount は手選別ゆえ drift する (origin/k/v/dot が漏れていた)。
+#   body の全 class token は COUNTED (占有数パリティ済の value class) か EXEMPT (構造/modifier/繰延 prose·chrome) のいずれかに *機械的に* 分類されねばならない。
+#   未分類トークン = 将来の value class 追加 (enumeration drift) を必ず FAIL し count-parity 追加 (COUNTED 登録) を強制する = allowlist drift を構造的に検出。
+#   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (body prose=folio-4cf: cd/at/resp/cond/meas/role/why/plain・chrome=folio-mk9: when/who/stamp/sign/grow/gword/gdef/en/term)。
+COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac"
+EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-eyebrow cover-meta cover-sub doc-type reader-chip summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold rtm-summary-derived scol ears-legend lt m b ext-badge nfr-hero cd at resp cond meas role why plain term en gword gdef grow when who stamp sign"
+unknown_cls="$(KNOWN="$COUNTED $EXEMPT" perl -CSD -0777 -ne 'my %k=map{$_=>1} split /\s+/,$ENV{KNOWN}; my %seen; while (/\bclass\s*=\s*"([^"]*)"/gi){ for (split /\s+/,$1){ my $t=lc; next unless length; $seen{$t}=1 unless $k{$t}; } } print join(" ", sort keys %seen);' "$BODY")"
+chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
 exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
 act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"
@@ -244,9 +264,10 @@ chk "within-doc: actor (key, tint) == .actors (順序)" "$exp_tint" "$act_tint"
 # ★scope 境界 (no silent caps・round-2 ceiling で honest 後退): §7e+§7f は SRS 本体の
 #   *識別子・構造・数値・統制値* フィールド (id/fid/data-req-id/ears class+label/priority class+label/vmethod/nid/category/
 #   metric_v·l/nfr-hero 数値/cid2/label/regulation/rtm 列見出し+行見出し id+行ラベル/受入ドット可視/tint/origin/goals headline+id/actor key+name) を
-#   *二層* で完全列挙・突合する: (1) 順序突合 (chk) = 値・順序の改竄、 (2) ★count_attr_token 占有数パリティ (HTML 属性構文非依存 =
-#   quote/case/数値文字参照を吸収・全 value class + 統制値 marker は global∧要件行内∧legend-scope の三項 binding) = case-drop+decoy/
-#   entity ghost/chrome relocation の add を封鎖、 (3) acc-dot は marker-keyed nested-reject。 round-5 ceiling の HTML 属性構文 robustness
+#   *三層* で完全列挙・突合する: (1) 順序突合 (chk) = 値・順序の改竄、 (2) ★count_attr_token 占有数パリティ (HTML 属性構文非依存 =
+#   quote/case/数値文字参照を吸収・全 value class + 統制値 marker は global∧要件行内∧legend-scope の三項 binding・RTM dot は joint-token) =
+#   case-drop+decoy/entity ghost/chrome relocation/attr-absent 偽 dot の add を封鎖、 (3) ★class-token 機械的網羅 (全 token が COUNTED|EXEMPT =
+#   vcount allowlist drift を構造封鎖・将来の value class 追加を必ず FAIL) + acc-dot marker-keyed nested-reject。 round-5/6 ceiling の HTML 属性構文 robustness
 #   兄弟 (nested-content / case-drop+decoy / legend relocation / entity-encoding) を全て決定論的に封じた。 ★ただし以下 2 つは本 issue scope 外として *明示繰延* する:
 #   (1) **body prose テキスト値** (mark_terms 系の自由文: ears.condition/response・nfr.target/measure・acceptance.criterion・
 #       upper_needs.need・goals.desc・scope.in/out・actor.role・constraint.text) — 決定的だが本文 prose ゆえ value 突合は別カテゴリ。

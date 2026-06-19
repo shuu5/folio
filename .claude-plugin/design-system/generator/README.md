@@ -215,9 +215,11 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   属性名・値トークンとも **case 非依存** + **quote 構文非依存** (`"..."`/`'...'`/unquoted/multi-class) + **数値文字参照 decode** (`&#102;id`→fid)。 assembler は小文字 ASCII class のみ
   emit ゆえ single/大文字/entity/multi-class class は全て tamper だが素朴な `grep 'class="fid"'` を素通る → 属性値を空白分割しトークンを lc 完全一致で数える。
   (b) ★**統制値は可視 styling class token** (`.prio/.ears/.vmeth`) を **global ∧ 要件行内 ∧ legend-scope** の三項で binding (class-prio-only ghost / chrome relocation / legend 削除+add の各死角を相互補完)。
-  (c) ★**value-internal class の count-parity** (ct/cid/av/nm/grp/lbl/cl/cid2/reg-badge/aid/metric/cat/qual) — 小文字 grep の ordered 値突合は単体では `class="CT"` で偽要素を脱落させ
-  同値 decoy で列保存する case-drop+decoy を素通すため、 占有数パリティを *併設* し偽要素の add を封鎖 (二層)。 (d) **rtm 行見出し id** (`<tr><th>` は class-less ゆえ `/gi` で偽行を抽出列へ)・
-  **受入ドット可視** (marker-keyed nested-reject = `<b>AC999</b>` ネストでの脱落を封じる)。 ★occurrence は token 単位 (grep -c の line-count gotcha 回避)。
+  (c) ★**value-internal class の count-parity** (ct/cid/av/nm/grp/lbl/cl/cid2/reg-badge/aid/metric/cat/qual/big/u/origin/k/v/tgt/l/RTM dot は joint-token) — 小文字 grep の
+  ordered 値突合は単体では `class="CT"` で偽要素を脱落させ同値 decoy で列保存する case-drop+decoy を素通すため、 占有数パリティを *併設* し偽要素の add を封鎖 (二層)。
+  (d) **rtm 行見出し id** (`<tr><th>` は class-less ゆえ `/gi` で偽行を抽出列へ)・**受入ドット可視** (marker-keyed nested-reject = `<b>AC999</b>` ネストでの脱落を封じる)。
+  (e) ★**class-token 機械的網羅** (round-6 ceiling 根本 fix): body の全 class token は COUNTED (占有数パリティ済) か EXEMPT (構造/modifier/繰延 prose·chrome) に *機械分類* されねばならず、
+  未分類トークン (将来の value class 追加 = vcount allowlist drift) を必ず FAIL し count-parity 追加を強制する = 6 round 通底の partial-enumeration を構造封鎖。 ★occurrence は token 単位。
 - **core**: `lib/verify-common.sh` に `qesc` (yq 式の各行を esc して出力する複数行 esc) を追加 (純追加・両 pack 共用)。
 - **★scope 境界 (no silent caps・round-2 ceiling で honest 後退)**: dty は SRS 本体の **識別子・構造・数値・統制値** フィールド (id/fid/data-req-id/EARS/priority/
   vmethod/nid/category/metric/cid2/label/regulation/rtm 見出し+行ラベル/tint/origin/headline/key/name) を順序突合 + marker 占有数パリティで完全列挙・突合する。
@@ -227,8 +229,8 @@ ds8 round-4 が繰延した「決定的可視フィールド値が *件数のみ
   - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) — lib/common.sh が全 pack 同一構造で emit
     (ADR/research も同じ count-only gap) ゆえ `verify_core_chrome` 昇格の cross-pack follow-up **bd folio-mk9**。
   (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造は floor・本文 prose 内容は ceiling 寄り)。
-- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→87** (round-1 A36-A46 + round-2 A47-A57 +
-  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class])・**ADR 52→53** (A51: drg)。
+- **非破壊**: assemble/inject/css 無改変 → 生成 artifact byte-identical (floor 強化は verify 側のみ)。 敵対 **SRS 44→55→66→69→92** (round-1 A36-A46 + round-2 A47-A57 +
+  round-3 A58-A60 [decoy/ghost fid/ghost nid] + round-4 A61-A67 [single-quote ghost fid/nid・chrome ghost prio/vmeth・rtm 行見出し id・受入ドット可視・delete-legend+add-row・unquoted/multi-class/大文字属性名 ghost・class-prio-only ghost・acc-dot class-case 回避] + round-6 A74-A78 [acc-dot nested / ct·cl case-drop+decoy / legend relocation / entity-encoded class] + round-7 A79-A83 [origin/cover-meta(k·v)/RTM dot vcount 漏れ + novel-class drift 構造封鎖])・**ADR 52→53** (A51: drg)。
   全 fixture (EC + clinic) verify PASS (default/--filled/--artifact)・validate clean・sandbox 37/37。
 - **two-gate 境界 (確定)**: 識別子・構造・数値・統制値 = floor (機械検証・本 issue)。 本文 prose 内容 + opus prose スロット (cover-summary/plain/rationale 等) の
   content fidelity = ceiling (gate J = `agents/fidelity-srs`)。 区別原理は「正当 content と *構造的に区別可能か*」 — 識別子/統制値は区別可能ゆえ floor、 自由 prose は ceiling 寄り。
@@ -265,7 +267,7 @@ folio verify-srs filled.html contract/ec-checkout.srs.yaml                      
 uv run --with playwright==1.60.0 python render-gate-srs.py filled.html           # 実 SRS を light/dark × 3 viewport で検査
 uv run --with playwright==1.60.0 python render-gate-srs.py --selftest            # detector の検出力を fixture で自己検証
 
-./test-adversarial.sh                                                            # 87 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty 識別子/構造値 (§7e+§7f+marker count) の回帰
+./test-adversarial.sh                                                            # 92 ケース: assembler + prose + term-inline + verify-srs floor + gate F selftest + ds8 gate H/cover-meta + dty 識別子/構造値 (§7e+§7f+marker count) の回帰
 ```
 
 ## S5 floor: verify-srs (taxonomy §5.2 gate A-H + visual-first)
