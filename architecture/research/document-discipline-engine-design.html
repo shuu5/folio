@@ -48,6 +48,8 @@
   <li><a href="#s6-versioning">§6. 論点5 — versioning = 単一版ライン (additive)</a></li>
   <li><a href="#s7-instance2">§7. 論点6 + B1 実証 — instance#2 (ADR-pack) が炙り出した core / pack 境界</a></li>
   <li><a href="#s8-next">§8. 次の一手</a></li>
+  <li><a href="#s9-principle-pack">§9. B4 — principle / constitution pack の設計合意</a></li>
+  <li class="toc--sub"><a href="#s9-1-mapping">§9.1 folio doc-type → pack 写像仮説 (論点⑤・build せず記録)</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -65,7 +67,11 @@
   <tbody>
     <tr><td>B0</td><td>folio-9ay</td><td>設計 grill (6 論点合意)</td><td>完了</td></tr>
     <tr><td>B1</td><td>folio-bwc</td><td>instance#2 = clinic ADR 生成 + 本 design-of-record</td><td>本 doc</td></tr>
-    <tr><td>B2+</td><td>(後続別 bd)</td><td>core 抽出 (非破壊) → research/principle pack → 照会/HOW-outside 機構 → folio self dogfood</td><td>未着手</td></tr>
+    <tr><td>B2</td><td>folio-5ua</td><td>core 抽出 (非破壊・共有 lib/ へ)</td><td>完了</td></tr>
+    <tr><td>B3</td><td>folio-ar1</td><td>instance#3 = research pack (rule-of-three 止め時 MET)</td><td>完了</td></tr>
+    <tr><td>B4</td><td>folio-igv</td><td>instance#4 = principle / constitution pack (本 §9)</td><td>設計合意・実装中</td></tr>
+    <tr><td>B5</td><td>folio-983</td><td>照会 graph + HOW-outside enforcement 機構</td><td>未着手</td></tr>
+    <tr><td>B6</td><td>folio-qf1</td><td>folio self dogfood (endgame)</td><td>未着手</td></tr>
   </tbody>
 </table>
 </section>
@@ -154,6 +160,38 @@
   <li><strong>folio self dogfood</strong>: endgame として folio 自身の architecture/ をこのエンジンで生成・検証する。</li>
   <li><strong>正式 ADR 化</strong>: 本 design-of-record で固めた engine architecture を、 実証が十分に積まれた段階で正式 ADR (P-10 user 承認) へ昇格させる。</li>
 </ul>
+</section>
+
+<section id="s9-principle-pack" class="informative">
+<h2>§9. B4 — principle / constitution pack の設計合意</h2>
+<p>B4 (folio-igv) は §3 の照会終端ロール <code>principle</code> を実 doc-type 化する pack を新設する。 instance#4 として <strong>folio 自身の 14 不変原則</strong>を題材に取り、 principle 固有の 3 性質 (不変・終端・改訂は ADR 経由) を engine 機構で扱えることを実証する。 設計 grill (2026-06-20) で次の 6 点を合意した。</p>
+<table class="data-table">
+  <thead><tr><th>論点</th><th>決定</th><th>要点</th></tr></thead>
+  <tbody>
+    <tr><td>① 題材</td><td>folio 14 原則を read-only fidelity target</td><td>frozen <code>constitution.html</code> は置換せず別アーティファクトとして生成 (P-10 安全)。 B6 self-dogfood の「源 contract」前払い。 過渡的に手書き frozen + 生成の二重表現を許容する。</td></tr>
+    <tr><td>② schema 粒度</td><td>中核 + 改訂来歴を構造照会</td><td><code>{id, 見出し, 宣言文, tier}</code> + <code>amended_by</code> (ADR / date / approved_by)。 versioning / amendment 手続きは opus prose (短い policy 宣言のみ構造化)。</td></tr>
+    <tr><td>③ constitution = optional-but-special</td><td>baseline-diff CI gate</td><td>principles の golden と diff し、 宣言文 / tier / 増減の変化には必ず ADR 照会 + 版 bump を強制 → silent change を機械的に不可能化。 <code>doc_type:constitution</code> フラグ時のみ起動 (非対称)。 B0 決定③ (guarantee = CI) ④ (P-10 一般化) の機構化。</td></tr>
+    <tr><td>④ 照会終端機構</td><td>principle node の局所整合</td><td>principle の前方照会を FAIL (終端不変条件) + inbound 参照を <code>verify_cross_doc_refs</code> 再利用で fail-closed + <code>amended_by</code> は別軸の来歴 edge。 graph 全体の終端完備は B5 へ。</td></tr>
+    <tr><td>⑤ scope</td><td>principle pack のみ build + 写像仮説を記録</td><td>投機 build をせず (rule-of-three 経済性)、 folio doc-type → pack 写像の仮説だけ本 doc に残す (§9.1)。</td></tr>
+    <tr><td>⑥ sequencing</td><td>principle pack 先 → bcx 汎用 lint 後</td><td>principle の異質さ (前方照会なし / baseline-diff / amendment edge) が SRS・ADR・research の 3 例の前提を破る = 汎用 lint を well-informed に一般化する最良の 4 例目 (lint 自身の rule-of-three)。</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s9-1-mapping">§9.1 folio doc-type → pack 写像仮説 (論点⑤・build せず記録)</h3>
+<p>B6 (folio self-dogfood) は folio の全 doc-type を生成可能にする必要がある。 どの doc-type が既存 pack を再利用し、 どれが新 pack を要するかの<strong>仮説</strong>を残す。 実証は各 doc-type を dogfood する段で行い、 既存 pack に挿さらなければ rule-of-three が新 pack の必要を炙り出す。</p>
+<table class="data-table">
+  <thead><tr><th>folio doc-type</th><th>写像仮説</th><th>根拠</th></tr></thead>
+  <tbody>
+    <tr><td>constitution</td><td>principle pack (B4)</td><td>不変原則 = principle ロール (終端)</td></tr>
+    <tr><td>rules</td><td>SRS 族 (or 汎用 spec pack)</td><td>EARS で REQ-* を持つ = claim 群</td></tr>
+    <tr><td>self-spec</td><td>SRS 族 (or 汎用 spec pack)</td><td>architecture の WHAT = claim 群</td></tr>
+    <tr><td>relations / verification</td><td>SRS 族 (or 汎用 spec pack)</td><td>規約・framework の spec = WHAT</td></tr>
+    <tr><td>ADR cluster</td><td>ADR pack (済)</td><td>B1 で実証</td></tr>
+    <tr><td>research</td><td>research pack (済)</td><td>B3 で実証</td></tr>
+  </tbody>
+</table>
+
+<p><strong>★rule-of-three 追試</strong>: principle pack が <strong>core を一切変えずに純粋な pack として挿さる</strong>かが instance#4 の止め時判定である。 挿されば core 抽出の完了を 4 例目が裏づけ、 core 変更を要すれば抽出が不完全のサイン (可逆ゆえ core → pack へ降格できる)。 本節は探索領域 (research/) の design-of-record (路線「い」) であり、 実証が十分に積まれた段階で正式 ADR (P-10 承認) へ昇格させる。</p>
 </section>
 
 <!-- folio:chrome-bottom -->
