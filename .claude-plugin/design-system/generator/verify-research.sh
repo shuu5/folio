@@ -71,6 +71,14 @@ chk "scope items == |in_scope|+|out_scope|" "$(( $(q '.question.in_scope | lengt
 chk "outcome panel == 1"                   "1"                                "$(grep -c 'data-component="research-outcome-panel"' "$BODY")"
 chk "glossary == |glossary|"               "$(q '.glossary | length')"        "$(grep -c 'class="grow"' "$BODY")"
 chk "approval == |approval|"               "$(q '.approval | length')"        "$(grep -c 'class="sign"' "$BODY")"
+# 1b. ★core 共通 chrome (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary term/en/def) の
+#     値突合 + 占有数パリティ (folio-mk9・verify_core_chrome)。 件数のみ検証 (値改竄が素通る fail-open) を全 pack 共通で塞ぐ。
+verify_core_chrome
+# 1b'. ★research-pack reader-chip 占有数 (folio-mk9 self-review round-6): reader-chip class を持つ要素は genuine reader-chip 1 個
+#   + cross-doc-ref-chip 1 個 = ちょうど 2 個。 SRS と非対称に ADR/research は reader-chip 総数を quote-robust に bind していなかった
+#   ため、 single-quote/unquoted/entity の data-component を持つ偽 ref-chip decoy や 属性値内 > で count_genuine を断片化した
+#   genuine-style decoy が素通った。 count_attr_token (quote/case/entity/>-attr 非依存の全文走査) で reader-chip 総数 == 2 を bind し封鎖 (SRS §7b'' と対称)。
+chk "core-chrome(research): reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
 
 # 2. id 一意性
 chk_empty "finding id 一意"        "$(q '.findings[].id' | sort | uniq -d | tr '\n' ' ')"

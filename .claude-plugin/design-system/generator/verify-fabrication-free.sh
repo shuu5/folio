@@ -97,6 +97,17 @@ chk "nfr-hero == |nfr(hero)|"      "$(q '[.nfr[] | select(.hero)] | length')"   
 chk "constraints == |constraints|" "$(q '.constraints | length')"                         "$(grep -c 'class="cid2"' "$BODY")"
 chk "glossary == |glossary|"       "$(q '.glossary | length')"                            "$(grep -c 'class="grow"' "$BODY")"
 chk "approval == |approval|"       "$(q '.approval | length')"                            "$(grep -c 'class="sign"' "$BODY")"
+# 7b'. ★core 共通 chrome (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary term/en/def) の
+#      値突合 + 占有数パリティ (folio-mk9・lib/verify-common.sh の verify_core_chrome)。 上の件数のみ検証 (件数 OK でも値改竄が
+#      素通る fail-open) を全 pack 共通で塞ぐ cross-pack gap の解消 (dty round-2 完全列挙が発見・ADR/research も同型 gap)。
+verify_core_chrome
+# 7b''. ★SRS-pack 固有 reader-chip 占有数 (folio-mk9 self-review round-5): SRS は cross_doc を持たず cross-doc-ref-chip を emit しない
+#   ゆえ reader-chip class を持つ要素は genuine reader-chip ちょうど 1 個のみ。 core の count_genuine_reader_chip (ref-chip 除外・要素単位)
+#   は『class="reader-chip" data-component="cross-doc-ref-chip">任意 text』の additive decoy を ref-chip 側へ分類し genuine count を増やさず、
+#   global『想定読者:』marker も marker 無し text なら不変ゆえ、 SRS では偽 ref-chip (= 捏造 chrome box) が verify を素通った
+#   (ADR/research は cross-doc-ref-chip ブロック==1 を別途 bind ゆえ既に捕捉・SRS のみ ref-chip count 検証が無かった)。
+#   SRS の reader-chip class 総数 == 1 (quote-robust) を bind し、 ref-chip 構文を借りた捏造 reader-chip box を封鎖する。
+chk "core-chrome(SRS): reader-chip class 総数 == 1 (cross_doc 無し=ref-chip 不在)" "1" "$(count_attr_token class reader-chip < "$BODY")"
 
 # 7c. yq の入れ子 optional 欠落で "null" セルが人間出力へ漏れていないか
 chk "null セル漏れなし" "0" "$(grep -oE '>null<' "$BODY" | wc -l | tr -d ' ')"
@@ -263,16 +274,22 @@ chk "vcount: b == |scope.in|+|scope.out|" "$(q '(.scope.in | length) + (.scope.o
 # ★round-6 ceiling 根本 fix: vcount allowlist drift の *構造封鎖*。 上の vcount は手選別ゆえ drift する (origin/k/v/dot が漏れていた)。
 #   body の全 class token は COUNTED (占有数パリティ済の value class) か EXEMPT (構造/modifier/繰延 prose·chrome) のいずれかに *機械的に* 分類されねばならない。
 #   未分類トークン = 将来の value class 追加 (enumeration drift) を必ず FAIL し count-parity 追加 (COUNTED 登録) を強制する = allowlist drift を構造的に検出。
-#   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (prose slot=opus 充填 §8: why/plain・chrome=folio-mk9: when/who/stamp/sign/grow/gword/gdef/en/term/lt)。
+#   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (prose slot=opus 充填 §8: why/plain)。
 # ★folio-4cf: body prose 値 class (cd/at/resp/cond/meas/role/b) を EXEMPT → COUNTED へ移した (§7g で値を順序突合 + ここで占有数パリティ)。
-COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac rtm-summary-derived cd cond resp meas at role b"
-# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose slot=§8 / chrome=folio-mk9)。 ★en/lt は EXEMPT 維持だが folio-czo で legend-scope の
-#   (class,label) SET 突合済 (en は glossary 表と class 共有ゆえ global vcount 不可・lt は legend-exclusive だが SET で被覆)。
+# ★folio-mk9: core 共通 chrome の value class (doc-type/cover-eyebrow/cover-sub・sign/who/when/stamp・grow/gword/gdef) を
+#   EXEMPT → COUNTED へ移した。 verify_core_chrome (§7b') が値を順序突合 + 占有数パリティ済 (global) ゆえ「明示繰延」ではなくなった。
+#   ★en は EXEMPT 維持: glossary 表 (verify_core_chrome が grow 行内で占有数突合) と EARS legend (folio-czo の legend-scope SET) で
+#     class 共有ゆえ *global* vcount は不可 (両 scope の和になる)。 両 scope で個別に被覆済。
+#   ★folio-mk9 self-review round-5: reader-chip を EXEMPT → COUNTED へ移した。 ADR/research では cross-doc-ref-chip が同 class を再利用
+#     (global 2 個) ゆえ class count 不可だが、 SRS は cross_doc を持たず ref-chip を emit しないため reader-chip class 総数 == 1 (§7b'') で
+#     global 占有数を bind 済 (ref-chip 構文を借りた捏造 reader-chip box を封鎖)。 reader 値は verify_core_chrome が別途突合。
+COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac rtm-summary-derived cd cond resp meas at role b doc-type cover-eyebrow cover-sub sign who when stamp grow gword gdef reader-chip"
+# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose slot=§8) + 共有 class (en は scope 別被覆)。
 # ★round-9 ceiling: rtm-summary-derived は可視 contract 値 (派生 5 数値) を運ぶゆえ EXEMPT から外し COUNTED へ移した。
 #   round-8 は値突合 chk (下) は追加したが EXEMPT に残したため占有数パリティが無く、 single-quote decoy の偽 <p> 追記
 #   (real を無傷に残し別 <p class='rtm-summary-derived'>孤立要件 999件</p> を併置) を網羅検査も値突合 (double-quote 固定) も素通した。
 #   COUNTED 化で count_attr_token 占有数 == 1 を強制し decoy-append を quote 非依存に封鎖する。
-EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-eyebrow cover-meta cover-sub doc-type reader-chip summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold scol ears-legend lt m ext-badge nfr-hero why plain term en gword gdef grow when who stamp sign"
+EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-meta summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold scol ears-legend lt m ext-badge nfr-hero why plain term en"
 # ★quote-robust: class_tokens 経由 (旧 inline perl は double-quote 固定で single/unquoted novel token を分類漏れ = drift 構造封鎖の overclaim)。
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $COUNTED $EXEMPT | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
@@ -387,11 +404,11 @@ rm -f "$STRIPPED"
 #   兄弟 (nested-content / case-drop+decoy / legend relocation / entity-encoding) を全て決定論的に封じた。 ★さらに §7g (folio-4cf) で
 #   **body prose テキスト値** (mark_terms 系の自由文: ears.condition/response・nfr.target/measure・acceptance.criterion・upper_needs.need・
 #   goals.desc・scope.in/out・actor.role・constraint.text) を term-badge strip + 順序突合 (値) + vcount 占有数パリティ (decoy-add) の二層で被覆した
-#   (dty round-2 ceiling 繰延分の解消)。 ★ただし以下は本 issue scope 外として *明示繰延* する:
-#   - **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary-term-table term/en/def) —
-#       lib/common.sh が全 pack 同一構造で emit (ADR/research も同じ count-only gap) ゆえ verify_core_chrome 昇格の cross-pack follow-up (bd folio-mk9)。
-#       凡例の en/lt 可視ラベルは §7f legend-scope SET で被覆済 (folio-czo)・glossary 表の en は folio-mk9 の領分。
-#   (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ。 識別子/構造/本文 prose は floor・gate J=content fidelity ceiling)。
+#   (dty round-2 ceiling 繰延分の解消)。 ★さらに **core 共通 chrome** (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・
+#   glossary-term-table term/en/def) を §7b' で verify_core_chrome (lib/verify-common.sh・全 pack 共通) が値突合 + 占有数パリティ済 (folio-mk9 で
+#   core 昇格・dty round-2 完全列挙が指した cross-pack count-only gap の解消)。 凡例の en/lt 可視ラベルは §7f legend-scope SET で被覆済 (folio-czo)・
+#   glossary 表の en は §7b' verify_core_chrome が grow 行内で被覆。
+#   (ds8 教訓#4: gate funnel が掘り当てた broad pre-existing gap を bolt-on せず追跡 follow-up へ → folio-mk9 で着地。 識別子/構造/本文 prose/chrome は floor・gate J=content fidelity ceiling)。
 
 # 8. prose スロット (perl で要素単位判定 = ネストタグ/改行/空白のみを正しく捕捉)
 slots="$(grep -oE 'data-prose-slot=' "$BODY" | wc -l | tr -d ' ')"

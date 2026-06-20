@@ -304,6 +304,64 @@ cp "$TMP/base-filled.html" "$TMP/r54.html"
 perl -0777 -i -pe 's#<div(\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>)(.*?)</div>#"<my-tag".$1.($2 =~ s{<b>ADR-CLINIC-0001</b>}{<b>ADR-PHANTOM</b>}r)."</my-tag>"#se' "$TMP/r54.html"
 expect_verify_fail_filled "R54 ★ref-chip hyphen-tag swap+偽id を marker-keyed で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r54.html"
 
+# === R55-R74: core 共通 chrome (cover-head/approval/glossary) の floor 突合 (folio-mk9・verify_core_chrome) ===
+# lib/common.sh が全 pack 同一構造で emit する決定的可視 chrome 値の改竄を verify_core_chrome が FAIL することを回帰確認 (SRS A110-A129 / ADR A52-A71 と parity)。
+# (a) 値改竄 = 順序突合が捕捉 / (b) decoy 注入 (大文字化/entity/unquoted/single-quote) = 占有数パリティが捕捉。 python landed-assert で改竄着地を強制。
+chrome_tamper_fail() { # label needle replacement
+  if python3 -c "
+d=open('$TMP/base-filled.html').read()
+o='''$2'''; assert o in d, 'needle not found'
+open('$TMP/chrome.html','w').write(d.replace(o,'''$3''',1))
+" 2>/dev/null; then expect_verify_fail_filled "$1" "$BASE_PROSE" "$BASE" "$TMP/chrome.html"; else ng "$1 setup 失敗"; fi
+}
+chrome_decoy_fail() { # label decoy_html (</h1> 直後へ decoy 注入)
+  if python3 -c "
+d=open('$TMP/base-filled.html').read()
+o='</h1>'; assert o in d, 'anchor not found'
+open('$TMP/chromed.html','w').write(d.replace(o,o+'''$2''',1))
+" 2>/dev/null; then expect_verify_fail_filled "$1" "$BASE_PROSE" "$BASE" "$TMP/chromed.html"; else ng "$1 setup 失敗"; fi
+}
+# (a) 値改竄
+chrome_tamper_fail "R55 ★cover eyebrow_left 改竄を core-chrome 順序突合で捕捉" '<span class="doc-type">調査記録 (Research)</span>' '<span class="doc-type">詐欺ラベル</span>'
+chrome_tamper_fail "R56 ★cover eyebrow_right 改竄を core-chrome 順序突合で捕捉" '<span>クリニック — 二重予約防止の方式調査</span>' '<span>詐欺の右ラベル</span>'
+chrome_tamper_fail "R57 ★cover title (h1) 改竄を core-chrome 順序突合で捕捉" '<h1>同じ診療枠への二重予約をどう防ぐか — 確定方式の比較調査</h1>' '<h1>詐欺タイトル</h1>'
+chrome_tamper_fail "R58 ★cover subtitle 改竄を core-chrome 順序突合で捕捉" '<p class="cover-sub">安全 (二重予約ゼロ) と速さ (ピーク応答) を両立する確定方式を、 決めずに洗い出す</p>' '<p class="cover-sub">詐欺サブタイトル</p>'
+chrome_tamper_fail "R59 ★reader (想定読者) 改竄を core-chrome 順序突合で捕捉" '想定読者: クリニックの事業責任者 + 開発リード — 医療コーディングの専門知識は不要 (専門語はやさしい言葉を併記)</div>' '想定読者: 詐欺の読者</div>'
+chrome_tamper_fail "R60 ★approval role 改竄を core-chrome 順序突合で捕捉" '<span class="role">承認 (院長)</span>' '<span class="role">詐欺の役職</span>'
+chrome_tamper_fail "R61 ★approval who (承認者名) 改竄を core-chrome 順序突合で捕捉" '<span class="who">山田 理恵</span>' '<span class="who">詐欺 太郎</span>'
+chrome_tamper_fail "R62 ★approval when (承認日) 改竄を core-chrome 順序突合で捕捉" '<span class="when">2026-06-15 承認</span>' '<span class="when">1999-01-01 承認</span>'
+chrome_tamper_fail "R63 ★approval stamp (印) 改竄を core-chrome 順序突合で捕捉" '<span class="stamp">承認済</span>' '<span class="stamp">却下</span>'
+chrome_tamper_fail "R64 ★glossary term 改竄を core-chrome 順序突合で捕捉" '<div class="gword">ダブルブッキング<span class="en">' '<div class="gword">詐欺用語<span class="en">'
+chrome_tamper_fail "R65 ★glossary en 改竄を core-chrome 順序突合で捕捉" '<span class="en">double booking</span>' '<span class="en">fraud-en</span>'
+chrome_tamper_fail "R66 ★glossary def 改竄を core-chrome 順序突合で捕捉" '<div class="gdef">同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。</div>' '<div class="gdef">詐欺の定義</div>'
+# (b) decoy 注入 (占有数パリティが捕捉)
+chrome_decoy_fail "R67 ★doc-type 大文字化 decoy を doc-type 占有数で捕捉" '<span class="DOC-TYPE">詐欺の文書種</span>'
+chrome_decoy_fail "R68 ★sign 行 大文字化 decoy (偽承認行) を sign 占有数で捕捉" '<div class="SIGN"><span class="role">詐欺</span><span class="who">x</span><span class="when">y</span><span class="stamp">z</span></div>'
+chrome_decoy_fail "R69 ★grow 行 大文字化 decoy (偽用語行) を grow 占有数で捕捉" '<div class="GROW"><div class="gword">詐欺</div><div class="gdef">x</div></div>'
+chrome_decoy_fail "R70 ★who entity-encoded decoy (&#119;ho) を文字参照 decode 占有数で捕捉" '<span class="&#119;ho">詐欺の承認者</span>'
+chrome_decoy_fail "R71 ★stamp unquoted decoy (class=stamp) を quote 非依存 占有数で捕捉" '<span class=stamp>詐欺の印</span>'
+chrome_decoy_fail "R72 ★h1 大文字化 decoy (<H1>) を h1 タグ占有数で捕捉" '<H1>詐欺の第二タイトル</H1>'
+chrome_decoy_fail "R73 ★想定読者 marker decoy (偽 reader-chip) を marker 占有数 + 値突合で捕捉" '<div class="reader-chip"> 想定読者: 詐欺の第二読者</div>'
+# R73b ★marker *無し* の偽 reader-chip decoy (anchor 一致だが "想定読者:" 無し) を構造 anchor 占有数で捕捉 (R73 では漏れる fail-open を塞いだ folio-mk9 self-review 回帰)。
+chrome_decoy_fail "R73b ★想定読者 *無し* の偽 reader-chip decoy を anchor 占有数で捕捉" '<div class="reader-chip"> 詐欺の追加チップ</div>'
+# R73c ★ref-chip *構文形* の偽 reader-chip decoy (`class="reader-chip" role="note">…` = 閉じ引用後に空白+任意属性) を占有数パリティで捕捉。
+#        R73b の anchor grep (`class="reader-chip">` = > 直後) は不一致・marker count も "想定読者:" 無しで不一致ゆえ素通る fail-open を
+#        (class reader-chip 占有) − (data-component cross-doc-ref-chip 占有) == 1 で塞いだ回帰 (folio-mk9 self-review round-3)。
+chrome_decoy_fail "R73c ★ref-chip 構文形の偽 reader-chip decoy を占有数パリティで捕捉" '<div class="reader-chip" role="note">詐欺の偽 reader-chip…</div>'
+# R73d ★ref-chip と *同一構文* (class="reader-chip" data-component="cross-doc-ref-chip") を持つ additive decoy に偽『想定読者:』text を載せた攻撃。
+#        旧 差分式 `(class reader-chip 占有) − (cross-doc-ref-chip 占有)` は被減数 (+1)・減数 (+1) が同タグ上で同時に増えて差 1 のまま不変ゆえ素通った
+#        (folio-mk9 self-review round-4 が SRS full verify exit 0 で実証)。 element-level genuine count + global『想定読者:』marker count==1 で塞いだ回帰。
+chrome_decoy_fail "R73d ★ref-chip 同一構文+偽『想定読者:』additive decoy を要素単位+marker 全体数で捕捉" '<div class="reader-chip" data-component="cross-doc-ref-chip">想定読者: 詐欺の偽読者</div>'
+# R73e/f ★ref-chip 構文形 + single-quote/unquoted data-component の偽 ref-chip decoy (folio-mk9 self-review round-6・FO-1)。
+#         count_genuine は ref-chip 側へ分類・ref-chip ブロック grep は double-quote 固定で見逃す・marker 無し ゆえ素通った fail-open を、
+#         reader-chip class 総数 == 2 (§1b'・quote-robust count_attr_token) で封鎖した回帰。
+chrome_decoy_fail "R73e ★single-quote data-component の偽 ref-chip decoy を reader-chip 総数==2 で捕捉" "<div class=\"reader-chip\" data-component='cross-doc-ref-chip'>規制当局承認済（捏造）</div>"
+chrome_decoy_fail "R73f ★unquoted data-component の偽 ref-chip decoy を reader-chip 総数==2 で捕捉" '<div class="reader-chip" data-component=cross-doc-ref-chip>法的拘束力契約（捏造）</div>'
+# R73g ★属性値内 > で count_genuine の tag-splitter を断片化した genuine-style decoy (folio-mk9 self-review round-6・FO-2)。
+#        tag-splitter 堅牢化 + reader-chip 総数==2 の二層で封鎖した回帰。
+chrome_decoy_fail "R73g ★title内 > で断片化する genuine-style decoy を tag-splitter堅牢化+総数==2 で捕捉" '<div title="x>y" class="reader-chip" role="z">捏造の権威 box</div>'
+chrome_tamper_fail "R74 ★glossary en single-quote decoy を grow 行内 en 占有数で捕捉" '<div class="gword">ダブルブッキング<span class="en">double booking</span></div>' "<div class=\"gword\">ダブルブッキング<span class=\"en\">double booking</span><span class='en'>詐欺</span></div>"
+
 # === inject fail-closed ===
 
 # R20. manifest から 1 スロットを削除 → 集合不一致 abort

@@ -648,6 +648,63 @@ o='<span class=\"why\" data-prose-slot=\"rationale\" data-source=\"N-2\" data-sl
 open('$TMP/g_resptail.html','w').write(d.replace(o,'<span class=\"why\" data-prose-slot=\"rationale\" data-source=\"N-2\" data-slot-id=\"rationale-FR1\"></span>詐欺の追記応答</td>',1))
 " 2>/dev/null; then expect_verify_fail "A109 ★ears.response slot 後ろ text-node 追記を td.resp 全体 strip 突合で捕捉" "$BASE" "$TMP/g_resptail.html"; else ng "A109 setup 失敗"; fi
 
+# ---- A110-A129: core 共通 chrome (cover-head/approval/glossary) の floor 突合 (folio-mk9・verify_core_chrome) ----
+# lib/common.sh が全 pack 同一構造で emit する決定的可視 chrome 値の改竄を verify_core_chrome が FAIL することを回帰確認する。
+# (a) 値改竄 = body_tamper_fail (順序突合が捕捉) / (b) decoy 注入 (大文字化/entity/unquoted/single-quote/偽要素併置) = 占有数パリティが捕捉。
+echo
+echo "core 共通 chrome 層 (cover-head/approval/glossary・folio-mk9) の fail-closed:"
+# </h1> 直後へ decoy を 1 個注入し verify FAIL を期待する helper (占有数パリティ検証用・python landed-assert)。
+chrome_decoy_fail() { # label decoy_html
+  if python3 -c "
+d=open('$TMP/good.html').read()
+o='</h1>'; assert o in d, 'anchor not found'
+open('$TMP/cd.html','w').write(d.replace(o,o+'''$2''',1))
+" 2>/dev/null; then expect_verify_fail "$1" "$BASE" "$TMP/cd.html"; else ng "$1 setup 失敗"; fi
+}
+# (a) 値改竄 (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary term/en/def) → 順序突合 FAIL
+body_tamper_fail "A110 ★cover eyebrow_left 改竄を core-chrome 順序突合で捕捉" '<span class="doc-type">要件定義書 (SRS)</span>' '<span class="doc-type">詐欺ラベル</span>'
+body_tamper_fail "A111 ★cover eyebrow_right 改竄を core-chrome 順序突合で捕捉" '<span>EC サイト — 注文確定・決済</span>' '<span>詐欺の右ラベル</span>'
+body_tamper_fail "A112 ★cover title (h1) 改竄を core-chrome 順序突合で捕捉" '<h1>カートの商品を、 確実に・二重課金せず・売り越さず「注文確定」までやり切る仕組み</h1>' '<h1>詐欺タイトル</h1>'
+body_tamper_fail "A113 ★cover subtitle 改竄を core-chrome 順序突合で捕捉" '<p class="cover-sub">在庫の取り合いも、 決済の失敗も、 ボタン連打も起こりうる前提で設計する</p>' '<p class="cover-sub">詐欺サブタイトル</p>'
+body_tamper_fail "A114 ★reader (想定読者) 改竄を core-chrome 順序突合で捕捉" '想定読者: EC 事業の事業責任者 — プログラミング・会計の専門知識は不要 (専門語は必ずやさしい言葉を併記)</div>' '想定読者: 詐欺の読者</div>'
+body_tamper_fail "A115 ★approval role 改竄を core-chrome 順序突合で捕捉" '<span class="role">承認 (事業責任者)</span>' '<span class="role">詐欺の役職</span>'
+body_tamper_fail "A116 ★approval who (承認者名) 改竄を core-chrome 順序突合で捕捉" '<span class="who">田中 葵</span>' '<span class="who">詐欺 太郎</span>'
+body_tamper_fail "A117 ★approval when (承認日) 改竄を core-chrome 順序突合で捕捉" '<span class="when">2026-06-15 承認</span>' '<span class="when">1999-01-01 承認</span>'
+body_tamper_fail "A118 ★approval stamp (印) 改竄を core-chrome 順序突合で捕捉" '<span class="stamp">承認済</span>' '<span class="stamp">却下</span>'
+body_tamper_fail "A119 ★glossary term 改竄を core-chrome 順序突合で捕捉" '<div class="gword">在庫引当<span class="en">' '<div class="gword">詐欺用語<span class="en">'
+body_tamper_fail "A120 ★glossary en 改竄を core-chrome 順序突合で捕捉" '<span class="en">stock allocation</span>' '<span class="en">fraud-en</span>'
+body_tamper_fail "A121 ★glossary def 改竄を core-chrome 順序突合で捕捉" '<div class="gdef">注文の瞬間に在庫を「この人の分」として押さえること。 押さえないと同じ 1 個を 2 人に売ってしまう。</div>' '<div class="gdef">詐欺の定義</div>'
+# (b) decoy 注入 (占有数パリティが捕捉・順序突合は anchored ゆえ素通りうる経路を二層目で封鎖)
+chrome_decoy_fail "A122 ★doc-type 大文字化 decoy (CLASS 偽要素) を doc-type 占有数で捕捉" '<span class="DOC-TYPE">詐欺の文書種</span>'
+chrome_decoy_fail "A123 ★sign 行 大文字化 decoy (偽承認行) を sign 占有数で捕捉" '<div class="SIGN"><span class="role">詐欺</span><span class="who">x</span><span class="when">y</span><span class="stamp">z</span></div>'
+chrome_decoy_fail "A124 ★grow 行 大文字化 decoy (偽用語行) を grow 占有数で捕捉" '<div class="GROW"><div class="gword">詐欺</div><div class="gdef">x</div></div>'
+chrome_decoy_fail "A126 ★who entity-encoded decoy (&#119;ho) を文字参照 decode 占有数で捕捉" '<span class="&#119;ho">詐欺の承認者</span>'
+chrome_decoy_fail "A127 ★stamp unquoted decoy (class=stamp) を quote 非依存 占有数で捕捉" '<span class=stamp>詐欺の印</span>'
+chrome_decoy_fail "A128 ★h1 大文字化 decoy (<H1>) を h1 タグ占有数 (case 非依存) で捕捉" '<H1>詐欺の第二タイトル</H1>'
+chrome_decoy_fail "A129 ★想定読者 marker decoy (偽 reader-chip) を marker 占有数 + 値突合で捕捉" '<div class="reader-chip"> 想定読者: 詐欺の第二読者</div>'
+# A130 ★marker *無し* の偽 reader-chip decoy (`class="reader-chip">` anchor 一致だが "想定読者:" 無し) を構造 anchor 占有数で捕捉。
+#       marker count に keyed した A129 では捕捉できない fail-open を anchor 占有数パリティ (genuine == 1) で塞いだ回帰 (folio-mk9 self-review)。
+chrome_decoy_fail "A130 ★想定読者 *無し* の偽 reader-chip decoy を anchor 占有数で捕捉" '<div class="reader-chip"> 詐欺の追加チップ</div>'
+# A130b ★ref-chip *構文形* の偽 reader-chip decoy (`class="reader-chip" role="note">…` = 閉じ引用後に空白+任意属性) を占有数パリティで捕捉。
+#        A130 の anchor grep (`class="reader-chip">` = > 直後) は > 直後でないため不一致・marker count も "想定読者:" 無しで不一致ゆえ素通る fail-open を
+#        (class reader-chip 占有) − (data-component cross-doc-ref-chip 占有) == 1 で塞いだ回帰 (folio-mk9 self-review round-3)。
+chrome_decoy_fail "A130b ★ref-chip 構文形の偽 reader-chip decoy を占有数パリティで捕捉" '<div class="reader-chip" role="note">詐欺の偽 reader-chip…</div>'
+# A130c ★ref-chip と *同一構文* (class="reader-chip" data-component="cross-doc-ref-chip") を持つ additive decoy に偽『想定読者:』text を載せた攻撃。
+#        旧 差分式 `(class reader-chip 占有) − (cross-doc-ref-chip 占有)` は被減数 (+1)・減数 (+1) が同タグ上で同時に増えて差 1 のまま不変ゆえ素通った
+#        (folio-mk9 self-review round-4 が SRS full verify exit 0 で実証)。 element-level genuine count + global『想定読者:』marker count==1 で塞いだ回帰。
+chrome_decoy_fail "A130c ★ref-chip 同一構文+偽『想定読者:』additive decoy を要素単位+marker 全体数で捕捉" '<div class="reader-chip" data-component="cross-doc-ref-chip">想定読者: 詐欺の偽読者</div>'
+# A130d ★ref-chip 同一構文 (class="reader-chip" data-component="cross-doc-ref-chip") で marker を *持たない* 任意 text の additive decoy。
+#        element-level genuine count は ref-chip 側へ分類し count を増やさず・global『想定読者:』marker も marker 無しゆえ不変 = SRS で素通る fail-open
+#        (folio-mk9 self-review round-5)。 SRS は cross_doc を持たず ref-chip 不在ゆえ reader-chip class 総数 == 1 (§7b'') で捏造 ref-chip box を封鎖した回帰。
+chrome_decoy_fail "A130d ★ref-chip 構文+marker無し任意 text の捏造 box を SRS reader-chip 総数==1 で捕捉" '<div class="reader-chip" data-component="cross-doc-ref-chip">詐欺の任意テキスト box</div>'
+# A130e ★A130d の single-quote data-component 変種 (quote-robust count_attr_token が classify) も封鎖。
+chrome_decoy_fail "A130e ★ref-chip 構文 single-quote data-component の捏造 box を quote-robust 占有数で捕捉" "<div class=\"reader-chip\" data-component='cross-doc-ref-chip'>詐欺 single-quote box</div>"
+# A130f ★属性値内 > で count_genuine の tag-splitter を断片化した genuine-style decoy (folio-mk9 self-review round-6・FO-2)。
+#        SRS は §7b'' の reader-chip 総数==1 (count_attr_token 全文走査=>-attr 非依存) で既に封鎖。 tag-splitter 堅牢化 + 総数 bind の二層回帰。
+chrome_decoy_fail "A130f ★title内 > で断片化する genuine-style decoy を SRS 総数==1 で捕捉" '<div title="x>y" class="reader-chip" role="z">捏造の権威 box</div>'
+# A125 ★glossary en single-quote decoy (grow 行内・double-quote real は無傷) を grow 行内 en 占有数で捕捉
+body_tamper_fail "A125 ★glossary en single-quote decoy を grow 行内 en 占有数で捕捉" '<div class="gword">在庫引当<span class="en">stock allocation</span></div>' "<div class=\"gword\">在庫引当<span class=\"en\">stock allocation</span><span class='en'>詐欺</span></div>"
+
 echo
 echo "PASS=$pass FAIL=$fail"
 if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi
