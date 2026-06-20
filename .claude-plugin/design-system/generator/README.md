@@ -109,6 +109,48 @@ SRS/ADR generator の機構を **3 例目の doc-type (research / 調査記録 =
 ./test-adversarial-research.sh
 ```
 
+## principle-pack = instance#4 (folio engine B4 / folio-igv / 照会終端ロールの実 doc-type 化)
+
+SRS/ADR/research generator の機構を **4 例目の doc-type (constitution / 不変原則 = 「照会の終端」doc)** へ適用した四例目。
+照会の抽象ロール `principle` (B0 论点2 = 照会終端) を実 doc-type として cover する。 題材 = folio 自身の 14 不変原則を
+frozen `architecture/spec/constitution.html` から **read-only で忠実抽出**し、 「engine が folio 原則を再現できる」を
+読み比べで実証する (frozen constitution.html は **絶対に編集しない** = P-10。 生成は別ファイル)。
+
+- **入力 contract** (`contract/folio-constitution.principle.yaml`) — principle-pack schema: meta(doc_type:constitution) / approval /
+  decisions_dir / principles(id/heading/statement/tier/amended_by) / versioning(s5) / amendment(s6) / inbound / glossary。
+  ★構造差 (principle の hallmark): **前方照会を持たない** (照会の終端) / **inbound のみ受ける** / **amended_by = 改訂来歴の別軸 edge** /
+  **tier (Always/Ask-first/Never) で原則を 3 群に分類**。
+- **決定的 assembler** (`assemble-principle.sh`) — `lib/common.sh` (core) を source。 cover骨格/glossary/footer/term-inline (mark_terms)/band/esc/finalize は共用 (core)、
+  principles(tier 3群 emit)/amendment 来歴/versioning 表/amendment 手順/inbound チップは principle 固有 emitter。 固有 CSS は srs.css token を流用。
+  ★生成前 fail-closed: **doc_type==constitution 必須** (doc_type flip で verify の gate を bypass する経路を生成段で封鎖) /
+  principle に許可外キー (leads_to/justifies 等の前方照会) があれば abort (終端不変条件) / top-level に cross_doc/outcome があれば abort /
+  inbound.ref が principles に実在しなければ abort (phantom) / amended_by の ADR が decisions_dir に実在しなければ abort。
+- **prose injector は SRS/ADR/research と無改変共用** (`inject-prose.sh`) — `data-slot-id` ベースで pack 非依存。
+  ★4 例目でも無改変で挿さった = rule-of-three の「core 確定」一次証拠の再現 (B4 の止め時 MET 確認)。
+- **floor** = `verify-principle.sh [--filled <manifest> | --artifact | --write-baseline] <contract> <html>` — 行数=contract導出 / id 一意 /
+  可視 pid・heading 順序 (tier-grouped) / tier badge fidelity / statement fidelity (term バッジ strip 後の可視テキスト == esc(contract)) /
+  amendment 来歴 fidelity / cover-meta 再導出 / escape 健全 / prose 空|充填|注入忠実 / term-inline。 加えて **principle 固有 3 gate**:
+  - **①終端強制**: HTML に前方照会 chip (leads_to/justifies/resolved_by/cross-doc-*) が無いことを確かめる (inbound = data-inbound-* は受ける照会ゆえ別物・許可)。
+  - **②baseline-diff gate** (doc_type:constitution のみ・doc_type は assemble/verify 双方で fail-closed 束縛ゆえ flip で skip 不可): principles の
+    committed golden (`baselines/folio-constitution.principle.golden` = `id\ttier\tsha256(heading+statement)\tamended_adrs`) と diff し、
+    **見出し (heading) / 宣言文 (statement) / tier / 改訂来歴 (amended_by) / 増減 のいずれの変化にも必ず (新規 amended_by → 実在 ADR) + (版 bump) を要求** = silent change を機械的に不可能化。
+    版 bump は `sort -V` で前進 (downgrade/同値/garbage を bump と誤認しない)。 golden は `--write-baseline` で生成 (人間が原則変更を承認したときに更新する正規路)。 B0 決定③ guarantee=CI / 決定④ P-10 一般化を機構化。
+  - **③inbound fail-closed** (doc_type:constitution のみ): core の `verify_cross_doc_refs` を **target=self** で再利用し、 inbound.ref が
+    principles[].id に実在 (dangling 0 = phantom 照会捕捉) / role 抽象 allowlist / (ref,role) ペア集合一致 を確かめる (照会終端 node の局所整合)。
+  ★floor 通過は `CEILING=PENDING` (taxonomy §5.1)。 graph 全体の終端完備 (全チェーンが principle で終端) は **B5 (folio-983) へ切出し**。 専用 ceiling agent 制度化は follow-up。
+- **敵対回帰** = `test-adversarial-principle.sh` (A1-A10 assemble abort / BD1-BD7 ★baseline-diff (silent change 6 + 正当改訂 PASS 1) /
+  ★BD8-BD11+A11 cell-quality errata 回帰 (doc_type flip abort+FAIL / heading-only silent / amended_by 消去 / version downgrade / empty amended_by:[] 整合) /
+  T1 終端 / IB1-IB5 inbound / F1-F16 fabrication-free / C1-C6 core chrome / J1-J2 inject = 54 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
+  ★baseline-diff 系は mutated contract を **canonical basename のサブdir** に置き committed golden へ解決させる (別名だと「golden 不在」FAIL で silent-change 検出を検証できない false-pass になる)。
+
+```bash
+./assemble-principle.sh contract/folio-constitution.principle.yaml asm.html
+./inject-prose.sh prose/folio-constitution.principle.prose.yaml asm.html filled.html   # ← SRS/ADR/research と同じ injector
+./verify-principle.sh --filled prose/folio-constitution.principle.prose.yaml contract/folio-constitution.principle.yaml filled.html
+./verify-principle.sh --write-baseline contract/folio-constitution.principle.yaml      # ← 原則変更を承認したとき golden を更新
+./test-adversarial-principle.sh
+```
+
 ## engine core 抽出 (B2 / folio-5ua / rule-of-three)
 
 SRS-pack (instance#1) ∩ ADR-pack (instance#2) の共通項を **共有ライブラリ層 `lib/`** へ引き上げた非破壊リファクタ
