@@ -50,6 +50,9 @@
   <li><a href="#s8-next">§8. 次の一手</a></li>
   <li><a href="#s9-principle-pack">§9. B4 — principle / constitution pack の設計合意</a></li>
   <li class="toc--sub"><a href="#s9-1-mapping">§9.1 folio doc-type → pack 写像仮説 (論点⑤・build せず記録)</a></li>
+  <li><a href="#s10-b5">§10. B5 — 照会 graph 終端完備 + HOW-outside enforcement の設計合意</a></li>
+  <li class="toc--sub"><a href="#s10-1-principles">§10.1 B5 が確立した横断原則</a></li>
+  <li class="toc--sub"><a href="#s10-2-followups">§10.2 follow-up と B6 前払い</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -69,8 +72,8 @@
     <tr><td>B1</td><td>folio-bwc</td><td>instance#2 = clinic ADR 生成 + 本 design-of-record</td><td>本 doc</td></tr>
     <tr><td>B2</td><td>folio-5ua</td><td>core 抽出 (非破壊・共有 lib/ へ)</td><td>完了</td></tr>
     <tr><td>B3</td><td>folio-ar1</td><td>instance#3 = research pack (rule-of-three 止め時 MET)</td><td>完了</td></tr>
-    <tr><td>B4</td><td>folio-igv</td><td>instance#4 = principle / constitution pack (本 §9)</td><td>設計合意・実装中</td></tr>
-    <tr><td>B5</td><td>folio-983</td><td>照会 graph + HOW-outside enforcement 機構</td><td>未着手</td></tr>
+    <tr><td>B4</td><td>folio-igv</td><td>instance#4 = principle / constitution pack (本 §9)</td><td>完了</td></tr>
+    <tr><td>B5</td><td>folio-983</td><td>照会 graph 終端完備 + HOW-outside enforcement 機構 (本 §10)</td><td>設計合意</td></tr>
     <tr><td>B6</td><td>folio-qf1</td><td>folio self dogfood (endgame)</td><td>未着手</td></tr>
   </tbody>
 </table>
@@ -192,6 +195,33 @@
 </table>
 
 <p><strong>★rule-of-three 追試</strong>: principle pack が <strong>core を一切変えずに純粋な pack として挿さる</strong>かが instance#4 の止め時判定である。 挿されば core 抽出の完了を 4 例目が裏づけ、 core 変更を要すれば抽出が不完全のサイン (可逆ゆえ core → pack へ降格できる)。 本節は探索領域 (research/) の design-of-record (路線「い」) であり、 実証が十分に積まれた段階で正式 ADR (P-10 承認) へ昇格させる。</p>
+</section>
+
+<section id="s10-b5" class="informative">
+<h2>§10. B5 — 照会 graph 終端完備 + HOW-outside enforcement の設計合意</h2>
+<p>B5 (folio-983) は §3 の照会 graph と §4 の HOW-outside enforcement を実機構化する。 設計 grill (2026-06-21) では reader 要約でなく <strong>実 corpus (生成 5 contract) と現行 verify / hook 機構を read-only で精査する grounding sweep を 3 本</strong> (論点④/⑤/⑥) 走らせ、 検証済み事実に基づいて 7 論点を詰めた。 sweep は地図に無かった重大事実 — <strong>終端の 2 系統分裂</strong> (clinic ADR の inline principle が constitution に不在)・<strong>inbound.from の完全無検査</strong> (phantom 照会が GREEN 通過)・<strong>HOW-leak の hard gate 強制ゼロ</strong> (唯一の機構は advisory lens)・<strong>userConfig の runtime 未読</strong> (base_url のみ実読) — を炙り出し、 論点⑥ の推奨を案A から案C へ反転させた。</p>
+<table class="data-table">
+  <thead><tr><th>B5 論点</th><th>決定</th><th>要点</th></tr></thead>
+  <tbody>
+    <tr><td>① graph 空間 (cross-repo 境界)</td><td>repo ローカル完備 + folio principle 照会だけ registry 参照</td><td>各 repo 内で graph が閉じる。 consumer → folio principle の照会のみ plugin 同梱 registry への dangling 検証 (既存 vocabulary 配布レイヤーの拡張)。 cross-repo 統合は B5 射程外。 B6 (folio が consumer 兼 engine) を最も楽にする。</td></tr>
+    <tr><td>② 格納スキーマ</td><td>contract YAML を graph 検証 SSoT</td><td>HTML data-* は描画用 projection。 照会の真の SSoT は既に contract YAML (<code>verify_cross_doc_refs</code> が YAML を source に HTML と SET 一致)。 別表現への転写は drift 源ゆえ避ける。 scope = 生成 doc、 folio 自身の HTML graph 化は B6。</td></tr>
+    <tr><td>③ ロール写像宣言</td><td>pack ごと rolemap (node-type → role 表)</td><td>rolemap = node intrinsic role の SSoT。 scope 内 edge role は floor で <code>edge.role == rolemap[node.type]</code> を pin (co-author + enforce)。 既存 corpus から draft → 明示宣言 → pin が二重担保。 SRS の exploration 不在 (B0 開問F) は scan で実証解決。 rolemap = pack / リーダー = core。 <code>role</code> の多重定義は path-scoped で受容 (改名は follow-up)。</td></tr>
+    <tr><td>④ 終端完備の検証 (主題)</td><td>独立 graph script (reachability 一括)</td><td><code>contract/</code> glob → edge union → principle 終端への到達可能性を 1 計算で {終端完備 / 孤立 = warn / 逆方向 = 局所} に展開。 終端は <strong>domain-local principle</strong> (ADR inline 含む) を許容 (論点① repo-local と整合・inline を graph node に昇格)。 孤立は方向ゼロでなく到達可能性で定義。 <code>amended_by</code> は来歴 meta-edge として除外。 既存 core 関数は不変、 traversal は独立 script。</td></tr>
+    <tr><td>⑤ HOW-outside content gate</td><td>二段 floor + ceiling</td><td>floor-1 照会リンク存在 + floor-2 <strong>P-11 4-enum の保守的 hard-block</strong> (明示 primitive の有無 = 意味判定の射程外ゆえ ADR-0028 の精度懸念に当たらない)。 ceiling = 概念 HOW (P-3 portability) を既存 spec-review-ssot lens 強化で advisory (新 agent 不要)。 scope = spec_path・floor は CI で担保。 staged rollout (soft-warn 実測 → 新 ADR で CI hard gate)。</td></tr>
+    <tr><td>⑥ tier1/2 配布</td><td>plugin 固定 (新 config 変数 0)</td><td>tier1 照会 digest は <code>folio prime</code> 追記で常時 baked + progressive disclosure、 tier2 content gate は hook 1 本追加で全 consumer 自動適用。 consumer 独自 doc-type は実需要ゼロゆえ YAGNI follow-up。 userConfig は runtime 未読 (base_url のみ実読) のため案A の「userConfig 拡張」は新機構実装を要し不採用 (地図から flip)。</td></tr>
+    <tr><td>⑦ CI gate の floor ∧ ceiling</td><td>決定的 → floor / 意味的 → ceiling を両方に</td><td>graph floor = 到達性 / dangling / 孤立 (例外的に exhaustive)・graph ceiling = 照会 note / role 真正性 (既存 fidelity-* lens)。 HOW floor = link + 4-enum・HOW ceiling = concept HOW (spec-review-ssot lens)。 guarantee は tier3 CI のみ、 ceiling は <code>CEILING=PENDING</code> の advisory (ADR-0028 一般化)。</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s10-1-principles">§10.1 B5 が確立した横断原則</h3>
+<ul>
+  <li><strong>境界原則</strong>: <code>contract/</code> 内 = 厳密検証 / <code>contract/</code> 外 (folio-self の <code>inbound.from</code>・<code>amended_by.adr</code>) = external-ref として warn・解決は B6。 これで B5 は自完結を保ちつつ phantom 照会を silent に通さない。</li>
+  <li><strong>決定的 → floor (CI hard = guarantee) / 意味的 → ceiling (advisory)</strong>。 graph 構造は有限ゆえ floor が例外的に exhaustive (folio の「floor は検査できた範囲だけ green」が当てはまらない稀な領域)。 一方 照会 note の真正性・概念 HOW は意味判定ゆえ ceiling。</li>
+  <li><strong>core は additive 拡張のみ</strong>: rolemap リーダーを core (<code>lib/</code>) に追加するが、 既存 core 関数 (<code>verify_cross_doc_refs</code> / <code>inject-prose</code>) は byte-identity 非回帰を維持し、 graph traversal は独立 script に置いて既存 core に持ち込まない。 rule-of-three の「pack 追加は core 不変」(B4 で MET) とは別軸の capability 追加。</li>
+</ul>
+
+<h3 id="s10-2-followups">§10.2 follow-up と B6 前払い</h3>
+<p>grill で炙り出した B5 scope 外の改善候補 (実装時に bd 起票判断): 抽象 role の改名 (P-5 hygiene・<code>role</code> の 3 重定義)、 ADR-less 孤立 SRS の warn → block 昇格 policy、 <code>inbound.from</code> / <code>amended_by.adr</code> の実在・reverse 検証 (B6 で folio spec graph 接続時)、 generated contract の HOW-leak lens (generator ceiling 側)、 ceiling lens の CI 非ゲート advisory 化、 userConfig 4 キーの runtime 未読 gap、 review_model の機械 override 欠落。 <strong>B6 前払い</strong>: 照会 graph helper は doc-type 非依存で core に置き folio 自身の横断 graph へ転用できるよう設計し、 folio-self-spec の HOW 参照 (§9 Bindings 等) の <code>&lt;code&gt;</code> 言及 → <code>&lt;a href&gt;</code> 昇格は B6 self-dogfood の deliverable とする。 本節も探索領域 (research/) の design-of-record (路線「い」) であり、 B5 の確定設計は新規 ADR (P-10 user 承認) へ昇格させる。</p>
 </section>
 
 <!-- folio:chrome-bottom -->
