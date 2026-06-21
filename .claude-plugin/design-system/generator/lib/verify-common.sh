@@ -166,6 +166,14 @@ verify_term_inline() { # $1 = markable フィールドの yq 式  $2 = 被覆 se
   done
   [[ "$tfail" -eq 0 ]] && printf '  [OK]   %-'"$CHKW"'s %s\n' "term-inline 派生・一意 (data-term∈glossary・併記==plain_short)" "${#MARKS[@]}"
   # (c) 用語被覆: ascii=英数境界 / CJK=漢字非隣接 (perl -CSD) で assemble と同一の語境界規律。
+  # ★照合統一 (folio-wqh): exp は perl 既定 sort (codepoint 照合・locale 非依存)、 act は shell `sort -u`
+  #   (LC_COLLATE 依存) で両辺の照合が食い違っていた。 glossary に大文字 ascii 語 (SSoT 等) と小文字語が
+  #   混在すると、 en_US.UTF-8 の辞書照合 (大小文字を同位扱い: api < SSoT) と codepoint 照合 (大文字が先:
+  #   SSoT < api) で並びがズレ、 set_eq の厳密 == が *集合は同一なのに* false FAIL した (verify-side 限定の
+  #   latent core fragility)。 両辺を LC_ALL=C sort -u に揃えて照合を locale 非依存へ固定する: perl 内の sort は
+  #   外出しし exp/act とも同一の C 照合へ通す (= 「両辺同一照合」を明示)。 さらに set_eq の内部 comm (-23/-13)
+  #   も LC_ALL=C 下で呼んで C-sorted 入力と整合させる (en_US.UTF-8 のままだと genuine FAIL 時に comm が
+  #   "input is not in sorted order" を出し診断が崩れる。 一時代入は set_eq とその comm に伝播しリークしない)。
   local MKF GF2 gte exp_marks act_marks
   MKF="$(mktemp)"; GF2="$(mktemp)"
   esc "$(q "$markable_expr")" > "$MKF"
@@ -177,11 +185,11 @@ verify_term_inline() { # $1 = markable フィールドの yq 式  $2 = 被覆 se
       while (my $l=<$gf>){ chomp $l; next unless length $l; my ($te,$a)=split(/\t/,$l,2);
         my $pat=($a eq "1")?qr/(?<![A-Za-z0-9])\Q$te\E(?![A-Za-z0-9])/:qr/(?<!\p{Han})\Q$te\E(?!\p{Han})/;
         push @out,$te if $m=~$pat; } close $gf; }
-    print "$_\n" for sort @out;
-  ')"
+    print "$_\n" for @out;
+  ' | LC_ALL=C sort -u)"
   rm -f "$MKF" "$GF2"
-  act_marks="$(printf '%s\n' "${MARKS[@]}" | grep . | sed -E 's/.*data-term="([^"]*)".*/\1/' | sort -u)"
-  set_eq "$cov_label" "$exp_marks" "$act_marks"
+  act_marks="$(printf '%s\n' "${MARKS[@]}" | grep . | sed -E 's/.*data-term="([^"]*)".*/\1/' | LC_ALL=C sort -u)"
+  LC_ALL=C set_eq "$cov_label" "$exp_marks" "$act_marks"
 }
 
 # ---- core 共通 chrome (cover-head / approval-block / glossary-term-table) の floor 突合 (folio-mk9) ----
