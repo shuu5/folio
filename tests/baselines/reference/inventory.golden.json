@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-17T07:02:20Z",
+  "generatedAt": "2026-06-21T22:09:46Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -129,6 +129,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
@@ -184,6 +185,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
@@ -345,6 +347,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0017-unit-integration-boundary.html"
         ],
@@ -726,6 +729,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0038-constitution-p14-human-readability.html",
           "research/presentation-design-patterns.html",
           "decisions/ADR-0037-render-safety-ceiling.html",
@@ -866,6 +870,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
@@ -899,6 +904,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "research/presentation-design-patterns.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html"
@@ -1140,6 +1146,30 @@
       }
     },
     {
+      "@id": "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+      "title": "ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement (engine B5)",
+      "summary": "engine epic folio-0dv / B5 (folio-983)。 文書規律エンジンの",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.0.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0007-context-injection.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "spec/rules.html",
+          "spec/verification.html"
+        ]
+      }
+    },
+    {
       "@id": "decisions/README.html",
       "title": "folio decisions index",
       "summary": "folio Layer 0 の ADR cluster",
@@ -1190,7 +1220,11 @@
       "status": "active",
       "version": "1.0.0",
       "stakeholders": [],
-      "relations": {}
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html"
+        ]
+      }
     },
     {
       "@id": "research/plugin-sandbox-verification-research.html",
@@ -1502,6 +1536,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
         "essence": "epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を"
+      },
+      {
+        "id": "ADR-0043",
+        "class": "decision",
+        "ssot": "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+        "essence": "engine epic folio-0dv / B5 (folio-983)。 文書規律エンジンの"
       },
       {
         "id": "P-1",

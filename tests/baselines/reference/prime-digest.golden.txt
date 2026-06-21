@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 47 specs · folio 1.0.0
+# 48 specs · folio 1.0.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -192,6 +192,11 @@
 - doc-type: adr · status: accepted
 - summary: epic folio-c5g / S4 着手前 grill (2026-06-15) で確定した 2 つの refine を記録する。 (1) 人間プレゼンの生成を
 
+## decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html
+- title: ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement (engine B5)
+- doc-type: adr · status: accepted
+- summary: engine epic folio-0dv / B5 (folio-983)。 文書規律エンジンの
+
 ## decisions/README.html
 - title: folio decisions index
 - doc-type: cluster-readme · status: active
@@ -237,7 +242,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 111 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 112 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -273,6 +278,7 @@ ADR-0039 [decision] decisions/ADR-0039-presentation-template-layer.html
 ADR-0040 [decision] decisions/ADR-0040-human-layer-presentation-compression.html
 ADR-0041 [decision] decisions/ADR-0041-human-layer-visual-design-system.html
 ADR-0042 [decision] decisions/ADR-0042-hybrid-generation-dense-table-readability.html
+ADR-0043 [decision] decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html
 P-1 [principle] spec/constitution.html#p-1
 P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11
@@ -352,7 +358,7 @@ REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
 
 # 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
-# 111 nodes · 99 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 112 nodes · 99 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
 # 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs

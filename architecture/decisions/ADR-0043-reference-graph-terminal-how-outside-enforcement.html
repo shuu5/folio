@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0043">
+<meta name="folio-adr-date" content="2026-06-22">
+<title>ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement (engine B5)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement (engine B5)",
+  "folio:version": "1.0.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/document-discipline-engine-design.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0034-object-term-xref-system.html" },
+    { "@id": "./ADR-0007-context-injection.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0043</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-22 &middot; folio v1.0.0 &middot; engine epic folio-0dv / B5 (folio-983)。 文書規律エンジンの<strong>照会 graph 終端完備検証</strong>と<strong>HOW-outside content boundary</strong>を、 決定的 floor (CI guarantee) と意味的 ceiling (advisory) の二層 + 3-tier enforcement (注入 / 編集 gate / CI) として確定する。 per-pack 局所照会検証 (B1&ndash;B4 で実証済) を graph 全体の <strong>principle 終端到達保証</strong>へ拡張し、 design-intent (WHAT/WHY) 本文への実装 HOW 混入を機械検出する。 設計の探索 (design-of-record) は <a href="../research/document-discipline-engine-design.html#s10-b5">engine §10</a> (research domain・路線「い」) にあり、 本 ADR は実装 + 検証 (commit 1c48156 / 2c49a74 / 59f3fc9) 後の forward decision を記録する。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement・<a href="./ADR-0007-context-injection.html">ADR-0007</a> の context injection・<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> の xref graph を engine 汎用機構へ一般化する。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-graph">§2.1 照会 graph 終端完備検証 (rolemap + reachability)</a></li>
+  <li class="toc--sub"><a href="#s2-2-how-outside">§2.2 HOW-outside content boundary (二段 floor + ceiling)</a></li>
+  <li class="toc--sub"><a href="#s2-3-tiers">§2.3 3-tier enforcement (注入 / 編集 gate / CI)</a></li>
+  <li class="toc--sub"><a href="#s2-4-principles">§2.4 横断原則 (境界 / 決定的&harr;意味的 / core additive)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0043</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-22</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0028 (一般化 — 二層 enforcement モデル 〔決定的 floor = CI hard guarantee / 意味的 ceiling = advisory〕 を engine の照会 graph・HOW-outside へ拡張。 ceiling は <code>CEILING=PENDING</code> で floor 単独 GREEN を禁ずる)、 ADR-0007 (一般化 — SessionStart context injection を tier1 照会 graph digest 〔常時 baked + progressive disclosure〕 へ拡張)、 ADR-0034 (基盤 — object/term xref graph 〔in-band + 生成 AI-graph hybrid〕 を照会 graph の格納・描画基盤として再利用。 照会の真の SSoT は contract YAML)、 ADR-0033 (継承 — co-author + enforce の規律を rolemap pin 〔<code>edge.role == rolemap[node.type]</code>〕 が踏襲)。 規範化先 = rules.html (照会 graph / HOW-outside contract) + verification.html (floor REQ)。 設計 design-of-record = engine §10 (research/document-discipline-engine-design.html・路線「い」 = research に留め実証後 ADR 昇格)。 接地 = engine epic folio-0dv / B5 folio-983 (子 folio-p4o = graph 終端完備 / folio-6us = HOW-outside gate / folio-hi6 = tier1/2 配布 + CI 統合)。 follow-up = folio-pgb (floor-2 hard-gate 昇格・needs-user) / folio-ulz (孤立 SRS warn&rarr;block policy・needs-user) / folio-0v0 (rules.html LC_ALL=C 言い換え) / folio-1sn (allowlist 一本化)。 起点 = user grill 2026-06-21 (grounding sweep 3 本で検証済事実に基づき 7 論点を詰めた) + B1&ndash;B4 実証 (per-pack 照会検証の load-bearing 確認)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>engine epic <strong>folio-0dv</strong> は folio の文書規律を一般化した汎用文書生成エンジンを構築する (<a href="../research/document-discipline-engine-design.html">engine 設計 doc</a>)。 その §3 は doc-type を跨ぐ<strong>照会 graph</strong> (主張 &rarr; 根拠 &rarr; 探索 &rarr; … &rarr; 原則 終端) を、 §4 は WHAT/WHY と実装 HOW を分離する <strong>HOW-outside</strong> を design intent として置いた。 B1&ndash;B4 (clinic ADR / core 抽出 / research pack / principle pack) は <strong>per-pack の照会検証</strong> (<code>verify_cross_doc_refs</code> = contract YAML を SSoT に各 doc 内の cross-doc 照会の存在と SET 一致を検証) を実装・実証した。</p>
+
+<p><strong>第一の gap — 局所照会では graph 全体の終端到達を保証できない</strong>。 per-pack verify は「この doc が宣言する照会先が存在するか」を局所に検査するが、 corpus 全体を 1 つの graph として見たとき「<em>全チェーンが原則 (principle) 終端へ到達するか</em>」は検査しない。 原則へ繋がらない孤立ノードや、 受け手の無い phantom 照会が局所検証を素通りしうる。 「根拠を原則まで全部見せて」という engine の北極星 (doc-type を跨ぐ説明可能性) は、 graph-level の<strong>終端完備性</strong>を保証して初めて成立する。</p>
+
+<p><strong>第二の gap — HOW 混入に強制機構が無い</strong>。 design-intent 文書 (WHAT/WHY) に実装/環境固有の HOW (<a href="../spec/constitution.html#p-3">P-3</a> portability 違反・<a href="../spec/constitution.html#p-11">P-11</a> の具体 primitive) が紛れ込むと、 文書が特定実装に癒着し portability と読みやすさを損なう。 だが B4 時点で HOW 混入を止める機構は<strong>助言的 lens 1 本のみ</strong>で、 CI hard gate は存在しなかった。</p>
+
+<p>B5 (folio-983) の設計 grill (2026-06-21) は reader 要約でなく<strong>実 corpus と現行機構を read-only で精査する grounding sweep を 3 本</strong>走らせ、 検証済事実に基づき 7 論点を詰めた。 sweep は地図に無かった重大事実 — 終端の 2 系統分裂 / <code>inbound.from</code> の完全無検査 / HOW-leak の hard gate ゼロ / userConfig の runtime 未読 — を炙り出し、 配布方式の推奨を案A から案C へ反転させた。 本 ADR はその確定設計を、 実装 + 検証 (engine §10 の 3 子セルが land 済) 後に forward decision として記録する。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-graph">§2.1 照会 graph 終端完備検証 (rolemap + reachability)</h3>
+
+<p><strong>(a) rolemap</strong> — pack ごとに <code>rolemap</code> (node-type &rarr; 抽象ロール 〔claim / rationale / exploration / verification / principle / implementation〕 の写像表) を pack 側 SSoT として宣言する。 抽象ロールにより「主張 &rarr; 根拠 &rarr; … &rarr; 原則終端」の統一 edge を doc-type 跨ぎで定義でき、 <a href="../spec/constitution.html#p-5">P-5</a> (1 entity = 1 canonical name) を保ったまま「根拠を原則まで辿る」が成立する。 リーダーは core (additive) に置き、 scope 内 edge のロールは floor で <code>edge.role == rolemap[node.type]</code> を pin する (co-author + enforce = <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の規律を踏襲)。 corpus からの draft &rarr; 明示宣言 &rarr; pin が二重担保となり、 ロールの不在 (例 SRS の exploration 不在) は scan で実証解決する。</p>
+
+<p><strong>(b) reachability</strong> — 照会の真の SSoT は contract YAML (<a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> の xref graph を格納・描画基盤に再利用、 HTML <code>data-*</code> は描画用 projection ゆえ別表現への転写を避ける)。 独立 script が <code>contract/</code> を集約し edge union を作り、 principle 終端への到達可能性を 1 計算で {<strong>終端完備</strong> / <strong>孤立 = warn</strong> / <strong>逆方向 = 局所</strong>} に展開する。 終端は <strong>domain-local principle</strong> を許容する (ADR inline の原則を graph node に昇格 = repo-local 完備と整合)。 孤立は方向ゼロでなく到達可能性で定義し、 改訂来歴 (<code>amended_by</code>) は meta-edge として reachability から除外する。 既存 core 関数は不変、 graph traversal は独立 script に置く。</p>
+
+<h3 id="s2-2-how-outside">§2.2 HOW-outside content boundary (二段 floor + ceiling)</h3>
+
+<p>design-intent (WHAT/WHY) 本文には HOW を埋めず、 実装/検証 (HOW) へは照会リンクで繋ぐ content boundary を二段 floor + ceiling で強制する。 <strong>floor-1 = 照会リンク存在</strong> (本文 <code>&lt;a href&gt;</code> の link-integrity 延長)。 <strong>floor-2 = P-11 4-enum の保守的検出</strong> — 環境変数の具体値 / バイナリ path / OS コマンド / 明示ツール起動という<em>明示 primitive</em> の有無を可視テキストから構文検出する。 明示 primitive の有無は意味判定の射程外ゆえ <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の prose-gate 精度懸念に当たらない。 <strong>ceiling = 概念 HOW</strong> (P-3 portability 依存の記述) を既存 spec-review-ssot lens の強化で advisory に検出する (新 agent 不要)。 scope = spec_path (design-intent 空間)・HOW の住処である plugin harness は対象外。 floor-2 は誤検出率を実測する <strong>staged rollout</strong> を採り、 当初は soft-warn (exit 非影響の advisory) で着地させ、 許容内と確認後に新 ADR (P-10 user 承認) で CI hard gate へ昇格する。</p>
+
+<h3 id="s2-3-tiers">§2.3 3-tier enforcement (注入 / 編集 gate / CI)</h3>
+
+<p>§2.1/§2.2 の規律を 3 つの層で consumer へ配布する。 配布方式は <strong>plugin 固定</strong> (新 userConfig 変数 0) — userConfig は runtime 未読 (base_url のみ実読) ゆえ「userConfig 拡張」は新機構実装を要し不採用 (§4)。</p>
+<ul>
+  <li><strong>tier1 = 注入</strong> (<a href="./ADR-0007-context-injection.html">ADR-0007</a> の一般化): 照会 graph digest を <code>folio prime</code> 出力に追記し SessionStart で常時 baked。 progressive disclosure の Tier 1 (= node/edge 数 + 被参照数上位、 詳細は inventory を Tier 2/3 で参照) で文脈を圧迫しない (enforcement の tier1 とは別概念)。</li>
+  <li><strong>tier2 = 編集 gate</strong>: spec_path 配下 spec の編集時に HOW primitive を検出する PreToolUse hook。 <strong>非ブロッキング advisory</strong> (shaping = deny でない) であり、 これは保証層でなく振る舞いを形作る層。</li>
+  <li><strong>tier3 = CI</strong>: graph floor (到達可能性 / dangling / 孤立) + HOW floor (link + 4-enum) を CI で hard 検査する。 <strong>guarantee は tier3 のみ</strong> (hook は直編集 / opt-in / コストで保証にならない)。 ceiling (照会 note・role の真正性 / 概念 HOW) は <code>CEILING=PENDING</code> の advisory で CI を gate せず、 floor &and; ceiling の真 GREEN は人間 ratify を要する (ADR-0028 一般化)。</li>
+</ul>
+
+<h3 id="s2-4-principles">§2.4 横断原則 (境界 / 決定的&harr;意味的 / core additive)</h3>
+<ul>
+  <li><strong>境界原則</strong>: <code>contract/</code> 内 = 厳密検証 / <code>contract/</code> 外 (folio-self の <code>inbound.from</code>・<code>amended_by.adr</code>) = external-ref として warn し解決は B6 (folio が consumer 兼 engine となる self-dogfood)。 これで B5 は自完結を保ちつつ phantom 照会を silent に通さない。</li>
+  <li><strong>決定的 &rarr; floor (CI hard = guarantee) / 意味的 &rarr; ceiling (advisory)</strong>。 graph 構造は有限ゆえ floor が例外的に exhaustive (folio の「floor は検査できた範囲だけ green」が当てはまらない稀な領域)。 照会 note の真正性・概念 HOW は意味判定ゆえ ceiling。</li>
+  <li><strong>core は additive 拡張のみ</strong>: rolemap リーダーを core に追加するが、 既存 core 関数 (<code>verify_cross_doc_refs</code> / <code>inject-prose</code>) は byte-identity 非回帰を維持し、 graph traversal は独立 script に置く。 rule-of-three の「pack 追加は core 不変」(B4 で MET) とは別軸の capability 追加。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: corpus 全体が 1 graph として原則終端への到達を機械保証され、 doc-type を跨ぐ「根拠を原則まで全部見せて」が成立する。 design-intent への HOW 混入が CI で検出され portability と可読性が守られる。 注入 (tier1) / shaping (tier2) / guarantee (tier3) の三層で「気づかせる」と「保証する」を分離できる。</li>
+  <li><strong>払うもの</strong>: pack ごとの rolemap を定義・維持する。 floor-2 は staged rollout (soft-warn &rarr; 実測 &rarr; 新 ADR で hard 昇格) ゆえ昇格まで保証が弱い (folio-pgb)。 tier1 digest は <code>folio prime</code> の出力量を僅かに増やす (progressive disclosure で緩和)。 contract/ 外照会 (folio-self への inbound・amended_by) は B6 まで warn 留め。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (照会 graph の格納スキーマ = contract YAML SSoT と 3-tier enforcement architecture は構築後の転換が高コスト) / <em>surprising</em> (per-pack 局所検証から graph-level 終端完備へ・配布を userConfig 拡張から plugin 固定へ反転 = grounding sweep が地図を補正) / <em>real-trade-off</em> (graph 格納スキーマ・案A/B/C 配布・soft-warn vs hard-gate・終端定義 〔§4〕 の 3 種以上の実トレードオフ) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>(格納) 照会 graph を専用表現へ転写</strong> — 不採用。 照会の SSoT は既に contract YAML (<code>verify_cross_doc_refs</code> が YAML を source に HTML と SET 一致)。 別表現への転写は二重 SSoT = drift 源ゆえ、 contract YAML を graph 検証 SSoT に据え HTML <code>data-*</code> は描画 projection と位置づける。</li>
+  <li><strong>(配布・案A) userConfig 拡張で tier1/2 を opt-in 化</strong> — 不採用 (地図から flip した本命対抗馬)。 grounding sweep で userConfig 4 キーが runtime 未読 (<code>base_url</code> のみ実読) と判明し、 「userConfig 拡張」は新機構実装を要すると分かった。 plugin 固定 (新 config 変数 0・hook 1 本 + prime 追記) なら全 consumer に自動適用でき実装も最小。 consumer 独自 doc-type は実需要ゼロゆえ YAGNI follow-up。</li>
+  <li><strong>(HOW gate) floor-2 を即 CI hard-block</strong> — 不採用 (段階化)。 P-11 4-enum の保守的構文検出は誤検出 (例 spec が言語仕様を説明する文脈の primitive 言及) を伴いうる。 即 hard-block は正当な記述を阻む risk があるため、 soft-warn で実 corpus の誤検出率を実測し、 許容内と確認後に新 ADR (P-10) で hard 昇格する staged rollout を採る。</li>
+  <li><strong>(graph 空間) cross-repo 照会 graph を B5 で構築</strong> — 不採用。 各 repo 内で graph を閉じ (repo-local 完備)、 consumer &rarr; folio principle の照会のみ plugin 同梱 registry への dangling 検証とする。 cross-repo 統合は B5 射程外とし B6 (folio が consumer 兼 engine) を最も楽にする。</li>
+  <li><strong>(終端定義) 孤立を「方向ゼロ」で定義</strong> — 不採用。 方向ゼロでは中継ノードを孤立と誤判定する。 principle 終端への<em>到達可能性</em>で孤立を定義し、 ADR inline の原則を graph node に昇格して domain-local 終端を許容する方が graph の実体に合う。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<p>design-of-record (探索): <a href="../research/document-discipline-engine-design.html#s10-b5">engine §10</a> (research domain・路線「い」 = research に留め実証後 ADR 昇格)。 一般化元: <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement モデル — 決定的 floor / 意味的 ceiling / CEILING=PENDING を engine の照会 graph・HOW-outside へ拡張)・<a href="./ADR-0007-context-injection.html">ADR-0007</a> (SessionStart 注入を tier1 digest へ拡張)。 基盤: <a href="./ADR-0034-object-term-xref-system.html">ADR-0034</a> (xref graph を照会 graph の格納・描画基盤に再利用・contract YAML を SSoT)。 継承: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (co-author + enforce を rolemap pin が踏襲)。 規範化先: <a href="../spec/rules.html">rules.html</a> (照会 graph / rolemap / HOW-outside contract)・<a href="../spec/verification.html">verification.html</a> (graph floor + HOW floor の REQ)。 原則接地: <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離) / <a href="../spec/constitution.html#p-7">P-7</a> (3-domain) / <a href="../spec/constitution.html#p-11">P-11</a> (HOW の隔離) / <a href="../spec/constitution.html#p-10">P-10</a> (ADR 昇格は user 承認)。 追跡: bd engine epic folio-0dv / B5 folio-983 (子 folio-p4o = graph 終端完備検証 commit 1c48156 / folio-6us = HOW-outside gate commit 2c49a74 / folio-hi6 = tier1/2 配布 + CI 統合 commit 59f3fc9)。 follow-up: folio-pgb (floor-2 hard-gate 昇格・needs-user) / folio-ulz (孤立 SRS warn&rarr;block policy・needs-user) / folio-0v0 (rules.html の HOW primitive 言い換え) / folio-1sn (rolemap allowlist 一本化)。 B6 前払い: 照会 graph helper を doc-type 非依存で core に置き folio 自身の横断 graph へ転用し、 folio-self-spec の HOW 参照の <code>&lt;a href&gt;</code> 昇格を B6 (folio-qf1) self-dogfood の deliverable とする。 決定の経緯: user grill 2026-06-21 (grounding sweep 3 本で検証済事実に基づき 7 論点を詰め、 配布推奨を案A &rarr; 案C へ反転) + B1&ndash;B4 実証 (per-pack 照会検証が load-bearing と確認)。 version: 本 ADR 文書版 = 1.0.0 (記録する実装は engine epic folio-0dv・後方互換 capability 追加)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0042-hybrid-generation-dense-table-readability.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0042 — hybrid generation + dense-table readability strategy (機械SSoT 決定的組立 + opus prose 充填 + 密系部品 A/B 可読化)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

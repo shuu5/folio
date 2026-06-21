@@ -18,6 +18,9 @@
   },
   "@id": "./document-discipline-engine-design.html",
   "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html" }
+  ],
   "dc:title": "文書規律エンジン (C) B0 設計 design-of-record",
   "folio:version": "1.0.0"
 }
@@ -207,21 +210,17 @@
     <tr><td>② 格納スキーマ</td><td>contract YAML を graph 検証 SSoT</td><td>HTML data-* は描画用 projection。 照会の真の SSoT は既に contract YAML (<code>verify_cross_doc_refs</code> が YAML を source に HTML と SET 一致)。 別表現への転写は drift 源ゆえ避ける。 scope = 生成 doc、 folio 自身の HTML graph 化は B6。</td></tr>
     <tr><td>③ ロール写像宣言</td><td>pack ごと rolemap (node-type → role 表)</td><td>rolemap = node intrinsic role の SSoT。 scope 内 edge role は floor で <code>edge.role == rolemap[node.type]</code> を pin (co-author + enforce)。 既存 corpus から draft → 明示宣言 → pin が二重担保。 SRS の exploration 不在 (B0 開問F) は scan で実証解決。 rolemap = pack / リーダー = core。 <code>role</code> の多重定義は path-scoped で受容 (改名は follow-up)。</td></tr>
     <tr><td>④ 終端完備の検証 (主題)</td><td>独立 graph script (reachability 一括)</td><td><code>contract/</code> glob → edge union → principle 終端への到達可能性を 1 計算で {終端完備 / 孤立 = warn / 逆方向 = 局所} に展開。 終端は <strong>domain-local principle</strong> (ADR inline 含む) を許容 (論点① repo-local と整合・inline を graph node に昇格)。 孤立は方向ゼロでなく到達可能性で定義。 <code>amended_by</code> は来歴 meta-edge として除外。 既存 core 関数は不変、 traversal は独立 script。</td></tr>
-    <tr><td>⑤ HOW-outside content gate</td><td>二段 floor + ceiling</td><td>floor-1 照会リンク存在 + floor-2 <strong>P-11 4-enum の保守的 hard-block</strong> (明示 primitive の有無 = 意味判定の射程外ゆえ ADR-0028 の精度懸念に当たらない)。 ceiling = 概念 HOW (P-3 portability) を既存 spec-review-ssot lens 強化で advisory (新 agent 不要)。 scope = spec_path・floor は CI で担保。 staged rollout (soft-warn 実測 → 新 ADR で CI hard gate)。</td></tr>
+    <tr><td>⑤ HOW-outside content gate</td><td>二段 floor + ceiling</td><td>floor-1 照会リンク存在 + floor-2 <strong>P-11 4-enum の保守的検出</strong> (明示 primitive の有無 = 意味判定の射程外ゆえ ADR-0028 の精度懸念に当たらない。 B5 実装は soft-warn 着地・hard-block 昇格は staged rollout = <a href="../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html#s2-2-how-outside">ADR-0043 §2.2</a>)。 ceiling = 概念 HOW (P-3 portability) を既存 spec-review-ssot lens 強化で advisory (新 agent 不要)。 scope = spec_path・floor は CI で担保。 staged rollout (soft-warn 実測 → 新 ADR で CI hard gate)。</td></tr>
     <tr><td>⑥ tier1/2 配布</td><td>plugin 固定 (新 config 変数 0)</td><td>tier1 照会 digest は <code>folio prime</code> 追記で常時 baked + progressive disclosure、 tier2 content gate は hook 1 本追加で全 consumer 自動適用。 consumer 独自 doc-type は実需要ゼロゆえ YAGNI follow-up。 userConfig は runtime 未読 (base_url のみ実読) のため案A の「userConfig 拡張」は新機構実装を要し不採用 (地図から flip)。</td></tr>
     <tr><td>⑦ CI gate の floor ∧ ceiling</td><td>決定的 → floor / 意味的 → ceiling を両方に</td><td>graph floor = 到達性 / dangling / 孤立 (例外的に exhaustive)・graph ceiling = 照会 note / role 真正性 (既存 fidelity-* lens)。 HOW floor = link + 4-enum・HOW ceiling = concept HOW (spec-review-ssot lens)。 guarantee は tier3 CI のみ、 ceiling は <code>CEILING=PENDING</code> の advisory (ADR-0028 一般化)。</td></tr>
   </tbody>
 </table>
 
 <h3 id="s10-1-principles">§10.1 B5 が確立した横断原則</h3>
-<ul>
-  <li><strong>境界原則</strong>: <code>contract/</code> 内 = 厳密検証 / <code>contract/</code> 外 (folio-self の <code>inbound.from</code>・<code>amended_by.adr</code>) = external-ref として warn・解決は B6。 これで B5 は自完結を保ちつつ phantom 照会を silent に通さない。</li>
-  <li><strong>決定的 → floor (CI hard = guarantee) / 意味的 → ceiling (advisory)</strong>。 graph 構造は有限ゆえ floor が例外的に exhaustive (folio の「floor は検査できた範囲だけ green」が当てはまらない稀な領域)。 一方 照会 note の真正性・概念 HOW は意味判定ゆえ ceiling。</li>
-  <li><strong>core は additive 拡張のみ</strong>: rolemap リーダーを core (<code>lib/</code>) に追加するが、 既存 core 関数 (<code>verify_cross_doc_refs</code> / <code>inject-prose</code>) は byte-identity 非回帰を維持し、 graph traversal は独立 script に置いて既存 core に持ち込まない。 rule-of-three の「pack 追加は core 不変」(B4 で MET) とは別軸の capability 追加。</li>
-</ul>
+<p>grill は 3 つの横断原則 — <strong>境界原則</strong> (<code>contract/</code> 内 = 厳密検証 / 外 〔folio-self の <code>inbound.from</code>・<code>amended_by.adr</code>〕 = external-ref として warn・解決は B6)、 <strong>決定的 → floor (CI hard = guarantee) / 意味的 → ceiling (advisory)</strong> (graph 構造は有限ゆえ floor が例外的に exhaustive)、 <strong>core は additive 拡張のみ</strong> (既存 core 関数は byte-identity 非回帰・graph traversal は独立 script) — を確立した。 <strong>これらの確定形は <a href="../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html#s2-4-principles">ADR-0043 §2.4</a> が正本</strong> (路線「い」= 実証後 ADR 昇格が完了)。 本 §10 は確定原則を二重保持せず、 grounding sweep が配布推奨を案A → 案C へ反転させた discovery の経緯記録に focus する。</p>
 
 <h3 id="s10-2-followups">§10.2 follow-up と B6 前払い</h3>
-<p>grill で炙り出した B5 scope 外の改善候補 (実装時に bd 起票判断): 抽象 role の改名 (P-5 hygiene・<code>role</code> の 3 重定義)、 ADR-less 孤立 SRS の warn → block 昇格 policy、 <code>inbound.from</code> / <code>amended_by.adr</code> の実在・reverse 検証 (B6 で folio spec graph 接続時)、 generated contract の HOW-leak lens (generator ceiling 側)、 ceiling lens の CI 非ゲート advisory 化、 userConfig 4 キーの runtime 未読 gap、 review_model の機械 override 欠落。 <strong>B6 前払い</strong>: 照会 graph helper は doc-type 非依存で core に置き folio 自身の横断 graph へ転用できるよう設計し、 folio-self-spec の HOW 参照 (§9 Bindings 等) の <code>&lt;code&gt;</code> 言及 → <code>&lt;a href&gt;</code> 昇格は B6 self-dogfood の deliverable とする。 本節も探索領域 (research/) の design-of-record (路線「い」) であり、 B5 の確定設計は新規 ADR (P-10 user 承認) へ昇格させる。</p>
+<p>grill で炙り出した B5 scope 外の改善候補 (実装時に bd 起票判断): 抽象 role の改名 (P-5 hygiene・<code>role</code> の 3 重定義)、 ADR-less 孤立 SRS の warn → block 昇格 policy、 <code>inbound.from</code> / <code>amended_by.adr</code> の実在・reverse 検証 (B6 で folio spec graph 接続時)、 generated contract の HOW-leak lens (generator ceiling 側)、 ceiling lens の CI 非ゲート advisory 化、 userConfig 4 キーの runtime 未読 gap、 review_model の機械 override 欠落。 <strong>B6 前払い</strong>: 照会 graph helper は doc-type 非依存で core に置き folio 自身の横断 graph へ転用できるよう設計し、 folio-self-spec の HOW 参照 (§9 Bindings 等) の <code>&lt;code&gt;</code> 言及 → <code>&lt;a href&gt;</code> 昇格は B6 self-dogfood の deliverable とする。 本節も探索領域 (research/) の design-of-record (路線「い」) であり、 B5 の確定設計は <a href="../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> (P-10 user 承認・2026-06-22 accepted) へ昇格済。</p>
 </section>
 
 <!-- folio:chrome-bottom -->
