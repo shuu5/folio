@@ -140,3 +140,58 @@ folio_jsonld_structural_check() {
   fi
   return 0
 }
+
+# --- HOW-outside content gate: P-11 4-primitive 検出 (共有: tier2 PreToolUse hook + tier3 validate) ---
+# engine 設計 §10 論点⑤⑦ (HOW-outside content gate) floor-2 の検出パターン SSoT。 B5-II が
+# bin/folio validate gate (r) に実装した P-11 4-enum 検出を、 B5-III の tier2 content gate hook
+# (check-content-boundary.sh = shaping advisory) と共用するため本 lib に集約する (jsonld 構造 check と
+# 同じ DRY pattern、 ADR-0020 §2.4)。 validate (tier3 = guarantee) も本関数を呼び behavior-preserving。
+#
+# $1 = mask 済 visible text (caller が folio_mask_prose + tag 除去で生成)。 P-11 4-primitive を保守的
+# 構文検出し "category\ttoken" 行を未 sort で stdout に出す (caller が LC_ALL=C sort -u + 整形)。
+#   (1) env-var-value   : 大文字 env-var 名 (>=3) に =値 (NAME=value の具体値、 bare 名は対象外)
+#   (2) binary-path     : system binary dir 配下の絶対 path (相対 path 誤検出を境界で抑止)
+#   (3) os-command      : 破壊的/OS 固有コマンドのコマンド形 (flag/arg 付き)
+#   (4) tool-invocation : 既知 CLI tool 名 + flag 形 (bare 言及でなくコマンド形のみ)
+# 「明示 primitive の有無」 は構文判定 (意味判定でない) ゆえ ADR-0028 の精度懸念に当たらない (§10⑤)。
+# 検出パターンは bin/folio folio_check_how_primitives の floor-2 と byte-identical に保つ (SSoT = 本関数)。
+folio_how_primitive_scan() {
+  local text="$1"
+  # (1) env var の具体値: 大文字 env-var 名 (>=3 文字) に = と値 (典型 env value 文字に限定 = CJK/括弧で境界) が続く。
+  printf '%s\n' "$text" | grep -oE '\b[A-Z][A-Z0-9_]{2,}=[A-Za-z0-9_./:@%+-]+' 2>/dev/null | sed 's/^/env-var-value\t/'
+  # (2) binary path: 既知 system binary dir 配下の絶対 path (境界前置文字で相対 path 誤検出を抑止)。
+  printf '%s\n' "$text" | grep -oE '(^|[^[:alnum:]_./-])/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' 2>/dev/null \
+    | grep -oE '/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' | sed 's/^/binary-path\t/'
+  # (3) OS-specific command: 高シグナルな破壊的/OS 固有コマンドのコマンド形 (flag/arg 付き)。
+  printf '%s\n' "$text" | grep -oE '\b(rm -[rf]+|sudo |chmod [0-7ugoa]|chown |apt-get |apt install|brew install|systemctl |kill -9|pkill |mkdir -p|kill-server)' 2>/dev/null | sed 's/^/os-command\t/'
+  # (4) 明示 tool 起動: 既知 CLI tool 名 + flag 形 (bare 言及でなくコマンド形のみ。 保守的)。
+  printf '%s\n' "$text" | grep -oE '\b(jq|yq|awk|sed|grep|tmux|pnpm|npm|git|node|playwright|docker|kubectl|curl|wget|flock) +-{1,2}[A-Za-z]' 2>/dev/null | sed 's/^/tool-invocation\t/'
+}
+
+# --- HOW-outside content gate: prose mask (tier2 hook 専用、 advisory) ---
+# spec 本文の可視 prose のみを残し code/pre/script/style/chrome/aside.machine-readable を mask する。
+# bin/folio folio_prose_only (tier3 validate の authoritative masker) と同一アルゴリズムを保持し、
+# tier2 hook の P-11 検出が tier3 floor-2 と一致するようにする (advisory ⊆ guarantee)。 bin/folio 側は
+# inventory/prime が plugin-lib 非依存のため移譲できず (line 1672 設計意図)、 本 lib に同期コピーを置く
+# (drift 時は bin/folio folio_prose_only が SSoT)。 引数: $1 = HTML body 文字列。
+folio_mask_prose() {
+  printf '%s\n' "$1" | awk '
+    function mask_inline_code(s,   i,c,n,out){
+      n=length(s); out=""
+      for(i=1;i<=n;i++){
+        c=substr(s,i,1)
+        if(incode){ out=out " "; if(c==">" && substr(s,i-6,7)=="</code>") incode=0; continue }
+        if(c=="<" && substr(s,i,5)=="<code" && (substr(s,i+5,1)==" " || substr(s,i+5,1)==">")){ incode=1; out=out " "; continue }
+        out=out c
+      }
+      return out
+    }
+    BEGIN{ skip=0; incode=0; chrome=0 }
+    /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/{chrome=1}
+    /<(pre|script|style)[ >]/{skip++}
+    /<aside class="machine-readable"/{skip++}
+    skip==0 && chrome==0 { print mask_inline_code($0) }
+    /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{chrome=0}
+    /<\/(pre|script|style|aside)>/{if(skip>0)skip--}
+  '
+}

@@ -1,0 +1,128 @@
+schema_version: "0.1"
+req_id: "REQ-VER-007"
+ears_pattern: "unwanted"
+description: |
+  tier-2 content gate (engine 設計 §4 HOW を外側へ・enforcement は 3-tier の tier-2 = PreToolUse 編集 gate、
+  B5-III / engine doc §10 論点⑥) の advisory 検出を hook scenario で実証する。 spec_path 配下の spec を
+  Write する際、 本文 (prose) に platform 固有 HOW (P-11 4-primitive) を裸書きすると advisory を stderr に
+  出す (★非ブロッキング = exit 0。 tier-2 は shaping であり guarantee ではない — guarantee は tier-3 CI floor)。
+  検出ロジックは plugin-lib.sh folio_how_primitive_scan / folio_mask_prose を tier-3 = bin/folio validate
+  gate (r) how-outside (B5-II) と共用し一致する (advisory ⊆ guarantee)。
+
+  検査軸:
+    positive (advisory 発火・exit 0): 本文裸書きの env-var-value (NAME=value) / os-command (rm -rf)。
+    mask negative: <code> 内 primitive は folio_mask_prose で mask され非検出 (advisory なし・exit 0)。
+    scope=spec_path: decisions/ (= 一次資料層・WHAT domain 外) の裸 primitive は非走査 (exit 0)。
+    tool 限定: Edit は部分編集ゆえ対象外 (exit 0)。 非 .html は対象外 (exit 0)。
+    clean: HOW なし spec は無音通過 (exit 0)。
+  ※ harness は stderr_contains (部分一致) のみ assert 可ゆえ「advisory 不発火」(stderr 空) の厳密検証は
+    selftest-folio-hi6.local.sh が担う (fail-closed)。 本 scenario は発火/exit-code の CI 回帰を固定する。
+  Reference: engine doc §4 / §10 論点⑥、 ADR-0003 §2.1 (path-boundary と対の content-boundary)、 P-3/P-11/P-13.
+
+setup:
+  env: {}
+  fixtures: []
+
+scenarios:
+  - name: "spec 本文に裸 env-var (NAME=value) → advisory 発火・非ブロッキング (exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/spec/feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="spec"></head>
+        <body><p>設定値は EXAMPLE_VAR=somevalue を用いる。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+      stderr_contains: "folio content-boundary (advisory)"
+
+  - name: "spec 本文に裸 os-command (rm -rf) → advisory (category=os-command)"
+    given:
+      env: {}
+      file_path: "architecture/spec/feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="spec"></head>
+        <body><p>不要時は rm -rf で消去する。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+      stderr_contains: "os-command"
+
+  - name: "絶対 path で spec_path 配下の spec 本文に裸 primitive → advisory (実機の絶対 path 入力)"
+    given:
+      env: {}
+      file_path: "/home/user/folio/architecture/spec/feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="spec"></head>
+        <body><p>binary は /usr/bin/jq を呼ぶ。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+      stderr_contains: "folio content-boundary (advisory)"
+
+  - name: "<code> 内 primitive は mask → 非検出 (advisory なし・exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/spec/feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="spec"></head>
+        <body><p>env 名は <code>HIDDEN_VAR=xyz</code> のように示す。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "spec_path 外 (decisions/) の裸 primitive は非走査 (scope=spec_path・exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/decisions/ADR-9999-x.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="adr"></head>
+        <body><p>DECVAR=v2 を設定する。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "Edit tool は対象外 (部分編集ゆえ全文 content なし・exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/spec/feature.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "非 .html は対象外 (exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/spec/notes.md"
+      content: "EXAMPLE_VAR=somevalue"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "HOW なし clean spec は無音通過 (exit 0)"
+    given:
+      env: {}
+      file_path: "architecture/spec/feature.html"
+      content: |
+        <!DOCTYPE html>
+        <html><head><meta name="folio-doc-type" content="spec"></head>
+        <body><p>本機能は注文を確定する。</p></body></html>
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+teardown:
+  cleanup_files: []

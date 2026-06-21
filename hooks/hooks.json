@@ -20,6 +20,16 @@
             "timeout": 5000
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-content-boundary.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ],
     "PostToolUse": [

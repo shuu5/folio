@@ -350,3 +350,17 @@ REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
 REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
 REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
+
+# 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
+# 111 nodes · 99 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
+- P-11 [principle] ← 6 refs
+- P-7 [principle] ← 4 refs
+- ADR-0003 [decision] ← 3 refs
+- ADR-0033 [decision] ← 3 refs
+- ADR-0039 [decision] ← 3 refs
+- P-10 [principle] ← 3 refs
+- P-13 [principle] ← 3 refs
+- P-14 [principle] ← 3 refs
+- P-2 [principle] ← 3 refs
+- P-3 [principle] ← 3 refs

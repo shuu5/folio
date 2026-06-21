@@ -59,7 +59,7 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 │   ├── e2e/                                agent-driven e2e integration (runbook + golden)
 │   └── runner.sh                           軽量 bash runner (bash + yq + jq、 REPO_ROOT = ../)
 ├── hooks/                                  Claude Code 公式仕様 = plugin root 直下 MUST
-│   └── hooks.json                          hook 宣言 (PreToolUse × 2 + PostToolUse = MVP core)
+│   └── hooks.json                          hook 宣言 (PreToolUse × 3 [caller-marker / path-boundary / content-boundary] + PostToolUse × 2 + SessionStart、 MVP core + B5-III tier2 content-boundary)
 ├── skills/                                 SKILL (公式仕様 = plugin root 直下): folio-architect (spec 編集の正規路) + folio-compress (ADR-0040 圧縮 migration)
 ├── agents/                                 review subagent (公式仕様 = plugin root 直下): Phase F spec-review-* 5 本 + readability-walk (rules §11.4 readability lens) + SRS ceiling 2 本 (persona-walk-srs = gate I / fidelity-srs = gate J、 taxonomy §5.3、 S5.2)
 ├── .claude-plugin/                         Claude Code manifest + 内部 HOW (P-11 部分隔離)

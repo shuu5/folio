@@ -64,6 +64,13 @@ jobs:
       - name: folio validate (deterministic floor — 18 gate)
         run: .claude-plugin/bin/folio validate
 
+      # 照会 graph 終端完備の deterministic floor (engine §10④⑦ / B5)。 design-system 生成 doc corpus
+      # (contract/) の到達性 / dangling / 孤立 を検証する graph floor を CI floor に乗せる (B5-III)。
+      # graph 構造は有限ゆえ floor が例外的に exhaustive = guarantee (exit 1 で merge block)。 ★graph
+      # ceiling (照会 note / role 真正性) は CEILING=PENDING の advisory ゆえ CI 非ゲート (fidelity-* lens)。
+      - name: folio verify-graph (deterministic floor — 照会 graph 終端完備)
+        run: .claude-plugin/bin/folio verify-graph
+
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
       #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)

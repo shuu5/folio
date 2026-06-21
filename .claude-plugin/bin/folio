@@ -290,6 +290,26 @@ folio_prime_emit_digest() {
   printf '# object-graph index — %s canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)\n' "$og_count"
   printf '# <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。\n'
   [[ -n "$og_body" ]] && printf '%s\n' "$og_body"
+
+  # 照会 graph digest (engine 設計 §10 論点⑥ tier1 = 照会 map digest を常時 baked。 §4 3-tier
+  # enforcement の tier-1 SessionStart 注入)。 progressive disclosure: Tier 1 = node/edge 数 +
+  # 最重要 cross-ref (被参照数 top 10)。 全 node/edge は inventory.json objectGraph で Tier 2/3 参照。
+  # 順序は被参照数 desc → id asc で決定的 (byte-exact 安定)。 objectGraph 不在の旧 inventory は 0 edge。
+  local xr_nodes xr_edges xr_top
+  xr_nodes=$(jq '(.objectGraph.nodes // []) | length' "$inv")
+  xr_edges=$(jq '(.objectGraph.edges // []) | length' "$inv")
+  xr_top=$(jq -r '
+    ((.objectGraph.nodes // []) | map({(.id): .class}) | add // {}) as $cls
+    | (.objectGraph.edges // [])
+    | group_by(.to) | map({to: .[0].to, n: length})
+    | sort_by(-.n, .to) | .[0:10][]
+    | "- \(.to) [\($cls[.to] // "external")] ← \(.n) refs"
+  ' "$inv")
+  printf '\n'
+  printf '# 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)\n'
+  printf '# %s nodes · %s 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。\n' "$xr_nodes" "$xr_edges"
+  printf '# 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。\n'
+  [[ -n "$xr_top" ]] && printf '%s\n' "$xr_top"
 }
 
 # folio prime: Tier 1 inventory digest を stdout 出力 (ADR-0007 §2.1〜2.4)。
@@ -803,17 +823,10 @@ folio_check_how_primitives() {
   # ★tag は空でなく space に置換する: <b>FOO</b>=<i>bar</i> 等の隣接 inline 要素が連結して FOO=bar の
   # 偽 primitive を捏造するのを防ぐ (語境界を former tag 境界で正しく分離する。 保守的 = 偽陽性抑制)。
   text=$(folio_prose_only "$body" | sed -E 's/<[^>]+>/ /g')
-  {
-    # (1) env var の具体値: 大文字 env-var 名 (>=3 文字) に = と値 (典型 env value 文字に限定 = CJK/括弧で境界) が続く (NAME=value)。 bare 名 (= 無し) は P-11 = 具体値ゆえ対象外。
-    printf '%s\n' "$text" | grep -oE '\b[A-Z][A-Z0-9_]{2,}=[A-Za-z0-9_./:@%+-]+' 2>/dev/null | sed 's/^/env-var-value\t/'
-    # (2) binary path: 既知 system binary dir 配下の絶対 path (境界前置文字で相対 path 誤検出を抑止)。
-    printf '%s\n' "$text" | grep -oE '(^|[^[:alnum:]_./-])/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' 2>/dev/null \
-      | grep -oE '/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' | sed 's/^/binary-path\t/'
-    # (3) OS-specific command: 高シグナルな破壊的/OS 固有コマンドのコマンド形 (flag/arg 付き)。
-    printf '%s\n' "$text" | grep -oE '\b(rm -[rf]+|sudo |chmod [0-7ugoa]|chown |apt-get |apt install|brew install|systemctl |kill -9|pkill |mkdir -p|kill-server)' 2>/dev/null | sed 's/^/os-command\t/'
-    # (4) 明示 tool 起動: 既知 CLI tool 名 + flag 形 (bare 言及でなくコマンド形のみ。 保守的)。
-    printf '%s\n' "$text" | grep -oE '\b(jq|yq|awk|sed|grep|tmux|pnpm|npm|git|node|playwright|docker|kubectl|curl|wget|flock) +-{1,2}[A-Za-z]' 2>/dev/null | sed 's/^/tool-invocation\t/'
-  } | LC_ALL=C sort -u | while IFS=$'\t' read -r cat tok; do
+  # P-11 4-primitive 検出は plugin-lib.sh folio_how_primitive_scan に集約 (tier2 hook と共用 SSoT、
+  # validate は folio_cmd_validate 冒頭で plugin-lib.sh を lazy source 済 = 本関数呼出時に利用可能)。
+  # 出力は未 sort ゆえ LC_ALL=C sort -u で正規化してから整形する (従来 inline 版と byte-identical)。
+  folio_how_primitive_scan "$text" | LC_ALL=C sort -u | while IFS=$'\t' read -r cat tok; do
     [[ -z "$cat" || -z "$tok" ]] && continue
     printf '%s\t[how-outside] P-11 primitive (%s): "%s" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)\n' "$rel" "$cat" "$tok"
   done
@@ -3319,6 +3332,31 @@ folio_cmd_verify_srs() {
 }
 
 # ============================================================================
+# verify-graph: 照会 graph 終端完備の決定的 floor (engine §10 論点④⑦、 B5-I verify-graph.sh へ委譲)
+#   B5-III CI gate 統合 (論点③): 独立 graph script を bin/folio フローへ thin dispatch する
+#   (graph traversal は独立 script に保持・既存 core 不変 = §10④)。 CI(ci.yml) はこの subcommand を
+#   `folio validate` と対称な floor entry として呼ぶ。 floor (到達性 / dangling / 孤立) は CI hard
+#   gate = guarantee (graph 構造は有限ゆえ floor が例外的に exhaustive、 §10.1)。 ★graph ceiling
+#   (照会 note / role 真正性) は意味判定ゆえ CEILING=PENDING の advisory = 既存 fidelity-* lens の
+#   射程 (CI 非ゲート、 ADR-0028 一般化)。 exit 0=floor PASS (≠真 GREEN) / 1=floor FAIL / 2=tool error。
+# ============================================================================
+folio_cmd_verify_graph() {
+  local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local gen="${bin_dir}/../design-system/generator"
+  local vg="${gen}/verify-graph.sh"
+  [[ -f "$vg" ]] || { echo "folio verify-graph: verify-graph.sh not found ($vg)" >&2; return 2; }
+  # 既定 contract-dir / rolemap-dir は verify-graph.sh 側で $SCRIPT_DIR/{contract,rolemap} に解決する。
+  # --contract-dir / --rolemap-dir は pass-through (consumer の生成 doc graph へも適用できる、 §10①)。
+  local rc=0
+  bash "$vg" "$@" || rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    # floor PASS ≠ 真 GREEN: graph ceiling (照会 note / role 真正性) は fidelity-* lens の射程ゆえ未検査。
+    echo "CEILING=PENDING (graph ceiling = fidelity-* lens / 照会 note・role 真正性は advisory・CI 非ゲート、 engine §10⑦)"
+  fi
+  return "$rc"
+}
+
+# ============================================================================
 # dispatch
 # ============================================================================
 
@@ -3351,6 +3389,11 @@ Subcommands:
   verify-srs <html>        生成 SRS プレゼン HTML の決定的 floor 検査 (taxonomy §5.2 gate A-E,G,H + visual-first、
              <contract>    gate F render は renderer 在で実行・不在は SKIP、 ADR-0041/0042)。 floor 通過でも GREEN にせず CEILING=PENDING を返す
                            (floor 単独 GREEN 禁止)。 GREEN には ceiling (persona-walk-srs + fidelity-srs) 合格が必須。
+                           exit 0=floor PASS (≠GREEN) / 1=floor FAIL / 2=tool error
+  verify-graph             照会 graph 終端完備の決定的 floor (到達性 / dangling / 孤立、 engine §10④⑦、 B5)。
+        [--contract-dir d] B5-I verify-graph.sh へ thin dispatch (traversal は独立 script・既存 core 不変)。
+        [--rolemap-dir d]  CI floor = guarantee (graph 構造有限ゆえ exhaustive)。 graph ceiling (照会 note /
+                           role 真正性) は CEILING=PENDING の advisory = fidelity-* lens の射程 (CI 非ゲート)。
                            exit 0=floor PASS (≠GREEN) / 1=floor FAIL / 2=tool error
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
@@ -3387,6 +3430,11 @@ EOF
   verify-srs)
     shift
     folio_cmd_verify_srs "$@"
+    exit $?
+    ;;
+  verify-graph)
+    shift
+    folio_cmd_verify_graph "$@"
     exit $?
     ;;
   *)
