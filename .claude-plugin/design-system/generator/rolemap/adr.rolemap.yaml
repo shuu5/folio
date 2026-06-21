@@ -1,0 +1,30 @@
+# folio engine B5-I (folio-p4o) — ADR-pack の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表を ADR-pack の具体 node-type へ写像する pack 側 SSoT (詳細は srs.rolemap.yaml 冒頭注記)。
+# ★ADR の核 = cross-doc 照会: decision (claim) が別文書 SRS の要件を *正当化* する (justifies)。
+#   この edge は照会 graph 上 toward-terminal の *逆方向* (ADR→SRS だが reachability は SRS→ADR) ゆえ
+#   direction: backward と宣言する (engine doc §10④「逆方向 = 局所」)。 局所の要件 ID 実在検証は
+#   verify-adr.sh が担い (既存)、 verify-graph.sh は doc 粒度の到達可能性だけを見る。
+# ★ADR は inline principle (PRIN-...) を照会終端に持つ (domain-local 終端・constitution に不在でも許容)。
+pack: adr
+
+roles:
+  context: rationale         # 背景・力学 = なぜこの判断が要るか
+  options: exploration       # 検討した選択肢 + 利点/欠点
+  decision: claim            # 採用した判断 = 主張
+  principle: principle       # 照会終端 (これ以上遡らない inline 原則)
+
+# 前方 cross-doc 照会 edge。 decision.justifies[] が SRS 要件へ向かう。
+edges:
+  - from_node: decision               # roles[decision] = claim が edge.role の期待値 (二重担保)
+    role_expr: '.decision.justifies[].role'        # corpus 側の各 edge role
+    count_expr: '.decision.justifies | length'     # |edges| (空 role 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'     # 照会先 doc の doc_id (graph dangling 用)
+    direction: backward                # ADR→SRS は toward-terminal の逆 (reachability は SRS→ADR)
+
+# 照会終端 node = inline principle id (domain-local 終端)。 doc 自身 → 終端 node の edge を graph に張る。
+terminal:
+  id_expr: '.principle.id'
+
+external: []
+forbidden_roles: []

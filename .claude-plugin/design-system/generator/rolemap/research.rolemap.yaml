@@ -1,0 +1,26 @@
+# folio engine B5-I (folio-p4o) — research-pack の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表を research-pack の具体 node-type へ写像する pack 側 SSoT (詳細は srs.rolemap.yaml 冒頭注記)。
+# ★research の核 = cross-doc 前方照会: approaches (exploration) が後続 decision (ADR) の option へ leads_to。
+#   この edge は toward-terminal の *順方向* (research→ADR→終端) ゆえ direction: forward。
+#   局所の option ID 実在検証は verify-research.sh が担い (既存)、 verify-graph.sh は doc 粒度の到達可能性を見る。
+# ★research は終端 node を持たない (探索は決めない hallmark)。 outcome.resolved_by の先 ADR が終端へ繋ぐ。
+pack: research
+
+roles:
+  findings: rationale        # 観察・わかったこと = 根拠
+  approaches: exploration    # 検討した方式 (verdict なし = 探索は決めない)
+
+# 前方 cross-doc 照会 edge。 approaches[].leads_to が ADR option へ向かう (doc 粒度では research→ADR)。
+edges:
+  - from_node: approaches             # roles[approaches] = exploration が edge.role の期待値 (二重担保)
+    role_expr: '.approaches[].role'              # corpus 側の各 edge role
+    count_expr: '.approaches | length'           # |edges| (空 role 検出)
+    target_docid_expr: '.cross_doc.adr_doc_id'   # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                  # research→ADR は toward-terminal の順方向
+
+# research は照会終端を持たない (決めない探索)。
+terminal: {}
+
+external: []
+forbidden_roles: []

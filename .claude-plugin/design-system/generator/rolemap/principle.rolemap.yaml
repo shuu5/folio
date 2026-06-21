@@ -1,0 +1,31 @@
+# folio engine B5-I (folio-p4o) — principle/constitution-pack の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表を principle-pack の具体 node-type へ写像する pack 側 SSoT (詳細は srs.rolemap.yaml 冒頭注記)。
+# ★principle の hallmark = 照会 graph の *終端* (前方照会を持たない・受ける照会 inbound のみ)。
+#   ゆえ edges は空。 doc 自身が照会終端 node (terminal.id_expr = doc_id)。
+# ★境界原則 (engine doc §10.1): contract/ 内 = 厳密検証 / contract外 (folio-self) = external-ref warn。
+#   inbound.from (ADR-0021 / rules.html 等) と amended_by.adr (folio の実 ADR) は contract外を指すゆえ
+#   external-ref warn とし、 実在・reverse 検証は B6 (folio 自身の spec graph 接続時) へ繰延。
+#   amended_by は来歴 meta-edge ゆえ reachability から除外する (meta: true)。
+pack: principle
+
+roles:
+  principles: principle      # 14 不変原則 = 遡らない終端
+
+# principle は前方 cross-doc 照会を持たない (終端)。
+edges: []
+
+# doc 自身が照会終端 node (constitution)。 principles[] がその終端原則。
+terminal:
+  id_expr: '.meta.doc_id'
+
+# contract外 (folio-self) を指す照会 = external-ref warn (B6 で解決)。
+external:
+  - desc: 'inbound 照会元 (受ける照会・source は folio-self doc)'
+    ref_expr: '.inbound[].from'
+    meta: false
+  - desc: 'amended_by 改訂来歴 (folio の実 ADR)'
+    ref_expr: '.principles[].amended_by[]?.adr'
+    meta: true               # 来歴 meta-edge = reachability から除外
+
+forbidden_roles: []

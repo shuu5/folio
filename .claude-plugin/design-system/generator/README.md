@@ -151,6 +151,46 @@ frozen `architecture/spec/constitution.html` から **read-only で忠実抽出*
 ./test-adversarial-principle.sh
 ```
 
+## 照会 graph 終端完備検証 (engine B5-I / folio-p4o)
+
+個々の pack verify (verify-adr/research/principle) は **1 doc の局所** 照会 (justifies/leads_to/inbound) を検証する。
+B5-I は **corpus 全体の照会 graph** を見て「全チェーンが principle 終端へ到達するか」を検証する (engine doc §10③④⑦)。
+per-pack verify が建物の各部屋の配線を見るのに対し、 こちらは建物全体の到達可能性を見る。
+
+- **rolemap (pack 側 SSoT)** — `rolemap/<pack>.rolemap.yaml` (srs/adr/research/principle)。 engine doc §3 の抽象ロール表
+  (claim/rationale/exploration/verification/principle/implementation) へ各 pack の具体 node-type を写像する。
+  `roles` (node intrinsic role) / `edges` (前方 cross-doc 照会 = from_node/role_expr/target_docid_expr/direction) /
+  `terminal` (照会終端 node の id_expr) / `external` (contract外 folio-self 照会・meta=来歴) / `forbidden_roles` (例: SRS は exploration 不在)。
+- **core リーダー (additive)** — `lib/graph-common.sh` (既存 core 関数は byte-identity 非回帰・新規ファイル)。
+  `graph_pack_of` (filename→pack) / `rolemap_role_for` (roles[node-type]・fail-closed) / `rolemap_roles_invalid` (allowlist sanity) /
+  `GRAPH_ROLE_ALLOWLIST` (verify-common の `CROSS_DOC_ROLE_ALLOWLIST` と語彙一致・`graph_role_vocab_consistent` で機械照合)。
+  graph traversal 自体は core に持ち込まず独立 script に置く (§10④)。 reader は doc-type 非依存ゆえ B6 (folio 自身の横断 graph) へ転用可。
+- **独立 script** — `verify-graph.sh [--contract-dir <dir>] [--rolemap-dir <dir>]`。 既存 core 不変。 2 段:
+  - **(1) rolemap floor (scope=各 contract)** — `edge.role == rolemap[node.type]` を pin (co-author + enforce)。
+    rolemap 宣言 ∩ corpus edge の **二重担保** = どちら側の改竄も捕捉する。 SRS の exploration 不在は `forbidden_roles` を
+    corpus scan で実証 (rolemap 宣言 ∩ corpus 不在)。 rolemap roles ⊆ 抽象 allowlist の sanity も。 **違反 = hard FAIL**。
+    **edges 武装解除ガード** — pin は `rolemap.edges` の宣言を起点に駆動する (necnt=0 ならループ 0 回 = corpus edge 無検査)。
+    edge を本来持つ pack (adr=backward / research=forward) で edges を空に/削除すると pin が無言で解除されるため、
+    **edge-less pack の allowlist (`srs`/`principle`) 以外は edges を 1 件以上宣言** することを期待値駆動で hard FAIL に固定する
+    (G2 が roles[] 値改竄を捕捉するのに対し、 本ガードは edges 宣言除去 = 構造的 floor 解除を捕捉)。
+    **vacuum ガード** — `rolemap.edges` を残したまま `role_expr`/`count_expr` を *協調的に* 存在しない path へ書き換えると
+    `declared_cnt=0`/`|eroles|=0` で件数が一致し pin が 0 回照合になる (edges 武装解除の兄弟ベクタ)。 照会先 doc_id
+    (`target_docid_expr`) は別 expr ゆえ vacuum の巻き添えにならず有効に残るため、 **「有効照会先 ⟹ `declared_cnt` 正整数」**
+    を pin して expr vacuum (cexpr 自体の null 化も含む) を捕捉する。
+  - **(2) graph reachability (global)** — contract glob → edge union → principle 終端への到達可能性を
+    `{終端完備 / 孤立=warn / external-ref=warn}` に展開。 **終端は domain-local principle を許容** (ADR inline `principle:` を
+    graph node に昇格 = constitution に不在でも終端)。 **逆方向** (ADR→SRS の justifies) は reachability では SRS→ADR と辿り
+    局所の要件 ID 実在は既存 verify-adr が担う (§10④「逆方向=局所」)。 **amended_by は来歴 meta-edge ゆえ reachability から除外**。
+    **dangling (graph 不在 node 先) = hard FAIL**。 **孤立 (例: ADR-less な EC SRS) / external-ref (inbound.from・amended_by.adr の
+    folio-self 先) = warn** (exit 0・advisory)。 graph 構造は有限ゆえ floor が例外的に exhaustive (§10.1)。
+- **graph ceiling** = 照会 note / role の **真正性** は意味判定ゆえ **既存 fidelity-* lens** (fidelity-adr/research/principle) の射程。
+  新 agent は不要 (§10⑦)。 CI gate (floor∧ceiling) 統合は **B5-III (folio-hi6)** が担う。
+
+```bash
+./verify-graph.sh                                            # 既定 corpus (contract/ + rolemap/) を検証
+./verify-graph.sh --contract-dir /tmp/x/contract --rolemap-dir /tmp/x/rolemap   # 別 corpus を指定 (tamper test 等)
+```
+
 ## engine core 抽出 (B2 / folio-5ua / rule-of-three)
 
 SRS-pack (instance#1) ∩ ADR-pack (instance#2) の共通項を **共有ライブラリ層 `lib/`** へ引き上げた非破壊リファクタ

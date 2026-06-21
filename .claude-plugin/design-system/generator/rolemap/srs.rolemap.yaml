@@ -1,0 +1,34 @@
+# folio engine B5-I (folio-p4o) — SRS-pack の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表 (照会 = 抽象ロール graph) を SRS-pack の具体 node-type へ写像する pack 側 SSoT。
+# core (lib/graph-common.sh) の reader が読み、 verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: reachability の edge / 終端 node / external-ref を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive)。
+#
+# ★SRS の hallmark: 前方 cross-doc 照会を *持たない* (片方向 = ADR→SRS で SRS は照会される側)。
+#   ゆえ edges は空。 また exploration role を持たない (B0 開問F) — これを forbidden_roles に宣言し
+#   floor が scan で実証する (rolemap 宣言 ∩ corpus 不在 の二重担保)。
+pack: srs
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# = node intrinsic role の SSoT。
+roles:
+  upper_needs: rationale     # 上位ニーズ N-x = なぜそれが要るか
+  requirements: claim        # 機能要件 FR = 主張・約束されるもの
+  nfr: claim                 # 非機能要件 NFR = 主張・約束されるもの
+  acceptance: verification   # 受入基準 AC = 満たせたと確かめる基準
+
+# 前方 cross-doc 照会 edge。 SRS は他文書を照会しない (片方向)。
+edges: []
+
+# この pack が持つ照会終端 node。 SRS は終端を持たない (constitution があれば別 pack = principle)。
+terminal: {}
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 SRS には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 SRS は exploration を持たない (B0 開問F)。
+# floor が「rolemap に exploration 不在」かつ「corpus に cross-doc edge / exploration node 不在」を scan で実証。
+forbidden_roles:
+  - exploration
