@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="fixture">
+<title>how-outside kitchen-sink (floor-1 + floor-2)</title>
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/" },
+  "@id": "./how-violations.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "how-violations"
+}
+</script>
+</head>
+<body>
+<section id="s1">
+<p>floor-2 地の文 primitive: env EXAMPLE_VAR=somevalue / binary /usr/bin/jq / cmd rm -rf / tool jq -r を裸書きで含む。</p>
+<p>floor-2 negative (<code>HIDDEN_VAR=xyz</code> と <code>/usr/bin/yq</code> と <code>chmod 755</code> は code 内で mask される)。</p>
+<p>floor-1 本文照会: <a href="./gone.html">missing-file</a>、 <a href="./real.html#nope">bad-anchor</a>、 <a href="./real.html#s1-anchor">good-anchor</a>、 <a href="./sub/">dir-ref</a>、 <a href="https://example.com/x">external</a>。</p>
+<p>floor-1 negative-xref: <a class="xref" href="./xgone.html" data-tooltip="t">壊れ xref</a> は gate (h) xref-resolve が所有する (floor-1 は二重報告しない)。</p>
+<nav class="cluster-nav"><a href="./navgone.html">nav-link</a></nav>
+</section>
+</body>
+</html>

@@ -1,0 +1,29 @@
+schema_version: "0.1"
+req_id: "REQ-VER-013"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の gate (r) HOW-outside content gate (engine 設計 §10 論点⑤⑦ / P-3・P-11・P-13、 B5-II)
+  が clean spec doc に対し [OK] how-outside + exit 0 を出すことを実証する (how-outside-validate.yaml =
+  detection 側の clean 対、 validate-clean.yaml と同型)。 spec/clean.html は:
+    - floor-2 negative: 地の文に P-11 4-primitive を裸書きしない。 code 内の
+      <code>FOLIO_ARCHITECT_CONTEXT</code> env-var 名 / <code>tests/</code> dir 名は構造参照ゆえ
+      <code> mask で非検出 (誤検出ゼロの byte-exact 固定)。
+    - floor-1 negative: 本文照会は同一文書 anchor (#s1) と external (https://) のみで全て解決 / 非対象
+      ゆえ floor-1 報告ゼロ。
+  これにより gate (r) が clean corpus を warn なく通すこと ([OK] = false-positive ゼロ) を CI floor で固定し、
+  検出ロジックの劣化 (例 awk nav-strip 破壊 / prose_only mask 退行) が clean 側を赤化する回帰も捕捉する。
+  検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
+command: ["validate", "--root", "tests/fixtures/how-outside-clean"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/how-outside-clean.golden.txt"
+
+setup:
+  fixtures:
+    - "how-outside-clean/spec/clean.html"   # HOW 漏れ無し = [OK] how-outside (floor-1/2 false-positive ゼロ)
+
+expect:
+  exit_code: 0                              # clean = 違反なし (how-outside は warn でも block 違反ゼロ)

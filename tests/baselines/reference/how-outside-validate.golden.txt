@@ -1,0 +1,32 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/how-outside-violations
+files checked: 3 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [FAIL] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [OK] readability-floor
+  [WARN] how-outside
+
+warnings (6):
+  spec/how-violations.html [how-outside] P-11 primitive (binary-path): "/usr/bin/jq" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
+  spec/how-violations.html [how-outside] P-11 primitive (env-var-value): "EXAMPLE_VAR=somevalue" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
+  spec/how-violations.html [how-outside] P-11 primitive (os-command): "rm -rf" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
+  spec/how-violations.html [how-outside] P-11 primitive (tool-invocation): "jq -r" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
+  spec/how-violations.html [how-outside] 照会リンク ./gone.html の target file が存在しない (floor-1 照会リンク存在)
+  spec/how-violations.html [how-outside] 照会リンク ./real.html#nope の target anchor が存在しない (floor-1 照会リンク存在)
+
+violations (1):
+  spec/how-violations.html [xref-broken] class=xref -> spec/xgone.html (xref target file not found)

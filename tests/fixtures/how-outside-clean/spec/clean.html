@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="fixture">
+<title>how-outside clean spec doc ([OK])</title>
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/" },
+  "@id": "./clean.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "clean"
+}
+</script>
+</head>
+<body>
+<section id="s1">
+<p>HOW 漏れの無い普通の地の文。 platform 固有 primitive も解決不能照会リンクも無い。</p>
+<p>code 内の <code>FOLIO_ARCHITECT_CONTEXT</code> の env-var 名や <code>tests/</code> の dir 名は構造参照ゆえ mask され検出されない。</p>
+<p>解決する本文照会: <a href="./clean.html#s1">同一文書 anchor</a> と <a href="https://example.com">external</a> は floor-1 で報告されない。</p>
+</section>
+</body>
+</html>

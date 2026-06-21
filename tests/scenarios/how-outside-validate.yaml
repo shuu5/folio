@@ -1,0 +1,50 @@
+schema_version: "0.1"
+req_id: "REQ-VER-013/015"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の gate (r) HOW-outside content gate (warn channel = soft-warn 着地、 engine 設計 §10
+  論点⑤⑦ / P-3・P-11・P-13、 B5-II) の検出ロジックを seeded fixtures で実証する。 floor-1 (照会リンク存在 /
+  link-integrity 延長) + floor-2 (P-11 4-enum の保守的構文検出) の positive/negative + scope=spec_path +
+  gate 所有分離を 1 golden で byte-exact に固定し、 検出ロジックを tests/runner.sh = CI floor に乗せる
+  (selftest-folio-6us.local.sh の committed 移送。 validate-violations.yaml / readability-floor.yaml と
+  同型の violation-detection scenario):
+    floor-2 positive (spec/how-violations.html 地の文の P-11 4-primitive、 warn):
+      - env-var-value   : EXAMPLE_VAR=somevalue (NAME=value の具体値)
+      - binary-path     : /usr/bin/jq (system binary dir 配下の絶対 path)
+      - os-command      : rm -rf (破壊的/OS 固有コマンドのコマンド形)
+      - tool-invocation : jq -r (既知 CLI tool + flag 形)
+    floor-2 negative (<code> mask): HIDDEN_VAR=xyz / /usr/bin/yq / chmod 755 は <code> 内で mask され
+      非検出 (golden の warning 列に現れない = 構造参照を誤検出しないことの byte-exact 固定)。
+    floor-1 positive (spec/how-violations.html 本文 <a href>、 warn):
+      - missing-file : ./gone.html (target file 不在)
+      - bad-anchor   : ./real.html#nope (target anchor 不在、 ./real.html#s1-anchor は解決し非報告)
+    floor-1 negative: good-anchor (./real.html#s1-anchor) / dir-ref (./sub/) / external
+      (https://example.com/x) / nav 内リンク (gate o 所有) / xref (gate h 所有) は floor-1 で非報告
+      (golden warning 列に現れない = 関心の分離と二重報告回避の byte-exact 固定)。
+    gate 所有分離: 壊れ xref (<a class="xref" href="./xgone.html">) は floor-1 でなく gate (h)
+      xref-resolve が block [xref-broken] で捕捉する (violations 列に現れ how-outside warn には現れない)。
+    scope=spec_path: decisions/d.html に裸書きした DECVAR=v2 は subdir!=spec ゆえ how-outside 非走査
+      (golden に現れない = WHAT domain scope の byte-exact 固定)。 status 行は [WARN] how-outside。
+  検査 root override (--root) で fixtures を汚染なく検査する (ADR-0020 §2.3 test isolation)。
+  how-outside-clean.yaml ([OK] how-outside、 exit 0) と対を成す。 [SKIP] how-outside は glossary-orphan
+  系 golden (spec/ doc 無し fixture) が既に固定する。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
+command: ["validate", "--root", "tests/fixtures/how-outside-violations"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/how-outside-validate.golden.txt"
+
+setup:
+  fixtures:
+    # 実体は tests/fixtures/how-outside-violations/ に VCS 管理 (runner の cli-golden handler は
+    # setup を読まないが、 validate が --root 経由で実ディスクを検査する)。 path-boundary hook を
+    # 避けるため doc-type=fixture。
+    - "how-outside-violations/spec/how-violations.html"  # floor-1 + floor-2 の positive/negative kitchen-sink
+    - "how-outside-violations/spec/real.html"            # floor-1 解決先 (anchor id="s1-anchor")
+    - "how-outside-violations/spec/sub/index.html"       # floor-1 dir-ref (./sub/) 解決先
+    - "how-outside-violations/decisions/d.html"          # scope=spec_path 排除証 (DECVAR=v2 非検出)
+
+expect:
+  exit_code: 1                                           # 壊れ xref 1 件 = gate (h) block (how-outside は warn のみ)

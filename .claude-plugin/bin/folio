@@ -724,6 +724,101 @@ folio_prose_only() {
   '
 }
 
+# ============================================================================
+# HOW-outside content gate (gate (r)、 warn channel = soft-warn 着地)
+#   engine 設計 §10 論点⑤⑦ (architecture/research/document-discipline-engine-design.html) の
+#   B5-II 実装。 design-intent (WHAT/WHY) と実装・検証 (HOW) を content として分離する規律 (P-3 /
+#   P-11 / P-13) を spec_path scope で機械検査する 2 段 floor。 両 floor とも warn channel に出し
+#   (exit code 非影響)、 staged rollout (soft-warn 実測 → 誤検出率許容内なら新 ADR で CI hard gate 化)
+#   の第一段に留める。 概念 HOW (P-3 portability) の意味判定は ceiling = spec-review-ssot lens が担う。
+# ============================================================================
+
+# folio_check_inbody_refs (floor-1 照会リンク存在 / link-integrity 延長):
+#   本文に authored された照会リンク (in-body <a href>) が解決するかを検査する。 gate (a)
+#   link-integrity は <head> JSON-LD relation のみを検査する (REQ-CI-010) ため、 本文中の
+#   <a href> (別 spec doc / HOW 成果物 / 同一文書 anchor への authored リンク) は class="xref"
+#   (gate (h) xref-resolve が block 検査) と生成 chrome/nav 以外は未検査だった。 本関数は
+#   folio_prose_only で code/pre/chrome/aside を mask した prose 中の <a href> を抽出し、
+#   class="xref" (block 二重報告回避) と external/protocol-relative URL (試作 scope 外、 gate (a) と
+#   同基準) を除外して、 相対 path の target file 存在 + #anchor の target 内 id 存在を検査する。
+#   ★<nav> 内の navigation リンク (breadcrumb / cluster-nav 等) は除外する: これらは gate (n)
+#   nav-dead-link / gate (o) cluster-reachability が所有し既に検査するため二重報告になる。 floor-1 は
+#   本文 content (p/section/li/dd 等) に authored された照会リンクのみを検査する (関心の分離)。
+#   解決不能を "rel\t[how-outside] ..." 行で stdout (warn channel)。 引数: $1=body, $2=rel(root 相対)、
+#   $3=doc 絶対 path (相対 href の解決基点 + 同一文書 anchor の検査対象)。
+folio_check_inbody_refs() {
+  local body="$1" rel="$2" docabs="$3"
+  local docdir; docdir=$(dirname "$docabs")
+  local tag href pathpart anchor target
+  while IFS= read -r tag; do
+    [[ -z "$tag" ]] && continue
+    case "$tag" in *'class="xref"'*) continue ;; esac        # gate (h) xref-resolve が block 検査済 → 二重報告回避
+    href=$(printf '%s' "$tag" | grep -oP 'href="\K[^"]*' | head -1)
+    [[ -z "$href" ]] && continue
+    case "$href" in *://*|mailto:*|tel:*|//*) continue ;; esac  # external/protocol-relative は試作 scope 外 (gate (a) と同基準)
+    if [[ "$href" == \#* ]]; then                            # 同一文書 anchor
+      anchor="${href#\#}"
+      [[ -z "$anchor" ]] && continue
+      if ! grep -qF "id=\"${anchor}\"" "$docabs" && ! grep -qF "id='${anchor}'" "$docabs"; then
+        printf '%s\t[how-outside] 照会リンク %s が同一文書 anchor に解決しない (floor-1 照会リンク存在 / link-integrity 延長)\n' "$rel" "$href"
+      fi
+      continue
+    fi
+    if [[ "$href" == *"#"* ]]; then pathpart="${href%%#*}"; anchor="${href#*#}"; else pathpart="$href"; anchor=""; fi
+    [[ -z "$pathpart" ]] && continue
+    target=$(realpath -m "${docdir}/${pathpart}")
+    if [[ -d "$target" ]]; then
+      continue   # 実在 directory 参照 (cluster nav 等) は解決済とみなす (dir index 生成は deployment 層・floor-1 の射程外)
+    elif [[ ! -f "$target" ]]; then
+      printf '%s\t[how-outside] 照会リンク %s の target file が存在しない (floor-1 照会リンク存在)\n' "$rel" "$href"
+    elif [[ -n "$anchor" ]] && ! grep -qF "id=\"${anchor}\"" "$target" && ! grep -qF "id='${anchor}'" "$target"; then
+      printf '%s\t[how-outside] 照会リンク %s の target anchor が存在しない (floor-1 照会リンク存在)\n' "$rel" "$href"
+    fi
+  done < <(folio_prose_only "$body" | awk '
+    # <nav>…</nav> 区間を除去 (navigation = gate (n)/(o) 所有)。 inline (同一行・内部に <a> 等タグ可) と
+    # 複数行 nav の両対応 (inline は greedy .*</nav> で nav 内 tag ごと除去、 残れば innav で行 skip)。
+    { line=$0
+      while (match(line, /<nav[ >].*<\/nav>/)) { line=substr(line,1,RSTART-1) substr(line,RSTART+RLENGTH) }
+      if (innav) { if (line ~ /<\/nav>/) { sub(/.*<\/nav>/,"",line); innav=0 } else next }
+      if (line ~ /<nav[ >]/) { sub(/<nav[ >].*/,"",line); innav=1 }
+      print line
+    }
+  ' | grep -oP '<a [^>]*href="[^"]*"[^>]*>' 2>/dev/null)
+}
+
+# folio_check_how_primitives (floor-2 P-11 4-enum の保守的検出):
+#   constitution P-11 (design-intent 文書に platform 固有 HOW を書かない) の 4 primitive を spec
+#   prose から保守的に検出する: (1) env var の具体値 (NAME=value) (2) binary path (/usr/bin/... 等)
+#   (3) OS-specific command (4) 明示 tool 起動 (tool 名 + flag)。 「明示 primitive の有無」 は構文判定
+#   (意味判定でない) ゆえ ADR-0028 の精度懸念に当たらない (engine §10 論点⑤)。 folio_prose_only で
+#   code/pre/chrome/aside を mask した上で残存 HTML tag を除去した可視テキストのみを走査するため、
+#   <code> 内の正当な構造参照 (例 <code>FOLIO_ARCHITECT_CONTEXT</code> の env var 名や <code>tests/</code>
+#   の dir 名) を誤検出しない。 P-11 は名前ではなく「本文への直接記述」 を禁ずるため、 検出対象は地の文に
+#   裸書きされた primitive に限る (保守的 = 誤検出率を抑え soft-warn 信号の信頼性を保つ。 staged rollout:
+#   実測後に新 ADR で CI hard gate 化)。 検出を "rel\t[how-outside] ..." 行で stdout (warn channel)。
+#   重複は (category, token) で uniq。 引数: $1=body, $2=rel。
+folio_check_how_primitives() {
+  local body="$1" rel="$2" text cat tok
+  # prose_only (code/pre/chrome/aside mask) → 残存 HTML tag を space 置換し可視テキスト化 (tag 属性の誤検出回避)。
+  # ★tag は空でなく space に置換する: <b>FOO</b>=<i>bar</i> 等の隣接 inline 要素が連結して FOO=bar の
+  # 偽 primitive を捏造するのを防ぐ (語境界を former tag 境界で正しく分離する。 保守的 = 偽陽性抑制)。
+  text=$(folio_prose_only "$body" | sed -E 's/<[^>]+>/ /g')
+  {
+    # (1) env var の具体値: 大文字 env-var 名 (>=3 文字) に = と値 (典型 env value 文字に限定 = CJK/括弧で境界) が続く (NAME=value)。 bare 名 (= 無し) は P-11 = 具体値ゆえ対象外。
+    printf '%s\n' "$text" | grep -oE '\b[A-Z][A-Z0-9_]{2,}=[A-Za-z0-9_./:@%+-]+' 2>/dev/null | sed 's/^/env-var-value\t/'
+    # (2) binary path: 既知 system binary dir 配下の絶対 path (境界前置文字で相対 path 誤検出を抑止)。
+    printf '%s\n' "$text" | grep -oE '(^|[^[:alnum:]_./-])/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' 2>/dev/null \
+      | grep -oE '/(usr/local/s?bin|usr/s?bin|s?bin)/[A-Za-z0-9._-]+' | sed 's/^/binary-path\t/'
+    # (3) OS-specific command: 高シグナルな破壊的/OS 固有コマンドのコマンド形 (flag/arg 付き)。
+    printf '%s\n' "$text" | grep -oE '\b(rm -[rf]+|sudo |chmod [0-7ugoa]|chown |apt-get |apt install|brew install|systemctl |kill -9|pkill |mkdir -p|kill-server)' 2>/dev/null | sed 's/^/os-command\t/'
+    # (4) 明示 tool 起動: 既知 CLI tool 名 + flag 形 (bare 言及でなくコマンド形のみ。 保守的)。
+    printf '%s\n' "$text" | grep -oE '\b(jq|yq|awk|sed|grep|tmux|pnpm|npm|git|node|playwright|docker|kubectl|curl|wget|flock) +-{1,2}[A-Za-z]' 2>/dev/null | sed 's/^/tool-invocation\t/'
+  } | LC_ALL=C sort -u | while IFS=$'\t' read -r cat tok; do
+    [[ -z "$cat" || -z "$tok" ]] && continue
+    printf '%s\t[how-outside] P-11 primitive (%s): "%s" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)\n' "$rel" "$cat" "$tok"
+  done
+}
+
 # dual-audience structural 検査 (REQ-DA-STRUCT-1..5、 ADR-0033 §2.4 / rules.html §7 の floor)。
 # co-author dual-audience requirement container (data-audience="human" を担う
 # <section class="req">...</section> verbose card と <details class="spec-row">...</details>
@@ -1602,6 +1697,7 @@ folio_cmd_validate() {
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0 render_safety_fail=0
   local floor_fail=0 floor_warn=0   # gate (q) readability-floor (REQ-VER-023、 ADR-0039 §2.7 / P-14)
+  local how_warn=0 how_seen=0   # gate (r) HOW-outside content gate (warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13、 scope=spec_path)
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
@@ -1720,6 +1816,17 @@ folio_cmd_validate() {
       # gate (p) diagram-render-safety — mermaid subgraph 多行タイトル overlap (REQ-VER-021、 rules §4.5)
       local rsv
       while IFS= read -r rsv; do [[ -n "$rsv" ]] && { violations+=("$rsv"); render_safety_fail=1; }; done < <(folio_check_render_safety "$body" "$rel")
+
+      # gate (r) HOW-outside content gate — floor-1 照会リンク存在 + floor-2 P-11 4-enum (warn channel、 soft-warn 着地)。
+      # scope = spec_path (WHAT domain) ゆえ subdir==spec のみ走査する (decision=WHY / research=exploration は
+      # HOW 参照がより許容され、 frozen / 探索の性質ゆえ soft-warn 第一段の対象外。 engine 設計 §10 論点⑤)。
+      # constitution.html は loop 冒頭 (@type==FolioConstitution) で skip 済ゆえ本 gate には到達しない (P-11 定義自身)。
+      if [[ "$subdir" == "spec" ]]; then
+        how_seen=$((how_seen + 1))
+        local hw
+        while IFS= read -r hw; do [[ -n "$hw" ]] && { warnings+=("$hw"); how_warn=1; }; done < <(folio_check_inbody_refs "$body" "$rel" "$f")
+        while IFS= read -r hw; do [[ -n "$hw" ]] && { warnings+=("$hw"); how_warn=1; }; done < <(folio_check_how_primitives "$body" "$rel")
+      fi
 
       # --- xref gates (ADR-0034 §2.6): resolve/tooltip = universal、 completeness = opt-in meta ---
       # gate (h) xref resolve-integrity — body の <a class="xref" href> が定義 site に解決するか。
@@ -1952,7 +2059,7 @@ folio_cmd_validate() {
   done
 
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
-  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)\n'
+  printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)\n'
   printf 'root: %s\n' "$root"
   printf 'files checked: %d · relations checked: %d\n' "$files_checked" "$relations_checked"
 
@@ -1983,6 +2090,9 @@ folio_cmd_validate() {
   if [[ "$render_safety_fail" -eq 1 ]]; then printf '  [FAIL] render-safety\n'; else printf '  [OK] render-safety\n'; fi
   if [[ "$floor_fail" -eq 1 ]]; then printf '  [FAIL] readability-floor\n'
   elif [[ "$floor_warn" -eq 1 ]]; then printf '  [WARN] readability-floor\n'; else printf '  [OK] readability-floor\n'; fi
+  # gate (r) HOW-outside content gate (warn-only soft-warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13)。 spec/ doc 不在なら SKIP。
+  if [[ "$how_seen" -eq 0 ]]; then printf '  [SKIP] how-outside (spec/ doc 無し = scope=spec_path)\n'
+  elif [[ "$how_warn" -eq 1 ]]; then printf '  [WARN] how-outside\n'; else printf '  [OK] how-outside\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
   if [[ ${#warnings[@]} -gt 0 ]]; then
@@ -3229,9 +3339,9 @@ Subcommands:
                            --root で scan/output root を override = validate/fix と対称)
   prime [--root <dir>]     Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen、
                            --root で scan/inventory.json 場所を override = inventory と対称)
-  validate [--root <dir>]  spec 集合の 17-gate 検査 (link-integrity / jsonld / broken-reverse / vocabulary /
+  validate [--root <dir>]  spec 集合の 18-gate 検査 (link-integrity / jsonld / broken-reverse / vocabulary /
                            delta-marker / dual-audience / xref ×4 / glossary / nav ×3 / ears-coverage /
-                           render-safety / readability-floor、 ADR-0020/0025/0028/0033/0034/0035/0039、
+                           render-safety / readability-floor / how-outside (warn、 B5-II)、 ADR-0020/0025/0028/0033/0034/0035/0039、
                            exit 0=clean/1=violation/2=tool error、 --root で検査 root override)
   fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
                            materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)

@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: architecture
 files checked: 47 · relations checked: 428
   [OK] internal link-integrity
@@ -18,8 +18,10 @@ files checked: 47 · relations checked: 428
   [OK] ears-coverage
   [OK] render-safety
   [WARN] readability-floor
+  [WARN] how-outside
 
-warnings (1):
+warnings (2):
+  spec/rules.html [how-outside] P-11 primitive (env-var-value): "LC_ALL=C" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
   spec/verification.html [readability-floor] 人間層可視 prose 13234 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
 
 clean: 0 violations

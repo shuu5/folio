@@ -1,4 +1,4 @@
-folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor (ADR-0020/0025/0028/0033/0034/0035/0039)
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: tests/fixtures/nav-validate-readme-linkrot
 files checked: 4 · relations checked: 0
   [OK] internal link-integrity
@@ -18,6 +18,7 @@ files checked: 4 · relations checked: 0
   [OK] ears-coverage
   [OK] render-safety
   [WARN] readability-floor
+  [OK] how-outside
 
 warnings (2):
   spec/README.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 1 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
