@@ -18,10 +18,9 @@ files checked: 49 · relations checked: 452
   [OK] ears-coverage
   [OK] render-safety
   [WARN] readability-floor
-  [WARN] how-outside
+  [OK] how-outside
 
-warnings (2):
-  spec/rules.html [how-outside] P-11 primitive (env-var-value): "LC_ALL=C" を spec 本文に検出 (platform 固有 HOW は P-11 で禁止・implementation harness / AI-agent instruction file へ隔離、 floor-2)
+warnings (1):
   spec/verification.html [readability-floor] 人間層可視 prose 13234 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
 
 clean: 0 violations

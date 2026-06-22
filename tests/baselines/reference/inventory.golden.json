@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-22T06:31:40Z",
+  "generatedAt": "2026-06-22T15:54:21Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -1794,7 +1794,7 @@
         "id": "REQ-GLOSS-003",
         "class": "requirement",
         "ssot": "spec/rules.html#req-gloss-003",
-        "essence": "生成 glossary.html の各 dt id は canonical を slug 化した #term-&lt;slug&gt;。 slug は決定的 (lowercase / 非英数連→hyphen / LC_ALL=C)・非空・一意 な MUST。 衝突は fail-closed。 prose の a.term は anchor-residue として block。"
+        "essence": "生成 glossary.html の各 dt id は canonical を slug 化した #term-&lt;slug&gt;。 slug は決定的 (lowercase / 非英数連→hyphen / ロケール非依存)・非空・一意 な MUST。 衝突は fail-closed。 prose の a.term は anchor-residue として block。"
       },
       {
         "id": "REQ-NAV-001",
