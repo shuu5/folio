@@ -38,10 +38,11 @@ expect_pass_warn() { local label="$1" d="$2" w="$3"; shift 3
 
 echo "照会 graph adversarial regression (fail-closed / warn-correct expected):"
 
-# H0. happy path: exit 0 / 終端完備=4 / FLOOR-OK
+# H0. happy path: exit 0 / 終端完備=5 / FLOOR-OK
+#   B6 (folio-8ct) で spec-pack (FOLIO-RULES → constitution・principle_edge) を corpus へ追加し終端完備=4→5 に増えた。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=4 孤立(warn)=1"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=4 / 孤立=1 / FLOOR-OK / exit 0)"
+if run "$D" && [[ "$RUNOUT" == *"終端完備=5 孤立(warn)=1"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
+  ok "H0 happy path (終端完備=5 / 孤立=1 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL

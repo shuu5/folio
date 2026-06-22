@@ -151,6 +151,29 @@ frozen `architecture/spec/constitution.html` から **read-only で忠実抽出*
 ./test-adversarial-principle.sh
 ```
 
+## spec-pack = instance#5 (folio engine B6 / folio-8ct / self-dogfood endgame)
+
+SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules / Layer 1 普遍規約 = 「EARS 章立て規範文 + 非終端 照会」doc)** へ適用した五例目。 狙い = **★core (`lib/{common,verify-common,graph-common}.sh` + `inject-prose.sh`) を 1 バイトも変えず純粋 pack として挿さるか**を folio 自身の `architecture/spec/rules.html` で実証する (rule-of-three の **B6 完成サイン** = engine が folio 文書型を再現できる self-dogfood)。 挿さった証拠 = `git diff --stat lib/ inject-prose.sh` 空 + 既存 4 pack 非回帰 + sandbox 40/40 + validate clean。 ★frozen でない `rules.html` は **読むだけで一切編集しない** (非破壊・生成は別ファイル `/tmp/folio-design-samples/b6-spec/`)。
+
+- **入力 contract** (`contract/folio-rules.spec.yaml`) — spec-pack schema: meta(doc_type:rules) / approval / graph(principle_edge) / sections(id/tint/kicker/heading/essence/blocks[]) / requirements(id/ears_pattern/essence/statement) / references(非終端 照会) / glossary。 ★機械抽出 DRAFT を `scripts/extract-rules-spec.sh` が起こす (人間レビュー前提)。
+  - **block types** (section 内 content・document 順): `prose` / `note`(aside) / `list` / `code`(lines[]・改行回避) / `table`(caption/headers/rows) / `mermaid`(source_lines[]・source-text 表現) / `subhead`(heading/essence) / `requirements`(ids[])。 ★**未対応 block type は silent drop せず fail-closed abort** (no silent caps)。
+  - ★構造差 (rules の hallmark): **非終端 照会** (principle 終端 / SRS 片方向 の *中間* = 前方 references を持つ)。 EARS 5-pattern (ubiquitous/event-driven/state-driven/optional/unwanted) の章立て規範文。
+- **決定的 assembler** (`assemble-spec.sh`) — `lib/common.sh` (core) を source。 cover骨格/glossary/footer/band/esc/finalize は共用 (core)、 sections/blocks emitter / EARS 要件 row / references(前方照会 chip) は spec 固有 emitter。 固有 CSS は srs.css token を流用。 ★term-inline (mark_terms) は不使用 = rules 用語は plain_short を持たない (glossary は term + def・rules.html の `span.term[data-tooltip]` 由来)。
+  - ★生成前 fail-closed: **doc_type==rules 必須** (flip で gate bypass 不可) / 未知 EARS・tint・reference role / 要件 id・section id 重複 / **要件 ↔ requirements block の集合一致** (孤立要件・二重配置・未定義参照) / 空 reference token / graph.principle_edge role allowlist / 未対応 block type。
+- **prose injector は SRS/ADR/research/principle と無改変共用** (`inject-prose.sh`) — `data-slot-id` ベースで pack 非依存。 ★**5 例目でも無改変で挿さった = rule-of-three の B6 完成サイン**。 prose スロットは cover-summary + chapter-lead-NN (band 毎) のみ = 捏造面を最小化 (essence/要件/照会は faithful contract data)。
+- **floor** = `verify-spec.sh [--filled <manifest> | --artifact] <contract> <html>` — 行数=contract導出 (section/band/要件/ref chip/block 種別) / 要件 fidelity (data-req-id 集合 + (id,pattern,class,label,essence,statement) emission 順タプル) / section heading・essence 順序 / block fidelity (prose/note/list/code/table/mermaid/subhead 可視テキスト順序突合) / **非終端 照会 fidelity** (chip echo: token/doc/role count・SET・role allowlist・(token,role) ペア・可視 `<b>`==attr) / core 共通 chrome (verify_core_chrome) / cover-meta 4 KV 再導出 / escape 健全 / prose スロット (3 mode)。 ★floor 通過は `CEILING=PENDING` (taxonomy §5.1)。
+- **非終端 照会の graph 接続** (`rolemap/spec.rolemap.yaml`) — `graph.principle_edge` (rules→constitution・role=implementation・direction=forward) を verify-graph.sh の rolemap edge が pin し、 reachability で **FOLIO-RULES が FOLIO-CONSTITUTION 終端へ到達** することを実証する。 ★これが principle pack が B5 で external-ref warn として残した「inbound from: rules.html」を graph で閉じる (self-dogfood で rules も終端完備に)。 ADR/verification 前方照会は external-ref warn (B6 では実在/reverse 解決は範囲外)。
+- **bootstrap extractor** (`.claude-plugin/scripts/extract-rules-spec.sh`) — `rules.html` を read-only 走査し contract DRAFT を起こす one-shot。 meta / sections(heading+essence) / requirements(spec-row) / glossary(term span dedup) / references(xref) / content blocks(subhead/table/code/mermaid/requirements) を抽出。 ★**モデル化しなかった verbose machine prose の件数を stderr に LOG** (silent drop 禁止・rules.html 自身が §11.5 で既定非表示にする機械層ゆえ human 層 = essence+subhead+表+図+要件 を抽出する設計判断)。
+- **敵対回帰** = `test-adversarial-spec.sh` (A1-A16 assemble abort [doc_type flip / 未対応 block type / EARS / tint / id 重複 / 孤立要件 / 未定義参照 / 二重配置 / role / 空 token / graph role / 改行 / EARS 空白 split / tint 空白 split / references role 空白 split] + F1-F18 verify FAIL [要件 row 削除 / 可視 rid / statement / essence / EARS badge / section heading / section essence / ref token SET / ref 可視 `<b>` / ref role / table cell / code 行 / subhead / mermaid source / cover-meta / core chrome / prose 注入 / escape 健全] + J1-J2 inject + P1-P2 健全性 = 38 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
+
+```bash
+.claude-plugin/scripts/extract-rules-spec.sh > contract/folio-rules.spec.yaml   # ← rules.html から contract DRAFT を機械抽出 (LOG は stderr)
+./assemble-spec.sh contract/folio-rules.spec.yaml asm.html
+./inject-prose.sh prose/folio-rules.prose.yaml asm.html filled.html             # ← SRS/ADR/research/principle と同じ injector
+./verify-spec.sh --filled prose/folio-rules.prose.yaml contract/folio-rules.spec.yaml filled.html
+./test-adversarial-spec.sh
+```
+
 ## 照会 graph 終端完備検証 (engine B5-I / folio-p4o)
 
 個々の pack verify (verify-adr/research/principle) は **1 doc の局所** 照会 (justifies/leads_to/inbound) を検証する。

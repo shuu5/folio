@@ -1,0 +1,42 @@
+# folio engine B6 (folio-8ct) — spec/rules-pack の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表 (照会 = 抽象ロール graph) を spec-pack (doc_type=rules) の具体 node-type へ写像する pack 側 SSoT
+# (詳細は srs.rolemap.yaml 冒頭注記)。 core (lib/graph-common.sh) の reader が読み、 verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: reachability の edge / 終端 node / external-ref を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive)。
+#
+# ★rules の hallmark (principle 終端 / SRS RTM の *中間*): EARS 章立て規範文 + **非終端 照会**。
+#   rules は前方 cross-doc 照会を *持つ* (constitution P-x への前方 edge = role implementation)。
+#   ゆえ edges を 1 件以上宣言する (edge-bearing pack = floor 武装解除ガードの対象)。
+#   ★この 1 本が principle pack が B5 で external-ref warn として残した「inbound from: rules.html」を graph で閉じる
+#     (rules → FOLIO-CONSTITUTION 終端への到達 = self-dogfood で照会 graph が rules も終端完備にする)。
+pack: spec
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+roles:
+  requirements: implementation   # rules 要件 (EARS) = constitution 原則を実装規律へ展開する = implementation
+  principle_edge: implementation # constitution への前方照会 edge の node-type (= rules→principle)
+
+# 前方 cross-doc 照会 edge。 graph.principle_edge が constitution (FOLIO-CONSTITUTION 終端) へ向かう。
+edges:
+  - from_node: principle_edge            # roles[principle_edge] = implementation が edge.role の期待値 (二重担保)
+    role_expr: '.graph.principle_edge.role'         # corpus 側の edge role (= implementation)
+    count_expr: '[.graph.principle_edge] | length'  # |edges| = 1 (空 role 検出・vacuum ガード)
+    target_docid_expr: '.graph.principle_edge.target_doc_id'  # 照会先 doc の doc_id (FOLIO-CONSTITUTION)
+    direction: forward                     # rules→constitution は toward-terminal の順 (reachability そのまま)
+
+# spec は照会終端 node を *持たない* (constitution = principle pack が終端)。 reachability は edge で constitution へ到達する。
+terminal: {}
+
+# contract外 (folio-self) を指す前方照会 = external-ref warn (B6 では実在/reverse 解決は範囲外・warn 留め)。
+#   ADR (decisions/) と verification.html (REQ-VER) は generator corpus に pack contract を持たないため edge にせず external。
+external:
+  - desc: 'ADR 前方照会 (folio decisions・rationale)'
+    ref_expr: '.references[] | select(.role == "rationale") | .token'
+    meta: false
+  - desc: 'verification REQ-VER 前方照会 (検証仕様)'
+    ref_expr: '.references[] | select(.role == "verification") | .token'
+    meta: false
+
+forbidden_roles: []

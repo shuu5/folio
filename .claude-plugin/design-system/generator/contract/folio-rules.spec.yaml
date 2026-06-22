@@ -1,0 +1,541 @@
+# folio engine B6 (folio-8ct) — spec-pack contract (instance#5 / self-dogfood)
+# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が architecture/spec/rules.html から起こした)。 人間レビュー前提。
+# doc_type = rules (Layer 1 consumer universal rules)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。
+# ★抽出範囲 = rules.html の *人間層* (section essence + subhead essence + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会)。
+#   モデル化しなかった verbose machine prose は §11.5 で rules.html 自身が既定非表示にする機械層 (件数は extractor が stderr に LOG)。
+
+meta:
+  doc_id: FOLIO-RULES
+  doc_type: rules
+  title: "folio rules — Layer 1 consumer universal rules"
+  eyebrow_left: "ルール (Rules)"
+  eyebrow_right: "folio — Layer 1 consumer 向け普遍規約"
+  subtitle: "v1.0.0 · status: active · Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)"
+  version: "1.0.0"
+  date: "2026-06-22"
+  status: "active"
+  reader: "Developer, AI Agent, External Reviewer — folio を consume する開発者・AI Agent・外部レビュアー"
+
+# 承認記録 (core 共用 approval-block)。 rules.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。
+approval:
+  - { role: "文書種別", who: "rules (Layer 1 universal rules)", when: "v1.0.0", stamp: "active" }
+  - { role: "生成 (engine B6 spec-pack)", who: "folio design system", when: "2026-06-22 生成", stamp: "生成" }
+
+# ★非終端 照会の graph 接続: rules → constitution (FOLIO-CONSTITUTION 終端) の前方 edge (role=implementation)。
+#   verify-graph.sh の rolemap edge がこの 1 本を pin し、 reachability で rules が principle 終端へ到達することを実証する。
+graph:
+  principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
+
+sections:
+  - id: "s0"
+    tint: "info"
+    kicker: "§0 / 読み方"
+    heading: "§0. Reader's Guide"
+    essence: "本 rules は Layer 1 consumer project に適用する (folio Layer 0 本体は folio-self-spec.html)。folio.config.yaml の schema は §2、 MUST 要件は §10 に集約する。"
+    blocks: []
+  - id: "s2"
+    tint: "brand"
+    kicker: "§2 / ディレクトリ"
+    heading: "§2. Directory Structure (Layer 1 consumer project)"
+    essence: "Layer 1 consumer の directory layout と folio.config.yaml の構造を定める。folio が govern するのは architecture/ の 3 domain のみで、 実装適合性 test の location は規定しない (P-13(b))。"
+    blocks:
+      - type: code
+        lines:
+          - "<consumer-project>/                   # 例: scribe / my-typescript-app / 等"
+          - "├── README.md"
+          - "├── CLAUDE.md (or AGENTS.md)          # platform-specific binding (P-2 例外、 P-11 root 例外)"
+          - "├── folio.config.yaml                 # folio plugin consume 宣言 + userConfig override"
+          - "│"
+          - "├── architecture/                     # Layer 1 design-intent 空間 (folio rules で書かれた、 P-7 3-domain)"
+          - "│   ├── index.html                    # walkable nav (folio build が graph から生成、 generated-view、 ADR-0035)"
+          - "│   ├── spec/                         # design intent (WHAT、 cwd で context 即判定)"
+          - "│   │   ├── README.html               # spec entry point (constitution P-6)"
+          - "│   │   ├── constitution.html         # project 固有 constitution (folio core 継承 + project 固有)"
+          - "│   │   ├── overview.html"
+          - "│   │   └── ..."
+          - "│   ├── decisions/                    # decision (WHY、 ADR project 固有)"
+          - "│   └── research/                     # exploration (spec 反映前の探索)"
+          - "│"
+          - "├── <test dir>                       # HOW-test (実装適合性): consumer の stack 慣習 (tests/ 等)、 folio 非規定 (P-13(b)、 ADR-0026)"
+          - "│"
+          - "└── <実装本体 dir>                    # HOW-impl (architecture/spec/ に従う)"
+          - "    ├── (scribe の場合) skills/, agents/, commands/"
+          - "    ├── (TS webapp の場合) src/, components/, app/"
+          - "    └── ..."
+      - type: code
+        lines:
+          - "folio_version: \"^0.4\"                  # folio framework の依存 version (semver range)"
+          - "spec_path: \"architecture/spec/\"        # default、 userConfig で override 可能"
+          - "caller_marker_env: \"FOLIO_ARCHITECT_CONTEXT\""
+          - "caller_marker_value: \"folio-architect\""
+          - "review_model: \"opus\"                   # optional、 Phase F specialist の model"
+  - id: "s3"
+    tint: "violet"
+    kicker: "§3 / 命名"
+    heading: "§3. File Naming Convention"
+    essence: "全 HTML file 名は kebab-case、 ADR は ADR-NNNN-<slug>、 各 cluster は README.html を持つ MUST。 vocabulary.yaml の schema は terms 配列 (canonical MUST / forbidden = gate 用)。"
+    blocks: []
+  - id: "s4"
+    tint: "info"
+    kicker: "§4 / HTML 書式"
+    heading: "§4. HTML Format Conventions"
+    essence: "全 spec file は head 4 要素 (meta / title / css link / JSON-LD)・body 冒頭 aside・RFC 2119 boilerplate・section wrapper を MUST 採用する。 visual richness と a11y minimum も本章が定める。"
+    blocks:
+      - { type: subhead, heading: "§4.1 <head> Metadata (3 層 + JSON-LD 関係性)", essence: "全 spec file の head は (1) meta tag による flat metadata、 (2) title、 (3) common.css への link、 (4) JSON-LD 関係性ブロックの 4 要素を MUST 含む。" }
+      - type: code
+        lines:
+          - "<head>"
+          - "<meta charset=\"UTF-8\">"
+          - "<meta name=\"folio-doc-type\"     content=\"spec\">     <!-- constitution|spec|adr|changes|research|tutorial|howto|explanation -->"
+          - "<meta name=\"folio-layer\"        content=\"core\">     <!-- core|project -->"
+          - "<meta name=\"folio-version\"      content=\"1.2.0\">"
+          - "<meta name=\"folio-status\"       content=\"active\">   <!-- draft|active|deprecated|archived -->"
+          - "<meta name=\"folio-stakeholders\" content=\"Developer, AI Agent\">"
+          - "<meta name=\"folio-arc42\"        content=\"section-5\"> <!-- arc42 mapping (optional) -->"
+          - "<meta name=\"folio-diataxis\"     content=\"reference\"> <!-- tutorial|howto|reference|explanation -->"
+          - "<title>...</title>"
+          - "<link rel=\"stylesheet\" href=\"../../common.css\">"
+          - "<script type=\"application/ld+json\">"
+          - "{ /* JSON-LD block: relations.html §3.2 Full Example を参照 */ }"
+          - "</script>"
+          - "</head>"
+      - { type: subhead, heading: "§4.2 Body 冒頭 aside.machine-readable", essence: "" }
+      - type: code
+        lines:
+          - "<aside class=\"machine-readable\" aria-hidden=\"true\">"
+          - "  <dl>"
+          - "    <dt>id</dt>building-blocks"
+          - "    <dt>doc-type</dt>spec"
+          - "    <dt>arc42-section</dt>5"
+          - "    <dt>stakeholders</dt>Developer, AI Agent"
+          - "    <dt>version</dt>1.2.0"
+          - "    <dt>status</dt>active"
+          - "  </dl>"
+          - "</aside>"
+      - { type: subhead, heading: "§4.3 RFC 2119 Boilerplate", essence: "" }
+      - { type: subhead, heading: "§4.4 section.normative / section.informative Wrappers", essence: "" }
+      - { type: subhead, heading: "§4.5 Visual Richness Patterns (HTML 活用 guidance)", essence: "" }
+      - type: table
+        caption: ""
+        headers: ["domain pattern", "推奨 element", "用途例"]
+        rows:
+          - ["lifecycle / 状態遷移", "mermaid stateDiagram-v2", "binding live/tombstone/expired/未存在、 issue draft/active/done"]
+          - ["caller-system 対話 / 操作 sequence", "mermaid sequenceDiagram", "API client → service の request/response、 multi-component 連携"]
+          - ["decision flow / 分岐", "mermaid flowchart", "adoption-state 検出、 ADR alternatives 選択木"]
+          - ["component 関係 / 継承", "mermaid classDiagram", "architecture layer 関係、 base/derived 関係"]
+          - ["data model / entity 関係", "mermaid erDiagram", "binding ← short-code × target-URL 等の entity 関係"]
+          - ["traceability matrix", "<table>", "REQ-ID × constitution 原則 × component 実装"]
+          - ["alternative comparison", "<table>", "ADR §3 採用/不採用 candidates × criteria"]
+          - ["state transition matrix", "<table>", "遷移元 × 遷移先 × トリガー (stateDiagram と併用可)"]
+          - ["progressive disclosure", "<details> + <summary>", "optional / advanced 内容、 長い enumeration の折りたたみ"]
+          - ["structured definition", "<dl> + <dt>/<dd>", "用語 / 原則 / component の definition"]
+          - ["dual-audience requirement (machine SSoT + human essence)", "<section class=\"req\" data-audience> + <details> fold", "規範要件を machine normative + human 要約で co-author (§7)"]
+          - ["concept flow (per-section「どう動くか」)", "mermaid flowchart", "section 単位 1 枚の概念図 (dual-audience human view)"]
+          - ["compact requirement list (「何があるか」)", "純 CSS list (1 行 1 REQ)", "最小読量で REQ 一覧を提示 (dual-audience human view)"]
+          - ["coverage RTM (traceability)", "<table> (REQ × derives × scenario × verified)", "trace / coverage 主題の section、 空 mapping = gap 可視化"]
+          - ["EARS keyword 色 badge", "<span class=\"req__ears--<p>\">", "EARS pattern の視覚識別 (色 mapping は folio 独自設計)"]
+      - { type: subhead, heading: "§4.6 Accessibility Minimum Rules (a11y, normative)", essence: "text・diagram text は WCAG 2.2 SC 1.4.3 AA contrast、 head は viewport meta、 mermaid 図は accTitle/accDescr・fill override 時の color paired・overflow scroll の focusable 化を満たす MUST。" }
+  - id: "s5"
+    tint: "warn"
+    kicker: "§5 / delta marker"
+    heading: "§5. Delta Marker Markup"
+    essence: "本章は spec 改訂の trace を spec 本文に inline 保存する HTML-native な markup (ins/del.delta + data-delta-* 属性) を定める。 命名は D-YYYY-MM-DD-NNN format (同日連番)。"
+    blocks:
+      - type: code
+        lines:
+          - "<ins class=\"delta\" data-delta-id=\"D-2026-05-22-001\" data-delta-date=\"2026-05-22\">新しい要件テキスト</ins>"
+          - "<del class=\"delta\" data-delta-id=\"D-2026-05-21-003\" data-delta-superseded-by=\"D-2026-05-22-001\">旧テキスト</del>"
+  - id: "s6"
+    tint: "brand"
+    kicker: "§6 / EARS 記法"
+    heading: "§6. EARS Notation Markup"
+    essence: "本章は acceptance criteria に EARS の 5 pattern (Ubiquitous / Event-driven / State-driven / Optional / Unwanted) を採用し、 data-ears-* 属性付き HTML markup で記述する。"
+    blocks:
+      - type: table
+        caption: ""
+        headers: ["pattern", "template", "用途"]
+        rows:
+          - ["Ubiquitous", "The system SHALL ...", "無条件不変条件"]
+          - ["Event-driven", "WHEN [trigger], the system SHALL ...", "event 応答"]
+          - ["State-driven", "WHILE [precondition], the system SHALL ...", "状態継続中"]
+          - ["Optional", "WHERE [feature included], the system SHALL ...", "機能オプション"]
+          - ["Unwanted", "IF [unwanted condition], THEN the system SHALL ...", "異常応答"]
+      - type: code
+        lines:
+          - "<p class=\"ears\" data-ears-pattern=\"event-driven\">"
+          - "  <span class=\"ears-id\">REQ-002</span>:"
+          - "  <span class=\"ears-when\">WHEN AI agent attempts to write to spec</span>,"
+          - "  the system <span class=\"ears-shall\">SHALL</span> verify caller context declaration."
+          - "</p>"
+  - id: "s7"
+    tint: "violet"
+    kicker: "§7 / dual-audience"
+    heading: "§7. Dual-Audience Markup (data-audience taxonomy)"
+    essence: "spec を機械向け (精密 normative = SSoT) と人間向け (essence + 図) の双方へ 1 HTML に co-author する markup。 採用は任意だが採用 spec は §7.3 invariant 遵守 MUST (conditional-normative)。 consistency は二層 enforcement (floor / ceiling) で担保。"
+    blocks:
+      - { type: subhead, heading: "§7.1 data-audience taxonomy", essence: "data-audience は closed 2 値 (machine | human) の canonical 属性。 synonym は P-5 で禁止、 継承無く明示付与のみ。 presentation 要素にも付与でき、 REQ-DA-STRUCT-1 MUST は req container のみ。" }
+      - { type: subhead, heading: "§7.2 Canonical markup pattern (2 form)", essence: "requirement は 2 form (card / spec-row) で human essence と machine normative を data-audience + fold で co-author。 machine 部は DOM 常在・aria-hidden 無し・視覚のみ畳む。 id・badge・ears-id は一致、 EARS pattern は data-ears-pattern が SSoT。" }
+      - type: code
+        lines:
+          - "<section class=\"req\" id=\"req-xxx-001\" data-audience=\"human\">"
+          - "  <div class=\"req__card\">"
+          - "    <span class=\"badge badge--req\">REQ-XXX-001</span>"
+          - "    <span class=\"req__ears req__ears--event\">Event-Driven</span>   <!-- EARS badge (§6) -->"
+          - "  </div>"
+          - "  <p class=\"req__essence\">…(human 要約 = machine normative の正確な要約)…</p>"
+          - "  <details class=\"req__machine\" data-audience=\"machine\">          <!-- canonical SSoT、 DOM 常在、 no aria-hidden -->"
+          - "    <summary>normative (machine)</summary>"
+          - "    <div class=\"req__normative\">"
+          - "      <p class=\"ears\" data-ears-pattern=\"event-driven\">"
+          - "        <span class=\"ears-id\">REQ-XXX-001</span>:"
+          - "        <span class=\"ears-when\">WHEN …</span>, the system <span class=\"ears-shall\">SHALL</span> …."
+          - "      </p>"
+          - "    </div>"
+          - "  </details>"
+          - "</section>"
+      - type: code
+        lines:
+          - "<div class=\"spec-list\">                                            <!-- 複数 .spec-row を束ねる container -->"
+          - "  <details class=\"spec-row\" id=\"req-xxx-001\" data-audience=\"human\">"
+          - "    <summary>"
+          - "      <span class=\"badge badge--req\">REQ-XXX-001</span>"
+          - "      <span class=\"req__ears req__ears--event\">Event</span>                <!-- EARS badge (§6) -->"
+          - "      <span class=\"essence\">…(human 要約 = machine normative の正確な要約)…</span>"
+          - "    </summary>"
+          - "    <div class=\"spec-normative\" data-audience=\"machine\">                  <!-- canonical SSoT、 DOM 常在、 no aria-hidden -->"
+          - "      <p class=\"ears\" data-ears-pattern=\"event-driven\">"
+          - "        <span class=\"ears-id\">REQ-XXX-001</span>:"
+          - "        <span class=\"ears-when\">WHEN …</span>, the system <span class=\"ears-shall\">SHALL</span> …."
+          - "      </p>"
+          - "    </div>"
+          - "  </details>"
+          - "</div>"
+      - { type: subhead, heading: "§7.3 Dual-Audience Safety Invariants (conditional-normative floor)", essence: "dual-audience 採用 spec は REQ-DA-STRUCT-1〜5 の構造 invariant 遵守 MUST。 floor (validate) が両 form を data-audience=human で一律検査。 fidelity は ceiling (spec-review-fidelity) が担う。" }
+      - type: requirements
+        ids: ["REQ-DA-STRUCT-1", "REQ-DA-STRUCT-2", "REQ-DA-STRUCT-3", "REQ-DA-STRUCT-4", "REQ-DA-STRUCT-5"]
+      - { type: subhead, heading: "§7.4 Human view guidance (Hybrid)", essence: "human view (concept 図 / list / coverage RTM / EARS badge / fold) は §4.5 menu に集約、 強制しない guidance (author 判断、 P-8)。 普遍性は tiered (core/RTM 普遍、 図・list は section 依存、 coverage opt-in)。" }
+  - id: "s8"
+    tint: "warn"
+    kicker: "§8 / JS 統制"
+    heading: "§8. JavaScript Governance (read-only enhancement only)"
+    essence: "spec HTML 内の JavaScript の使用範囲を定める。 原則は JS = render/view の read-only enhancement に限り、 normative content (定義/要件/MUST) の SSoT にしない (canonical は常に static)。 JS 含む spec は本章遵守。"
+    blocks:
+      - type: requirements
+        ids: ["REQ-DA-JS-1", "REQ-DA-JS-2"]
+      - type: table
+        caption: ""
+        headers: ["区分", "具体"]
+        rows:
+          - ["ALLOW", "static DOM content から派生する view enhancement (TOC 補完 / mermaid render / cross-ref tooltip / dark-light toggle / beforeprint で <details> 一括 open)。 mermaid は vendored render として ALLOW。"]
+          - ["PROHIBIT", "JS のみに存在する normative / fetch ロード content の SSoT 化 / CDN 実行時取得 script による content 生成 / ES modules + fetch() (file:// 破綻)。"]
+          - ["REQUIRE", "noscript でも full content が読める / library は vendoring (CDN 不可) / single-file classic <script> か inline / inline data は <script type=\"application/json\"> 同梱 / CSP は meta tag + hash ('sha256-…'、 nonce は static で不可)。"]
+  - id: "s9"
+    tint: "info"
+    kicker: "§9 / 照会 (xref)"
+    heading: "§9. Object Cross-Reference (in-band xref + no-JS hover tooltip)"
+    essence: "architecture 内 defined-object の in-band cross-reference・no-JS hover tooltip・完全性 enforcement を hybrid で定める (in-band id が SSoT、 lint/AI-graph/glossary は projection)。 穴は folio fix が materialize・完全性は validate・採用は opt-in。"
+    blocks:
+      - type: mermaid
+        caption: "図 §9: xref のライフサイクル (in-band id = SSoT → fix が materialize → gate・tooltip・AI-graph が派生)。"
+        source_lines:
+          - "flowchart TB"
+          - "  accTitle: xref lifecycle (hybrid: in-band SSoT から projection を生成)"
+          - "  accDescr: prose 内の canonical token を folio fix が a.class=xref に materialize し、 href は in-band HTML の id (SSoT 定義 site) へ解決する。 data-tooltip は folio fix が定義 site の essence をコピーして生成する。 そこから folio validate の completeness gate と no-JS tooltip と AI-graph projection が派生する。"
+          - "  T[\"prose 内の裸 token\\n(P-N / REQ-* / ADR-NNNN)\"]"
+          - "  FIX[\"folio fix\\nauto-materialize\"]"
+          - "  X[\"a.class=xref\\nhref + data-tooltip\"]"
+          - "  SSOT[\"in-band HTML の id\\n= canonical SSoT 定義 site\"]"
+          - "  ESS[\"§9.2 essence 抽出\\n(定義 site を再利用)\"]"
+          - "  VAL[\"folio validate\\ncompleteness gate (opt-in)\"]"
+          - "  TIP[\"no-JS hover tooltip\\n(:hover/:focus-visible)\"]"
+          - "  GRAPH[\"AI-graph projection\\n(inventory/prime)\"]"
+          - "  T --> FIX --> X"
+          - "  X -->|href 解決| SSOT"
+          - "  ESS -->|data-tooltip 供給| X"
+          - "  SSOT --> ESS"
+          - "  X --> VAL"
+          - "  X --> TIP"
+          - "  X --> GRAPH"
+      - { type: subhead, heading: "§9.1 markup 規約 + prefix→SSoT-doc registry", essence: "defined-object への inline 参照は untyped な xref とし、 href は §9.1 registry に従い SSoT 定義 site (canonical ID 小文字化の id) へ解決 (ADR は file 自体)。 規則 § は explicit-tier で auto-gap 検出はしない。" }
+      - type: code
+        lines:
+          - "<a class=\"xref\" href=\"<referencing-doc → SSoT-doc の相対 path>#<id>\" data-tooltip=\"<essence>\">TOKEN</a>"
+      - type: table
+        caption: "prefix → SSoT-doc registry (ADR-0034 §2.2、 object-identity model)"
+        headers: ["prefix", "class", "SSoT doc", "定義 site / anchor"]
+        rows:
+          - ["P-N", "principle", "constitution.html", "<dt id=\"p-N\">"]
+          - ["REQ-VER-* / REQ-NAV-*", "requirement", "verification.html", "id=\"req-ver-NNN\" / id=\"req-nav-NNN\" (§3.6 / §3.8)"]
+          - ["REQ-REL-*", "requirement", "relations.html", "id=\"req-rel-NNN\""]
+          - ["REQ-CI-* / REQ-DA-* / REQ-CM-* / REQ-ADR-* / REQ-XREF-* / REQ-GLOSS-*", "requirement", "rules.html (本 file)", "id=\"req-…\""]
+          - ["ADR-NNNN", "decision", "decisions/ADR-NNNN-*.html", "file 自体 (anchor 無し)"]
+          - ["rule §", "rule", "rules.html", "<h2 id=\"…\"> (explicit-tier)"]
+      - { type: subhead, heading: "§9.2 essence 抽出 contract (tooltip text の生成元)", essence: "data-tooltip 生成 (folio fix)・tooltip-consistency 検査 (folio validate)・glossary が依存する横断機構。 essence は定義 site の既存内容を再利用し (新規に書き起こさない = P-7 重複禁止)、 plain-text 化と attribute escape を必ず行う。" }
+      - type: table
+        caption: "per-class essence 抽出 contract (ADR-0034 §6)"
+        headers: ["class", "定義 site", "essence の元"]
+        rows:
+          - ["REQ-*", "spec-row <details class=\"spec-row\" id=\"req-…\"> (または verbose card <section class=\"req\">)", "<summary> 内 .essence (または .req__essence) の text"]
+          - ["P-N", "constitution <dt id=\"p-N\">", "<strong> text から \"P-N: \" prefix を除いた title 部"]
+          - ["ADR-NNNN", "decisions/ADR-NNNN-*.html", "<header> .meta div の末尾 · セグメント (summary)"]
+          - ["rule (§)", "rules.html <h2 id=\"…\">", "見出し text (explicit-tier、 auto-wrap なし)"]
+      - { type: subhead, heading: "§9.3 tooltip CSS governance (no-JS、 §8 整合)", essence: "tooltip は §8 と整合する no-JS CSS-only 機構 (:hover + :focus-visible の擬似要素 box)。 tooltip 抜きでも xref は click で定義へ飛ぶ working baseline link を保つ (tooltip は上載せ)。 viewport 端の切れは限界。" }
+      - { type: subhead, heading: "§9.4 Cross-reference requirements (REQ-XREF-*)", essence: "resolvable xref として数え AI-graph edge の SSoT とするのは <a class=\"xref\"> 形のみ。 cov-req・plain nav link・normative-ref は projection に参加しない。" }
+      - type: requirements
+        ids: ["REQ-XREF-001", "REQ-XREF-002", "REQ-XREF-003", "REQ-XREF-004"]
+      - { type: subhead, heading: "§9.5 Glossary terms (Class B、 vocabulary.yaml SSoT + explicit/auto-mark hover tooltip)", essence: "glossary 用語 (Class B) は defined-object (Class A) の no-gaps とは別の best-effort tier で、 SSoT は vocabulary.yaml の definition、 HTML glossary view はそこからの生成 projection とし定義を二重化しない (P-7)。" }
+      - type: requirements
+        ids: ["REQ-GLOSS-001", "REQ-GLOSS-002", "REQ-GLOSS-003"]
+  - id: "s10"
+    tint: "bad"
+    kicker: "§10 / 必須義務"
+    heading: "§10. Mandatory Actions for Layer 1 Consumer"
+    essence: "本 §10 は Layer 1 consumer が無条件遵守すべき動的な操作上の MUST 義務 (§2〜§6 の構造規則とは別) を 1 箇所に集約する。 enforcement 機構と binding 詳細は folio-self-spec.html §7 / §9 に分離する。"
+    blocks:
+      - { type: subhead, heading: "§10.1 Spec Edit Caller Marker", essence: "spec_path 配下の file への AI agent の write を caller marker env var で gate する RFC 2119 MUST を定める。 env var 名・値・hook flow は folio-self-spec.html §7.3 / §9 に集約する。" }
+      - type: requirements
+        ids: ["REQ-CM-001", "REQ-CM-002", "REQ-CM-003"]
+      - { type: subhead, heading: "§10.2 CI Gate Compliance", essence: "" }
+      - type: mermaid
+        caption: "図 §10.2: 7 gate の ADR-0028 二層 (floor / ceiling) への振り分け。"
+        source_lines:
+          - "flowchart TB"
+          - "  accTitle: §10.2 7 gate の二層 enforcement"
+          - "  accDescr: REQ-CI-010〜016 の 7 gate を ADR-0028 の二層に振り分ける。 deterministic floor は folio validate が CI で block/warn し、 LLM ceiling は Phase F review agent が authoring 時に担保する (CI hard gate にしない)。"
+          - "  G[\"§10.2 7 gate (REQ-CI-010〜016)\"]"
+          - "  G --> F[\"deterministic floor — folio validate (CI block/warn)\"]"
+          - "  G --> C[\"LLM ceiling — Phase F review (authoring advisory)\"]"
+          - "  F --> F1[\"link-integrity / json-ld (block)\"]"
+          - "  F --> F2[\"vocabulary / delta-marker (block)\"]"
+          - "  F --> F3[\"EARS-coverage (warn)\"]"
+          - "  C --> C1[\"declarative-form (spec-review-temporal)\"]"
+          - "  C --> C2[\"what-only (spec-review-ssot)\"]"
+      - type: requirements
+        ids: ["REQ-CI-001"]
+      - type: table
+        caption: "7 gate overview (REQ-ID は下記の id 付き spec-row への deep-link、 SSoT は spec-row)"
+        headers: ["REQ-ID", "gate", "結果", "根拠"]
+        rows:
+          - ["REQ-CI-010", "link-integrity gate", "fail = merge block", "P-6"]
+          - ["REQ-CI-011", "declarative-form gate", "fail = merge block", "P-4"]
+          - ["REQ-CI-012", "what-only gate", "fail = merge block", "P-3 / P-11"]
+          - ["REQ-CI-013", "vocabulary gate", "fail = merge block", "P-5"]
+          - ["REQ-CI-014", "EARS coverage gate", "warn (merge 許可)", "§6"]
+          - ["REQ-CI-015", "delta marker consistency gate", "fail = merge block", "§5"]
+          - ["REQ-CI-016", "json-ld-validation gate", "fail = merge block", "relations §3"]
+      - type: requirements
+        ids: ["REQ-CI-010", "REQ-CI-011", "REQ-CI-012", "REQ-CI-013", "REQ-CI-014", "REQ-CI-015", "REQ-CI-016"]
+      - { type: subhead, heading: "§10.3 ADR Worthiness", essence: "決定が (a) 不可逆 (b) rationale 無しでは意外 (c) 代替間の真の trade-off の 3 条件すべてを満たす時のみ folio-architect が ADR 起票を offer (sparingly)。 1 つでも偽なら spec 本文や vocabulary.yaml に吸収。 承認は decisions/README §5。" }
+      - type: requirements
+        ids: ["REQ-ADR-001"]
+  - id: "s11"
+    tint: "ok"
+    kicker: "§11 / 人間向け提示"
+    heading: "§11. Human-First Presentation (P-14)"
+    essence: "本章は P-14 (Human Readability) を実装する presentation 規律 — 人間読者層 (§11.1)・表示層 remediate の build/fix 分業 (§11.2)・既定表示 (§11.3)・検査手続き (§11.4)・圧縮 (§11.5) を定める。 生成 SRS の design system は §12。"
+    blocks:
+      - { type: subhead, heading: "§11.1 ページ種別 × 主たる人間読者層 (定義)", essence: "ページ種別ごとの主たる人間読者層と提示の力点を下表で定義する (P-14 委任の履行)。 提示判断 (見せる / 折る / 削る) はこの読者層定義を物差しとする。" }
+      - type: table
+        caption: "ページ種別ごとの主読者層と提示の力点 (P-14 委任の履行、 ADR-0039 §2.1)"
+        headers: ["ページ種別", "主たる人間読者層", "提示の力点"]
+        rows:
+          - ["入口層 — landing (index.html) / cluster README.html", "folio を知らない初見の外部開発者", "hero 一文 + 読者別導線 + dead-end ゼロ (landing template、 ADR-0039 §2.2)。 専門用語は xref / glossary hover で即解決"]
+          - ["spec 本文層 — architecture/spec/*.html", "folio を導入済みで仕様を参照・検索する既習 consumer 開発者", "essence・表・図が常時可視、 EARS 全文は fold (§7 dual-audience)。 ページ内目次 + prev-next で検索性"]
+          - ["decisions 層 — architecture/decisions/*.html", "設計経緯を時系列で辿る維持者", "ADR 番号順の prev-next chain (決定的順序)。 frozen 本文は不変、 chrome のみ build が維持"]
+          - ["glossary — architecture/glossary.html", "初見〜既習の横断参照", "vocabulary.yaml 由来の生成 view。 本文からは hover tooltip (§9.5) で遷移なし参照"]
+      - { type: subhead, heading: "§11.2 表示層 remediate の分業 (build / fix)", essence: "表示層 regen は folio build が一元所有、 folio fix は graph materialize 専任。 validate の violation message は対応する remediate tool を名指しする MUST。" }
+      - { type: subhead, heading: "§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)", essence: "no-JS では class 無しで全文可視へ graceful degrade (AI・検索・印刷は不変)。 fold ネスト 2 段上限・<summary> 要旨 1 文・印刷時全展開は MUST。 生成 SRS プレゼンの既定表示は §12 が定める。" }
+      - { type: subhead, heading: "§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)", essence: "" }
+      - type: mermaid
+        caption: "図 §11.4: 「読める」の三層検査 (機械 → readability lens → user 実機 walk)。"
+        source_lines:
+          - "flowchart TB"
+          - "  accTitle: §11.4 readability 検査の三層"
+          - "  accDescr: 「読める」の検査は三層で行う。 下層は機械 (deterministic) で readability floor (REQ-VER-023) と render-gate ceiling (REQ-VER-022) が幾何を検査する。 幾何が clean でも読みにくい page はあるため、 その上層に readability review lens (常設 MUST、 LLM persona review) を置き、 最上層に user 実機 walk (MUST、 人間の目視) を最終検査器として置く。 上層 2 手続きは presentation 変更時の必須 step。"
+          - "  subgraph L1[\"下層 = 機械 (deterministic、 CI gate)\"]"
+          - "    floor[\"readability floorREQ-VER-023\"]"
+          - "    ceiling[\"render-gate ceilingREQ-VER-022 (幾何 detector)\"]"
+          - "  end"
+          - "  L1 --> lens[\"readability review lens(常設 MUST・LLM persona review)\"]"
+          - "  lens --> walk[\"user 実機 walk(MUST・最終検査器 = 人間)\"]"
+      - { type: subhead, heading: "§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)", essence: "人間層 = 制限時間付きプレゼン / 機械層 = 無制限の原稿。 各章に章要旨 MUST・地の文は machine へ降格 (削除しない MUST)・可視 prose は約 12,000 字を time-box 上限とする。 生成 SRS プレゼンの圧縮は §12 が改訂・置換する。" }
+  - id: "s12"
+    tint: "brand"
+    kicker: "§12 / 要件定義書 design system"
+    heading: "§12. 要件定義書 design system (機械 SSoT 生成 + 2-gate 検証)"
+    essence: "要件定義書 (SRS) の人間プレゼンを機械 SSoT から生成し 2-gate (floor ∧ ceiling) で検証する regime。 規律を普遍コア (core) と SRS 固有パック (srs-pack) に分ける。"
+    blocks:
+      - type: table
+        caption: "密系部品の可読化 3 戦略 (assembler が MUST スロットを保証、 部品 id allowlist の SSoT は catalog / taxonomy)"
+        headers: ["戦略", "対象 (判定根拠)", "assembler が必ず生成する affordance"]
+        rows:
+          - ["B = 畳む", "rtm-grid register 全体 (トレース監査の道具、 register-pure ゆえ機械判定)", "人間ビューで既定折りたたみ + 直前に空不可の平易要約スロット。 全グリッドは保持し AI / 印刷で展開 (情報は畳むだけで欠落しない)。"]
+          - ["A = 噛み砕く", "要件本体・NFR の明示 allowlist (register をまたぐ部品 id 集合)", "各行に空不可の plain-language スロット (やさしい言い換え) + 専門語の inline 併記。 文書の本体ゆえ畳まない。"]
+          - ["据置", "元々平易な部品 (用語表・参照一覧・改訂履歴 等) の明示集合", "既存のまま、 軽い注釈のみ (plain スロットは SHOULD)。"]
+
+requirements:
+  - id: "REQ-DA-STRUCT-1"
+    ears_pattern: "optional"
+    essence: "dual-audience を採用する spec の各 [data-audience=\"human\"] requirement container は [data-audience=\"machine\"] 子孫を持つ MUST (孤立 human の排除)。"
+    statement: "REQ-DA-STRUCT-1: WHERE a spec adopts the dual-audience pattern, each [data-audience=\"human\"] requirement container (verbose card または compact spec-row) SHALL contain a [data-audience=\"machine\"] descendant (派生元の存在保証、 孤立 human の排除)。"
+  - id: "REQ-DA-STRUCT-2"
+    ears_pattern: "optional"
+    essence: "requirement-id は container id ・ .badge--req text ・ machine .ears-id text 間で case 正規化して一致する MUST。"
+    statement: "REQ-DA-STRUCT-2: WHERE a spec adopts the dual-audience pattern, the requirement-id SHALL be consistent (case-normalized) across the requirement container id (section / details), the .badge--req text, and the machine .ears-id text。"
+  - id: "REQ-DA-STRUCT-3"
+    ears_pattern: "optional"
+    essence: "全 data-audience 値は machine か human のみ (synonym 禁止、 P-5)。"
+    statement: "REQ-DA-STRUCT-3: WHERE a spec adopts the dual-audience pattern, every data-audience value SHALL be one of machine or human only (no synonym、 P-5)。"
+  - id: "REQ-DA-STRUCT-4"
+    ears_pattern: "optional"
+    essence: "machine 部 ([data-audience=\"machine\"]) は aria-hidden を持たない MUST NOT (AI / accessibility-tree からの normative 不可視化を防ぐ)。"
+    statement: "REQ-DA-STRUCT-4: WHERE a spec adopts the dual-audience pattern, the machine part ([data-audience=\"machine\"]) SHALL NOT carry aria-hidden (AI / accessibility-tree からの normative 不可視化を防ぐ)。"
+  - id: "REQ-DA-STRUCT-5"
+    ears_pattern: "optional"
+    essence: "human EARS badge (req__ears--<p>) は machine data-ears-pattern と整合する MUST (短縮形 alias を正規化して比較)。"
+    statement: "REQ-DA-STRUCT-5: WHERE a spec adopts the dual-audience pattern, the human EARS badge (req__ears--<p>) SHALL agree with the machine data-ears-pattern (短縮形 alias を正規化して比較)。"
+  - id: "REQ-DA-JS-1"
+    ears_pattern: "optional"
+    essence: "JS は static DOM 由来の read-only view enhancement に限り、 normative content (定義 / 要件 / MUST) の SSoT にしない MUST。"
+    statement: "REQ-DA-JS-1: WHERE a spec includes JavaScript, the JavaScript SHALL be limited to read-only view enhancement derived from static DOM content, and SHALL NOT hold the SSoT of any normative content (定義 / 要件 / MUST)。"
+  - id: "REQ-DA-JS-2"
+    ears_pattern: "optional"
+    essence: "JS 無効でも完全に読める MUST (progressive enhancement) ・ library は vendoring (runtime CDN 不可) ・ ES modules + fetch() は不使用 (file:// 破綻)。"
+    statement: "REQ-DA-JS-2: WHERE a spec includes JavaScript, the spec SHALL remain fully readable with JavaScript disabled (progressive enhancement), SHALL vendor its libraries (no runtime CDN), and SHALL NOT use ES modules with fetch() (file:// で null origin CORS により破綻、 verified)。 vendoring 違反のうち runtime-CDN script (<script src=\"http(s)://…\"> および protocol-relative src=\"//…\") は folio validate の dual-audience gate が 機械検出する (escaped 例・<pre> 内 raw 例は mask、 ADR-0039 §2.5)。 検出は 単一行 tag の試作 heuristic — 行跨ぎ tag は守備範囲外で、 網羅は ceiling の領分 (folio の corpus 慣習は単一行 script tag)。 conformance: scenarios/validate-violations.yaml (cdn-script.html seed、 double/single-quote 両形)。"
+  - id: "REQ-XREF-001"
+    ears_pattern: "ubiquitous"
+    essence: "defined-object への inline 参照は <a class=\"xref\" href data-tooltip> 形を用い、 href は §9.1 registry に従い object の SSoT 定義 site に解決する。"
+    statement: "REQ-XREF-001: An inline reference to a defined-object (principle P-N / requirement REQ-* / decision ADR-NNNN) SHALL use the <a class=\"xref\" href data-tooltip> form, whose href resolves to the object's SSoT definition site per the §9.1 prefix→SSoT-doc registry."
+  - id: "REQ-XREF-002"
+    ears_pattern: "optional"
+    essence: "xref-completeness に opt-in した spec (folio-xref-completeness=enabled) は、 prose の canonical token 言及ごとに resolvable xref を最低 1 つ持つ (orphan-mention 禁止、 conditional-normative)。"
+    statement: "WHERE a spec opts into xref-completeness (folio-xref-completeness=enabled), REQ-XREF-002: every prose mention of an auto-materializable canonical object token SHALL carry at least one resolvable xref to that object (orphan-mention forbidden、 folio fix が初出を wrap して充足する)。"
+  - id: "REQ-XREF-003"
+    ears_pattern: "ubiquitous"
+    essence: "各 xref は click で定義へ飛ぶ baseline link を保ち、 data-tooltip に定義 essence (plain-text、 §9.2 contract) を持つ (no-JS CSS-only tooltip)。"
+    statement: "REQ-XREF-003: Each xref SHALL remain a working baseline link (click → definition) and SHALL carry, in data-tooltip, the plain-text essence of the object's definition per the §9.2 essence-extraction contract, rendered as a no-JS CSS-only tooltip."
+  - id: "REQ-XREF-004"
+    ears_pattern: "ubiquitous"
+    essence: "各 canonical object ID は architecture 全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。"
+    statement: "REQ-XREF-004: Each canonical object ID SHALL be defined exactly once as an id-bearing SSoT element across architecture, and SHALL NOT be renumbered or reused (ID immutability)。"
+  - id: "REQ-GLOSS-001"
+    ears_pattern: "optional"
+    essence: "手動 (explicit) mark した glossary 用語は span.term[data-term] で表す MUST。 data-term は vocabulary.yaml canonical に解決、 data-tooltip はその escape 済 definition と一致。 Class B で未 mark は gap-lint せず。"
+    statement: "WHERE a glossary term is given a hover tooltip by explicit (manual) marking — not by folio fix auto-marking, which is governed by REQ-GLOSS-002, REQ-GLOSS-001: the term SHALL be explicitly marked as <span class=\"term\" data-term=\"<canonical>\"> whose data-term resolves to a canonical entry in vocabulary.yaml and whose data-tooltip holds that entry's definition rendered as an HTML-attribute-escaped value (the canonical escaping of & / < / > / \", applied identically by folio fix on write and folio validate on check); unmarked term mentions SHALL NOT be gap-linted (Class B best-effort tier、 ADR-0034 §2.8)。"
+  - id: "REQ-GLOSS-002"
+    ears_pattern: "optional"
+    essence: "opt-in doc (folio-glossary-automark=enabled) では folio fix が folio-closed 用語の doc 初出を span.term に auto-mark (hover のみ・非リンク)。 code/見出し/summary/chrome/既 mark skip、 consumer 用語は対象外、 no-gaps 非保証。"
+    statement: "WHERE a living spec or research document opts into glossary auto-marking via <meta name=\"folio-glossary-automark\" content=\"enabled\">, REQ-GLOSS-002: folio fix SHALL best-effort auto-mark the document-first prose occurrence of each domain: folio-closed canonical term as <span class=\"term\" data-term=\"<canonical>\" data-tooltip=\"<definition>\"> — a no-JS hover-only mark that carries the tooltip and does not link to glossary.html — while skipping occurrences inside code / <pre> / machine-readable aside / headings (h1–h6) / the doc summary line (div.meta — folio inventory の summary 抽出 SSoT で、 mark は抽出を切断する) / chrome marker regions (folio:chrome-* — build 所有領域、 mark は再 build で drift する) and terms already marked; it SHALL NOT auto-mark domain: consumer terms nor guarantee no-gaps completeness of all occurrences (Class B best-effort tier extending REQ-GLOSS-001, ADR-0036 §2.3/§2.4)。 conformance は scenarios/glossary-automark.yaml (opt-in fixture に folio fix が doc 初出のみ span 化 + idempotent + code/見出し/既 mark skip を seed)。"
+  - id: "REQ-GLOSS-003"
+    ears_pattern: "event-driven"
+    essence: "生成 glossary.html の各 dt id は canonical を slug 化した #term-<slug>。 slug は決定的 (lowercase / 非英数連→hyphen / LC_ALL=C)・非空・一意 な MUST。 衝突は fail-closed。 prose の a.term は anchor-residue として block。"
+    statement: "WHEN folio build or folio validate resolves a vocabulary.yaml with domain: folio-closed definitions, REQ-GLOSS-003: the folio CLI SHALL give each canonical term a <dt id=\"term-<slug>\"> whose slug is deterministic (lowercased, non-alphanumeric runs collapsed to one hyphen, edge hyphens trimmed, computed under LC_ALL=C), non-empty (an all-non-ASCII or all-symbol canonical falling back to a deterministic x<cksum>), and unique within the page; on a slug collision (two distinct canonicals mapping to one slug) it SHALL fail closed — folio build not writing glossary.html (exit 2) and folio validate blocking with [glossary-slug] — independently of whether a generated glossary.html is present。 Separately — and independently of any vocabulary.yaml resolution (this is a marking-form invariant, not a derive obligation) — the glossary gate SHALL block any <a class=\"term\"> found in living spec/research prose as anchor residue ([glossary-anchor-residue], detect-only) since glossary term marks are span-only (hover-only、 ADR-0036 §2.4)。 conformance は scenarios/glossary-slug-collision.yaml + scenarios/glossary-residue.yaml (slug 衝突 / anchor 残滓 を seed した fixture に folio validate が exit 1)。"
+  - id: "REQ-CM-001"
+    ears_pattern: "event-driven"
+    essence: "AI agent が spec_path 配下の file に write を試みる時、 system は caller marker env var が宣言値に set されているか検証する MUST。"
+    statement: "REQ-CM-001: WHEN AI agent attempts to write to any file under spec_path, the system SHALL verify that the caller marker environment variable is set to the declared value."
+  - id: "REQ-CM-002"
+    ears_pattern: "ubiquitous"
+    essence: "AI agent は spec Edit/Write tool call の前に caller marker env var (folio.config.yaml で宣言) を set し、 完了後即 unset する MUST。"
+    statement: "REQ-CM-002: The AI agent SHALL set the caller marker env var (declared in folio.config.yaml) before invoking any spec Edit/Write tool call, and SHALL unset it immediately upon completion."
+  - id: "REQ-CM-003"
+    ears_pattern: "unwanted"
+    essence: "caller marker env var が不在または予期しない値なら、 PreToolUse hook は permissionDecision: deny を返す MUST。"
+    statement: "REQ-CM-003: IF the caller marker env var is absent or holds an unexpected value, THEN the PreToolUse hook SHALL return permissionDecision: deny."
+  - id: "REQ-CI-001"
+    ears_pattern: "ubiquitous"
+    essence: "Layer 1 consumer CI workflow は merge を許可する前に下記 7 gate すべてを enforce する MUST。"
+    statement: "REQ-CI-001: The Layer 1 consumer CI workflow SHALL enforce all seven gates defined below before permitting merge."
+  - id: "REQ-CI-010"
+    ears_pattern: "unwanted"
+    essence: "link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。"
+    statement: "REQ-CI-010: IF the link-integrity gate finds a broken reference (external URL, anchor fragment, or internal file-system reference), THEN the Layer 1 consumer CI workflow SHALL block the merge (P-6)."
+  - id: "REQ-CI-011"
+    ears_pattern: "unwanted"
+    essence: "declarative-form gate が非宣言的構文を検出したら CI は merge を block する MUST (P-4)。"
+    statement: "REQ-CI-011: IF the declarative-form gate finds a non-declarative construct, THEN the Layer 1 consumer CI workflow SHALL block the merge (P-4)."
+  - id: "REQ-CI-012"
+    ears_pattern: "unwanted"
+    essence: "what-only gate が WHAT spec への WHY / HOW content 混入を検出したら CI は merge を block する MUST (P-3 / P-11)。"
+    statement: "REQ-CI-012: IF the what-only gate finds WHY or HOW content in a WHAT spec, THEN the Layer 1 consumer CI workflow SHALL block the merge (P-3 / P-11)."
+  - id: "REQ-CI-013"
+    ears_pattern: "unwanted"
+    essence: "vocabulary gate が canonical 用語の禁止 synonym を検出したら CI は merge を block する MUST (P-5)。"
+    statement: "REQ-CI-013: IF the vocabulary gate finds a forbidden synonym for a canonical term, THEN the Layer 1 consumer CI workflow SHALL block the merge (P-5)."
+  - id: "REQ-CI-014"
+    ears_pattern: "unwanted"
+    essence: "EARS-coverage gate が well-formed EARS pattern を欠く requirement を検出したら CI は warning を出すが merge は許可する (§6)。"
+    statement: "REQ-CI-014: IF the EARS-coverage gate finds a requirement lacking a well-formed EARS pattern, THEN the Layer 1 consumer CI workflow SHALL emit a warning while still permitting the merge (§6)."
+  - id: "REQ-CI-015"
+    ears_pattern: "unwanted"
+    essence: "delta-marker consistency gate が未解決または不正な delta marker を検出したら CI は merge を block する MUST (§5)。"
+    statement: "REQ-CI-015: IF the delta-marker consistency gate finds an unresolved or malformed delta marker, THEN the Layer 1 consumer CI workflow SHALL block the merge (§5)."
+  - id: "REQ-CI-016"
+    ears_pattern: "ubiquitous"
+    essence: "Layer 1 consumer CI workflow は全 spec file の <head> JSON-LD block が relations §3 schema に適合するか検証する MUST。"
+    statement: "REQ-CI-016: The Layer 1 consumer CI workflow SHALL verify that every spec file's <head> JSON-LD block conforms to the schema defined in relations.html §3. Detailed assertion strategy (exit code + stderr 中心、 permissionDecision: deny JSON は SHOULD NOT 使用) は verification.html §3 REQ-VER-003 を参照。"
+  - id: "REQ-ADR-001"
+    ears_pattern: "event-driven"
+    essence: "authoring 中に surface した決定が (a) 不可逆 ・ (b) rationale 無しでは意外 ・ (c) viable な代替間の真の trade-off の 3 条件すべてを満たす時、 folio-architect は ADR として記録するよう offer する MUST。"
+    statement: "REQ-ADR-001: WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives, folio-architect SHALL offer to record it as an ADR in architecture/decisions/ (起票自体は decisions/README §5 の user 承認に従う)。"
+
+# 非終端 照会 (前方・他文書へ)。 constitution P-x (role=implementation) / ADR (rationale) / verification REQ-VER (verification)。
+references:
+  - { token: "P-1", doc: "constitution.html", role: "implementation" }
+  - { token: "P-14", doc: "constitution.html", role: "implementation" }
+  - { token: "P-13", doc: "constitution.html", role: "implementation" }
+  - { token: "P-7", doc: "constitution.html", role: "implementation" }
+  - { token: "P-2", doc: "constitution.html", role: "implementation" }
+  - { token: "P-5", doc: "constitution.html", role: "implementation" }
+  - { token: "P-8", doc: "constitution.html", role: "implementation" }
+  - { token: "P-3", doc: "constitution.html", role: "implementation" }
+  - { token: "P-6", doc: "constitution.html", role: "implementation" }
+  - { token: "P-4", doc: "constitution.html", role: "implementation" }
+  - { token: "P-11", doc: "constitution.html", role: "implementation" }
+  - { token: "P-10", doc: "constitution.html", role: "implementation" }
+  - { token: "REQ-VER-021", doc: "verification.html", role: "verification" }
+  - { token: "REQ-VER-023", doc: "verification.html", role: "verification" }
+  - { token: "REQ-VER-019", doc: "verification.html", role: "verification" }
+  - { token: "REQ-VER-022", doc: "verification.html", role: "verification" }
+  - { token: "REQ-VER-024", doc: "verification.html", role: "verification" }
+  - { token: "REQ-VER-026", doc: "verification.html", role: "verification" }
+  - { token: "ADR-0022", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0026", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0031", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0033", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0020", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0028", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0034", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0036", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0039", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0040", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0041", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0042", doc: "decisions/", role: "rationale" }
+
+# 用語集 (core 共用 glossary-term-table)。 term = 表示語 / en = canonical (data-term) / def = data-tooltip 由来定義。
+glossary:
+  - { term: "spec", en: "spec", def: "WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。" }
+  - { term: "constitution", en: "constitution", def: "folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。" }
+  - { term: "marker", en: "marker", def: "HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。" }
+  - { term: "gate", en: "gate", def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。" }
+  - { term: "ADR", en: "ADR", def: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。" }
+  - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。" }
+  - { term: "cluster", en: "cluster", def: "architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。" }
+  - { term: "progressive disclosure", en: "progressive disclosure", def: "情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。" }
+  - { term: "dual-audience", en: "dual-audience", def: "1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。" }
+  - { term: "essence", en: "essence", def: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。" }
+  - { term: "fold", en: "fold", def: "details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。" }
+  - { term: "EARS", en: "EARS", def: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。" }
+  - { term: "canonical name", en: "canonical name", def: "1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。" }
+  - { term: "xref", en: "xref", def: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。" }
+  - { term: "invariant", en: "invariant", def: "spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。" }
+  - { term: "floor", en: "floor", def: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。" }
+  - { term: "ceiling", en: "ceiling", def: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。" }
+  - { term: "data-audience", en: "data-audience", def: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。" }
+  - { term: "defined-object", en: "defined-object", def: "一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。" }
+  - { term: "SSoT", en: "SSoT", def: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。" }
+  - { term: "dogfood", en: "dogfood", def: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。" }
+  - { term: "remediate", en: "remediate", def: "validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。" }
+  - { term: "landing", en: "landing", def: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。" }
+  - { term: "frozen", en: "frozen", def: "accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。" }
+  - { term: "chrome", en: "chrome", def: "folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。" }
