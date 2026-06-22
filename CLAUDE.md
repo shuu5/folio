@@ -3,7 +3,7 @@
 ## 0. Identity (MUST)
 
 - cwd は `~/projects/local-projects/folio/` で始まること。
-- これは **folio** (META FRAMEWORK)。 twill (`~/projects/local-projects/twill/`) / scribe / 他 Layer 1 project と混同したら作業前に user に確認すること。
+- これは **folio** (META FRAMEWORK)。 scribe / 他 Layer 1 project と混同したら作業前に user に確認すること。
 
 ## 1. 必読
 
