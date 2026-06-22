@@ -130,7 +130,13 @@ core_emit_cover_tail() {
 # ---- glossary 表 (doc-type 非依存・両 pack 同一) ----
 emit_glossary() {
   printf '<div data-component="glossary-term-table">\n'
-  q '.glossary[] | [.term, (.en // ""), .def] | @tsv' | while IFS=$'\t' read -r term en def; do
+  # ★IFS= read で 1 行受け手動 tab split (folio-4wz)。 旧 `IFS=$'\t' read -r term en def` は tab が
+  #   IFS-whitespace ゆえ *空の中間 en* (term\t\tdef) を畳み、 3 フィールドが 2 個に潰れて def が en へ混入した
+  #   (term / 空en / def → term / def / 空)。 principle/srs は全 en 非空・spec-pack は回避策で全 en 非空ゆえ未顕在だったが
+  #   空 en の glossary entry で en バッジに定義文が誤表示され def が消える core バグ。 manual split は空 en でも
+  #   3 フィールドを正しく分離する (term=先頭〜1st tab / en=1st〜2nd tab=空可 / def=2nd tab〜末尾)。 @tsv は常に 3 列 (2 tab)。
+  q '.glossary[] | [.term, (.en // ""), .def] | @tsv' | while IFS= read -r line; do
+    term="${line%%$'\t'*}"; rest="${line#*$'\t'}"; en="${rest%%$'\t'*}"; def="${rest#*$'\t'}"
     [[ -n "$term" ]] || continue; enb=""; [[ -n "$en" ]] && enb="<span class=\"en\">$(esc "$en")</span>"
     printf '<div class="grow"><div class="gword">%s%s</div><div class="gdef">%s</div></div>\n' "$(esc "$term")" "$enb" "$(esc "$def")"
   done

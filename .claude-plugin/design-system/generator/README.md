@@ -52,11 +52,15 @@ SRS generator の機構を **別 doc-type (ADR / 設計判断記録)** へ適用
   cross-doc 照会解決 / verdict 整合 / escape 健全 / prose 空|充填|注入忠実 / term-inline fidelity+被覆)。
 - **2-gate ceiling** = ADR-pack fidelity (機械 SSoT 突合 = verify-adr + fidelity-srs 相当) + persona-walk (非エンジニア可読)。
   ★ADR 専用 ceiling agent (persona-walk-adr / fidelity-adr) の制度化は core 抽出後の follow-up。
-- **敵対回帰** = `test-adversarial-adr.sh` (A1-A51 = 53 ケース: cross-doc dangling/doc_id/不在・role/verdict/status・id 重複・改行・
+- **敵対回帰** = `test-adversarial-adr.sh` (83 ケース・TV5-1〜4 含む: cross-doc dangling/doc_id/不在・role/verdict/status・id 重複・改行・
   glossary 部分文字列・HTML 偽 justify 注入・行数削除・prose 改竄・term 改竄・chosen 捏造・inject 集合不一致・escape・
   ★role 別 role 改竄 (req,role ペア)・★verdict バッジ付け替え (opt-id,verdict ペア)・
   ★既存 justify edge 重複注入 (count anchor)・★verdict 可視ラベルのみ改竄・★principle.id/supersession.status/superseded_by 改竄・
-  ★ds8 ceiling round-1〜4 (nested-tag early-match / hyphen-tag swap / cover-meta / cxid / drid / justify-role)・★dty (drg))。
+  ★ds8 ceiling round-1〜4 (nested-tag early-match / hyphen-tag swap / cover-meta / cxid / drid / justify-role)・★dty (drg)・
+  ★TV5-1〜4 (folio-tv5 = verify_cross_doc_refs の LC_ALL=C 照合統一。 ★これは **latent 防御 hardening で red→green ではない**:
+  旧コードは 1 run 内で sort/comm を同一 locale で実行し内部一貫ゆえ mixed-case key でも public path では PASS する。
+  TV5-1/2 = 非回帰 smoke / TV5-3 = origin/main 旧版との differential (旧=新=PASS を明示記録) / TV5-4 = fix が pin する
+  sort/comm 照合 primitive の red→green))。
   ★abort 系は **stderr 理由を検証**し「別原因の誤 abort」= false-pass を弾く (S4 の A1 否定検証 false-pass 教訓)。
 
 ```bash
@@ -161,10 +165,10 @@ SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules 
 - **決定的 assembler** (`assemble-spec.sh`) — `lib/common.sh` (core) を source。 cover骨格/glossary/footer/band/esc/finalize は共用 (core)、 sections/blocks emitter / EARS 要件 row / references(前方照会 chip) は spec 固有 emitter。 固有 CSS は srs.css token を流用。 ★term-inline (mark_terms) は不使用 = rules 用語は plain_short を持たない (glossary は term + def・rules.html の `span.term[data-tooltip]` 由来)。
   - ★生成前 fail-closed: **doc_type==rules 必須** (flip で gate bypass 不可) / 未知 EARS・tint・reference role / 要件 id・section id 重複 / **要件 ↔ requirements block の集合一致** (孤立要件・二重配置・未定義参照) / 空 reference token / graph.principle_edge role allowlist / 未対応 block type。
 - **prose injector は SRS/ADR/research/principle と無改変共用** (`inject-prose.sh`) — `data-slot-id` ベースで pack 非依存。 ★**5 例目でも無改変で挿さった = rule-of-three の B6 完成サイン**。 prose スロットは cover-summary + chapter-lead-NN (band 毎) のみ = 捏造面を最小化 (essence/要件/照会は faithful contract data)。
-- **floor** = `verify-spec.sh [--filled <manifest> | --artifact] <contract> <html>` — 行数=contract導出 (section/band/要件/ref chip/block 種別) / 要件 fidelity (data-req-id 集合 + (id,pattern,class,label,essence,statement) emission 順タプル) / section heading・essence 順序 / block fidelity (prose/note/list/code/table/mermaid/subhead 可視テキスト順序突合) / **非終端 照会 fidelity** (chip echo: token/doc/role count・SET・role allowlist・(token,role) ペア・可視 `<b>`==attr) / core 共通 chrome (verify_core_chrome) / cover-meta 4 KV 再導出 / escape 健全 / prose スロット (3 mode)。 ★floor 通過は `CEILING=PENDING` (taxonomy §5.1)。
+- **floor** = `verify-spec.sh [--filled <manifest> | --artifact] <contract> <html>` — 行数=contract導出 (section/band/要件/ref chip/block 種別) / 要件 fidelity (data-req-id 集合 + (id,pattern,class,label,essence,statement) emission 順タプル) / section heading・essence・kicker 順序 (kicker = §N/トピック band ラベル・決定的フィールド・folio-l93 で floor 化) / block fidelity (prose/note/list/code/table/mermaid/subhead 可視テキスト順序突合) / **非終端 照会 fidelity** (chip echo: token/doc/role count・SET・role allowlist・(token,role) ペア・可視 `<b>`==attr) / core 共通 chrome (verify_core_chrome) / cover-meta 4 KV 再導出 / escape 健全 / prose スロット (3 mode)。 ★floor 通過は `CEILING=PENDING` (taxonomy §5.1)。
 - **非終端 照会の graph 接続** (`rolemap/spec.rolemap.yaml`) — `graph.principle_edge` (rules→constitution・role=implementation・direction=forward) を verify-graph.sh の rolemap edge が pin し、 reachability で **FOLIO-RULES が FOLIO-CONSTITUTION 終端へ到達** することを実証する。 ★これが principle pack が B5 で external-ref warn として残した「inbound from: rules.html」を graph で閉じる (self-dogfood で rules も終端完備に)。 ADR/verification 前方照会は external-ref warn (B6 では実在/reverse 解決は範囲外)。
 - **bootstrap extractor** (`.claude-plugin/scripts/extract-rules-spec.sh`) — `rules.html` を read-only 走査し contract DRAFT を起こす one-shot。 meta / sections(heading+essence) / requirements(spec-row) / glossary(term span dedup) / references(xref) / content blocks(subhead/table/code/mermaid/requirements) を抽出。 ★**モデル化しなかった verbose machine prose の件数を stderr に LOG** (silent drop 禁止・rules.html 自身が §11.5 で既定非表示にする機械層ゆえ human 層 = essence+subhead+表+図+要件 を抽出する設計判断)。
-- **敵対回帰** = `test-adversarial-spec.sh` (A1-A16 assemble abort [doc_type flip / 未対応 block type / EARS / tint / id 重複 / 孤立要件 / 未定義参照 / 二重配置 / role / 空 token / graph role / 改行 / EARS 空白 split / tint 空白 split / references role 空白 split] + F1-F18 verify FAIL [要件 row 削除 / 可視 rid / statement / essence / EARS badge / section heading / section essence / ref token SET / ref 可視 `<b>` / ref role / table cell / code 行 / subhead / mermaid source / cover-meta / core chrome / prose 注入 / escape 健全] + J1-J2 inject + P1-P2 健全性 = 38 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
+- **敵対回帰** = `test-adversarial-spec.sh` (A1-A16 assemble abort [doc_type flip / 未対応 block type / EARS / tint / id 重複 / 孤立要件 / 未定義参照 / 二重配置 / role / 空 token / graph role / 改行 / EARS 空白 split / tint 空白 split / references role 空白 split] + F1-F18 verify FAIL [要件 row 削除 / 可視 rid / statement / essence / EARS badge / section heading / section essence / ref token SET / ref 可視 `<b>` / ref role / table cell / code 行 / subhead / mermaid source / cover-meta / core chrome / prose 注入 / escape 健全] + F19-F22 kicker drift [§番号 swap / topic 取り違え / heading §N 不整合 / 静的 band kicker drift・folio-l93] + G1 空 en glossary (core emit_glossary・folio-4wz) + J1-J2 inject + P1-P2 健全性 = 43 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
 
 ```bash
 .claude-plugin/scripts/extract-rules-spec.sh > contract/folio-rules.spec.yaml   # ← rules.html から contract DRAFT を機械抽出 (LOG は stderr)

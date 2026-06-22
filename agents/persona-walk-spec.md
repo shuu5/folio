@@ -48,7 +48,7 @@ model: opus
 - **dual-audience の読み取り**: `cover-summary` / `chapter-lead-13` が、 非エンジニアに「このページは機械データから生成された人間向け view で、 機械向けの精密な記述は元の rules.html を参照すればよい」と伝えるか。 生成 view であることが分からず、 これが規範の全てだと誤読させていないか。
 - **専門用語の壁**: 技術用語・略語が**説明なしに本文へ出ていないか**。 spec-pack は要件本文に inline の plain 併記 (term-inline) を**持たない**ため、 やさしさの足場は (1) 各章の `chapter-lead-NN` (やさしい導入)、 (2) 各要件の `.rq-essence` (やさしい要約)、 (3) 末尾の `glossary-term-table` の 3 つに限られる。 essence / 章リードがその場で意味を届けているか — 用語表 (`glossary-term-table`) まで戻らないと読めない構成は減点 (本文 essence で完結すべき)。
 - **掴み (deck register)**: `doc-cover-band` の `cover-summary`・各章の `chapter-lead-NN` が、 専門外の読者にとって**その先を読む地図**になっているか。 要旨が掴めず本文を全部読まないと何の章か分からなければ減点。
-- **band ラベル (`kicker` = §N / トピック) の地図整合 (暫定 ceiling・floor 未被覆)**: 各 band の `kicker` ラベルが、 その章の見出し (`h2`) と矛盾しないか — 特に `§N` 番号が heading 内の `§N.` と食い違う (例 `kicker` 『§8 / …』だが heading 『§9. …』) と、 同じ章に 2 つの矛盾する番号が出て非エンジニアの地図 (deck register) が壊れる。 トピック語が別章のものに見える swap も減点。 ★`kicker` は floor (`verify-spec.sh`) が**未検査の決定的フィールド** (heading/essence と違い突合されない) で、 follow-up [folio-l93] が floor へ昇格するまで本 gate I が §N/トピック ↔ heading の整合を reader-map の躓きとして**暫定的に**拾う (floor 昇格後は本項を撤去)。
+- **band ラベル (`kicker` = §N / トピック) の読み取り**: 各 band の `kicker` ラベルが、 非エンジニアの章間ナビ (deck register) の地図として機能するか — その章が「何の章か」を `kicker` の §N/トピックで掴め、 本文へ入る前の見取り図になっているか。 ★`kicker` の決定的整合 (§N/トピック ↔ contract・heading との §N 一致) は floor (`verify-spec.sh` の kicker 列突合) が heading/essence と同列に被覆するため、 本 gate I は**読書体験**として `kicker` がナビに効くかだけを見る (整合性の機械検査は floor の担当)。
 - **迷子**: 任意の章・任意の要件に直接着地しても「これは何を守るルールで、 いつ効く型 (EARS) か」が掴めるか。
 
 ## 4. findings の形式
@@ -65,7 +65,7 @@ model: opus
 
 - **正確性 (捏造 / 情報落ち / 歪み) は検査しない** — それは gate J 同型 = [fidelity-spec](fidelity-spec.md) の領分。 本 agent は「**書いてある内容が読めるか**」だけを見る (内容が SSoT に忠実かは問わない)。 ただし「読んでいて明らかに辻褄が合わない」「非終端のはずの照会が終端のように描かれている」「EARS バッジの型が要件の中身と噛み合っていない」と persona が感じた点は、 fidelity 判定でなく**読書体験の躓き**として報告してよい。
 - **幾何 render 崩れ (overlap / 横幅超過 / 不可視化) は検査しない** — gate F (playwright render-gate、 ADR-0037) の領分。
-- **部品の存在 / 件数一致 / 可視テキスト厳密一致 / EARS badge の構造 (class/label レンダリング) / section heading・essence 順序 / 照会 chip の集合一致 / no-TBD は検査しない** — floor (`verify-spec.sh`) が決定的に被覆。 気付いても low で言及するに留める。 (★例外 = band の `kicker` = `§N / トピック` ラベルは現状 **floor 非被覆** — heading/essence と違い verify-spec.sh が突合しない。 follow-up [folio-l93] で floor へ昇格予定で、 それまでは §3 の暫定項 (reader-map 整合) が本 gate I で拾う。)
+- **部品の存在 / 件数一致 / 可視テキスト厳密一致 / EARS badge の構造 (class/label レンダリング) / section heading・essence・kicker 順序 / 照会 chip の集合一致 / no-TBD は検査しない** — floor (`verify-spec.sh`) が決定的に被覆 (`kicker` 列突合を含む)。 気付いても low で言及するに留める。
 - **要件定義書 (SRS) の読書体験は [persona-walk-srs](persona-walk-srs.md)・設計判断記録 (ADR) の読書体験は [persona-walk-adr](persona-walk-adr.md)・調査記録 (research) の読書体験は [persona-walk-research](persona-walk-research.md)・不変原則 (principle / constitution) の読書体験は [persona-walk-principle](persona-walk-principle.md) の領分** — 読む文書 (要件定義書 / 設計判断記録 / 調査記録 / 不変原則 / Layer 1 規約) と hallmark (要件 / 公平な決定 / 決めない探索 / 動かせない約束の終端 / EARS 章立て + 非終端 照会) が違う。 本 agent の対象は**生成 spec (rules) プレゼン**に限る。
 - folio 自身の architecture/ ページの読書体験は [readability-walk](readability-walk.md) (persona=外部開発者) の領分。 frozen `architecture/spec/rules.html` (生成元) の評価でもない — 本 agent は**生成された spec (rules) プレゼン HTML** を歩く。
 

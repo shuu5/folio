@@ -373,6 +373,71 @@ if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/a21.html"; then ng "A21 escape 
 elif grep -q '&lt;script&gt;alert' "$TMP/a21.html"; then ok "A21 HTML 注入を正規 entity に escape"
 else ng "A21 正規 entity &lt;script&gt; が出ていない"; fi
 
+# === folio-tv5: verify_cross_doc_refs の collation 統一 (LC_ALL=C) — ★latent 防御 hardening (red→green ではない) ===
+# ★正直な性質付け (l93 self-review で確認): この fix は *latent な防御 hardening* であり TDD の red→green ではない。
+#   旧コードは 1 run 内で exp_k/act_k の sort -u も dangling の comm も *全て同一の ambient locale* で実行するため
+#   内部一貫しており、 mixed-case key を入れても両辺が同じ照合で並び set_eq の == は常に一致・comm も sort と同照合で
+#   整合する。 ゆえに verify-adr の public path 経由では旧コードでも mixed-case key は PASS し、 LC_ALL=C 統一の有無に
+#   *依らず* 緑になる (TV5-1/TV5-2 はこの不変を smoke で固定するだけで red→green の証明ではない)。
+#   genuine な false FAIL (comm: input is not in sorted order) は sort と comm が *異なる* 照合を使う場合のみ生じる
+#   = 旧コードが起こさない条件。 よって:
+#     - TV5-1/TV5-2 = mixed-case の非回帰 smoke (旧コードでも緑・fix の red→green 主張はしない)。
+#     - TV5-3 = origin/main の旧 verify-common.sh を read-only で取り出した differential。 旧=新=PASS を明示記録し
+#              「fix は latent hardening で現行 locale では旧コードも PASS」を assert で固定 (将来 false 主張を防ぐ)。
+#     - TV5-4 = fix が pin する collation *primitive* の red→green: un-pinned な sort/comm 照合不整合は genuine に
+#              "input is not in sorted order" で error (red)、 LC_ALL=C 統一なら clean (green)。 verify-side の照合規律が
+#              機構として効く下限を primitive で固定する (public path では発火しない条件を直接 exercise)。
+# C 照合 (F=70 < a=97 → FR2,FR3,ax-low-9) と en_US.UTF-8 照合 (case-insensitive a<f → ax-low-9,FR2,FR3) で並びが逆になる
+# mixed-case keys を両辺 (ADR justifies + 参照先 SRS req ids) へ入れる。
+cp "$SRS" "$TMP/srs-mixed.srs.yaml"
+yq -i '.requirements += [{"id":"ax-low-9"}]' "$TMP/srs-mixed.srs.yaml"
+cp "$BASE" "$TMP/tv5.yaml"
+yq -i '.cross_doc.srs_contract = "srs-mixed.srs.yaml"' "$TMP/tv5.yaml"
+yq -i '.decision.justifies += [{"req":"ax-low-9","role":"claim","note":"collation テスト用の低位 key"}]' "$TMP/tv5.yaml"
+bash "$ASM" "$TMP/tv5.yaml" "$TMP/tv5.html" >/dev/null 2>&1
+expect_verify_pass "TV5-1 mixed-case cross-doc key (FR*/ax-low-9) で verify PASS (非回帰 smoke・red→green ではない)" "$TMP/tv5.yaml" "$TMP/tv5.html"
+# TV5-2. 同 mixed-case を LC_ALL=C 外側環境でも PASS (内部 LC_ALL=C 統一ゆえ外側 locale に依らず一貫・非回帰 smoke)。
+if LC_ALL=C bash "$VER" "$TMP/tv5.yaml" "$TMP/tv5.html" >/dev/null 2>&1; then ok "TV5-2 mixed-case key が LC_ALL=C 外側環境でも verify PASS (非回帰 smoke)"; else ng "TV5-2 LC_ALL=C 外側で mixed-case verify FAIL"; fi
+# TV5-3. ★differential (origin/main の旧 verify-common.sh vs 現行): 同一 fixture で旧=新=PASS を明示記録する。
+#   旧コードを read-only で取り出し、 source 差し替えで同じ verify を回す。 旧でも PASS する = fix が latent hardening で
+#   ある証拠 (red→green でなく無害な堅牢化)。 origin/main が取れない環境では SKIP (worktree 外で fetch 不可なら honest skip)。
+TV5_OLD="$TMP/verify-common.old.sh"
+if git -C "$SCRIPT_DIR" show origin/main:.claude-plugin/design-system/generator/lib/verify-common.sh > "$TV5_OLD" 2>/dev/null && [[ -s "$TV5_OLD" ]]; then
+  # 旧 verify-common.sh を read-only で取り出し、 lib + verify-adr.sh だけの最小 swap dir で source 差し替えする。
+  # verify は read-only ゆえ fix の有無で artifact (HTML) は byte-identical = 現行 dir で組んだ $TMP/tv5.html を再利用し
+  #   旧 verify-common.sh だけで verify を回す (assemble を temp で再走しないので srs.css 等の asset path に依存しない)。
+  #   cross_doc は contract ($TMP/tv5.yaml) の dir 相対で解決され srs-mixed.srs.yaml は $TMP に在るため正しく辿れる。
+  TV5_GEN="$TMP/gen-old"; mkdir -p "$TV5_GEN"
+  cp -r "$SCRIPT_DIR/lib" "$SCRIPT_DIR/verify-adr.sh" "$TV5_GEN/" 2>/dev/null
+  cp "$TV5_OLD" "$TV5_GEN/lib/verify-common.sh"
+  if bash "$TV5_GEN/verify-adr.sh" "$TMP/tv5.yaml" "$TMP/tv5.html" >/dev/null 2>&1; then
+    ok "TV5-3 ★differential: 旧 verify-common.sh (origin/main) も mixed-case key で PASS = fix は latent hardening (red→green ではない・正直に固定)"
+  else
+    ng "TV5-3 旧 verify-common.sh が mixed-case で FAIL (= genuine red→green であった。 性質付けを red→green へ訂正せよ)"
+  fi
+else
+  ok "TV5-3 (SKIP) origin/main の旧 verify-common.sh を取得できず differential を省略 (worktree 外・fetch 不可な honest skip)"
+fi
+# TV5-4. ★primitive の red→green: fix が pin する sort/comm 照合規律を直接 exercise。 旧コードは public path で
+#   この不整合を起こさない (1 run = 同一 locale) ため verify 経由では発火しないが、 「照合を揃えなければ comm は
+#   genuine に壊れる」機構を primitive で固定する。 un-pinned (comm の locale != sort の locale) なら
+#   "input is not in sorted order" で error (red)、 LC_ALL=C 統一なら clean (green)。
+printf 'FR2\nFR3\nax-low-9\n' > "$TMP/tv5-keys.txt"; printf 'FR2\nFR3\nax-low-9\nZZZ\n' > "$TMP/tv5-keys2.txt"
+# ★locale guard (TV5-3 の honest-skip と同型): red 側は en_US.UTF-8 の case-insensitive 照合が LC_ALL=C と食い違うことに
+#   依存する。 en_US.UTF-8 未 install の最小環境では glibc が C へ fallback し comm が error せず tv5_unpinned_err が空 →
+#   guard が偽 → 本 fix と無関係の false-FAIL になる。 locale 在不在で skip し portability を保つ。
+if locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+  tv5_unpinned_err="$(LC_ALL=en_US.UTF-8 comm -23 <(LC_ALL=C sort -u "$TMP/tv5-keys.txt") <(LC_ALL=C sort -u "$TMP/tv5-keys2.txt") 2>&1 >/dev/null)"
+  tv5_pinned_err="$(LC_ALL=C comm -23 <(LC_ALL=C sort -u "$TMP/tv5-keys.txt") <(LC_ALL=C sort -u "$TMP/tv5-keys2.txt") 2>&1 >/dev/null)"
+  if [[ "$tv5_unpinned_err" == *"not in sorted order"* && -z "$tv5_pinned_err" ]]; then
+    ok "TV5-4 ★primitive: 照合不整合 (comm!=sort locale) は genuine error・LC_ALL=C 統一は clean (fix の規律機構を固定)"
+  else
+    ng "TV5-4 ★primitive red→green 不成立 (un-pinned err='$tv5_unpinned_err' / pinned err='$tv5_pinned_err')"
+  fi
+else
+  ok "TV5-4 (SKIP) en_US.UTF-8 locale 不在ゆえ collation-mismatch primitive を exercise 不可 (honest skip・TV5-3 と同型)"
+fi
+
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

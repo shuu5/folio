@@ -216,6 +216,43 @@ if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/f18.html"; then ng "F18 escape 
 elif grep -q '&lt;script&gt;alert' "$TMP/f18.html"; then ok "F18 HTML 注入を正規 entity に escape"
 else ng "F18 正規 entity &lt;script&gt; が出ていない"; fi
 
+# === kicker 列 fidelity (folio-l93・決定的フィールド→floor) ===
+# 17n 独立 ceiling (wf_1ffcdb7c HIGH) が炙った floor gap: band() が <span class="kicker"> で可視 emit する
+# §N/トピック ラベルは sections[].kicker 由来の決定的フィールドだが verify-spec が未突合だった。 §番号 swap /
+# topic 取り違え / heading の §N との drift / 静的 band kicker drift を kicker 列突合が FAIL することを lock。
+# F19. ★§番号 swap: §5↔§6 の kicker を入れ替え → 順序突合 FAIL (ZZSWAPZZ は doc に出ない安全な placeholder)。
+cp "$TMP/base-filled.html" "$TMP/f19.html"
+perl -0777 -i -pe 's#§5 / delta marker#ZZSWAPZZ#; s#§6 / EARS 記法#§5 / delta marker#; s#ZZSWAPZZ#§6 / EARS 記法#' "$TMP/f19.html"
+expect_vfilled_fail "F19 ★kicker §番号 swap (§5↔§6) を kicker 列突合が捕捉" "$TMP/f19.html" "kicker"
+
+# F20. ★topic 取り違え: §3 の kicker トピックを別章 (§2 ディレクトリ) のものへ → 順序突合 FAIL。
+cp "$TMP/base-filled.html" "$TMP/f20.html"
+perl -0777 -i -pe 's#§3 / 命名#§3 / ディレクトリ#' "$TMP/f20.html"
+expect_vfilled_fail "F20 ★kicker topic 取り違え (§3 命名→ディレクトリ) を捕捉" "$TMP/f20.html" "kicker"
+
+# F21. ★heading の §N との不整合: §6 の kicker を §9 へ (heading は「§6. EARS Notation Markup」) → 順序突合 FAIL。
+cp "$TMP/base-filled.html" "$TMP/f21.html"
+perl -0777 -i -pe 's#§6 / EARS 記法#§9 / EARS 記法#' "$TMP/f21.html"
+expect_vfilled_fail "F21 ★kicker §N が heading §N と不整合 (§6→§9・heading §6) を捕捉" "$TMP/f21.html" "kicker"
+
+# F22. ★静的 band kicker (references) の drift → 末尾 2 件も期待列に含むため FAIL ("(前方)" は perl regex で \( \) escape)。
+cp "$TMP/base-filled.html" "$TMP/f22.html"
+perl -0777 -i -pe 's#この規約が参照する文書 / 照会 \(前方\)#詐欺照会ラベル#' "$TMP/f22.html"
+expect_vfilled_fail "F22 ★静的 band kicker (references) drift を捕捉" "$TMP/f22.html" "kicker"
+
+# === 4wz: emit_glossary 空中間 en (core lib/common.sh・spec assembler 経由で exercise) ===
+# G1. ★空 en の glossary entry で def が en バッジへ畳まれない (folio-4wz)。 旧 IFS=$'\t' read は空中間 en
+#     (term\t\tdef) を畳み def を en へ混入させた (term/空en/def → term/def/空)。 manual split が 3 列を正しく分離する。
+cp "$BASE" "$TMP/g1.yaml"
+yq -i '.glossary += [{"term":"ZZZEMPTYEN","en":"","def":"空en検証用の定義文"}]' "$TMP/g1.yaml"
+bash "$ASM" "$TMP/g1.yaml" "$TMP/g1.html" >/dev/null 2>&1
+if grep -qF '<div class="gword">ZZZEMPTYEN</div><div class="gdef">空en検証用の定義文</div>' "$TMP/g1.html" \
+   && ! grep -qF '<span class="en">空en検証用の定義文</span>' "$TMP/g1.html"; then
+  ok "G1 ★空 en glossary entry で def が gdef に残り en へ畳まれない (folio-4wz)"
+else
+  ng "G1 ★空 en glossary で def が en へ混入 (4wz 未修正 = 中間フィールド畳み)"
+fi
+
 # === inject fail-closed ===
 # J1. manifest から 1 スロット削除 → 集合不一致 abort
 cp "$BASE_PROSE" "$TMP/j1.prose.yaml"; yq -i 'del(.slots.["cover-summary"])' "$TMP/j1.prose.yaml"

@@ -347,27 +347,31 @@ verify_cross_doc_refs() {
   # (a) count anchor: |edges| == HTML の data-<keyAttr>= 出現数 (set_eq は sort -u で重複を潰す → 重複注入は count で捕捉)
   chk "${prefix}: count == |edges|" "$(q "$count_expr")" "$(grep -o "${key_attr}=" "$BODY" | wc -l | tr -d ' ')"
   # (a) SET 一致: contract key 集合 == HTML data-<keyAttr> 集合 (捏造 0 + 脱落 0)
+  # ★collation 統一 (folio-tv5 / folio-wqh と同根): 両辺の sort -u + 内部 comm を呼ぶ set_eq を *全て LC_ALL=C 下*で
+  #   揃え、 data-key/role に大文字 ascii と小文字が混在しても locale 照合差で set_eq が *集合は同一なのに* false FAIL する
+  #   verify-side latent fragility を封じる (現状 lowercase 主体で未発火・B5 论点4 が本関数を graph 到達性へ拡張する土台ゆえ
+  #   同時是正が自然)。 verify_term_inline (folio-wqh) の LC_ALL=C 不動点を複製。 verify-side only・出力 (PASS/FAIL 判定) 不変。
   local exp_k act_k
-  exp_k="$(q "$keys_expr" | sort -u)"
-  act_k="$(grep -oE "${key_attr}=\"[^\"]+\"" "$BODY" | sed "s/.*${key_attr}=\"//; s/\"\$//" | sort -u)"
-  set_eq "${prefix}: key SET (contract == HTML)" "$exp_k" "$act_k"
-  # (b) dangling 照会 0: contract key が参照先 ID に実在
+  exp_k="$(q "$keys_expr" | LC_ALL=C sort -u)"
+  act_k="$(grep -oE "${key_attr}=\"[^\"]+\"" "$BODY" | sed "s/.*${key_attr}=\"//; s/\"\$//" | LC_ALL=C sort -u)"
+  LC_ALL=C set_eq "${prefix}: key SET (contract == HTML)" "$exp_k" "$act_k"
+  # (b) dangling 照会 0: contract key が参照先 ID に実在 (sort -u と comm を同一 C 照合へ揃える = sort/comm 照合不整合回避)
   local dangling
-  dangling="$(comm -23 <(q "$keys_expr" | sort -u) <(yq -r "$target_ids_expr" "$target_abs" | sort -u))"
+  dangling="$(LC_ALL=C comm -23 <(q "$keys_expr" | LC_ALL=C sort -u) <(yq -r "$target_ids_expr" "$target_abs" | LC_ALL=C sort -u))"
   chk_empty "${prefix}: dangling 照会 (${target_label} に無い key)" "$(printf '%s' "$dangling" | tr '\n' ' ' | sed 's/ *$//')"
   # (i') ★空値ガード (core の核): comm -23 が空行を空 missing に畳む fail-open を塞ぐ。 contract key 全件非空を明示要求
   #      (空照会キー = option/要件 に繋がらない壊れた前方/後方参照。 assemble validate と対称・両 pack 共通)。
   chk "${prefix}: key 全て非空 (空照会キー禁止)" "$(q "$count_expr")" "$(q "$nonempty_count_expr")"
   # (d) role allowlist (HTML 側 data-<roleAttr> ⊆ 抽象ロール allowlist)
   local badrole
-  badrole="$(grep -oE "${role_attr}=\"[^\"]+\"" "$BODY" | sed "s/.*${role_attr}=\"//; s/\"\$//" | sort -u \
+  badrole="$(grep -oE "${role_attr}=\"[^\"]+\"" "$BODY" | sed "s/.*${role_attr}=\"//; s/\"\$//" | LC_ALL=C sort -u \
     | grep -vxE "$CROSS_DOC_ROLE_ALLOWLIST" | tr '\n' ' ')"
   chk_empty "${prefix}: 照会 role が抽象 allowlist 内" "$badrole"
   # (d') (key,role) ペア SET 一致: allowlist 内別 role への改竄 = 照会 graph の意味偽装を捕捉 (role allowlist だけでは fail-open)
   local exp_kr act_kr
-  exp_kr="$(q "$pair_expr" | sort -u)"
+  exp_kr="$(q "$pair_expr" | LC_ALL=C sort -u)"
   act_kr="$(grep -oE "${key_attr}=\"[^\"]+\" ${role_attr}=\"[^\"]+\"" "$BODY" \
-    | sed -E "s/${key_attr}=\"([^\"]+)\" ${role_attr}=\"([^\"]+)\"/\1\t\2/" | sort -u)"
-  set_eq "${prefix}: (key,role) ペア (contract == HTML)" "$exp_kr" "$act_kr"
+    | sed -E "s/${key_attr}=\"([^\"]+)\" ${role_attr}=\"([^\"]+)\"/\1\t\2/" | LC_ALL=C sort -u)"
+  LC_ALL=C set_eq "${prefix}: (key,role) ペア (contract == HTML)" "$exp_kr" "$act_kr"
   return 0
 }
