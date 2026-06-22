@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-21T22:09:46Z",
+  "generatedAt": "2026-06-22T06:31:40Z",
   "folioVersion": "1.0.0",
   "specs": [
     {
@@ -129,6 +129,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
@@ -729,6 +730,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0038-constitution-p14-human-readability.html",
           "research/presentation-design-patterns.html",
@@ -1136,6 +1138,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html"
+        ],
         "dc:references": [
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html",
@@ -1158,6 +1163,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html"
+        ],
         "dc:references": [
           "research/document-discipline-engine-design.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -1166,6 +1174,28 @@
           "decisions/ADR-0033-dual-audience-hub.html",
           "spec/rules.html",
           "spec/verification.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0044-spec-pack-folio-self-host.html",
+      "title": "ADR-0044 — spec-pack による folio rules の self-host (engine B6)",
+      "summary": "engine epic folio-0dv / B6 (folio-qf1)。 文書規律エンジンの",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.0.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "spec/rules.html"
         ]
       }
     },
@@ -1222,6 +1252,7 @@
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html"
         ]
       }
@@ -1542,6 +1573,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
         "essence": "engine epic folio-0dv / B5 (folio-983)。 文書規律エンジンの"
+      },
+      {
+        "id": "ADR-0044",
+        "class": "decision",
+        "ssot": "decisions/ADR-0044-spec-pack-folio-self-host.html",
+        "essence": "engine epic folio-0dv / B6 (folio-qf1)。 文書規律エンジンの"
       },
       {
         "id": "P-1",

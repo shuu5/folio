@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0044">
+<meta name="folio-adr-date" content="2026-06-22">
+<title>ADR-0044 — spec-pack による folio rules の self-host (engine B6) — engine core 抽出完成の実証 + extraction-bootstrap + 非破壊生成 + 自己参照独立 ceiling</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0044-spec-pack-folio-self-host.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0044 — spec-pack による folio rules の self-host (engine B6)",
+  "folio:version": "1.0.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/document-discipline-engine-design.html" },
+    { "@id": "./ADR-0042-hybrid-generation-dense-table-readability.html" },
+    { "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "../spec/rules.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0044</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0044 — spec-pack による folio rules の self-host (engine B6)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-22 &middot; folio v1.0.0 &middot; engine epic folio-0dv / B6 (folio-qf1)。 文書規律エンジンの <strong>self-dogfood endgame</strong> を確定する。 folio 自身の規約文書 <a href="../spec/rules.html">rules.html</a> を新 <strong>spec-pack</strong> (SRS でも principle でもない第三ジャンル = EARS 章立て規範文 + 非終端照会) で機械 SSoT から決定的生成し、 「engine が folio 文書型を再現できる」を <strong>core (lib/) 無改変</strong>で実証する (rule-of-three の B6 完成サイン = 最も異質な doc-type が純粋 pack として挿さる)。 源は <strong>extraction-bootstrap</strong> (rules.html &rarr; contract YAML)、 生成物は <strong>/tmp 非破壊</strong>、 忠実性は <strong>自己参照独立 ceiling</strong> (engine&ne;oracle で fail-open を断つ) で検証する。 設計の探索 (design-of-record) は <a href="../research/document-discipline-engine-design.html#s1-purpose">engine §1 endgame</a> (research domain) にあり、 本 ADR は実装 + 検証 (commit a33af5d / errata baefae8) 後の forward decision を記録する。 <a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の hybrid 生成・<a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> の照会 graph・<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement を folio self-host へ適用する。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-spec-pack">§2.1 spec-pack = 第三ジャンル (EARS 章立て規範文 + 非終端照会)</a></li>
+  <li class="toc--sub"><a href="#s2-2-bootstrap">§2.2 extraction-bootstrap (機械抽出で源を起こす)</a></li>
+  <li class="toc--sub"><a href="#s2-3-nondestructive">§2.3 非破壊生成 + 自己参照独立 ceiling (engine&ne;oracle)</a></li>
+  <li class="toc--sub"><a href="#s2-4-scope">§2.4 正直な scope (人間層プレゼン 再現 / 機械層 round-trip は境界)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0044</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-22</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0042 (基盤 — hybrid 生成 〔決定的 assembler + opus prose スロット + 集合一致 fail-closed〕 を spec-pack が無改変共用。 inject-prose.sh は 5 例目でも byte-identity で挿さる)、 ADR-0043 (継承 — 照会 graph 終端完備を spec-pack の rolemap が踏襲し、 rules&rarr;constitution edge 〔role=implementation〕 で principle 終端へ到達。 これが B5 で principle pack が残した external-ref warn 「inbound from rules.html」を forward 方向で graph 接続する)、 ADR-0028 (一般化 — 二層 enforcement 〔決定的 floor = verify-spec / 意味的 ceiling = fidelity〕 を、 engine&ne;oracle の自己参照に対し<strong>独立</strong> ceiling として強化。 floor 単独は <code>CEILING=PENDING</code>)、 ADR-0041 (系譜 — 要件定義書 visual design system の 5 例目 doc-type 拡張)。 規範化先 = 未 (spec-pack の規範は generator README + contract schema を一次資料とし、 verification.html への REQ 規範化は follow-up)。 設計 design-of-record = engine §1 endgame (research/document-discipline-engine-design.html)。 接地 = engine epic folio-0dv / B6 folio-qf1 (実装 cell folio-8ct = commit a33af5d / §0 errata = baefae8)。 follow-up = folio-w1f (機械層 dual-audience round-trip = full self-host) / folio-tr0 (残 3 文書 verification/relations/self-spec の self-host) / folio-17n (spec-pack 専用 ceiling agents 制度化) / folio-4wz (core emit_glossary の latent bug) / folio-2jr (spec-pack polish 束) / folio-wlu (§N symbolic section-ref)。 起点 = user grill 2026-06-22 (grounding sweep + 2 blocker spike で SRS 不適合 = RTM 三層を実測確認) + 独立 ceiling (wf_8367ac81 = proof_sound / land-with-errata) + user walk (gate I 北極星 MET 「前より読みやすい」)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>engine epic <strong>folio-0dv</strong> は folio の文書規律を一般化した汎用文書生成エンジンを構築する (<a href="../research/document-discipline-engine-design.html">engine 設計 doc</a>)。 その §1 は <strong>self-dogfood endgame</strong> — 「rule-of-three の最終局面 = folio 自身をこのエンジンで dogfood する」— を北極星に置いた。 B1&ndash;B5 は engine を組み上げた: core 抽出 (<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の決定的 assembler + opus prose)・4 pack (SRS / ADR / research / principle)・照会 graph と HOW-outside enforcement (<a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a>)。 残る問いは <strong>engine が folio 自身の文書を再現できるか</strong>である。</p>
+
+<p><strong>構造ギャップ (grounding sweep で確認)</strong>: (a) 既存 4 pack は SRS / ADR / research / principle のみで folio の design-intent doc-type (rules / self-spec / relations / verification) 用 pack が無い。 (b) <code>architecture/</code> は手書き HTML で機械 SSoT (contract) が存在しない。 「源も受け皿も無い」のが endgame の構造的障壁である。</p>
+
+<p><strong>SRS-pack は使えない (2 blocker spike で実測確認)</strong>。 grounding 当初は「rules は EARS 要件が最多ゆえ SRS-pack に最も近い」と推定したが、 spike で <code>assemble-srs.sh</code> が <strong>RTM 三層連結</strong> (上位事業ニーズ &rarr; 要件 &rarr; 受入基準を集合一致で fail-closed) を必須とすることが判明した。 folio の rules は EARS 規約だが事業ニーズも受入基準も持たない規範文ゆえ、 SRS-pack に挿せば<em>捏造</em>になる。 最も近い既存 pack は principle pack だが、 principle は<strong>照会終端</strong> (前方照会を持つと verify FAIL) であり、 前方照会 を多数持つ rules とは終端不変条件が衝突する。 すなわち rules は SRS でも principle でもない<strong>第三ジャンル</strong>である。</p>
+
+<p>B6 (folio-qf1) の設計 grill (2026-06-22) は scope を <strong>(B) 証明優先</strong> — 1 pack + 1 文書 (rules) で「engine が folio 文書型を再現できる」を実証し、 残り 3 文書 (verification / relations / self-spec) は follow-up — と確定した。 本 ADR はその実装 (実装 cell folio-8ct = commit a33af5d) と独立 ceiling 検証 (wf_8367ac81) 後の forward decision を記録する。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-spec-pack">§2.1 spec-pack = 第三ジャンル (EARS 章立て規範文 + 非終端照会)</h3>
+
+<p>folio の design-intent spec (rules / verification / relations) のための新 <strong>spec-pack</strong> を新設する。 schema は SRS (RTM 三層必須) でも principle (照会終端・tier ベース・EARS 無) でもない第三ジャンル = <strong>EARS 章立て規範文 + 前方 (非終端) 照会 + dual-audience</strong>。 構成 = <code>assemble-spec.sh</code> (決定的 assembler) / <code>contract/folio-rules.spec.yaml</code> (機械 SSoT) / <code>verify-spec.sh</code> (floor gate) / <code>rolemap/spec.rolemap.yaml</code> (照会 graph 接続) / <code>prose/folio-rules.prose.yaml</code> (opus prose スロット)。</p>
+
+<p><strong>★core (lib/) 無改変が B6 完成サイン</strong>: spec-pack は <code>lib/{common,verify-common,graph-common}.sh</code> + <code>inject-prose.sh</code> を <em>1 バイトも変えず</em>純粋 pack として挿さる (<code>git diff</code> 空で実証)。 これは最も異質な doc-type (非終端照会・EARS 章立て・SRS の RTM も principle の tier も持たない instance#5) が core 無改変で挿さったことを意味し、 <strong>engine core 抽出完了</strong>の最終確証となる (<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の hybrid 生成機構が doc-type 非依存であることの 5 例目の証拠)。 番号を出現順から計算する <code>band()</code> の <code>CHAPN</code> カウンタ等、 既存 core が新 pack に無改変で再利用される。</p>
+
+<p><strong>非終端照会の graph 接続</strong>: rules は前方照会 (constitution P-x / ADR / verification REQ-VER) を持つ非終端ノードゆえ、 <code>rolemap/spec.rolemap.yaml</code> が <code>graph.principle_edge</code> (rules &rarr; constitution・role=implementation・forward) を宣言し、 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> の <code>verify-graph.sh</code> が FOLIO-RULES の principle 終端到達を実証する。 これにより rules は非終端ノードとして principle 終端へ到達し、 照会 graph 上で終端完備となる (B5 の external-ref warn 「inbound from rules.html」解消は §5 Trace 参照)。</p>
+
+<h3 id="s2-2-bootstrap">§2.2 extraction-bootstrap (機械抽出で源を起こす)</h3>
+
+<p>contract (機械 SSoT) は <strong>HTML から機械抽出する one-shot bootstrap</strong> (<code>scripts/extract-rules-spec.sh</code>) で起こす。 rules.html は属性マーク済 (<code>id</code> / <code>data-ears-pattern</code> = SSoT / <code>.ears-id</code> / <code>.section-essence</code> / glossary / <code>.xref</code>) ゆえ構造化層を確実に抽出でき、 捏造リスクを最小化する (人間が contract をゼロから書く手動 author は rules の規模 〔29 spec-row〕 では転記漏れ risk が大きい)。 抽出器は HTML に存在する人間層 (section / EARS 要件 / essence / 表 / 図 / glossary / 照会) を contract 化し、 <strong>モデル化しなかった verbose な機械層 prose の件数を stderr に LOG</strong> する (no silent caps = 除外を可視化)。 位置づけは「既存 HTML を contract 化する一回限りの bootstrap」で、 以後は contract が SSoT、 HTML は生成物となる。</p>
+
+<h3 id="s2-3-nondestructive">§2.3 非破壊生成 + 自己参照独立 ceiling (engine&ne;oracle)</h3>
+
+<p><strong>非破壊</strong>: 生成物は <code>/tmp/folio-design-samples/b6-spec/</code> に置き、 <code>architecture/spec/rules.html</code> を一切編集しない。 validate golden を dirty にせず可逆。 byte-identity 一致は opus prose 充填ゆえ不可能で、 忠実性は内容等価で測る (<a href="../spec/constitution.html#p-14">P-14</a> 人間可読性の生成物適用)。 現 HTML の置換は drift gate を要するため follow-up に繰延。</p>
+
+<p><strong>★自己参照独立 ceiling</strong>: folio が自身の spec を生成し、 それを<em>同じ folio CLI</em> (<code>folio validate</code> / <code>verify-graph</code>) で検証すると、 生成ロジックのバグと検証ロジックのバグが同一コードベースで相殺しうる (<strong>engine=oracle の fail-open</strong>)。 これを断つため、 忠実性判定には folio 自身の gate と<strong>独立した read-only ceiling</strong> (生成 HTML を原 rules.html + contract と別 agent で突合) を必須とする (<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement を engine&ne;oracle へ強化)。 とりわけ floor (<code>verify-spec</code>) は「生成が contract から導出されたか」しか検査できず「contract が rules.html を忠実に捉えているか (= 抽出の忠実性)」は構造上検査できないため、 独立 ceiling がこの死角を突く。 floor 単独通過は <code>CEILING=PENDING</code> で GREEN を機械的に禁ずる。</p>
+
+<h3 id="s2-4-scope">§2.4 正直な scope (人間層プレゼン 再現 / 機械層 round-trip は境界)</h3>
+
+<p>本 self-host が実証する主張水準を<strong>正直に限定</strong>する。 独立 ceiling (wf_8367ac81 = proof_sound) が確認した事実: 生成物は rules.html の<strong>人間層プレゼン を高忠実に再現</strong>する (12 section / 26 EARS 要件は規範文まで byte 一致 / 表 / mermaid / glossary 25 / 照会 30 / 捏造ゼロ)。 一方 <code>data-audience="machine"</code> の機械層 prose は extractor が非モデル化する。 ゆえに正当な主張は「engine が rules 文書型の<strong>人間層プレゼン</strong>を機械 SSoT から決定的・捏造ゼロで生成できる」であり、 「rules.html 全体 (dual-audience) を再現」と無限定に言うと overclaim となる。 この境界は生成物本文に開示する (cover-summary / 照会 lead に「人間層プレゼン であり機械層は source 参照」と明記)。 機械層も含む full dual-audience round-trip は folio-w1f に繰延 (これが完了すると北極星「非エンジニア&times;機械 両対応」の self-host が full 化する)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: engine が folio 自身の文書型を再現できることが実証され (self-dogfood)、 rule-of-three が<strong>最も異質な instance#5 で core 無改変</strong>を確証 = engine core 抽出完了の最終証拠。 folio の design-intent spec が機械 SSoT から生成可能になる道が開け、 生成物は元 rules.html より<strong>人間可読性が向上</strong>した (user walk = gate I 北極星 MET)。 spec-pack は verification / relations の self-host (folio-tr0) に再利用できる。</li>
+  <li><strong>払うもの</strong>: 機械層 dual-audience round-trip は未達 (folio-w1f) ゆえ「全体再現」は overclaim となり主張を人間層に限定する。 残り 3 文書 (verification / relations / self-spec) は follow-up (self-spec は spec-row=0 の最異質ゆえ専用 architecture-description pack 案件)。 spec-pack 専用の常設 ceiling agent (persona-walk-spec / fidelity-spec) は未制度化で B6 は ad-hoc 独立 ceiling を用いた (folio-17n)。 generator README + contract schema が一次規範で、 verification.html への REQ 規範化は未了。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (spec-pack の第三ジャンル schema と extraction-bootstrap = contract SSoT 化のモデルは構築後の転換が高コスト) / <em>surprising</em> (SRS-pack 不適合が RTM 三層の実測で判明し pack 選定を反転・「全体再現」を「人間層プレゼン 再現」へ正直に scope 限定) / <em>real-trade-off</em> (SRS vs principle vs 新 pack・機械抽出 vs 手動 author・/tmp 非破壊 vs 置換・engine 自身の gate vs 独立 ceiling の 4 種の実トレードオフ)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>(pack) rules を既存 SRS-pack に挿す</strong> — 不採用 (spike で実測棄却)。 <code>assemble-srs.sh</code> は RTM 三層連結 (上位ニーズ &rarr; 要件 &rarr; 受入基準) を fail-closed 必須とするが、 folio の規約文書は事業ニーズも受入基準も持たない。 挿せば存在しない上位ニーズ/受入基準の<em>捏造</em>を強いる。</li>
+  <li><strong>(pack) principle pack を一般化して流用</strong> — 不採用。 principle は照会終端 (前方照会を宣言すると verify FAIL)・tier ベース・EARS 無。 前方照会 を多数持つ rules に流用すると終端不変条件を壊し、 B4 で確立した principle pack の性質を歪める。</li>
+  <li><strong>(源) contract を手動 author する</strong> — 不採用 (rules の規模)。 B4 (constitution・14 原則) は手動転記で成立したが、 rules は 29 spec-row + 章 + glossary + 多数 xref と大きく、 手動転記は漏れ risk が大きい。 属性マーク済 HTML からの機械抽出が確実かつ verification / relations にも再利用できる。</li>
+  <li><strong>(置き場) architecture/spec/rules.html を生成物で置換</strong> — 不採用 (B-scope の非破壊)。 置換は golden 全再生成 + drift gate 新設 + 全 block gate 適合を要し、 証明優先の B6 scope に対し過大。 別パス (/tmp) 非破壊なら validate を汚さず可逆で、 真の self-host (置換) は drift gate と共に follow-up へ。</li>
+  <li><strong>(忠実性 oracle) folio 自身の gate で fidelity を担保</strong> — 不採用。 engine=oracle ゆえ生成バグと検証バグが相殺する fail-open があり、 self-dogfood の証明力そのものを損なう。 独立した read-only ceiling (生成 vs 原本 + contract) を必須とする。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<p>design-of-record (探索): <a href="../research/document-discipline-engine-design.html#s1-purpose">engine §1 endgame</a> (research domain・self-dogfood)。 基盤: <a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (hybrid 生成 = 決定的 assembler + opus prose スロット + 集合一致 fail-closed を spec-pack が無改変共用)。 継承: <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> (照会 graph 終端完備を spec-pack rolemap が踏襲し、 rules &rarr; constitution edge で B5 の external-ref warn を forward 接続)。 一般化: <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement を engine&ne;oracle の独立 ceiling へ強化・<code>CEILING=PENDING</code>)。 self-host target: <a href="../spec/rules.html">rules.html</a> (Layer 1 普遍規約)。 原則接地: <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離 = 機械層 prose の非モデル化境界) / <a href="../spec/constitution.html#p-5">P-5</a> (1 entity = 1 canonical name = symbolic id 参照) / <a href="../spec/constitution.html#p-7">P-7</a> (3-domain = research/decision/spec) / <a href="../spec/constitution.html#p-10">P-10</a> (ADR 昇格は user 承認) / <a href="../spec/constitution.html#p-13">P-13</a> (WHAT&harr;HOW 束縛) / <a href="../spec/constitution.html#p-14">P-14</a> (人間可読性 = 生成物に適用・gate I)。 追跡: bd engine epic folio-0dv / B6 folio-qf1 (実装 cell folio-8ct = spec-pack + extractor + 生成 commit a33af5d / §0 errata = baefae8)。 検証: floor (verify-spec) PASS / 敵対 spec 38 + graph 19 / sandbox 40/40 / validate clean / core byte-identity / 独立 ceiling wf_8367ac81 = proof_sound・land-with-errata / user walk = gate I 北極星 MET。 follow-up: folio-w1f (機械層 dual-audience round-trip = full self-host) / folio-tr0 (残 3 文書 self-host) / folio-17n (spec-pack 専用 ceiling agents 制度化) / folio-4wz (core emit_glossary latent bug) / folio-2jr (spec-pack polish 束) / folio-wlu (§N symbolic section-ref の間接化)。 決定の経緯: user grill 2026-06-22 (grounding sweep + 2 blocker spike で SRS 不適合 = RTM 三層を実測確認・scope を (B) 証明優先に確定) + 独立 ceiling (engine&ne;oracle で抽出忠実性の死角を突き proof_sound / land-with-errata 判定) + user walk (gate I 北極星 「前より読みやすい」)。 version: 本 ADR 文書版 = 1.0.0 (記録する実装は engine epic folio-0dv・後方互換 capability 追加)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0043-reference-graph-terminal-how-outside-enforcement.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0043 — 照会 graph 終端完備 + HOW-outside content boundary の 3-tier enforcement (engine B5)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
