@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-VER-018"
+ears_pattern: "event-driven"
+kind: "cli-fix"
+description: |
+  folio fix が present な <a class="xref" data-tooltip> の data-tooltip を SSoT essence から
+  再計算し、 drift があるときだけ書き換える (ADR-0034 §2.4 managed staleness、 fix Pass 3.5、 folio-dpz)。
+  parity hole 回帰防止: validate gate (i) [xref-stale-tooltip] が「fix で再生成」と remediate を
+  名指す以上、 fix にこの resync 経路が無いと detect↔remediate parity が壊れる (REQ-VER-015)。
+  従前は wrap pass が present token を skip するため stale tooltip を直せず 'already complete' を
+  返していた (folio-dpz バグ実体)。 cli-fix harness で RED→GREEN+idempotent を behavioral 検証する:
+    (a) pre-fix  validate が [xref-stale-tooltip] で RED (exit≠0) = 修正対象あり
+    (b) fix      が exit 0 で present xref の data-tooltip を SSoT essence へ resync
+    (c) post-fix validate clean (exit 0) = tooltip-consistency 充足
+    (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (差分時のみ書換 = no-op)
+    (e) post_fix_require: 再生成後の正しい essence text が tree に残る (resync が機能した behavioral 証拠)
+    (f) post_fix_forbid : 改訂前の stale essence text が tree から消える (drift が解消された証拠)
+  fixture = 改訂前 tooltip を持つ opt-in spec (P-5 を present xref) + SSoT stub (constitution P-5)。
+  scope は spec/research のみ (frozen decisions/ は fix で resync 不可 = stuck-RED 回避、 CLAUDE.md §2 / P-6)。
+
+# --- cli-fix scenario (fixture tree を temp copy し RED→fix→GREEN→idempotent、 runner.sh run_cli_fix) ---
+fixture: "fixtures/xref-tooltip-resync"   # SCRIPT_DIR (tests) 相対の fixture tree
+command: ["fix"]                          # bin/folio に渡す引数列 (--root <tmp> は harness が付与)
+
+expect:
+  exit_code: 0                            # happy path (RED → fix 0 → GREEN → idempotent)
+
+# 再生成後の正しい essence text が tree に残る (resync が SSoT essence を書き込んだ behavioral 証拠)
+post_fix_require: "1 entity = 1 canonical name"
+# 改訂前の stale essence text が消える (drift が解消された = no-op で残置していない証拠)
+post_fix_forbid: "OLD STALE essence"

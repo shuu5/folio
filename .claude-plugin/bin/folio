@@ -620,6 +620,26 @@ folio_cmd_fix() {
     done < <(find "$xdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
+  # --- Pass 3.5: xref tooltip resync (present <a class="xref" data-tooltip> の data-tooltip を SSoT essence
+  #     から再計算し差分時のみ書換、 ADR-0034 §2.4 managed staleness を fix で解消、 idempotent)。 validate gate (i)
+  #     [xref-stale-tooltip] が「fix で再生成」と remediate を名指す parity を満たす (REQ-VER-015、 folio-dpz)。
+  #     scope = spec/research のみ (frozen decisions/ ADR 本文は書き換えない = stuck-RED 回避、 glossary populate と同基準・
+  #     CLAUDE.md §2 / P-6。 real corpus の decisions に実 <a class="xref"> body anchor は無い = no-op)。 ---
+  local xtip_resync=0 xtip_touched=0 td tdir_abs tf tn
+  local xtip_dirs=("spec" "research")
+  for td in "${xtip_dirs[@]}"; do
+    tdir_abs="${root_abs}/${td}"
+    [[ -d "$tdir_abs" ]] || continue
+    while IFS= read -r tf; do
+      [[ -z "$tf" ]] && continue
+      tn=$(folio_xref_tooltip_resync_doc "$tf" "$root_abs"); tn=${tn:-0}
+      if [[ "$tn" -gt 0 ]]; then
+        xtip_resync=$((xtip_resync + tn)); xtip_touched=$((xtip_touched + 1))
+        printf '  ~%d xref-tip  %s\n' "$tn" "$(realpath -m --relative-to="$root_abs" "$tf")"
+      fi
+    done < <(find "$tdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
+
   # --- Pass 4: glossary — auto-mark (opt-in doc に <span class="term"> を挿入、 REQ-GLOSS-002 best-effort、 hover-only) +
   #     tooltip populate (explicit + auto-mark 双方 <span> の data-tooltip を vocabulary.yaml definition から
   #     materialize、 ADR-0034 §2.8 + ADR-0036 §2.3/§2.4、 idempotent) ---
@@ -641,12 +661,13 @@ folio_cmd_fix() {
     done < <(find "$gdir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done
 
-  # --- report (reverse + xref + glossary mark/tooltip のいずれも 0 なら already-complete) ---
-  if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 && "$gloss_pop" -eq 0 && "$gloss_mark" -eq 0 ]]; then
-    printf 'already complete: graph is bidirectional + opt-in xref/glossary materialized + glossary tooltips populated (0 changes)\n'
+  # --- report (reverse + xref wrap + xref-tip resync + glossary mark/tooltip のいずれも 0 なら already-complete) ---
+  if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 && "$xtip_resync" -eq 0 && "$gloss_pop" -eq 0 && "$gloss_mark" -eq 0 ]]; then
+    printf 'already complete: graph is bidirectional + opt-in xref/glossary materialized + xref/glossary tooltips synced (0 changes)\n'
   else
     [[ "$materialized" -gt 0 ]] && printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
     [[ "$xref_wrapped" -gt 0 ]] && printf 'materialized %d xref(s) across %d file(s)\n' "$xref_wrapped" "$xref_touched"
+    [[ "$xtip_resync" -gt 0 ]] && printf 'resynced %d xref tooltip(s) across %d file(s)\n' "$xtip_resync" "$xtip_touched"
     [[ "$gloss_mark" -gt 0 ]] && printf 'auto-marked %d glossary term(s) across %d file(s)\n' "$gloss_mark" "$gloss_touched"
     [[ "$gloss_pop" -gt 0 ]] && printf 'materialized %d glossary tooltip(s) across %d file(s)\n' "$gloss_pop" "$gloss_touched"
   fi
@@ -1386,6 +1407,85 @@ folio_xref_wrap_doc() {
   printf '%d' "$((after - before))"
 }
 
+# file ($1=絶対, $2=root 絶対) の既存 <a class="xref" data-tooltip> の data-tooltip を SSoT essence
+# から再計算し、 現行値と差分があるときだけ書き換える (ADR-0034 §2.4 no-JS 複製の managed staleness を
+# fix で解消)。 更新数を stdout (0 = 既に同期済 = idempotent)。 wrap (Pass 3) が裸 token を初出 wrap する
+# のに対し本関数は present token の tooltip drift を resync する — validate gate (i) [xref-stale-tooltip]
+# が「fix で再生成」と remediate を名指す以上、 fix にこの経路が無いと detect↔remediate parity が壊れる
+# (REQ-VER-015、 folio-dpz)。 検査 (gate i) と書込 (本関数) は同一 folio_xref_tooltip_text を共有する。
+# glossary_populate_doc と同型: <a> tag を本文順に走査し、 code/aside 領域 (escaped 例) は skip。
+# 解決不能 token (essence 空) は skip — validate gate も [[ -z "$xexp" ]] で resolve gate へ譲るため、
+# blank tooltip 上書きで二重報告を作らない (detect↔remediate 対称)。 frozen decisions/ は呼出側で除外。
+folio_xref_tooltip_resync_doc() {
+  local file="$1" root_abs="$2"
+  # 候補 token (canon) → 期待 tooltip の事前計算 (awk 中で外部関数を呼べないため map 化)。
+  # body 内の <a class="xref"> から href を抽出し canon→essence を一度だけ解決する。
+  local mapfile present_hrefs h tk tip
+  mapfile=$(mktemp)
+  present_hrefs=$(folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null \
+    | grep -oP 'href="\K[^"]*' 2>/dev/null | LC_ALL=C sort -u)
+  while IFS= read -r h; do
+    [[ -z "$h" ]] && continue
+    tk=$(folio_xref_canon_from_href "$h"); [[ -z "$tk" ]] && continue
+    tip=$(folio_xref_tooltip_text "$tk" "$root_abs")
+    [[ -z "$tip" ]] && continue   # 解決不能 = resolve gate の責務、 tooltip 上書きしない (validate gate と対称)
+    printf '%s\t%s\n' "$h" "$tip" >> "$mapfile"
+  done < <(printf '%s\n' "$present_hrefs")
+  if [[ ! -s "$mapfile" ]]; then rm -f "$mapfile"; printf '0'; return 0; fi
+
+  local out cf; out=$(mktemp); cf=$(mktemp)
+  awk -v mapfile="$mapfile" -v cf="$cf" '
+    BEGIN{ while((getline l < mapfile)>0){ n=split(l,a,"\t"); if(n>=2) tipmap[a[1]]=a[2] }; changed=0; skip=0 }
+    { line=$0
+      # block skip (pre/script/style/machine-readable aside) — escaped 例 (<code>&lt;a class="xref"&gt;</code>)
+      # は実 <a で非マッチゆえ自然除外されるが、 raw 例の防御も兼ねて populate_doc と同 idiom で skip。
+      if(($0 ~ /<(pre|script|style)[ >]/) || ($0 ~ /<aside class="machine-readable"/)) skip++
+      if(skip==0){
+        res=""
+        while(1){
+          p=index(line,"<a ")
+          if(p==0){ res=res line; break }
+          seg=substr(line,p); gt=index(seg,">")
+          if(gt==0){ res=res line; break }
+          tag=substr(seg,1,gt)
+          # class="xref" かつ href / data-tooltip 双方を持つ tag のみ resync (data-tooltip 無しは wrap の
+          # 責務 = gate i も grep -q data-tooltip で skip するため対称、 越権で新規 tooltip を生やさない)。
+          if(tag ~ /class="xref"/ && match(tag,/href="[^"]*"/)){
+            href=substr(tag,RSTART+6,RLENGTH-7)
+            # data-tooltip 値を in-place 置換 (strip+append でなく原位置保持 = 属性順を変えず、
+            # 値同一なら byte 不変で false-positive changed を作らない = idempotent 厳密化)。
+            # (tipmap = SSoT essence map。 awk 組込 exp() と衝突しない名前。)
+            if((href in tipmap) && match(tag,/data-tooltip="[^"]*"/)){
+              cur=substr(tag,RSTART+14,RLENGTH-15)   # data-tooltip=" は 14 char、 末尾 " 除く
+              if(cur!=tipmap[href]){
+                tag=substr(tag,1,RSTART-1) "data-tooltip=\"" tipmap[href] "\"" substr(tag,RSTART+RLENGTH)
+                changed++
+              }
+            }
+          }
+          res=res substr(line,1,p-1) tag
+          line=substr(seg,gt+1)
+        }
+        print res
+      } else {
+        print $0
+      }
+      if($0 ~ /<\/(pre|script|style|aside)>/){ if(skip>0) skip-- }
+    }
+    END{ print changed+0 > cf }
+  ' "$file" > "$out"
+  local awk_rc=$?
+  # fail-closed: awk 失敗 (rc≠0) or 非空 input に空 output = 破壊兆候。 書込まず 0 を返す
+  # (cmp -s が空 output を「差分」と誤認し source を truncate する fail-open を封鎖、 folio-dpz 実証)。
+  if [[ "$awk_rc" -ne 0 ]] || { [[ -s "$file" ]] && [[ ! -s "$out" ]]; }; then
+    rm -f "$out" "$mapfile" "$cf"; printf '0'; return 0
+  fi
+  local changed; changed=$(cat "$cf" 2>/dev/null)
+  if cmp -s "$out" "$file"; then rm -f "$out" "$mapfile" "$cf"; printf '0'; return 0; fi
+  mv "$out" "$file"; rm -f "$mapfile" "$cf"
+  printf '%d' "${changed:-0}"
+}
+
 # vocabulary.yaml ($root_abs or その親) の definition を持つ term を canonical\t escaped-definition で
 # 1 行ずつ stdout (glossary tooltip の生成元 = SSoT、 ADR-0034 §2.8)。 yq→JSON 後 jq -r '(.[0], .[1])'
 # で canonical/definition を交互行に raw 出力し bash で pair 読みする (yq/jq の @tsv は " を CSV-quote-wrap・
@@ -1859,20 +1959,25 @@ folio_cmd_validate() {
       done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null | grep -oP 'href="\K[^"]*' 2>/dev/null)
 
       # gate (i) xref tooltip-consistency — cached data-tooltip が定義の現 essence と一致するか
-      # (drift 検出、 fix 再生成 = §2.4 no-JS 複製の managed staleness)。 fix と同一 folio_xref_tooltip_text。
-      local xtag xh xtip xtok xexp
-      while IFS= read -r xtag; do
-        [[ -z "$xtag" ]] && continue
-        printf '%s' "$xtag" | grep -q 'data-tooltip=' || continue
-        xh=$(printf '%s' "$xtag" | grep -oP 'href="\K[^"]*')
-        xtip=$(printf '%s' "$xtag" | grep -oP 'data-tooltip="\K[^"]*')
-        xtok=$(folio_xref_canon_from_href "$xh"); [[ -z "$xtok" ]] && continue
-        xexp=$(folio_xref_tooltip_text "$xtok" "$root_abs")
-        [[ -z "$xexp" ]] && continue   # 解決不能 token (essence 空) は resolve gate の責務、 tooltip では二重報告しない
-        if [[ "$xtip" != "$xexp" ]]; then
-          violations+=("${rel}"$'\t'"[xref-stale-tooltip] ${xtok} data-tooltip drifted from current essence (fix で再生成)"); xref_tooltip_fail=1
-        fi
-      done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null)
+      # (drift 検出、 fix 再生成 = §2.4 no-JS 複製の managed staleness)。 fix Pass 3.5 と同一 folio_xref_tooltip_text。
+      # scope = spec/research のみ (frozen decisions/ ADR 本文は fix で resync 不可 = stuck-RED ゆえ除外、
+      # detect↔remediate 不変条件 REQ-VER-015 / glossary gate (l) と同基準、 folio-dpz)。 real corpus の
+      # decisions に実 <a class="xref"> body anchor は無いため本 guard は no-op (escaped code 例のみ)。
+      if [[ "$subdir" == "spec" || "$subdir" == "research" ]]; then
+        local xtag xh xtip xtok xexp
+        while IFS= read -r xtag; do
+          [[ -z "$xtag" ]] && continue
+          printf '%s' "$xtag" | grep -q 'data-tooltip=' || continue
+          xh=$(printf '%s' "$xtag" | grep -oP 'href="\K[^"]*')
+          xtip=$(printf '%s' "$xtag" | grep -oP 'data-tooltip="\K[^"]*')
+          xtok=$(folio_xref_canon_from_href "$xh"); [[ -z "$xtok" ]] && continue
+          xexp=$(folio_xref_tooltip_text "$xtok" "$root_abs")
+          [[ -z "$xexp" ]] && continue   # 解決不能 token (essence 空) は resolve gate の責務、 tooltip では二重報告しない
+          if [[ "$xtip" != "$xexp" ]]; then
+            violations+=("${rel}"$'\t'"[xref-stale-tooltip] ${xtok} data-tooltip drifted from current essence (fix で再生成)"); xref_tooltip_fail=1
+          fi
+        done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null)
+      fi
 
       # gate (j) xref completeness — orphan-mention (opt-in: folio-xref-completeness=enabled の doc のみ)。
       # Slice 1 では誰も opt-in しないため real corpus で no-op (KEYSTONE invariant、 ADR-0034 §2.5/§2.6)。
