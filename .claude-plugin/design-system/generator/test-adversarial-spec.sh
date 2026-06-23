@@ -278,6 +278,105 @@ expect_inject_abort "J1 manifest 欠落スロットを inject が abort" "$TMP/j
 cp "$BASE_PROSE" "$TMP/j2.prose.yaml"; yq -i '.slots.["ghost-slot"] = "幽霊"' "$TMP/j2.prose.yaml"
 expect_inject_abort "J2 manifest orphan キーを inject が abort" "$TMP/j2.prose.yaml" "$TMP/base.html"
 
+# === w1f cell-2: 機械層 (machine free-prose dual-audience) round-trip + REQ-DA-STRUCT ===
+# M1. ★機械層 prose テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・テキスト差のみ = round-trip 単独検出)。
+cp "$TMP/base-filled.html" "$TMP/m1.html"
+perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine">)#${1}ZZTAMPERZZ #' "$TMP/m1.html"
+expect_vfilled_fail "M1 ★機械層 prose 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m1.html" "原本↔生成物 機械層"
+
+# M2. ★機械層 prose 脱落 (silent drop) → 件数 + round-trip FAIL。
+cp "$TMP/base-filled.html" "$TMP/m2.html"
+perl -0777 -i -pe 's#<p data-component="spec-machine-prose" data-audience="machine">.*?</p>\n##s' "$TMP/m2.html"
+expect_vfilled_fail "M2 ★機械層 prose 脱落を件数+round-trip が捕捉" "$TMP/m2.html" "spec-machine-prose"
+
+# M3. ★機械層 prose 捏造 (原本に無い block を add) → 件数 + round-trip FAIL (生成物のみ)。
+cp "$TMP/base-filled.html" "$TMP/m3.html"
+perl -0777 -i -pe 's#(<div class="machine-body">\n)#${1}<p data-component="spec-machine-prose" data-audience="machine">捏造された機械層</p>\n#' "$TMP/m3.html"
+expect_vfilled_fail "M3 ★機械層 prose 捏造を round-trip (生成物のみ) が捕捉" "$TMP/m3.html" "原本↔生成物 機械層"
+
+# M4. ★機械層 list item (mli) 脱落 → mli 件数 + round-trip FAIL。
+cp "$TMP/base-filled.html" "$TMP/m4.html"
+perl -0777 -i -pe 's#<li class="mli">.*?</li>\n##s' "$TMP/m4.html"
+expect_vfilled_fail "M4 ★機械層 list item 脱落を件数+round-trip が捕捉" "$TMP/m4.html" "machine li"
+
+# M5. ★data-audience 値域違反 (machine→robot) → REQ-DA-STRUCT-3 FAIL (P-5 closed 2 値)。
+cp "$TMP/base-filled.html" "$TMP/m5.html"
+perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" )data-audience="machine"#${1}data-audience="robot"#' "$TMP/m5.html"
+expect_vfilled_fail "M5 ★data-audience 値域違反 (robot) を REQ-DA-STRUCT-3 が捕捉" "$TMP/m5.html" "REQ-DA-STRUCT-3"
+
+# M6. ★machine 部に aria-hidden → REQ-DA-STRUCT-4 FAIL (AI/AT からの normative 不可視化禁止)。
+cp "$TMP/base-filled.html" "$TMP/m6.html"
+perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine")>#${1} aria-hidden="true">#' "$TMP/m6.html"
+expect_vfilled_fail "M6 ★machine 部の aria-hidden を REQ-DA-STRUCT-4 が捕捉" "$TMP/m6.html" "REQ-DA-STRUCT-4"
+
+# M7. ★要件 container の data-audience="human" 剥奪 → tuple + REQ-DA-STRUCT-1 FAIL (孤立 human container 検出)。
+cp "$TMP/base-filled.html" "$TMP/m7.html"
+perl -0777 -i -pe 's#(<div data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*") data-audience="human">#${1}>#' "$TMP/m7.html"
+expect_vfilled_fail "M7 ★要件 container の data-audience=human 剥奪を REQ-DA-STRUCT-1 が捕捉" "$TMP/m7.html" "REQ-DA-STRUCT-1"
+
+# M8. ★未対応 machine block type (silent drop 禁止・contract abort) → assemble fail-closed。
+cp "$BASE" "$TMP/m8.yaml"; yq -i '.sections[0].machine_blocks += [{"type":"diagram","html":"x"}]' "$TMP/m8.yaml"
+expect_abort "M8 ★未対応 machine block type を fail-closed abort (silent drop 禁止)" "$TMP/m8.yaml" "未対応 machine block type"
+
+# M9. ★machine_preamble の未対応 type → assemble abort。
+cp "$BASE" "$TMP/m9.yaml"; yq -i '.machine_preamble += [{"type":"video","html":"x"}]' "$TMP/m9.yaml"
+expect_abort "M9 ★machine_preamble の未対応 type を fail-closed abort" "$TMP/m9.yaml" "未対応 machine block type"
+
+# M10. ★機械層 prose の二重 escape (live <code> が &lt;code&gt; 化) → round-trip FAIL (原本テキストと差)。
+cp "$TMP/base-filled.html" "$TMP/m10.html"
+perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine">[^<]*)<code>#${1}&lt;code&gt;#' "$TMP/m10.html"
+expect_vfilled_fail "M10 ★機械層の二重 escape を round-trip が捕捉" "$TMP/m10.html" "原本↔生成物 機械層"
+
+# M11. ★機械層 block 順序入替 (隣接 prose 2 件を swap・件数/集合不変・順序のみ差) → 順序付き round-trip FAIL。
+#   旧版 (集合一致) では素通っていた = §11 を順序付きに強化した major fix の red→green pin (人間層 §4/§5 と対称)。
+cp "$TMP/base-filled.html" "$TMP/m11.html"
+perl -0777 -i -e '
+  local $/; my $H=<>;
+  my @m; while ($H=~/(<p data-component="spec-machine-prose" data-audience="machine">.*?<\/p>)/gs){ push @m,$1; last if @m>=2; }
+  my ($a,$b)=($m[0],$m[1]);
+  $H=~s/\Q$a\E/__M11A__/; $H=~s/\Q$b\E/__M11B__/; $H=~s/__M11A__/$b/; $H=~s/__M11B__/$a/;
+  print $H;
+' "$TMP/m11.html"
+expect_vfilled_fail "M11 ★機械層 block 順序入替を順序付き round-trip が捕捉" "$TMP/m11.html" "原本↔生成物 機械層"
+
+# M12. ★cross-section 誤帰属 (ある fold の machine prose を別 fold の machine-body へ移動・件数/集合不変・document 順のみ差)
+#   → 順序付き round-trip FAIL。 集合一致では section 帰属を検証できず素通っていた (major fix の red→green pin)。
+cp "$TMP/base-filled.html" "$TMP/m12.html"
+perl -0777 -i -e '
+  local $/; my $H=<>;
+  $H=~/(<p data-component="spec-machine-prose" data-audience="machine">.*?<\/p>\n)/s; my $blk=$1;
+  $H=~s/\Q$blk\E//;
+  my @pos; while ($H=~/<div class="machine-body">\n/g){ push @pos,$+[0]; }
+  my $ins=$pos[-1]; $H=substr($H,0,$ins).$blk.substr($H,$ins);
+  print $H;
+' "$TMP/m12.html"
+expect_vfilled_fail "M12 ★cross-section 誤帰属を順序付き round-trip が捕捉" "$TMP/m12.html" "原本↔生成物 機械層"
+
+# M13. ★機械層 note (aside) テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・最複雑 modality の content fidelity pin)。
+#   note は nested <p>・<span class=term>・<a> を含む最も構造複雑な block 種ゆえ専用の改竄敵対が要る (prose M1 と対称)。
+cp "$TMP/base-filled.html" "$TMP/m13.html"
+perl -0777 -i -pe 's#(<aside data-component="spec-machine-note" data-audience="machine">)#${1}ZZNOTETAMPERZZ #' "$TMP/m13.html"
+expect_vfilled_fail "M13 ★機械層 note 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m13.html" "原本↔生成物 機械層"
+
+# M14. ★機械層 note 脱落 (silent drop) → spec-machine-note 件数 + round-trip FAIL (prose M2 と対称)。
+cp "$TMP/base-filled.html" "$TMP/m14.html"
+perl -0777 -i -pe 's#<aside data-component="spec-machine-note" data-audience="machine">.*?</aside>\n##s' "$TMP/m14.html"
+expect_vfilled_fail "M14 ★機械層 note 脱落を件数+round-trip が捕捉" "$TMP/m14.html" "spec-machine-note"
+
+# M15. ★原本不在 fail-closed pin (verify-spec §11 L310-311 = 機械層 contract で原本 rules.html 不在なら FAIL)。
+#   SPEC_ORIGIN_HTML で存在しない path を指し、 round-trip 照合不能を *素通さず* FAIL することを red→green で固定する。
+#   ★これが無いと将来 path 解決 (SCRIPT_DIR 相対) が壊れても緑のまま = round-trip が silent skip する回帰を検出できない。
+#   健全 baseline (P2 で PASS) を入力にし、 原本 path だけを破壊して fail-closed branch を確実に踏ませる
+#   (= 別 gate の巻き添え FAIL でなく「原本不在」理由を substring 検証して false-pass を弾く)。
+m15_out="$(SPEC_ORIGIN_HTML=/nonexistent/rules.html bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" 2>&1)"; m15_rc=$?
+if [[ $m15_rc -eq 0 ]]; then
+  ng "M15 ★原本不在 fail-closed (verify が PASS した = fail-open 回帰)"
+elif [[ "$m15_out" != *"原本不在"* ]]; then
+  ng "M15 ★原本不在 fail-closed (FAIL したが理由が想定外。 期待 '原本不在')"
+else
+  ok "M15 ★原本不在を verify-spec §11 が fail-closed FAIL (照合不能を素通さない)"
+fi
+
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
 expect_vfilled_pass  "P2 健全 baseline は --filled verify PASS" "$TMP/base-filled.html"

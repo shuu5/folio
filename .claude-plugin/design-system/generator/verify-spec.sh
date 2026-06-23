@@ -128,7 +128,9 @@ while IFS= read -r id; do
   printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$(esc "$ess")" "$(esc "$stmt")"
 done < <(q '.sections[].blocks[]? | select(.type=="requirements") | .ids[]') > "$EXPF"
 perl -CSD -0777 -ne '
-  while (/<div data-component="ears-requirement-row" data-req-id="([^"]*)" data-ears-pattern="([^"]*)">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">([^<]*)<\/p>\s*<details class="rq-norm"><summary>[^<]*<\/summary><p class="rq-stmt">([^<]*)<\/p><\/details>/g) {
+  # ★canonical dual-audience form (w1f cell-2): row opener に data-audience="human"、 rq-norm に data-audience="machine" を
+  #   literal で要求し structured-regex に組み込む (= REQ-DA-STRUCT-1/-4 の構造 anchor を tuple 突合に同梱・属性 drop は row 脱落→件数 FAIL)。
+  while (/<div data-component="ears-requirement-row" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">([^<]*)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">([^<]*)<\/p><\/details>/g) {
     my ($rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7);
     # 可視 rid == data-req-id (attr-vs-visible)
     if ($rid ne $vrid) { print "VIS-MISMATCH:$rid\xe2\x89\xa0$vrid\n"; next; }
@@ -247,6 +249,120 @@ else
     fail=1
   fi
   rm -f "$exp" "$act"
+fi
+
+# ============================================================================
+# 10. ★機械層 (machine free-prose) dual-audience floor — w1f cell-2 / ADR-0045。
+#     生成物が 71 機械層 block + 要件 fold を canonical data-audience="machine" form で持ち、
+#     REQ-DA-STRUCT-1..5 に適合する (folio_check_dual_audience 相当・bin/folio:865)。
+# ============================================================================
+# 件数 (contract 由来・silent drop / 偽 add を捕捉)。 fold = machine_blocks を持つ section 数 + (preamble 非空 ? 1 : 0)。
+NPRE="$(q '.machine_preamble // [] | length')"
+MB_PROSE="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="prose")) | length')"
+MB_NOTE="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="note")) | length')"
+MB_LIST="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | length')"
+MB_LI="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | [.[].items[]] | length')"
+SEC_WITH_MB="$(q '[.sections[] | select((.machine_blocks // []) | length > 0)] | length')"
+EXP_FOLD="$SEC_WITH_MB"; [[ "$NPRE" -gt 0 ]] && EXP_FOLD="$((SEC_WITH_MB + 1))"
+chk "spec-machine-prose == Σ machine prose"  "$MB_PROSE" "$(grep -c 'data-component="spec-machine-prose"' "$BODY")"
+chk "spec-machine-note == Σ machine note"    "$MB_NOTE"  "$(grep -c 'data-component="spec-machine-note"' "$BODY")"
+chk "spec-machine-list == Σ machine list"    "$MB_LIST"  "$(grep -c 'data-component="spec-machine-list"' "$BODY")"
+chk "machine li (mli) == Σ machine list items" "$MB_LI"  "$(grep -c 'class="mli"' "$BODY")"
+chk "spec-machine-fold == sections(mb) + preamble" "$EXP_FOLD" "$(grep -c 'data-component="spec-machine-fold"' "$BODY")"
+
+# REQ-DA-STRUCT-3 (P-5): 全 live data-audience 値 ∈ {machine, human} (escape 済 code 例示は live tag でないので除外)。
+bad_da="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b[^>]*\sdata-audience="([^"]*)"/g){ print "$1\n" unless $1 eq "machine" || $1 eq "human"; }' "$BODY" | LC_ALL=C sort -u | tr '\n' ' ')"
+chk_empty "REQ-DA-STRUCT-3: data-audience 値域 (machine|human のみ)" "$bad_da"
+# REQ-DA-STRUCT-4: machine 部 (data-audience="machine" を持つ live tag) に aria-hidden が無い (AI/AT 不可視化禁止)。
+aria_machine="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b([^>]*)>/g){ my $a=$1; print "x\n" if $a=~/\sdata-audience="machine"/ && $a=~/\baria-hidden\b/; }' "$BODY" | wc -l | tr -d ' ')"
+chk "REQ-DA-STRUCT-4: machine 部に aria-hidden 不在" "0" "$aria_machine"
+# REQ-DA-STRUCT-1: 各 ears-requirement-row (data-audience="human") が data-audience="machine" 子孫 (rq-norm fold) を持つ。
+#   tuple 突合 (§4) が row→rq-norm(machine) の構造隣接を literal 要求済 = NREQ tuple PASS が -1 の構造保証。 件数でも二重に固定。
+chk "REQ-DA-STRUCT-1: human 要件 container 数 == |requirements|" "$NREQ" "$(grep -c 'data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*" data-audience="human"' "$BODY")"
+chk "REQ-DA-STRUCT-1: machine fold (rq-norm) 数 == |requirements|" "$NREQ" "$(grep -c 'class="rq-norm" data-audience="machine"' "$BODY")"
+# REQ-DA-STRUCT-2 (id 整合) / -5 (EARS-pattern 整合) は §4 要件タプル突合が enforce 済 (data-req-id==rid / class==EARS_CLASS[pattern])。
+printf '  [OK]   %-'"$CHKW"'s %s\n' "REQ-DA-STRUCT-2/-5 (id/EARS-pattern 整合) は §4 tuple が enforce" "委譲"
+
+# raw-emit (★二重 escape 検出): 機械層 raw HTML が壊れず emit されたか。 機械層 region に live inline tag が在り (raw 生存)、
+#   機械層 fold 内に二重 escape 痕 (&lt;code&gt; 化けた wrapper) が無いことを確認。 厳密 fidelity は §11 round-trip が担う。
+#   ★注: 機械層 prose は <code>&lt;p ...&gt;</code> 等の *正当な escape 済 HTML 例示* を含む (原文由来) ため
+#   「&lt; が無い」検査はできない (false-positive)。 二重 escape の確定検出は §11 round-trip (原本テキストと差が出る) が担う。
+mfold_region="$(perl -CSD -0777 -ne 'while (/<details data-component="spec-machine-fold"[^>]*>(.*?)<\/details>/gs){ print "$1"; }' "$BODY")"
+chk "raw-emit: 機械層に live <code> 生存 (raw 生存)" "$([[ "$(printf '%s' "$mfold_region" | grep -c '<code>')" -gt 0 ]] && echo yes || echo no)" "yes"
+chk "raw-emit: 機械層に live <a href 生存"          "$([[ "$(printf '%s' "$mfold_region" | grep -c '<a href=')" -gt 0 ]] && echo yes || echo no)" "yes"
+chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%s' "$mfold_region" | grep -c '<span class="term"')" -gt 0 ]] && echo yes || echo no)" "yes"
+
+# ============================================================================
+# 11. ★原本↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
+#     原本 (architecture/spec/rules.html) を *直 grep して生成 path から独立に* 再抽出し、 生成物の機械層と
+#     双方向 (完全性 = 原本の全機械層が生成物に / no-fabrication = 生成物の機械層が全て原本に) を照合する。
+#     ★順序付き (集合でない): 両側を sort せず document 順の配列のまま diff する (人間層 §4/§5 と対称)。
+#       - 原本順保存 (契約 description 受入): 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
+#       - section 帰属: machine_blocks[] は section ごとに連続して emit される (build()/emit_section) ため、
+#         ある block を別 section の fold へ移すと document 順が原本順とずれる → cross-section 誤帰属も検出。
+#       (旧版は両側 LC_ALL=C sort した集合一致で、 順序入替・cross-section 移動を素通していた=major fix。)
+#     ★fail-open しない: 機械層を持つ contract で原本不在なら FAIL (照合不能を素通さない)。
+#     二重 escape (生 < → &lt;) は原本テキストと差が出るため本照合が確定検出する (§10 raw-emit より厳密)。
+# ============================================================================
+NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
+ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../architecture/spec/rules.html}"
+if [[ "$NMB_TOTAL" -gt 0 ]]; then
+  if [[ ! -f "$ORIG" ]]; then
+    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (機械層 contract だが照合不能・fail-closed)\n' "原本↔生成物 機械層集合一致" "$ORIG"; fail=1
+  else
+    LF="$(mktemp)"; RF="$(mktemp)"
+    # LEFT: 原本の live data-audience="machine" 自由文 (<p>→prose / <aside>→note / <ul>→li 単位) を document 順に再抽出 + inner_norm。
+    #   live tag (実 <) のみゆえ escape 済例示 (&lt;p) を除外。 spec-normative の <div> は p/aside/ul でないため対象外 (= 26 EARS 除外)。
+    #   ★sort しない (document 順を保存) = 順序付き突合 (人間層 §4/§5 と対称)。
+    perl -CSD -0777 -e '
+      local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $H=<$fh>; close $fh;
+      sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
+      my @u; my $p=0; my $len=length($H);
+      while ($p<$len) {
+        my %c;
+        if (substr($H,$p)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{prose}=$p+$-[0]; }
+        if (substr($H,$p)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>/) { $c{note}=$p+$-[0]; }
+        if (substr($H,$p)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{list}=$p+$-[0]; }
+        last unless %c;
+        my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
+        if ($k eq "prose") { substr($H,$at)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
+        elsif ($k eq "note") { substr($H,$at)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
+        else { substr($H,$at)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/ul>/s; my $in=$1; my $e=$at+$+[0];
+               while ($in=~/<li\b[^>]*>(.*?)<\/li>/gs){ push @u,"li\t".norm($1); } $p=$e; }
+      }
+      print "$_\n" for @u;
+    ' "$ORIG" > "$LF"
+    # RIGHT: 生成物の機械層 block を document 順に再抽出 + inner_norm。 prose/note/li は fold 内で交互に出現しうるため、
+    #   型ごとに別 pass で集めず *位置走査* で混在順序を保存する (LEFT と同型・順序付き突合のため必須)。
+    #   mli は machine list 専有 class・spec-machine-{prose,note} は machine 専有 component ゆえ live tag のみ抽出。
+    perl -CSD -0777 -e '
+      local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $B=<$fh>; close $fh;
+      sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
+      my @u; my $p=0; my $len=length($B);
+      while ($p<$len) {
+        my %c;
+        if (substr($B,$p)=~/<p data-component="spec-machine-prose" data-audience="machine">/)  { $c{prose}=$p+$-[0]; }
+        if (substr($B,$p)=~/<aside data-component="spec-machine-note" data-audience="machine">/) { $c{note}=$p+$-[0]; }
+        if (substr($B,$p)=~/<li class="mli">/) { $c{li}=$p+$-[0]; }
+        last unless %c;
+        my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
+        if ($k eq "prose") { substr($B,$at)=~/<p data-component="spec-machine-prose" data-audience="machine">(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
+        elsif ($k eq "note") { substr($B,$at)=~/<aside data-component="spec-machine-note" data-audience="machine">(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
+        else { substr($B,$at)=~/<li class="mli">(.*?)<\/li>/s; push @u,"li\t".norm($1); $p=$at+$+[0]; }
+      }
+      print "$_\n" for @u;
+    ' "$BODY" > "$RF"
+    if diff -q "$LF" "$RF" >/dev/null 2>&1; then
+      printf '  [OK]   %-'"$CHKW"'s %s\n' "原本↔生成物 機械層 双方向 順序付き一致 (round-trip)" "$(grep -c . "$LF")"
+    else
+      printf '  [FAIL] %-'"$CHKW"'s\n' "原本↔生成物 機械層 不一致 (脱落 / 捏造 / 二重 escape / 改竄 / 順序入替 / cross-section 誤帰属)"
+      echo "    --- 順序付き diff (< 原本 / > 生成物) ---"; diff "$LF" "$RF" | sed 's/^/      /' | head -20
+      echo "    --- 原本のみ (生成物に脱落) ---"; LC_ALL=C comm -23 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+      echo "    --- 生成物のみ (原本に無い = 捏造/改竄) ---"; LC_ALL=C comm -13 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+      fail=1
+    fi
+    rm -f "$LF" "$RF"
+  fi
 fi
 
 echo

@@ -51,6 +51,9 @@ declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [veri
 declare -A TINT_OK=( [brand]=1 [violet]=1 [warn]=1 [info]=1 [ok]=1 [bad]=1 )
 # 対応 block type (これ以外 = silent drop の疑い → fail-closed abort)。
 BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|requirements'
+# ★機械層 (w1f cell-2 / ADR-0045) 対応 block type。 cell-1 schema = data-audience="machine" 自由文 (p→prose / aside→note / ul→list)。
+#   これ以外は silent drop の疑い → fail-closed abort (人間層 BLOCK_TYPE_ALLOW と対称)。
+MACHINE_BLOCK_TYPE_ALLOW='prose|note|list'
 
 # ---- icon SVG (spec-pack 固有 + 共用。 section index で循環選択する静的デザイン資産・contract 由来でない) ----
 ICO_GUIDE='<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
@@ -70,7 +73,7 @@ SECT_ICONS=("$ICO_GUIDE" "$ICO_DIR" "$ICO_TAG" "$ICO_CODE" "$ICO_DELTA" "$ICO_EA
 
 # ---- fail-closed contract validation (普遍規律 = core_validate_strings、 spec 固有 = doc_type/EARS/role/tint/block/集合) ----
 validate() {
-  local errs=0 d p si bi nsec nblk btype
+  local errs=0 d p si bi nsec nblk btype nmb mbi mbtype npre pi pbtype
   core_validate_strings "assemble-spec" || errs=1
   # ★doc_type 束縛 (fail-open 封鎖): 本 pack は rules 専用 assembler。 doc_type が rules 以外なら abort。
   [[ "$(q '.meta.doc_type')" == "rules" ]] || { echo "assemble-spec: ★meta.doc_type は rules 必須 (spec-pack は rules 専用・doc_type flip で gate bypass 不可)" >&2; errs=1; }
@@ -92,6 +95,20 @@ validate() {
       printf '%s' "$btype" | grep -qxE "$BLOCK_TYPE_ALLOW" \
         || { echo "assemble-spec: ★未対応 block type '$btype' (section[$si] block[$bi]・silent drop 禁止・fail-closed)" >&2; errs=1; }
     done
+    # ★機械層 block type allowlist (w1f cell-2): sections[].machine_blocks の type も逐値検査 (silent drop 禁止)。
+    nmb="$(q ".sections[$si].machine_blocks // [] | length")"
+    for ((mbi=0; mbi<nmb; mbi++)); do
+      mbtype="$(q ".sections[$si].machine_blocks[$mbi].type")"
+      printf '%s' "$mbtype" | grep -qxE "$MACHINE_BLOCK_TYPE_ALLOW" \
+        || { echo "assemble-spec: ★未対応 machine block type '$mbtype' (section[$si] machine_blocks[$mbi]・silent drop 禁止・fail-closed)" >&2; errs=1; }
+    done
+  done
+  # ★文書前文 machine_preamble の type も逐値検査。
+  npre="$(q '.machine_preamble // [] | length')"
+  for ((pi=0; pi<npre; pi++)); do
+    pbtype="$(q ".machine_preamble[$pi].type")"
+    printf '%s' "$pbtype" | grep -qxE "$MACHINE_BLOCK_TYPE_ALLOW" \
+      || { echo "assemble-spec: ★未対応 machine block type '$pbtype' (machine_preamble[$pi]・silent drop 禁止・fail-closed)" >&2; errs=1; }
   done
   # ★要件 ↔ requirements block の集合一致 (孤立要件・二重参照・存在しない要件参照を生成前に拒否)。
   #   block で参照する全 id ⊆ requirements[].id (存在しない要件参照を拒否)
@@ -171,6 +188,27 @@ figure[data-component="spec-diagram"] figcaption{padding:7px 15px;font-size:11.5
 [data-component="cross-doc-ref-chip"] .rf-arrow{color:var(--violet);font-weight:800}
 [data-component="cross-doc-ref-chip"] .rf-doc{font-weight:700;color:var(--ink)}
 [data-component="cross-doc-ref-chip"] .rf-role{margin-left:auto;font-size:11px;font-weight:700;color:var(--brand);background:var(--brand-tint);border:1px solid var(--line);border-radius:999px;padding:1px 10px;white-space:nowrap}
+/* ===== 機械層 (machine free-prose) — w1f cell-2 / ADR-0045 =====
+   data-audience="machine" の自由文を native <details> fold で *既定非表示* (collapsed) + *トグル表示* (native disclosure)。
+   no-JS で動作 (§12 自己完結) し rules.html §11.3/§11.5 の機械層挙動 (機械層=無制限の原稿・既定で畳む) に整合する。
+   人間層 (章 essence / 可視 block) は fold の外で既定表示を保つ。 機械層は subdued な見た目で二次情報であることを示す。 */
+[data-component="spec-machine-fold"]{margin:12px 0 4px;border:1px dashed var(--line);border-radius:10px;background:var(--paper-2)}
+[data-component="spec-machine-fold"] > summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:8px 14px;font-size:11.5px;color:var(--ink-faint)}
+[data-component="spec-machine-fold"] > summary::-webkit-details-marker{display:none}
+[data-component="spec-machine-fold"] > summary::before{content:"▸";color:var(--ink-faint);font-size:10px;transition:transform .15s}
+[data-component="spec-machine-fold"][open] > summary::before{transform:rotate(90deg)}
+[data-component="spec-machine-fold"] .mf-kicker{font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+[data-component="spec-machine-fold"] .mf-label{color:var(--ink-soft)}
+[data-component="spec-machine-fold"] .mf-count{margin-left:auto;font-weight:700;color:var(--ink-faint);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:1px 9px;white-space:nowrap}
+[data-component="spec-machine-fold"] .machine-body{padding:4px 15px 12px;border-top:1px dashed var(--line)}
+[data-component="spec-machine-prose"]{margin:8px 0;font-size:12.5px;line-height:1.7;color:var(--ink-soft)}
+[data-component="spec-machine-note"]{display:block;margin:8px 0;border-left:3px solid var(--info-line);padding:2px 0 2px 12px;font-size:12px;line-height:1.65;color:var(--ink-soft)}
+[data-component="spec-machine-note"] p{margin:0}
+ul[data-component="spec-machine-list"]{margin:8px 0;padding-left:4px;list-style:none;display:flex;flex-direction:column;gap:5px}
+ul[data-component="spec-machine-list"] .mli{position:relative;padding-left:18px;font-size:12.5px;line-height:1.65;color:var(--ink-soft)}
+ul[data-component="spec-machine-list"] .mli::before{content:"\2014";position:absolute;left:0;color:var(--ink-faint);top:0}
+[data-component="spec-machine-fold"] code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+@media print{[data-component="spec-machine-fold"]{display:none}}
 CSS
 }
 
@@ -244,16 +282,55 @@ emit_requirement_row() {
   # hard error 化し、 万一 validate を擦り抜けた未知 pattern が無スタイル class="unknown" badge として silent emit されるのを封鎖。
   [[ -v EARS_CLASS[$pat] ]] || { echo "assemble-spec: ★到達不能: emit 時に未知 EARS pattern '$pat' (validate を擦り抜けた・fail-closed)" >&2; exit 1; }
   class="${EARS_CLASS[$pat]}"; label="${EARS_LABEL[$pat]}"
-  printf '<div data-component="ears-requirement-row" data-req-id="%s" data-ears-pattern="%s">\n' "$(esc "$id")" "$(esc "$pat")"
+  # ★canonical dual-audience requirement (w1f cell-2 / ADR-0045 論点2): row = human container (data-audience="human")、
+  #   normative fold = machine 部 (data-audience="machine")。 REQ-DA-STRUCT-1 (human→machine 子孫) / -2 (id 整合) /
+  #   -4 (machine 部 aria-hidden 無し) / -5 (EARS-pattern 整合) を *生成物* へ適用する (floor 射程拡大)。
+  #   ★適合は verify-spec §10 が *相当* に enforce する。 canonical な bin/folio folio_check_dual_audience は
+  #   要件 container を <(section|details) data-audience="human"> で key するため、 本 row は <div> ゆえ未被覆
+  #   (生成物は /tmp 生成で folio validate 非対象)。 canonical container form (section/details) への寄せ・
+  #   validate-gate 被覆は follow-up (folio-tr0 置換/drift gate) 領分。
+  printf '<div data-component="ears-requirement-row" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$id")" "$(esc "$pat")"
   printf '<div class="rq-head"><span class="rid">%s</span><span data-component="ears-badge" class="%s">%s</span></div>\n' "$(esc "$id")" "$class" "$(esc "$label")"
   printf '<p class="rq-essence">%s</p>\n' "$(esc "$essence")"
-  printf '<details class="rq-norm"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$(esc "$stmt")"
+  printf '<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$(esc "$stmt")"
   printf '</div>\n'
 }
 emit_requirements() {
   printf '<div class="rq-list">\n'
   while IFS= read -r id; do [[ -n "$id" ]] && emit_requirement_row "$id"; done < <(q ".sections[$1].blocks[$2].ids[]")
   printf '</div>\n'
+}
+
+# ---- 機械層 (machine free-prose) emitter (w1f cell-2 / ADR-0045) ----
+# ★★最重要 gotcha: machine_blocks.html / items は cell-1 が逐語 capture した *生 HTML* (inner_norm 済 = 単一行)。
+#   ゆえ **RAW emit (esc 厳禁)**。 esc を通すと <span class="term"> → &lt;span class=&quot;term&quot;> に壊れる
+#   (人間層 emitter は esc 経路ゆえ machine_blocks 専用に raw 経路を分ける)。 canonical form = data-audience="machine"
+#   (rules §7/§11.5・REQ-DA-STRUCT-1..5 が *生成物* に適用される)。 p→prose / aside→note / ul→list。
+emit_machine_block() { # $1 = block への yq path (e.g. ".machine_preamble[0]" / ".sections[$si].machine_blocks[$bi]")
+  local base="$1" mt
+  mt="$(q "$base.type")"
+  case "$mt" in
+    prose) printf '<p data-component="spec-machine-prose" data-audience="machine">%s</p>\n' "$(q "$base.html")" ;;
+    note)  printf '<aside data-component="spec-machine-note" data-audience="machine">%s</aside>\n' "$(q "$base.html")" ;;
+    list)  printf '<ul data-component="spec-machine-list" data-audience="machine">\n'
+           while IFS= read -r it; do printf '<li class="mli">%s</li>\n' "$it"; done < <(q "$base.items[]")
+           printf '</ul>\n' ;;
+    *) echo "assemble-spec: ★到達不能: emit 時に未対応 machine block type '$mt' ($base・validate を擦り抜けた・fail-closed)" >&2; exit 1 ;;
+  esac
+}
+
+# 機械層 fold (native <details> = 既定非表示 [collapsed] + トグル [native disclosure]・no-JS。 rules §11.3/§11.5 の機械層挙動に整合)。
+#   $1 = machine block 配列の yq path / $2 = summary ラベル。 配列が空なら何も emit しない (孤立 fold 防止)。
+#   ★data-audience は *内側の各 block* が持つ (71 件)。 fold wrapper 自体は audience 中立 chrome (data-component で識別)。
+emit_machine_fold() {
+  local arr="$1" summary="$2" n i
+  n="$(q "$arr // [] | length")"
+  [[ "$n" -gt 0 ]] || return 0
+  printf '<details data-component="spec-machine-fold" class="machine-fold">\n'
+  printf '<summary><span class="mf-kicker">機械層 (machine-readable)</span> <span class="mf-label">%s</span> <span class="mf-count">%s 件</span></summary>\n' "$(esc "$summary")" "$n"
+  printf '<div class="machine-body">\n'
+  for ((i=0; i<n; i++)); do emit_machine_block "$arr[$i]"; done
+  printf '</div>\n</details>\n'
 }
 
 emit_blocks() {
@@ -285,6 +362,8 @@ emit_section() {
   band "$tint" "$kicker" "$heading" "$icon"
   printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
   emit_blocks "$si"
+  # ★機械層 (w1f cell-2): この章の data-audience="machine" 自由文を fold で既定非表示・人間層 (essence/blocks) の後に置く。
+  emit_machine_fold ".sections[$si].machine_blocks" "$heading の地の文・運用説明・rationale"
   band_end
 }
 
@@ -326,6 +405,8 @@ build() {
   printf '<div class="page" data-component="requirement-type-color-tokens">\n'
   emit_cover
   emit_ears_legend
+  # ★機械層 文書前文 (w1f cell-2): section 外の data-audience="machine" 前文を fold で既定非表示・cover/legend の後・§1 の前に置く。
+  emit_machine_fold ".machine_preamble" "文書前文 (この規約集の位置づけ)"
   nsec="$(q '.sections | length')"
   for ((si=0; si<nsec; si++)); do emit_section "$si"; done
   # 非終端 照会 (前方 references) band。
