@@ -15,7 +15,7 @@
 
 set -uo pipefail
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 # ============================================================================
 # inventory helpers — HTML spec から field 抽出 (folio 自身の整った spec 群が対象)

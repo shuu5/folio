@@ -2,7 +2,7 @@
 
 A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy.
 
-**Status**: Phase X5-γ (選択的完成)。 現行 `v1.0.0`、 v1.0 昇格基準は [ADR-0030](./architecture/decisions/ADR-0030-v1-stability-criteria.html) (accepted) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `tests/` HOW-test) へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に rename、 概念「verification」は spec 名・`folio validate` として存続)。 folio は自身の rules を self-host する。
+**Status**: Phase X5-γ (選択的完成)。 現行 `v1.1.0`、 v1.0 昇格基準は [ADR-0030](./architecture/decisions/ADR-0030-v1-stability-criteria.html) (accepted) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `tests/` HOW-test) へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に rename、 概念「verification」は spec 名・`folio validate` として存続)。 folio は自身の rules を self-host する。
 
 ## Install
 

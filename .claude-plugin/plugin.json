@@ -1,6 +1,6 @@
 {
   "name": "folio",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. minimal scope = ADR-0003/0007: 1 skill + 6 hook + 7 script + 1 CLI.",
   "author": {

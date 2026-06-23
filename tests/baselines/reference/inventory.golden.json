@@ -1,7 +1,7 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-22T15:54:21Z",
-  "folioVersion": "1.0.0",
+  "generatedAt": "2026-06-23T02:44:20Z",
+  "folioVersion": "1.1.0",
   "specs": [
     {
       "@id": "spec/README.html",
@@ -9,7 +9,7 @@
       "summary": "ブラッシュアップ対象の folio framework spec を集約 (constitution は spec graph scan 対象外の特別枠)",
       "doc-type": "cluster-readme",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
@@ -29,7 +29,7 @@
       "summary": "folio Layer 0 framework 自身の architecture spec",
       "doc-type": "self-spec",
       "status": "stable",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [
         "Developer",
         "AI Agent",
@@ -73,7 +73,7 @@
       "summary": "spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)",
       "doc-type": "spec",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [
         "Developer",
         "AI Agent",
@@ -118,7 +118,7 @@
       "summary": "Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)",
       "doc-type": "rules",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [
         "Developer",
         "AI Agent",
@@ -175,7 +175,7 @@
       "summary": "sandbox verification framework spec (機能単位 use case verification の SSoT)",
       "doc-type": "spec",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [
         "Developer",
         "AI Agent",
@@ -1205,7 +1205,7 @@
       "summary": "folio Layer 0 の ADR cluster",
       "doc-type": "cluster-readme",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [
         "Developer",
         "AI Agent",
@@ -1219,7 +1219,7 @@
       "summary": "user 要望 + 業界調査 + plugin scope の集約",
       "doc-type": "cluster-readme",
       "status": "active",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "stakeholders": [],
       "relations": {}
     },
