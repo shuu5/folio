@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: architecture
-files checked: 49 · relations checked: 452
+files checked: 50 · relations checked: 464
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse

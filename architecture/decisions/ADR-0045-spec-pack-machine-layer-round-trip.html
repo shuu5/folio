@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.1.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0045">
+<meta name="folio-adr-date" content="2026-06-23">
+<title>ADR-0045 — spec-pack の機械層 dual-audience round-trip (engine w1f) — full self-host fidelity / extract 取り込み + canonical data-audience form + 二層 fidelity gate</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0045-spec-pack-machine-layer-round-trip.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0045 — spec-pack の機械層 dual-audience round-trip (engine w1f)",
+  "folio:version": "1.1.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0044-spec-pack-folio-self-host.html" },
+    { "@id": "../research/document-discipline-engine-design.html" },
+    { "@id": "./ADR-0042-hybrid-generation-dense-table-readability.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "../spec/rules.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0045</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0045 — spec-pack の機械層 dual-audience round-trip (engine w1f)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-23 &middot; folio v1.1.0 &middot; engine epic folio-0dv / follow-up folio-w1f。 <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> (B6) が <strong>意図的に境界として繰延</strong>した「機械層 dual-audience round-trip」(§2.4) を閉じ、 北極星 <a href="../research/document-discipline-engine-design.html#s1-purpose">folio-7wn</a>「非エンジニア&times;機械 両対応の完璧な文書」の self-host を <strong>full 化</strong>する設計を確定する。 grounding sweep (wf_378476a0) が実 scope を確定: <a href="../spec/rules.html">rules.html</a> の機械層 (<code>data-audience="machine"</code>) 106 node のうち 26 EARS SHALL 文は既に round-trip 済で、 真の対象は <strong>extractor が意図的に skip する ~71 件の自由文 prose</strong> である。 これは contract のどの field からも決定的導出できない人手の自由文ゆえ、 round-trip の依存方向が設計判断となる。 本 ADR は user grill (2026-06-23・全 5 論点合意) の forward decision を記録する <strong>prospective</strong> ADR で、 実装は後続 w1f cell (2&ndash;3 分割) で行う。 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> の dual-audience co-author + <a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の hybrid 生成・<a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement を機械層へ拡張する。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-direction">§2.1 取り込み方向 = extract (機械抽出で逐語取り込み)</a></li>
+  <li class="toc--sub"><a href="#s2-2-form">§2.2 機械層 DOM form = canonical data-audience (本物の dual-audience)</a></li>
+  <li class="toc--sub"><a href="#s2-3-gate">§2.3 二層 fidelity gate (決定的 floor 集合一致 + 独立 ceiling)</a></li>
+  <li class="toc--sub"><a href="#s2-4-core-scope">§2.4 core 無改変 + scope (rules 1 文書 /tmp 非破壊・schema は tr0 汎用)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0045</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-23</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0044 (拡張 — B6 が §2.4 で「機械層 round-trip は境界」と正直に scope 限定した、 その境界を本 ADR が閉じる。 ADR-0044 の人間層プレゼン self-host の上に機械層を積む)、 ADR-0033 (一般化 — dual-audience を「machine canonical = SSoT / human = 派生 view を 1-DOM に co-author し enforcement で整合保証」と定義した hub。 spec-pack 生成物がこの co-author 構造 〔<code>data-audience="machine"</code> 子孫 + REQ-DA-STRUCT〕 を再現することを本 ADR が要求)、 ADR-0042 (基盤 — hybrid 生成の決定的 assembler を機械層 block emit に拡張・core 無改変共用)、 ADR-0028 (継承 — 二層 enforcement を機械層自由文の忠実性へ適用し、 抽出忠実性の死角を独立 ceiling で突く・<code>CEILING=PENDING</code>)。 規範化先 = 未 (spec-pack の規範は generator README + contract schema を一次資料とする)。 設計 design-of-record = engine §10 (research/document-discipline-engine-design.html) + 本 grill grounding (wf_378476a0)。 接地 = engine epic folio-0dv / follow-up folio-w1f。 prospective: 実装は w1f cell (cell-1 extractor 双方向化 + schema / cell-2 assemble canonical form + verify floor / cell-3 fidelity-spec 機械層軸 + 独立 ceiling) で後続。 前処理 = folio-ccu (rules.html §11.2/§11.5 の stale prose を extract 前に是正)。 follow-up = folio-tr0 (機械層 schema を verification/relations/self-spec へ再利用) / 置換 + drift gate (真の self-host) / folio-1pz (spec-pack 可読性 minor)。 起点 = user grill 2026-06-23 (grounding sweep wf_378476a0 が「26 SHALL 文は round-trip 済 / ~71 自由文が未モデル化」を実測確定・全 5 論点を上流→下流順で合意)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> (engine B6) は spec-pack で folio 自身の <a href="../spec/rules.html">rules.html</a> を機械 SSoT から生成し、 「engine が folio 文書型を再現できる」を core 無改変で実証した。 ただし §2.4 で主張水準を<strong>正直に限定</strong>し、 生成物は rules.html の<strong>人間層プレゼン</strong>を高忠実に再現する一方、 <code>data-audience="machine"</code> の機械層 prose は extractor が非モデル化する、 機械層も含む full dual-audience round-trip は <strong>folio-w1f に繰延</strong>する、 と境界を明記した。 北極星 <a href="../research/document-discipline-engine-design.html#s1-purpose">folio-7wn</a>「非エンジニア&times;機械 両対応」を self-host で<strong>完成</strong>と言い切るには、 この機械層を閉じる必要がある。</p>
+
+<p><strong>grounding sweep (wf_378476a0) が実 scope を確定</strong>。 rules.html の機械層 (<code>data-audience="machine"</code>) は 106 node あるが、 これは二分される: (a) <strong>26 EARS SHALL 文</strong> = 既に contract の <code>statement</code> field にあり <code>rq-norm</code> fold として生成済 (= round-trip 済)。 (b) <strong>~71 件の自由文 prose</strong> (45 段落 + 16 注記 + 10 箇条書き = rationale / context / 運用説明) = <code>extract-rules-spec.sh</code> が意図的に skip し件数を LOG するのみ・contract 未モデル化・生成物に不在。 w1f の真の対象は (b) のみである (「機械層全体が未モデル化」は誤認)。</p>
+
+<p><strong>純生成では閉じない (= 設計判断が必須)</strong>。 ~71 件は人手で書かれた自由文で、 contract のどの構造化 field からも決定的に導出できない (例「folio が govern するのは architecture/ の 3 domain&hellip;」「cwd で context を即判定&hellip;」)。 ゆえに round-trip には (a) 原本 HTML から contract へ機械抽出で取り込む extract 方向か、 (b) opus prose スロットとして再 author するか、 の依存方向の選択が要る。 この判断は ADR-0044 にも <a href="../research/document-discipline-engine-design.html">engine 設計 doc</a> にも記録が無い。 本 ADR は user grill (2026-06-23・全 5 論点) で合意した forward decision を、 実装に先立ち記録する <strong>prospective</strong> ADR である。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-direction">§2.1 取り込み方向 = extract (機械抽出で逐語取り込み)</h3>
+
+<p>機械層自由文 (~71 件) の round-trip 方向を <strong>extract 取り込み</strong>とする。 <code>extract-rules-spec.sh</code> を双方向化し、 現在 skip している機械層 prose (段落 / 注記 / 箇条書き) を原本 rules.html から<strong>逐語抽出して contract に取り込む</strong>。 原本が<em>既に存在する確定テキスト</em>である以上、 これは「文書を新たに書く」問題ではなく「既存テキストを機械可読化する」問題であり、 逐語転記ゆえ<strong>捏造リスクが構造的にゼロ</strong>となる。 folio の確立 doctrine 「決定的に導出できるもの &rarr; floor / 意味的なもの &rarr; ceiling」(<a href="../research/document-discipline-engine-design.html">engine 設計</a>) に最も素直に乗る (extract された prose は contract 由来ゆえ floor で忠実性を担保できる)。 skip ロジックを capture ロジックに変えるのが extractor の中核変更だが、 <strong>no silent caps</strong> 原則を保ち、 取り込んだ件数・残余 (もし境界を残すなら) を LOG する。</p>
+
+<h3 id="s2-2-form">§2.2 機械層 DOM form = canonical data-audience (本物の dual-audience)</h3>
+
+<p>生成物の機械層 DOM を、 原本と同じ <strong>canonical form (正規形)</strong> <code>data-audience="machine"</code> で出力する。 現 spec-pack は要件 normative を <code>data-audience</code> 属性を持たない独自 <code>rq-norm</code> fold で出すが、 これを canonical form へ置換し、 機械層自由文も章単位の <code>data-audience="machine"</code> block として出力する。 これにより生成物は <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> が定義した dual-audience co-author 構造 (machine canonical 子孫 + human 派生 view) を再現し、 folio 自身の物差し <a href="../spec/rules.html#s7-3-floor">REQ-DA-STRUCT-1..5</a> (人間層 container が機械層子孫を持つ・id 整合・値域 <code>machine|human</code>・機械層 aria-hidden 無し・EARS pattern 整合) と <code>folio_check_dual_audience</code> の検査対象になる = <strong>本物の dual-audience 文書</strong>となる。 floor 射程の拡大はコストではなく「engine が自分の dual-audience 規律ごと自己再現できた」という self-host 証明そのものであり、 積極的に取りに行く (部分 round-trip では「full self-host」を半分しか主張できない)。</p>
+
+<h3 id="s2-3-gate">§2.3 二層 fidelity gate (決定的 floor 集合一致 + 独立 ceiling)</h3>
+
+<p>機械層 prose の忠実性を<strong>二層</strong>で担保する。 §2.1 で extract (逐語コピー) を選んだことで、 忠実性の大部分が<em>決定的に</em>検査可能になる (B6 の opus 作文時より遥かに強い)。 <strong>floor</strong> = 原本 rules.html の <code>data-audience="machine"</code> テキストと生成物の機械層テキストが<strong>両方向で集合一致</strong>する (欠落ゼロ = 完全性 / 余計な作文ゼロ = no-fabrication / 逐語一致)。 この照合は extractor の内部ロジックに依存せず<strong>原本を直接 grep する</strong>ため folio の生成 path と独立で、 <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> §2.3 が指摘した engine=oracle 死角 (生成バグと検証バグの相殺) を踏まない (fail-open しない正当な floor)。 <strong>ceiling</strong> = 既存 <code>fidelity-spec</code> agent (folio-17n で制度化済) に機械層軸を追加し、 機械的に判定しきれない構造的帰属 (どの prose がどの章のものか)・歪曲の有無を独立 read-only で検査する。 floor 単独通過は <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 継承の <code>CEILING=PENDING</code> で GREEN を機械的に禁ずる。</p>
+
+<h3 id="s2-4-core-scope">§2.4 core 無改変 + scope (rules 1 文書 /tmp 非破壊・schema は tr0 汎用)</h3>
+
+<p><strong>core 無改変を既定</strong>とする (既定 = 無改変・例外の additive は本段落末尾の汎用 primitive 出現時のみに限る)。 触る対象は pack 側 (<code>extract-rules-spec.sh</code> = spec-pack 固有 / <code>assemble-spec.sh</code> / <code>verify-spec.sh</code> / contract schema) に閉じ、 <code>lib/{common,verify-common,graph-common}.sh</code> + <code>inject-prose.sh</code> の<strong>既存関数を byte 不変で死守</strong>する (extract を選んだため opus slot 機構 = <code>inject-prose.sh</code> に触らない)。 これが保てれば rule-of-three の instance#5 でも core 無改変 = engine core 抽出完了の主張を一層強固にする。 core additive 拡張は「tr0 でも確実に再利用する汎用 primitive が実際に現れた時のみ・既存関数の改変なし」に限る。</p>
+
+<p><strong>scope</strong> = 成果物は <a href="../spec/rules.html">rules.html</a> <strong>1 文書のみ</strong>・生成は <code>/tmp</code> 非破壊 (原本を編集せず validate golden を dirty にしない)。 ただし機械層 prose の contract schema は、 残 3 文書 (verification / relations / self-spec) の self-host (folio-tr0) で<strong>再利用を見据えた汎用設計</strong>とする (rules で実証し、 残 3 文書は別 cell)。 生成物で実際の rules.html を置換する真の self-host は drift gate を要するため別 follow-up に繰延 (B-scope 非破壊原則との衝突を避ける)。 extract が逐語取り込みゆえ、 原本の stale prose (rules.html §11.2 / §11.5) は事前に <strong>folio-ccu</strong> で是正してから extract する (stale を正本として contract に焼き付けない)。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: 北極星「非エンジニア&times;機械 両対応」の self-host が <strong>full 化</strong>し、 生成物が folio 自身の dual-audience 規律 (REQ-DA-STRUCT) に適合する本物の dual-audience 文書になる (engine が自分の規律ごと自己再現できた証明)。 extract 逐語取り込みゆえ機械層忠実性の大部分を決定的 floor で担保でき (集合一致・原本直 grep で fail-open しない)、 ADR-0044 §2.4 の境界を埋める。 機械層 schema は tr0 で再利用できる。</li>
+  <li><strong>払うもの</strong>: extractor の skip&rarr;capture 中核変更・<code>rq-norm</code> fold &rarr; canonical <code>data-audience</code> fold への置換 (assemble + CSS + verify 波及)・floor 射程拡大 (生成物が REQ-DA-STRUCT 適合検査の対象に) で工数は 1 cell に収まらず <strong>2&ndash;3 cell</strong> に分割する。 真の置換 (drift gate) と残 3 文書は別 follow-up。 抽出忠実性 (contract が原本を正しく捉えたか) は floor で完全には担保できず独立 ceiling に依存する。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (extract 双方向化 + canonical form 化 + 機械層 schema は構築後の転換が高コスト・tr0 が依存) / <em>surprising</em> (機械層 106 node が「26 SHALL 済 / ~71 自由文未モデル化」に二分されると grounding で判明し、 純生成では閉じない = extract 必須が確定) / <em>real-trade-off</em> (extract vs opus 再 author vs ハイブリッド・canonical form vs rq-norm 維持・floor 集合一致 vs ceiling 専有・core 無改変 vs additive の実トレードオフ)。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>(方向) 機械層 prose を opus prose スロットで再 author</strong> — 不採用。 <code>prose.yaml</code> に機械層用 slot を新設し opus に書かせる案は extractor 改修が不要で軽いが、 原本が<em>既に存在する確定テキスト</em>なのに LLM 作文に置き換えるのは捏造リスクを招き、 忠実性が ceiling 頼みになる。 <code>prose.yaml</code> slot の規律「SSoT 外の義務を新造しない」とも衝突する (機械層は rules.html 由来の既存テキストで SSoT 外でない)。</li>
+  <li><strong>(方向) ハイブリッド (規範寄り prose は contract / 純説明 prose は opus slot)</strong> — 不採用。 両者の利点を取れるが、 「どの prose が決定的でどれが意味的か」の境界線引き自体が新たな設計負債になり、 単純な extract より複雑化する。 extract が逐語ゆえ全件を決定的に扱える今、 境界を引く動機が無い。</li>
+  <li><strong>(form) <code>rq-norm</code> fold を維持し機械層 prose を別 band で補完</strong> — 不採用 (部分 round-trip)。 改修は局所で済むが、 生成物は原本と同じ <code>data-audience</code> 構造を持たず REQ-DA-STRUCT 非適用ゆえ「full self-host」と言えない。 北極星の self-host 完成を半分しか主張できない。</li>
+  <li><strong>(gate) 機械層 prose の忠実性を folio 自身の gate (verify-spec) のみで担保</strong> — 不採用。 verify-spec は「contract &rarr; 生成 HTML」の導出しか検査できず「contract が原本を忠実に捉えたか (抽出忠実性)」は構造上検査できない (engine=oracle 死角)。 原本を直接突合する独立 ceiling を必須とする。</li>
+  <li><strong>(scope) rules.html を生成物で置換し drift gate も同時新設</strong> — 不採用 (scope 過大)。 置換は B-scope の非破壊原則と衝突し、 drift gate という別物の新設を抱えて w1f が肥大化する。 /tmp 非破壊で round-trip を実証し、 置換 + drift gate は別 follow-up に分ける。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<p>拡張対象 (境界): <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> §2.4 (B6 が「機械層 round-trip は境界」と正直に scope 限定・本 ADR がその境界を閉じる)。 一般化基盤: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (dual-audience = machine canonical SSoT + human 派生 view の 1-DOM co-author を enforcement で担保・生成物がこの構造を再現)。 生成基盤: <a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (hybrid 生成の決定的 assembler を機械層 block emit へ拡張・core 無改変共用)。 enforcement 継承: <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement を機械層自由文の忠実性へ適用・独立 ceiling で抽出忠実性の死角を突く・<code>CEILING=PENDING</code>)。 self-host target: <a href="../spec/rules.html">rules.html</a> の機械層 (<code>data-audience="machine"</code>)。 原則接地: <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離) / <a href="../spec/constitution.html#p-5">P-5</a> (1 entity = 1 canonical name) / <a href="../spec/constitution.html#p-10">P-10</a> (ADR 昇格は user 承認) / <a href="../spec/constitution.html#p-13">P-13</a> (WHAT&harr;HOW 束縛) / <a href="../spec/constitution.html#p-14">P-14</a> (人間可読性 = 生成物に適用)。 設計 design-of-record: <a href="../research/document-discipline-engine-design.html#s10-b5">engine §10</a> (research domain) + 本 grill grounding sweep (wf_378476a0 = 機械層 106 node の二分・extract 必須を実測確定)。 追跡: bd engine epic folio-0dv / follow-up folio-w1f。 prospective 実装計画: cell-1 (extractor 双方向化 = skip&rarr;capture + 機械層 prose schema・tr0 汎用) / cell-2 (assemble-spec canonical <code>data-audience</code> form + verify-spec floor = 原本&harr;生成物 機械層集合一致 + REQ-DA-STRUCT 適合 + CSS) / cell-3 (fidelity-spec 機械層軸 + 独立 ceiling + user walk gate I)。 前処理: <a href="../spec/rules.html">folio-ccu</a> (rules.html §11.2/§11.5 の stale prose 是正を extract 前に land)。 受入: 既存 5 pack + 人間層 spec-pack byte-identity 非回帰 / core <code>git diff</code> 空 (rule-of-three) or core additive のみ / sandbox 全 GREEN / validate clean / 独立 ceiling 捏造ゼロ / user walk = 北極星 full self-host。 follow-up: folio-tr0 (機械層 schema を verification/relations/self-spec へ再利用) / 置換 + drift gate (真の self-host) / folio-1pz (spec-pack 可読性 minor)。 決定の経緯: user grill 2026-06-23 (grounding sweep wf_378476a0 で機械層の実 scope = ~71 自由文を確定し、 全 5 論点を上流→下流順で合意: 方向=extract / form=canonical data-audience / gate=二層 / core=pack 内完結 / scope=rules 1 文書 + tr0 汎用 schema)。 version: 本 ADR 文書版 = 1.1.0 (記録する capability は engine epic folio-0dv・後方互換追加)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0044-spec-pack-folio-self-host.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0044 — spec-pack による folio rules の self-host (engine B6) — engine core 抽出完成の実証 + extraction-bootstrap + 非破壊生成 + 自己参照独立 ceiling</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

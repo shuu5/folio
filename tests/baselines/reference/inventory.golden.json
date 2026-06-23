@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-23T02:44:20Z",
+  "generatedAt": "2026-06-23T05:05:53Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -129,6 +129,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
@@ -730,6 +731,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0038-constitution-p14-human-readability.html",
@@ -872,6 +874,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
@@ -1139,6 +1142,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html"
         ],
         "dc:references": [
@@ -1190,10 +1194,36 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html"
+        ],
         "dc:references": [
           "research/document-discipline-engine-design.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "spec/rules.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+      "title": "ADR-0045 — spec-pack の機械層 dual-audience round-trip (engine w1f)",
+      "summary": "engine epic folio-0dv / follow-up folio-w1f。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.1.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "spec/rules.html"
         ]
@@ -1252,6 +1282,7 @@
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html"
         ]
@@ -1579,6 +1610,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0044-spec-pack-folio-self-host.html",
         "essence": "engine epic folio-0dv / B6 (folio-qf1)。 文書規律エンジンの"
+      },
+      {
+        "id": "ADR-0045",
+        "class": "decision",
+        "ssot": "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+        "essence": "engine epic folio-0dv / follow-up folio-w1f。"
       },
       {
         "id": "P-1",
