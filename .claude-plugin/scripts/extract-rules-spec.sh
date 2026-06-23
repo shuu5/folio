@@ -11,10 +11,12 @@
 #   - glossary: <span class="term" data-term data-tooltip> (dedup by data-term)
 #   - references (非終端 照会・前方): <a class="xref" href> + 外部 doc への <a href> (constitution#p-* / ADR-* / verification#req-ver-*)
 #   - content blocks (document 順): subhead(h3+essence) / table / code(pre>code) / mermaid(pre.mermaid) / requirements(spec-list)
+#   - ★機械層自由文 (w1f cell-1 / ADR-0045): data-audience="machine" の <p>/<aside>/<ul> (rationale/context/運用説明) を
+#     machine_preamble (文書前文) + sections[].machine_blocks (section 内) として *逐語* capture する (inner HTML 保持・p→prose / aside→note / ul→list)。
 #
-# ★silent drop 禁止 (no silent caps): 各 section で *モデル化しなかった* prose 段落 (data-audience="machine" の
-#   verbose 地の文 = rules.html 自身が §11.5 で既定非表示にする「機械層」) の件数を stderr に LOG する。
-#   人間層プレゼン (essence + subhead + 表 + 図 + 要件) を抽出し、 機械層 verbose prose は意図的に範囲外として LOG する。
+# ★silent drop 禁止 (no silent caps): 機械層自由文を skip せず逐語 capture し、 capture 件数を stderr に LOG する (旧版は範囲外として
+#   件数のみ LOG していたが w1f cell-1 で skip→capture へ反転)。 capture 漏れ (live machine opener 数 ≠ capture 数) は ★uncaptured
+#   警告を出して fail-loud にする。 人間層プレゼン (essence + subhead + 表 + 図 + 要件) は従来どおり構造化 field へ抽出する。
 #
 # usage: extract-rules-spec.sh [<rules.html>] > <draft contract.yaml>   (LOG は stderr)
 #        既定 <rules.html> = <repo-root>/architecture/spec/rules.html
@@ -61,6 +63,89 @@ sub preline {
 }
 # YAML double-quoted scalar (安全 escape)。
 sub ys { my ($s)=@_; $s//=""; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return "\"$s\""; }
+
+# ---- 機械層自由文 capture (w1f cell-1 / ADR-0045: skip→capture) ----
+# inner_norm: 機械層 prose の inner HTML を *逐語* 保持する (タグ・entity を残し空白のみ単一空白へ畳む)。
+#   plain()/preline() と異なり タグ除去・entity decode をしない (round-trip 逐語性・cell-2 が raw emit する前提)。
+#   空白畳みのみゆえ tab/改行が消え core_validate_strings (tab/改行禁止) を通過し、 単一行で ys() の \\・" escape で閉じる。
+sub inner_norm {
+  my ($s) = @_; $s //= "";
+  $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
+  return $s;
+}
+# extract_machine_blocks: region 内の data-audience="machine" 自由文 (<p>/<aside>/<ul>) を document 順に capture。
+#   live tag のみ対象 (escape 済 code 例示 &lt;p は live に data-audience を持たないので除外 = escape 区別)。 p→prose / aside→note / ul→list。
+#   aside は inner を一括保持 (内側 <p> は data-audience を持たず別 capture されない)。 ul は balanced match で nested list を誤終端しない。
+#   返り値 (\@blocks, $expected)。 $expected = capture 漏れ検出用の live machine opener 数 (aside 内側は mask 済・no silent caps)。
+sub extract_machine_blocks {
+  my ($region) = @_;
+  my @mb; my $p = 0;
+  while ($p < length($region)) {
+    my %cand;
+    if (substr($region,$p) =~ /<p\b[^>]*\sdata-audience="machine"[^>]*>/)    { $cand{prose} = $p + $-[0]; }
+    if (substr($region,$p) =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>/) { $cand{note}  = $p + $-[0]; }
+    if (substr($region,$p) =~ /<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $cand{list}  = $p + $-[0]; }
+    last unless %cand;
+    my ($kind) = sort { $cand{$a} <=> $cand{$b} } keys %cand;
+    my $at = $cand{$kind};
+    if ($kind eq "prose") {
+      substr($region,$at) =~ /<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s;
+      push @mb, { type=>"prose", html=>inner_norm($1) }; $p = $at + $+[0];
+    } elsif ($kind eq "note") {
+      substr($region,$at) =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s;
+      push @mb, { type=>"note", html=>inner_norm($1) }; $p = $at + $+[0];
+    } else {
+      my $sub = substr($region, $at);
+      my $depth = 0; my $end_off = length($sub); my $open_len = 0;
+      while ($sub =~ /(<ul\b[^>]*>|<\/ul>)/g) {
+        my $tok = $1; my $te = pos($sub);
+        if ($tok =~ /^<ul/) { $depth++; $open_len = $te if $depth == 1; }
+        else { $depth--; if ($depth == 0) { $end_off = $te; last; } }
+      }
+      my $whole = substr($sub, 0, $end_off);
+      my $inner = substr($whole, $open_len, length($whole) - $open_len - length("</ul>"));
+      # ★top-level <li> を nested <ul>/<ol> 深さを追って切る (naive 非貪欲 (.*?)</li> は nested list 内の </li> で
+      #   早期終端し top-level 項目を silent 分割するため・w1f cell-1 errata)。 nested list は親 <li> の inner に逐語保持。
+      my @items;
+      while ($inner =~ /<li\b[^>]*>/g) {
+        my $li_start = pos($inner);
+        my $ldepth = 0; my $li_end = -1;
+        while ($inner =~ /(<(?:ul|ol)\b[^>]*>|<\/(?:ul|ol)>|<\/li>)/g) {
+          my $t = $1;
+          if    ($t =~ /^<(?:ul|ol)/)   { $ldepth++; }
+          elsif ($t =~ /^<\/(?:ul|ol)>/){ $ldepth--; }
+          elsif ($ldepth == 0)          { $li_end = $-[0]; last; }   # depth 0 の </li> = この項目の終端
+        }
+        last if $li_end < 0;
+        push @items, inner_norm(substr($inner, $li_start, $li_end - $li_start));
+        pos($inner) = $li_end;
+      }
+      push @mb, { type=>"list", items=>\@items }; $p = $at + $end_off;
+    }
+  }
+  # expected: aside を mask (一括 capture 済) してから p/ul/aside opener を数える (nested を二重計上しない)。
+  my $masked = $region;
+  my $n_aside = () = ($masked =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>.*?<\/aside>/gs);
+  $masked =~ s/<aside\b[^>]*\sdata-audience="machine"[^>]*>.*?<\/aside>//gs;
+  my $n_p  = () = ($masked =~ /<p\b[^>]*\sdata-audience="machine"[^>]*>/g);
+  my $n_ul = () = ($masked =~ /<ul\b[^>]*\sdata-audience="machine"[^>]*>/g);
+  return (\@mb, $n_aside + $n_p + $n_ul);
+}
+# emit_mblocks: machine block 列を YAML 出力 (key=machine_preamble|machine_blocks, indent=0|4)。 空なら key を出さない。
+sub emit_mblocks {
+  my ($key, $indent, $blocks) = @_;
+  return if !@$blocks;
+  my $pad = " " x $indent; my $ipad = " " x ($indent + 2);
+  print "${pad}$key:\n";
+  for my $b (@$blocks) {
+    if ($b->{type} eq "list") {
+      print "${ipad}- type: list\n${ipad}  items:\n";
+      print "${ipad}    - ", ys($_), "\n" for @{$b->{items}};
+    } else {
+      print "${ipad}- { type: ", $b->{type}, ", html: ", ys($b->{html}), " }\n";
+    }
+  }
+}
 
 my @LOG;
 
@@ -150,7 +235,6 @@ for my $id (@SECORDER) {
   # top-level section の最初の section-essence (h2 直後) を section essence とする。
   my $essence = ($inner =~ /<p class="section-essence"[^>]*>(.*?)<\/p>/s) ? plain($1) : "";
   my @blocks;
-  my $prose_skipped = 0;
 
   # doc 順走査: block opener を左から順に処理する。 各 iteration で最も近い opener を見つけて処理し pos を進める。
   pos($inner) = 0;
@@ -168,10 +252,6 @@ for my $id (@SECORDER) {
     # 最小位置の opener。
     my ($kind) = sort { $cand{$a} <=> $cand{$b} } keys %cand;
     my $at = $cand{$kind};
-    # opener より手前に <p ...> や <ul data-audience="machine"> の prose があれば LOG（モデル化しない）。
-    my $gap = substr($inner, $p, $at - $p);
-    $prose_skipped += () = ($gap =~ /<p\b(?![^>]*class="section-essence")[^>]*>/g);
-    $prose_skipped += () = ($gap =~ /<ul data-audience="machine">/g);
 
     if ($kind eq "h3") {
       substr($inner,$at) =~ /<h3[^>]*>(.*?)<\/h3>/s;
@@ -229,20 +309,30 @@ for my $id (@SECORDER) {
       $p = $at + $end_off;
     }
   }
-  # 末尾 prose (最後の opener 以降) も概算 LOG。
-  my $tail = substr($inner, $p);
-  $prose_skipped += () = ($tail =~ /<p\b(?![^>]*class="section-essence")[^>]*>/g);
+  # ★機械層自由文 capture (skip→capture・w1f cell-1)。 section inner の data-audience="machine" prose を document 順に取り込む。
+  my ($mblocks, $mexp) = extract_machine_blocks($inner);
+  my $mcap = scalar(@$mblocks);
+  push @LOG, "section $id: 機械層 prose capture $mcap 件 (data-audience=machine の <p>/<aside>/<ul> を逐語取り込み)"
+    . ($mcap == $mexp ? "" : " ★uncaptured " . ($mexp - $mcap) . " 件 (expected $mexp・要調査)");
+  push @sections, { id=>shortid($id), heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
+}
 
-  push @LOG, "section $id: モデル化しなかった prose/aside 段落 ≈ $prose_skipped 件 (rules.html の data-audience=machine 機械層・§11.5 で既定非表示・human 層は essence+subhead+表+図+要件として抽出)";
-  push @sections, { id=>shortid($id), heading=>$heading, essence=>$essence, blocks=>\@blocks };
+# ★機械層 preamble (最初の section より前の文書前文 = RFC2119 / constitution 実装宣言の boilerplate aside)。
+#   section に属さない body 直下の data-audience="machine" prose を別 capture する (tr0 汎用: 他文書も body 先頭 boilerplate を持つ)。
+my $preamble_region = ($H =~ /^(.*?)<section id="/s) ? $1 : "";
+my ($preamble_blocks, $pre_exp) = extract_machine_blocks($preamble_region);
+{
+  my $pcap = scalar(@$preamble_blocks);
+  push @LOG, "preamble: 機械層 prose capture $pcap 件 (section 外の文書前文)"
+    . ($pcap == $pre_exp ? "" : " ★uncaptured " . ($pre_exp - $pcap) . " 件 (expected $pre_exp・要調査)");
 }
 
 # ===== YAML 出力 =====
 print "# folio engine B6 (folio-8ct) — spec-pack contract (instance#5 / self-dogfood)\n";
 print "# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が architecture/spec/rules.html から起こした)。 人間レビュー前提。\n";
 print "# doc_type = rules (Layer 1 consumer universal rules)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。\n";
-print "# ★抽出範囲 = rules.html の *人間層* (section essence + subhead essence + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会)。\n";
-print "#   モデル化しなかった verbose machine prose は §11.5 で rules.html 自身が既定非表示にする機械層 (件数は extractor が stderr に LOG)。\n";
+print "# ★抽出範囲 = rules.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。\n";
+print "#   機械層 = data-audience=\"machine\" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture (旧版は範囲外として LOG のみ・skip→capture に反転)。\n";
 print "\n";
 print "meta:\n";
 print "  doc_id: FOLIO-RULES\n";
@@ -266,6 +356,9 @@ print "#   verify-graph.sh の rolemap edge がこの 1 本を pin し、 reacha
 print "graph:\n";
 print "  principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }\n";
 print "\n";
+# ★機械層 preamble (w1f cell-1): section に属さない文書前文の data-audience="machine" prose を逐語 capture。
+emit_mblocks("machine_preamble", 0, $preamble_blocks);
+print "\n" if @$preamble_blocks;
 print "sections:\n";
 for my $s (@sections) {
   print "  - id: ", ys($s->{id}), "\n";
@@ -297,6 +390,8 @@ for my $s (@sections) {
   } else {
     print "    blocks: []\n";
   }
+  # ★機械層自由文 (section 内・data-audience="machine") を blocks の sibling として出力 (cell-2 が canonical form へ)。
+  emit_mblocks("machine_blocks", 4, $s->{machine_blocks});
 }
 print "\n";
 print "requirements:\n";
@@ -319,9 +414,16 @@ for my $g (@gloss) {
   print "  - { term: ", ys($g->{term}), ", en: ", ys($g->{en}), ", def: ", ys($g->{def}), " }\n";
 }
 
-# ===== LOG (silent drop 禁止: モデル化しなかった content を stderr へ) =====
+# ===== LOG (silent drop 禁止: capture 件数を stderr へ・uncaptured があれば ★ 警告) =====
 print STDERR "=== extract-rules-spec LOG (no silent caps) ===\n";
 print STDERR "$_\n" for @LOG;
+my $mtot = scalar(@$preamble_blocks); $mtot += scalar(@{$_->{machine_blocks}}) for @sections;
+my ($mprose, $mnote, $mlist) = (0,0,0);
+for my $b (@$preamble_blocks, map { @{$_->{machine_blocks}} } @sections) {
+  $mprose++ if $b->{type} eq "prose"; $mnote++ if $b->{type} eq "note"; $mlist++ if $b->{type} eq "list";
+}
 printf STDERR "抽出: %d sections / %d requirements / %d references / %d glossary terms\n",
   scalar(@sections), scalar(@reqs), scalar(@refs), scalar(@gloss);
+printf STDERR "機械層 prose capture: %d 件 (prose=%d / note=%d / list=%d・preamble %d 件含む)\n",
+  $mtot, $mprose, $mnote, $mlist, scalar(@$preamble_blocks);
 PERL
