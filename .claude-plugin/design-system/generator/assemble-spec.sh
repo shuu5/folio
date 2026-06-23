@@ -38,8 +38,13 @@ command -v yq >/dev/null || { echo "assemble-spec: yq required" >&2; exit 1; }
 source "$SCRIPT_DIR/lib/common.sh"
 
 # EARS pattern (canonical = rules.html の data-ears-pattern 値) → 表示 class / label (verify-spec.sh と二重保守 = detect↔remediate parity)。
+# ★label = rules.html §6 / contract ears-table の「用途」列 SSoT に一致させる (folio-2jr: 旧 禁止/機能 は §6 異常応答/機能オプション と
+#   semantic drift していた — unwanted は「禁止」でなく異常時の振る舞い、 optional は機能の有無条件。 view を SSoT から導出し drift 根絶)。
 declare -A EARS_CLASS=( [ubiquitous]=always [event-driven]=trigger [state-driven]=state [unwanted]=forbid [optional]=option )
-declare -A EARS_LABEL=( [ubiquitous]=恒常 [event-driven]=きっかけ [state-driven]=状態 [unwanted]=禁止 [optional]=機能 )
+declare -A EARS_LABEL=( [ubiquitous]=無条件不変条件 [event-driven]="event 応答" [state-driven]=状態継続中 [unwanted]=異常応答 [optional]=機能オプション )
+# EARS 凡例の「いつ守るか」平易説明 (folio-2jr persona-walk major-1: 凡例 label は専門語ゆえ非エンジニアに意味が自明でない →
+#   各型に平易タイミング語を併記。 §6 章リード prose の言い換え (常に/きっかけ/状態の間/機能/異常時) と方向一致・verify-spec と二重保守=parity)。
+declare -A EARS_WHEN=( [ubiquitous]=常に守る [event-driven]=きっかけがある時 [state-driven]=状態が続く間 [unwanted]=異常が起きた時 [optional]=機能を使う時 )
 # 抽象ロール (B0 论点2 照会 graph)。 references (前方照会) の role allowlist。 verify-common.sh の CROSS_DOC_ROLE_ALLOWLIST と一致。
 declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [verification]=1 [implementation]=1 )
 # CSS tint allowlist (section.tint / band)。
@@ -145,12 +150,17 @@ figure[data-component="spec-diagram"] figcaption{padding:7px 15px;font-size:11.5
 [data-component="ears-requirement-row"]{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:11px;padding:11px 14px;background:var(--paper);box-shadow:var(--shadow)}
 [data-component="ears-requirement-row"] .rq-head{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:5px}
 [data-component="ears-requirement-row"] .rid{font-weight:800;font-size:12px;color:var(--brand);background:var(--brand-tint);border:1px solid var(--line);border-radius:6px;padding:2px 9px;letter-spacing:.02em}
-[data-component="ears-badge"]{margin-left:auto;display:inline-flex;align-items:center;font-size:11px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:2px 11px;white-space:nowrap}
-[data-component="ears-badge"].always{color:var(--brand);background:var(--brand-tint);border:1px solid var(--line)}
-[data-component="ears-badge"].trigger{color:var(--info);background:var(--info-tint);border:1px solid var(--info-line)}
-[data-component="ears-badge"].state{color:var(--violet);background:var(--violet-tint);border:1px solid var(--violet-line)}
-[data-component="ears-badge"].forbid{color:var(--bad);background:var(--bad-tint);border:1px solid var(--bad-line)}
-[data-component="ears-badge"].option{color:var(--ok);background:var(--ok-tint);border:1px solid var(--ok-line)}
+[data-component="ears-badge"],[data-component="ears-legend-item"]{display:inline-flex;align-items:center;font-size:11px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:2px 11px;white-space:nowrap}
+[data-component="ears-badge"]{margin-left:auto}
+[data-component="ears-badge"].always,[data-component="ears-legend-item"].always{color:var(--brand);background:var(--brand-tint);border:1px solid var(--line)}
+[data-component="ears-badge"].trigger,[data-component="ears-legend-item"].trigger{color:var(--info);background:var(--info-tint);border:1px solid var(--info-line)}
+[data-component="ears-badge"].state,[data-component="ears-legend-item"].state{color:var(--violet);background:var(--violet-tint);border:1px solid var(--violet-line)}
+[data-component="ears-badge"].forbid,[data-component="ears-legend-item"].forbid{color:var(--bad);background:var(--bad-tint);border:1px solid var(--bad-line)}
+[data-component="ears-badge"].option,[data-component="ears-legend-item"].option{color:var(--ok);background:var(--ok-tint);border:1px solid var(--ok-line)}
+[data-component="ears-legend"]{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:14px 0 4px;padding:11px 14px;border:1px solid var(--line);border-radius:11px;background:var(--paper-2)}
+[data-component="ears-legend"] .el-cap{font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ink-faint);text-transform:uppercase;margin-right:2px}
+[data-component="ears-legend"] .el-item{display:inline-flex;align-items:center;gap:6px}
+[data-component="ears-legend"] .el-when{font-size:11.5px;color:var(--ink-soft)}
 [data-component="ears-requirement-row"] .rq-essence{margin:0 0 7px;font-size:13.5px;line-height:1.7;color:var(--ink)}
 [data-component="ears-requirement-row"] .rq-norm{font-size:12px;border-top:1px dashed var(--line);padding-top:6px}
 [data-component="ears-requirement-row"] .rq-norm summary{cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--ink-faint);text-transform:uppercase}
@@ -291,6 +301,20 @@ emit_references() {
 
 # emit_glossary (glossary-term-table) は lib/common.sh (core) を使う。
 
+# EARS 凡例 (静的 key・色分け badge と §6「用途」label の対応を 1 度だけ提示・folio-2jr)。 cover 直後に emit。
+# 5 pattern を rules.html §6 table 行順で列挙。 label は EARS_LABEL (= §6 用途 SSoT)・色 class は EARS_CLASS。
+# data-component=ears-legend-item は ears-badge とは別 (verify-spec の ears-badge==|requirements| カウントに干渉させない)。
+emit_ears_legend() {
+  printf '<div data-component="ears-legend"><span class="el-cap">EARS 5 型 (規範要件の種類)</span>'
+  local pat
+  for pat in ubiquitous event-driven state-driven optional unwanted; do
+    # 各型 = 色 badge (§6 用途 label) + 平易な「いつ守るか」(persona-walk major-1)。
+    printf '<span class="el-item"><span data-component="ears-legend-item" class="%s">%s</span><span class="el-when">%s</span></span>' \
+      "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$(esc "${EARS_WHEN[$pat]}")"
+  done
+  printf '</div>\n'
+}
+
 # footer は core_emit_footer に spec-pack 別のタグ列を渡す (本文 SSoT 行は共通)。
 emit_footer() {
   core_emit_footer '<span>folio design system</span><span>spec-pack</span><span>folio engine B6 (instance#5)</span><span>EARS 章立て + 非終端 照会</span>'
@@ -301,6 +325,7 @@ build() {
   emit_head "$(q '.meta.title')"
   printf '<div class="page" data-component="requirement-type-color-tokens">\n'
   emit_cover
+  emit_ears_legend
   nsec="$(q '.sections | length')"
   for ((si=0; si<nsec; si++)); do emit_section "$si"; done
   # 非終端 照会 (前方 references) band。
