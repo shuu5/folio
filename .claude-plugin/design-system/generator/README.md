@@ -179,6 +179,24 @@ SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules 
 ./test-adversarial-spec.sh
 ```
 
+### spec-pack FORK = verification self-host (folio engine tr0 / folio-nxp / doc-type=spec 2例目)
+
+spec-pack (rules) を **doc-type=spec の 2 例目** (`architecture/spec/verification.html`) へ適用した FORK。 狙い = w1f の rules self-host を別 folio 文書型 (spec) へ広げる。 **★共有 core (`lib/*.sh` + `inject-prose.sh`) + 共有 spec-pack スクリプト (`extract-rules-spec.sh` / `assemble-spec.sh` / `verify-spec.sh`) を 1 バイトも触らず、 新ファイルの新設のみで挿す** (FORK = 並列安全・rule-of-three pack 層)。 ★frozen でない `verification.html` は **読むだけで一切編集しない** (非破壊・生成は `/tmp/folio-design-samples/tr0-verif/`)。
+
+- **新ファイル**: `.claude-plugin/scripts/extract-verification-spec.sh` (extractor fork) / `assemble-verification.sh` / `verify-verification.sh` / `test-adversarial-verification.sh` / `contract/folio-verification.spec.yaml` / `prose/folio-verification.prose.yaml`。
+- **★verification 固有差分 = 機械層 `demoted`** (rules.html に無い): verification.html は機械層に `<div class="demoted" data-audience="machine">` を 4 箇所持つ (ADR-0040 圧縮の機械層降格分・中身は `<p>`/`<ul>`/`<pre><code>`)。 現 extractor は `<p>/<aside>/<ul>` のみ拾い div は死角ゆえ、 fork は **div.demoted を machine_block `type: demoted` として balanced div で inner を逐語 capture** (round-trip 被覆)。 assemble は `<div data-component="spec-machine-demoted" data-audience="machine">` で RAW emit (二重 escape 厳禁)、 verify は件数 + 双方向 *順序付き* round-trip に demoted を含める。 ★demoted は `<pre><code>` を内包しうるため extractor の section block scan から mask して human-layer code 誤捕捉を防ぐ (machine_blocks は別途 capture ゆえ無損失)。
+- **fork 時の rules 前提解除**: assemble/verify の `doc_type==rules` guard → `==spec`、 verify の round-trip 原本 `rules.html` → `verification.html`、 cover/band/footer ラベルを spec 文脈へ。 EARS 5-pattern / 非終端 照会 / 機械層 prose/note/list は rules と同型。 verification は human-layer code block を持たない (全 `<pre><code>` は demoted 内 = 機械層)。
+- **floor 通過 = `CEILING=PENDING`** (taxonomy §5.1・floor 単独 GREEN 禁止)。 意味的 fidelity (機械層軸含む) は cell-3 admin が独立 ceiling (fidelity-spec / persona-walk-spec) を `/tmp` 生成物に回す。
+- **敵対回帰** = `test-adversarial-verification.sh` (rules 版を verification anchor へ差し替え + verification 固有の demoted 改竄 F12 [text 改竄=round-trip] / M16 [block 脱落=件数+round-trip] を追加 = 62 ケース)。
+
+```bash
+.claude-plugin/scripts/extract-verification-spec.sh > contract/folio-verification.spec.yaml   # ← verification.html から DRAFT 機械抽出
+./assemble-verification.sh contract/folio-verification.spec.yaml asm.html
+./inject-prose.sh prose/folio-verification.prose.yaml asm.html filled.html                    # ← 同じ injector (無改変共用)
+./verify-verification.sh --filled prose/folio-verification.prose.yaml contract/folio-verification.spec.yaml filled.html
+./test-adversarial-verification.sh
+```
+
 ## 照会 graph 終端完備検証 (engine B5-I / folio-p4o)
 
 個々の pack verify (verify-adr/research/principle) は **1 doc の局所** 照会 (justifies/leads_to/inbound) を検証する。

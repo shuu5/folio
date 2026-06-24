@@ -1,0 +1,23 @@
+# folio engine tr0 (folio-nxp) — spec-pack prose manifest (③「読みやすさの足場」) — verification fork
+#
+# opus 著作物。決定的 assembler が空で出力した data-prose-slot に inject-prose.sh が
+# HTML escape して注入する。slot-id ↔ 散文の 1:1 対応 (集合一致を inject が fail-closed 検査)。
+#
+# 各値は機械 SSoT (contract/folio-verification.spec.yaml = verification.html から機械抽出) 接地。捏造/歪曲/脱落は
+# fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
+#   - cover-summary は doc 全体 (section/要件/照会) に接地する。
+#   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
+#   - band 順: 01=§0 読み方 / 02=§1 検証契約 / 03=§2 検証範囲 / 04=§3 EARS 要件 / 05=§4 実装段階 / 06=§5 未解決 / 07=§6 参照 / 08=照会 / 09=用語集。
+
+slots:
+  cover-summary: "folio plugin を sandbox (隔離環境) で実機検証する枠組みの仕様です。 検証の 3 つの状態・何を検証し何を範囲外とするか・規範要件 (EARS 記法の REQ-VER / REQ-NAV)・段階的な実装の進め方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の verification.html を機械 SSoT から dual-audience で再生成したもので、 各章の『機械層』fold を開くと精密な規範記述 (EARS 文・地の文) を確認できます。"
+
+  chapter-lead-01: "まず読み方から。 着手前は §1 (検証契約の定義) と §3 (EARS 規範要件) を必読とし、 そのあと §2 (検証範囲) → §4 (実装段階) と読み進めます。 §5 の未解決事項と §6 の参照は補足です。"
+  chapter-lead-02: "「verification (検証)」という言葉の正式な定義をここに置きます。 検証には 3 つの状態があり、 本枠組みが対象とするのはそのうち sandbox で実機検証された状態だけです。 他の文書はこの章を参照します。"
+  chapter-lead-03: "何を検証し、 何を範囲の外とするかの境界を定めます。 対象は plugin の挙動・spec どうしの整合性・マージ前の自動チェック (CI gate) の 3 つで、 個別実装の内部 test や AI 出力品質の評価は範囲外です。"
+  chapter-lead-04: "検証すべき規範要件を EARS という記法で集めた、 本仕様の中心となる章です。 冒頭の図が検証の全体像 (scenario を runner が読み、 hook 模擬や CLI golden で実行し結果を判定する流れ) を示します。"
+  chapter-lead-05: "検証を段階的に導入していくための 3 ステップの進め方と、 将来の完成形と今の試作段階がどう違うかを定めます。 いきなり全部ではなく、 軽い単体検証から統合・隔離へと積み上げます。"
+  chapter-lead-06: "まだ解決していない論点と、 起票を保留している決定記録 (ADR) 候補、 すでに採用済みの関連 ADR を補足としてまとめます。 詳細は調査記録を参照します。"
+  chapter-lead-07: "本仕様が依拠する内部・外部の参照文書を一覧します。 読んでいて根拠をたどりたくなったら、 ここから元の文書へ進めます。"
+  chapter-lead-08: "この仕様が前方照会する主要な文書を挙げます。 上位の原則 (constitution の P-x) や決定記録 (ADR) への前方照会で、 verification は照会の終わりではありません — より上位の文書へとつながっています。"
+  chapter-lead-09: "本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。"
