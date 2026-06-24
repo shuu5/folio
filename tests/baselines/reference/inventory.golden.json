@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-23T05:05:53Z",
+  "generatedAt": "2026-06-24T05:21:04Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -1219,6 +1219,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "research/doctype-coverage-audit.html"
+        ],
         "dc:references": [
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "research/document-discipline-engine-design.html",
@@ -1273,6 +1276,21 @@
       }
     },
     {
+      "@id": "research/doctype-coverage-audit.html",
+      "title": "folio doc-type coverage audit",
+      "summary": "北極星 folio-7wn の完全 doc-suite 被覆 roadmap の SSoT (探索領域・後段で正式化)",
+      "doc-type": "research",
+      "status": "active",
+      "version": "1.0.0",
+      "stakeholders": [],
+      "relations": {
+        "dc:references": [
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html"
+        ]
+      }
+    },
+    {
       "@id": "research/document-discipline-engine-design.html",
       "title": "文書規律エンジン (C) B0 設計 design-of-record",
       "summary": "folio 規律を一般化した汎用文書一式生成エンジンの設計記録 (epic folio-0dv / B0=folio-9ay 合意 + B1=folio-bwc 実証)",
@@ -1282,6 +1300,7 @@
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
+          "research/doctype-coverage-audit.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html"

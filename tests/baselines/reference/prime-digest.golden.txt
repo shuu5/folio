@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 50 specs · folio 1.1.0
+# 51 specs · folio 1.1.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -221,6 +221,11 @@
 - title: folio constitution X4 amendment proposal
 - doc-type: planning · status: superseded
 - summary: constitution 改訂の review 用ドラフト (即編集前の文面提示、 user 承認 → ADR 起票 → 編集の順)
+
+## research/doctype-coverage-audit.html
+- title: folio doc-type coverage audit
+- doc-type: research · status: active
+- summary: 北極星 folio-7wn の完全 doc-suite 被覆 roadmap の SSoT (探索領域・後段で正式化)
 
 ## research/document-discipline-engine-design.html
 - title: 文書規律エンジン (C) B0 設計 design-of-record

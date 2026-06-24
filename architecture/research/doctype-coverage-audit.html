@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="active">
+<title>folio — 文書型 被覆完全性 監査 (doc-type coverage audit)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./doctype-coverage-audit.html",
+  "@type": "schema:TechArticle",
+  "folio:version": "1.0.0",
+  "folio:status": "active",
+  "dc:title": "folio doc-type coverage audit",
+  "dc:references": [
+    { "@id": "./document-discipline-engine-design.html" },
+    { "@id": "../decisions/ADR-0045-spec-pack-machine-layer-round-trip.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-essence">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">doctype-coverage-audit</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-essence">§0. 要旨</a></li>
+  <li><a href="#s1-catalog">§1. canonical doc-type カタログ × folio 被覆</a></li>
+  <li><a href="#s2-gapset">§2. gap_set — 穴の二分と優先度</a></li>
+  <li><a href="#s3-roadmap">§3. roadmap (post-B6・bd epic folio-c5r)</a></li>
+  <li><a href="#s4-codeless">§4. コード無しプロジェクトへの射程 (folio-dxq へ)</a></li>
+  <li><a href="#s5-references">§5. 参照</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+<nav class="crumb"><a href="../index.html">architecture</a> / <a href="README.html">research</a> / doc-type coverage audit</nav>
+
+<h1>folio 文書型 被覆完全性 監査 (doc-type coverage audit)</h1>
+<div class="meta">v1.0.0 &middot; status: active &middot; 北極星 folio-7wn の完全 doc-suite 被覆 roadmap の SSoT (探索領域・後段で正式化)</div>
+
+<section id="s0-essence">
+<h2>§0. 要旨</h2>
+<p>本書は 2026-06-24 に実施した多エージェント監査 (<code>doctype-completeness-audit</code> / wf_8e16a043) の design-of-record である。問い = <strong>「folio 文書規律エンジン (C) は『任意プロジェクト向けの完全な文書一式』を生成する能力の全体像で、本当に self-spec (architecture description) 『だけ』が欠けているのか」</strong>。</p>
+<p>★中心的発見: folio engine は完全 project doc-suite を構成する canonical <strong>約 17 の文書型のうち 5 種しか生成できない</strong> (SRS / ADR / research / principle / spec=rules)。self-spec (architecture description) は<strong>最初かつ最も paradigm-breaking な穴だが唯一ではない</strong>。本書はその全 gap を優先度付きで SSoT 化し、埋める roadmap を定める。実装追跡は bd epic <code>folio-c5r</code> (post-B6 完全 doc-suite 被覆 roadmap)。</p>
+<aside class="informative">
+<p><strong>位置づけ (P-7 探索領域)</strong>: 本書は探索領域 (research/) の記録であり、scope を silently に拡大するものではない。確定設計は段階ごとに grill → 正式 ADR (P-10 user 承認) へ昇格させる。コード無しプロジェクトへの射程拡大は <code>folio-dxq</code> で別途明文化する。</p>
+</aside>
+</section>
+
+<section id="s1-catalog">
+<h2>§1. canonical doc-type カタログ × folio 被覆</h2>
+<p>完全な project documentation suite を構成する canonical 文書型を業界標準 (ISO/IEC/IEEE 42010 / 29148 / 29119, arc42, C4, Diátaxis, ADR, RFC, IEEE 1016 等) に接地して体系化し、folio の現 pack 被覆と厳密照合した。<strong>structure_kind</strong> = requirement-indexed (離散正規単位を索引) / descriptive (prose+図+表 主体) / hybrid。<strong>被覆</strong> = covered (生成可) / partial (machinery のみ) / gap (pack 無)。</p>
+<table>
+<thead><tr><th>doc-type</th><th>structure</th><th>code 依存</th><th>必須</th><th>folio 被覆</th><th>pack / 備考</th></tr></thead>
+<tbody>
+<tr><td>Glossary / 用語集</td><td>req-indexed</td><td>agnostic</td><td>○</td><td><strong>partial</strong></td><td>machinery は lib/ に在り (vocabulary.yaml / .term)・standalone pack 無。promotion が最安 keystone</td></tr>
+<tr><td>Vision / Charter</td><td>descriptive</td><td>code-less可</td><td>○</td><td><strong>gap</strong></td><td>叙述目標型・research と一部重複するが別軸</td></tr>
+<tr><td>Constitution / Principle</td><td>descriptive</td><td>code-less可</td><td>—</td><td>covered</td><td>principle-pack (instance#4・baseline-diff gate)</td></tr>
+<tr><td>Consumer Rules / Standards</td><td>hybrid</td><td>agnostic</td><td>—</td><td>covered</td><td>spec-pack (rules=instance#5・dual-audience round-trip)</td></tr>
+<tr><td>Requirements / SRS</td><td>req-indexed</td><td>agnostic</td><td>○</td><td>covered</td><td>srs-pack (EC + clinic・EARS 5型 + RTM)</td></tr>
+<tr><td><strong>Architecture Description</strong></td><td>descriptive</td><td>agnostic</td><td>○</td><td><strong>gap (P1)</strong></td><td>★最重要・要件索引型を脱した初の descriptive doc-type。self-spec の型。専用 pack 要 (folio-5uu)</td></tr>
+<tr><td>ADR / 設計判断記録</td><td>req-indexed</td><td>agnostic</td><td>○</td><td>covered</td><td>adr-pack (justifies→SRS 後方照会)</td></tr>
+<tr><td>Research / 探索記録</td><td>descriptive</td><td>agnostic</td><td>—</td><td>covered</td><td>research-pack (approaches→ADR 前方照会)</td></tr>
+<tr><td>Interface / API Spec</td><td>hybrid</td><td>code固有</td><td>—</td><td>gap</td><td>prose frame + indexed endpoint/error 表</td></tr>
+<tr><td>Data / Domain Model</td><td>hybrid</td><td>agnostic</td><td>—</td><td>gap</td><td>entity catalog (indexed) + domain 図 (descriptive)</td></tr>
+<tr><td>Test Cases / Spec</td><td>req-indexed</td><td>code固有</td><td>—</td><td>gap (P2)</td><td>RTM native・SRS↔test ループ閉・machinery 再利用で安価</td></tr>
+<tr><td>Verification / V&amp;V Report</td><td>req-indexed</td><td>agnostic</td><td>—</td><td>partial</td><td>RTM machinery は core に在るが standalone V&amp;V doc pack 無 (folio-self の verification.html=検証 contract spec と別物)</td></tr>
+<tr><td>Risk Register</td><td>req-indexed</td><td>code-less可</td><td>—</td><td>gap</td><td>indexed-row log ≈ ADR 形状・安価</td></tr>
+<tr><td>Roadmap / Release Plan</td><td>descriptive</td><td>agnostic</td><td>—</td><td>gap</td><td>時系列 milestone</td></tr>
+<tr><td>Operations Runbook</td><td>hybrid</td><td>code固有</td><td>—</td><td>gap</td><td>procedural (順序付き step) = RTM も flat-prose も適合しない第3の structure sub-kind</td></tr>
+<tr><td>Change Log / Release Notes</td><td>req-indexed</td><td>agnostic</td><td>—</td><td>gap</td><td>version-keyed entry log・安価</td></tr>
+<tr><td>Index / README / doc map</td><td>descriptive</td><td>agnostic</td><td>○</td><td>partial</td><td>folio build が graph から derive (readme-index/inventory machinery)・authoring pack でない</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s2-gapset">
+<h2>§2. gap_set — 穴の二分と優先度</h2>
+<p>gap を質で二分すると engine の真のフロンティアが見える:</p>
+<ul>
+<li><strong>(a) 構造的に novel</strong> (要件索引型を脱す・RTM 非適用・floor が薄く ceiling 主導) = <strong>architecture-description (P1)</strong> / vision / roadmap / operations(手順型)。engine がまだ扱ったことのない doc category。</li>
+<li><strong>(b) indexed で安価</strong> (既存 machinery 近接) = <strong>glossary (P1・machinery 既存=最安 keystone)</strong> / test-cases / risk / changelog / V&amp;V。</li>
+</ul>
+<p>優先度: <strong>P1</strong> = architecture-description, glossary。<strong>P2</strong> = test-cases, vision, interface, data-model。<strong>P3</strong> = risk, changelog, operations, roadmap, standalone V&amp;V。</p>
+<aside class="informative">
+<p><strong>(C) への直接 answer</strong>: 「self-spec だけが穴」は <em>folio-self の狭い範囲でのみ真</em> (verification/relations は spec-pack fork で被覆済・self-spec のみ spec-row 0=構造的 novel)。<em>汎用 suite では false</em> (architecture に加え glossary・test-cases・vision 他が欠ける)。self-spec は最も architecturally significant だが、glossary (suite keystone・安価) と test-cases (SRS↔test ループ) を見落とすのは誤り。engine 設計 doc §9.1 は self-spec を「SRS 族 (claim 群)」と仮説していたが、tr0 grounding で spec-row 0 / EARS 0 = descriptive と実証され仮説は覆った。</p>
+</aside>
+</section>
+
+<section id="s3-roadmap">
+<h2>§3. roadmap (post-B6・bd epic folio-c5r)</h2>
+<p>順序の核心 = <strong>architecture (最難) を最後に、安い keystone (glossary) を先に</strong>。</p>
+<ol>
+<li><strong>段階1</strong> (folio-8f0・本書): gap 全体像の SSoT 化。</li>
+<li><strong>段階2</strong>: glossary pack (folio-1uc・最安 keystone・suite walk の cross-doc 整合 SSoT) + test-cases pack (folio-uvt) + suite demo 設計 grill (folio-yzv・clinic 母体)。indexed-heavy 一式 (SRS+ADR+research+glossary+test-cases) で suite demo を architecture 前に先行実証できる。</li>
+<li><strong>段階3</strong>: architecture-description 汎用 pack (folio-5uu・最難・grill + grounding-sweep 必須)。folio-self-spec を instance#1 として B6 self-dogfood と同一成果物で回収。</li>
+<li><strong>段階4</strong>: clinic suite 統合 walk (folio-rqj・cross-doc graph 双方向 fail-closed + 非エンジニア persona walk + fidelity ceiling 横断)。単一文書 walk が検査しない suite 規模の一貫性を検査する。</li>
+</ol>
+<p>suite demo (段階2/4) の構成 = glossary / vision / architecture / SRS / ADR / research / test-cases / README。constitution は scale 依存 (clinic 単一チームでは optional)。</p>
+</section>
+
+<section id="s4-codeless">
+<h2>§4. コード無しプロジェクトへの射程 (folio-dxq へ)</h2>
+<p>核心命題 (verified): folio の文書規律は設計上すでにコード非依存。core の照会 graph が使う抽象ロール集合 <code>GRAPH_ROLE_ALLOWLIST</code> は <code>claim|rationale|exploration|principle|verification|implementation</code> で「コード」概念を含まない。「実装=コード」は SRS-pack 固有の写像にすぎず、ADR-pack は <code>implementation</code> を「実装方式 (非コード)」へ既に写像済。</p>
+<p>規律ごとの translate 度: dual-audience=high (混在読者=専門家 vs 市民/議員/監査人 はコード無しドメインで常態・価値増)、canonical-name=high、declarative=high (法令/標準/憲章は本来 declarative)、P-7 3-domain=high、RTM=high (政策目標→施策→根拠→評価指標)、EARS=medium-high (規範型で high・記述型で low)、HOW-outside=high (再定義要: 「実装」が施行/運用/建造になる)。</p>
+<p>橋頭堡 = <strong>principle/constitution pack</strong> (要件索引型を脱した唯一の実証済 pack・公共政策の基本方針/ガバナンス憲章は principle 型・既に gate I 達成)。第二 = architecture-description pack。最大の不確実点 = 純記述型 doc-type (EARS が乗らない) の floor をどう厚くするか (ceiling 依存で機械保証強度が落ちる)。詳細は <code>folio-dxq</code> の research note に展開する。</p>
+</section>
+
+<section id="s5-references">
+<h2>§5. 参照</h2>
+<ul>
+<li><a href="document-discipline-engine-design.html"><code>document-discipline-engine-design.html</code></a> — 文書規律エンジン B0 設計 (3層構造 / 照会=抽象ロール graph)。本監査はこの engine の被覆完全性を測る。</li>
+<li><a href="../decisions/ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> — spec-pack 機械層 round-trip (w1f)。verification/relations self-host (tr0) はこの fork。</li>
+<li>bd epic <code>folio-c5r</code> (完全 doc-suite 被覆 roadmap) + 段階 issue (folio-8f0/1uc/yzv/uvt/5uu/rqj) — 実装追跡の SSoT。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
