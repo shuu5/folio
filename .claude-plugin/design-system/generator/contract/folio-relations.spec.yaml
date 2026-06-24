@@ -1,0 +1,329 @@
+# folio engine tr0 (folio-hd0) — spec-pack contract (relations dual-audience self-host・spec-pack fork)
+# ★機械抽出 DRAFT (scripts/extract-relations-spec.sh が architecture/spec/relations.html から起こした)。 人間レビュー前提。
+# doc_type = spec (spec 間の関係性表現規約)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。
+# ★抽出範囲 = relations.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。
+#   機械層 = data-audience="machine" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture。
+#   ★JSON-LD: head の <script type=application/ld+json> は doc 自身のメタデータ (assemble が head 生成・machine_blocks でない)。 §3 の <pre><code>&lt;script…&gt;</code></pre> は人間層エスケープ code 例 (通常の code block として往復・特別機構なし)。
+
+meta:
+  doc_id: FOLIO-RELATIONS
+  doc_type: spec
+  title: "folio relations — spec 間の関係性表現規約"
+  eyebrow_left: "関係性 spec (Relations)"
+  eyebrow_right: "folio — spec 間の関係性表現規約"
+  subtitle: "v1.1.0 · status: active · spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)"
+  version: "1.1.0"
+  date: "2026-06-24"
+  status: "active"
+  reader: "Developer, AI Agent, External Reviewer — folio spec を編集する開発者・AI Agent・外部レビュアー"
+
+# 承認記録 (core 共用 approval-block)。 relations.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。
+approval:
+  - { role: "文書種別", who: "spec (relation management spec)", when: "v1.1.0", stamp: "active" }
+  - { role: "生成 (engine tr0 spec-pack fork)", who: "folio design system", when: "2026-06-24 生成", stamp: "生成" }
+
+# ★非終端 照会の graph 接続: relations → constitution (FOLIO-CONSTITUTION 終端) の前方 edge (role=implementation)。
+#   verify-graph.sh の rolemap edge がこの 1 本を pin し、 reachability で relations が principle 終端へ到達することを実証する (rolemap 登録は admin/graph 領分)。
+graph:
+  principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
+
+sections:
+  - id: "s0"
+    tint: "info"
+    kicker: "§0 / 読み方"
+    heading: "§0. Reader's Guide"
+    essence: "本 spec は Layer 1 consumer と folio Layer 0 自身の双方に適用し、 各 spec が head JSON-LD で宣言した関係性を build 時に inventory へ集約する前提を共有する。 読む順序は §1 標準語彙 → §2 独自語彙 → §3 markup → §4 inventory → §5 双方向。"
+    blocks:
+      - type: mermaid
+        caption: ""
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: in-band relation から AI 消費までの data pipeline"
+          - "  accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。"
+          - "  HEAD[\"各 spec の head JSON-LDin-band relation (§3)\"]"
+          - "  HEAD -->|\"folio inventoryが architecture/ を scan\"| INV[\"inventory.json3-tier index (§4)\"]"
+          - "  INV -->|\"folio prime\"| DIG[\"Tier 1 digest(per-spec entry、§4.2)\"]"
+          - "  DIG -->|\"SessionStart hook 注入\"| AI([\"AI agent の初期 context\"])"
+  - id: "s1"
+    tint: "brand"
+    kicker: "§1 / W3C 標準語彙"
+    heading: "§1. W3C Standard Vocabulary"
+    essence: "関係性は W3C 既存標準語彙 (dcterms / schema.org / PROV-O) を最優先で採用し、 表現できない関係のみ §2 で folio 独自語彙を定義する。"
+    blocks:
+      - { type: subhead, heading: "§1.1 Dublin Core Terms (DCMI)", essence: "文書間関係 (置換 / 参照 / 部分 / 要求 / 来歴) は dcterms 語彙を採用 MUST、 JSON-LD context に dc prefix を宣言する。" }
+      - type: table
+        caption: "採用する dcterms 語彙"
+        headers: ["folio で表したい関係", "採用語彙", "逆語彙", "備考"]
+        rows:
+          - ["supersedes (置き換える)", "dc:replaces", "dc:isReplacedBy", "ADR supersedes 関係、 §5 で双方向 materialize 対象"]
+          - ["cross-reference (参照)", "dc:references", "dc:isReferencedBy", "spec 同士の引用、 双方向 dual"]
+          - ["subsection (一部である)", "dc:hasPart", "dc:isPartOf", "cluster (例: decisions/) ↔ 個別 ADR"]
+          - ["requirement (要求事項)", "dc:requires", "dc:isRequiredBy", "強い依存、 folio:depends-on の代替を検討"]
+          - ["provenance (来歴)", "dc:provenance", "(なし)", "監査用、 audit trail に使用"]
+      - { type: subhead, heading: "§1.2 schema.org (補完)", essence: "dcterms で表せない型・記事メタデータは schema.org で補完し、 spec の base 型は schema:TechArticle とする。" }
+      - type: table
+        caption: "採用する schema.org 型・プロパティ"
+        headers: ["用途", "採用", "備考"]
+        rows:
+          - ["spec file の base 型", "schema:TechArticle", "schema:Article の specialization、 技術文書向け"]
+          - ["creative work 一般", "schema:CreativeWork", "ADR / research note 等の汎用型"]
+          - ["citation (出典)", "schema:citation", "research/ から外部 URL を参照する際に使用"]
+          - ["基底文書 (派生元)", "schema:isBasedOn", "research → spec の派生関係に使用可能"]
+      - { type: subhead, heading: "§1.3 PROV-O (履歴・派生)", essence: "派生・生成の来歴は PROV-O (wasDerivedFrom / wasGeneratedBy) を、 使用時のみ採用する。" }
+      - type: table
+        caption: "採用する PROV-O 語彙"
+        headers: ["folio で表したい関係", "採用語彙", "備考"]
+        rows:
+          - ["derived-from (派生元)", "prov:wasDerivedFrom", "spec → 派生元 research の関係、 ADR → 元の dialog/issue"]
+          - ["generated-by (生成プロセス)", "prov:wasGeneratedBy", "auto-generated artifact (将来の inventory.json 等)"]
+    machine_blocks:
+      - { type: note, html: "<p>folio relation は <strong>W3C 既存標準語彙を最優先</strong>とする (interoperability + 学習コスト削減)。 独自命名 (folio:* prefix) は §1 で表現できない関係に限り §2 で個別定義する。</p>" }
+  - id: "s2"
+    tint: "violet"
+    kicker: "§2 / folio 独自語彙"
+    heading: "§2. folio Custom Vocabulary"
+    essence: "標準語彙で表せない folio 固有の関係のみ folio: prefix で独自定義し、 追加は user 承認の ADR を経る MUST。"
+    blocks:
+      - { type: subhead, heading: "§2.1 folio 独自語彙 (規範定義)", essence: "folio:depends-on / extends / implements の 3 語を独自定義する (URI 実体は v1.0.0 で解決可能化予定の placeholder)。" }
+      - type: table
+        caption: "folio:* prefix で定義する独自語彙"
+        headers: ["語彙", "意味", "逆語彙", "W3C 代替検討"]
+        rows:
+          - ["folio:depends-on", "技術的依存 (この spec が成立するために必要な前提 spec)", "folio:depended-by", "dc:requires の方が強すぎる、 折衷で独自定義"]
+          - ["folio:extends", "継承・拡張 (rules.html § 等を Layer 1 consumer が拡張する場合)", "folio:extended-by", "schema:additionalType は近いが意味が弱い"]
+          - ["folio:implements", "constitution 原則 (P-1〜P-13) の実装関係", "folio:implemented-by", "標準で対応する概念なし (constitution と spec の関係は folio 固有)"]
+      - { type: subhead, heading: "§2.2 命名規則 (standard 優先原則)", essence: "新規関係は標準語彙 → 既存独自語彙 → 新規 folio: 語彙の順で採用判断し、 独自語彙の ADR には却下理由・逆語彙・使用例を含める MUST。" }
+    machine_blocks:
+      - { type: note, html: "<p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し <span class=\"term\" data-term=\"constitution\" data-tooltip=\"folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。\">constitution</span> <a class=\"xref\" href=\"./constitution.html#p-10\" data-tooltip=\"Constitution 自身への変更前 user 確認\">P-10</a> に準じた user 承認を経る MUST。</p>" }
+  - id: "s3"
+    tint: "info"
+    kicker: "§3 / JSON-LD"
+    heading: "§3. JSON-LD Schema in <head>"
+    essence: "各 spec は head に JSON-LD ブロックを 1 個 MUST 持ち、 その関係性表現 schema を本章が規定する。"
+    blocks:
+      - { type: subhead, heading: "§3.1 Minimal Example (関係性なし)", essence: "関係性を持たない最小 spec の JSON-LD 例。 @type は schema:TechArticle を採用し、 独自型は使わない。" }
+      - type: code
+        lines:
+          - "<script type=\"application/ld+json\">"
+          - "{"
+          - "  \"@context\": {"
+          - "    \"schema\": \"https://schema.org/\","
+          - "    \"folio\": \"https://folio.dev/spec/v1/\""
+          - "  },"
+          - "  \"@id\": \"./constitution.html\","
+          - "  \"@type\": \"schema:TechArticle\","
+          - "  \"folio:version\": \"0.4.2-draft\","
+          - "  \"folio:stakeholders\": [\"Developer\", \"AI Agent\"]"
+          - "}"
+          - "</script>"
+      - { type: subhead, heading: "§3.2 Full Example (関係性込み)", essence: "複数の関係性 (references / depends-on 等) を宣言する spec の JSON-LD 例。" }
+      - type: code
+        lines:
+          - "<script type=\"application/ld+json\">"
+          - "{"
+          - "  \"@context\": {"
+          - "    \"dc\": \"http://purl.org/dc/terms/\","
+          - "    \"schema\": \"https://schema.org/\","
+          - "    \"folio\": \"https://folio.dev/spec/v1/\""
+          - "  },"
+          - "  \"@id\": \"./relations.html\","
+          - "  \"@type\": \"schema:TechArticle\","
+          - "  \"dc:title\": \"folio relations spec\","
+          - "  \"folio:version\": \"0.1.0-draft\","
+          - "  \"folio:stakeholders\": [\"Developer\", \"AI Agent\", \"External Reviewer\"],"
+          - "  \"dc:references\": ["
+          - "    { \"@id\": \"./rules.html#s4-format\" },"
+          - "    { \"@id\": \"./constitution.html#s2-principles\" },"
+          - "    { \"@id\": \"../research/spec-graph-management-research.html\" }"
+          - "  ],"
+          - "  \"folio:depends-on\": ["
+          - "    { \"@id\": \"./rules.html\" }"
+          - "  ]"
+          - "}"
+          - "</script>"
+      - { type: subhead, heading: "§3.3 @id Resolution Rules", essence: "@id と参照値の記述規則 (自己 / 同一 dir / 上位 dir / section anchor の相対 path、 architecture 配下は絶対 URL 禁止)。" }
+      - { type: subhead, heading: "§3.4 Conformance Level (Phase 1)", essence: "試作段階の遵守レベル: JSON-LD ブロックと標準語彙優先は MUST、 @id 自己参照と関係性宣言は次 Phase で MUST へ昇格する。" }
+      - type: table
+        caption: ""
+        headers: ["項目", "Phase X2 (現在)", "Phase X3 以降"]
+        rows:
+          - ["JSON-LD ブロック存在", "MUST", "MUST"]
+          - ["@id 自己参照", "SHOULD", "MUST"]
+          - ["関係性宣言 (dc:*, folio:*)", "SHOULD", "MUST (リンクを HTML <a href> で書くなら JSON-LD でも書く)"]
+          - ["標準語彙優先 (§2.2)", "MUST", "MUST"]
+    machine_blocks:
+      - { type: note, html: "<p>各 spec file は <code>&lt;head&gt;</code> 内に <code>&lt;script type=\"application/ld+json\"&gt;</code> ブロックを 1 個 MUST 含む (<a href=\"rules.html#s4-format\">rules.html §4.1</a>)。 ブロック内容の関係性表現 schema を本 §3 で規定する。</p>" }
+  - id: "s4"
+    tint: "warn"
+    kicker: "§4 / inventory"
+    heading: "§4. Inventory Schema"
+    essence: "全 spec を集約する inventory.json を auto-generate する設計の schema を規定する (実体 file は CLI 生成で手動作成禁止)。"
+    blocks:
+      - { type: subhead, heading: "§4.1 inventory.json Structure", essence: "inventory.json の構造と各 field の型・必須・source を定義する。" }
+      - type: code
+        lines:
+          - "{"
+          - "  \"$schema\": \"https://folio.dev/inventory/v1.json\","
+          - "  \"generatedAt\": \"ISO-8601 timestamp\","
+          - "  \"folioVersion\": \"0.x.y-draft\","
+          - "  \"specs\": ["
+          - "    {"
+          - "      \"@id\": \"specs/relations.html\","
+          - "      \"title\": \"folio relations spec\","
+          - "      \"summary\": \"spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)\","
+          - "      \"doc-type\": \"spec\","
+          - "      \"status\": \"draft\","
+          - "      \"version\": \"0.1.0-draft\","
+          - "      \"stakeholders\": [\"Developer\", \"AI Agent\"],"
+          - "      \"relations\": {"
+          - "        \"dc:references\": [\"specs/rules.html#s4-format\"],"
+          - "        \"folio:depends-on\": [\"specs/rules.html\"]"
+          - "      }"
+          - "    }"
+          - "  ]"
+          - "}"
+      - type: table
+        caption: "inventory.json field 定義"
+        headers: ["field", "type", "必須", "source"]
+        rows:
+          - ["$schema", "URL", "MUST", "固定値 (folio CLI が埋込)"]
+          - ["generatedAt", "ISO 8601", "MUST", "CLI 実行時刻"]
+          - ["folioVersion", "SemVer string", "MUST", "plugin.json から読込"]
+          - ["specs[].@id", "relative path", "MUST", "spec の <head> JSON-LD から"]
+          - ["specs[].title", "string", "MUST", "spec <title> または JSON-LD dc:title"]
+          - ["specs[].summary", "string (1-2 文)", "SHOULD", "spec <header> .meta または最初の <aside class=\"informative\"> 第 1 段落"]
+          - ["specs[].doc-type", "enum", "MUST", "<meta name=\"folio-doc-type\">"]
+          - ["specs[].status", "enum", "MUST", "<meta name=\"folio-status\">"]
+          - ["specs[].version", "SemVer string", "MUST", "<meta name=\"folio-version\">"]
+          - ["specs[].stakeholders", "array", "SHOULD", "<meta name=\"folio-stakeholders\"> または JSON-LD folio:stakeholders"]
+          - ["specs[].relations", "object", "SHOULD", "JSON-LD dc:* / folio:* プロパティ集約"]
+      - { type: subhead, heading: "§4.2 Three-Tier Progressive Disclosure Model", essence: "Anthropic Agent Skills の 3-tier loading に倣い、 Tier 1 (inventory) → Tier 2 (head + 要約) → Tier 3 (本文) で AI の context を効率化する。" }
+      - type: table
+        caption: "3-tier model と folio file の対応"
+        headers: ["Tier", "Anthropic Skills", "folio 対応", "tokens 目安"]
+        rows:
+          - ["Tier 1", "YAML name + description", "inventory.json (本 §4 schema)", "30-50 per spec"]
+          - ["Tier 2", "SKILL.md 本体", "各 spec の <head> JSON-LD + 本文サマリ第 1 段落", "500-2000 per spec"]
+          - ["Tier 3", "reference files", "各 spec 本文全体 + ../research/*.html", "unbounded"]
+      - type: table
+        caption: "architecture/spec/ + constitution.html の Tier 別表現 (Phase X3 の inventory auto-generate 想定)"
+        headers: ["file", "Tier 1 (inventory.json entry summary)", "Tier 2 (head + 冒頭 aside)", "Tier 3 (本文)"]
+        rows:
+          - ["constitution.html", "「folio の 14 不変原則 (P-1〜P-14、 3-tier)」", "JSON-LD + §1 Purpose 第 1 段落", "§1〜§7 全本文 + 不変原則本体"]
+          - ["rules.html", "「Layer 1 consumer 向け universal rules + Mandatory Actions」", "JSON-LD + §0 Reader's Guide", "§0、 §2〜§6、 §10 全本文"]
+          - ["folio-self-spec.html", "「folio Layer 0 framework 自身の architecture spec」", "JSON-LD + §0 Reader's Guide", "§0〜§9 全本文 + 8 mermaid 図"]
+          - ["relations.html (本書)", "「spec 間関係性表現規約 (JSON-LD + W3C 語彙 + inventory)」", "JSON-LD + §0 Reader's Guide", "§0〜§6 全本文"]
+      - { type: subhead, heading: "§4.3 Auto-Generation Timing", essence: "inventory.json の生成・stale 検出のタイミングと Phase を定める (現 X2 は非生成、 X3 で auto-update + CI 検出)。" }
+      - type: table
+        caption: ""
+        headers: ["事象", "generation 動作", "Phase"]
+        rows:
+          - ["spec file 追加・編集・削除", "inventory.json が auto-updated される MUST (具体的 enforcement mechanism は folio-self-spec.html §7 系に集約予定、 試作 plugin 完成時)", "X3 (試作 plugin 完成後)"]
+          - ["CI build 開始時", "inventory.json の stale 状態を 検出し CI failure とする MUST (検出 mechanism は folio-self-spec.html §7.5 系に集約予定)", "X3"]
+          - ["scratch 段階 (現在 X2)", "inventory.json は 生成しない。 必要なら手動の specs/README.html 内 file inventory 表が代替", "X2 (現在)"]
+      - { type: subhead, heading: "§4.4 Input / Output Behavior", essence: "folio inventory CLI の WHAT (走査対象 dir・出力先・失敗モード) を規定し、 実装 HOW は folio-self-spec §9 に隔離する。" }
+      - type: table
+        caption: ""
+        headers: ["失敗種別", "動作"]
+        rows:
+          - ["JSON-LD parse error", "該当 file を skip + stderr に warn、 inventory 全体生成は継続"]
+          - ["stale 検出 (CI build 時)", "CI failure (rules.html §10.2 REQ-CI-016 json-ld-validation gate と integration)"]
+          - ["file system access error", "fatal exit、 stderr に error"]
+    machine_blocks:
+      - { type: note, html: "<p>folio は全 spec の集約 index (<code>inventory.json</code>) を <strong>auto-generate</strong> する設計を採用する (将来の試作 plugin で実装予定)。 AI agent は inventory.json のみで全体構造を把握でき、 必要な spec だけ Read することで context window を効率的に使う。</p> <p>本 §4 では schema を規定する。 inventory.json の <strong>実体 file は作成しない</strong> (試作 plugin の <code>folio inventory</code> CLI で auto-generate される、 manual 作成は禁止)。</p>" }
+      - { type: note, html: "<p>本モデルは <a href=\"https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills\">Anthropic Agent Skills</a> の 3-tier loading パターンに基づく (調査レポート §3.3)。 AI agent が必要分のみ読み込み、 context window を効率化する。</p>" }
+      - { type: note, html: "<p>本 §4.4 は <code>folio inventory</code> CLI (<a href=\"folio-self-spec.html#s7-6-phase-x3-minimal\">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href=\"folio-self-spec.html#s9-bindings\">folio-self-spec.html §9 Bindings</a> に隔離 (<a class=\"xref\" href=\"./constitution.html#p-11\" data-tooltip=\"design-intent 文書に HOW を書かない\">P-11</a>)。</p>" }
+  - id: "s5"
+    tint: "ok"
+    kicker: "§5 / 双方向参照"
+    heading: "§5. Bidirectional Reference"
+    essence: "forward relation の記述 MUST と、 reverse relation を auto-materialize する計画 (Phase X3+) を集約する。"
+    blocks:
+      - { type: subhead, heading: "§5.1 双方向 dual の対象関係", essence: "双方向 dual で記述する SHOULD の forward / reverse 対 (replaces / references / hasPart / depends-on / extends / implements)。" }
+      - type: table
+        caption: ""
+        headers: ["forward", "reverse", "典型例"]
+        rows:
+          - ["dc:replaces", "dc:isReplacedBy", "ADR supersede 関係"]
+          - ["dc:references", "dc:isReferencedBy", "spec cross-ref"]
+          - ["dc:hasPart", "dc:isPartOf", "cluster ↔ 個別 spec"]
+          - ["folio:depends-on", "folio:depended-by", "技術依存"]
+          - ["folio:extends", "folio:extended-by", "Layer 1 拡張"]
+          - ["folio:implements", "folio:implemented-by", "constitution ↔ spec"]
+      - type: mermaid
+        caption: ""
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: 双方向 relation の detect-remediate lifecycle"
+          - "  accDescr: spec A が forward relation (dc:references → spec B) を head JSON-LD に宣言する。 Phase X3+ tooling 着地後は、 folio fix が target spec B に対応 reverse relation を auto-materialize し、 folio validate の broken-reverse gate が欠落 reverse を violation として報告する。 結果として relation graph は双方向に保たれる。"
+          - "  DECL[\"spec A: forward 宣言dc:references → spec B(REQ-REL-001)\"]"
+          - "  DECL --> GATE{\"folio validatebroken-reverse gate(REQ-REL-004、 Phase X3+)\"}"
+          - "  GATE -->|\"reverse 欠落\"| VIO[\"broken-reverseviolation 報告\"]"
+          - "  VIO --> FIX[\"folio fix(REQ-REL-002、 Phase X3+)\"]"
+          - "  GATE -->|\"reverse 有り\"| OK[\"clean\"]"
+          - "  FIX --> MAT[\"spec B に dc:isReferencedBy → spec Aを materialize\"]"
+          - "  MAT --> BIDI([\"relation graph 双方向(bidirectional)\"])"
+          - "  OK --> BIDI"
+      - { type: subhead, heading: "§5.2 Precedent (log4brains pattern)", essence: "双方向 auto-materialize の precedent は log4brains の supersedeBy() で、 folio も同設計を Phase X3+ で採用予定。" }
+      - { type: subhead, heading: "§5.3 EARS 規範要件", essence: "forward 宣言・reverse auto-materialize・X2 手動・broken-reverse 報告の 4 件を EARS 要件として規定する。" }
+      - type: requirements
+        ids: ["REQ-REL-001", "REQ-REL-002", "REQ-REL-003", "REQ-REL-004"]
+    machine_blocks:
+      - { type: note, html: "<p>本 §5 は forward relation を spec 中で記述する <strong>MUST</strong> 規範および、 reverse relation の auto-materialize 計画 (Phase X3+) を集約する。 構成: §5.1 dual 対象関係 (table)、 §5.2 precedent (informative aside)、 §5.3 <span class=\"term\" data-term=\"EARS\" data-tooltip=\"Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。\">EARS</span> 規範要件 (REQ-REL-001〜004)。</p>" }
+      - { type: note, html: "<p>双方向 auto-materialize の precedent として <a href=\"https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts\">log4brains <code>Adr.supersedeBy()</code></a> がある (ADR-A が ADR-B を supersede した際、 ADR-B 側に逆参照を自動追加するパターン)。 folio framework も同設計を採用予定 (具体的な CLI 構文 / 実装機構は <a href=\"folio-self-spec.html#s7-harness\">folio-self-spec.html §7 系</a> に集約予定、 Phase X3+)。 詳細は <a href=\"../research/spec-graph-management-research.html#s3-integrated\">spec-graph-management-research.html §3</a> を参照。</p>" }
+  - id: "s6"
+    tint: "brand"
+    kicker: "§6 / 参照"
+    heading: "§6. References"
+    essence: "本 spec が依拠する constitution / rules / 調査レポートと、 W3C 標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を列挙する。"
+    blocks: []
+
+requirements:
+  - id: "REQ-REL-001"
+    ears_pattern: "ubiquitous"
+    essence: "各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を <head> JSON-LD に宣言する (関係が存在する場合)。"
+    statement: "REQ-REL-001: Each spec SHALL declare applicable forward relations (e.g., dc:replaces, dc:references, folio:depends-on) in its <head> JSON-LD block when such relations exist."
+  - id: "REQ-REL-002"
+    ears_pattern: "event-driven"
+    essence: "Phase X3+ tooling が active で forward relation が宣言されると、 対応する reverse relation (dc:isReplacedBy 等) を target spec に auto-materialize する。"
+    statement: "REQ-REL-002: WHEN Phase X3+ tooling is active and a forward relation is declared in any spec, the system SHALL auto-materialize the corresponding reverse relation (e.g., dc:isReplacedBy) on the target spec."
+  - id: "REQ-REL-003"
+    ears_pattern: "ubiquitous"
+    essence: "Phase X2 (現在) では reverse relation は X3 tooling 着地まで手動で記述する (SHOULD)。"
+    statement: "REQ-REL-003: In Phase X2 (current), reverse relations SHOULD be written manually until X3 tooling lands."
+  - id: "REQ-REL-004"
+    ears_pattern: "event-driven"
+    essence: "forward relation が対応 reverse を欠くと、 link-check tooling が broken-reverse violation を報告する (Phase X3+)。"
+    statement: "REQ-REL-004: WHEN a forward relation lacks its corresponding reverse relation in Phase X3+, the link-check tooling SHALL report a broken-reverse violation (具体的な CLI 構文・実装機構は folio-self-spec.html §7 系 に集約)。"
+
+# 非終端 照会 (前方・他文書へ)。 constitution P-x (role=implementation) / ADR (rationale) / verification REQ-VER (verification)。
+references:
+  - { token: "P-10", doc: "constitution.html", role: "implementation" }
+  - { token: "P-1", doc: "constitution.html", role: "implementation" }
+  - { token: "P-13", doc: "constitution.html", role: "implementation" }
+  - { token: "P-14", doc: "constitution.html", role: "implementation" }
+  - { token: "P-11", doc: "constitution.html", role: "implementation" }
+  - { token: "P-2", doc: "constitution.html", role: "implementation" }
+  - { token: "P-7", doc: "constitution.html", role: "implementation" }
+  - { token: "ADR-0021", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0023", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0024", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0035", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0036", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0039", doc: "decisions/", role: "rationale" }
+
+# 用語集 (core 共用 glossary-term-table)。 term = 表示語 / en = canonical (data-term) / def = data-tooltip 由来定義。
+glossary:
+  - { term: "spec", en: "spec", def: "WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。" }
+  - { term: "inventory", en: "inventory", def: "architecture 全 spec を <head> JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。" }
+  - { term: "ADR", en: "ADR", def: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。" }
+  - { term: "cluster", en: "cluster", def: "architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。" }
+  - { term: "constitution", en: "constitution", def: "folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。" }
+  - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。" }
+  - { term: "landing", en: "landing", def: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。" }
+  - { term: "SSoT", en: "SSoT", def: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。" }
+  - { term: "gate", en: "gate", def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。" }
+  - { term: "golden", en: "golden", def: "期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。" }
+  - { term: "EARS", en: "EARS", def: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。" }

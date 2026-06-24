@@ -1,0 +1,23 @@
+# folio engine tr0 (folio-hd0) — spec-pack prose manifest (relations fork・③「読みやすさの足場」)
+#
+# opus 著作物。決定的 assembler が空で出力した data-prose-slot に inject-prose.sh が
+# HTML escape して注入する。slot-id ↔ 散文の 1:1 対応 (集合一致を inject が fail-closed 検査)。
+#
+# 各値は機械 SSoT (contract/folio-relations.spec.yaml = relations.html から機械抽出) 接地。捏造/歪曲/脱落は
+# fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
+#   - cover-summary は doc 全体 (section/要件/照会) に接地する。
+#   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
+#   - band 順: 01=§0 / 02=§1 / 03=§2 / 04=§3 / 05=§4 / 06=§5 / 07=§6 / 08=照会 (前方) / 09=用語集。
+
+slots:
+  cover-summary: "folio の各 spec ファイルどうしの関係 (置き換え・参照・依存・拡張など) を、 機械が読める形で表現するための規約集です。 W3C の標準語彙 (dcterms / schema.org / PROV-O)・head の JSON-LD ブロック・全 spec を集約する inventory・双方向参照の 4 本立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の relations.html の人間向け view を機械データから生成したもので、 機械向けの詳細記述は元の relations.html を参照してください。"
+
+  chapter-lead-01: "まず読み方から。 この規約は folio を導入した各プロジェクトと folio 自身の双方に適用され、 各 spec が head の JSON-LD で宣言した関係を build 時に inventory へ集めます。 標準語彙 (§1) → 独自語彙 (§2) → markup (§3) → inventory (§4) → 双方向 (§5) の順に読みます。"
+  chapter-lead-02: "関係の表し方は、 まず W3C の既存標準語彙 (dcterms / schema.org / PROV-O) を最優先で使います。 標準で表せない関係だけを、 次の §2 で folio 独自の語彙として定義します。"
+  chapter-lead-03: "標準語彙で表せない folio 固有の関係 (依存・拡張・原則の実装) だけを、 folio: という接頭辞を付けて独自に定義します。 独自語彙を増やすときは ADR を起こし、 利用者の承認を得ます。"
+  chapter-lead-04: "各 spec は head の中に JSON-LD ブロックを 1 個必ず持ちます。 そこに関係をどう書くか — 最小例・関係込みの例・@id の書き方・試作段階での遵守レベル — をこの章が定めます。"
+  chapter-lead-05: "全 spec を 1 つに集めた索引 (inventory.json) を自動生成する設計です。 その構造・3 段階の読み込みモデル・生成のタイミング・入出力の振る舞いを定めます (索引の実体ファイルは手で作らず CLI が生成します)。"
+  chapter-lead-06: "関係は片方向だけでなく、 反対側にも書く (双方向 dual) のが望ましいという規律です。 forward 側の宣言は必須、 reverse 側は将来の tooling が自動で補う計画で、 その対象関係・先行事例・要件を定めます。"
+  chapter-lead-07: "この規約が依拠する文書の一覧です。 上位の原則 (constitution) や rules・調査レポートと、 拠り所にした W3C の標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を挙げます。"
+  chapter-lead-08: "この規約が前方照会する主要な文書を挙げます。 上位の原則 (P-x) と決定記録 (ADR) への前方照会で、 relations は照会の終わりではありません — より上位の文書へ繋がっていきます。"
+  chapter-lead-09: "本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。"
