@@ -183,7 +183,7 @@ chk "mermaid figcaption 列 == mermaid blocks.caption (順序)" \
   "$(perl -CSD -0777 -ne 'while (/<figcaption>([^<]*)<\/figcaption>/g){ print "$1\n"; }' "$BODY")"
 chk "mermaid source 行列 == mermaid blocks.source_lines (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="mermaid") | .source_lines[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<pre class="mermaid-src">(.*?)<\/pre>/gs){ my $b=$1; print "$_\n" for split(/\n/,$b,-1); }' "$BODY")"
+  "$(perl -CSD -0777 -ne 'while (/<pre class="mermaid">(.*?)<\/pre>/gs){ my $b=$1; print "$_\n" for split(/\n/,$b,-1); }' "$BODY")"
 # code 行 (全 spec-code 横断・順序)
 chk "code 行列 == code blocks.lines (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="code") | .lines[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \

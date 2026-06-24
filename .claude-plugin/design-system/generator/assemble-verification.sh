@@ -164,7 +164,8 @@ pre[data-component="spec-code"] code{font-family:ui-monospace,SFMono-Regular,Men
 [data-component="spec-table"] th{text-align:left;padding:6px 10px;background:var(--brand-tint);border:1px solid var(--line);font-size:11.5px;letter-spacing:.02em;color:var(--ink-soft)}
 [data-component="spec-table"] td{padding:6px 10px;border:1px solid var(--line);line-height:1.6;color:var(--ink)}
 figure[data-component="spec-diagram"]{margin:10px 0;border:1px solid var(--line);border-radius:10px;background:var(--paper-2);overflow:hidden}
-figure[data-component="spec-diagram"] .mermaid-src{margin:0;padding:12px 15px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.55;white-space:pre;overflow-x:auto;color:var(--ink-soft);background:var(--paper-2)}
+figure[data-component="spec-diagram"] .mermaid{margin:0;padding:12px 15px;overflow-x:auto;text-align:center}
+figure[data-component="spec-diagram"] .mermaid:not([data-processed]){font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.55;white-space:pre;text-align:left;color:var(--ink-soft);background:var(--paper-2)}
 figure[data-component="spec-diagram"] figcaption{padding:7px 15px;font-size:11.5px;color:var(--ink-faint);border-top:1px dashed var(--line);background:var(--paper)}
 .rq-list{display:flex;flex-direction:column;gap:10px;margin:8px 0}
 [data-component="ears-requirement-row"]{border:1px solid var(--line);border-left:3px solid var(--brand);border-radius:11px;padding:11px 14px;background:var(--paper);box-shadow:var(--shadow)}
@@ -228,7 +229,10 @@ emit_head() {
   printf '<title>%s</title>\n<style>\n' "$(esc "$1")"
   cat "$CSS"
   emit_spec_css
-  printf '\n</style>\n</head>\n<body>\n'
+  printf '\n</style>\n'
+  # 図 (mermaid) がある doc にだけ vendor を head に1回 load (defer・図ゼロなら何も出さない)。 ../assets/mermaid.min.js を参照。
+  [[ "${HAS_MERMAID:-0}" -gt 0 ]] && printf '<script src="../assets/mermaid.min.js" defer></script>\n'
+  printf '</head>\n<body>\n'
 }
 
 emit_cover() {
@@ -272,11 +276,20 @@ emit_table() {
   printf '</tbody></table></div>\n'
 }
 emit_mermaid() {
-  local si="$1" bi="$2"
-  printf '<figure data-component="spec-diagram" class="diagram"><pre class="mermaid-src">'
+  local si="$1" bi="$2" cap
+  # ★render target = <pre class="mermaid"> (head の mermaid.min.js が SVG 描画する) + raw DSL を逐語保持 (round-trip 維持)。
+  #   旧 <pre class="mermaid-src"> は raw DSL を露出するだけで描画されず gate I blocker (図の約束と実体が乖離) だった。
+  printf '<figure data-component="spec-diagram" class="diagram"><pre class="mermaid">'
   local first=1
   while IFS= read -r line; do [[ "$first" -eq 1 ]] && first=0 || printf '\n'; printf '%s' "$(esc "$line")"; done < <(q ".sections[$si].blocks[$bi].source_lines[]")
-  printf '</pre><figcaption>%s</figcaption></figure>\n' "$(esc "$(q ".sections[$si].blocks[$bi].caption // \"\"")")"
+  printf '</pre>'
+  # figcaption: contract の caption を優先。 空なら DSL 内の accDescr → accTitle を fallback 抽出 (gate I が figcaption 空を指摘・両者とも SSoT 由来)。
+  cap="$(q ".sections[$si].blocks[$bi].caption // \"\"")"
+  if [[ -z "$cap" ]]; then
+    cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accDescr:[[:space:]]*//p' | head -1)"
+    [[ -z "$cap" ]] && cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accTitle:[[:space:]]*//p' | head -1)"
+  fi
+  printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
 }
 emit_subhead() {
   printf '<div data-component="spec-subhead"><h3>%s</h3><p class="sub-se">%s</p></div>\n' \
@@ -412,8 +425,44 @@ emit_footer() {
   core_emit_footer '<span>folio design system</span><span>spec-pack (verification fork)</span><span>folio engine tr0</span><span>EARS 章立て + 非終端 照会 + 機械層 demoted</span>'
 }
 
+# 図がある doc にだけ mermaid.initialize を1回 emit (原本 relations.html を mirror: startOnLoad:false + DOMContentLoaded run・base theme・横スクロール図 keyboard-focus 化)。
+#   ★契約は startOnLoad:true と記すが、 原本が verified に動く startOnLoad:false + mermaid.run() を優先 (defer load 後の確実な run)。 figure ゼロなら何も出さない。
+emit_mermaid_script() {
+  [[ "${HAS_MERMAID:-0}" -gt 0 ]] || return 0
+  cat <<'MJS'
+<script>
+window.addEventListener('DOMContentLoaded', async () => {
+  if (!window.mermaid) return;
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'antiscript',
+    theme: 'base',
+    flowchart: { useMaxWidth: false },
+    themeVariables: {
+      primaryColor: '#2a4d6e',
+      primaryTextColor: '#ffffff',
+      lineColor: '#2a4d6e',
+      secondaryColor: '#5ac8b8',
+      tertiaryColor: '#f5f8fa'
+    }
+  });
+  try { await mermaid.run(); } catch (e) {}
+  document.querySelectorAll('figure.diagram > pre.mermaid').forEach((p) => {
+    if (p.scrollWidth > p.clientWidth + 1) {
+      p.tabIndex = 0;
+      p.setAttribute('role', 'region');
+      const t = p.querySelector('svg title');
+      if (t && t.textContent) p.setAttribute('aria-label', t.textContent + ' (横スクロール可能な図)');
+    }
+  });
+});
+</script>
+MJS
+}
 build() {
   local nsec si
+  # 図 (mermaid block) が1つ以上ある doc にだけ mermaid vendor + initialize を1回 emit (図ゼロなら script 無し)。 emit_head/foot が参照。
+  HAS_MERMAID="$(q '[.sections[].blocks[]? | select(.type=="mermaid")] | length')"
   emit_head "$(q '.meta.title')"
   printf '<div class="page" data-component="requirement-type-color-tokens">\n'
   emit_cover
@@ -432,6 +481,7 @@ build() {
   band_end
   printf '</div>\n'
   emit_footer
+  emit_mermaid_script
   printf '</body>\n</html>\n'
 }
 
