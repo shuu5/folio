@@ -1,0 +1,34 @@
+# glossary.rolemap.yaml — glossary-pack (doc_type: glossary) の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表 (照会 = 抽象ロール graph) を glossary-pack の具体 node-type へ写像する pack 側 SSoT
+# (詳細は srs.rolemap.yaml / spec.rolemap.yaml 冒頭注記)。 core (lib/graph-common.sh) の reader が読み、
+# verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: reachability の edge / 終端 node / external-ref を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★glossary の hallmark = canonical-name SSoT (P-5) を実装根拠に *前方照会* する非 edgeless node。
+#   spec-pack 同型: constitution P-x への前方 edge = role implementation を 1 件以上宣言する
+#   (edge-bearing pack = floor 武装解除ガードの対象)。 この 1 本が glossary → FOLIO-CONSTITUTION 終端への
+#   到達を張り、 glossary を照会 graph で終端完備にする (self-dogfood)。
+pack: glossary
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+roles:
+  principle_edge: implementation # constitution (P-5) への前方照会 edge の node-type (= glossary→principle)
+
+# 前方 cross-doc 照会 edge。 graph.principle_edge が constitution (FOLIO-CONSTITUTION 終端) へ向かう。
+edges:
+  - from_node: principle_edge            # roles[principle_edge] = implementation が edge.role の期待値 (二重担保)
+    role_expr: '.graph.principle_edge.role'         # corpus 側の edge role (= implementation)
+    count_expr: '[.graph.principle_edge] | length'  # |edges| = 1 (空 role 検出・vacuum ガード)
+    target_docid_expr: '.graph.principle_edge.target_doc_id'  # 照会先 doc の doc_id (FOLIO-CONSTITUTION)
+    direction: forward                     # glossary→constitution は toward-terminal の順 (reachability そのまま)
+
+# glossary は照会終端 node を *持たない* (constitution = principle pack が終端)。 reachability は edge で constitution へ到達する。
+terminal: {}
+
+# contract外 (folio-self) を指す前方照会 = external-ref warn (B6 で実在/reverse 解決)。 現状なし。
+external: []
+
+forbidden_roles: []

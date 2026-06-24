@@ -1,0 +1,343 @@
+# folio-glossary.glossary.yaml — machine SSoT for the glossary-pack instance #1 (folio self-host)
+# doc_type: glossary (canonical vocabulary). The most "terminal/lookup" doc-type for the generator:
+# no chapters/EARS — a flat set of dual-audience term entries. Source SSoT (read-only):
+#   - architecture/vocabulary.yaml  (terms[].canonical / domain / definition)
+#   - architecture/glossary.html    (dt id="term-<slug>" + dd)
+# Each term is dual-audience: human layer = plain definition (prose slot, opus-authored);
+# machine layer = structured record (canonical en・slug/anchor term-<slug>・JSON-LD schema:DefinedTerm・
+# cross-doc anchors data-xref-target) in a native <details> fold.
+# Schema mirrors srs/adr/spec conventions: cover + terms[] (no chapters; terms are the body).
+# fabrication-free: every visible token derives from this contract. plain definitions live in the
+# prose manifest (folio-glossary.prose.yaml) and are injected by inject-prose.sh (core, unmodified).
+doc_type: glossary
+doc_id: folio-glossary
+title: "folio glossary — canonical vocabulary"
+version: "1.1.0"
+source_spec: "architecture/glossary.html"
+source_vocab: "architecture/vocabulary.yaml"
+term_set_id: "folio:glossary"
+term_set_name: "folio canonical vocabulary"
+# graph node 識別 + 前方照会 (verify-graph.sh が読む graph メタ・HTML には render しない)。
+# spec-pack 同型: meta.doc_id = 大文字 graph node ID、 cross_doc_refs = principle 終端 (P-5 canonical naming) への
+# 前方照会。 glossary は canonical-name の SSoT ゆえ P-5 (constitution) を実装根拠として前方照会する非 edgeless node。
+meta:
+  doc_id: "FOLIO-GLOSSARY"
+  doc_type: "glossary"
+  # cover-head / cover-tail (core_emit_cover_head / _tail) が読む cover の SSoT
+  # (spec-pack 同型: graph node 識別の doc_id/doc_type と cover メタを同居)。
+  title: "folio glossary"
+  eyebrow_left: "用語集 (Glossary)"
+  eyebrow_right: "folio — canonical vocabulary"
+  subtitle: "folio-framework 語の canonical 定義集 — 非エンジニアにも届く平易定義 + 機械可読 term レコードの dual-audience 用語集"
+  version: "1.1.0"
+  reader: "folio を読む全ての人 — 非エンジニアの読者と、 用語を参照する機械 (CLI / 他 spec の .term) の双方"
+cross_doc_refs:
+  - rel: "constitution"
+    target: "P-5"
+    note: "canonical naming principle — glossary が canonical-name SSoT を担う実装根拠"
+# graph.principle_edge — verify-graph.sh が読む前方照会 edge (spec-pack 同型)。 cross_doc_refs (上) は
+# human 可読の照会記述、 こちらは graph reader が消費する機械 edge (role=implementation・target=FOLIO-CONSTITUTION 終端)。
+# glossary は canonical-name SSoT として P-5 (constitution) を実装根拠に前方照会する非 edgeless node ゆえ
+# principle 終端へ到達する edge を 1 本張る (rolemap/glossary.rolemap.yaml edges[] と二重担保)。
+graph:
+  principle_edge:
+    target_doc_id: "FOLIO-CONSTITUTION"
+    role: "implementation"
+cover:
+  # eyebrow / title / subtitle / reader / cover-summary は .meta.* (core cover-head/_tail) が SSoT。
+  # ここは bespoke の cover-meta dl (verify-glossary §6 が .cover.meta[] を突合) のみを持つ。
+  meta:
+    - label: "doc-type"
+      value: "glossary (用語集)"
+    - label: "status"
+      value: "active"
+    - label: "version"
+      value: "1.1.0"
+    - label: "用語数"
+      value: "33"
+    - label: "読了目安"
+      value: "約 12 分"
+footer:
+  gen_meta: "folio design-system generator — glossary-pack (instance #1 / folio self-host)"
+# approval-block (core_emit_approval_block) — doc-meta 形 (spec-pack 同型)。 用語集は
+# vocabulary.yaml SSoT から派生する自己適用ゆえ stamp は self (= 承認済以外) で表示される。
+approval:
+  - role: "文書種別"
+    who: "glossary (canonical vocabulary)"
+    when: "v1.1.0"
+    stamp: "active"
+  - role: "生成 (engine glossary-pack)"
+    who: "folio design system"
+    when: "2026-06-24 生成"
+    stamp: "生成"
+# chrome glossary-term-table (core emit_glossary) — 主題語 terms[] とは別。 用語集ページ自体の
+# 構造 (dual-audience / 機械層) を読み解くための doc-mechanics 補助語 (非エンジニアの道標)。
+glossary:
+  - term: "dual-audience"
+    en: "dual-audience"
+    def: "1 つのページを、 人が読む平易な説明と機械が読む正確な記録の両方に使う作り。 この用語集では各語が平易定義 (人) と term レコード (機械) を併せ持つ。"
+  - term: "machine layer"
+    en: "machine layer"
+    def: "各語の折り畳み (details) の中にある、 機械が参照するための構造化記録 (正式名・anchor・domain・JSON-LD)。"
+  - term: "self-host"
+    en: "self-host"
+    def: "folio が自分自身の言葉を folio のやり方で記述すること。 この用語集は folio 語を folio の generator で生成した自己適用 (dogfood) の一例。"
+terms:
+  - canonical: "spec"
+    en: "spec"
+    slug: "spec"
+    domain: "folio-closed"
+    formal_def: "WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。"
+    plain_slot: "plain-spec"
+    cross_refs:
+      - "P-3"
+      - "P-7"
+  - canonical: "ADR"
+    en: "ADR"
+    slug: "ADR"
+    domain: "folio-closed"
+    formal_def: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。"
+    plain_slot: "plain-ADR"
+    cross_refs:
+      - "rules §10.3"
+  - canonical: "constitution"
+    en: "constitution"
+    slug: "constitution"
+    domain: "folio-closed"
+    formal_def: "folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。"
+    plain_slot: "plain-constitution"
+    cross_refs:
+      - "P-10"
+  - canonical: "invariant"
+    en: "invariant"
+    slug: "invariant"
+    domain: "folio-closed"
+    formal_def: "spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。"
+    plain_slot: "plain-invariant"
+    cross_refs: []
+  - canonical: "inventory"
+    en: "inventory"
+    slug: "inventory"
+    domain: "folio-closed"
+    formal_def: "architecture 全 spec を <head> JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。"
+    plain_slot: "plain-inventory"
+    cross_refs:
+      - "REQ-VER-010"
+  - canonical: "prime"
+    en: "prime"
+    slug: "prime"
+    domain: "folio-closed"
+    formal_def: "inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。"
+    plain_slot: "plain-prime"
+    cross_refs:
+      - "REQ-VER-012"
+  - canonical: "cluster"
+    en: "cluster"
+    slug: "cluster"
+    domain: "folio-closed"
+    formal_def: "architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。"
+    plain_slot: "plain-cluster"
+    cross_refs:
+      - "P-7"
+      - "folio-self-spec §2"
+  - canonical: "vocabulary"
+    en: "vocabulary"
+    slug: "vocabulary"
+    domain: "folio-closed"
+    formal_def: "folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。"
+    plain_slot: "plain-vocabulary"
+    cross_refs:
+      - "P-5"
+  - canonical: "SSoT"
+    en: "SSoT"
+    slug: "SSoT"
+    domain: "folio-closed"
+    formal_def: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。"
+    plain_slot: "plain-SSoT"
+    cross_refs: []
+  - canonical: "dual-audience"
+    en: "dual-audience"
+    slug: "dual-audience"
+    domain: "folio-closed"
+    formal_def: "1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。"
+    plain_slot: "plain-dual-audience"
+    cross_refs:
+      - "ADR-0033"
+  - canonical: "data-audience"
+    en: "data-audience"
+    slug: "data-audience"
+    domain: "folio-closed"
+    formal_def: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。"
+    plain_slot: "plain-data-audience"
+    cross_refs: []
+  - canonical: "EARS"
+    en: "EARS"
+    slug: "EARS"
+    domain: "folio-closed"
+    formal_def: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。"
+    plain_slot: "plain-EARS"
+    cross_refs: []
+  - canonical: "essence"
+    en: "essence"
+    slug: "essence"
+    domain: "folio-closed"
+    formal_def: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。"
+    plain_slot: "plain-essence"
+    cross_refs:
+      - "rules §9.2"
+      - "P-7"
+  - canonical: "dogfood"
+    en: "dogfood"
+    slug: "dogfood"
+    domain: "folio-closed"
+    formal_def: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。"
+    plain_slot: "plain-dogfood"
+    cross_refs: []
+  - canonical: "floor"
+    en: "floor"
+    slug: "floor"
+    domain: "folio-closed"
+    formal_def: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。"
+    plain_slot: "plain-floor"
+    cross_refs:
+      - "ADR-0028"
+  - canonical: "ceiling"
+    en: "ceiling"
+    slug: "ceiling"
+    domain: "folio-closed"
+    formal_def: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。"
+    plain_slot: "plain-ceiling"
+    cross_refs:
+      - "ADR-0028"
+  - canonical: "xref"
+    en: "xref"
+    slug: "xref"
+    domain: "folio-closed"
+    formal_def: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。"
+    plain_slot: "plain-xref"
+    cross_refs:
+      - "ADR-0034"
+  - canonical: "defined-object"
+    en: "defined-object"
+    slug: "defined-object"
+    domain: "folio-closed"
+    formal_def: "一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。"
+    plain_slot: "plain-defined-object"
+    cross_refs: []
+  - canonical: "canonical name"
+    en: "canonical name"
+    slug: "canonical-name"
+    domain: "folio-closed"
+    formal_def: "1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。"
+    plain_slot: "plain-canonical-name"
+    cross_refs:
+      - "P-5"
+  - canonical: "progressive disclosure"
+    en: "progressive disclosure"
+    slug: "progressive-disclosure"
+    domain: "folio-closed"
+    formal_def: "情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。"
+    plain_slot: "plain-progressive-disclosure"
+    cross_refs: []
+  - canonical: "caller-marker"
+    en: "caller-marker"
+    slug: "caller-marker"
+    domain: "folio-closed"
+    formal_def: "spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。"
+    plain_slot: "plain-caller-marker"
+    cross_refs:
+      - "ADR-0006"
+  - canonical: "gate"
+    en: "gate"
+    slug: "gate"
+    domain: "folio-closed"
+    formal_def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。"
+    plain_slot: "plain-gate"
+    cross_refs:
+      - "rules §10.2"
+      - "REQ-VER-023"
+  - canonical: "marker"
+    en: "marker"
+    slug: "marker"
+    domain: "folio-closed"
+    formal_def: "HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。"
+    plain_slot: "plain-marker"
+    cross_refs: []
+  - canonical: "golden"
+    en: "golden"
+    slug: "golden"
+    domain: "folio-closed"
+    formal_def: "期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。"
+    plain_slot: "plain-golden"
+    cross_refs:
+      - "REQ-VER-004"
+  - canonical: "keystone"
+    en: "keystone"
+    slug: "keystone"
+    domain: "folio-closed"
+    formal_def: "機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。"
+    plain_slot: "plain-keystone"
+    cross_refs: []
+  - canonical: "frozen"
+    en: "frozen"
+    slug: "frozen"
+    domain: "folio-closed"
+    formal_def: "accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。"
+    plain_slot: "plain-frozen"
+    cross_refs:
+      - "P-10"
+  - canonical: "chrome"
+    en: "chrome"
+    slug: "chrome"
+    domain: "folio-closed"
+    formal_def: "folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。"
+    plain_slot: "plain-chrome"
+    cross_refs:
+      - "ADR-0039 §2.3"
+  - canonical: "curated region"
+    en: "curated region"
+    slug: "curated-region"
+    domain: "folio-closed"
+    formal_def: "marker の内側を人間が author し、 folio build が verbatim に往復保全する領域 (nav-curated / landing-hero)。 chrome と所有の向きが逆。"
+    plain_slot: "plain-curated-region"
+    cross_refs: []
+  - canonical: "remediate"
+    en: "remediate"
+    slug: "remediate"
+    domain: "folio-closed"
+    formal_def: "validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。"
+    plain_slot: "plain-remediate"
+    cross_refs:
+      - "rules §11.2"
+  - canonical: "fold"
+    en: "fold"
+    slug: "fold"
+    domain: "folio-closed"
+    formal_def: "details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。"
+    plain_slot: "plain-fold"
+    cross_refs: []
+  - canonical: "sandbox"
+    en: "sandbox"
+    slug: "sandbox"
+    domain: "folio-closed"
+    formal_def: "tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。"
+    plain_slot: "plain-sandbox"
+    cross_refs:
+      - "ADR-0013"
+      - "ADR-0017"
+  - canonical: "harness"
+    en: "harness"
+    slug: "harness"
+    domain: "folio-closed"
+    formal_def: "scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。"
+    plain_slot: "plain-harness"
+    cross_refs:
+      - "REQ-VER-011"
+  - canonical: "landing"
+    en: "landing"
+    slug: "landing"
+    domain: "folio-closed"
+    formal_def: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。"
+    plain_slot: "plain-landing"
+    cross_refs:
+      - "ADR-0039 §2.2"
