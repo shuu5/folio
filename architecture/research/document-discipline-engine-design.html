@@ -82,8 +82,8 @@
     <tr><td>B2</td><td>folio-5ua</td><td>core 抽出 (非破壊・共有 lib/ へ)</td><td>完了</td></tr>
     <tr><td>B3</td><td>folio-ar1</td><td>instance#3 = research pack (rule-of-three 止め時 MET)</td><td>完了</td></tr>
     <tr><td>B4</td><td>folio-igv</td><td>instance#4 = principle / constitution pack (本 §9)</td><td>完了</td></tr>
-    <tr><td>B5</td><td>folio-983</td><td>照会 graph 終端完備 + HOW-outside enforcement 機構 (本 §10)</td><td>設計合意</td></tr>
-    <tr><td>B6</td><td>folio-qf1</td><td>folio self dogfood (endgame)</td><td>未着手</td></tr>
+    <tr><td>B5</td><td>folio-983</td><td>照会 graph 終端完備 + HOW-outside enforcement 機構 (本 §10・ADR-0043 昇格)</td><td>完了</td></tr>
+    <tr><td>B6</td><td>folio-qf1</td><td>folio self dogfood (endgame・spec-pack 自己 self-host)</td><td>完了</td></tr>
     <tr><td>c5r</td><td>folio-c5r</td><td>post-B6 完全 doc-suite 被覆 + suite demo grill (本 §11)</td><td>進行中</td></tr>
   </tbody>
 </table>
@@ -239,16 +239,16 @@
     <tr><td>① 母体ドメイン</td><td>clinic 一本</td><td>EC (SRS-pack) とは別ドメインを母体に suite を組み、 generator の汎用性を別 consumer で実証する。</td></tr>
     <tr><td>② 段階4 walk の順序</td><td>二段 (索引型先行 → 記述型後追い)</td><td>索引型 (SRS / ADR / research / glossary / test-cases) を先に歩き、 記述型 (architecture / vision) を後で追う。 要件索引型を脱した descriptive pack が engine フロンティア。</td></tr>
     <tr><td>③ vision の扱い</td><td>含む (段階3 architecture の後)</td><td>記述型 2 例目として vision pack を suite に入れる (<code>folio-c5r.4</code>)。</td></tr>
-    <tr><td>④ constitution</td><td>機械的にゼロ生成 + cross-doc 重複検出 (floor) + 要否は人間最終判断</td><td>constitution を「翻訳して必ず入れる」のでなく、 あえてゼロ生成し SRS goals 等との重複を機械検出して人間に提示する。 検出が clean でも最終判断は人間。</td></tr>
+    <tr><td>④ constitution</td><td>一律機械的に生成 + SRS との重複検出 → warning + folio 適用可否は人間</td><td>constitution を生成するか否かを engine に判断させない (一律生成 = 冪等)。 生成物が SRS goals 等と重複していないかを検出し、 重複が多ければ人間に warning を出す。 重複の多寡から folio 適用可否を人間が最終判断する。 検出が clean でも「必要の証明」ではない。</td></tr>
     <tr><td>⑤ 段階4 合格条件</td><td>三層 (機械 floor / ceiling / 人間最終判断)</td><td>floor = graph 双方向 + 重複検出、 ceiling = persona (gate I) + fidelity (gate J)、 その上に人間の最終判断を必ず置く。</td></tr>
   </tbody>
 </table>
 
 <h3 id="s11-1-pivot">§11.1 哲学転換 — 「判断する engine」を作らない</h3>
-<p>論点④ で当初案『constitution を機械的に必ず生成する』と『要否を engine が判断する』の両極を退け、 <strong>engine = 確実な生成器 + 機械的検出 (floor・冪等)</strong> / <strong>doc-type の要否判断は engine に作り込まず人間に委ねる (ceiling・事後)</strong> という分担に合意した。 理由は二つ: 「要否を判断する engine」は同じ入力に別の出力を返しうるため <strong>冪等性</strong>を壊す。 また判断ロジックを正しく作り込むのは原理的に難しい。 代わりに engine は <strong>判断材料 (cross-doc 重複)</strong> を機械的に可視化し、 人間に判断を促す (黙って判断しない)。 ★重要な含意: <strong>検出機構に引っかからなくても最終判断は人間である</strong> — 「重複が見つからなかった」は「その doc-type が必要だ」の証明ではない。 これは folio の <strong>「floor 緑 ≠ 完成」</strong> (機械 floor は『検査できた範囲が緑』) という教訓を、 doc-type の要否判断そのものへ適用したものである。 作ってみて『重複していて要らなそうだ』と分かれば、 その project は folio を使わなくてよいと人間が決めればよく、 judgment を engine の機能として作り込まない。</p>
+<p>論点④ で『engine が constitution の要否を判断する』案を退け、 <strong>constitution は一律機械的に生成する</strong>ことにした。 要否で生成可否を分岐させると同じ入力に別の出力を返し <strong>冪等性</strong>を壊すうえ、 判断ロジックを正しく作り込むのも原理的に難しいからである。 その上で <strong>engine = 確実な生成器 + 機械的検出 (floor・冪等)</strong> / <strong>要否の最終判断は engine に作り込まず人間に委ねる (ceiling・事後)</strong> という分担に合意した。 engine は生成した constitution が SRS と重複していないかを検出し、 重複が多ければ <strong>warning を出す</strong> (= 判断材料の可視化・黙って判断しない)。 ★重要な含意: <strong>検出が clean でも「必要の証明」ではなく、 最終判断は人間である</strong>。 重複が多ければ『このプロジェクトは constitution 級の統治構造を持たない』と人間が読み取り、 folio をそのプロジェクトに適用しない判断をすればよい。 これは folio の <strong>「floor 緑 ≠ 完成」</strong> (機械 floor は『検査できた範囲が緑』) という教訓を doc-type の要否判断そのものへ適用したものであり、 judgment を engine の機能として作り込まない。</p>
 
 <h3 id="s11-2-constitution-demo">§11.2 constitution 必然性 = 統治構造の scale 依存</h3>
-<p>constitution が必然か人工的かは <strong>統治構造 (governance) の有無 = project の scale</strong> で決まる。 folio 自身は複数 consumer を統べる META FRAMEWORK ゆえ constitution が必然である (既存の不変原則 14 条)。 一方 clinic は単一システムで、 constitution を立てると SRS goals と重複し人工的になる。 この対比を実証するデモ (clinic constitution をあえてゼロ生成 → 重複検出 → 人間が不要と判断) は follow-up <code>folio-c5r.2</code>、 その基盤となる cross-doc 重複検出 lint は <code>folio-c5r.1</code> で実装する。 constitution を統治構造の scale 軸で位置づける research note 化は <code>folio-dxq</code> が担う。 folio の constitution は read-only な写像 (翻訳) であり、 ゼロ生成デモは clinic 側で行う。</p>
+<p>constitution が必然か人工的かは <strong>統治構造 (governance) の有無 = project の scale</strong> で決まる。 folio 自身は複数 consumer を統べる META FRAMEWORK ゆえ constitution が必然である (既存の不変原則 14 条)。 一方 clinic は単一システムで、 constitution を立てると SRS goals と重複し人工的になる。 この対比を実証するデモ (clinic constitution を一律生成 → SRS との重複が検出される → 人間が不要〔= folio 不適〕と判断) は follow-up <code>folio-c5r.2</code>、 その基盤となる cross-doc 重複検出 lint は <code>folio-c5r.1</code> で実装する。 constitution を統治構造の scale 軸で位置づける research note 化は <code>folio-dxq</code> が担う。 folio の constitution は read-only な写像 (翻訳) であり、 一律生成デモは clinic 側で行う。</p>
 </section>
 
 <!-- folio:chrome-bottom -->
