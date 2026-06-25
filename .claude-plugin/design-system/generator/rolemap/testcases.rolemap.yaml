@@ -1,0 +1,50 @@
+# testcases.rolemap.yaml — test-cases-pack (doc_type: test-cases) の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表 (照会 = 抽象ロール graph) を test-cases-pack の具体 node-type へ写像する pack 側 SSoT
+# (詳細は srs.rolemap.yaml / adr.rolemap.yaml 冒頭注記)。 core (lib/graph-common.sh) の reader が読み、
+# verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: reachability の edge / 終端 node / external-ref を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★test-cases の hallmark = 三段 trace の前方照会: test case (verification) が SRS の要件 (claim) と
+#   受入基準 (verification) を *前方照会* する (ADR→SRS と同型の片方向 cross-doc)。 ゆえ edge-bearing pack。
+#   ★この rolemap は本 cell (folio-uvt) の時点で verify-graph.sh に *完全配線済み* (CI gate)。 verify-graph.sh は
+#   contract/*.yaml を無条件 glob し graph_pack_of でファイル名から pack=testcases を導出して同名 rolemap を
+#   発見・必須化するため、 新設と同時に pass-1 floor pin (edge.role == roles[test_cases]=verification) +
+#   forbidden_roles=[exploration] を *常時* 課される (opt-in registry ではない)。 ゆえ本 rolemap は floor を
+#   通すこと自体が受入条件 = role_expr は照会先 ID 列でなく source node (test_cases) の intrinsic role token
+#   (verification) を |edges| 回 emit する (下 edges[] 注記)。 ★pass-2 reachability では test-cases は SRS を
+#   前方照会するが SRS 自身が principle 終端に未到達ゆえ TC-CLINIC-APPT は孤立 advisory WARN になる
+#   (SRS-EC-CHECKOUT と同型・exit 0 を割らない)。 principle 終端まで到達する graph 終端完備化は段階4 (folio-rqj) 領分。
+pack: testcases
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# test_cases = verification (満たせたと確かめる試験)。 前方照会先 (SRS の FR/AC) の役割は照会先 pack (srs) が持つ。
+roles:
+  test_cases: verification   # テストケース = 要件が満たせたと確かめる検証手段
+
+# 前方 cross-doc 照会 edge。 test_cases[].trace.{verifies,confirms} が SRS (SRS-CLINIC-APPT) の
+# 要件 (claim) / 受入基準 (verification) へ向かう。 ADR→SRS と同型ゆえ direction: backward
+# (test-cases→SRS だが reachability は SRS→test-cases。 局所の FR/AC 実在検証は verify-testcases.sh が担う)。
+edges:
+  - from_node: test_cases               # roles[test_cases] = verification が edge.role の期待値 (二重担保)
+    # ★edge.role token = *source node-type (test_cases) の intrinsic role* = verification を |edges| 回 emit
+    #   (adr の '.decision.justifies[].role'→claim / glossary の '.graph.principle_edge.role'→implementation と同型。
+    #    edge role token は source 役割を表し floor pin = roles[from_node] が照合する)。 ★照会先 ID 列 (FR/AC) は
+    #    role_expr ではなく verify-testcases.sh の verify_cross_doc_refs (cross-doc set 検証) が別経路で扱う。
+    role_expr: '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | map("verification") | .[]'  # source 役割 (verification) を |edges| 回
+    count_expr: '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length'  # |edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'   # 照会先 doc の doc_id (graph dangling 用)
+    direction: backward                  # test-cases→SRS は toward-terminal の逆 (reachability は SRS→test-cases)
+
+# この pack が持つ照会終端 node。 test-cases は終端を持たない (SRS / constitution が終端側)。 reachability は edge で SRS へ到達する。
+terminal: {}
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 test-cases には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 test-cases は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration node / 探索 edge 不在」を scan で実証。
+forbidden_roles:
+  - exploration

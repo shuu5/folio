@@ -1,0 +1,187 @@
+# folio engine 段階2c (folio-uvt) — test-cases-pack 入力 contract インスタンス (instance#6 / rule-of-three)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT と同一ドメイン)。
+# doc-type = test-cases (テストケース仕様)。SRS generator と同型の機構 (決定的 assembler + opus prose + 2-gate)
+# を test-cases-pack schema (scope / test_cases[] / trace / glossary) へ適用する。
+#
+# ★この pack の核 = 三段 trace + cross-doc 前方照会 (inter-doc cross-ref):
+#   各 test case が「どの要件 (FR) を / どの受入基準 (AC) で」検証するかを SRS-CLINIC-APPT へ *前方照会* し、
+#   verify-testcases.sh が参照先 SRS contract に当該 FR/AC ID が実在することを fail-closed で確かめる
+#   (B0 论点2 抽象ロール graph: test_cases=verification / 照会先 requirements=claim・acceptance=verification)。
+#   三段 = 要件(FR・claim) → 受入(AC・verification) → test case。集合外参照は fail-closed。
+#
+# 読者 = クリニックの事業責任者 (医療コーディング・IT・テスト技法の専門知識なし。専門語は必ずやさしい言葉を併記)。
+# 人間層 = 「この機能が正しいと言える条件 / 何を試すか」を平易に。
+# 機械層 = 詳細手順 (前提・操作・期待結果) + 三段 trace + JSON-LD。
+#
+# fabrication-free: 全 visible token は本 contract 由来。 plain 要約のみ prose スロットで後注入。
+# core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three・純粋 pack 挿入)。
+
+doc_type: test-cases
+
+meta:
+  doc_id: TC-CLINIC-APPT
+  doc_type: test-cases
+  title: 診療予約の仕組みが「正しく動く」と言える条件を、 試す手順とともに 1 件ずつ書き出す
+  eyebrow_left: テストケース仕様 (Test Cases)
+  eyebrow_right: クリニック — 診療予約
+  subtitle: 要件のひとつひとつに「合格の確かめ方」を結びつけ、 何を・どう試せば正しいと言えるかを示す
+  version: "1.0"
+  date: "2026-06-24"
+  reader: クリニックの事業責任者 — 医療コーディングや IT・テスト技法の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+
+# 承認記録 (SRS / ADR と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-24 承認
+    stamp: 承認済
+  - role: レビュー (事務長)
+    who: 鈴木 大輔
+    when: 2026-06-23 レビュー
+    stamp: レビュー済
+  - role: 作成 (受付業務担当)
+    who: 受付チーム
+    when: 2026-06-22 起票
+    stamp: 作成
+
+# ★cross-doc 前方照会の解決先 (verify-testcases.sh が参照先 SRS contract を読み込み、 test_cases の trace に
+#   現れる FR/AC ID 実在を確かめる)。srs_contract は contract/ dir 起点の相対パス。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_title: 診療予約システム SRS (診療の予約を空き枠どおり・二重予約なく受け付ける仕組み)
+
+# 01 このテスト仕様の範囲 (scope-summary-panel)。何を試し、 何を試さないか。
+scope:
+  in:
+    - 空き枠の確認・予約受付・競合時の確定・診療時間外の拒否
+    - 予約変更/キャンセルによる枠開放・前日リマインドの送付
+    - 受付時の本人確認の差し戻し (取り違え防止)
+  out:
+    - 診察内容・カルテ・会計・診療報酬の正しさ
+    - 通知サービス自体の到達保証 (外部サービスの責務)
+    - 性能・稼働率の負荷試験 (NFR は別途の試験計画で扱う)
+
+# 02 テストケース (testcase-card)。各ケースは決定的に組立てられ、 trace が SRS へ前方照会する。
+#   kind ∈ {正常系, 異常系, 境界値}。priority ∈ {must, should}。
+#   trace.verifies = 検証する要件 (FR・role=claim) / trace.confirms = 確かめる受入基準 (AC・role=verification)。
+#   verifies/confirms の各 ID は cross_doc.srs_contract の .requirements[].id / .acceptance[].id に実在すること。
+test_cases:
+  - id: TC1
+    title: 空き枠の確認が、 その枠の本当の残り人数を返す
+    kind: 正常系
+    priority: must
+    precondition: ある診療枠の受け入れ可能人数のうち、 残りが 2 人ぶん空いている。
+    steps:
+      - 患者が日時を選び、 その枠の空きを問い合わせる。
+      - システムが診療カレンダーからその枠の残り人数を取り出す。
+    expected: その枠の空き枠が「残り 2」と表示され、 満枠とは表示されない。
+    trace:
+      verifies: [FR1]
+      confirms: [AC1]
+  - id: TC2
+    title: 空いている枠を選んで申し込むと、 1 件だけ確保して確定する
+    kind: 正常系
+    priority: must
+    precondition: ある診療枠に、 まだ受け入れの空きがある。
+    steps:
+      - 患者がその空いている枠を選んで予約を申し込む。
+      - システムがその枠を 1 件だけ確保し、 残り人数を 1 減らす。
+    expected: 予約が確定し、 確定通知が患者に返る。 残り人数がちょうど 1 減っている。
+    trace:
+      verifies: [FR2]
+      confirms: [AC1]
+  - id: TC3
+    title: 残り 1 枠に 2 人がほぼ同時に申し込んでも、 確定は 1 件だけになる
+    kind: 異常系
+    priority: must
+    precondition: ある診療枠の残りが 1 人ぶんだけで、 2 人の患者がほぼ同じ瞬間に申し込もうとしている。
+    steps:
+      - 患者 A と患者 B が、 同じ残り 1 枠にほぼ同時に予約を申し込む。
+      - システムが 2 件の申込を確定処理にかける。
+    expected: 一方だけが予約確定となり、 もう一方には満枠と表示されて確定しない。 ダブルブッキングは起きない。
+    trace:
+      verifies: [FR2, FR3]
+      confirms: [AC1]
+  - id: TC4
+    title: 診療時間外や休診日の枠への予約は、 受け付けず案内に切り替える
+    kind: 異常系
+    priority: must
+    precondition: 申し込もうとしている日時が、 その日の診療時間外、 または休診日にあたる。
+    steps:
+      - 患者が診療時間外または休診日の枠に予約を申し込む。
+      - システムが診療カレンダーで受診可能な日時かを判定する。
+    expected: 予約は受け付けられず、 受診できる別の日時が案内される。 枠外の予約は 1 件も確定しない。
+    trace:
+      verifies: [FR4]
+      confirms: [AC4]
+  - id: TC5
+    title: 予約をキャンセルすると、 空いた枠がすぐ次の人に開放される
+    kind: 正常系
+    priority: should
+    precondition: 患者が、 ある枠を予約済みの状態にある。
+    steps:
+      - 患者が自分の予約をキャンセルする。
+      - システムがその枠の残り人数を 1 戻す。
+    expected: キャンセルが受け付けられ、 空いた枠がすぐに別の患者から再予約できる状態になる。
+    trace:
+      verifies: [FR5]
+      confirms: [AC5]
+  - id: TC6
+    title: 予約日の前日になると、 リマインド通知が送られる
+    kind: 正常系
+    priority: should
+    precondition: 患者が翌日の枠を予約済みで、 連絡先の同意を得ている。
+    steps:
+      - 予約日の前日になる。
+      - システムが対象の予約を集め、 通知サービスへリマインド送付を依頼する。
+    expected: 前日のリマインド通知が患者に送付される (対象予約に対する送付率は 100%)。
+    trace:
+      verifies: [FR6]
+      confirms: [AC2]
+  - id: TC7
+    title: 本人確認に通らない予約・受付は、 確定させず差し戻す
+    kind: 異常系
+    priority: must
+    precondition: 予約や当日受付の相手が、 予約した本人であると確認できない。
+    steps:
+      - 受付スタッフが当日受付で本人確認を行う。
+      - システムが予約者と来院者の一致を確かめる。
+    expected: 本人と確認できない予約・受付は確定させず差し戻され、 別人の予約として処理されない。
+    trace:
+      verifies: [FR7]
+      confirms: [AC3]
+  - id: TC8
+    title: 満枠ちょうどの枠への追加申込は、 満枠としてはっきり断る
+    kind: 境界値
+    priority: must
+    precondition: ある診療枠の残りが 0 人ぶん (満枠) になっている。
+    steps:
+      - 患者がその満枠の枠に予約を申し込む。
+      - システムが残り人数を確かめる。
+    expected: 予約は確定せず、 満枠として患者に明示される。 黙って失敗させない。
+    trace:
+      verifies: [FR3]
+      confirms: [AC1]
+
+# 03 用語集 (glossary = 用語の SSoT。 plain_short = 本文の専門語に併記するやさしい言い換え)。
+#   glossary 語どうしは部分文字列禁止 (core_validate_glossary_substring が拒否)。
+glossary:
+  - { term: テストケース,     en: test case,       plain_short: 試し方の 1 件,        def: 「この状況で・こう操作したら・こうなるべき」を 1 件にまとめた、 正しさの確かめ方。 }
+  - { term: トレーサビリティ, en: traceability,    plain_short: 要件との結びつき,      def: どのテストがどの要件・受入基準を確かめているかを、 たどれるようにつないでおくこと。 }
+  - { term: 受入基準,         en: acceptance criteria, plain_short: 合格と言える条件, def: 「これが満たせていれば合格」と事前に決めておく、 要件ごとの確かめどころ。 }
+  - { term: 正常系,           en: normal case,     plain_short: うまくいく筋道,        def: 想定どおりに正しく使われたときに、 期待どおり動くかを確かめるテスト。 }
+  - { term: 異常系,           en: abnormal case,   plain_short: うまくいかない筋道,    def: 間違った操作や競合など、 困った状況でも安全に振る舞うかを確かめるテスト。 }
+  - { term: 境界値,           en: boundary value,  plain_short: ぎりぎりの値,          def: 「残り 0」「ちょうど満枠」など、 境目の値で正しく振る舞うかを確かめるテスト。 }
+  - { term: 診療枠,           en: appointment slot, plain_short: 予約できる時間帯,     def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
+  - { term: ダブルブッキング, en: double booking,  plain_short: 二重予約,              def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 満枠,             en: fully booked,    plain_short: 空きなし,              def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: リマインド通知,   en: reminder,        plain_short: 思い出し通知,          def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: 本人確認,         en: identity check,  plain_short: 本人かの確かめ,        def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 休診日,           en: closed day,      plain_short: 診療しない日,          def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
+  - { term: 診療時間外,       en: off hours,       plain_short: 診療していない時間,    def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
+  - { term: 診療カレンダー,   en: clinic calendar, plain_short: 診療予定表,            def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
+
+footer:
+  gen_meta: folio design-system generator — test-cases-pack (instance#6 / 三段 trace + cross-doc 前方照会)
