@@ -91,6 +91,26 @@ chk "gate D: contract 全要件/NFR の vmethod ∈ {T,A,I,D}" 0 "$(q '[(.requir
 chk "gate D: 可視 fid == data-req-id (id 乖離なし)" 0 "$(perl -ne 'while(/data-component="ears-requirement-row" data-req-id="([^"]*)".*?<span class="fid">([^<]*)<\/span>/g){ print "x\n" if $1 ne $2; }' "$BODY" | wc -l | tr -d ' ')"
 
 echo
+echo "--- navigable anchor (folio-lzz: cross-doc deep-link 着地点・案A 裸ミラー) ---"
+# referenceable node (要件/NFR/受入) が data-*-id をミラーした navigable id= を出す = arch referrer の
+# #FR*/#NFR*/#AC* が実際に着地する前提 (案A)。 id は当該 component 要素から *space-anchored* (' id="') で
+# scoped 抽出する (data-req-id / data-slot-id 等の部分一致や body chrome id を巻き込まない)。 set_eq で
+# contract node 集合と emission 順一致を要求 = id 脱落 (anchor 不在=404 復活) / 値ミラー不一致 / 偽 id 注入を一括封鎖。
+req_nav="$(grep 'data-component="ears-requirement-row"' "$BODY" | grep -oE ' id="[^"]*"' | sed 's/^ id="//; s/"$//')"
+set_eq "anchor: 要件 navigable id == contract req id" "$(q '.requirements[].id')" "$req_nav"
+nfr_nav="$(grep 'data-component="nfr-metric-row"' "$BODY" | grep -oE ' id="[^"]*"' | sed 's/^ id="//; s/"$//')"
+set_eq "anchor: NFR navigable id == contract nfr id" "$(q '.nfr[].id')" "$nfr_nav"
+ac_nav="$(grep 'class="ac"' "$BODY" | grep -oE ' id="[^"]*"' | sed 's/^ id="//; s/"$//')"
+set_eq "anchor: 受入 navigable id == contract acceptance id" "$(q '.acceptance[].id')" "$ac_nav"
+# ★folio-lzz ceiling [必須-1]: navigable id は body 全体で一意 (collision=0)。 上の set_eq は component 行しか見ないため、
+#   非 component 要素 (cover 付近の空 <a id="FR2"> 等) へ同 id を注入すると set_eq PASS のまま fragment 解決が tree-order 先頭の
+#   偽要素へ着地する fail-open があった (verify-adr の uniqueness を SRS が欠いていた)。 id 属性を *attribute-name 境界* ((?<![\w-])(?i:id) で
+#   data-req-id / data-slot-id 〔直前ハイフン〕を除外しつつ、 whitespace と HTML5 self-closing slash 〔<a/id=…〕 区切りの両方を捕捉) かつ
+#   *quote/entity/case/unquoted-robust* (count_attr_token と同規律・ceiling round-2 が slash separator を追加封鎖) に全列挙し重複 0 を要求。
+allids_dup="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n"; }' < "$BODY" | LC_ALL=C sort | LC_ALL=C uniq -d | grep -c .)"
+chk "anchor: navigable id は body 全体で一意 (collision=0・quote/entity/case-robust)" 0 "$allids_dup"
+
+echo
 echo "--- gate G: 内容完全性 (no-TBD placeholder)。 prose 全充填は --artifact 済 ---"
 # placeholder トークンを *本文全体* で語境界マッチ (セル先頭に限らず prose 中段の TBD も捕捉)。
 # 語境界 = 前後が letter/number (\p{L}\p{N}) でない位置。 これで「TODOリスト管理」「未定義」「XXXL」等の語内包含は

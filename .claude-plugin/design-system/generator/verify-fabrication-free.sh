@@ -172,7 +172,7 @@ declare -A DTY_EARS_EN=( [event]=When [state]=While [unwanted]=If-Then [ubiquito
 #     ★blocker 封鎖: fid/data-req-id を contract id と突合し 可視↔attr↔contract の三者一致を強制 (consistent rename = FR1→FR99 を封鎖)。
 exp_reqrow="$(q '.requirements[] | [.id, .ears.pattern, .priority, .vmethod] | @tsv' | while IFS=$'\t' read -r _id _pat _pr _vm; do
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$_id")" "$(esc "$_id")" "${DTY_EARS_CLASS[$_pat]}" "${DTY_EARS_LABEL[$_pat]}" "$_pr" "${DTY_PRIO_LABEL[$_pr]}" "$(esc "$_vm")"; done)"
-act_reqrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="ears-requirement-row" data-req-id="([^"]*)"><td><span class="fid">([^<]*)<\/span><\/td><td><span class="ears ([a-z]+)">([^<]*)<\/span><\/td>.*?<span class="prio ([a-z]+)" data-component="priority-badge">([^<]*)<\/span> <span class="vmeth">([^<]*)<\/span><\/td><\/tr>/g){ print "$1\t$2\t$3\t$4\t$5\t$6\t$7\n"; }' "$BODY")"
+act_reqrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="ears-requirement-row" data-req-id="([^"]*)" id="[^"]*"><td><span class="fid">([^<]*)<\/span><\/td><td><span class="ears ([a-z]+)">([^<]*)<\/span><\/td>.*?<span class="prio ([a-z]+)" data-component="priority-badge">([^<]*)<\/span> <span class="vmeth">([^<]*)<\/span><\/td><\/tr>/g){ print "$1\t$2\t$3\t$4\t$5\t$6\t$7\n"; }' "$BODY")"
 chk "within-doc: 要件行 (req-id,fid,ears,prio,vmethod) == .requirements (順序)" "$exp_reqrow" "$act_reqrow"
 # ★marker 占有数パリティ (ds8 不動点)。 (h) の row-scope タプルは非貪欲 .*? ゆえ resp セルへデコイ (第2 prio/vmeth/fid 対) を
 #   注入すると末尾の正規対を拾い可視虚偽を素通す (second-element-injection)。 占有数で塞ぐ。 ★occurrence で数える (grep -c は
@@ -307,7 +307,7 @@ act_rtmsum="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless def
 chk "within-doc: rtm-summary 可視 5 数値 == 再導出 (data-derived 属性の可視版)" "$exp_rtmsum" "$act_rtmsum"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
 exp_nfrrow="$(q '.nfr[] | [.id, .category] | @tsv' | while IFS=$'\t' read -r _id _cat; do printf '%s\t%s\n' "$(esc "$_id")" "$(esc "$_cat")"; done)"
-act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"
+act_nfrrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="nfr-metric-row" id="[^"]*"><td><span class="nid">([^<]*)<\/span><\/td><td>([^<]*)<\/td>/g){ print "$1\t$2\n"; }' "$BODY")"
 chk "within-doc: nfr 行 (nid, category) == .nfr (順序)" "$exp_nfrrow" "$act_nfrrow"
 # (j) rtm 行見出し: 可視要件 id + 行ラベル (span.lbl) を結合して順序突合 ((requirements+nfr) 順)。
 #   ★round-3 ceiling: 旧 (j) は span.lbl のみ突合し rtm 行見出しの *要件 id* (emit_rtm_fold の <tr><th>{id}{lbl}</th>) を漏らし、

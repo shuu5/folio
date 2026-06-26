@@ -139,6 +139,49 @@ cp "$TMP/base-filled.html" "$TMP/a24.html"
 perl -0777 -i -pe 's#(<div class="justify-row"><span class="justify-req" data-justifies-req="FR2".*?</div>)#$1$1#s' "$TMP/a24.html"
 expect_verify_fail_filled "A24 ★既存 justify edge の重複注入 (集合不変) を count anchor で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a24.html"
 
+# ★folio-lzz: navigable anchor (arch referrer の #decision 着地点) の fail-closed。
+# ALZZ1. decision panel の navigable id 削除 (arch の cross-doc #decision が 404 復活) → anchor gate が捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz1.html"
+perl -0777 -i -pe 's# id="decision"##' "$TMP/alzz1.html"
+expect_verify_fail_filled "ALZZ1 ★decision panel navigable id 欠落 (404 復活) を anchor gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz1.html"
+# ALZZ2. id="decision" を別要素にも注入 (HTML id collision) → anchor 一意 gate が捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz2.html"
+perl -0777 -i -pe 's#(<p class="justify-tgt")#<span id="decision">x</span>$1#' "$TMP/alzz2.html"
+expect_verify_fail_filled "ALZZ2 ★id=decision 重複注入 (double-quote collision) を anchor 一意 gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz2.html"
+# ALZZ3. ★folio-lzz ceiling [必須-2] 回帰: single-quote decoy (id='decision') → quote-robust uniqueness が捕捉
+#        (旧 double-quote リテラル grep は見逃した fail-open)。
+cp "$TMP/base-filled.html" "$TMP/alzz3.html"
+perl -0777 -i -pe "s{<body>}{<body><div id='decision'>FAKE</div>}" "$TMP/alzz3.html"
+expect_verify_fail_filled "ALZZ3 ★id=decision single-quote collision を quote-robust uniqueness で捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz3.html"
+# ALZZ4. ★数値文字参照 decoy (id="decisio&#110;" = decision) → entity-robust uniqueness が捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz4.html"
+perl -0777 -i -pe 's{<body>}{<body><div id="decisio&#110;">FAKE</div>}' "$TMP/alzz4.html"
+expect_verify_fail_filled "ALZZ4 ★id=decision 数値文字参照 collision を entity-robust uniqueness で捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz4.html"
+# ALZZ5. ★大文字 ID 属性 decoy (id 名は case-insensitive・case-robust) → uniqueness が捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz5.html"
+perl -0777 -i -pe 's{<body>}{<body><div ID="decision">FAKE</div>}' "$TMP/alzz5.html"
+expect_verify_fail_filled "ALZZ5 ★id=decision 大文字 ID 属性 collision を case-robust uniqueness で捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz5.html"
+# ALZZ6. ★ceiling round-2: HTML5 slash separator collision (<div/id="decision"> は valid な id=decision 要素)。
+#   (?<![\w-]) attribute-name 境界が / 区切り decoy を捕捉 (旧 (?<=\s) の取りこぼしを封鎖)。
+cp "$TMP/base-filled.html" "$TMP/alzz6.html"
+perl -0777 -i -pe 's{<body>}{<body><div/id="decision">FAKE</div>}' "$TMP/alzz6.html"
+expect_verify_fail_filled "ALZZ6 ★id=decision slash separator collision を attribute-name 境界 gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz6.html"
+# ALZZ7/8. ★ceiling round-3: semicolon-less 数値文字参照 collision (10進 &#110 / 16進 &#x6e = 'n' → decision)。
+#   ;? optional terminator decode が ; 無し実体を捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz7.html"
+perl -0777 -i -pe 's{<body>}{<body><div id="decisio&#110">FAKE</div>}' "$TMP/alzz7.html"
+expect_verify_fail_filled "ALZZ7 ★id=decision semicolon-less 10進実体 collision を entity-robust gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz7.html"
+cp "$TMP/base-filled.html" "$TMP/alzz8.html"
+perl -0777 -i -pe 's{<body>}{<body><div id="decisio&#x6e">FAKE</div>}' "$TMP/alzz8.html"
+expect_verify_fail_filled "ALZZ8 ★id=decision semicolon-less 16進実体 collision を entity-robust gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz8.html"
+# ALZZ9/10. ★ceiling round-4: capital-X 16進数値参照 (HTML5 は &#X.. 大文字 X も 16進)。[xX] が捕捉。
+cp "$TMP/base-filled.html" "$TMP/alzz9.html"
+perl -0777 -i -pe 's{<body>}{<body><div id="decisio&#X6e;">FAKE</div>}' "$TMP/alzz9.html"
+expect_verify_fail_filled "ALZZ9 ★id=decision capital-X 16進実体 collision を entity-robust gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz9.html"
+cp "$TMP/base-filled.html" "$TMP/alzz10.html"
+perl -0777 -i -pe 's{<body>}{<body><div id="&#X64;&#X65;&#X63;&#X69;&#X73;&#X69;&#X6f;&#X6e;">FAKE</div>}' "$TMP/alzz10.html"
+expect_verify_fail_filled "ALZZ10 ★id=decision 全 capital-X entity 綴り collision を entity-robust gate が捕捉" "$BASE_PROSE" "$BASE" "$TMP/alzz10.html"
+
 # A25. ★HTML 改竄: verdict バッジの class は正 (chosen) のまま可視ラベルだけ改竄 (採用→不採用) → 可視ラベル整合で FAIL
 #      (非エンジニアが読むのは class でなく可視文字。 class 突合だけでは fail-open)。
 cp "$TMP/base-filled.html" "$TMP/a25.html"

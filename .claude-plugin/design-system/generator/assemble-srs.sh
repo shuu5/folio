@@ -131,8 +131,8 @@ emit_req_table() {
   printf '<div class="tbl-wrap"><table data-component="requirement-matrix-table"><thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする (+ やさしい言い換え + なぜ要る)</th><th>優先/検証</th></tr></thead><tbody>\n'
   while IFS=$'\t' read -r id pat cond resp prio vmeth rsrc; do
       [[ -n "$id" ]] || continue; src_attr=""; [[ -n "$rsrc" && "$rsrc" != "null" ]] && src_attr=" data-source=\"$(esc "$rsrc")\""
-      printf '<tr data-component="ears-requirement-row" data-req-id="%s"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s" data-component="priority-badge">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
-        "$(esc "$id")" "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(mark_terms "$cond")" "$(mark_terms "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
+      printf '<tr data-component="ears-requirement-row" data-req-id="%s" id="%s"><td><span class="fid">%s</span></td><td><span class="ears %s">%s</span></td><td class="cond">%s</td><td class="resp">%s<span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span><span class="why" data-prose-slot="rationale"%s data-slot-id="rationale-%s"></span></td><td><span class="prio %s" data-component="priority-badge">%s</span> <span class="vmeth">%s</span></td></tr>\n' \
+        "$(esc "$id")" "$(esc "$id")" "$(esc "$id")" "${EARS_CLASS[$pat]}" "${EARS_LABEL[$pat]}" "$(mark_terms "$cond")" "$(mark_terms "$resp")" "$(esc "$id")" "$src_attr" "$(esc "$id")" "$prio" "${PRIO_LABEL[$prio]}" "$(esc "$vmeth")"
     done < <(q '.requirements[] | [.id, .ears.pattern, .ears.condition, .ears.response, .priority, .vmethod, (.rationale_source // "")] | @tsv')
   printf '</tbody></table></div>\n'
 }
@@ -149,7 +149,7 @@ emit_nfr_table() {
   printf '<div class="tbl-wrap"><table data-component="nfr-metrics-table"><thead><tr><th>ID</th><th>区分</th><th>目標値 (+ やさしい言い換え)</th><th>測り方</th></tr></thead><tbody>\n'
   while IFS=$'\t' read -r id categ tgt meas; do
     [[ -n "$id" ]] || continue
-    printf '<tr data-component="nfr-metric-row"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$categ")" "$(mark_terms "$tgt")" "$(esc "$id")" "$(mark_terms "$meas")"
+    printf '<tr data-component="nfr-metric-row" id="%s"><td><span class="nid">%s</span></td><td>%s</td><td><span class="tgt">%s</span><span class="plain" data-prose-slot="plain" data-slot-id="plain-%s"></span></td><td class="meas">%s</td></tr>\n' "$(esc "$id")" "$(esc "$id")" "$(esc "$categ")" "$(mark_terms "$tgt")" "$(esc "$id")" "$(mark_terms "$meas")"
   done < <(q '.nfr[] | [.id, .category, .target, .measure] | @tsv')
   printf '</tbody></table></div>\n'
 }
@@ -158,7 +158,7 @@ emit_acceptance() {
   printf '<div data-component="acceptance-criteria-checklist">\n'
   while IFS=$'\t' read -r id links crit mv ml; do
     [[ -n "$id" ]] || continue
-    printf '<div class="ac"><div class="aid">%s ← %s</div><p class="at">%s</p><div class="metric"><span class="v">%s</span><span class="l">%s</span></div></div>\n' "$(esc "$id")" "$(esc "$links")" "$(mark_terms "$crit")" "$(esc "$mv")" "$(esc "$ml")"
+    printf '<div class="ac" id="%s"><div class="aid">%s ← %s</div><p class="at">%s</p><div class="metric"><span class="v">%s</span><span class="l">%s</span></div></div>\n' "$(esc "$id")" "$(esc "$id")" "$(esc "$links")" "$(mark_terms "$crit")" "$(esc "$mv")" "$(esc "$ml")"
   done < <(q '.acceptance[] | [.id, (.links | join("/")), .criterion, (.metric_v // ""), (.metric_l // "")] | @tsv')
   printf '</div>\n'
 }

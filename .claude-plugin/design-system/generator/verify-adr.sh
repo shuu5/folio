@@ -176,6 +176,17 @@ chk "cover-meta 結果 == 良い/トレードオフ件数"  "$(esc "良い $(q '
 chk "cover-meta 版 == vX / date"             "v$(q '.meta.version') / $(q '.meta.date')" "$(printf '%s\n' "$adr_meta_kv" | grep -F '版' | head -1 | cut -f2)"
 chk "cover-meta KV 総数 == 4"                "4" "$(printf '%s\n' "$adr_meta_kv" | grep -c .)"
 
+# 3d. ★navigable anchor (folio-lzz: cross-doc deep-link 着地点)。 arch referrer の #decision が着地する固定 anchor。
+#     decision panel に id="decision" がちょうど 1 個 (脱落=anchor 不在で 404 復活) + body 全体で id="decision" 一意
+#     (別要素への重複 id 注入 = collision を封鎖)。 ADR の cross-doc 被参照点は decision 固定リテラル 1 つ (案A・D-1)。
+chk "anchor: decision panel id=decision == 1" "1" "$(grep -c 'data-component="adr-decision-panel" id="decision"' "$BODY")"
+# ★folio-lzz ceiling [必須-2]: id collision 検査を quote/entity-robust + global 一意へ。 旧 grep -oE ' id="decision"' は
+#   double-quote リテラル固定で id='decision' (single-quote) / id="decisio&#110;" (数値文字参照) が DOM 上 id=decision に解決されるのに
+#   数えず、 本物前方への偽 decoy で #decision 着地点を奪取できる fail-open があった (reader-chip/dty の quote-robust 教訓を id uniqueness へ
+#   未適用)。 id 属性を attribute-name 境界 ((?<![\w-])(?i:id) で data-*-id 〔直前ハイフン〕除外・whitespace と HTML5 self-closing slash 区切り両捕捉) + quote/entity/case/unquoted-robust に全列挙し body 全体で重複 0 を要求 (SRS [必須-1] と同一 idiom・ceiling round-2 が slash 封鎖)。
+allids_dup="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n"; }' < "$BODY" | LC_ALL=C sort | LC_ALL=C uniq -d | grep -c .)"
+chk "anchor: navigable id は body 全体で一意 (collision=0・quote/entity/case-robust)" 0 "$allids_dup"
+
 # 4. verdict 整合 (chosen ちょうど 1 + decision.chosen 一致)
 chk "verdict=chosen はちょうど 1 件" "1" "$(q '[.options[] | select(.verdict=="chosen")] | length')"
 chk "decision.chosen == verdict=chosen option" "$(q '[.options[] | select(.verdict=="chosen")][0].id // "MISSING"')" "$(q '.decision.chosen')"

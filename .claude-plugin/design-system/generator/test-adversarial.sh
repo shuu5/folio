@@ -215,6 +215,51 @@ expect_srs_fail "A32 可視 fid 捏造 (data-req-id 乖離) を gate D が捕捉
 perl -0777 -pe 's!\@media\s*\([^)]*prefers-color-scheme:\s*dark[^)]*\)\s*\{!/* prefers-color-scheme: dark is a TODO comment */ .x {!gs' "$TMP/art.html" > "$TMP/darkfake.html"
 expect_srs_fail "A33 dark media のコメント擬装を gate B が捕捉" "$BASE" "$TMP/darkfake.html"
 
+# ★folio-lzz: navigable anchor gate (案A 裸ミラー・cross-doc deep-link 着地点) の fail-closed。
+# A33b. 要件 navigable id ミラー不一致 (id 値だけ偽装・data-req-id 温存) → anchor gate 固有の検出
+#       (within-doc tuple は id を [^"]* で無視ゆえ捕捉できない = anchor gate だけが破れを検出)。
+sed 's# id="FR2"# id="FR-NISE"#' "$TMP/art.html" > "$TMP/anchormis.html"
+expect_srs_fail "A33b ★要件 navigable id ミラー不一致を anchor gate が捕捉" "$BASE" "$TMP/anchormis.html"
+# A33c. 要件 navigable id 欠落 (anchor 不在 = cross-doc #FR2 が 404 復活) → anchor gate が捕捉。
+sed 's# id="FR2"##' "$TMP/art.html" > "$TMP/anchordrop.html"
+expect_srs_fail "A33c ★要件 navigable id 欠落 (404 復活) を anchor gate が捕捉" "$BASE" "$TMP/anchordrop.html"
+# A33d. NFR navigable id 欠落 → anchor gate (NFR set) が捕捉。
+sed 's#nfr-metric-row" id="NFR1"#nfr-metric-row"#' "$TMP/art.html" > "$TMP/anchornfr.html"
+expect_srs_fail "A33d ★NFR navigable id 欠落を anchor gate が捕捉" "$BASE" "$TMP/anchornfr.html"
+# A33e. 受入 navigable id 欠落 → anchor gate (受入 set) 固有の検出 (verify-fab 受入 regex は内側 div ゆえ素通る)。
+sed 's#<div class="ac" id="AC1"#<div class="ac"#' "$TMP/art.html" > "$TMP/anchorac.html"
+expect_srs_fail "A33e ★受入 navigable id 欠落を anchor gate が捕捉" "$BASE" "$TMP/anchorac.html"
+# ★folio-lzz ceiling [必須-1] 回帰: 非 component 要素へ同 id を注入 (collision) → fragment が tree-order 先頭の偽要素へ着地する
+#   fail-open を global uniqueness gate が捕捉。 set_eq は component 行しか見ないため collision は uniqueness gate 固有の検出。
+# A33f. double-quote collision decoy → uniqueness FAIL。
+sed 's#<body>#<body><a id="FR2"></a>#' "$TMP/art.html" > "$TMP/coll_dq.html"
+expect_srs_fail "A33f ★id collision (double-quote decoy) を uniqueness gate が捕捉" "$BASE" "$TMP/coll_dq.html"
+# A33g. single-quote collision decoy (quote-robust) → uniqueness FAIL。
+sed "s#<body>#<body><a id='FR2'></a>#" "$TMP/art.html" > "$TMP/coll_sq.html"
+expect_srs_fail "A33g ★id collision (single-quote decoy・quote-robust) を uniqueness gate が捕捉" "$BASE" "$TMP/coll_sq.html"
+# A33h. 数値文字参照 collision decoy (FR&#50; = FR2・entity-robust) → uniqueness FAIL。
+perl -0777 -pe 's{<body>}{<body><a id="FR&#50;"></a>}' "$TMP/art.html" > "$TMP/coll_ent.html"
+expect_srs_fail "A33h ★id collision (数値文字参照 decoy・entity-robust) を uniqueness gate が捕捉" "$BASE" "$TMP/coll_ent.html"
+# A33i. 大文字 ID 属性 collision decoy (HTML 属性名は case-insensitive・case-robust) → uniqueness FAIL。
+sed 's#<body>#<body><a ID="FR2"></a>#' "$TMP/art.html" > "$TMP/coll_uc.html"
+expect_srs_fail "A33i ★id collision (大文字 ID 属性・case-robust) を uniqueness gate が捕捉" "$BASE" "$TMP/coll_uc.html"
+# A33j. ★ceiling round-2: HTML5 self-closing slash separator collision (<a/id="FR2"> は valid な id=FR2 要素を生む)。
+#   旧 (?<=\s) は / を空白と見なさず取りこぼした fail-open を (?<![\w-]) attribute-name 境界が捕捉。
+perl -0777 -pe 's{<body>}{<body><a/id="FR2"></a>}' "$TMP/art.html" > "$TMP/coll_sl.html"
+expect_srs_fail "A33j ★id collision (HTML5 slash separator <a/id=…>) を attribute-name 境界 gate が捕捉" "$BASE" "$TMP/coll_sl.html"
+# A33k/l. ★ceiling round-3: semicolon-less 数値文字参照 collision (HTML5 は &#50/&#x32 を ; 無しでも decode)。
+#   旧 ; 必須 decode が見逃した fail-open を ;? optional terminator が捕捉 (10進・16進)。
+perl -0777 -pe 's{<body>}{<body><a id="FR&#50"></a>}' "$TMP/art.html" > "$TMP/coll_sld.html"
+expect_srs_fail "A33k ★id collision (semicolon-less 10進実体 FR&#50) を entity-robust gate が捕捉" "$BASE" "$TMP/coll_sld.html"
+perl -0777 -pe 's{<body>}{<body><a id="FR&#x32"></a>}' "$TMP/art.html" > "$TMP/coll_slh.html"
+expect_srs_fail "A33l ★id collision (semicolon-less 16進実体 FR&#x32) を entity-robust gate が捕捉" "$BASE" "$TMP/coll_slh.html"
+# A33m/n. ★ceiling round-4: capital-X 16進数値参照 (HTML5 は &#X.. の大文字 X も 16進受理)。
+#   旧 lowercase-x リテラル decode が見逃した fail-open を [xX] が捕捉 (;有/;無)。char-ref 文法枯渇。
+perl -0777 -pe 's{<body>}{<body><a id="FR&#X32;"></a>}' "$TMP/art.html" > "$TMP/coll_Xc.html"
+expect_srs_fail "A33m ★id collision (capital-X 16進実体 FR&#X32;) を entity-robust gate が捕捉" "$BASE" "$TMP/coll_Xc.html"
+perl -0777 -pe 's{<body>}{<body><a id="FR&#X32"></a>}' "$TMP/art.html" > "$TMP/coll_Xn.html"
+expect_srs_fail "A33n ★id collision (capital-X 16進実体 ;無 FR&#X32) を entity-robust gate が捕捉" "$BASE" "$TMP/coll_Xn.html"
+
 echo
 echo "gate F (render-gate-srs) detector の検出力 (selftest):"
 # A34. gate F detector — low-contrast/overflow/overlap × light/dark の kind 完全一致発火を fixture で検証。
@@ -298,7 +343,7 @@ expect_verify_fail "A47 ★要件 ID consistent rename (fid+data-req-id) を 7f(
 perl -0777 -pe 's#<span class="ears trigger">きっかけ</span>#<span class="ears forbid">禁止</span>#' "$TMP/good.html" > "$TMP/g_ears.html"
 expect_verify_fail "A48 EARS 種別 (class+label) 改竄を 7f(h) が捕捉" "$BASE" "$TMP/g_ears.html"
 # A49. nfr-metric-row の可視 nid 捏造 (§7e source-trace nid と非対称だった穴) → §7f(i)
-perl -0777 -pe 's#(<tr data-component="nfr-metric-row"><td><span class="nid">)NFR1(</span>)#${1}NFRX${2}#' "$TMP/good.html" > "$TMP/g_nnid.html"
+perl -0777 -pe 's#(<tr data-component="nfr-metric-row" id="[^"]*"><td><span class="nid">)NFR1(</span>)#${1}NFRX${2}#' "$TMP/good.html" > "$TMP/g_nnid.html"
 expect_verify_fail "A49 nfr 表 nid 捏造を 7f(i) が捕捉" "$BASE" "$TMP/g_nnid.html"
 # A50. ★要件行 *内* の priority ラベル改竄 (legend の静的 badge でなく row-scope) → §7f(h)
 perl -0777 -pe 's#(data-req-id="FR1".*?priority-badge">)必須(</span> <span class="vmeth">)#${1}任意${2}#s' "$TMP/good.html" > "$TMP/g_prio.html"
@@ -307,7 +352,7 @@ expect_verify_fail "A50 要件行内 priority ラベル改竄を 7f(h) が捕捉
 perl -0777 -pe 's#(data-req-id="FR1".*?<span class="vmeth">)T(</span>)#${1}D${2}#s' "$TMP/good.html" > "$TMP/g_vm.html"
 expect_verify_fail "A51 要件行 vmethod 改竄 (T→D) を 7f(h) が捕捉" "$BASE" "$TMP/g_vm.html"
 # A52. nfr 区分 (category) 改竄 → §7f(i)
-perl -0777 -pe 's#(nfr-metric-row"><td><span class="nid">NFR1</span></td><td>)性能(</td>)#${1}捏造区分${2}#' "$TMP/good.html" > "$TMP/g_cat.html"
+perl -0777 -pe 's#(nfr-metric-row" id="[^"]*"><td><span class="nid">NFR1</span></td><td>)性能(</td>)#${1}捏造区分${2}#' "$TMP/good.html" > "$TMP/g_cat.html"
 expect_verify_fail "A52 nfr category 改竄を 7f(i) が捕捉" "$BASE" "$TMP/g_cat.html"
 # A53. constraint id (cid2) 改竄 → §7f(k)
 perl -0777 -pe 's#<td class="cid2">CON1</td>#<td class="cid2">CONX</td>#' "$TMP/good.html" > "$TMP/g_cid.html"

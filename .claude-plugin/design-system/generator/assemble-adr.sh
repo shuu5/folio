@@ -215,7 +215,7 @@ emit_options() {
 }
 
 emit_decision() {
-  printf '<div data-component="adr-decision-panel">\n'
+  printf '<div data-component="adr-decision-panel" id="decision">\n'
   printf '<p class="dec-kick">採用 — %s</p>\n' "$(esc "$(q '.decision.chosen')")"
   printf '<p class="dec-state">%s</p>\n' "$(mark_terms "$(q '.decision.statement')")"
   printf '<span class="dec-plain" data-prose-slot="plain" data-slot-id="decision-plain"></span>\n'
