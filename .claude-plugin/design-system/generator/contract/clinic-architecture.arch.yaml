@@ -1,0 +1,291 @@
+# folio engine 段階3 (folio-5uu) — architecture-description-pack 入力 contract インスタンス (instance#1 / descriptive)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT / ADR-CLINIC-0001 と同一ドメイン・suite 一貫)。
+# doc-type = architecture-description (構造の WHAT)。 要件索引型 (SRS/ADR/research/testcases) を脱した初の
+# *記述型 (descriptive)* doc-type。 schema = arc42 (固定 8 章) + C4 (図) ハイブリッド。
+#
+# ★この pack の核 = cross-doc 照会 (案A = 別文書への cross-document link・再掲ゼロ):
+#   decisions[].refs.srs[] (claim)  → SRS-CLINIC-APPT の要件 (FR) を *充足照会*
+#   decisions[].refs.adr[] (rationale) → ADR-CLINIC-0001 の判断を *根拠照会*
+#   principle (terminal)            → 照会 graph の終端 (これ以上遡らない・ADR と共有)
+#   verify-arch.sh が照会先 contract に当該 ID が実在することを fail-closed で確かめる。
+#
+# 構造 (8 章 / 部品 / 決定 / 流れ / 品質 / リスク / 用語 / 図) は contract から決定的組立 (捏造不可)。
+# prose スロット (cover-summary / chapter-lead-NN / decision の plain-AD / rationale-AD) のみ opus が後充填。
+# core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three: core byte-identity が最重 gate)。
+#
+# 読者 = クリニックの事業責任者 (医療や IT の専門知識は不要・専門語はやさしい言葉を併記)。
+
+doc_type: architecture-description
+
+meta:
+  doc_id: ARCH-CLINIC-APPT
+  title: クリニック診療予約システム — アーキテクチャ記述
+  eyebrow_left: folio design-system / architecture
+  eyebrow_right: arc42 + C4
+  subtitle: 診療予約システムを 6 つの部品に分け、 二重予約を仕組みとして起こさない全体像と、 そう決めた理由をまとめる
+  version: "1.0"
+  date: "2026-06-25"
+  reader: クリニックの事業責任者 — 医療や IT の専門知識は不要 (専門語はやさしい言葉を併記)
+
+# 承認記録 (SRS / ADR と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-25 承認
+    stamp: 承認済
+  - role: レビュー (開発リード)
+    who: 佐藤 健
+    when: 2026-06-24 レビュー
+    stamp: レビュー済
+  - role: 作成 (システム設計)
+    who: 設計チーム
+    when: 2026-06-23 起票
+    stamp: 作成
+
+# ★cross-doc 照会の解決先 (案A)。 verify-arch.sh が参照先 contract を読み、 照会 ID 実在 + doc_id 一致を確かめる。
+#   *_contract は contract/ dir 起点の相対パス。 rendered link 先 (*.html#anchor) は別途 assembler が emit (folio-lzz は別件)。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_title: 診療予約システム SRS (空き枠どおり・二重予約なく受け付ける仕組み)
+  srs_html: clinic-appointment.srs.html
+  adr_contract: clinic-double-booking.adr.yaml
+  adr_doc_id: ADR-CLINIC-0001
+  adr_title: 二重予約を確定方式で防ぐ設計判断記録
+  adr_html: clinic-double-booking.adr.html
+
+# §1 課題と背景 (context)。 problem = 何を解こうとしているか / actors = 関わる人・外部システム。
+context:
+  problem: 一番こわいのは同じ時間に 2 人を入れてしまう事故 (ダブルブッキング)。 加えて来院忘れと患者の取り違えも防ぎたい。 担当範囲は空き確認から予約・変更・当日受付まで。 診察内容や会計は別の仕組みに任せる。
+  actors:
+    - { id: patient,         kind: internal, name: 患者,           role: 予約を取り受診する人 }
+    - { id: front-desk,      kind: internal, name: 受付スタッフ,   role: 予約と来院受付を管理する人 }
+    - { id: physician,       kind: internal, name: 医師,           role: 診療枠を持ち診察する人 }
+    - { id: notification,    kind: external, name: 通知サービス,   role: リマインド通知を送る外部サービス }
+    - { id: clinic-calendar, kind: external, name: 診療カレンダー, role: 診療枠と休診日の出どころ }
+
+# §2 ソリューション戦略 (strategy)。 全体を貫く 4 つの設計方針。 plain = やさしい一言 / rationale = なぜそうするか。
+strategy:
+  - id: S1
+    name: 安全優先
+    plain: 二重予約は「注意」でなく仕組みで防ぐ。
+    rationale: 同じ枠の取り合いは普通に起きる。 人の注意やアプリ任せでは必ず漏れる。 確定の瞬間に空き確認を一体化し、 ダブルブッキングを構造的に 0 にする。
+  - id: S2
+    name: 速さの確保
+    plain: 競合する枠だけを一瞬調整し、 全体は止めない。
+    rationale: 予約受付開始直後は申込が集中する。 安全のために遅く固くすると現場が回らない。 競合枠だけを短く調整しピーク負荷に耐える。
+  - id: S3
+    name: 出どころは一つ
+    plain: 空き枠と休診日は診療カレンダーだけを見る。
+    rationale: 情報が二重にあると食い違う。 空き枠と休診日の出どころを診療カレンダー 1 か所にすれば矛盾が起きない。
+  - id: S4
+    name: 落ちても止めない
+    plain: 通知が送れなくても予約受付は続け、 あとで送り直す。
+    rationale: 外部の通知サービスが一時的に落ちても、 本来の予約受付まで止めてはならない。 リマインドだけ遅延・再送する。
+
+# §3 部品の組み立て (components = C4 Container・6 個)。 responsibility = 担当すること / separation_reason = なぜ分けるか。
+#   kind ∈ {core, external} (core = システム内側の中核 / external = 外部連携の橋渡し)。
+components:
+  - id: web-front
+    name: 予約UI
+    kind: core
+    responsibility: 患者・スタッフが空きを見て予約・変更する画面。
+    separation_reason: 見た目と操作を一手に持ち、 中の仕組みが変わっても画面は影響を受けにくくする。
+  - id: api-orchestrator
+    name: 予約API
+    kind: core
+    responsibility: 申込を受け取り、 枠在庫・通知・外部連携へ橋渡しするまとめ役。
+    separation_reason: 処理の入口を 1 つにして、 順序とルールを 1 か所で管理する。
+  - id: slot-store
+    name: 枠在庫(スロット)管理
+    kind: core
+    responsibility: 各枠の空き数を持ち、 予約確定で正しく減らす (AD-1 の実装境界・状態を持つ)。
+    separation_reason: 空き数を持つ唯一の場所にして、 数の食い違いを防ぐ。
+  - id: conflict-control
+    name: 競合制御
+    kind: core
+    responsibility: ほぼ同時の申込で 1 件だけ通す判定を行う (AD-1・枠在庫と双対)。
+    separation_reason: 取り合いの判定を 1 か所に集約し、 二重予約の隙を消す。
+  - id: notify-svc
+    name: 通知サービス連携
+    kind: external
+    responsibility: 前日のリマインドを外部の通知サービスへ依頼する (落ちても予約本体は止めない・S4)。
+    separation_reason: 通知は外部任せにし、 障害が予約本体に波及しないよう切り離す。
+  - id: calendar-adapter
+    name: 連携アダプタ
+    kind: external
+    responsibility: 診療カレンダー等の外部と橋渡しし、 形式の違いを吸収する (連携アダプタ)。
+    separation_reason: 外部の都合をシステム内に持ち込まず、 ここで翻訳して隔離する。
+
+# §4 動いているときの流れ (runtime)。 二重予約防止フロー (同時申込の sequence) を 1 本記述する。
+runtime:
+  flows:
+    - id: F1
+      name: 同時申込の二重予約防止
+      summary: 2 人が同じ枠をほぼ同時に申し込んでも、 枠在庫を減らせるのは先に届いた 1 件だけ。 後から届いた申込は満枠として丁寧に断る。 「先に空きを見てから取る」のでなく「取るのと同時に空きを確かめる」のですり抜ける隙がない。
+      steps:
+        - 患者A → 予約API: この枠を予約したい
+        - 予約API → 枠在庫: A は残数 1 以上なら 1 減らして確定
+        - 枠在庫 → 予約API: OK (残数 1→0) 確定
+        - 予約API → 患者A: 予約できました
+        - 患者B → 予約API: (ほぼ同時) 同じ枠を予約したい
+        - 予約API → 枠在庫: B は残数 1 以上なら 1 減らして確定
+        - 枠在庫 → 予約API: NG (残数 0) 満枠
+        - 予約API → 患者B: 満枠です。 別の枠をご案内します
+
+# §5 アーキテクチャ決定 (decisions = AD-1..4)。 ★照会の主役。 summary = 何を決めたか (決定的) /
+#   plain-AD・rationale-AD = prose スロット (やさしい一言 / なぜその案か)。 refs = cross-doc 照会 edge。
+#     srs[]       → SRS の要件 ID (claim・充足照会)
+#     adr[]       → ADR の doc_id (rationale・根拠照会)
+#     principle[] → 原則終端 (任意・principle.id に実在すること)
+decisions:
+  - id: AD-1
+    title: 二重予約は「取るのと空き確認を 1 つにする方式」で防ぐ
+    summary: 確定の瞬間に「残数が 1 以上のときだけ 1 減らす」条件付き更新を 1 回で行う。 成功した 1 件だけ確定し、 残数 0 で失敗した申込は満枠として断る。
+    refs:
+      srs: [FR2, FR3]
+      adr: [ADR-CLINIC-0001]
+      principle: [PRIN-SAFETY-FIRST]
+  - id: AD-2
+    title: 空き枠と休診日は診療カレンダーだけを出どころにする
+    summary: 空き枠と休診日は診療カレンダーを唯一の出どころとし、 連携アダプタ越しに参照する。 システム内に重複した枠情報を持たない。
+    refs:
+      srs: [FR4]
+      adr: []
+      principle: []
+  - id: AD-3
+    title: 通知は外部サービスに任せ、 落ちても予約は止めない
+    summary: 前日のリマインドは外部の通知サービスに依頼し、 通知が送れなくても予約受付は継続する。 失敗した通知はあとで再送する。
+    refs:
+      srs: [FR6]
+      adr: []
+      principle: []
+  - id: AD-4
+    title: 本人確認は予約と当日受付の両方で必ず行う
+    summary: 別人の予約として処理しないため、 予約時と当日受付時の両方で本人確認を行う。 確認に通らない予約・受付は確定させず差し戻す。
+    refs:
+      srs: [FR7]
+      adr: []
+      principle: []
+
+# §5 末尾 原則終端 (principle = 照会 graph の終端・ADR-CLINIC-0001 と共有する domain-local 終端)。
+principle:
+  id: PRIN-SAFETY-FIRST
+  text: 患者の安全と予約の信頼を、 性能より優先する。 ただし両立できる最小の機構を選ぶ。
+
+# §6 品質特性 (quality = QA-1..5)。 attribute = 品質の軸 / target = 目標 / plain = やさしい一言 /
+#   srs_ref = SRS の対応 ID (NFR / AC。 充足は SRS 側が SSoT・ここは照会のみ)。
+quality:
+  - { id: QA-1, attribute: 整合性, target: 二重予約 0 件 (最優先),        plain: 同じ枠に 2 人を入れない。 これが一番大事。,           srs_ref: AC1 }
+  - { id: QA-2, attribute: 応答性, target: 95% が 2.0 秒以内,             plain: 空き照会は待たせず、 ほとんど 2 秒以内に返す。,        srs_ref: NFR1 }
+  - { id: QA-3, attribute: 可用性, target: 稼働率 99.5% / 月 (例),        plain: ほぼいつでも使える状態を保つ (例示の目標値)。,         srs_ref: NFR2 }
+  - { id: QA-4, attribute: 処理能力, target: 200 件/分 (例),             plain: 予約開始直後の集中にも詰まらず捌く (例示の目標値)。,   srs_ref: NFR3 }
+  - { id: QA-5, attribute: 安全性, target: 漏えい 0・権限者のみ,          plain: 患者情報を守り、 見てよい人だけが見られるようにする。, srs_ref: NFR4 }
+
+# §7 リスク (risks = R-1..4)。 severity ∈ {高, 中}。 risk = 何が危ういか / impact = 起きると何が困るか / mitigation = どう抑えるか。
+risks:
+  - { id: R-1, severity: 高, risk: 二重予約防止がデータ土台 (確実な書き込み) に依存する, impact: データ層が弱いと条件付き更新の保証が崩れ二重予約が漏れる, mitigation: トランザクション必須・該当箇所を重点テスト }
+  - { id: R-2, severity: 中, risk: 競合に負けた申込への満枠の伝え方が弱い,             impact: 患者が満枠と気づかず混乱し再申込が増える,             mitigation: 「満枠・別枠案内」画面をはっきり用意する }
+  - { id: R-3, severity: 中, risk: 外部カレンダーの仕様変更に振り回される,             impact: 連携が壊れ空き枠・休診日が取得できなくなる,           mitigation: 変更の影響を連携アダプタに閉じ込める }
+  - { id: R-4, severity: 中, risk: 通知サービス障害の監視が手薄,                       impact: リマインドが送れず来院忘れが増える,                   mitigation: 再送の仕組みと監視を整備する }
+
+# §8 用語集 (glossary = 用語の SSoT。 plain_short = 本文の専門語に併記するやさしい言い換え。 SRS / ADR glossary と出どころ整合)。
+glossary:
+  - { term: 診療枠,         en: appointment slot,      plain_short: 予約できる時間帯,         def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
+  - { term: ダブルブッキング, en: double booking,        plain_short: 二重予約,               def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 満枠,           en: fully booked,          plain_short: 空きなし,               def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: 無断キャンセル,  en: no-show,               plain_short: 連絡なく来ないこと,     def: 予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。 }
+  - { term: リマインド通知,  en: reminder,              plain_short: 思い出し通知,           def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: 本人確認,        en: identity check,        plain_short: 本人かの確かめ,         def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 診療カレンダー,  en: clinic calendar,       plain_short: 診療予定表,             def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
+  - { term: 条件付き更新,    en: conditional update,    plain_short: 条件を満たすときだけ書き換え, def: 「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。 }
+  - { term: トランザクション, en: transaction,           plain_short: ひとまとめの処理,       def: 「全部成功」か「全部やらなかった」かのどちらかになる、 分けられない一塊の処理。 }
+  - { term: 連携アダプタ,    en: anti-corruption layer, plain_short: 外部との橋渡し,         def: 外部システムとの間に置く翻訳役。 外部の都合や形式の違いをここで吸収し、 システム内へ持ち込ませない。 }
+
+# 図 (diagrams = C4 Context / Container + sequence の 3 図)。 mermaid DSL を行配列で保持 (core_validate_strings は
+#   各行を 1 行 string として検査・改行なし)。 assembler が esc して <pre class="mermaid"> へ join 出力 (raw DSL 露出 = gate I blocker・folio-97z)。
+#   kind ∈ {context, container, sequence} (data-component="<kind>-diagram" へ写像)。 caption = 図の平易な説明 (esc・bold なし)。
+diagrams:
+  - id: D1
+    kind: context
+    caption: 図 1 (C4 — System Context 図) このシステム (中央の枠) と、 まわりの人・外部サービスの関係。 外部と書いた通知サービス・診療カレンダーは別の仕組みで、 このシステムはそれらに「お願いする/参照する」関係にある。
+    lines:
+      - flowchart TB
+      - '  patient["患者<br/>(予約を取り受診する人)"]'
+      - '  staff["受付スタッフ<br/>(予約と来院受付を管理)"]'
+      - '  subgraph sys["診療予約システム (このシステムが担当する範囲)"]'
+      - '    core["空き確認 / 予約 / 変更 / 当日受付"]'
+      - '  end'
+      - '  notify["通知サービス<br/>(外部・リマインドを送る)"]'
+      - '  calendar["診療カレンダー<br/>(外部・枠と休診日の出どころ)"]'
+      - '  patient --> |"空きを見て予約する"| sys'
+      - '  staff --> |"予約と来院を管理する"| sys'
+      - '  sys --> |"前日のお知らせを依頼"| notify'
+      - '  sys --> |"空き枠・休診日を参照"| calendar'
+      - '  notify -.-> |"リマインドが届く"| patient'
+  - id: D2
+    kind: container
+    caption: 図 2 (C4 — Container 図) システムの内側を 6 つの部品に分けた図。 中心の枠在庫管理と競合制御が「同じ枠に 2 人入らない」を守る要 (理由は §5 AD-1)。
+    lines:
+      - flowchart TB
+      - '  patient["患者 / 受付スタッフ"]'
+      - '  subgraph sys["診療予約システム"]'
+      - '    ui["予約UI<br/>(画面)"]'
+      - '    api["予約API<br/>(受付のまとめ役)"]'
+      - '    slot["枠在庫(スロット)管理<br/>(空き数を持つ中心)"]'
+      - '    conf["競合制御<br/>(取り合いをさばく)"]'
+      - '    notifysvc["通知サービス連携<br/>(お知らせ依頼)"]'
+      - '    adapter["連携アダプタ<br/>(外部との橋渡し)"]'
+      - '  end'
+      - '  cal["診療カレンダー (外部)"]'
+      - '  ext["通知サービス (外部)"]'
+      - '  patient --> ui'
+      - '  ui --> api'
+      - '  api --> slot'
+      - '  slot --- conf'
+      - '  api --> notifysvc'
+      - '  api --> adapter'
+      - '  notifysvc --> ext'
+      - '  adapter --> cal'
+  - id: D3
+    kind: sequence
+    caption: 図 3 (フロー図 — sequence) 同じ枠への同時申込。 確定の判定は「取るのと空き確認を 1 つの操作にまとめる」のがポイント (= §5 AD-1)。 だから A だけ通り、 B は確実に満枠になる。
+    lines:
+      - sequenceDiagram
+      - '  participant P1 as 患者A'
+      - '  participant P2 as 患者B'
+      - '  participant API as 予約API'
+      - '  participant SLOT as 枠在庫 + 競合制御'
+      - '  P1->>API: この枠を予約したい'
+      - '  P2->>API: (ほぼ同時) 同じ枠を予約したい'
+      - '  API->>SLOT: A は残数が1以上なら1減らして確定'
+      - '  SLOT-->>API: OK (残数 1→0) 確定'
+      - '  API-->>P1: 予約できました'
+      - '  API->>SLOT: B は残数が1以上なら1減らして確定'
+      - '  SLOT-->>API: NG (残数0) 満枠'
+      - '  API-->>P2: 満枠です。別の枠をご案内します'
+
+# ★実装HOWリーク検出の denylist (verify-arch.sh が本文 = 人間層 + prose に対し保守的 advisory scan・WARN)。
+#   architecture = 構造の WHAT。 具体的な言語/FW/製品/platform 名 (実装 HOW) が本文に混入したら WARN (FAIL でない)。
+#   ★アーキテクチャの正当な語彙 (層/component/adapter/anti-corruption layer 等のパターン名) は flag しない (保守的)。
+#   B5 の HOW-outside soft-warn (folio-6us) を横展開。 拡張可能 (ここに追記)。 大文字小文字非依存で語境界マッチ。
+how_leak_denylist:
+  - PostgreSQL
+  - MySQL
+  - Redis
+  - MongoDB
+  - Kafka
+  - RabbitMQ
+  - gRPC
+  - GraphQL
+  - React
+  - Vue.js
+  - Kubernetes
+  - Docker
+  - nginx
+  - Node.js
+
+# footer の生成メタ (tag 列は assembler 固定)。
+footer:
+  gen_meta: folio design-system generator — architecture-description-pack (folio-5uu / instance#1)

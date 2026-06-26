@@ -1,0 +1,55 @@
+# arch.rolemap.yaml — architecture-description-pack (doc_type: architecture-description) の抽象ロール graph 写像 (rolemap)
+#
+# folio engine 段階3 (folio-5uu)。 engine doc §3 表 (照会 = 抽象ロール graph) を arch-pack の具体 node-type へ写像する
+# pack 側 SSoT (詳細は srs.rolemap.yaml / adr.rolemap.yaml 冒頭注記)。 core (lib/graph-common.sh) の reader が読み、
+# verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: principle 終端への到達可能性 / dangling / 孤立 を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★arch の hallmark = 構造 WHAT の前方照会: decisions[] (claim) が SRS の要件 (充足照会) と ADR の判断
+#   (根拠照会) を *別文書 cross-document link* で指し、 再掲しない (案A)。 ゆえ edge-bearing pack
+#   (GRAPH_EDGELESS_PACKS = srs|principle に含まれない)。 verify-graph.sh は contract/*.yaml を無条件 glob し
+#   graph_pack_of でファイル名 (clinic-architecture.arch.yaml) から pack=arch を導出して同名 rolemap を発見・必須化する
+#   (opt-in registry でない)。 ゆえ本 rolemap は新設と同時に pass-1 floor pin (edge.role == roles[decisions]=claim) +
+#   forbidden_roles=[exploration] を *常時* 課される = floor を通すこと自体が受入条件。
+# ★pass-2 reachability: arch は principle 終端 (PRIN-SAFETY-FIRST・ADR-CLINIC-0001 と共有する domain-local 終端) を
+#   terminal.id_expr で宣言するため arch→終端 edge が張られ、 ARCH-CLINIC-APPT は *終端完備* になる
+#   (記述型でも完全な照会 graph 終端を実証)。
+pack: arch
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# decisions = claim (採用した構造判断 = 主張)。 前方照会先 (SRS の FR=claim / ADR の判断=rationale) の役割は
+# verify-arch.sh の verify_cross_doc_refs が HTML data-*-role で別途扱う (graph の roles は *source node* の intrinsic role)。
+roles:
+  decisions: claim   # アーキテクチャ決定 = 構造の主張
+
+# 前方 cross-doc 照会 edge (2 本)。 decisions[].refs.{srs,adr}[] が SRS / ADR へ向かう。 ADR→SRS と同型ゆえ
+# direction: backward (arch→照会先 だが reachability は照会先→arch。 局所の ID 実在検証は verify-arch.sh が担う)。
+# ★edge.role token = *source node-type (decisions) の intrinsic role* = claim を |edges| 回 emit
+#   (testcases の map("verification") と同型。 照会先 ID 列・照会 relationship role〔SRS=claim / ADR=rationale〕は
+#    role_expr でなく verify-arch.sh の verify_cross_doc_refs が別経路で扱う)。
+edges:
+  - from_node: decisions                                              # roles[decisions] = claim が edge.role の期待値 (二重担保)
+    role_expr: '[.decisions[].refs.srs[]] | map("claim") | .[]'       # source 役割 (claim) を |srs edges| 回
+    count_expr: '[.decisions[].refs.srs[]] | length'                  # |srs edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'                        # 照会先 doc の doc_id (graph dangling 用)
+    direction: backward                                              # arch→SRS は toward-terminal の逆 (reachability は SRS→arch)
+  - from_node: decisions                                              # 同 source node (decisions=claim)
+    role_expr: '[.decisions[].refs.adr[]] | map("claim") | .[]'       # source 役割 (claim) を |adr edges| 回
+    count_expr: '[.decisions[].refs.adr[]] | length'                  # |adr edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.adr_doc_id'                        # 照会先 doc の doc_id (graph dangling 用)
+    direction: backward                                              # arch→ADR は toward-terminal の逆 (reachability は ADR→arch)
+
+# この pack が持つ照会終端 node = inline principle id (domain-local 終端・ADR-CLINIC-0001 と共有)。
+# doc 自身 → 終端 node の edge を graph に張り、 ARCH-CLINIC-APPT を終端完備にする。
+terminal:
+  id_expr: '.principle.id'
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 arch (clinic instance) には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 arch は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration role 不在」を scan で実証。
+forbidden_roles:
+  - exploration
