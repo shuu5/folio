@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.1.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0046">
+<meta name="folio-adr-date" content="2026-06-26">
+<title>ADR-0046 — architecture-description pack (engine 段階3) — 記述型 doc-type の floor 三本柱 + 案A cross-document 照会 + core 無改変</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0046-architecture-description-pack.html",
+  "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "../research/doctype-coverage-audit.html" }
+  ],
+  "dc:title": "ADR-0046 — architecture-description pack (engine 段階3)",
+  "folio:version": "1.1.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/document-discipline-engine-design.html" },
+    { "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
+    { "@id": "./ADR-0041-human-layer-visual-design-system.html" },
+    { "@id": "./ADR-0042-hybrid-generation-dense-table-readability.html" },
+    { "@id": "./ADR-0044-spec-pack-folio-self-host.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0046</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0046 — architecture-description pack (engine 段階3)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-06-26 &middot; folio v1.1.0 &middot; engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3。 文書規律エンジンに<strong>要件索引型を脱した初の記述型 doc-type</strong> = architecture-description (構造の WHAT を描く文書) を追加する設計を確定する。 <a href="../research/doctype-coverage-audit.html">doctype-coverage-audit</a> が汎用 suite の最大 gap (P1) と特定した記述型を、 <strong>arc42 固定章立て + C4 図</strong> の schema と <strong>floor 三本柱</strong> (照会 graph 整合 + navigable id アンカー + 固定章/必須要素存在) で生成する。 SRS 要件・ADR 決定・principle 原則へは<strong>照会するだけで再掲しない (案A)</strong>。 設計の探索は demo-walk grill (2026-06-26) で行い、 本 ADR は実装 + 検証 + land (main 503ccb5) 後の forward decision を記録する。 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> の照会 graph・<a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> の visual design system・<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の hybrid 生成を記述型 doc-type へ適用し、 <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> が宣言した engine core 抽出完了が記述型へも及ぶことを <strong>core 無改変</strong>で確認する。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-schema">§2.1 schema (arc42 固定章立て + C4 図)</a></li>
+  <li class="toc--sub"><a href="#s2-2-floor">§2.2 floor 三本柱 + 横展開 (記述型でも厚い floor)</a></li>
+  <li class="toc--sub"><a href="#s2-3-cross-doc">§2.3 案A — cross-document 照会 (再掲しない)</a></li>
+  <li class="toc--sub"><a href="#s2-4-principles">§2.4 横断原則 (core 無改変 / clinic 先)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0046</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-06-26</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0043 (基盤 — 照会 graph 終端完備検証 〔<code>verify_cross_doc_refs</code> + <code>verify-graph.sh</code>〕 を記述型 pack の floor 背骨に流用。 HOW-outside content boundary 〔P-11 4-enum 保守検出〕 を実装HOWリーク advisory として横展開)、 ADR-0041 (基盤 — 人間層 visual design system + 機械 SSoT 生成 + 2-gate 検証を記述型 doc-type へ適用)、 ADR-0042 (基盤 — 構造=決定的組立 / prose=opus 充填の hybrid 生成を記述型へ適用)、 ADR-0044 (継承 — engine core 〔lib/ + inject-prose.sh〕 抽出完了の doctrine。 記述型 pack を core 無改変で挿し rule-of-three を継続実証)。 設計 design-of-record = <a href="../research/doctype-coverage-audit.html">doctype-coverage-audit</a> (research・gap SSoT・段階3) + <a href="../research/document-discipline-engine-design.html">engine 設計 §9.1</a> (doc-type&rarr;pack 写像、 self-spec を SRS 族と仮説したが tr0 grounding で記述型と覆った)。 接地 = engine epic folio-0dv / sub-epic folio-c5r 段階3 folio-5uu (worker build 912a0a5 / land 503ccb5)。 follow-up = folio-lzz (生成 doc の navigable id emit・案A 前提) / folio-bur (fab-free 可視 echo pin 横展開) / folio-udn (arch gate-I polish) / folio-7vd (architecture 専用 ceiling agent)。 起点 = user demo-walk grill 2026-06-26 (記述型は抽象論点だけでは非エンジニア判断不能ゆえ opus モックアップ &rarr; <code>:8729</code> walk &rarr; 反応で論点確定。 walk が照会リンクバグを炙り出し案A確定 + 照会 graph=floor 背骨の発見 + navigable id 欠落 〔folio-lzz〕 を発見)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>engine epic <strong>folio-0dv</strong> は folio の文書規律を一般化した汎用文書生成エンジンを構築する (<a href="../research/document-discipline-engine-design.html">engine 設計 doc</a>)。 その sub-epic <strong>folio-c5r</strong> は「任意プロジェクト向けの完全な文書一式」(canonical 約 17 doc-type) を被覆する roadmap である。 engine が現在生成できる 5 doc-type (SRS / ADR / research / principle / spec=rules) は<strong>いずれも要件索引型</strong> — 要件・主張・原則を id で索引し、 EARS 章立てや RTM 三層連結で<em>振る舞い</em>を記述する文書型である。</p>
+
+<p><strong>gap — 記述型 doc-type が engine に欠けている</strong>。 多エージェント監査 (<a href="../research/doctype-coverage-audit.html">doctype-coverage-audit</a>・wf_8e16a043) は、 汎用 suite を構成する約 17 doc-type のうち engine が生成できるのは 5 種のみで、 <strong>architecture-description が最も paradigm-breaking な穴 (P1)</strong> と確定した。 記述型は<strong>要件索引型を脱す</strong> — EARS も RTM も乗らず (構造を描く文書であって振る舞いを索引しない)、 floor が薄く ceiling 主導になりがちで、 機械保証の強度が落ちるのが最大の不確実点だった。</p>
+
+<p><strong>framing — architecture-description は「構造の WHAT」であって「HOW」でない</strong>。 <a href="../spec/constitution.html#p-7">constitution P-7</a> は design intent (WHAT) を構造・不変条件と既に規定する。 SRS = <em>振る舞い</em>の WHAT / architecture = <em>構造</em>の WHAT (両方とも design-intent の内側) であり、 実装 HOW (コード / SQL / ライブラリ / platform 固有) のみが外側 (<a href="../spec/constitution.html#p-3">P-3</a> / <a href="../spec/constitution.html#p-11">P-11</a>)。 当初の「構造 HOW」というラベルは廃語で、 constitution の改訂は不要 (既に self-consistent)。</p>
+
+<p>記述型 pack 自体が engine 初の領域ゆえ、 設計 grill (2026-06-26) は reader 論点でなく <strong>demo-walk-first</strong> で進めた — 抽象論点だけでは非エンジニアが全体像を判断できないため、 opus でモックアップを生成し <code>:8729</code> で walk し、 反応で論点を確定してから本物の決定的 pack を構築した (見た目 design system の S1&ndash;S4 と同型)。 walk は照会リンクの着地バグを炙り出し、 <strong>案A (別文書照会) の確定</strong>・<strong>照会 graph = floor 背骨の発見</strong>・<strong>生成 doc に navigable id アンカーが無い問題 (folio-lzz)</strong> を顕在化させた。 clinic 診療予約 architecture を母体 (instance#1) に本物 pack を構築・検証し、 本 ADR はその実装 + 検証 + land (main 503ccb5) 後の forward decision を記録する。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-schema">§2.1 schema (arc42 固定章立て + C4 図)</h3>
+
+<p>architecture-description pack は <strong>arc42 の固定章立て</strong> (課題と外部接点 / 全体戦略 / 構成部品 / 実行時の流れ / 設計決定 / 品質 / リスク / 用語の固定 8 章) と <strong>C4 の階層図</strong> (mermaid で描く) を schema に採る。 固定章を採る load-bearing な理由は、 <strong>章の集合が floor の検査単位を与える</strong>こと — 記述型でも「章の存在 + 各章の必須要素 (id 付き component / decision / quality / risk node) の存在」を機械検査でき、 EARS/RTM が乗らない記述型でも厚い floor を張る土台になる (§1 の最大不確実点への答え)。 図は <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> visual design system の render target (<code>&lt;pre class="mermaid"&gt;</code>) として出し、 非エンジニア可読性 (gate I) を担保する。</p>
+
+<h3 id="s2-2-floor">§2.2 floor 三本柱 + 横展開 (記述型でも厚い floor)</h3>
+
+<p>architecture-description pack の floor は次の<strong>三本柱</strong>を持つ。</p>
+<ul>
+  <li><strong>(a) 照会 graph 整合</strong> — 全 cross-ref 辺 (決定 &rarr; ADR = rationale 照会 / 決定 &rarr; 要件 = 充足照会 / 決定 &rarr; 原則 = 終端) が suite 内の実在 node を role 通り指すことを機械検査する。 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> の <code>verify_cross_doc_refs</code> + <code>verify-graph.sh</code> をそのまま流用する。 ★<strong>記述型の floor 背骨は EARS でなく照会 graph</strong> — cross-ref は文章でなく機械検査可能なグラフの辺であり、 これが記述型でも floor を厚くできる核心。</li>
+  <li><strong>(b) navigable id アンカー emit</strong> — referenceable node (component / decision / quality / risk) に安定 navigable id を出し、 案A の照会を人間が実際に辿れるようにする (アンカー命名は照会 graph の node 識別子と一致させ verify が突合可能に)。 飛び先 SRS / ADR 側の id 欠落は横断課題ゆえ folio-lzz で別途閉じる。</li>
+  <li><strong>(c) 固定章 + 必須要素存在</strong> — arc42 固定 8 章の存在と、 各章の必須要素 (id 付き node) の存在を機械検査する (§2.1)。</li>
+</ul>
+<p>加えて floor を次で補強する: <strong>実装HOWリーク advisory 検出</strong> (コード / platform mandate の本文混入を <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> の HOW-outside / P-11 4-enum 保守検出として横展開・core 無改変) / <strong>CJK inline 強調の空白規律</strong> (assembler が強調タグの前後に空白を入れると助詞前で改行崩れを起こすため FAIL 検出・既知 CJK 語境界難所と同根) / <strong>fab-free</strong> (属性 pin と<em>可視 echo pin の両方</em> = 属性が intact でも可視テキストだけ捏造する fail-open を塞ぐ)。</p>
+
+<h3 id="s2-3-cross-doc">§2.3 案A — cross-document 照会 (再掲しない)</h3>
+
+<p>architecture-description は SRS の要件 / ADR の決定 / principle の原則へ <strong>cross-document link で照会するだけで再掲しない</strong>。 照会クリックで実際の別文書 (ADR / SRS / principle のページ) へ飛び、 architecture-description 自身は inline 要約も持たない。 これは WHAT &rarr; WHY &rarr; 構造の WHAT &rarr; 実装 HOW という<strong>はしご</strong> (SRS = 振る舞いの WHAT / ADR = WHY / architecture = 構造の WHAT / 実装 = HOW) の各段が互いを指すが再掲しない構造である。 inline 要約 (案B / 案C) は飛び先文書が既に持つ cover-summary / plain 説明と二重保持になり drift 源となるため採らない (§4)。</p>
+
+<h3 id="s2-4-principles">§2.4 横断原則 (core 無改変 / clinic 先)</h3>
+<ul>
+  <li>★<strong>core (lib/ + inject-prose.sh) 無改変</strong> — 最も異質な<em>記述型</em> pack が byte-identity で挿さる。 これは <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> が宣言した engine core 抽出完了が、 要件索引型を脱した記述型 doc-type へも及ぶことの確認であり、 rule-of-three (pack 追加は core 不変) の継続実証。 pack 追加物は contract YAML + assemble-arch.sh + rolemap + verify-arch.sh + prose manifest + test-adversarial-arch.sh のみ (= land した 6 ファイル)。</li>
+  <li><strong>clinic 先 &rarr; folio-self-spec は後</strong> — 記述型 pack 自体が新規ゆえ、 具体的で境界の明確な clinic 診療予約 architecture (instance#1) で assembler を先に証明し、 最難の meta &times; 記述型である folio-self-spec (folio 自身の architecture 記述) は後の self-dogfood 段階で instance#2 として回収し de-risk する (B6 で確立した self-host 型を適用・engine 全体の「具体例で証明 &rarr; self-host」型と同じ)。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: 記述型 doc-type でも照会 graph + 固定章で厚い floor を張れ、 機械保証が ceiling に過度依存しない。 完全 doc-suite に構造記述文書が加わり、 案A で architecture-description が SRS / ADR / principle を再掲せず照会で繋がる (drift 源を排除)。 engine core が記述型 doc-type へも無改変で及び、 engine 汎用性の射程が広がる。</li>
+  <li><strong>払うもの</strong>: <strong>rendered navigability は別レイヤー</strong> — 照会 graph は contract レベルで機械検査され正しく PASS するが、 飛び先 SRS / ADR が navigable id を出さないと人間はリンクを辿れず案A の価値が空洞化する。 これは floor の欠陥でなく<strong>横断課題 folio-lzz</strong> で別途閉じる。 pack ごとに contract を維持する。 記述型ゆえ floor は ceiling 補完を前提とし、 architecture 専用 ceiling agent は folio-7vd で制度化する。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (schema 〔arc42 + C4〕・floor 三本柱・案A 照会モデルは consumer が architecture doc を生成し始めると転換が高コスト) / <em>surprising</em> (要件索引型を脱した初の記述型 / floor 背骨が EARS でなく照会 graph / 「構造 HOW」は廃語で構造は design-intent の WHAT) / <em>real-trade-off</em> (案A vs 案B/C 〔§4〕・clinic 先 vs self-spec 先・EARS 流用 vs 照会 graph floor の 3 種以上の実トレードオフ) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>(照会挙動・案B/C) inline 要約または転写を持つ</strong> — 不採用。 飛び先文書が既に cover-summary / plain 説明を持つため inline 要約は二重保持 = drift 源になる。 照会は別文書への link に徹し (案A)、 architecture は要約を持たない。</li>
+  <li><strong>(floor) EARS を記述型へ流用する</strong> — 不採用。 EARS は<em>振る舞いトリガー</em>の型 (いつ何をするか) であって構造記述に乗らない。 記述型の floor 背骨は照会 graph (機械検査可能な辺) + 固定章/必須要素存在に据える。</li>
+  <li><strong>(母体) folio-self-spec を先に構築する</strong> — 不採用。 meta &times; 記述型である self-spec は最難で、 記述型 pack 自体が新規の段階で de-risk できない。 境界の明確な clinic で assembler を証明してから folio-self-spec を後の self-dogfood 段階で self-host する (B6 で確立した型を適用)。</li>
+  <li><strong>(framing)「構造 HOW」というラベルを使う</strong> — 廃語。 構造は <a href="../spec/constitution.html#p-7">P-7</a> の design-intent (WHAT) であり HOW ではない。 HOW は実装 (コード / platform 固有) のみで、 それは <a href="../spec/constitution.html#p-3">P-3</a> / <a href="../spec/constitution.html#p-11">P-11</a> により design-intent 空間の外側に隔離される。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<p>design-of-record (探索): <a href="../research/doctype-coverage-audit.html">doctype-coverage-audit</a> (research domain・gap SSoT = architecture-description を P1 gap と確定・段階3 を定義) + <a href="../research/document-discipline-engine-design.html#s9-1-mapping">engine 設計 §9.1</a> (doc-type &rarr; pack 写像仮説・self-spec を SRS 族と仮説したが tr0 grounding で記述型と覆った)。 基盤: <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> (照会 graph 終端完備検証 〔<code>verify_cross_doc_refs</code> + <code>verify-graph.sh</code>〕 を floor 背骨に流用・HOW-outside content boundary を実装HOWリーク advisory に横展開)・<a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> (人間層 visual design system + 機械 SSoT 生成 + 2-gate 検証を記述型へ適用)・<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (構造 = 決定的組立 / prose = opus 充填の hybrid 生成を記述型へ適用)。 継承: <a href="./ADR-0044-spec-pack-folio-self-host.html">ADR-0044</a> (engine core 抽出完了の doctrine を記述型 pack の core 無改変で継続実証)。 原則接地: <a href="../spec/constitution.html#p-7">P-7</a> (3-domain・design intent = 構造の WHAT) / <a href="../spec/constitution.html#p-3">P-3</a> (WHAT/HOW 分離) / <a href="../spec/constitution.html#p-11">P-11</a> (HOW の隔離) / <a href="../spec/constitution.html#p-10">P-10</a> (ADR 昇格は user 承認)。 追跡: bd engine epic folio-0dv / sub-epic folio-c5r 段階3 folio-5uu (worker build 912a0a5・land main 503ccb5・contract YAML + assemble-arch.sh + rolemap + verify-arch.sh + prose manifest + test-adversarial-arch.sh の 6 ファイル)。 follow-up: folio-lzz (生成 doc が referenceable node に navigable id アンカーを出す・案A 前提・横断スコープ) / folio-bur (fab-free 可視 echo pin の他 pack 横展開) / folio-udn (arch gate-I polish = 照会バッジ外部リンク affordance + term-inline 併記非対称) / folio-7vd (architecture 専用 ceiling agent = persona-walk-architecture + fidelity-architecture)。 決定の経緯: user demo-walk grill 2026-06-26 (opus モックアップ &rarr; <code>:8729</code> walk &rarr; 反応で論点確定。 walk が照会リンク着地バグを炙り出し案A確定 + 照会 graph = floor 背骨の発見 + navigable id 欠落 〔folio-lzz〕 を発見・粒度 OK 確認)。 検証: floor 全 GREEN を admin 独立再走 (assemble / verify pre-fill + filled PASS・敵対 57/57・verify-graph FLOOR-OK 〔ARCH-CLINIC-APPT 終端完備・PRIN-SAFETY-FIRST を ADR と共有〕・sandbox 41/41 回帰 0・core 〔lib/ + inject-prose.sh〕 diff 空 = 無改変・<code>folio validate</code> clean) + 独立 ceiling wf_58801326 (3 レンズ opus・fidelity minor1 = rationale-AD-1 の案A no-restate drift を prose 修正 e405e5b で除去 / persona gate I 実質達成 〔mermaid 3 図 SVG・mobile 崩れ無し〕 / 可視層 fabrication 敵対 74 攻撃 fail-open 0)。 version: 本 ADR 文書版 = 1.1.0 (記録する capability は engine epic folio-0dv・後方互換追加)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0045-spec-pack-machine-layer-round-trip.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0045 — spec-pack の機械層 dual-audience round-trip (engine w1f) — full self-host fidelity / extract 取り込み + canonical data-audience form + 二層 fidelity gate</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

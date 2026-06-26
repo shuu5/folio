@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-24T05:21:04Z",
+  "generatedAt": "2026-06-26T13:43:45Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -1115,6 +1115,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html"
         ],
         "dc:references": [
@@ -1142,6 +1143,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html"
         ],
@@ -1168,6 +1170,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html"
         ],
         "dc:references": [
@@ -1195,6 +1198,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html"
         ],
         "dc:references": [
@@ -1229,6 +1233,31 @@
           "decisions/ADR-0033-dual-audience-hub.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
           "spec/rules.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0046-architecture-description-pack.html",
+      "title": "ADR-0046 — architecture-description pack (engine 段階3)",
+      "summary": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3。 文書規律エンジンに",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.1.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isReferencedBy": [
+          "research/doctype-coverage-audit.html"
+        ],
+        "dc:references": [
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0044-spec-pack-folio-self-host.html"
         ]
       }
     },
@@ -1286,7 +1315,8 @@
       "relations": {
         "dc:references": [
           "research/document-discipline-engine-design.html",
-          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html"
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+          "decisions/ADR-0046-architecture-description-pack.html"
         ]
       }
     },
@@ -1300,6 +1330,7 @@
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0046-architecture-description-pack.html",
           "research/doctype-coverage-audit.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
@@ -1635,6 +1666,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
         "essence": "engine epic folio-0dv / follow-up folio-w1f。"
+      },
+      {
+        "id": "ADR-0046",
+        "class": "decision",
+        "ssot": "decisions/ADR-0046-architecture-description-pack.html",
+        "essence": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3。 文書規律エンジンに"
       },
       {
         "id": "P-1",
