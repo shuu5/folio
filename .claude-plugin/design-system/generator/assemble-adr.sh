@@ -215,6 +215,7 @@ emit_options() {
 }
 
 emit_decision() {
+  local SRS_HTML; SRS_HTML="$(q '.cross_doc.srs_html')"   # ★cross-doc deep-link path 先 (folio-c5r.9・root 平置き)
   printf '<div data-component="adr-decision-panel" id="decision">\n'
   printf '<p class="dec-kick">採用 — %s</p>\n' "$(esc "$(q '.decision.chosen')")"
   printf '<p class="dec-state">%s</p>\n' "$(mark_terms "$(q '.decision.statement')")"
@@ -223,8 +224,8 @@ emit_decision() {
   printf '<div class="justify-box"><p class="jh">この判断が正当化する要件 (cross-doc 照会 → %s)</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")"
   while IFS=$'\t' read -r req role note; do
     [[ -n "$req" ]] || continue
-    printf '<div class="justify-row"><span class="justify-req" data-justifies-req="%s" data-justifies-role="%s">%s</span><span class="justify-role">%s</span><span class="justify-note">%s</span></div>\n' \
-      "$(esc "$req")" "$(esc "$role")" "$(esc "$req")" "$(esc "$role")" "$(mark_terms "$note")"
+    printf '<div class="justify-row"><a class="justify-req" href="%s#%s" data-justifies-req="%s" data-justifies-role="%s">%s</a><span class="justify-role">%s</span><span class="justify-note">%s</span></div>\n' \
+      "$(esc "$SRS_HTML")" "$(esc "$req")" "$(esc "$req")" "$(esc "$role")" "$(esc "$req")" "$(esc "$role")" "$(mark_terms "$note")"
   done < <(q '.decision.justifies[] | [.req, .role, (.note // "")] | @tsv')
   printf '<p class="justify-tgt">照会先: %s — %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.cross_doc.srs_title')")"
   printf '</div>\n</div>\n'

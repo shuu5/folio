@@ -51,6 +51,7 @@ cross_doc:
   srs_contract: clinic-appointment.srs.yaml
   srs_doc_id: SRS-CLINIC-APPT
   srs_title: 診療予約システム SRS (診療の予約を空き枠どおり・二重予約なく受け付ける仕組み)
+  srs_html: clinic-appointment.srs.html   # ★cross-doc deep-link 先 (folio-c5r.9・root 平置き = path prefix なし)。anchor = SRS の裸 id (#FR2/#AC1・folio-lzz)
 
 # 01 このテスト仕様の範囲 (scope-summary-panel)。何を試し、 何を試さないか。
 scope:

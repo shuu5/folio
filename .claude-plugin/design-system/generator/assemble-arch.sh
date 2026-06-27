@@ -320,7 +320,7 @@ emit_decisions() {
     # ★SRS 充足照会 (role=claim・別文書 link・コード + SRS 由来機能名ラベル併記)
     printf '<div class="ad-ref-row claim"><span class="ad-ref-lab">充足する要件</span>'
     local fr
-    while IFS= read -r fr; do [[ -n "$fr" ]] || continue; printf '<a class="xref-link" href="../%s#%s" data-arch-ref="%s" data-arch-role="claim"><span class="xref-code">%s</span><span class="xref-label" data-srs-label-ref="%s">%s</span></a>' \
+    while IFS= read -r fr; do [[ -n "$fr" ]] || continue; printf '<a class="xref-link" href="%s#%s" data-arch-ref="%s" data-arch-role="claim"><span class="xref-code">%s</span><span class="xref-label" data-srs-label-ref="%s">%s</span></a>' \
       "$(esc "$SRS_HTML")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "${SRS_LABEL[$fr]}")"; done < <(q '.decisions[] | select(.id=="'"$did"'") | .refs.srs[]')
     printf '</div>\n'
     # ★ADR 根拠照会 (role=rationale・別文書 link・doc_id + ADR タイトルラベル併記)
@@ -328,7 +328,7 @@ emit_decisions() {
     if [[ "$nadr" != "0" ]]; then
       printf '<div class="ad-ref-row rationale"><span class="ad-ref-lab">判断の根拠</span>'
       local ar
-      while IFS= read -r ar; do [[ -n "$ar" ]] || continue; printf '<a class="xref-link" href="../%s#decision" data-adr-ref="%s" data-adr-role="rationale"><span class="xref-code">%s</span><span class="xref-label" data-adr-label-ref="%s">%s</span></a>' \
+      while IFS= read -r ar; do [[ -n "$ar" ]] || continue; printf '<a class="xref-link" href="%s#decision" data-adr-ref="%s" data-adr-role="rationale"><span class="xref-code">%s</span><span class="xref-label" data-adr-label-ref="%s">%s</span></a>' \
         "$(esc "$ADR_HTML")" "$(esc "$ar")" "$(esc "$ar")" "$(esc "$ar")" "$(esc "$ADR_TITLE")"; done < <(q '.decisions[] | select(.id=="'"$did"'") | .refs.adr[]')
       printf '</div>\n'
     fi
@@ -356,7 +356,7 @@ emit_quality() {
   local qid sref
   for qid in "${QIDS[@]}"; do
     sref="$(q '.quality[] | select(.id=="'"$qid"'") | .srs_ref')"
-    printf '<tr data-component="quality-row" id="qa-%s"><td><span class="qa-id">%s</span> <span class="qa-attr">%s</span></td><td><span class="qa-target">%s</span><span class="qa-plain">%s</span></td><td><a class="qa-srs" href="../%s#%s" data-quality-srs-ref="%s">%s</a></td></tr>\n' \
+    printf '<tr data-component="quality-row" id="qa-%s"><td><span class="qa-id">%s</span> <span class="qa-attr">%s</span></td><td><span class="qa-target">%s</span><span class="qa-plain">%s</span></td><td><a class="qa-srs" href="%s#%s" data-quality-srs-ref="%s">%s</a></td></tr>\n' \
       "$(esc "$qid")" "$(esc "$qid")" "$(esc "$(q '.quality[] | select(.id=="'"$qid"'") | .attribute')")" \
       "$(esc "$(q '.quality[] | select(.id=="'"$qid"'") | .target')")" "$(mark_terms "$(q '.quality[] | select(.id=="'"$qid"'") | .plain')")" \
       "$(esc "$SRS_HTML")" "$(esc "$sref")" "$(esc "$sref")" "$(esc "$sref")"
@@ -387,7 +387,7 @@ emit_footer() {
 
 # mermaid render JS (defer 済みで window.mermaid 利用可・raw DSL を SVG へ。 no-JS では pre が読める fallback)。
 emit_mermaid_js() {
-  printf '<script src="../assets/mermaid.min.js" defer></script>\n'
+  printf '<script src="assets/mermaid.min.js" defer></script>\n'
   cat <<'JS'
 <script>
 window.addEventListener('DOMContentLoaded', async () => {

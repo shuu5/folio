@@ -141,6 +141,18 @@ tc_echo_bad="$(SRS="$srs_id_e" FRJ="$fr_join_e" TITLE="$srs_title_e" perl -CSD -
 ' "$BODY")"
 chk_empty "cross-doc: 可視 echo == テンプレ+id (marker-keyed・swap/平文/nested 封鎖)" "$tc_echo_bad"
 
+# 3b-href. ★cross-doc deep-link 遷移先 fidelity (folio-c5r.9・arch gate 1h 同型)。 tc-ref / rtm-code を <a href> 化した
+#   ので、 href 値が contract 派生 <srs_html>#<ref> へ束縛されることを set_eq + 件数で証明する (anchor swap / filename swap /
+#   外部 host / デッドリンク / href 欠落〔span 残存〕を fail-closed 封鎖)。 root 平置きゆえ path prefix なし (#<ref>=裸 id・folio-lzz)。
+SRS_HTML_E="$(esc "$(q '.cross_doc.srs_html')")"
+chk "href: <a class=tc-ref href> 数 == |edges| (span 残存/href 欠落封鎖)" "$NEDGE" "$(grep -oE '<a class="tc-ref" href=' "$BODY" | wc -l | tr -d ' ')"
+exp_tcref_href="$(q '.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
+act_tcref_href="$(perl -CSD -0777 -ne 'while (/<a class="tc-ref" href="([^"]*)"\s+data-trace-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
+LC_ALL=C set_eq "href: tc-ref (href, ref) == <srs_html>#<ref> (anchor/filename swap 封鎖)" "$exp_tcref_href" "$act_tcref_href"
+chk "href: <a class=rtm-code href> 数 == |edges| (RTM href 欠落封鎖)" "$NEDGE" "$(grep -oE '<a class="rtm-code" href=' "$BODY" | wc -l | tr -d ' ')"
+rtmcode_href_bad="$(SRS="$SRS_HTML_E" perl -CSD -Mutf8 -0777 -ne 'my $s=$ENV{SRS}; utf8::decode($s); my @bad; while (/<a class="rtm-code" href="([^"]*)">([^<]*)<\/a>/g){ push @bad,"$1\x{2260}$2" if $1 ne "$s#$2"; } print join(" ",@bad);' "$BODY")"
+chk_empty "href: rtm-code href == <srs_html>#<code> (可視コード==飛び先 anchor)" "$rtmcode_href_bad"
+
 # 3c. ★三段 trace の within-doc RTM fidelity: (tc,kind,FR-codes,AC-codes) を *emission 順* で contract へ pin。
 #   RTM の FR/AC セルは code バッジ (<b class="rtm-code">) + SRS 由来 label を併記する構造ゆえ、 セル内の rtm-code 値のみを
 #   行スコープで抽出して join し contract の verifies/confirms join と突合する (label の fidelity は §3e が別途・data-label-ref で担う)。
@@ -153,8 +165,8 @@ act_rtm="$(perl -CSD -0777 -ne '
     my ($kind) = $row =~ /<td class="rtm-kind">([^<]*)<\/td>/;
     my ($frc)  = $row =~ /<td class="rtm-fr">(.*?)<\/td>/s;
     my ($acc)  = $row =~ /<td class="rtm-ac">(.*?)<\/td>/s;
-    my @fr = (defined $frc) ? ($frc =~ /<b class="rtm-code">([^<]*)<\/b>/g) : ();
-    my @ac = (defined $acc) ? ($acc =~ /<b class="rtm-code">([^<]*)<\/b>/g) : ();
+    my @fr = (defined $frc) ? ($frc =~ /<a class="rtm-code"[^>]*>([^<]*)<\/a>/g) : ();
+    my @ac = (defined $acc) ? ($acc =~ /<a class="rtm-code"[^>]*>([^<]*)<\/a>/g) : ();
     print join("\t", ($tc//""), ($kind//""), join("\x{30FB}",@fr), join("\x{30FB}",@ac)), "\n";
   }' "$BODY")"
 set_eq "RTM 行 (tc,kind,FR-codes,AC-codes) == contract (順序)" "$exp_rtm" "$act_rtm"

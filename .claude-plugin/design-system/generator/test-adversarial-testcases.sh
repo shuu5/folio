@@ -68,13 +68,18 @@ expect_fail "scope.in 項目削除 (件数脱落)"   "$(mut 30 's{<li><span clas
 # --- ★三段 trace / cross-doc 照会の改竄 (本 pack の核) ---
 expect_fail "偽 FR 参照 (dangling・SRS に無い FR99)" "$(mut 12 's{data-trace-ref="FR1" data-trace-role="claim">FR1}{data-trace-ref="FR99" data-trace-role="claim">FR99}')"
 expect_fail "trace role 意味偽装 (claim→verification)" "$(mut 13 's{data-trace-ref="FR1" data-trace-role="claim"}{data-trace-ref="FR1" data-trace-role="verification"}')"
-expect_fail "trace ref 削除 (count mismatch)" "$(mut 14 's{<span class="tc-ref" data-trace-ref="FR1" data-trace-role="claim">FR1</span>}{}')"
-expect_fail "tc-ref 可視 vs attr desync"      "$(mut 15 's{(data-trace-ref="FR1" data-trace-role="claim">)FR1(</span>)}{${1}FRX${2}}')"
-expect_fail "RTM FR code 改竄"                "$(mut 16 's{<b class="rtm-code">FR1</b>}{<b class="rtm-code">FR-FAKE</b>}')"
+expect_fail "trace ref 削除 (count mismatch)" "$(mut 14 's{<a class="tc-ref" href="clinic-appointment.srs.html#FR1" data-trace-ref="FR1" data-trace-role="claim">FR1</a>}{}')"
+expect_fail "tc-ref 可視 vs attr desync"      "$(mut 15 's{(data-trace-ref="FR1" data-trace-role="claim">)FR1(</a>)}{${1}FRX${2}}')"
+expect_fail "RTM FR code 改竄"                "$(mut 16 's{<a class="rtm-code" href="clinic-appointment.srs.html#FR1">FR1</a>}{<a class="rtm-code" href="clinic-appointment.srs.html#FR1">FR-FAKE</a>}')"
+# ★folio-c5r.9 cross-doc href 遷移先 fidelity 敵対 (arch gate 1h 同型)。
+expect_fail "tc-ref href anchor swap (#FR1→#FR99・attr 温存)"  "$(mut 40 's{(<a class="tc-ref" href="clinic-appointment.srs.html)#FR1(" data-trace-ref="FR1")}{${1}#FR99${2}}')"
+expect_fail "tc-ref href filename swap (外部 host)"            "$(mut 41 's{<a class="tc-ref" href="clinic-appointment.srs.html#FR1"}{<a class="tc-ref" href="https://evil.example#FR1"}')"
+expect_fail "tc-ref href 剥奪 (span 退行・押せないリンク)"      "$(mut 42 's{<a class="tc-ref" href="clinic-appointment.srs.html#FR1" (data-trace-ref="FR1" data-trace-role="claim">FR1)</a>}{<span class="tc-ref" ${1}</span>}')"
+expect_fail "rtm-code href anchor swap (可視FR1・href#FR2)"    "$(mut 43 's{<a class="rtm-code" href="clinic-appointment.srs.html#FR1">FR1</a>}{<a class="rtm-code" href="clinic-appointment.srs.html#FR2">FR1</a>}')"
 # ★per-card trace pin (card-keyed) の regression: card 間で FR/AC を入替える (RTM 無改竄)。 global key SET・
 #   (key,role) ペア SET・count・RTM は全て不変ゆえ 3/3c は素通る。 3d (per-card 三つ組) のみが捕捉する。
-expect_fail "card 間 FR 入替 (TC1↔TC8・RTM 無改竄)" "$(mut 26 's{(id="tc-TC1">.*?)data-trace-ref="FR1" data-trace-role="claim">FR1(</span>)}{${1}data-trace-ref="FR3" data-trace-role="claim">FR3${2}}s; s{(id="tc-TC8">.*?)data-trace-ref="FR3" data-trace-role="claim">FR3(</span>)}{${1}data-trace-ref="FR1" data-trace-role="claim">FR1${2}}s')"
-expect_fail "card 間 AC 入替 (TC4↔TC5・RTM 無改竄)" "$(mut 27 's{(id="tc-TC4">.*?)data-trace-ref="AC4" data-trace-role="verification">AC4(</span>)}{${1}data-trace-ref="AC5" data-trace-role="verification">AC5${2}}s; s{(id="tc-TC5">.*?)data-trace-ref="AC5" data-trace-role="verification">AC5(</span>)}{${1}data-trace-ref="AC4" data-trace-role="verification">AC4${2}}s')"
+expect_fail "card 間 FR 入替 (TC1↔TC8・RTM 無改竄)" "$(mut 26 's{(id="tc-TC1">.*?)data-trace-ref="FR1" data-trace-role="claim">FR1(</a>)}{${1}data-trace-ref="FR3" data-trace-role="claim">FR3${2}}s; s{(id="tc-TC8">.*?)data-trace-ref="FR3" data-trace-role="claim">FR3(</a>)}{${1}data-trace-ref="FR1" data-trace-role="claim">FR1${2}}s')"
+expect_fail "card 間 AC 入替 (TC4↔TC5・RTM 無改竄)" "$(mut 27 's{(id="tc-TC4">.*?)data-trace-ref="AC4" data-trace-role="verification">AC4(</a>)}{${1}data-trace-ref="AC5" data-trace-role="verification">AC5${2}}s; s{(id="tc-TC5">.*?)data-trace-ref="AC5" data-trace-role="verification">AC5(</a>)}{${1}data-trace-ref="AC4" data-trace-role="verification">AC4${2}}s')"
 
 # --- ★FR/AC 平易ラベル併記の fidelity (persona ceiling 是正・SRS 由来でないラベルを封鎖) ---
 # card trace の併記ラベルを捏造 (data-label-ref intact のまま可視ラベルだけ非 SRS 値へ)

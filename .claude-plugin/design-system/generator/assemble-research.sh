@@ -138,8 +138,9 @@ emit_cover() {
   nfnd="$(q '.findings | length')件"
   printf '<div class="cover-meta"><span class="m"><span class="k">状態</span><span class="v">%s</span></span><span class="m"><span class="k">検討した方式</span><span class="v">%s</span></span><span class="m"><span class="k">わかったこと</span><span class="v">%s</span></span><span class="m"><span class="k">版</span><span class="v">v%s / %s</span></span></div>\n' \
     "$(esc "$rstat")" "$napp" "$nfnd" "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
-  # ★cross-doc 前方照会の可視チップ (この調査の行き先 = 決着した ADR)
-  printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s この調査の行き先: <b>%s</b> — %s</div>\n' "$ICO_USER" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
+  # ★cross-doc 前方照会の可視チップ (この調査の行き先 = 決着した ADR・folio-c5r.9 で #decision へ deep-link)
+  local ADR_HTML; ADR_HTML="$(q '.cross_doc.adr_html')"
+  printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s この調査の行き先: <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</div>\n' "$ICO_USER" "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
   core_emit_approval_block
   core_emit_cover_tail
 }
@@ -166,6 +167,7 @@ emit_approaches() {
   printf '<div class="ap-grid">\n'
   local -a AIDS; mapfile -t AIDS < <(q '.approaches[].id')
   local aid name summ assess leads role
+  local ADR_HTML; ADR_HTML="$(q '.cross_doc.adr_html')"   # ★cross-doc deep-link path 先 (folio-c5r.9・root 平置き・coarse=#decision)
   for aid in "${AIDS[@]}"; do
     name="$(q '.approaches[] | select(.id=="'"$aid"'") | .name')"
     summ="$(q '.approaches[] | select(.id=="'"$aid"'") | .summary')"
@@ -175,8 +177,8 @@ emit_approaches() {
     printf '<div data-component="research-approach-card">\n'
     # ★cross-doc 前方照会チップ: ap-id / leads-to / leads-role を同一要素に固定順で刻む (verify が突合)。
     #   可視 id は <b>OPTx</b> に出し、 verify が data-leads-to との一致を突合 (非エンジニアが読む文字の偽装を捕捉)。
-    printf '<div class="ap-head"><span class="ap-id">%s</span><span class="ap-name">%s</span><span data-component="cross-doc-leads-chip" data-ap-id="%s" data-leads-to="%s" data-leads-role="%s">\xe2\x86\x92 つながる判断 <b>%s</b></span></div>\n' \
-      "$(esc "$aid")" "$(mark_terms "$name")" "$(esc "$aid")" "$(esc "$leads")" "$(esc "$role")" "$(esc "$leads")"
+    printf '<div class="ap-head"><span class="ap-id">%s</span><span class="ap-name">%s</span><a data-component="cross-doc-leads-chip" href="%s#decision" data-ap-id="%s" data-leads-to="%s" data-leads-role="%s">\xe2\x86\x92 つながる判断 <b>%s</b></a></div>\n' \
+      "$(esc "$aid")" "$(mark_terms "$name")" "$(esc "$ADR_HTML")" "$(esc "$aid")" "$(esc "$leads")" "$(esc "$role")" "$(esc "$leads")"
     printf '<p class="ap-sum">%s</p>\n' "$(mark_terms "$summ")"
     printf '<span class="ap-plain" data-prose-slot="plain" data-slot-id="plain-%s"></span>\n' "$(esc "$aid")"
     printf '<p class="ap-assess"><span class="ak">評価</span>%s</p>\n' "$(mark_terms "$assess")"
@@ -196,11 +198,12 @@ emit_open_questions() {
 
 emit_outcome() {
   printf '<div data-component="research-outcome-panel">\n'
+  local ADR_HTML; ADR_HTML="$(q '.cross_doc.adr_html')"   # ★cross-doc deep-link path 先 (folio-c5r.9・coarse=#decision)
   printf '<p class="oc-kick">調査の行き先 — 決着した判断</p>\n'
-  printf '<p class="oc-resolved" data-resolved-by="%s">この調査は <b>%s</b> で決着しました</p>\n' "$(esc "$(q '.outcome.resolved_by')")" "$(esc "$(q '.outcome.resolved_by')")"
+  printf '<p class="oc-resolved" data-resolved-by="%s">この調査は <a class="xref-doc" href="%s#decision"><b>%s</b></a> で決着しました</p>\n' "$(esc "$(q '.outcome.resolved_by')")" "$(esc "$ADR_HTML")" "$(esc "$(q '.outcome.resolved_by')")"
   printf '<span class="oc-plain" data-prose-slot="plain" data-slot-id="outcome-plain"></span>\n'
   printf '<span class="oc-note">%s</span>\n' "$(mark_terms "$(q '.outcome.note')")"
-  printf '<p class="oc-tgt">照会先 (前方参照): <b>%s</b> — %s</p>\n' "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
+  printf '<p class="oc-tgt">照会先 (前方参照): <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</p>\n' "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
   printf '</div>\n'
 }
 

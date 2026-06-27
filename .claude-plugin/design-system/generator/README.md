@@ -217,6 +217,15 @@ SRS/ADR/research/principle/spec/glossary generator の機構を **6 例目の do
 ./test-adversarial-testcases.sh
 ```
 
+## cross-doc deep-link navigability + suite レイアウト規約 (folio-c5r.9 / rqj follow-up)
+
+生成文書一式 (suite) の cross-doc 照会を **実際にクリックできる `<a href>`** にする層 (folio-lzz が target 側の navigable 裸 id を、 本 cell が referrer 側の href を配線)。 単一文書 walk が見ない suite 規模の navigability で、 純 pack 追加 (`lib/` + `inject-prose.sh` 無改変・arch 先例の 3 層を spine へ複製)。
+
+- **suite レイアウト規約 = 全 doc root 平置き (Fork A)**。 全 referrer が **`<filename>.html#<anchor>` の素パス** (referrer 位置非依存の単一規約) を使う。 arch も root へ置き、 旧 `../` ハードコードは撤廃した (referrer 位置で path prefix が分岐する非対称を解消)。 これは生成物 (consumer artifact) の配置規約ゆえ HOW = 本 README が SSoT (folio spec には置かない・P-3/P-11)。
+- **referrer 3 層 (arch 先例の複製)**: ① contract `cross_doc` に飛び先 `*_html` フィールド (例 `srs_html: clinic-appointment.srs.html`)。 ② assembler が `<a class="…" href="<*_html>#<anchor>" data-*-ref=…>` を決定的 emit。 anchor は folio-lzz の裸 id (`#FR2`/`#NFR1`/`#AC1`/`#decision`)。 ③ verify が (href, 兄弟 data-*-ref) ペアを contract 派生 href へ束ね set_eq + 件数で fail-closed (anchor swap / filename swap / 外部 host / href 欠落〔span 退行〕封鎖・arch gate 1h 同型)。
+- **配線済 referrer**: testcases→SRS (tc-ref / RTM rtm-code = `#FR/#AC`)・ADR→SRS (justify-req = `#FR`)・research→ADR (leads-chip / 表紙 ref-chip / oc-resolved / oc-tgt = **coarse `#decision` 着地**・OPT 単位 anchor は別 follow-up)・arch→SRS/ADR (既存・Fork A で `../` 撤廃)。
+- **敵対**: 各 pack の `test-adversarial-*.sh` に href anchor swap / filename swap (外部 host) / href 剥奪 を追加 (★href の `#` と perl `s#…#` デリミタ衝突を避け `{}`/`s{…}{…}` を使う)。
+
 ## 照会 graph 終端完備検証 (engine B5-I / folio-p4o)
 
 個々の pack verify (verify-adr/research/principle) は **1 doc の局所** 照会 (justifies/leads_to/inbound) を検証する。

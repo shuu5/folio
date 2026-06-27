@@ -71,7 +71,7 @@ expect_fail "principle terminal anchor 改名"          "$(mut 8 's{id="principl
 # --- ① 照会グラフ (cross-doc 前方照会の核) ---
 expect_fail "偽 FR 参照 (dangling・SRS に無い FR99)" "$(mut 10 's{data-arch-ref="FR2" data-arch-role="claim"}{data-arch-ref="FR99" data-arch-role="claim"}')"
 expect_fail "SRS role 意味偽装 (claim→rationale)"     "$(mut 11 's{data-arch-ref="FR2" data-arch-role="claim"}{data-arch-ref="FR2" data-arch-role="rationale"}')"
-expect_fail "SRS ref 削除 (count mismatch)"            "$(mut 12 's{<a class="xref-link" href="../clinic-appointment.srs.html#FR2" data-arch-ref="FR2" data-arch-role="claim"><span class="xref-code">FR2</span><span class="xref-label" data-srs-label-ref="FR2">予約受付</span></a>}{}')"
+expect_fail "SRS ref 削除 (count mismatch)"            "$(mut 12 's{<a class="xref-link" href="clinic-appointment.srs.html#FR2" data-arch-ref="FR2" data-arch-role="claim"><span class="xref-code">FR2</span><span class="xref-label" data-srs-label-ref="FR2">予約受付</span></a>}{}')"
 expect_fail "偽 ADR 参照 (dangling・別 doc_id)"        "$(mut 13 's{data-adr-ref="ADR-CLINIC-0001" data-adr-role="rationale"}{data-adr-ref="ADR-CLINIC-9999" data-adr-role="rationale"}')"
 expect_fail "ADR role 偽装 (rationale→claim)"          "$(mut 14 's{data-adr-ref="ADR-CLINIC-0001" data-adr-role="rationale"}{data-adr-ref="ADR-CLINIC-0001" data-adr-role="claim"}')"
 expect_fail "principle ref 改竄 (別原則)"              "$(mut 15 's{data-principle-ref="PRIN-SAFETY-FIRST"}{data-principle-ref="PRIN-FAKE"}')"
@@ -89,10 +89,10 @@ expect_fail "可視 xref-code ADR 捏造 (0001→9999・data-adr-ref intact)"   
 expect_fail "可視 xref-code 原則 捏造 (PRIN偽装・data-principle-ref intact)"  "$(mut 47 's{<span class="xref-code">PRIN-SAFETY-FIRST</span>}{<span class="xref-code">PRIN-TOTALLY-FAKE</span>}')"
 
 # --- ★href 遷移先 改竄 (属性+可視コード/ラベル intact のまま 飛び先だけ swap・folio-5uu self-review fail-open 封鎖) ---
-expect_fail "href SRS anchor swap (#FR2→#FR99・data-arch-ref=FR2 intact)"           "$(mut 52 's{href="../clinic-appointment.srs.html#FR2"}{href="../clinic-appointment.srs.html#FR99"}')"
-expect_fail "href filename 外部host注入 (SRS→https://evil.example・属性 intact)"     "$(mut 53 's{href="../clinic-appointment.srs.html#FR3"}{href="https://evil.example#FR3"}')"
+expect_fail "href SRS anchor swap (#FR2→#FR99・data-arch-ref=FR2 intact)"           "$(mut 52 's{href="clinic-appointment.srs.html#FR2"}{href="clinic-appointment.srs.html#FR99"}')"
+expect_fail "href filename 外部host注入 (SRS→https://evil.example・属性 intact)"     "$(mut 53 's{href="clinic-appointment.srs.html#FR3"}{href="https://evil.example#FR3"}')"
 expect_fail "href 原則 within-doc デッドリンク (#principle-PRIN…→#principle-FAKE)"   "$(mut 54 's{href="#principle-PRIN-SAFETY-FIRST"}{href="#principle-FAKE"}')"
-expect_fail "href quality anchor swap (#AC1→#AC99・data-quality-srs-ref=AC1 intact)" "$(mut 55 's{href="../clinic-appointment.srs.html#AC1"}{href="../clinic-appointment.srs.html#AC99"}')"
+expect_fail "href quality anchor swap (#AC1→#AC99・data-quality-srs-ref=AC1 intact)" "$(mut 55 's{href="clinic-appointment.srs.html#AC1"}{href="clinic-appointment.srs.html#AC99"}')"
 
 # --- cross-doc 可視 echo (表紙 ref-chip) ---
 expect_fail "ref-chip srs_doc_id 捏造" "$(mut 20 's{(data-component="cross-doc-ref-chip">.*?<b>)SRS-CLINIC-APPT(</b>)}{${1}FAKE-SRS${2}}s')"

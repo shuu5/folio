@@ -7,7 +7,7 @@
 # ★floor 三本柱 (folio-5uu grill 確定):
 #   ① 照会グラフ整合: decisions[].refs.{srs,adr}[] の cross-doc 照会が (a) HTML data-{arch,adr}-ref 集合と集合一致 +
 #      count anchor、 (b) 参照先 SRS/ADR contract に実在 (dangling 0)、 (c) doc_id 一致、 (d)(d') role 整合、
-#      (e) href 遷移先が contract 派生値 (1h・SRS/quality=../<srs_html>#<ref> / ADR=../<adr_html>#decision / principle=#principle-<ref>)。
+#      (e) href 遷移先が contract 派生値 (1h・SRS/quality=<srs_html>#<ref> / ADR=<adr_html>#decision / principle=#principle-<ref>)。
 #      共通スケルトン = core (verify_cross_doc_refs)。 SRS 向け・ADR 向けに 2 回呼ぶ。 graph 終端完備は verify-graph.sh が別途。
 #   ② navigable id アンカー: decision→ad-/component→comp-/quality→qa-/risk→risk- の id= 集合が contract と集合一致
 #      (glossary の id=term-<slug> 方式を踏襲・案A の人間半分・folio-lzz の手本)。
@@ -167,27 +167,27 @@ chk "可視 xref-code 総数 == |SRS+ADR+principle照会| (孤立 echo 封鎖)" 
 #   属性・可視ラベル intact のまま href だけを 別要件 (#FR99) / 外部 URL (https://evil) / 別文書 / within-doc デッドアンカー
 #   (#principle-FAKE) へ swap でき、 読者が正しいコード/ラベルを見てクリックすると別所へ飛ぶ fail-open があった
 #   (folio-5uu self-review・worker mut45-51 で塞いだ『属性 intact・可視捏造』と対称の『属性+可視 intact・href 改竄』)。
-#   各 <a> の (href, 兄弟 data-*-ref) ペアを contract 派生 href へ束ねて set_eq する: SRS/quality = ../<srs_html>#<ref> /
-#   ADR = ../<adr_html>#decision / principle = #principle-<ref>。 href が決定的に contract 由来であることを証明し、
+#   各 <a> の (href, 兄弟 data-*-ref) ペアを contract 派生 href へ束ねて set_eq する: SRS/quality = <srs_html>#<ref> /
+#   ADR = <adr_html>#decision / principle = #principle-<ref>。 href が決定的に contract 由来であることを証明し、
 #   anchor swap / filename swap / 外部 host / within-doc デッドリンクを fail-closed で封鎖する (cross-doc *target* アンカー
 #   の後付けは folio-lzz scope だが、 href *値* が contract 派生であること自体 + 原則 within-doc 遷移先健全性は本 cell scope)。
 SRS_HTML_E="$(esc "$(q '.cross_doc.srs_html')")"; ADR_HTML_E="$(esc "$(q '.cross_doc.adr_html')")"
-# (SRS claim href, FR) == ../<srs_html>#<ref>
-exp_srs_href="$(q '.decisions[].refs.srs[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '../%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
+# (SRS claim href, FR) == <srs_html>#<ref>
+exp_srs_href="$(q '.decisions[].refs.srs[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
 act_srs_href="$(perl -CSD -0777 -ne 'while (/\bhref="([^"]*)"\s+data-arch-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
-LC_ALL=C set_eq "href: SRS claim (href, FR) == ../<srs_html>#<ref>" "$exp_srs_href" "$act_srs_href"
-# (ADR rationale href, doc_id) == ../<adr_html>#decision
-exp_adr_href="$(q '.decisions[].refs.adr[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '../%s#decision\t%s\n' "$ADR_HTML_E" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
+LC_ALL=C set_eq "href: SRS claim (href, FR) == <srs_html>#<ref>" "$exp_srs_href" "$act_srs_href"
+# (ADR rationale href, doc_id) == <adr_html>#decision
+exp_adr_href="$(q '.decisions[].refs.adr[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '%s#decision\t%s\n' "$ADR_HTML_E" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
 act_adr_href="$(perl -CSD -0777 -ne 'while (/\bhref="([^"]*)"\s+data-adr-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
-LC_ALL=C set_eq "href: ADR rationale (href, doc_id) == ../<adr_html>#decision" "$exp_adr_href" "$act_adr_href"
+LC_ALL=C set_eq "href: ADR rationale (href, doc_id) == <adr_html>#decision" "$exp_adr_href" "$act_adr_href"
 # (principle href, id) == #principle-<ref> (within-doc 遷移先健全性・デッドリンク封鎖)
 exp_prin_href="$(q '.decisions[].refs.principle[]' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '#principle-%s\t%s\n' "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
 act_prin_href="$(perl -CSD -0777 -ne 'while (/\bhref="([^"]*)"\s+data-principle-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
 LC_ALL=C set_eq "href: principle (href, id) == #principle-<ref> (デッドリンク封鎖)" "$exp_prin_href" "$act_prin_href"
-# (quality srs href, AC/NFR) == ../<srs_html>#<srs_ref>
-exp_qa_href="$(q '.quality[].srs_ref' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '../%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
+# (quality srs href, AC/NFR) == <srs_html>#<srs_ref>
+exp_qa_href="$(q '.quality[].srs_ref' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
 act_qa_href="$(perl -CSD -0777 -ne 'while (/\bhref="([^"]*)"\s+data-quality-srs-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
-LC_ALL=C set_eq "href: quality (href, srs_ref) == ../<srs_html>#<srs_ref>" "$exp_qa_href" "$act_qa_href"
+LC_ALL=C set_eq "href: quality (href, srs_ref) == <srs_html>#<srs_ref>" "$exp_qa_href" "$act_qa_href"
 # href 総数 == 全照会数 (孤立/追加 href の add を封鎖。 set_eq の -u が畳む重複・余剰 href を件数で捕捉)
 chk "href: 総数 == |SRS+ADR+principle+quality照会| (孤立 href 封鎖)" "$((NSRS + NADR + NPRIN + NQA))" "$(grep -oE 'href="[^"]*"' "$BODY" | wc -l | tr -d ' ')"
 

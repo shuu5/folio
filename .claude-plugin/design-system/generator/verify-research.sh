@@ -143,6 +143,15 @@ chk "outcome: HTML resolved-by == contract" "$(esc "$(q '.outcome.resolved_by')"
 chk "outcome oc-resolved ブロック == 1"  "1" "$(grep -c 'class="oc-resolved"' "$BODY")"
 chk "cover ref-chip ブロック == 1"       "1" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
 chk "outcome oc-tgt ブロック == 1"       "1" "$(grep -c 'class="oc-tgt"' "$BODY")"
+
+# 4b-href. ★cross-doc deep-link 遷移先 fidelity (folio-c5r.9・Fork B coarse = ADR #decision 着地)。 research の ADR 照会
+#   (leads-chip ×|approaches| + 表紙 ref-chip + oc-resolved + oc-tgt = |approaches|+3 本) を <a href> 化したので、
+#   全 href が contract 派生 <adr_html>#decision へ束縛されることを件数 + 全件一致で証明 (anchor/filename swap・外部 host・
+#   href 欠落封鎖)。 OPT 単位 deep-link は folio-c5r.9 で coarse 採用ゆえ全照会が #decision (ADR の決定パネル) へ着地。
+ADR_HTML_E="$(esc "$(q '.cross_doc.adr_html')")"
+chk "href: 研究→ADR href 総数 == |approaches|+3 (leads+ref-chip+oc-resolved+oc-tgt)" "$(( $(q '.approaches | length') + 3 ))" "$(grep -oE 'href="[^"]*"' "$BODY" | wc -l | tr -d ' ')"
+bad_href="$(ADR="$ADR_HTML_E" perl -CSD -Mutf8 -0777 -ne 'my $a=$ENV{ADR}; utf8::decode($a); my @bad; while (/href="([^"]*)"/g){ push @bad,$1 if $1 ne "$a#decision"; } print join(" ",@bad);' "$BODY")"
+chk_empty "href: 全 cross-doc href == <adr_html>#decision (anchor/filename swap・外部 host 封鎖)" "$bad_href"
 adr_id_e="$(esc "$(q '.cross_doc.adr_doc_id')")"
 # (g') oc-resolved 内 <b> == 各ブロックの data-resolved-by / (h') cover ref-chip 内 <b> == adr_doc_id /
 # (j') oc-tgt 内 <b> == adr_doc_id (assemble で <b> 包みに統一)。 いずれも 全<b>列挙 + ちょうど1本 == 期待で

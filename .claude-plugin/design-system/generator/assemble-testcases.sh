@@ -196,10 +196,10 @@ emit_cards() {
     # ★各 trace edge = code バッジ (tc-ref・data-trace-ref/role) + SRS 由来 平易ラベル (tc-ref-label・data-label-ref)。
     #   ラベルは FR=requirements[].label / AC=acceptance[].criterion を REF_LABEL から verbatim (fabrication-free)。
     printf '<div class="tc-trace-row verify"><span class="tc-trace-label">検証する要件</span>'
-    while IFS= read -r fr; do [[ -n "$fr" ]] && printf '<span class="tc-trace-edge"><span class="tc-ref" data-trace-ref="%s" data-trace-role="claim">%s</span><span class="tc-ref-label" data-label-ref="%s">%s</span></span>' "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "${REF_LABEL[$fr]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.verifies[]')
+    while IFS= read -r fr; do [[ -n "$fr" ]] && printf '<span class="tc-trace-edge"><a class="tc-ref" href="%s#%s" data-trace-ref="%s" data-trace-role="claim">%s</a><span class="tc-ref-label" data-label-ref="%s">%s</span></span>' "$(esc "$SRS_HTML")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "${REF_LABEL[$fr]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.verifies[]')
     printf '</div>\n'
     printf '<div class="tc-trace-row confirm"><span class="tc-trace-label">確かめる受入基準</span>'
-    while IFS= read -r ac; do [[ -n "$ac" ]] && printf '<span class="tc-trace-edge"><span class="tc-ref" data-trace-ref="%s" data-trace-role="verification">%s</span><span class="tc-ref-label" data-label-ref="%s">%s</span></span>' "$(esc "$ac")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "${REF_LABEL[$ac]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.confirms[]')
+    while IFS= read -r ac; do [[ -n "$ac" ]] && printf '<span class="tc-trace-edge"><a class="tc-ref" href="%s#%s" data-trace-ref="%s" data-trace-role="verification">%s</a><span class="tc-ref-label" data-label-ref="%s">%s</span></span>' "$(esc "$SRS_HTML")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "${REF_LABEL[$ac]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.confirms[]')
     printf '</div>\n'
     printf '<p class="tc-trace-tgt">照会先: %s \xe2\x80\x94 %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.cross_doc.srs_title')")"
     printf '</div>\n</div>\n'
@@ -218,10 +218,10 @@ emit_rtm() {
     printf '<tr data-component="rtm-row"><td class="rtm-tc">%s</td><td class="rtm-kind">%s</td>' "$(esc "$tid")" "$(esc "$kind")"
     printf '<td class="rtm-fr">'
     first=1
-    while IFS= read -r x; do [[ -n "$x" ]] || continue; [[ "$first" -eq 1 ]] || printf '、'; first=0; printf '<span class="rtm-edge"><b class="rtm-code">%s</b> <span class="rtm-label" data-label-ref="%s">%s</span></span>' "$(esc "$x")" "$(esc "$x")" "$(esc "${REF_LABEL[$x]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.verifies[]')
+    while IFS= read -r x; do [[ -n "$x" ]] || continue; [[ "$first" -eq 1 ]] || printf '、'; first=0; printf '<span class="rtm-edge"><a class="rtm-code" href="%s#%s">%s</a> <span class="rtm-label" data-label-ref="%s">%s</span></span>' "$(esc "$SRS_HTML")" "$(esc "$x")" "$(esc "$x")" "$(esc "$x")" "$(esc "${REF_LABEL[$x]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.verifies[]')
     printf '</td><td class="rtm-ac">'
     first=1
-    while IFS= read -r x; do [[ -n "$x" ]] || continue; [[ "$first" -eq 1 ]] || printf '、'; first=0; printf '<span class="rtm-edge"><b class="rtm-code">%s</b> <span class="rtm-label" data-label-ref="%s">%s</span></span>' "$(esc "$x")" "$(esc "$x")" "$(esc "${REF_LABEL[$x]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.confirms[]')
+    while IFS= read -r x; do [[ -n "$x" ]] || continue; [[ "$first" -eq 1 ]] || printf '、'; first=0; printf '<span class="rtm-edge"><a class="rtm-code" href="%s#%s">%s</a> <span class="rtm-label" data-label-ref="%s">%s</span></span>' "$(esc "$SRS_HTML")" "$(esc "$x")" "$(esc "$x")" "$(esc "$x")" "$(esc "${REF_LABEL[$x]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.confirms[]')
     printf '</td></tr>\n'
   done
   printf '</tbody></table>\n'
@@ -252,6 +252,7 @@ validate
 #   validate() が SRS 実在 + 全 trace ref が SRS に実在を保証済ゆえ、 参照される全 ref の label/criterion は欠落なし。
 #   SRS contract は read-only (無編集)・既存 SRS-pack byte-identity 維持。 verify-testcases.sh が同一導出で fidelity 突合。
 SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
+SRS_HTML="$(q '.cross_doc.srs_html')"   # ★cross-doc deep-link path 先 (folio-c5r.9・root 平置き = prefix なし)
 declare -A REF_LABEL
 while IFS=$'\t' read -r _id _lbl; do [[ -n "$_id" ]] && REF_LABEL["$_id"]="$_lbl"; done < <(yq -r '.requirements[] | [.id, .label] | @tsv' "$SRS_ABS")
 while IFS=$'\t' read -r _id _crit; do [[ -n "$_id" ]] && REF_LABEL["$_id"]="$_crit"; done < <(yq -r '.acceptance[] | [.id, .criterion] | @tsv' "$SRS_ABS")

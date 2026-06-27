@@ -157,6 +157,15 @@ adr_echo_bad="$(EXP="$srs_id_e" JOIN="$srs_join_e" TITLE="$srs_title_e" CHOSEN="
 ' "$BODY")"
 chk_empty "cross-doc: 可視 echo == テンプレ+id(+title)・req attr==可視 (marker-keyed・swap/平文/タグ併記封鎖)" "$adr_echo_bad"
 
+# 3b-href. ★cross-doc deep-link 遷移先 fidelity (folio-c5r.9・arch gate 1h 同型)。 justify-req を <a href> 化したので、
+#   href が contract 派生 <srs_html>#<req> へ束縛されることを set_eq + 件数で証明 (anchor swap / filename swap / 外部 host /
+#   href 欠落〔span 残存〕を fail-closed 封鎖)。 root 平置きゆえ path prefix なし (#<req>=SRS の裸 id・folio-lzz)。
+SRS_HTML_E="$(esc "$(q '.cross_doc.srs_html')")"
+chk "href: <a class=justify-req href> 数 == |justifies| (span 残存/href 欠落封鎖)" "$(q '.decision.justifies | length')" "$(grep -oE '<a class="justify-req" href=' "$BODY" | wc -l | tr -d ' ')"
+exp_just_href="$(q '.decision.justifies[].req' | while IFS= read -r _r; do [[ -n "$_r" ]] || continue; printf '%s#%s\t%s\n' "$SRS_HTML_E" "$(esc "$_r")" "$(esc "$_r")"; done | LC_ALL=C sort -u)"
+act_just_href="$(perl -CSD -0777 -ne 'while (/<a class="justify-req" href="([^"]*)"\s+data-justifies-req="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
+LC_ALL=C set_eq "href: justify-req (href, req) == <srs_html>#<req> (anchor/filename swap 封鎖)" "$exp_just_href" "$act_just_href"
+
 # 3c. ★ds8 ceiling round-3: ADR identity echo の parity (research within-doc (k') / cover-meta (l') と対称)。
 #   round-2 まで ADR は cxid/drid 可視 id 列・cover-meta を皆無検証で、 可視 id 改竄 (CTX1→CTX-PHANTOM)・cover-meta 改竄が素通る fail-open だった
 #   (research は (k')(l') で突合済 = parity gap)。 cxid/drid は plain (esc) ゆえ [^<]* で安全抽出・opt-name は mark_terms で nested ゆえ対象外。
