@@ -266,6 +266,32 @@ per-pack verify が建物の各部屋の配線を見るのに対し、 こちら
 ./verify-graph.sh --contract-dir /tmp/x/contract --rolemap-dir /tmp/x/rolemap   # 別 corpus を指定 (tamper test 等)
 ```
 
+## cross-doc content 重複検出 lint (folio-c5r.1 / yzv 決定④)
+
+verify-graph が「照会 graph が終端まで繋がるか (構造)」を見るのに対し、 これは「別 doc-type が **同じ内容を字句重複**していないか (内容)」を suite 内で機械検出し、 **doc-type 要否の判断材料を可視化する** advisory lint。 canonical デモ (folio-c5r.2) = clinic に constitution を *あえて* ゼロ生成すると、 その principle が SRS goals を restate した字句重複が検出され、 人間が「この project に constitution は不要」と判断する流れを実証する。
+
+**★哲学 (yzv 決定④・不可侵)**: engine = 確実な生成器 + 機械的検出 (floor・冪等)。 判断 (doc-type 要否) は engine に作り込まず人間 (事後・ceiling)。 lint は判断材料を可視化するだけで判断しない。 **検出 clean は「字句重複が見つからなかった」であって doc-type が適切である証明ではない** (engine「floor 緑 ≠ 完成」を doc-type 要否判断へ適用)。 「判断する engine」は folio の冪等性・確実性を壊す。
+
+- **独立 script** — `verify-cross-doc-dup.sh [--contract-dir <dir>] [--rolemap-dir <dir>] [--strict] [--show-declared]`。 verify-graph と同じ suite-level 層・既存 core 不変 (additive)。 `lib/graph-common.sh` の `graph_pack_of` のみ再利用。 `folio verify-cross-doc-dup` で CLI からも。
+- **機構 3 段**:
+  - **(1) content-leaf 抽出** — 各 contract から pack 別 `CONTENT_LEAVES` map (script 内連想配列) の field を `(suite-prefix, doc_id, pack, label, text)` レコード化。 比較対象は **contract YAML の content-leaf 散文** (生成 HTML でなく SSoT 直比較・chrome/term-inline バッジのノイズを回避)。 **除外** (precision の核) = glossary def (全 pack に SSoT コピーで複製=全一致)・`cross_doc.*` chrome・共有終端 `principle.text` (PRIN-SAFETY-FIRST)・NFR 数値密 field。 これらは map に **不掲載**にするだけで除外される。
+  - **(2) 類似採点** — 同一 **suite prefix** (instance 名 `<instance>.<pack>.yaml` の最初の `-` 区切り = clinic / ec / folio) 内で doc_id が異なる全レコードペアを **文字 4-gram shingle の Jaccard(J)** で採点。 J は長さ正規化済で「2 文書がどれだけ同一か」を測り内容重複の信号になる。 perl `-CSD` で UTF-8 char 単位 (byte 4-gram は破綻・`LC_ALL=C` 集合演算との衝突を回避= folio-wqh と同型の idiom)。 正規化は決定的パイプライン (隅付き/全角括弧除去 → 空白 collapse → 数字非隣接スペース除去 → 句読点保持)。 **別 suite (別プロジェクト) は比較しない** (boilerplate 共有は重複でない)。 ★suite = instance 名の第 1 `-` segment という前提ゆえ、 同一 project の doc は同じ prefix を共有する命名が要る (例 `clinic-*`)。 prefix がずれると同一 suite が未比較化し demo が無言不発しうる・別 project の prefix 衝突で誤比較しうる (→ `meta.suite` タグ化は follow-up)。
+  - **(3) graph 認識 (declared/undeclared 分類)** — rolemap edge の `target_docid_expr` から **declared 無向 doc-pair 集合**を構築する (★verify-graph.sh と **同一の edge 定義**を再利用しドリフトを防ぐ・`cross_doc.*` の heuristic 再パースをしない)。 字句重複ペアが declared なら「設計意図の引継ぎ」= informational (非フラグ)、 undeclared なら actionable WARN。 ゼロ生成 constitution は **suite の他文書と cross_doc edge で繋がっていない** (誰も参照しない=inbound なし・自身も前方照会なし=outbound なし) → どの declared ペアにも入らない → undeclared → 検出される (demo 成立)。 ★これは「principle pack だから」ではない (folio の実 constitution は rules 等から inbound edge を受け declared に入る)。 真因は **ゼロ生成された孤立 doc が誰にも参照されない**こと。 declared 分類は「正当 echo (research↔ADR の approach=option は J≈1.0) が真の言い換え重複より字句スコアが高い」という J 単体では分離不能な問題への解でもある。 ★**declared マスクは doc-pair 粒度**ゆえ、 edge が説明しない内容の逐語重複も一律抑制される (高 J の declared echo は `--show-declared` で人間 review 推奨)。
+- **★閾値** — WARN = `J >= 0.40`、 HIGH = `J >= 0.65`。 `--warn-j` / `--high-j` で override 可。 **C(containment) は WARN 判定に使わず文脈併記のみ** — 長文 spec 同士は共通語彙だけで C が高く出て「内容重複」と「語彙重複」を分離できないため (= brief 段階の C 主導案を実測で棄却)。
+  - **★閾値の限界 (honest)** — 現 corpus の undeclared 最大 J ≈ **0.274** (TC-CLINIC title ⇔ ARCH decision の正当な話題重複)。 WARN_J=0.40 はその上に置き誤検出 0 だが margin は ≈0.13 と薄い。 ★重要: **near-verbatim な restatement のみ J>=0.4 に達する**。 意味を保ったまま語を入れ替えた restatement の多くは J≈0.23-0.27 で **clean ノイズ帯 (〜0.274) に沈み J 閾値では分離不能** (閾値を下げると正当な話題重複を誤検出する)。 ゆえに本 lint が確実に拾うのは「ほぼ逐語の手抜き restate」で、 巧妙な restate は **人間 ceiling が backstop** (検出 clean ≠ 重複なしの証明)。
+  - **★「誤検出 0」の射程** — 上記は **各 suite が SRS 1 本ずつの現 corpus 由来の限定実測**。 同一 suite に複数 SRS があり定型 EARS condition 等を共有すると undeclared WARN を生じうる (= 真の重複として正しく出るが、 boilerplate なら人間が無視判断する=哲学どおり)。
+- **★設計境界 (limitation・honest)** — 検出条件は **`J(4-gram Jaccard) >= 0.40`** の一点。 ここから外れる重複は構造上見逃す: (a) 語を入れ替えた意味的 paraphrase (J≈0)、 (b) 意味を保った中程度 restatement (J≈0.25 で noise 帯に沈む)、 (c) 短い原則文の一部を逐語コピーしただけ (高 C だが J<0.40)。 つまり「字句が連続一致するか」でなく **J 尺度で線が引かれている**。 意味レベルの重複/要否判断は人間 ceiling が backstop (= engine 哲学「検出機構も bounded・floor 緑 = 検査できた範囲が緑」の lint 内再帰)。 これは bug でなく設計境界ゆえ出力 NOTE + header に明文化する。
+- **出力と exit-code** — 既定 advisory: undeclared 重複の有無に関わらず **exit 0** (verdict にしない・`CEILING=HUMAN-JUDGMENT` 行を必ず出す)。 `--strict` 時のみ undeclared HIGH が 1 件以上で exit 1 (ローカル gate 向け・CI 非配線)。 起動エラー (引数不正/yq・perl 欠落/lib source 失敗) = exit 2 (false-green に倒さない)。 出力順は doc_id→label で決定的。
+- **新 doc-type 追加時** — `CONTENT_LEAVES` map を更新する。 **未登録 pack は fail-loud WARN** (silent false-negative 源ゆえ map 更新を強制)。
+- **敵対回帰** = `test-adversarial-cross-doc-dup.sh` (13 ケース): recall (憲章が SRS goal を verbatim/reworded restate → 検出)・precision (original principle / glossary def コピー / declared echo / 別 suite boilerplate → 誤検出しない)・exit-code (--strict + HIGH=1 / clean=0 / 既定 advisory は HIGH でも 0)・F10 未登録 pack 警告・起動エラー。 ★lint は advisory ゆえ判定は exit-code でなく **出力 substring** で行う。
+
+```bash
+./verify-cross-doc-dup.sh                       # 既定 corpus を検出 (advisory・exit 0)
+./verify-cross-doc-dup.sh --show-declared        # declared echo (graph で説明済) も列挙
+./verify-cross-doc-dup.sh --strict               # undeclared HIGH があれば exit 1 (ローカル gate)
+folio verify-cross-doc-dup --contract-dir /tmp/x/contract --rolemap-dir /tmp/x/rolemap   # 別 suite を検出
+```
+
 ## engine core 抽出 (B2 / folio-5ua / rule-of-three)
 
 SRS-pack (instance#1) ∩ ADR-pack (instance#2) の共通項を **共有ライブラリ層 `lib/`** へ引き上げた非破壊リファクタ
