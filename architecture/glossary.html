@@ -41,8 +41,12 @@
   <dd>Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。</dd>
   <dt id="term-ears"><span class="term-name">EARS</span></dt>
   <dd>Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。</dd>
+  <dt id="term-layer-architecture"><span class="term-name">Layer Architecture</span></dt>
+  <dd>constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (architecture/ 空間) でも architecture-description (doc-type) でもない。</dd>
   <dt id="term-ssot"><span class="term-name">SSoT</span></dt>
   <dd>Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。</dd>
+  <dt id="term-architecture-description"><span class="term-name">architecture-description</span></dt>
+  <dd>構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。</dd>
   <dt id="term-caller-marker"><span class="term-name">caller-marker</span></dt>
   <dd>spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。</dd>
   <dt id="term-canonical-name"><span class="term-name">canonical name</span></dt>
@@ -61,6 +65,8 @@
   <dd>要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。</dd>
   <dt id="term-defined-object"><span class="term-name">defined-object</span></dt>
   <dd>一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。</dd>
+  <dt id="term-design-intent-space"><span class="term-name">design-intent space</span></dt>
+  <dd>folio repo の architecture/ ディレクトリ全体 = spec / decisions / research / assets を含む設計意図の空間 (P-7 3-domain、 constitution §1 の architecture specification framework が書く対象)。 architecture-description (空間内の 1 doc-type) でも Layer Architecture でもない。</dd>
   <dt id="term-dogfood"><span class="term-name">dogfood</span></dt>
   <dd>folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。</dd>
   <dt id="term-dual-audience"><span class="term-name">dual-audience</span></dt>

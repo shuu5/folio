@@ -117,3 +117,18 @@ terms:
   - canonical: "landing"
     domain: "folio-closed"
     definition: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。"
+  # --- architecture polysemy 解消 (folio-c5r.7、 folio-5uu arch-pack grill 由来): 裸の "architecture"
+  #   は 3 entity を指す多義語 (P-5 緊張)。 P-5 forbidden は「1 entity = 複数名」用ゆえ多義 (1 名 = 3 entity)
+  #   には不適 — 各 entity に別 canonical 完全形を宣言して曖昧さを解く (forbidden: "architecture" は
+  #   vocabulary gate REQ-CI-013 の grep -F 部分一致が全 architecture/ path 参照を誤検出するため不可、 #110 D2)。
+  #   constitution 改訂は不要 = 語レベル整理 (frozen 資産の既存用語に整合: §3 "Layer Architecture" / self-spec
+  #   "design-intent 空間")。
+  - canonical: "architecture-description"
+    domain: "folio-closed"
+    definition: "構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。"
+  - canonical: "design-intent space"
+    domain: "folio-closed"
+    definition: "folio repo の architecture/ ディレクトリ全体 = spec / decisions / research / assets を含む設計意図の空間 (P-7 3-domain、 constitution §1 の architecture specification framework が書く対象)。 architecture-description (空間内の 1 doc-type) でも Layer Architecture でもない。"
+  - canonical: "Layer Architecture"
+    domain: "folio-closed"
+    definition: "constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (architecture/ 空間) でも architecture-description (doc-type) でもない。"
