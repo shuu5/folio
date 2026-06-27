@@ -136,10 +136,11 @@ chk "data-srs-label-ref 数 == |SRS照会|" "$NSRS" "$(grep -o 'data-srs-label-r
 exp_srslabels="$(q '[.decisions[].refs.srs[]] | unique | .[]' | while IFS= read -r _r; do [[ -n "$_r" ]] && printf '%s\t%s\n' "$(esc "$_r")" "$(esc "$(FR="$_r" yq -r '.requirements[] | select(.id==strenv(FR)) | .label' "$SRS_ABS")")"; done | LC_ALL=C sort -u)"
 act_srslabels="$(perl -CSD -0777 -ne 'while (/<span[^>]*\bdata-srs-label-ref="([^"]*)"[^>]*>([^<]*)<\/span>/gs){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
 LC_ALL=C set_eq "SRS 機能名ラベル (ref, label) == SRS 由来 (FR=label)" "$exp_srslabels" "$act_srslabels"
-# ADR ラベル = adr_title (contract 値・within-doc)
-ADR_TITLE_E="$(esc "$(q '.cross_doc.adr_title')")"
+# ADR ラベル = 「ADR: <参照先 ADR の実 .meta.title>」 live-mirror (folio-c5r.13・手書き title 廃止)。
+# 参照先 ADR を改題すると本 chk が fail-closed で drift を捕捉する (ADR_ABS は §照会先解決で設定済)。
+ADR_TITLE_E="$(esc "ADR: $(yq -r '.meta.title' "$ADR_ABS")")"
 act_adrlabel="$(perl -CSD -0777 -ne 'while (/<span[^>]*\bdata-adr-label-ref="[^"]*"[^>]*>([^<]*)<\/span>/gs){ print "$1\n"; }' "$BODY" | LC_ALL=C sort -u)"
-chk "ADR ラベル == cross_doc.adr_title" "$ADR_TITLE_E" "$act_adrlabel"
+chk "ADR ラベル == 「ADR: 」+ 参照先 .meta.title (live-mirror・retitle drift fail-closed)" "$ADR_TITLE_E" "$act_adrlabel"
 
 # 1f. principle 終端照会 (within-doc・data-principle-ref) + 終端 panel fidelity
 chk "data-principle-ref 数 == |principle照会|" "$NPRIN" "$(grep -o 'data-principle-ref=' "$BODY" | wc -l | tr -d ' ')"

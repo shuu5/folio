@@ -228,6 +228,13 @@ cp "$TMP/base-filled.html" "$TMP/a32.html"
 perl -0777 -i -pe 's#(class="justify-tgt">照会先: )SRS-CLINIC-APPT#${1}SRS-PHANTOM#' "$TMP/a32.html"
 expect_verify_fail_filled "A32 ★justify-tgt 平文 srs_doc_id 改竄を可視テキスト全体一致で捕捉" "$BASE_PROSE" "$BASE" "$TMP/a32.html"
 
+# A-c5r13. ★justify-tgt 照会ラベル title (live-mirror・folio-c5r.13) を捏造 → 「SRS: 参照先 .meta.title」等値で FAIL。
+#   手書き srs_title 廃止後、 チップ title は assembler が参照先 SRS の実 .meta.title から導出する。 参照先改題で
+#   build を忘れた stale チップ (= drift) を verify が捕捉することを実証する。
+cp "$TMP/base-filled.html" "$TMP/ac5r13.html"
+perl -0777 -i -pe 's#(class="justify-tgt">[^<]*SRS: )[^<]+#${1}捏造された参照先タイトル#' "$TMP/ac5r13.html"
+expect_verify_fail_filled "A-c5r13 ★justify-tgt 照会ラベル title 捏造を live-mirror 等値で捕捉 (retitle drift)" "$BASE_PROSE" "$BASE" "$TMP/ac5r13.html"
+
 # A33. ★justify-tgt をブロックごと削除 → ブロック==1 count anchor で FAIL (while が回らず @bad 空の素通りを塞ぐ・research と同じ規律)
 cp "$TMP/base-filled.html" "$TMP/a33.html"
 perl -0777 -i -pe 's#<p class="justify-tgt">.*?</p>##s' "$TMP/a33.html"

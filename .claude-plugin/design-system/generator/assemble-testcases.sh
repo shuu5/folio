@@ -201,7 +201,7 @@ emit_cards() {
     printf '<div class="tc-trace-row confirm"><span class="tc-trace-label">確かめる受入基準</span>'
     while IFS= read -r ac; do [[ -n "$ac" ]] && printf '<span class="tc-trace-edge"><a class="tc-ref" href="%s#%s" data-trace-ref="%s" data-trace-role="verification">%s</a><span class="tc-ref-label" data-label-ref="%s">%s</span></span>' "$(esc "$SRS_HTML")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "$ac")" "$(esc "${REF_LABEL[$ac]}")"; done < <(q '.test_cases[] | select(.id=="'"$tid"'") | .trace.confirms[]')
     printf '</div>\n'
-    printf '<p class="tc-trace-tgt">照会先: %s \xe2\x80\x94 %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.cross_doc.srs_title')")"
+    printf '<p class="tc-trace-tgt">照会先: %s \xe2\x80\x94 %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$SRS_REF_TITLE")"
     printf '</div>\n</div>\n'
   done
   printf '</div>\n'
@@ -253,6 +253,9 @@ validate
 #   SRS contract は read-only (無編集)・既存 SRS-pack byte-identity 維持。 verify-testcases.sh が同一導出で fidelity 突合。
 SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
 SRS_HTML="$(q '.cross_doc.srs_html')"   # ★cross-doc deep-link path 先 (folio-c5r.9・root 平置き = prefix なし)
+# ★cross-doc 照会ラベル live-mirror (folio-c5r.13・Option A): 参照先 SRS の実 .meta.title を「SRS: <title>」へ
+#   統一 (手書き cross_doc.srs_title 廃止・retitle drift を verify が fail-closed 化)。 validate 後ゆえ実在保証済。
+SRS_REF_TITLE="SRS: $(yq -r '.meta.title' "$SRS_ABS")"
 declare -A REF_LABEL
 while IFS=$'\t' read -r _id _lbl; do [[ -n "$_id" ]] && REF_LABEL["$_id"]="$_lbl"; done < <(yq -r '.requirements[] | [.id, .label] | @tsv' "$SRS_ABS")
 while IFS=$'\t' read -r _id _crit; do [[ -n "$_id" ]] && REF_LABEL["$_id"]="$_crit"; done < <(yq -r '.acceptance[] | [.id, .criterion] | @tsv' "$SRS_ABS")

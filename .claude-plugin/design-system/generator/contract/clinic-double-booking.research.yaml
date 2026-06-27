@@ -47,7 +47,7 @@ approval:
 cross_doc:
   adr_contract: clinic-double-booking.adr.yaml
   adr_doc_id: ADR-CLINIC-0001
-  adr_title: 同じ診療枠への二重予約を「枠の取り合いに強い確定方式」で防ぐ (ADR)
+  # 照会チップの title は assembler が参照先 .meta.title から live 導出 (folio-c5r.13・手書き title 廃止=drift 防止)
   adr_html: clinic-double-booking.adr.html   # ★cross-doc deep-link 先 (folio-c5r.9・root 平置き)。Fork B coarse = ADR の #decision (決定パネル) へ着地 (OPT 単位 anchor は別 follow-up)
 
 # 01 調査の問い・範囲 (単一の問い + in/out scope)

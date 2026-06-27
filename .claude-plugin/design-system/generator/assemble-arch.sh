@@ -312,7 +312,7 @@ emit_decisions() {
   local -a DIDS; mapfile -t DIDS < <(q '.decisions[].id')
   local did
   local SRS_HTML ADR_HTML ADR_TITLE
-  SRS_HTML="$(q '.cross_doc.srs_html')"; ADR_HTML="$(q '.cross_doc.adr_html')"; ADR_TITLE="$(q '.cross_doc.adr_title')"
+  SRS_HTML="$(q '.cross_doc.srs_html')"; ADR_HTML="$(q '.cross_doc.adr_html')"; ADR_TITLE="$ADR_REF_TITLE"
   for did in "${DIDS[@]}"; do
     printf '<div data-component="arch-decision-card" id="ad-%s">\n' "$(esc "$did")"
     printf '<div class="ad-head"><span class="ad-id">%s</span><h3 class="ad-title">%s</h3></div>\n' \
@@ -436,4 +436,7 @@ validate
 SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
 declare -A SRS_LABEL
 while IFS=$'\t' read -r _id _lbl; do [[ -n "$_id" ]] && SRS_LABEL["$_id"]="$_lbl"; done < <(yq -r '.requirements[] | [.id, .label] | @tsv' "$SRS_ABS")
+# ★cross-doc 照会ラベル live-mirror (folio-c5r.13・Option A): 参照先 ADR の実 .meta.title を「ADR: <title>」へ
+#   統一 (手書き cross_doc.adr_title 廃止・retitle drift を verify が fail-closed 化)。 validate 後ゆえ実在保証済。
+ADR_REF_TITLE="ADR: $(yq -r '.meta.title' "${CONTRACT_DIR}/$(q '.cross_doc.adr_contract')")"
 core_finalize "assemble-arch"

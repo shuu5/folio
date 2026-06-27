@@ -103,7 +103,9 @@ srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
 fr_label_join=""
 while IFS= read -r _fr; do [[ -n "$_fr" ]] && fr_label_join+="${fr_label_join:+・}$(FR="$_fr" yq -r '.requirements[] | select(.id==strenv(FR)) | .label' "$SRS_ABS")"; done < <(q '[.test_cases[].trace.verifies[]] | unique | .[]')
 fr_join_e="$(esc "$fr_label_join")"
-srs_title_e="$(esc "$(q '.cross_doc.srs_title')")"
+# ★照会チップ title = 「SRS: <参照先 SRS の実 .meta.title>」 live-mirror (folio-c5r.13・手書き srs_title 廃止)。
+#   tc-trace-tgt の可視テキストが「照会先: <srs_doc_id> — SRS: <実 title>」と完全一致を要求 = retitle drift を fail-closed 捕捉。
+srs_title_e="$(esc "SRS: $(yq -r '.meta.title' "$SRS_ABS")")"
 # ★可視テキスト厳密一致 (marker-keyed・nested-same-tag reject = ds8/B3 不動点)。 各 echo の全タグ除去後の可視テキストが固定テンプレ+id と完全一致を要求。
 #   ref-chip = <b> ちょうど 2 本 (srs_doc_id / FR label join)・tc-trace-h と tc-trace-tgt = <b> 無し平文・tc-ref = attr==可視。
 tc_echo_bad="$(SRS="$srs_id_e" FRJ="$fr_join_e" TITLE="$srs_title_e" perl -CSD -Mutf8 -0777 -ne '

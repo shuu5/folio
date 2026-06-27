@@ -169,6 +169,13 @@ cp "$TMP/base-filled.html" "$TMP/r29.html"
 perl -0777 -i -pe 's#(class="oc-tgt"[^>]*>照会先 \(前方参照\): <a[^>]*><b>)ADR-CLINIC-0001(</b>)#${1}ADR-PHANTOM${2}#' "$TMP/r29.html"
 expect_verify_fail_filled "R29 ★oc-tgt 可視 <b> id 改竄を echo 整合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r29.html"
 
+# R-c5r13. ★照会ラベル title (live-mirror・folio-c5r.13) を捏造 → 「ADR: 参照先 .meta.title」等値で FAIL。
+#   手書き title 廃止後、 チップ title は assembler が参照先 ADR の実 .meta.title から導出する。 参照先改題で
+#   build を忘れた stale チップ (= drift) を verify が捕捉することを実証する (先頭出現 = 表紙 reader-chip を改竄)。
+cp "$TMP/base-filled.html" "$TMP/rc5r13.html"
+perl -0777 -i -pe 's#(</a> \xe2\x80\x94 ADR: )[^<]+#${1}捏造された参照先タイトル#' "$TMP/rc5r13.html"
+expect_verify_fail_filled "R-c5r13 ★照会ラベル title 捏造を live-mirror 等値で捕捉 (retitle drift)" "$BASE_PROSE" "$BASE" "$TMP/rc5r13.html"
+
 # R30. ★round-2 ceiling: 正規 <b> の直後に 2 つ目の偽 <b> を *追加* (outcome) → 全<b>列挙 MULTI-B で FAIL
 #      (first-<b> マッチ版は「この調査は ADR-CLINIC-0001 (実は ADR-FORGED)」が読者に見えるのに素通った fail-open)。
 cp "$TMP/base-filled.html" "$TMP/r30.html"

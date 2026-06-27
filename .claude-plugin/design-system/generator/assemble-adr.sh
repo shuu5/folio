@@ -227,7 +227,7 @@ emit_decision() {
     printf '<div class="justify-row"><a class="justify-req" href="%s#%s" data-justifies-req="%s" data-justifies-role="%s">%s</a><span class="justify-role">%s</span><span class="justify-note">%s</span></div>\n' \
       "$(esc "$SRS_HTML")" "$(esc "$req")" "$(esc "$req")" "$(esc "$role")" "$(esc "$req")" "$(esc "$role")" "$(mark_terms "$note")"
   done < <(q '.decision.justifies[] | [.req, .role, (.note // "")] | @tsv')
-  printf '<p class="justify-tgt">照会先: %s — %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.cross_doc.srs_title')")"
+  printf '<p class="justify-tgt">照会先: %s — %s</p>\n' "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$SRS_REF_TITLE")"
   printf '</div>\n</div>\n'
 }
 
@@ -282,4 +282,7 @@ build() {
 }
 
 validate
+# ★cross-doc 照会ラベル live-mirror (folio-c5r.13・Option A): 参照先 SRS の実 .meta.title を「SRS: <title>」へ
+#   統一 (手書き cross_doc.srs_title 廃止・retitle drift を verify が fail-closed 化)。 validate 後ゆえ実在保証済。
+SRS_REF_TITLE="SRS: $(yq -r '.meta.title' "${CONTRACT_DIR}/$(q '.cross_doc.srs_contract')")"
 core_finalize "assemble-adr"

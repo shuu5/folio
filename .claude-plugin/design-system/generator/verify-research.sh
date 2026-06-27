@@ -164,7 +164,7 @@ adr_id_e="$(esc "$(q '.cross_doc.adr_doc_id')")"
 #   ★floor が封じるのは *決定的 echo 要素自体* の改竄 (swap/別タグ/第2<b>/平文・タグ併記/nested 早期終端/削除・重複)。 echo の *外側* の自由文へ
 #   偽 provenance を注入する経路 (marker 無し sibling・自由文中の偽 doc_id 言及) は prose の正当な doc_id 言及と区別不能ゆえ floor 対象外 = ceiling 領域
 #   (内容 fidelity・two-gate 境界 S5.1)。 marker-only count anchor (上) と marker-keyed while でパリティを取る。
-echo_bad="$(EXP="$adr_id_e" TITLE="$(esc "$(q '.cross_doc.adr_title')")" perl -CSD -Mutf8 -0777 -ne '
+echo_bad="$(EXP="$adr_id_e" TITLE="$(esc "ADR: $(yq -r '.meta.title' "$ADR_ABS")")" perl -CSD -Mutf8 -0777 -ne '
   my $exp=$ENV{EXP}; utf8::decode($exp); my $title=$ENV{TITLE}; utf8::decode($title); my @bad;
   while (/<([A-Za-z][\w-]*)\b[^>]*\bclass="oc-resolved"[^>]*>(.*?)<\/\1>/gs) {
     my ($tag,$blk,$in)=($1,$&,$2); push @bad,"oc-resolved:NESTED" if $in=~/<\Q$tag\E\b/;

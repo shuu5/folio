@@ -226,6 +226,16 @@ SRS/ADR/research/principle/spec/glossary generator の機構を **6 例目の do
 - **配線済 referrer**: testcases→SRS (tc-ref / RTM rtm-code = `#FR/#AC`)・ADR→SRS (justify-req = `#FR`)・research→ADR (leads-chip / 表紙 ref-chip / oc-resolved / oc-tgt = **coarse `#decision` 着地**・OPT 単位 anchor は別 follow-up)・arch→SRS/ADR (既存・Fork A で `../` 撤廃)。
 - **敵対**: 各 pack の `test-adversarial-*.sh` に href anchor swap / filename swap (外部 host) / href 剥奪 を追加 (★href の `#` と perl `s#…#` デリミタ衝突を避け `{}`/`s{…}{…}` を使う)。
 
+### cross-doc 照会ラベルの title live-mirror (folio-c5r.13)
+
+照会チップが示す参照先 doc の **タイトルを参照先 contract の `.meta.title` から live 導出**し drift-proof 化する層 (c5r.9 が href を、 本 cell が *表示ラベル* を drift-proof 化)。 旧実装は referrer contract の手書き `cross_doc.*_title` (短縮要約) で、 (a) 参照先を改題すると silent に古くなり、 (b) referrer 間で不整合 (同じ ADR を指すのに別文字列・SRS ラベル 3 種) だった。
+
+- **決定 (Option A・user walk)** = 照会ラベルを **`KIND: <参照先 .meta.title>`** 形式に統一 (`ADR: …` / `SRS: …`)。 種別ラベル (ADR/SRS) は assembler 内の静的定数、 title は **参照先 contract の `.meta.title` から live 導出** (arch の `SRS_LABEL[]` mirror と同方式・`validate` 後ゆえ参照先実在は保証済)。 手書き `cross_doc.*_title` は contract から廃止。
+- **drift-proof の機序**: build 時に毎回 mirror するため referrer と参照先は常に一致 (両者同時に動く)。 参照先を改題して referrer を再ビルドしないと **stale チップ (= drift)** になるが、 verify が「チップ可視 title == `KIND: ` + 参照先 `.meta.title`」を fail-closed 突合し捕捉する (手書き要約は機械検証不能ゆえ drift-proof には表示を実 title へ寄せるのが必須)。
+- **配線済 referrer**: research→ADR (reader-chip / oc-tgt)・testcases→SRS (tc-trace-tgt)・ADR→SRS (justify-tgt)・arch→ADR (decision の `data-adr-label-ref`)。 各 verify は参照先 `*_ABS` を解決し `KIND: <yq .meta.title>` を期待値に。
+- **敵対**: 各 pack に照会ラベル title 捏造 (live-mirror 等値で FAIL = retitle drift 検出) を追加 (research/testcases/adr・arch は既存 mut19)。
+- ★既知の軽微点: doc_id (例 `ADR-CLINIC-0001`) が既に種別を示すため `ADR: ` 接頭辞は doc_id と軽く重複する (Option B = title のみ への切替は assembler の `KIND: ` 接頭と verify 期待値の 1 箇所変更で可)。
+
 ## 照会 graph 終端完備検証 (engine B5-I / folio-p4o)
 
 個々の pack verify (verify-adr/research/principle) は **1 doc の局所** 照会 (justifies/leads_to/inbound) を検証する。

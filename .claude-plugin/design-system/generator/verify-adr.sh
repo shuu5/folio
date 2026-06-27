@@ -104,7 +104,9 @@ chk "cross-doc: justify-req span == |justifies|" "$(q '.decision.justifies | len
 chk "dec-kick ブロック == 1" "1" "$(grep -c 'class="dec-kick"' "$BODY")"
 srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
 srs_join_e="$(esc "$(q '[.decision.justifies[].req] | join("・")')")"
-srs_title_e="$(esc "$(q '.cross_doc.srs_title')")"
+# ★照会チップ title = 「SRS: <参照先 SRS の実 .meta.title>」 live-mirror (folio-c5r.13・手書き srs_title 廃止)。
+#   justify-tgt の可視テキストが「照会先: <srs_doc_id> — SRS: <実 title>」と完全一致を要求 = retitle drift を fail-closed 捕捉。
+srs_title_e="$(esc "SRS: $(yq -r '.meta.title' "$SRS_ABS")")"
 # ★可視テキスト厳密一致 (round-4 不動点 + ds8 ceiling round-2 深化): 各 echo の全タグ除去後の可視テキストが固定テンプレ+id(+title) と完全一致を要求。
 #   ★while-regex は *marker-keyed* (<([A-Za-z][\w-]*)\b ... marker ...>(.*?)</\1>) = marker を担持する任意 wrapper タグ (ハイフン入り <my-tag> 含む) を捕捉。
 #   tag 固定 (<div>/<p>) や \w+ だと wrapper-tag swap / hyphen タグで while がスキップし可視検査を逃れる fail-open があった (round-2 ceiling)。

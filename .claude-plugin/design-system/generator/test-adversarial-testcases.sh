@@ -50,6 +50,8 @@ expect_fail "rtm-row 削除 (件数 + RTM 脱落)"    "$(mut 2 's{<tr data-compo
 # --- 可視 card テキスト fidelity (属性 intact のまま可視だけ改竄・捏造ケース) ---
 expect_fail "tc-id 可視捏造"                  "$(mut 3 's{<span class="tc-id">TC1</span>}{<span class="tc-id">TCX</span>}')"
 expect_fail "tc-title 可視捏造"               "$(mut 4 's{(<h3 class="tc-title">)[^<]+}{${1}捏造タイトル}')"
+# ★tc-trace-tgt 照会ラベル title (live-mirror・folio-c5r.13) を捏造 → 「SRS: 参照先 .meta.title」等値で FAIL (retitle drift 検出)。
+expect_fail "tc-trace-tgt 照会ラベル title 捏造 (live-mirror 等値・c5r.13)" "$(mut 60 's{(<p class="tc-trace-tgt">[^<]*SRS: )[^<]+}{${1}捏造された参照先タイトル}')"
 expect_fail "tc-kind 可視ラベル捏造"          "$(mut 5 's{(<span class="tc-kind normal">)[^<]+}{${1}でたらめ}')"
 expect_fail "tc-kind class 改竄 (label/class 不整合)" "$(mut 6 's{<span class="tc-kind normal">正常系}{<span class="tc-kind abnormal">正常系}')"
 expect_fail "tc-prio class 改竄 (must→should)" "$(mut 7 's{<span class="tc-prio must">必須</span>}{<span class="tc-prio should">必須</span>}')"

@@ -140,7 +140,7 @@ emit_cover() {
     "$(esc "$rstat")" "$napp" "$nfnd" "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
   # ★cross-doc 前方照会の可視チップ (この調査の行き先 = 決着した ADR・folio-c5r.9 で #decision へ deep-link)
   local ADR_HTML; ADR_HTML="$(q '.cross_doc.adr_html')"
-  printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s この調査の行き先: <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</div>\n' "$ICO_USER" "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
+  printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s この調査の行き先: <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</div>\n' "$ICO_USER" "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$ADR_REF_TITLE")"
   core_emit_approval_block
   core_emit_cover_tail
 }
@@ -203,7 +203,7 @@ emit_outcome() {
   printf '<p class="oc-resolved" data-resolved-by="%s">この調査は <a class="xref-doc" href="%s#decision"><b>%s</b></a> で決着しました</p>\n' "$(esc "$(q '.outcome.resolved_by')")" "$(esc "$ADR_HTML")" "$(esc "$(q '.outcome.resolved_by')")"
   printf '<span class="oc-plain" data-prose-slot="plain" data-slot-id="outcome-plain"></span>\n'
   printf '<span class="oc-note">%s</span>\n' "$(mark_terms "$(q '.outcome.note')")"
-  printf '<p class="oc-tgt">照会先 (前方参照): <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</p>\n' "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$(q '.cross_doc.adr_title')")"
+  printf '<p class="oc-tgt">照会先 (前方参照): <a class="xref-doc" href="%s#decision"><b>%s</b></a> — %s</p>\n' "$(esc "$ADR_HTML")" "$(esc "$(q '.cross_doc.adr_doc_id')")" "$(esc "$ADR_REF_TITLE")"
   printf '</div>\n'
 }
 
@@ -230,4 +230,8 @@ build() {
 }
 
 validate
+# ★cross-doc 照会ラベル live-mirror (folio-c5r.13・Option A): 参照先 ADR の実 .meta.title を導出し
+#   「ADR: <title>」へ統一 (手書き cross_doc.adr_title 廃止・retitle drift を verify が fail-closed 化)。
+#   validate 後ゆえ adr_contract 実在は保証済 (arch SRS_LABEL[] mirror と同方式)。
+ADR_REF_TITLE="ADR: $(yq -r '.meta.title' "${CONTRACT_DIR}/$(q '.cross_doc.adr_contract')")"
 core_finalize "assemble-research"
