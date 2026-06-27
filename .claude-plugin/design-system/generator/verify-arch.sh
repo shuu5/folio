@@ -308,6 +308,10 @@ set_eq "可視 runtime flow name == .runtime.flows[].name" "$(qesc '.runtime.flo
 # runtime flow steps (esc・term-inline なし)
 set_eq "可視 runtime steps == .runtime.flows[].steps[]" "$(qesc '.runtime.flows[].steps[]')" \
   "$(perl -CSD -0777 -ne 'while (/<span class="rt-v">([^<]*)<\/span>/g){ print "$1\n"; }' "$BODY")"
+# ★folio-c5r.10: runtime flow summary (rt-summary・流れの概要) も突合する。 従来 contract に summary があるのに HTML 未描画 =
+#   silent field-drop (SSoT の情報落ち・S5 gradient-skip 型の round-trip 死角) だった。 emission 順で contract と set_eq (esc・term-inline なし)。
+set_eq "可視 runtime summary == .runtime.flows[].summary" "$(qesc '.runtime.flows[].summary')" \
+  "$(perl -CSD -0777 -ne 'while (/<p class="rt-summary">([^<]*)<\/p>/g){ print "$1\n"; }' "$BODY")"
 
 # ============ 図 (mermaid DSL + figcaption) fidelity ============
 # 各図の <pre class="mermaid"> 内容 == esc(join lines) / figcaption 可視 == diag-tag + esc(caption)。

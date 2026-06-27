@@ -157,6 +157,7 @@ table[data-component="component-table"]{width:100%;border-collapse:separate;bord
 .rt-step{display:flex;gap:11px;align-items:flex-start;font-size:13px;line-height:1.65;padding:5px 14px}
 .rt-step .rt-n{flex:0 0 22px;height:22px;border-radius:50%;background:var(--violet);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:1px}
 .rt-step .rt-v{flex:1 1 auto;color:var(--ink-soft)}
+.rt-summary{font-size:13px;color:var(--ink-soft);line-height:1.7;padding:2px 14px 6px;margin:0}
 /* C4 / sequence diagram (mermaid render target) */
 figure.diagram{margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--shadow);overflow:hidden}
 figure.diagram .mermaid{margin:0;padding:14px 10px;overflow-x:auto;text-align:center}
@@ -296,6 +297,9 @@ emit_runtime() {
   local fid
   for fid in "${FIDS[@]}"; do
     printf '<div data-component="runtime-flow"><p class="rt-name">%s</p>\n' "$(esc "$(q '.runtime.flows[] | select(.id=="'"$fid"'") | .name')")"
+    # ★folio-c5r.10: runtime flow の summary (流れの概要・SSoT にあるが従来未描画 = silent field-drop) を name と steps の間に描画。
+    #   rt-name/rt-step と同じ plain (esc・term-inline なし) 慣習で出し verify が set_eq で fidelity 突合。
+    printf '<p class="rt-summary">%s</p>\n' "$(esc "$(q '.runtime.flows[] | select(.id=="'"$fid"'") | .summary')")"
     local n=0 st
     while IFS= read -r st; do [[ -n "$st" ]] || continue; n=$((n+1)); printf '<div class="rt-step"><span class="rt-n">%s</span><span class="rt-v">%s</span></div>\n' "$n" "$(esc "$st")"; done < <(q '.runtime.flows[] | select(.id=="'"$fid"'") | .steps[]')
     printf '</div>\n'
