@@ -253,6 +253,62 @@ cp "$TMP/base-filled.html" "$TMP/aburg.html"; perl -0777 -i -pe 's#(<td class="d
 expect_verify_fail_filled "A-bur-g ★driver 本文 可視捏造を drg 除去後の順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburg.html"
 cp "$TMP/base-filled.html" "$TMP/aburh.html"; perl -0777 -i -pe 's#(data-component="adr-consequence-pos"><span class="b">[^<]+</span>)[^<]+#${1}FAKE CSQ#' "$TMP/aburh.html"
 expect_verify_fail_filled "A-bur-h ★consequence-pos 本文 可視捏造を件数+内容二層で捕捉 (●span 温存)" "$BASE_PROSE" "$BASE" "$TMP/aburh.html"
+# A-bur-r2-{a,b} ★folio-bur round-2 (ceiling-recursion): 可視本文 chk の射程外を突く decoy を quote-robust 占有数パリティで捕捉。
+cp "$TMP/base-filled.html" "$TMP/aburr2a.html"; perl -0777 -i -pe 's{(<p class="dec-state">)}{<p class="dec-state">捏造決定(decoy)</p>${1}}' "$TMP/aburr2a.html"
+expect_verify_fail_filled "A-bur-r2a ★dec-state 占有 decoy (+1) を count_attr_token 占有数パリティで捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr2a.html"
+cp "$TMP/base-filled.html" "$TMP/aburr2b.html"; perl -0777 -i -pe "s{(<li data-component=\"adr-consequence-pos\">)}{<li data-component='adr-consequence-pos'><span class=\"b\">●</span>捏造の良い結果</li>\${1}}" "$TMP/aburr2b.html"
+expect_verify_fail_filled "A-bur-r2b ★consequence single-quote decoy を count_attr_token data-component で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr2b.html"
+# A-bur-r3-{a..e} ★folio-bur round-3 (ceiling-recursion R2 是正): round-1/2 が positive 兄弟だけ pin し列挙漏れした
+#   5 可視サーフェス (negative 結果 / context detail / option pros-cons / justify-note / supersession note) の決定根拠捏造を捕捉。
+cp "$TMP/base-filled.html" "$TMP/aburr3a.html"; perl -0777 -i -pe 's#(<li data-component="adr-consequence-neg"><span class="b">[^<]*</span>).*?</li>#${1}このアプローチには欠点もトレードオフも一切存在せず完璧である (虚偽)</li>#s' "$TMP/aburr3a.html"
+expect_verify_fail_filled "A-bur-r3-a ★consequence-neg 本文捏造 (トレードオフ消去) を可視+占有で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3a.html"
+cp "$TMP/base-filled.html" "$TMP/aburr3b.html"; perl -0777 -i -pe 's#<p class="cxd">.*?</p>#<p class="cxd">この問題は実在せず何の対策も不要である (虚偽の文脈)</p>#s' "$TMP/aburr3b.html"
+expect_verify_fail_filled "A-bur-r3-b ★context detail (cxd) 捏造を可視+占有で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3b.html"
+cp "$TMP/base-filled.html" "$TMP/aburr3c1.html"; perl -0777 -i -pe 's#(<div class="pros"><h4>\+ 利点</h4><ul>\s*<li>).*?</li>#${1}無限スケール+無コストを同時実現 (虚偽の利点)</li>#s' "$TMP/aburr3c1.html"
+expect_verify_fail_filled "A-bur-r3-c1 ★option pros 本文捏造を option-keyed set_eq で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3c1.html"
+cp "$TMP/base-filled.html" "$TMP/aburr3c2.html"; perl -0777 -i -pe 's#(<div class="pros"><h4>\+ 利点</h4><ul>)#${1}<li>法的リスクをゼロにし監査も自動で完璧通過 (捏造した利点)</li>#' "$TMP/aburr3c2.html"
+expect_verify_fail_filled "A-bur-r3-c2 ★option pros 件数追加 (捏造 li) を option-keyed set_eq で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3c2.html"
+cp "$TMP/base-filled.html" "$TMP/aburr3d.html"; perl -0777 -i -pe 's#(<span class="justify-note">)[^<]+#${1}この要件は実際には別の理由で正当化される (捏造した照会根拠)#' "$TMP/aburr3d.html"
+expect_verify_fail_filled "A-bur-r3-d ★justify-note (照会根拠説明文) 捏造を可視+占有で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3d.html"
+cp "$TMP/base-filled.html" "$TMP/aburr3e.html"; perl -0777 -i -pe 's#(<p class="ss-row">)本 ADR は現行.*?</p>#${1}この ADR は既に廃止され別案に置き換わった (虚偽の改訂注記)</p>#s' "$TMP/aburr3e.html"
+expect_verify_fail_filled "A-bur-r3-e ★supersession note (自由文注記) 捏造を可視で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr3e.html"
+# A-bur-r4-{a..e} ★folio-bur round-4 (ceiling-recursion R3 是正): round-3 fix 自体の quote/first-match/occupancy 未完を occupancy で封鎖。
+cp "$TMP/base-filled.html" "$TMP/aburr4a.html"; perl -0777 -i -pe "s{(<div class=\"pros\">)}{<div class='pros'><h4>+ 利点</h4><ul><li>無限スケール無コスト(虚偽)</li></ul></div>\${1}}" "$TMP/aburr4a.html"
+expect_verify_fail_filled "A-bur-r4-a ★single-quote pros div decoy を pros 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr4a.html"
+cp "$TMP/base-filled.html" "$TMP/aburr4b.html"; perl -0777 -i -pe 's{(<div class="pros">)}{<div class="pros"><h4>+ 利点</h4><ul><li>二重pros捏造</li></ul></div>${1}}' "$TMP/aburr4b.html"
+expect_verify_fail_filled "A-bur-r4-b ★2個目 double-quote pros div (first-match 射程外) を pros 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr4b.html"
+cp "$TMP/base-filled.html" "$TMP/aburr4c.html"; perl -0777 -i -pe "s{(<span class=\"k\">状態</span>)}{<span class='k'>状態</span><span class='v'>廃止(虚偽)</span>\${1}}" "$TMP/aburr4c.html"
+expect_verify_fail_filled "A-bur-r4-c ★cover-meta single-quote KV decoy を k 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr4c.html"
+cp "$TMP/base-filled.html" "$TMP/aburr4d.html"; perl -0777 -i -pe "s{(</section>)}{<p class='ss-row'>既に廃止され置換済(虚偽)</p>\${1}}" "$TMP/aburr4d.html"
+expect_verify_fail_filled "A-bur-r4-d ★ss-row single-quote note decoy を ss-row 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr4d.html"
+cp "$TMP/base-filled.html" "$TMP/aburr4e.html"; perl -0777 -i -pe 's{(<span class="ss-k">改訂状態</span>)}{<span class="ss-k">廃止予定日</span>2026-12-31(捏造)${1}}' "$TMP/aburr4e.html"
+expect_verify_fail_filled "A-bur-r4-e ★allowlist 外 novel ss-k 行を ss-k 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr4e.html"
+# A-bur-r5-{a..f} ★folio-bur round-5 (ceiling-recursion R4 是正): round-4 が pros/cons/k/ss-row/ss-k へ展開した count_attr_token
+#   占有 idiom を可視 echo の count anchor (double-quote 固定 grep -c / count anchor 不在) に未展開だった穴。 single-quote/裸 additive decoy
+#   で採用判断・偽 cross-doc 照会・phantom 文脈 id/role/req を捏造でき素通った (dec-kick/jh=blocker)。 全 echo を quote-robust 占有へ統一。
+cp "$TMP/base-filled.html" "$TMP/aburr5a.html"; perl -0777 -i -pe "s{(<p class=\"dec-kick\">)}{<p class='dec-kick'>採用 — OPT-EVIL（捏造）</p>\${1}}" "$TMP/aburr5a.html"
+expect_verify_fail_filled "A-bur-r5-a ★single-quote dec-kick decoy (二重採用見出し=ADR 最 load-bearing) を dec-kick 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5a.html"
+cp "$TMP/base-filled.html" "$TMP/aburr5b.html"; perl -0777 -i -pe "s{(<p class=\"jh\">)}{<p class='jh'>この判断が正当化する要件 (cross-doc 照会 → SRS-EVIL)</p>\${1}}" "$TMP/aburr5b.html"
+expect_verify_fail_filled "A-bur-r5-b ★single-quote jh decoy (偽 cross-doc provenance) を jh 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5b.html"
+cp "$TMP/base-filled.html" "$TMP/aburr5c.html"; perl -0777 -i -pe "s{(<p class=\"justify-tgt\">)}{<p class='justify-tgt'>照会先: SRS-EVIL — SRS: 偽タイトル</p>\${1}}" "$TMP/aburr5c.html"
+expect_verify_fail_filled "A-bur-r5-c ★single-quote justify-tgt decoy (偽照会先 footnote) を justify-tgt 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5c.html"
+cp "$TMP/base-filled.html" "$TMP/aburr5d.html"; perl -0777 -i -pe "s{(<span class=\"cxid\">)}{<span class='cxid'>CTX-EVIL</span>\${1}}" "$TMP/aburr5d.html"
+expect_verify_fail_filled "A-bur-r5-d ★single-quote cxid decoy (phantom 文脈 id) を cxid 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5d.html"
+cp "$TMP/base-filled.html" "$TMP/aburr5e.html"; perl -0777 -i -pe "s{(<span class=\"justify-role\">)}{<span class='justify-role'>verification</span>\${1}}" "$TMP/aburr5e.html"
+expect_verify_fail_filled "A-bur-r5-e ★single-quote justify-role decoy (偽 cross-doc edge role) を justify-role 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5e.html"
+cp "$TMP/base-filled.html" "$TMP/aburr5f.html"; perl -0777 -i -pe "s{(<a class=\"justify-req\")}{<span class='justify-req'>FR-EVIL</span>\${1}}" "$TMP/aburr5f.html"
+expect_verify_fail_filled "A-bur-r5-f ★裸 single-quote justify-req span (data 属性無) を justify-req 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr5f.html"
+# A-bur-r6-{a..e} ★folio-bur round-6 (ceiling-recursion R5 是正): round-5 sweep が取りこぼした兄弟 echo (prin-id/drg/cover-meta-v) + novel-marker 系統封鎖。
+cp "$TMP/base-filled.html" "$TMP/aburr6a.html"; perl -0777 -i -pe "s{(<div data-component=\"adr-principle\">)}{\${1}<p class='prin-id'>照会終端 — PRIN-EVIL（捏造）</p>}" "$TMP/aburr6a.html"
+expect_verify_fail_filled "A-bur-r6-a ★single-quote prin-id decoy (照会 graph 終端 identity 捏造) を prin-id 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr6a.html"
+cp "$TMP/base-filled.html" "$TMP/aburr6b.html"; perl -0777 -i -pe "s{(</tbody>)}{<span class='drg'>SRS NFR2 / N-9（捏造）</span>\${1}}" "$TMP/aburr6b.html"
+expect_verify_fail_filled "A-bur-r6-b ★single-quote drg decoy (偽 grounds linkage) を drg 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr6b.html"
+cp "$TMP/base-filled.html" "$TMP/aburr6c.html"; perl -0777 -i -pe 's{(<span class="k">状態</span><span class="v">[^<]*</span>)}{${1}<span class="v">廃止済み（捏造）</span>}' "$TMP/aburr6c.html"
+expect_verify_fail_filled "A-bur-r6-c ★k 無し単独 cover-meta v decoy (矛盾状態値) を v 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr6c.html"
+cp "$TMP/base-filled.html" "$TMP/aburr6d.html"; perl -0777 -i -pe "s{(</body>)}{<p class='evil-novel'>偽の採用判断（捏造 novel class）</p>\${1}}" "$TMP/aburr6d.html"
+expect_verify_fail_filled "A-bur-r6-d ★novel class 注入を class-token 機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr6d.html"
+cp "$TMP/base-filled.html" "$TMP/aburr6e.html"; perl -0777 -i -pe "s{(</body>)}{<div data-component='adr-evil-panel'>偽パネル（捏造 novel data-component）</div>\${1}}" "$TMP/aburr6e.html"
+expect_verify_fail_filled "A-bur-r6-e ★novel data-component 注入を data-component 機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburr6e.html"
 
 # A33. ★justify-tgt をブロックごと削除 → ブロック==1 count anchor で FAIL (while が回らず @bad 空の素通りを塞ぐ・research と同じ規律)
 cp "$TMP/base-filled.html" "$TMP/a33.html"
@@ -520,6 +576,21 @@ if locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
 else
   ok "TV5-4 (SKIP) en_US.UTF-8 locale 不在ゆえ collation-mismatch primitive を exercise 不可 (honest skip・TV5-3 と同型)"
 fi
+
+
+# ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
+cp "$TMP/base-filled.html" "$TMP/r7a1.html"; perl -0777 -i -pe 's{</body>}{<p class="dec-why">正反対の判断根拠(捏造)</p></body>}' "$TMP/r7a1.html"
+expect_verify_fail_filled "R7-adr-a ★dec-why additive (★blocker: 判断の根拠) を dec-why 占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a1.html"
+cp "$TMP/base-filled.html" "$TMP/r7a2.html"; perl -0777 -i -pe 's{</body>}{<p class="dec-plain">偽の平易な判断(捏造)</p></body>}' "$TMP/r7a2.html"
+expect_verify_fail_filled "R7-adr-b ★dec-plain additive (★blocker: 平易な判断=北極星読者の第一面) を dec-plain 占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a2.html"
+cp "$TMP/base-filled.html" "$TMP/r7a3.html"; perl -0777 -i -pe 's{</body>}{<p class="opt-plain">偽の平易な選択肢(捏造)</p></body>}' "$TMP/r7a3.html"
+expect_verify_fail_filled "R7-adr-c ★opt-plain additive を占有==|options| で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a3.html"
+cp "$TMP/base-filled.html" "$TMP/r7a4.html"; perl -0777 -i -pe 's{</body>}{<div data-component="testcase-card">foreign dc(捏造)</div></body>}' "$TMP/r7a4.html"
+expect_verify_fail_filled "R7-adr-d ★foreign dc を機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a4.html"
+cp "$TMP/base-filled.html" "$TMP/r7a5.html"; perl -0777 -i -pe 's{</body>}{<span class="term">偽バッジ(捏造)</span></body>}' "$TMP/r7a5.html"
+expect_verify_fail_filled "R7-adr-e ★bare term を term==plain-language-term-inline で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a5.html"
+cp "$TMP/base-filled.html" "$TMP/r7a6.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">genuine 隠蔽(捏造)</p></body>}' "$TMP/r7a6.html"
+expect_verify_fail_filled "R7-adr-f ★display:none 隠蔽を display-state guard で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a6.html"
 
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

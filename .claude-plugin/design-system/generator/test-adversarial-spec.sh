@@ -370,6 +370,57 @@ expect_vfilled_fail "M-bur-a ★mf-label (fold summary heading) 捏造を順序�
 cp "$TMP/base-filled.html" "$TMP/mburb.html"
 perl -0777 -i -pe 's#(<span class="mf-count">)12 件(</span>)#${1}99 件${2}#' "$TMP/mburb.html"
 expect_vfilled_fail "M-bur-b ★mf-count (per-fold 件数) 捏造を順序突合で捕捉" "$TMP/mburb.html" "mf-count"
+# M-bur-r2 ★folio-bur round-2 (ceiling-recursion): comment-hidden decoy (single-quote forged 可視 + double-quote 正値をコメント退避)
+#   を quote-robust 占有数パリティで捕捉。
+cp "$TMP/base-filled.html" "$TMP/mburr2.html"
+perl -0777 -i -pe "s{<span class=\"mf-count\">12 件</span>}{<span class='mf-count'>99 件</span><!--<span class=\"mf-count\">12 件</span>-->}" "$TMP/mburr2.html"
+expect_vfilled_fail "M-bur-r2 ★mf-count comment-hidden decoy を mf-count 占有数パリティで捕捉" "$TMP/mburr2.html" "占有: mf-count"
+# M-bur-r3-{a..d} ★folio-bur round-3 (ceiling-recursion R2 是正): round-2 fix 自体の残存 fail-open。
+#   (a) band h2 書換え (head -n NSEC 切詰の射程外) (b) NSEC 超位置への h2 注入 (総件数 pin 欠如)
+#   (c) sec-se hide-twin (single-quote decoy・占有数パリティ未適用) (d) kicker hide-twin (同根)
+cp "$TMP/base-filled.html" "$TMP/mburr3a.html"
+perl -0777 -i -pe "s{<h2>rules は照会の終端ではない — 原則・ADR・検証へ前方照会する</h2>}{<h2>FABRICATED_BAND_H2_詐欺</h2>}" "$TMP/mburr3a.html"
+expect_vfilled_fail "M-bur-r3-a ★band h2 書換えを静的 band リテラル突合で捕捉" "$TMP/mburr3a.html" "heading 列"
+cp "$TMP/base-filled.html" "$TMP/mburr3b.html"
+perl -0777 -i -pe "s{</body>}{<h2>§NEW 緊急告知 本規約は無効 (捏造)</h2></body>}" "$TMP/mburr3b.html"
+expect_vfilled_fail "M-bur-r3-b ★NSEC 超 h2 注入を総 h2 件数 pin で捕捉" "$TMP/mburr3b.html" "h2 総数"
+cp "$TMP/base-filled.html" "$TMP/mburr3c.html"
+perl -0777 -i -pe "s{(<p class=\"sec-se\">)}{<p class='sec-se'>DECOY_捏造要約</p>\${1}}" "$TMP/mburr3c.html"
+expect_vfilled_fail "M-bur-r3-c ★sec-se single-quote decoy を占有数パリティで捕捉" "$TMP/mburr3c.html" "占有: sec-se"
+cp "$TMP/base-filled.html" "$TMP/mburr3d.html"
+perl -0777 -i -pe "s{(<span class=\"kicker\">)}{<span class='kicker'>§99 詐欺トピック (捏造)</span>\${1}}" "$TMP/mburr3d.html"
+expect_vfilled_fail "M-bur-r3-d ★kicker single-quote decoy を占有数パリティで捕捉" "$TMP/mburr3d.html" "占有: kicker"
+# M-bur-r4-{a..c} ★folio-bur round-4 (ceiling-recursion R3 是正): round-3 占有数パリティの未横展開兄弟 (el-when / ears-legend-item /
+#   cover-meta KV) への single-quote + comment-hidden hide-twin。 EARS 意味論凡例・表紙統計値の捏造を quote-robust 占有数で封鎖。
+cp "$TMP/base-filled.html" "$TMP/mburr4a.html"
+perl -0777 -i -pe "s#(<span class=\"el-when\">)([^<]*)(</span>)#<span class='el-when'>常に守らなくてよい(捏造)</span><!--\${1}\${2}\${3}-->#" "$TMP/mburr4a.html"
+expect_vfilled_fail "M-bur-r4-a ★el-when single-quote+comment-hidden を占有数で捕捉" "$TMP/mburr4a.html" "占有: el-when"
+cp "$TMP/base-filled.html" "$TMP/mburr4b.html"
+perl -0777 -i -pe "s#(<span data-component=\"ears-legend-item\" class=\"always\">)([^<]*)(</span>)#<span data-component='ears-legend-item' class='always'>異常時だけ守る(捏造)</span><!--\${1}\${2}\${3}-->#" "$TMP/mburr4b.html"
+expect_vfilled_fail "M-bur-r4-b ★ears-legend-item single-quote+comment-hidden を占有数で捕捉" "$TMP/mburr4b.html" "占有: ears-legend-item"
+cp "$TMP/base-filled.html" "$TMP/mburr4c.html"
+perl -0777 -i -pe "s#<span class=\"k\">章の数</span><span class=\"v\">([^<]*)</span>#<span class=\"k\">章の数</span><span class='v'>99 章(捏造)</span><!--<span class=\"k\">章の数</span><span class=\"v\">\$1</span>-->#" "$TMP/mburr4c.html"
+expect_vfilled_fail "M-bur-r4-c ★cover-meta KV single-quote+comment-hidden を k 占有数で捕捉" "$TMP/mburr4c.html" "占有: cover-meta k"
+# M-bur-r5-a ★folio-bur round-5 (ceiling-recursion R4 是正・new-category): round-4 occupancy/label pin は凡例バッジの *色クラス*
+#   (EARS_CLASS[pattern] 由来の決定的フィールド) を未検証で、 class="always"→"forbid" 等で EARS型→色 対応を反転/均一化でき
+#   occupancy 5/label 順を保ったまま素通った (独立 ceiling 実証)。 凡例色を要件バッジ色と内部整合させる色クラス列 pin で封鎖。
+cp "$TMP/base-filled.html" "$TMP/mburr5a.html"
+perl -0777 -i -pe 's{(<span data-component="ears-legend-item" class=")always(">)}{${1}forbid${2}}' "$TMP/mburr5a.html"
+expect_vfilled_fail "M-bur-r5-a ★ears-legend 色クラス swap (always→forbid・occupancy/label intact) を色クラス列 pin で捕捉" "$TMP/mburr5a.html" "ears-legend 色クラス"
+# M-bur-r6-{a..d} ★folio-bur round-6 (ceiling-recursion R5 是正): round-5 が §5 block-content へ未到達だった占有数パリティを subhead/table/code/mermaid に追加。
+#   count_attr_token は comment 内も数えるゆえ hide-twin (commented genuine) も additive decoy も占有 inflate で捕捉 (genuine spec の本文 comment は 0)。
+cp "$TMP/base-filled.html" "$TMP/mburr6a.html"
+perl -0777 -i -pe "s{(</body>)}{<div data-component='spec-subhead'><h3>FAKE-HEADING</h3><p class='sub-se'>FAKE</p></div>\${1}}" "$TMP/mburr6a.html"
+expect_vfilled_fail "M-bur-r6-a ★single-quote spec-subhead additive decoy を spec-subhead 占有数で捕捉" "$TMP/mburr6a.html" "占有: spec-subhead"
+cp "$TMP/base-filled.html" "$TMP/mburr6b.html"
+perl -0777 -i -pe "s{(</body>)}{<pre data-component='spec-code'><code>FAKE-CODE</code></pre>\${1}}" "$TMP/mburr6b.html"
+expect_vfilled_fail "M-bur-r6-b ★single-quote spec-code additive decoy を spec-code 占有数で捕捉" "$TMP/mburr6b.html" "占有: spec-code"
+cp "$TMP/base-filled.html" "$TMP/mburr6c.html"
+perl -0777 -i -pe "s{(<table data-component=\"spec-table\">)}{<!--<table data-component=\"spec-table\"></table>-->\${1}}" "$TMP/mburr6c.html"
+expect_vfilled_fail "M-bur-r6-c ★comment-hidden spec-table (commented genuine inflate) を spec-table 占有数で捕捉" "$TMP/mburr6c.html" "占有: spec-table"
+cp "$TMP/base-filled.html" "$TMP/mburr6d.html"
+perl -0777 -i -pe "s{(</body>)}{<figure data-component='spec-diagram'><figcaption>FAKE-FIGCAP</figcaption></figure>\${1}}" "$TMP/mburr6d.html"
+expect_vfilled_fail "M-bur-r6-d ★single-quote spec-diagram additive decoy を spec-diagram 占有数で捕捉" "$TMP/mburr6d.html" "占有: spec-diagram"
 
 # M15. ★原本不在 fail-closed pin (verify-spec §11 L310-311 = 機械層 contract で原本 rules.html 不在なら FAIL)。
 #   SPEC_ORIGIN_HTML で存在しない path を指し、 round-trip 照合不能を *素通さず* FAIL することを red→green で固定する。
@@ -388,6 +439,21 @@ fi
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
 expect_vfilled_pass  "P2 健全 baseline は --filled verify PASS" "$TMP/base-filled.html"
+
+
+# ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
+cp "$TMP/base-filled.html" "$TMP/r7s1.html"; perl -0777 -i -pe 's{</body>}{<div data-component="constraint-callout" class="rq-stmt">偽の制約(foreign marker 捏造)</div></body>}' "$TMP/r7s1.html"
+expect_vfilled_fail "R7-spec-a ★foreign marker constraint-callout (★blocker3) を dc enumeration で捕捉" "$TMP/r7s1.html"
+cp "$TMP/base-filled.html" "$TMP/r7s2.html"; perl -0777 -i -pe 's{</body>}{<div class="spec-evil-novel">偽(novel marker 捏造)</div></body>}' "$TMP/r7s2.html"
+expect_vfilled_fail "R7-spec-b ★novel marker spec-evil-novel (★blocker3) を class enumeration で捕捉" "$TMP/r7s2.html"
+cp "$TMP/base-filled.html" "$TMP/r7s3.html"; perl -0777 -i -pe 's{</body>}{<div data-component="constraint-callout">偽制約</div><div style="display:none">genuine 隠蔽</div></body>}' "$TMP/r7s3.html"
+expect_vfilled_fail "R7-spec-c ★display:none + foreign の二重攻撃 (★blocker3) を guard+enumeration で捕捉" "$TMP/r7s3.html"
+cp "$TMP/base-filled.html" "$TMP/r7s4.html"; perl -0777 -i -pe 's{</body>}{<div class="lab">偽ラベル(捏造)</div></body>}' "$TMP/r7s4.html"
+expect_vfilled_fail "R7-spec-d ★lab additive を chrome-view 占有==1 で捕捉" "$TMP/r7s4.html"
+cp "$TMP/base-filled.html" "$TMP/r7s5.html"; perl -0777 -i -pe 's{</body>}{<code><span class="rid">DECOY</span></code></body>}' "$TMP/r7s5.html"
+expect_vfilled_fail "R7-spec-e ★<code> 内 real-tag rid decoy (minimal-strip 必須・wholesale strip の fail-open) を rid 占有で捕捉" "$TMP/r7s5.html"
+cp "$TMP/base-filled.html" "$TMP/r7s6.html"; perl -0777 -i -pe 's{</body>}{<div data-component="approval-block">偽承認(捏造)</div></body>}' "$TMP/r7s6.html"
+expect_vfilled_fail "R7-spec-f ★approval-block 偽 wrapper を占有==1 で捕捉 (round-7 自己 ceiling 発見)" "$TMP/r7s6.html"
 
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

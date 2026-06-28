@@ -63,11 +63,25 @@ chk "ears-badge == |requirements|"        "$NREQ"                          "$(gr
 # ★EARS 凡例 (folio-2jr・静的 key): 1 個・5 item・label は EARS_LABEL (= rules.html §6 用途 SSoT) と §6 行順で一致 (assemble-spec と二重保守=parity)。
 chk "ears-legend == 1"                    "1"                              "$(grep -o 'data-component="ears-legend"' "$BODY" | wc -l)"
 chk "ears-legend-item == 5"               "5"                              "$(grep -o 'data-component="ears-legend-item"' "$BODY" | wc -l)"
+# ★folio-bur round-4 (ceiling-recursion R3 是正): 上の count/label列 は double-quote 固定ゆえ single-quote data-component decoy +
+#   comment-hidden genuine で EARS 凡例 (意味論) を反転捏造でき素通った (独立 ceiling 実証)。 sec-se/kicker 同型に quote-robust 占有数で封鎖。
+chk "占有: ears-legend-item == 5 (single-quote/comment-hidden decoy 封鎖・folio-bur r4)" "5" "$(count_attr_token data-component ears-legend-item < "$BODY")"
 exp_legend="$(for p in ubiquitous event-driven state-driven optional unwanted; do esc "${EARS_LABEL[$p]}"; printf '\n'; done)"
 act_legend="$(perl -CSD -0777 -ne 'while (/<span data-component="ears-legend-item" class="[^"]*">([^<]*)<\/span>/g){ print "$1\n"; }' "$BODY")"
 chk "ears-legend label 列 == EARS_LABEL (§6 用途 順)" "$exp_legend" "$act_legend"
+# ★folio-bur round-5 (ceiling-recursion R4 是正): 上の label 列突合は抽出 regex で class を `class="[^"]*"` ワイルドカードにし
+#   色クラス (always/trigger/state/option/forbid=EARS_CLASS[pattern] 由来の決定的フィールド) を drop していた。 要件バッジ (ears-badge) の
+#   色は §4 tuple で EARS_CLASS[pat] 突合済なのに、 凡例 (=色の意味の唯一の説明・gate-I 非エンジニア可読の要) の色↔EARS型 対応のみ未検証で、
+#   class="always"→"forbid" 等で凡例を任意に反転/均一化でき occupancy/label 順を保ったまま素通った (独立 ceiling 実証・new-category major)。
+#   凡例色クラスを EARS_CLASS[pattern] へ §6 順で pin (要件バッジ色との内部整合を保証)。
+exp_legend_cls="$(for p in ubiquitous event-driven state-driven optional unwanted; do echo "${EARS_CLASS[$p]}"; done)"
+act_legend_cls="$(perl -CSD -0777 -ne 'while (/<span data-component="ears-legend-item" class="([^"]*)">/g){ print "$1\n"; }' "$BODY")"
+chk "ears-legend 色クラス列 == EARS_CLASS (§6順・色↔EARS型 反転/均一化封鎖・folio-bur r5)" "$exp_legend_cls" "$act_legend_cls"
 # ★凡例の「いつ守るか」平易説明 (folio-2jr persona-walk major-1): 5 件・EARS_WHEN と §6 順で一致。
 chk "ears-legend el-when == 5"            "5"                              "$(grep -o 'class="el-when"' "$BODY" | wc -l)"
+# ★folio-bur round-4 (ceiling-recursion R3 是正): el-when (『いつ守るか』平易説明) も double-quote 固定ゆえ single-quote/comment-hidden
+#   decoy で『常に守らなくてよい』等の反転が素通った (独立 ceiling 実証)。 quote-robust 占有数で封鎖 (gate-I 北極星=非エンジニア可読の保全)。
+chk "占有: el-when == 5 (single-quote/comment-hidden decoy 封鎖・folio-bur r4)" "5" "$(count_attr_token class el-when < "$BODY")"
 exp_when="$(for p in ubiquitous event-driven state-driven optional unwanted; do esc "${EARS_WHEN[$p]}"; printf '\n'; done)"
 act_when="$(perl -CSD -0777 -ne 'while (/<span class="el-when">([^<]*)<\/span>/g){ print "$1\n"; }' "$BODY")"
 chk "ears-legend el-when 列 == EARS_WHEN (順序)" "$exp_when" "$act_when"
@@ -92,10 +106,16 @@ chk_empty "要件 id 一意"     "$(q '.requirements[].id' | sort | uniq -d | tr
 chk_empty "section id 一意"  "$(q '.sections[].id' | sort | uniq -d | tr '\n' ' ')"
 chk "doc_type == rules"      "rules" "$(q '.meta.doc_type')"
 
-# 3. section fidelity: 可視 heading 列 (先頭 NSEC 個の h2) == sections[].heading (順序) / essence 列 == sections[].essence (順序)。
-exp_sh="$(q '.sections[].heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
-act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#' | head -n "$NSEC")"
-chk "section 可視 heading 列 == sections[].heading (順序)" "$exp_sh" "$act_sh"
+# 3. section fidelity: 可視 heading 列 (全 NSEC+2 個の h2) == sections[].heading + 静的 band 2 件 (順序) / essence 列 == sections[].essence (順序)。
+# ★folio-bur round-3 (ceiling-recursion R2 是正): round-2 まで heading 列は head -n NSEC で先頭 NSEC 個の h2 のみ突合し、
+#   末尾 2 band の h2 (references / glossary band) を取りこぼし・総 h2 件数 pin も無く、 band h2 の任意書換え + NSEC 超位置への
+#   新規 h2 無制限注入が素通った (独立 ceiling 実証)。 kicker (STATIC_KICKERS) と同型に band h2 を静的リテラルで突合列へ含め、
+#   さらに総 h2 件数 == NSEC+2 を case 非依存 count で pin (大文字 <H2> 注入も封鎖)。
+STATIC_BAND_H2=("rules は照会の終端ではない — 原則・ADR・検証へ前方照会する" "本文に出てくる専門語のやさしい説明")
+exp_sh="$( { q '.sections[].heading'; printf '%s\n' "${STATIC_BAND_H2[@]}"; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
+act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#')"
+chk "section 可視 heading 列 == sections[].heading + 静的 band 2 件 (順序)" "$exp_sh" "$act_sh"
+chk "h2 総数 == NSEC+2 (band h2 切詰・大文字注入の盲点是正)" "$((NSEC+2))" "$(grep -oiE '<h2\b' "$BODY" | wc -l | tr -d ' ')"
 exp_se="$(q '.sections[].essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
 act_se="$(perl -CSD -0777 -ne 'while (/<div data-component="section-essence-callout"><p class="sec-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
 chk "section essence 列 == sections[].essence (順序)" "$exp_se" "$act_se"
@@ -110,6 +130,12 @@ STATIC_KICKERS=("この規約が参照する文書 / 照会 (前方)" "用語集
 exp_kicker="$( { q '.sections[].kicker'; printf '%s\n' "${STATIC_KICKERS[@]}"; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
 act_kicker="$(perl -CSD -0777 -ne 'while (/<span class="kicker"><svg class="ico"[^>]*>.*?<\/svg> ([^<]*)<\/span>/gs){ print "$1\n"; }' "$BODY")"
 chk "section kicker 列 == sections[].kicker + 静的 band 2 件 (順序)" "$exp_kicker" "$act_kicker"
+# ★folio-bur round-3 (ceiling-recursion R2 是正): round-2 は占有数パリティ (count_attr_token) を mf-label/mf-count のみに適用し、
+#   構造的に同一の hide-twin 脆弱性を持つ section 可視コンポーネント (sec-se / kicker) へ未適用だった → genuine を display:none で隠し
+#   single-quote class の decoy で捏造要約/§ラベルを描く hide-twin が素通った (独立 ceiling 実証・decoy が class 担持ゆえ folio-4a4 と異なり
+#   count_attr_token で捕捉可能)。 sec-se/kicker も占有数パリティで pin (content 突合 + 占有数の二層)。
+chk "占有: sec-se == NSEC (section-essence hide-twin 封鎖)" "$NSEC" "$(count_attr_token class sec-se < "$BODY")"
+chk "占有: kicker == NSEC+2 (kicker hide-twin 封鎖)" "$((NSEC+2))" "$(count_attr_token class kicker < "$BODY")"
 
 # 4. 要件 fidelity: data-req-id 集合一致 + emission 順タプル (id, pattern, class, label, essence, statement) 突合。
 exp_rid="$(q '.requirements[].id' | sort -u)"
@@ -160,6 +186,15 @@ chk "note 可視テキスト列 == note blocks.text (順序)" \
 chk "list 項目列 == list blocks.items (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="list") | .items[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(grep -oE '<li class="lbi">[^<]*</li>' "$BODY" | sed -E 's#<li class="lbi">([^<]*)</li>#\1#')"
+# ★folio-bur round-6 (ceiling-recursion R5 是正): round-5 の uniform sweep は count_attr_token を chrome/legend/cover-meta/fold へ適用したが
+#   §5 block-content (subhead/table/code/mermaid) へ未到達で、 同一行 hide-twin (single-quote 可視 decoy + double-quote commented genuine) を
+#   content 検査 (double-quote/bare-tag) も占有 (不在) も素通った (独立 ceiling 実証・4 blocker)。 §5 各 component に占有数パリティを追加:
+#   count_attr_token は comment 内も数えるゆえ commented genuine が count を inflate し hide-twin を捕捉、 additive decoy も同時に封鎖
+#   (genuine spec の本文に HTML comment は 0 個ゆえ comment-hidden 自体が tamper 信号)。 README:418 rtm-summary 先例と同型の二層 (占有 + 値突合)。
+chk "占有: spec-subhead == |subhead blocks| (hide-twin/additive 封鎖・folio-bur r6)" "$(q '[.sections[].blocks[]? | select(.type=="subhead")] | length')" "$(count_attr_token data-component spec-subhead < "$BODY")"
+chk "占有: spec-table == |table blocks| (hide-twin/additive 封鎖・folio-bur r6)"   "$(q '[.sections[].blocks[]? | select(.type=="table")] | length')"   "$(count_attr_token data-component spec-table < "$BODY")"
+chk "占有: spec-code == |code blocks| (hide-twin/additive 封鎖・folio-bur r6)"     "$(q '[.sections[].blocks[]? | select(.type=="code")] | length')"     "$(count_attr_token data-component spec-code < "$BODY")"
+chk "占有: spec-diagram == |mermaid blocks| (hide-twin/additive 封鎖・folio-bur r6)" "$(q '[.sections[].blocks[]? | select(.type=="mermaid")] | length')" "$(count_attr_token data-component spec-diagram < "$BODY")"
 # subhead heading + essence
 chk "subhead heading 列 == subhead blocks.heading (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
@@ -219,6 +254,10 @@ chk "cover-meta 規範要件 == |requirements|件" "$NREQ 件 (EARS)"      "$(pr
 chk "cover-meta 用語 == |glossary|語"     "$(q '.glossary | length') 語" "$(printf '%s\n' "$meta_kv" | grep -F '用語' | head -1 | cut -f2)"
 chk "cover-meta 版 == vX / date"          "v$(q '.meta.version') / $(q '.meta.date')" "$(printf '%s\n' "$meta_kv" | grep -F '版' | head -1 | cut -f2)"
 chk "cover-meta KV 総数 == 4"             "4" "$(printf '%s\n' "$meta_kv" | grep -c .)"
+# ★folio-bur round-4 (ceiling-recursion R3 是正): meta_kv / 総数==4 は double-quote 固定ゆえ single-quote KV decoy + comment-hidden
+#   genuine で contract 由来統計 (章の数/規範要件/用語/版) を floor 通過で捏造でき素通った (floor-confirmed・独立 ceiling 実証)。
+#   research/adr/testcases (l') と同型に quote-robust count_attr_token で KEY span を数える。
+chk "占有: cover-meta k == 4 (single-quote/comment-hidden KV decoy 封鎖・folio-bur r4)" "4" "$(count_attr_token class k < "$BODY")"
 
 # 8. escape 健全性
 chk "back-ref 化け entity なし (<lt; 等)" "0" "$(grep -oE '<(lt|gt|quot);' "$BODY" | wc -l | tr -d ' ')"
@@ -280,6 +319,11 @@ chk "machine fold: mf-label 列 == preamble固定 + section(mb).heading+suffix (
 exp_mc_bur="$( { [[ "$NPRE" -gt 0 ]] && echo "$NPRE 件"; q '.sections[] | (.machine_blocks // []) | length' | while read -r n; do [[ "$n" -gt 0 ]] && echo "$n 件"; done; } )"
 act_mc_bur="$(grep -oE '<span class="mf-count">[^<]*</span>' "$BODY" | sed -E 's#<span class="mf-count">([^<]*)</span>#\1#')"
 chk "machine fold: mf-count 列 == preamble + section(mb) per-fold 件数 (順序)" "$exp_mc_bur" "$act_mc_bur"
+# ★folio-bur round-2 (ceiling-recursion 是正): 上の可視 chk は double-quote 固定 grep ゆえ genuine を display:none で隠し
+#   single-quote/extra-attr の可視 decoy を描く hide-twin で素通る (独立 ceiling 実証)。 mf-label/mf-count は対応属性の無い
+#   可視専用 chrome ゆえ占有数パリティ層が必須。 count_attr_token で全 quote 形を数え decoy の +1 を捕捉 (二層目)。
+chk "占有: mf-label == fold 数 (preamble+section(mb))" "$EXP_FOLD" "$(count_attr_token class mf-label < "$BODY")"
+chk "占有: mf-count == fold 数 (preamble+section(mb))" "$EXP_FOLD" "$(count_attr_token class mf-count < "$BODY")"
 
 # REQ-DA-STRUCT-3 (P-5): 全 live data-audience 値 ∈ {machine, human} (escape 済 code 例示は live tag でないので除外)。
 bad_da="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b[^>]*\sdata-audience="([^"]*)"/g){ print "$1\n" unless $1 eq "machine" || $1 eq "human"; }' "$BODY" | LC_ALL=C sort -u | tr '\n' ' ')"
@@ -375,6 +419,68 @@ if [[ "$NMB_TOTAL" -gt 0 ]]; then
     rm -f "$LF" "$RF"
   fi
 fi
+
+
+# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
+# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
+# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
+# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
+# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
+#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
+chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
+  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
+chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
+  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
+# (b) spec chrome-view ($SB): escaped-example (&lt;...&gt;) を一掃し mermaid pre 内側のみ除去 (開始タグ保持で genuine mermaid
+#     class を pinnable に)。 ★<code> wholesale strip しない: <code><span class="rid">DECOY</span></code> は描画されるため。
+SB="$(mktemp)"; perl -0777 -pe 's{(<pre class="mermaid">).*?(</pre>)}{$1$2}gs; s{&lt;.*?&gt;}{}gs' "$BODY" > "$SB"
+# (c) enumeration (novel/foreign marker 拒否・blocker3 closer): chrome-view の全 class/dc が allowlist 内であること。
+R7_CLS="always chapbody cover-eyebrow cover-meta cover-sub delta diagram doc-type el-cap el-item el-when en foot forbid ft-grid gdef grow gword ic ico k kicker lab lbi lead m machine-body machine-fold mermaid mf-count mf-kicker mf-label mli num option page reader-chip ref-grid rf-arrow rf-doc rf-role rf-token rid role rq-essence rq-head rq-list rq-norm rq-stmt sec-se self sign stamp state sub-se summary-card tags tbl-wrap term tint-bad tint-brand tint-info tint-ok tint-violet tint-warn trigger txt v when who xref"
+R7_DC="approval-block chapter-deck-band cross-doc-ref-chip doc-cover-band ears-badge ears-legend ears-legend-item ears-requirement-row fidelity-sync-meta glossary-term-table requirement-type-color-tokens section-essence-callout spec-code spec-diagram spec-list-block spec-machine-fold spec-machine-list spec-machine-note spec-machine-prose spec-note spec-prose spec-subhead spec-table"
+chk_empty "enumeration(r7): 全 class が allowlist (novel/foreign marker 封鎖)" \
+  "$(class_tokens < $SB | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_CLS) | tr '\n' ' ' | sed 's/ *$//')"
+chk_empty "enumeration(r7): 全 data-component が allowlist (foreign dc 封鎖)" \
+  "$(attr_values data-component < $SB | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_DC) | tr '\n' ' ' | sed 's/ *$//')"
+# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
+EXP=1; for t in page summary-card ic lab txt cover-meta ref-grid foot ft-grid tags el-cap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+# ★approval-block/glossary-term-table も占有==1 (round-7 自己 ceiling: 空 wrapper + 偽テキストは core_chrome 内部欄 pin を素通る borrowed-canonical-chrome 残余)。
+EXP=1; for t in requirement-type-color-tokens doc-cover-band ears-legend fidelity-sync-meta approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP=4; for t in m v; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP=5; for t in el-item; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '(.sections | length) + 2')"; for t in num lead ico chapbody; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '(.sections | length) + 2')"; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '.sections | length')"; for t in section-essence-callout; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '.requirements | length')"; for t in rid rq-head rq-essence rq-norm rq-stmt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '.requirements | length')"; for t in ears-requirement-row ears-badge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '.references | length')"; for t in rf-token rf-arrow rf-doc rf-role; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="requirements")] | length')"; for t in rq-list; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="table")] | length')"; for t in tbl-wrap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="subhead")] | length')"; for t in sub-se; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="mermaid")] | length')"; for t in mermaid diagram; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="prose")] | length')"; for t in spec-prose; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="note")] | length')"; for t in spec-note; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="list")] | length')"; for t in spec-list-block; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.sections[].blocks[]? | select(.type=="list") | .items[]] | length')"; for t in lbi; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.sections[] | select((.machine_blocks // []) | length > 0)] | length) + ([ ((.machine_preamble // []) | length), 1 ] | min)')"; for t in machine-fold machine-body mf-kicker; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.sections[] | select((.machine_blocks // []) | length > 0)] | length) + ([ ((.machine_preamble // []) | length), 1 ] | min)')"; for t in spec-machine-fold; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="prose")) | length')"; for t in spec-machine-prose; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="note")) | length')"; for t in spec-machine-note; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | length')"; for t in spec-machine-list; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
+EXP="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | [.[].items[]] | length')"; for t in mli; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.sections[] | select(.tint=="brand")] | length) + 1')"; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.sections[] | select(.tint=="violet")] | length) + 1')"; for t in tint-violet; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[] | select(.tint=="info")] | length')"; for t in tint-info; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[] | select(.tint=="warn")] | length')"; for t in tint-warn; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[] | select(.tint=="ok")] | length')"; for t in tint-ok; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.sections[] | select(.tint=="bad")] | length')"; for t in tint-bad; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.requirements[] | select(.ears_pattern=="ubiquitous")] | length) + 1')"; for t in always; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.requirements[] | select(.ears_pattern=="event-driven")] | length) + 1')"; for t in trigger; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.requirements[] | select(.ears_pattern=="state-driven")] | length) + 1')"; for t in state; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.requirements[] | select(.ears_pattern=="optional")] | length) + 1')"; for t in option; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '([.requirements[] | select(.ears_pattern=="unwanted")] | length) + 1')"; for t in forbid; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+rm -f "$SB"
+# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ "$fail" -eq 0 ]]; then

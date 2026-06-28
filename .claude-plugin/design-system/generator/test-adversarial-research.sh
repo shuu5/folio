@@ -411,6 +411,51 @@ cp "$TMP/base-filled.html" "$TMP/rburp.html"; perl -0777 -i -pe 's#(<p class="oq
 expect_verify_fail_filled "R-bur-p ★oqt (未解決の問い) 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburp.html"
 cp "$TMP/base-filled.html" "$TMP/rburq.html"; perl -0777 -i -pe 's#(<li><span class="b">●</span>)[^<]*同時実行[^<]*#${1}FAKE範囲項目#' "$TMP/rburq.html"
 expect_verify_fail_filled "R-bur-q ★scope li 本文 可視捏造を in→out 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburq.html"
+# R-bur-r2-{a,b} ★folio-bur round-2 (ceiling-recursion): single-quote/unquoted additive decoy を quote-robust 占有数パリティで捕捉。
+cp "$TMP/base-filled.html" "$TMP/rburr2a.html"; perl -0777 -i -pe "s{(<p class=\"q-text\">)}{<p class='q-text'>捏造の問い(decoy)</p>\${1}}" "$TMP/rburr2a.html"
+expect_verify_fail_filled "R-bur-r2a ★q-text single-quote decoy を count_attr_token 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr2a.html"
+cp "$TMP/base-filled.html" "$TMP/rburr2b.html"; perl -0777 -i -pe "s{(<div class=\"scol in\">)}{\${1}<li><span class='b'>●</span>捏造範囲(decoy)</li>}" "$TMP/rburr2b.html"
+expect_verify_fail_filled "R-bur-r2b ★scope single-quote li decoy を scol 内 <li> 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr2b.html"
+# R-bur-r3-{a,b} ★folio-bur round-3 (ceiling-recursion R2 是正):
+#   (a) scol in/out 境界移動 (合計 li 数・union 順 不変ゆえ round-2 を素通る) → 列メンバーシップ束縛で捕捉
+#   (b) cover-meta KV single-quote decoy (double-quote 固定 meta_kv の射程外) → quote-robust count_attr_token で捕捉
+cp "$TMP/base-filled.html" "$TMP/rburr3a.html"; perl -0777 -i -pe 's#(<li><span class="b">●</span>(?:(?!</li>).)*</li>)(\s*</ul></div><div class="scol out"><h3>[^<]*</h3><ul>)#${2}${1}#s' "$TMP/rburr3a.html"
+expect_verify_fail_filled "R-bur-r3-a ★scol 境界移動 (in-scope→out-scope・合計不変) を列メンバーシップ束縛で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr3a.html"
+cp "$TMP/base-filled.html" "$TMP/rburr3b.html"; perl -0777 -i -pe "s#(<span class=\"k\">状態</span><span class=\"v\">[^<]*</span>)#\${1}<span class='k'>わかったこと</span><span class='v'>99件(捏造)</span>#" "$TMP/rburr3b.html"
+expect_verify_fail_filled "R-bur-r3-b ★cover-meta KV single-quote decoy を quote-robust count で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr3b.html"
+# R-bur-r4-{a,b} ★folio-bur round-4 (ceiling-recursion R3 是正): round-3 fix 自体の残存 fail-open。
+#   (a) scol 列見出し (<h3>) を swap し『調べた範囲↔調べない範囲』を反転 (li 内容は class 束縛で intact) → 列見出し静的リテラル pin で捕捉
+#   (b) single-quote bullet を scol *外* (panel/任意位置) へ注入 → 大域 class=b census で捕捉
+cp "$TMP/base-filled.html" "$TMP/rburr4a.html"; perl -0777 -i -pe 's{<div class="scol in"><h3>✓ 調べる範囲</h3>}{<div class="scol in"><h3>⚖ 調べない範囲</h3>}; s{<div class="scol out"><h3>⚖ 調べない範囲</h3>}{<div class="scol out"><h3>✓ 調べる範囲</h3>}' "$TMP/rburr4a.html"
+expect_verify_fail_filled "R-bur-r4-a ★scol 列見出し swap (調査範囲反転) を見出し静的リテラル pin で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr4a.html"
+cp "$TMP/base-filled.html" "$TMP/rburr4b.html"; perl -0777 -i -pe "s{(</body>)}{<li><span class='b'>●</span>捏造の追加範囲項目(decoy)</li>\${1}}" "$TMP/rburr4b.html"
+expect_verify_fail_filled "R-bur-r4-b ★scol 外 single-quote bullet を大域 class=b census で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr4b.html"
+# R-bur-r5-{a,b} ★folio-bur round-5 (ceiling-recursion R4 是正・new-category): token/tag-keyed census は arbitrary-wrapper 可視捏造を
+#   原理的に縛れない。 (a) scol-in <ul> 内へ <div class="zz"><span class="bb">●</span>捏造</div> = 非li/非b/●glyph で全 proxy 素通り
+#   (b) 第2 <div class="scol in"> 列丸ごと注入 = 見出し if-first-match + scol 占有 anchor 不在で無検査、 で緑 in-scope box に捏造 scope が素通った
+#   (独立 ceiling 実証・blocker)。 region-text reconciliation (全可視テキスト突合 + nested-div reject) + scol ブロック占有 (class=scol==2) で封鎖。
+cp "$TMP/base-filled.html" "$TMP/rburr5a.html"; perl -0777 -i -pe 's{(<div class="scol in">.*?)</ul>}{${1}<div class="zz"><span class="bb">●</span> 楽観ロックは調査対象外(捏造)</div></ul>}s' "$TMP/rburr5a.html"
+expect_verify_fail_filled "R-bur-r5-a ★非li/非b/●glyph の arbitrary-wrapper 捏造 scope (緑 box 内) を region-text+nested-div reject で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr5a.html"
+cp "$TMP/base-filled.html" "$TMP/rburr5b.html"; perl -0777 -i -pe 's{(</body>)}{<div class="scol in"><h3>✓ 調べた範囲</h3><ul><div class="zz"><span class="bb">●</span> 悲観ロックを実装済みと調査した(捏造の第2列)</div></ul></div>${1}}' "$TMP/rburr5b.html"
+expect_verify_fail_filled "R-bur-r5-b ★第2 scol-in 列丸ごと注入 (見出し if-first-match 死角) を scol ブロック占有+region-text で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr5b.html"
+# R-bur-r6-{a,b,c} ★folio-bur round-6 (ceiling-recursion R5 是正): container blocker (非 canonical marker を container へ注入) を class/data-component 機械的網羅で根治。
+cp "$TMP/base-filled.html" "$TMP/rburr6a.html"; perl -0777 -i -pe 's{(</ul></div>)(</div>)}{${1}<div class="scol2"><span class="bull">●</span>偽の第3列(捏造)</div>${2}}' "$TMP/rburr6a.html"
+expect_verify_fail_filled "R-bur-r6-a ★scope-panel 内 novel-class 第3列 (scol2/bull) を class-token 機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr6a.html"
+cp "$TMP/base-filled.html" "$TMP/rburr6b.html"; perl -0777 -i -pe 's{(<div data-component="research-finding-list">)}{${1}<div data-component="research-finding-row-x"><span class="fnid2">FND9</span><p class="fnh2">重大発見: 楽観ロックは安全と判明(捏造)</p></div>}' "$TMP/rburr6b.html"
+expect_verify_fail_filled "R-bur-r6-b ★finding-list 内 novel data-component 偽 finding を data-component 機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr6b.html"
+cp "$TMP/base-filled.html" "$TMP/rburr6c.html"; perl -0777 -i -pe 's{(<p class="q-text">[^<]*</p>)}{${1}<p class="zq">補足: この問いは既に決着済み(捏造)</p>}' "$TMP/rburr6c.html"
+expect_verify_fail_filled "R-bur-r6-c ★question-panel 内 novel-class 偽 p (zq) を class-token 機械的網羅で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr6c.html"
+
+
+# ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
+cp "$TMP/base-filled.html" "$TMP/r7re1.html"; perl -0777 -i -pe 's{</body>}{<div data-component="doc-cover-band">偽の公式決定(捏造)</div></body>}' "$TMP/r7re1.html"
+expect_verify_fail_filled "R7-res-a ★doc-cover-band additive (ceiling 残余: navy 全幅で偽公式決定) を占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re1.html"
+cp "$TMP/base-filled.html" "$TMP/r7re2.html"; perl -0777 -i -pe 's{</body>}{<p class="ap-plain">偽の平易な探索(捏造)</p></body>}' "$TMP/r7re2.html"
+expect_verify_fail_filled "R7-res-b ★ap-plain additive を占有==|approaches| で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re2.html"
+cp "$TMP/base-filled.html" "$TMP/r7re3.html"; perl -0777 -i -pe 's{</body>}{<div class="lab">偽(捏造)</div></body>}' "$TMP/r7re3.html"
+expect_verify_fail_filled "R7-res-c ★lab additive を占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re3.html"
+cp "$TMP/base-filled.html" "$TMP/r7re4.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">隠蔽(捏造)</p></body>}' "$TMP/r7re4.html"
+expect_verify_fail_filled "R7-res-d ★display:none 隠蔽を display-state guard で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re4.html"
 
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

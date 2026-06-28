@@ -88,6 +88,14 @@ HTML="${2:?usage: verify-principle.sh [...] <contract.yaml> <generated.html>}"
 fail=0
 make_body "$HTML"
 
+# ★folio-bur round-3 (ceiling-recursion R3): comment-hidden classless forgery 封鎖。
+#   round-2 の comment-hidden 対策は decoy 自身が marker class を担持する亜種だけを占有数パリティで捕捉したが、
+#   genuine を `<!--...-->` へ退避し marker class 無しの可視 decoy を描く classless 変種が素通った (独立 ceiling R2 実証)。
+#   HTML comment を除去した body で可視 grep + 占有数を再導出すれば、comment 内 genuine は消え (act/count が欠落) FAIL に倒れる。
+#   pack-level (core make_body は無改変・byte-identity 維持)。am-meta / ib-from / ib-role の 3 pin で使用。
+BODY_NC="$(mktemp)"; trap 'rm -f "$BODY" "$BODY_NC"' EXIT
+perl -0777 -pe 's/<!--.*?-->//gs' "$BODY" > "$BODY_NC"
+
 # adr_exists — ADR が decisions dir に実在するか (baseline-diff の新規 amended_by 実在確認)。
 adr_exists() { local adr="$1"; [[ -n "$DECISIONS_ABS" && -d "$DECISIONS_ABS" ]] || return 1; compgen -G "${DECISIONS_ABS}/${adr}-*.html" >/dev/null 2>&1; }
 
@@ -177,8 +185,12 @@ chk_empty "amendment: am-row 可視 <b> == data-amended-adr" "$am_vis_bad"
 # ★folio-bur: am-meta 可視テキスト (改訂日付 · 承認者) == contract 再導出 (tier 順)。 data-amended-adr/可視 <b> は pin 済だが
 #   am-meta (日付・承認者) は未検査ゆえ「(9999-99-99 · FORGED)」等の改訂来歴捏造が素通った (folio-bur audit 実証)。
 exp_am_bur="$(tg_field '(.amended_by // [])[] | "(" + .date + " · " + .approved_by + ")"' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
-act_am_bur="$(grep -oE '<span class="am-meta">[^<]*</span>' "$BODY" | sed -E 's#<span class="am-meta">([^<]*)</span>#\1#')"
+act_am_bur="$(grep -oE '<span class="am-meta">[^<]*</span>' "$BODY_NC" | sed -E 's#<span class="am-meta">([^<]*)</span>#\1#')"
 chk "within-doc: 可視 am-meta == (date · approved_by) (tier順)" "$exp_am_bur" "$act_am_bur"
+# ★folio-bur round-2 (ceiling-recursion 是正): 上の可視 chk は double-quote 固定 grep ゆえ comment-hidden decoy
+#   (`<span class='am-meta'>FORGED</span><!--<span class="am-meta">CORRECT</span>-->`) で素通る (独立 ceiling 実証)。
+#   quote-robust 占有数パリティ (count_attr_token は comment 内 genuine + 可視 forged を両方数え +1 で FAIL に倒す)。
+chk "占有: am-meta == Σ|amended_by|" "$(q '[.principles[].amended_by[]?] | length')" "$(count_attr_token class am-meta < "$BODY_NC")"
 
 # 8. versioning / amendment セクションの決定的フィールド値 fidelity。
 chk "versioning: basis == contract" "$(esc "$(q '.versioning.basis')")" \
@@ -327,11 +339,59 @@ if [[ "$DOC_TYPE" == "constitution" ]]; then
     chk_empty "inbound: ib-ref 可視 <b> == data-inbound-ref" "$ib_vis_bad"
     # ★folio-bur: 照会元/role の可視テキスト echo (visible-text-vs-attribute・chip emit = .inbound[] 配列順)。
     #   (a) ib-from: 照会元 — *対応属性が無く* 可視層が唯一の検証点ゆえ contract .inbound[].from へ直接束縛 (HIGH)。
-    chk "within-doc: 可視 ib-from == .inbound[].from (順序)" "$(qesc '.inbound[].from')" "$(grep -oE '<span class="ib-from">[^<]*</span>' "$BODY" | sed -E 's#<span class="ib-from">([^<]*)</span>#\1#')"
+    chk "within-doc: 可視 ib-from == .inbound[].from (順序)" "$(qesc '.inbound[].from')" "$(grep -oE '<span class="ib-from">[^<]*</span>' "$BODY_NC" | sed -E 's#<span class="ib-from">([^<]*)</span>#\1#')"
     #   (b) ib-role: 可視 role — data-inbound-role は verify_cross_doc_refs で contract pin 済ゆえ 可視==contract.role で transitively 封鎖。
-    chk "within-doc: 可視 ib-role == .inbound[].role (順序)" "$(q '.inbound[].role')" "$(grep -oE '<span class="ib-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="ib-role">([^<]*)</span>#\1#')"
+    chk "within-doc: 可視 ib-role == .inbound[].role (順序)" "$(q '.inbound[].role')" "$(grep -oE '<span class="ib-role">[^<]*</span>' "$BODY_NC" | sed -E 's#<span class="ib-role">([^<]*)</span>#\1#')"
+    # ★folio-bur round-2 (ceiling-recursion 是正): ib-from/ib-role の可視 chk も double-quote 固定ゆえ comment-hidden/single-quote
+    #   decoy で素通る (独立 ceiling 実証)。 quote-robust 占有数パリティで decoy の +1 を捕捉 (ib-from は対応属性が無く唯一の検証点ゆえ特に重要)。
+    chk "占有: ib-from == |inbound|" "$(q '.inbound | length')" "$(count_attr_token class ib-from < "$BODY_NC")"
+    chk "占有: ib-role == |inbound|" "$(q '.inbound | length')" "$(count_attr_token class ib-role < "$BODY_NC")"
   fi
 fi
+
+
+# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
+# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
+# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
+# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
+# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
+#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
+chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
+  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
+chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
+  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
+# (c) enumeration (novel/foreign marker 拒否・blocker3 closer): chrome-view の全 class/dc が allowlist 内であること。
+R7_CLS="am-kick am-meta am-row amp-plain chapbody cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid gdef grow gword ib-arrow ib-from ib-grid ib-ref ib-role ic ico k kicker lab lead m num p-head p-plain page ph pid pr-list pst reader-chip role self sign stamp summary-card tags term tier-always tier-askfirst tier-never tint-bad tint-brand tint-info tint-ok tint-violet tint-warn txt v vp-basis vp-bump vp-cond vp-note vp-plain when who"
+R7_DC="amendment-procedure-steps approval-block chapter-deck-band doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline principle-amendment-history principle-inbound-chip principle-row principle-tier-badge requirement-type-color-tokens versioning-policy-table"
+chk_empty "enumeration(r7): 全 class が allowlist (novel/foreign marker 封鎖)" \
+  "$(class_tokens < $BODY | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_CLS) | tr '\n' ' ' | sed 's/ *$//')"
+chk_empty "enumeration(r7): 全 data-component が allowlist (foreign dc 封鎖)" \
+  "$(attr_values data-component < $BODY | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_DC) | tr '\n' ' ' | sed 's/ *$//')"
+# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
+EXP="$(q '.principles | length')"; for t in pst p-plain pid p-head ph; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '.principles | length')"; for t in principle-row principle-tier-badge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
+EXP="$(q '[.principles[] | select(.tier=="Always")] | length | . * 2')"; for t in tier-always; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '[.principles[] | select(.tier=="Ask-first")] | length | . * 2')"; for t in tier-askfirst; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '[.principles[] | select(.tier=="Never")] | length | . * 2')"; for t in tier-never; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=7; for t in num lead kicker ico chapbody; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=7; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
+EXP="$(q '.inbound | length')"; for t in ib-ref ib-arrow; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '.inbound | length')"; for t in principle-inbound-chip; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
+EXP="$(q '[.principles[].amended_by[]?] | length')"; for t in am-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '[.principles[] | select((.amended_by // []) | length > 0)] | length')"; for t in am-kick; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '[.principles[] | select((.amended_by // []) | length > 0)] | length')"; for t in principle-amendment-history; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
+EXP=4; for t in m k v; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '.versioning.rules | length')"; for t in vp-bump vp-cond; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=3; for t in pr-list; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=2; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in vp-plain vp-note vp-basis txt tint-warn tint-violet tint-ok tint-info tint-bad tags summary-card page lab ic ib-grid ft-grid foot cover-meta amp-plain; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in versioning-policy-table requirement-type-color-tokens fidelity-sync-meta doc-cover-band amendment-procedure-steps approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
+# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
+#     構造化 badge は verify_term_inline が glossary 突合済)。
+chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
+  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
+# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ "$fail" -eq 0 ]]; then
