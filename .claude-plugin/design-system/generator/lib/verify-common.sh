@@ -132,10 +132,17 @@ set_eq() { # label expected-multiline actual-multiline
 }
 
 # inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、
-# <style> ブロックを除去した body-only ビューで数える ($BODY をグローバルに設定し EXIT で掃除)。
+# <style> ブロックの *中身を除去* した body-only ビューで数える ($BODY をグローバルに設定し EXIT で掃除)。
+# ★folio-wq4: 旧版は行範囲削除 (sed '/<style>/,/</style>/d') だった。 これは <style>/</style> と *同居行* に置かれた
+#   実 DOM 捏造を巻き込んで $BODY から消し、 占有/enumeration/display/term の全 $BODY check を一括 fail-open させる
+#   支配的 substrate trick だった (捏造を <style> 同居行に置くと round-7 pin も exit 0 で再 open。 さらに単行
+#   <style>...</style> は GNU sed が同行で range を閉じず以降 EOF まで削除・未閉じ <style> も EOF まで削除)。
+#   解: perl -0777 で <style> *タグは残し中身のみ空化* する。 de-interference 目的 (CSS セレクタ text を class grep から
+#   除外) は保ったまま、 同居行の実 DOM を保全して捏造を $BODY に surface させる (count_attr_token が捕捉に転じる)。
+#   残る空 <style></style> タグは class/data-component を持たず count に無害。 未閉じ <style> は match せず残置 (安全側)。
 make_body() { # $1 = html path
   BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-  sed '/<style>/,/<\/style>/d' "$1" > "$BODY"
+  perl -0777 -pe 's{(<style\b[^>]*>).*?(</style\s*>)}{$1$2}gs' "$1" > "$BODY"
 }
 
 # ---- plain-language-term-inline (glossary 派生ビュー、 ADR-0042 §2.2 A) の fidelity + 用語被覆 ----
@@ -212,7 +219,12 @@ verify_term_inline() { # $1 = markable フィールドの yq 式  $2 = 被覆 se
 #   (閉じ引用直後が >) で識別する (ref-chip は `class="reader-chip" data-component=...` = 引用後に空白)。 行 scope で値突合 + marker count==1。
 # 前提: $BODY (make_body 済) / $CONTRACT / q / esc / chk / count_attr_token / $fail / $CHKW。 mode 非依存 (chrome は構造ゆえ
 #  pre-fill/--filled/--artifact のいずれでも同一・prose slot を持たない)。 3 pack verify から無条件に呼ぶ。
-verify_core_chrome() {
+verify_core_chrome() { # $1 = role 追加 home 数 (SRS の div.role actor 等・default 0)  $2 = en 追加 home 数 (SRS の EARS legend 等・default 0)
+  local role_extra="${1:-0}" en_extra="${2:-0}"
+  # ★folio-wq4: 追加 home 数は非負整数のみ。 非数値 (旧 glossary が渡していた section ラベル文字列等) は
+  #   $((nap + role_extra)) で算術エラー→無音破壊するため、 silent 0 強制でなく loud fail で誤用を露出する。
+  case "$role_extra" in ''|*[!0-9]*) echo "  [FAIL] verify_core_chrome: role_extra は非負整数のみ (実 '$role_extra')"; fail=1; return 1 ;; esac
+  case "$en_extra"   in ''|*[!0-9]*) echo "  [FAIL] verify_core_chrome: en_extra は非負整数のみ (実 '$en_extra')";   fail=1; return 1 ;; esac
   local nap ngl nen signrows growrows readerlines
   nap="$(q '.approval | length')"; ngl="$(q '.glossary | length')"
   nen="$(q '[.glossary[] | select((.en // "") != "")] | length')"
@@ -284,6 +296,19 @@ verify_core_chrome() {
   chk "core-chrome: vcount gword == |glossary|" "$ngl" "$(count_attr_token class gword < "$BODY")"
   chk "core-chrome: vcount gdef == |glossary|"  "$ngl" "$(count_attr_token class gdef < "$BODY")"
   chk "core-chrome: grow 行内 en == |非空 en| (legend en と分離)" "$nen" "$(printf '%s\n' "$growrows" | count_attr_token class en)"
+
+  # (4) ★folio-wq4 (blocker 3): global 占有数 pin。 上の sign/grow *行 scope* count は legit な role/en が
+  #   正しい器に居ることを bind するが、 *scope 外* に注入された偽 <span class="role">承認者X / <span class="en">FAKE は
+  #   どの行 scope check にも掛からず素通った (occupancy 不完全)。 role/en の正当な置き場は厳密に:
+  #     role = approval の span.role (== |approval|・全 pack 共通) + pack 固有 home (SRS の emit_actors div.role = |.actors|)
+  #     en   = glossary 表の grow 行 en (== |非空 en|・全 pack 共通) + pack 固有 home (SRS の EARS legend en = 4 静的)
+  #   のみ (verified: 全 10 pack で span.role==|approval| / grow.en==|非空 en|・div.role と legend.en は SRS のみ)。
+  #   global token 占有数を quote-robust count_attr_token で |approval|+追加 / |非空 en|+追加 に強制し、 scope 外の
+  #   偽 role/en (偽承認者・偽用語バッジ) を封鎖する。 追加 home は SRS のみ非 0 ($1/$2)・他 9 pack は default 0
+  #   (= global == 行 scope と一致)。 複合式 (legend=固定 4) を要するのは SRS の 2 home のみ = bounded (dty の
+  #   partial-enumeration 沼を回避)。 EXEMPT 修飾クラス/badge の occupancy は別 follow-up (scope 外)。
+  chk "core-chrome: vcount role global == |approval|+追加home($role_extra)" "$((nap + role_extra))" "$(count_attr_token class role < "$BODY")"
+  chk "core-chrome: vcount en global == |非空 en|+追加home($en_extra)"      "$((nen + en_extra))" "$(count_attr_token class en < "$BODY")"
 }
 
 # ---- cross-doc 照会解決の共通スケルトン (rule-of-three: verify-adr §3 ∩ verify-research §3、 ds8 で core 昇格) ----

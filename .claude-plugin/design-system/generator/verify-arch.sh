@@ -333,7 +333,7 @@ for did in "${DIAGIDS[@]}"; do
 done
 
 # ============ 横展開 (a) 実装HOWリーク = 保守的 advisory scan (WARN・FAIL でない) ============
-# 本文 (style/script 除外済 BODY) に対し denylist 語を語境界・大文字小文字非依存で scan。 検出 = WARN (floor を割らない)。
+# 本文 ($BODY = make_body で <style> 中身を空化・<script> は残置) に対し denylist 語を語境界・大文字小文字非依存で scan。 検出 = WARN (floor を割らない)。
 mapfile -t DENY < <(q '.how_leak_denylist[]' 2>/dev/null)
 how_hits=""
 for term in "${DENY[@]}"; do

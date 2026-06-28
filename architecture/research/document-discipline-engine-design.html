@@ -63,6 +63,7 @@
   <li><a href="#s11-suite-grill">§11. c5r — suite demo grill: engine = 生成器 + 機械検出 / 判断は人間</a></li>
   <li class="toc--sub"><a href="#s11-1-pivot">§11.1 哲学転換 — 「判断する engine」を作らない</a></li>
   <li class="toc--sub"><a href="#s11-2-constitution-demo">§11.2 constitution 必然性 = 統治構造の scale 依存</a></li>
+  <li><a href="#s12">§12. wq4 — fab-free floor の CORE substrate 硬化と「静的検査 / render-gate」責務境界</a></li>
 </ol>
 </nav>
 <!-- /folio:chrome-toc -->
@@ -250,6 +251,20 @@
 
 <h3 id="s11-2-constitution-demo">§11.2 constitution 必然性 = 統治構造の scale 依存</h3>
 <p>constitution が必然か人工的かは <strong>統治構造 (governance) の有無 = project の scale</strong> で決まる。 folio 自身は複数 consumer を統べる META FRAMEWORK ゆえ constitution が必然である (既存の不変原則 14 条)。 一方 clinic は単一システムで、 constitution を立てると SRS goals と重複し人工的になる。 この対比を実証するデモ (clinic constitution を一律生成 → SRS との重複が検出される → 人間が不要〔= folio 不適〕と判断) は follow-up <code>folio-c5r.2</code>、 その基盤となる cross-doc 重複検出 lint は <code>folio-c5r.1</code> で実装する。 constitution を統治構造の scale 軸で位置づける research note 化は <code>folio-dxq</code> が担う。 folio の constitution は read-only な写像 (翻訳) であり、 一律生成デモは clinic 側で行う。</p>
+
+<h2 id="s12">§12. wq4 — fab-free floor の CORE substrate 硬化と「静的検査 / render-gate」責務境界</h2>
+<p>横展開 epic <code>folio-bur</code> (可視 echo pin = 「属性 pin ≠ 可視 pin / membership ≠ occupancy」を 7 pack へ pure-additive 硬化) の最終 ceiling が、 pack 層では塞げない <strong>CORE substrate (検査基盤) の fail-open</strong> を 3 件確定した。 pack-additive 制約 (core 無改変) を破る必要があるため別 epic <code>folio-wq4</code> へ繰延し、 grill (2026-06-29・grounding-sweep <code>wf_258cf2cd</code> で地図補正) を経て対処した。 この epic は engine の検査基盤に初めて core 変更を入れる節目であり、 同時に <strong>静的検査の責務境界</strong>を明文化する。</p>
+<p>★<strong>責務境界 (load-bearing)</strong>: fab-free floor は <strong>生成時点で DOM 文字列に存在する静的な捏造</strong>を検出する層である。 一方 <strong>render-time DOM 差替え</strong> (検証通過後に <code>&lt;script&gt;</code> が <code>innerHTML</code> 等で genuine な決定・承認・章を丸ごと別物にすり替える) は静的検査では原理的に触れない別ジャンルで、 <strong>render-gate (gate F) の責務</strong>である。 両者を 1 epic に混ぜると、 (a) make_body で <code>&lt;script&gt;</code> も strip しようとして glossary の JSON-LD 用語抽出 (<code>verify-glossary.sh</code>) を壊す、 (b) 「make_body を直したから捏造検査は完成」と誤認し render-time 差替えが手つかずで残る、 の二方向の事故を招く。 ゆえに wq4 = 静的 substrate (make_body + occupancy)、 <code>&lt;script&gt;</code> render-time = 別 epic <code>folio-4gz</code> と切り分けた。</p>
+<table class="data-table">
+  <thead><tr><th>wq4 grill 論点</th><th>決定</th><th>要点</th></tr></thead>
+  <tbody>
+    <tr><td>① epic scope</td><td>blocker 1 (make_body) + 3 (occupancy)。 blocker 2 (<code>&lt;script&gt;</code>) は別 render-gate epic へ carve</td><td>静的検査層に閉じる 1・3 を束ね、 render-time の 2 を分離 (上記責務境界)。</td></tr>
+    <tr><td>② make_body 機構</td><td>行範囲「削除」→ 内容のみ「空化」 (<code>perl -0777</code>)</td><td>旧 <code>sed '/&lt;style&gt;/,/&lt;\/style&gt;/d'</code> は <code>&lt;style&gt;</code> 同居行の実 DOM 捏造を巻き込み消去する支配的 fail-open だった (round-7 pin も再 open・単行 / 未閉じ <code>&lt;style&gt;</code> は EOF まで削除)。 <code>&lt;style&gt;</code> タグを残し中身のみ空化すれば、 CSS セレクタ干渉除去の目的を保ったまま同居捏造を検査対象に surface させ占有検査が捕捉する。 DOM パーサ再設計は不要 (= 当初『全面再設計』framing の反転)。</td></tr>
+    <tr><td>③ occupancy global pin</td><td><code>role</code> / <code>en</code> を global 占有 pin (複合式は繰延)</td><td>従来は sign / grow 行 <em>scope 内</em>でしか数えず、 scope 外へ注入した偽 <code>&lt;span class="role"&gt;</code> (偽承認者) が素通った。 正当な置き場は approval span.role == |approval| (全 pack 共通) + SRS 固有 home (actor div.role / EARS legend en 4) のみと verified ゆえ、 global token 占有数を契約由来値に bind する。 EXEMPT 修飾 / badge の複合式 occupancy は false-FAIL リスク (dty の partial-enumeration 沼) ゆえ別 follow-up へ。</td></tr>
+    <tr><td>④ 回帰 gate (byte-identity の代替)</td><td>assemble 無改変 proof + golden 全本 verify 再実行 + 敵対 + sandbox</td><td>rule-of-three の「core git diff 空」proof は make_body (lib/) を変える wq4 では void。 だが make_body は assemble を触らないため再生成 HTML は依然 byte-identical (assemble 側の無料 proof)。 verify 側退行は golden 全本再 verify + 敵対 suite + sandbox で捕捉する。</td></tr>
+  </tbody>
+</table>
+<p>★<strong>メタ教訓</strong> (<code>ceiling-recursive-admin-self-certify</code> の延長): folio-bur の ceiling-recursion は最終的に検査の <strong>substrate (core make_body) 層</strong>に到達した。 これは pack-additive 硬化の <strong>hard ceiling</strong> である ── 自己 mutation 検証 (pack に行を足す) は独立行注入ゆえ substrate trick を構造的に見落とす。 「floor 緑 = 検査基盤が健全な範囲で緑」であり、 基盤自体の欠陥は floor に映らない。 ゆえに <strong>substrate 修正は in-scope (pack) の land とは別 epic に切り出し、 独自の grill + 独立 ceiling + 回帰 gate を課す</strong> (bounded-land を <em>scope 境界</em>で適用する) のが正しい止め方である。</p>
 </section>
 
 <!-- folio:chrome-bottom -->

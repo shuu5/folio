@@ -592,6 +592,14 @@ expect_verify_fail_filled "R7-adr-e ★bare term を term==plain-language-term-i
 cp "$TMP/base-filled.html" "$TMP/r7a6.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">genuine 隠蔽(捏造)</p></body>}' "$TMP/r7a6.html"
 expect_verify_fail_filled "R7-adr-f ★display:none 隠蔽を display-state guard で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7a6.html"
 
+# ===== folio-wq4 回帰: make_body substrate + occupancy global pin が non-SRS pack (追加 home 0) でも効く (core ゆえ全 pack) =====
+cp "$TMP/base-filled.html" "$TMP/wq4adr1.html"; perl -0777 -i -pe 's{</body>}{<div><style>.x{}</style><span class="role">偽承認者(style同居)</span></div></body>}' "$TMP/wq4adr1.html"
+expect_verify_fail_filled "WQ4-adr-a ★<style>同居行の偽 role を make_body 中身空化で surface→global role 占有が捕捉 (旧 sed は素通り)" "$BASE_PROSE" "$BASE" "$TMP/wq4adr1.html"
+cp "$TMP/base-filled.html" "$TMP/wq4adr2.html"; perl -0777 -i -pe 's{</body>}{<span class="role">偽承認者(scope外)</span></body>}' "$TMP/wq4adr2.html"
+expect_verify_fail_filled "WQ4-adr-b ★行 scope 外の偽 role を global 占有 (==|approval|・追加 0) で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr2.html"
+cp "$TMP/base-filled.html" "$TMP/wq4adr3.html"; perl -0777 -i -pe 's{</body>}{<span class="en">FAKE-EN(scope外)</span></body>}' "$TMP/wq4adr3.html"
+expect_verify_fail_filled "WQ4-adr-c ★行 scope 外の偽 en を global 占有 (==|非空 en|・追加 0) で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr3.html"
+
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

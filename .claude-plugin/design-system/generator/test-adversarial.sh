@@ -849,6 +849,25 @@ expect_verify_fail "R7-srs-d ★nfr-hero additive を占有で捕捉" "$BASE" "$
 perl -0777 -pe 's{</body>}{<p style="display:none">genuine 隠蔽(捏造)</p></body>}' "$TMP/good.html" > "$TMP/r7dn.html"
 expect_verify_fail "R7-srs-e ★display:none 隠蔽を display-state guard で捕捉" "$BASE" "$TMP/r7dn.html"
 
+# ===== folio-wq4 回帰: make_body substrate (style co-located) + occupancy global pin (blocker 1+3) =====
+# blocker 1: 旧 make_body (sed '/<style>/,/</style>/d' 行範囲削除) は <style> 同居行の実 DOM 捏造を巻き込み消去し
+#   verify を偽 PASS させた。 新 make_body (perl 中身空化) は捏造を $BODY に surface させ既存/新 occupancy が捕捉する。
+perl -0777 -pe 's{</body>}{<p><style>.wq4{color:red}</style><span class="aid">捏造AC(style同居)</span></p></body>}' "$TMP/good.html" > "$TMP/wq4a.html"
+expect_verify_fail "WQ4-a ★<style>同居行の偽 aid を make_body 中身空化で surface→aid 占有が捕捉 (旧 sed 行範囲削除は素通り)" "$BASE" "$TMP/wq4a.html"
+perl -0777 -pe 's{</body>}{<div><style>.q{}</style><span class="role">偽の承認者(style同居)</span></div></body>}' "$TMP/good.html" > "$TMP/wq4b.html"
+expect_verify_fail "WQ4-b ★<style>同居行の偽 role を surface→global role 占有が捕捉" "$BASE" "$TMP/wq4b.html"
+# blocker 3: 行 scope (sign/grow) 外へ注入した偽 role/en を global 占有 pin が捕捉。
+perl -0777 -pe 's{</body>}{<span class="role">偽の承認者(scope外)</span></body>}' "$TMP/good.html" > "$TMP/wq4c.html"
+expect_verify_fail "WQ4-c ★行 scope 外 (sign 行外) の偽 role を global 占有 (==|approval|+actors) で捕捉" "$BASE" "$TMP/wq4c.html"
+perl -0777 -pe 's{</body>}{<span class="en">FAKE-EN(scope外)</span></body>}' "$TMP/good.html" > "$TMP/wq4d.html"
+expect_verify_fail "WQ4-d ★行 scope 外 (grow/legend 外) の偽 en を global 占有 (==|非空 en|+legend) で捕捉" "$BASE" "$TMP/wq4d.html"
+perl -0777 -pe 's{</body>}{<p>genuine見出し<style>.h{}</style><span class="role">偽承認(混在)</span></p></body>}' "$TMP/good.html" > "$TMP/wq4e.html"
+expect_verify_fail "WQ4-e ★テキスト+<style>+偽 role 混在行を surface→global role が捕捉" "$BASE" "$TMP/wq4e.html"
+
+# ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
+#   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。
+if [[ "$fail" -ne 0 ]]; then echo "PASS=$pass FAIL=$fail"; echo "RESULT: 取りこぼしあり (round-7/wq4 含む)"; exit 1; fi
+
 if [[ "$gateF_skipped" -eq 1 ]]; then
   echo "RESULT: bash 攻撃を fail-closed で捕捉 (ただし gate F selftest=A34 は renderer 不在で未検査・CI/uv で要実行)"
 else

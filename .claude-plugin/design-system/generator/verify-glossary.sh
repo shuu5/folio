@@ -172,7 +172,10 @@ html_h2count="$(perl -0777 -ne 'while (/<h2\b[^>]*>\s*用語\s*\((\d+)\s*語\)\s
 chk "用語数 h2 N == NTERMS (可視 contract 導出)" "$NTERMS" "$html_h2count"
 
 # ---- 7. footer verify-state token (core chrome) ----
-verify_core_chrome "footer verify-state token"
+# ★folio-wq4: verify_core_chrome は $1/$2 を role/en の追加 home 数 (整数) として解釈するよう変更された。
+#   glossary は actor (div.role) も EARS legend en も持たない (= 追加 0) ゆえ引数なしで呼ぶ。
+#   (旧版はここに section ラベル文字列を渡していたが argless 実装が無視していた dead arg。 現実装では算術エラーになるため除去。)
+verify_core_chrome
 
 # ---- 8. prose スロット mode (pre-fill 全空 / --filled・--artifact 全充填 + 注入忠実) ----
 slots=$(( 1 + NTERMS ))

@@ -100,7 +100,11 @@ chk "approval == |approval|"       "$(q '.approval | length')"                  
 # 7b'. ★core 共通 chrome (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary term/en/def) の
 #      値突合 + 占有数パリティ (folio-mk9・lib/verify-common.sh の verify_core_chrome)。 上の件数のみ検証 (件数 OK でも値改竄が
 #      素通る fail-open) を全 pack 共通で塞ぐ cross-pack gap の解消 (dty round-2 完全列挙が発見・ADR/research も同型 gap)。
-verify_core_chrome
+# ★folio-wq4 (blocker 3): SRS は core 共通 chrome に加え role/en の pack 固有 home を持つ — emit_actors の
+#   <div class="role"> (= |.actors|) と emit_legend の EARS 凡例 en 4 個 (When/While/If-Then/Ubiq.・静的 chrome folio-czo)。
+#   verify_core_chrome の global 占有 pin にこの追加 home 数を渡し、 行 scope 外への偽 role/en 注入を封鎖する
+#   (他 9 pack は追加 0 = global が approval/glossary と一致)。
+verify_core_chrome "$(q '.actors | length')" 4
 # 7b''. ★SRS-pack 固有 reader-chip 占有数 (folio-mk9 self-review round-5): SRS は cross_doc を持たず cross-doc-ref-chip を emit しない
 #   ゆえ reader-chip class を持つ要素は genuine reader-chip ちょうど 1 個のみ。 core の count_genuine_reader_chip (ref-chip 除外・要素単位)
 #   は『class="reader-chip" data-component="cross-doc-ref-chip">任意 text』の additive decoy を ref-chip 側へ分類し genuine count を増やさず、
@@ -278,8 +282,9 @@ chk "vcount: b == |scope.in|+|scope.out|" "$(q '(.scope.in | length) + (.scope.o
 # ★folio-4cf: body prose 値 class (cd/at/resp/cond/meas/role/b) を EXEMPT → COUNTED へ移した (§7g で値を順序突合 + ここで占有数パリティ)。
 # ★folio-mk9: core 共通 chrome の value class (doc-type/cover-eyebrow/cover-sub・sign/who/when/stamp・grow/gword/gdef) を
 #   EXEMPT → COUNTED へ移した。 verify_core_chrome (§7b') が値を順序突合 + 占有数パリティ済 (global) ゆえ「明示繰延」ではなくなった。
-#   ★en は EXEMPT 維持: glossary 表 (verify_core_chrome が grow 行内で占有数突合) と EARS legend (folio-czo の legend-scope SET) で
-#     class 共有ゆえ *global* vcount は不可 (両 scope の和になる)。 両 scope で個別に被覆済。
+#   ★en は EXEMPT 維持 (= COUNTED へは移さない) だが folio-wq4 で global 占有 pin 済: glossary 表 (grow 行内占有) と
+#     EARS legend (固定 4) の 2 home の和ゆえ旧版は *global* vcount を「不可」としていたが、 legend=固定 4 リテラルゆえ
+#     verify_core_chrome が global en == |非空 en| + 追加home(4) を強制する (scope 外への偽 en 注入を封鎖)。 行 scope SET は別途維持。
 #   ★folio-mk9 self-review round-5: reader-chip を EXEMPT → COUNTED へ移した。 ADR/research では cross-doc-ref-chip が同 class を再利用
 #     (global 2 個) ゆえ class count 不可だが、 SRS は cross_doc を持たず ref-chip を emit しないため reader-chip class 総数 == 1 (§7b'') で
 #     global 占有数を bind 済 (ref-chip 構文を借りた捏造 reader-chip box を封鎖)。 reader 値は verify_core_chrome が別途突合。
