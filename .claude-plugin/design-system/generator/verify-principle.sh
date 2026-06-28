@@ -174,6 +174,11 @@ am_vis_bad="$(perl -CSD -0777 -ne '
   print join(" ",@bad);
 ' "$BODY")"
 chk_empty "amendment: am-row 可視 <b> == data-amended-adr" "$am_vis_bad"
+# ★folio-bur: am-meta 可視テキスト (改訂日付 · 承認者) == contract 再導出 (tier 順)。 data-amended-adr/可視 <b> は pin 済だが
+#   am-meta (日付・承認者) は未検査ゆえ「(9999-99-99 · FORGED)」等の改訂来歴捏造が素通った (folio-bur audit 実証)。
+exp_am_bur="$(tg_field '(.amended_by // [])[] | "(" + .date + " · " + .approved_by + ")"' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
+act_am_bur="$(grep -oE '<span class="am-meta">[^<]*</span>' "$BODY" | sed -E 's#<span class="am-meta">([^<]*)</span>#\1#')"
+chk "within-doc: 可視 am-meta == (date · approved_by) (tier順)" "$exp_am_bur" "$act_am_bur"
 
 # 8. versioning / amendment セクションの決定的フィールド値 fidelity。
 chk "versioning: basis == contract" "$(esc "$(q '.versioning.basis')")" \
@@ -320,6 +325,11 @@ if [[ "$DOC_TYPE" == "constitution" ]]; then
       print join(" ",@bad);
     ' "$BODY")"
     chk_empty "inbound: ib-ref 可視 <b> == data-inbound-ref" "$ib_vis_bad"
+    # ★folio-bur: 照会元/role の可視テキスト echo (visible-text-vs-attribute・chip emit = .inbound[] 配列順)。
+    #   (a) ib-from: 照会元 — *対応属性が無く* 可視層が唯一の検証点ゆえ contract .inbound[].from へ直接束縛 (HIGH)。
+    chk "within-doc: 可視 ib-from == .inbound[].from (順序)" "$(qesc '.inbound[].from')" "$(grep -oE '<span class="ib-from">[^<]*</span>' "$BODY" | sed -E 's#<span class="ib-from">([^<]*)</span>#\1#')"
+    #   (b) ib-role: 可視 role — data-inbound-role は verify_cross_doc_refs で contract pin 済ゆえ 可視==contract.role で transitively 封鎖。
+    chk "within-doc: 可視 ib-role == .inbound[].role (順序)" "$(q '.inbound[].role')" "$(grep -oE '<span class="ib-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="ib-role">([^<]*)</span>#\1#')"
   fi
 fi
 

@@ -269,6 +269,17 @@ chk "spec-machine-note == Σ machine note"    "$MB_NOTE"  "$(grep -c 'data-compo
 chk "spec-machine-list == Σ machine list"    "$MB_LIST"  "$(grep -c 'data-component="spec-machine-list"' "$BODY")"
 chk "machine li (mli) == Σ machine list items" "$MB_LI"  "$(grep -c 'class="mli"' "$BODY")"
 chk "spec-machine-fold == sections(mb) + preamble" "$EXP_FOLD" "$(grep -c 'data-component="spec-machine-fold"' "$BODY")"
+# ★folio-bur: machine fold summary の可視 echo (mf-label heading / mf-count per-fold 件数)。 fold 件数 (EXP_FOLD) は
+#   上で pin 済だが、 各 fold の summary ラベル (heading echo) と per-fold 件数は contract へ未束縛で、 §N heading の捏造・
+#   per-fold 件数の捏造が素通った (folio-bur audit 実証の 2 穴・visible-text-vs-attribute / orphan-or-count)。
+# (a) mf-label: preamble 固定ラベル + mb>0 section の "{heading} の地の文・運用説明・rationale" (document 順)。
+exp_ml_bur="$( { [[ "$NPRE" -gt 0 ]] && echo "文書前文 (この規約集の位置づけ)"; q '.sections[] | select((.machine_blocks // []) | length > 0) | .heading' | while IFS= read -r h; do printf '%s の地の文・運用説明・rationale\n' "$h"; done; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
+act_ml_bur="$(grep -oE '<span class="mf-label">[^<]*</span>' "$BODY" | sed -E 's#<span class="mf-label">([^<]*)</span>#\1#')"
+chk "machine fold: mf-label 列 == preamble固定 + section(mb).heading+suffix (順序)" "$exp_ml_bur" "$act_ml_bur"
+# (b) mf-count: preamble 件数 + 各 mb>0 section の machine_blocks 件数 (document 順・"N 件")。
+exp_mc_bur="$( { [[ "$NPRE" -gt 0 ]] && echo "$NPRE 件"; q '.sections[] | (.machine_blocks // []) | length' | while read -r n; do [[ "$n" -gt 0 ]] && echo "$n 件"; done; } )"
+act_mc_bur="$(grep -oE '<span class="mf-count">[^<]*</span>' "$BODY" | sed -E 's#<span class="mf-count">([^<]*)</span>#\1#')"
+chk "machine fold: mf-count 列 == preamble + section(mb) per-fold 件数 (順序)" "$exp_mc_bur" "$act_mc_bur"
 
 # REQ-DA-STRUCT-3 (P-5): 全 live data-audience 値 ∈ {machine, human} (escape 済 code 例示は live tag でないので除外)。
 bad_da="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b[^>]*\sdata-audience="([^"]*)"/g){ print "$1\n" unless $1 eq "machine" || $1 eq "human"; }' "$BODY" | LC_ALL=C sort -u | tr '\n' ' ')"

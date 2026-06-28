@@ -123,6 +123,14 @@ expect_fail "gen-meta 捏造 (可視 contract 値)" "$m"
 m="$TMP/m18.html"; perl -0777 -pe 's{(<h2>用語 \()\d+( 語\)</h2>)}{${1}999${2}}s' "$GOOD" > "$m"
 expect_fail "用語数 h2 count 捏造" "$m"
 
+# 20. ★folio-bur: xref li 可視 "定義元: {target}" を捏造 (data-xref-target 属性は intact・visible-text-vs-attribute)
+m="$TMP/m20.html"; perl -0777 -pe 's{(<li data-xref-target="P-3" data-xref-rel="glossary-anchor">)定義元: P-3(</li>)}{${1}定義元: FAKE-XREF${2}}' "$GOOD" > "$m"
+expect_fail "★xref li 可視捏造 (定義元: target≠属性) / 属性 intact" "$m"
+
+# 21. ★folio-bur: data-xref-target 属性なしの孤立 li を term-xrefs <ul> 内へ挿入 (orphan-or-count)
+m="$TMP/m21.html"; perl -0777 -pe 's{(<li data-xref-target="P-3" data-xref-rel="glossary-anchor">定義元: P-3</li>)}{${1}<li>GHOST-XREF</li>}' "$GOOD" > "$m"
+expect_fail "★孤立 xref li 挿入 (属性なし) を li 総数で捕捉" "$m"
+
 # 19. verify が GREEN を *決して* 出さない (floor 単独 GREEN 禁止)
 total=$((total+1))
 if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" 2>/dev/null | grep -q 'GREEN'; then

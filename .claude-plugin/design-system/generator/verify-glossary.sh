@@ -90,6 +90,13 @@ set_eq "JSON-LD DefinedTerm @id emission 順"  "$exp_jsonld_id" "$jsonld_id"
 exp_xref="$(q '.terms[].cross_refs[]' 2>/dev/null)"
 act_xref="$(attr_values 'data-xref-target' < "$BODY")"
 set_eq "cross-doc anchor (data-xref-target)" "$exp_xref" "$act_xref"
+# ★folio-bur: 可視 echo 層の封鎖 (data-xref-target 属性は上で contract pin 済だが可視テキスト/孤立 li は未検査だった)。
+#   (a) visible-text-vs-attribute: 各 xref li の可視 "定義元: {target}" == "定義元: " + data-xref-target (属性 intact のまま可視のみ捏造を封鎖)。
+xref_vis_bad="$(perl -CSD -Mutf8 -0777 -ne 'my @bad; while (/<li\b[^>]*\bdata-xref-target="([^"]*)"[^>]*>(.*?)<\/li>/gs){ my ($t,$in)=($1,$2); push @bad,"NESTED:$t" if $in=~/</; push @bad,"$t\x{2260}$in" if $in ne "定義元: $t"; } print join(" ",@bad);' < "$BODY")"
+chk_empty "cross-doc: xref li 可視 == 定義元:{data-xref-target} (可視捏造封鎖)" "$xref_vis_bad"
+#   (b) orphan-or-count: term-xrefs <ul> 内の <li> 総数 == |cross_refs| (属性なし孤立 li の挿入を封鎖)。
+xref_li_total="$(perl -0777 -ne 'my $n=0; while (/<ul class="term-xrefs">(.*?)<\/ul>/gs){ my $b=$1; $n++ while $b=~/<li\b/g; } print $n;' < "$BODY")"
+chk "cross-doc: term-xrefs 内 <li> 総数 == |cross_refs| (孤立 li 封鎖)" "$(q '[.terms[].cross_refs[]?] | length')" "$xref_li_total"
 
 # ---- 6. cover-meta KV (label;value emission 順) ----
 exp_meta="$(yq -r '.cover.meta[] | .label + " ; " + .value' "$CONTRACT")"

@@ -235,6 +235,25 @@ cp "$TMP/base-filled.html" "$TMP/ac5r13.html"
 perl -0777 -i -pe 's#(class="justify-tgt">[^<]*SRS: )[^<]+#${1}捏造された参照先タイトル#' "$TMP/ac5r13.html"
 expect_verify_fail_filled "A-c5r13 ★justify-tgt 照会ラベル title 捏造を live-mirror 等値で捕捉 (retitle drift)" "$BASE_PROSE" "$BASE" "$TMP/ac5r13.html"
 
+# A-bur-{a..h} ★folio-bur: 可視テキスト echo 捏造 (id/sibling/件数 intact のまま *可視本文* のみ改竄)。verify-adr の folio-bur pin が
+#   判断宣言文/原則文/選択肢名・要約/文脈要約/driver・consequence 本文の可視層を contract へ束縛することを実証する。
+cp "$TMP/base-filled.html" "$TMP/abura.html"; perl -0777 -i -pe 's#(<p class="dec-state">)[^<]+#${1}FAKE DECISION#' "$TMP/abura.html"
+expect_verify_fail_filled "A-bur-a ★dec-state (判断宣言文) 可視捏造を可視==.decision.statement で捕捉" "$BASE_PROSE" "$BASE" "$TMP/abura.html"
+cp "$TMP/base-filled.html" "$TMP/aburb.html"; perl -0777 -i -pe 's#(<span class="opt-id">OPT1</span><span class="opt-name">)[^<]+#${1}FAKE OPT#' "$TMP/aburb.html"
+expect_verify_fail_filled "A-bur-b ★opt-name 可視捏造を (opt-id,opt-name) 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburb.html"
+cp "$TMP/base-filled.html" "$TMP/aburc.html"; perl -0777 -i -pe 's#(<p class="prin-text">)[^<]+#${1}FAKE PRIN#' "$TMP/aburc.html"
+expect_verify_fail_filled "A-bur-c ★prin-text (照会終端) 可視捏造を可視==.principle.text で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburc.html"
+cp "$TMP/base-filled.html" "$TMP/aburd.html"; perl -0777 -i -pe 's#(<p class="prin-note">)[^<]+#${1}FAKE NOTE#' "$TMP/aburd.html"
+expect_verify_fail_filled "A-bur-d ★prin-note 可視捏造を可視==.principle.note で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburd.html"
+cp "$TMP/base-filled.html" "$TMP/abure.html"; perl -0777 -i -pe 's#(<p class="cxh">)[^<]+#${1}FAKE CXH#' "$TMP/abure.html"
+expect_verify_fail_filled "A-bur-e ★cxh (context summary) 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/abure.html"
+cp "$TMP/base-filled.html" "$TMP/aburf.html"; perl -0777 -i -pe 's#(<p class="opt-sum">)[^<]+#${1}FAKE SUM#' "$TMP/aburf.html"
+expect_verify_fail_filled "A-bur-f ★opt-sum 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburf.html"
+cp "$TMP/base-filled.html" "$TMP/aburg.html"; perl -0777 -i -pe 's#(<td class="drid">DR1</td><td>)[^<]+#${1}FAKE DRIVER #' "$TMP/aburg.html"
+expect_verify_fail_filled "A-bur-g ★driver 本文 可視捏造を drg 除去後の順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/aburg.html"
+cp "$TMP/base-filled.html" "$TMP/aburh.html"; perl -0777 -i -pe 's#(data-component="adr-consequence-pos"><span class="b">[^<]+</span>)[^<]+#${1}FAKE CSQ#' "$TMP/aburh.html"
+expect_verify_fail_filled "A-bur-h ★consequence-pos 本文 可視捏造を件数+内容二層で捕捉 (●span 温存)" "$BASE_PROSE" "$BASE" "$TMP/aburh.html"
+
 # A33. ★justify-tgt をブロックごと削除 → ブロック==1 count anchor で FAIL (while が回らず @bad 空の素通りを塞ぐ・research と同じ規律)
 cp "$TMP/base-filled.html" "$TMP/a33.html"
 perl -0777 -i -pe 's#<p class="justify-tgt">.*?</p>##s' "$TMP/a33.html"

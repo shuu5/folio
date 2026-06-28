@@ -291,6 +291,17 @@ cp "$TMP/base-filled.html" "$TMP/f15.html"
 perl -0777 -i -pe 's#(<li>)user 承認を取得 \(P-10\)#${1}承認は不要#' "$TMP/f15.html"
 expect_vfilled_fail "F15 ★amendment step 改竄を fidelity で捕捉" "$TMP/f15.html" "amendment: steps"
 
+# F-bur-{a..c} ★folio-bur: inbound 照会元/role + amendment 来歴の可視テキスト捏造 (属性/件数 intact のまま可視のみ改竄)
+cp "$TMP/base-filled.html" "$TMP/fbura.html"
+perl -0777 -i -pe 's#(<span class="ib-from">)[^<]+#${1}FORGED-SOURCE#g' "$TMP/fbura.html"
+expect_vfilled_fail "F-bur-a ★ib-from (照会元・属性なし) 可視捏造を可視==.inbound[].from で捕捉" "$TMP/fbura.html" "ib-from"
+cp "$TMP/base-filled.html" "$TMP/fburb.html"
+perl -0777 -i -pe 's#(<span class="ib-role">)[^<]+#${1}FORGED-ROLE#g' "$TMP/fburb.html"
+expect_vfilled_fail "F-bur-b ★ib-role 可視捏造を可視==.inbound[].role で捕捉" "$TMP/fburb.html" "ib-role"
+cp "$TMP/base-filled.html" "$TMP/fburc.html"
+perl -0777 -i -pe 's#(<span class="am-meta">)[^<]+#${1}(9999-99-99 FORGED)#g' "$TMP/fburc.html"
+expect_vfilled_fail "F-bur-c ★am-meta (改訂日付·承認者) 可視捏造を可視==(date·approved_by) で捕捉" "$TMP/fburc.html" "am-meta"
+
 # F16. ★HTML 注入の escape 健全性 (生 markup が構造へ漏れない・false-positive 防止)。 abs decisions_dir で asm を通す。
 bd_base "$TMP/f16.yaml"; yq -i '(.principles[] | select(.id=="P-1")).statement = "<script>alert(1)</script>危険"' "$TMP/f16.yaml"
 bash "$ASM" "$TMP/f16.yaml" "$TMP/f16.html" >/dev/null 2>&1

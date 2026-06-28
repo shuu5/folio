@@ -399,6 +399,19 @@ if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/r23.html"; then ng "R23 escape 
 elif grep -q '&lt;script&gt;alert' "$TMP/r23.html"; then ok "R23 HTML 注入を正規 entity に escape"
 else ng "R23 正規 entity &lt;script&gt; が出ていない"; fi
 
+# R-bur-{m..q} ★folio-bur: 可視本文 echo 捏造 (id/件数 intact のまま *可視本文* のみ改竄)。verify-research の folio-bur pin が
+#   中心の問い/finding 見出し/アプローチ名/未解決問い/scope 本文の可視層を contract へ束縛することを実証する (scope は byte モード literal ●)。
+cp "$TMP/base-filled.html" "$TMP/rburm.html"; perl -0777 -i -pe 's#(<p class="q-text">)[^<]+#${1}FAKE問い#' "$TMP/rburm.html"
+expect_verify_fail_filled "R-bur-m ★q-text (中心の問い) 可視捏造を可視==.question.summary で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburm.html"
+cp "$TMP/base-filled.html" "$TMP/rburn.html"; perl -0777 -i -pe 's#(<p class="fnh">)[^<]+#${1}FAKE見出し#' "$TMP/rburn.html"
+expect_verify_fail_filled "R-bur-n ★fnh (finding 見出し) 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburn.html"
+cp "$TMP/base-filled.html" "$TMP/rburo.html"; perl -0777 -i -pe 's#(<span class="ap-id">AP1</span><span class="ap-name">)[^<]+#${1}FAKE方式名#' "$TMP/rburo.html"
+expect_verify_fail_filled "R-bur-o ★ap-name 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburo.html"
+cp "$TMP/base-filled.html" "$TMP/rburp.html"; perl -0777 -i -pe 's#(<p class="oqt">)[^<]+#${1}FAKE質問#' "$TMP/rburp.html"
+expect_verify_fail_filled "R-bur-p ★oqt (未解決の問い) 可視捏造を順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburp.html"
+cp "$TMP/base-filled.html" "$TMP/rburq.html"; perl -0777 -i -pe 's#(<li><span class="b">●</span>)[^<]*同時実行[^<]*#${1}FAKE範囲項目#' "$TMP/rburq.html"
+expect_verify_fail_filled "R-bur-q ★scope li 本文 可視捏造を in→out 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburq.html"
+
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

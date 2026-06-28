@@ -328,6 +328,12 @@ chk "within-doc: rtm 行見出し (id+ラベル) == (requirements+nfr) (順序)"
 #   <span class="dot ac" data-acc-link='FR1__AC1'>AC999</span> の可視 id 捏造 (suffix≠visible) を素通した = round-8 ceiling 実証)。
 acc_vis_bad="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @b; while ($t =~ /\bdata-acc-link\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))[^>]*>(.*?)<\/span>/gs){ my $lk=defined $1?$1:(defined $2?$2:$3); my $v=$4; my ($s)=$lk=~/^.*__(.*)$/; $s="" unless defined $s; push @b,"NESTED:$s" if $v=~/</; push @b,"$s\x{2260}$v" if $v ne $s; } print join(" ",@b);' < "$BODY")"
 chk_empty "within-doc: 受入ドット可視 == data-acc-link suffix (quote 非依存・nested-reject)" "$acc_vis_bad"
+# (j3) ★folio-bur: 後方トレースドット (data-trace-link) の可視テキスト == ● 固定記号 (acc ドット j2 と対称・visible-text-vs-attribute)。
+#   §5-6 は data-trace-link attr のみ set 突合し、 上の dot∧¬ac は class+attr 件数のみ → attr/class/件数 intact のまま
+#   ●→"N-3" 等の捏造 need ID を表示でき読者がトレース関係を誤読する fail-open が残った (folio-bur audit 実証)。
+#   acc j2 と同じ quote-robust + marker-keyed (.*?) + nested-reject (可視に < があれば NESTED=FAIL) で封じる。
+backdot_vis_bad="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @b; while ($t =~ /\bdata-trace-link\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))[^>]*>(.*?)<\/span>/gs){ my $lk=defined $1?$1:(defined $2?$2:$3); my $v=$4; push @b,"NESTED:$lk" if $v=~/</; push @b,"$lk\x{2260}$v" if $v ne "\x{25CF}"; } print join(" ",@b);' < "$BODY")"
+chk_empty "within-doc: 後方トレースドット可視 == ● 固定記号 (quote 非依存・nested-reject・folio-bur)" "$backdot_vis_bad"
 # (k) constraint: 可視 id (cid2) + label (cl) — plain leaf / 規制バッジ (reg-badge=「法令 {reg}」) — 非空 regulation のみ compound。 §7e は 7b で件数のみだった。
 chk "within-doc: constraint.id (cid2) == .constraints[].id (順序)"    "$(qesc '.constraints[].id')"    "$(grep -oE '<td class="cid2">[^<]*</td>' "$BODY" | sed -E 's#<td class="cid2">([^<]*)</td>#\1#')"
 chk "within-doc: constraint.label (cl) == .constraints[].label (順序)" "$(qesc '.constraints[].label')" "$(grep -oE '<td class="cl">[^<]*</td>' "$BODY" | sed -E 's#<td class="cl">([^<]*)</td>#\1#')"

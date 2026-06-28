@@ -588,6 +588,10 @@ d=open('$TMP/good.html').read()
 o='<td class=\"hit\">'; assert o in d
 open('$TMP/g_dotuq.html','w').write(d.replace(o,o+'<span class=dot>●</span>',1))
 " 2>/dev/null; then expect_verify_fail "A86 ★dot 後方● unquoted attr-absent を quote-robust joint-token で捕捉" "$BASE" "$TMP/g_dotuq.html"; else ng "A86 setup 失敗"; fi
+# A86b. ★folio-bur: 後方ドット attr-present・可視● 捏造 (data-trace-link intact のまま ●→N-3 偽 need ID)。 A82/A86 は attr-absent
+#   偽ドットを件数で捕捉するが、 attr/class/件数 intact のまま span 内可視テキストだけ捏造する fail-open は別物 (visible-text-vs-attribute)。
+#   (j3) 可視==● 固定記号 pin で封鎖 (acc ドット j2 と対称)。
+body_tamper_fail "A86b ★後方ドット attr-present・可視●捏造 (●→N-3) を可視==●固定記号で捕捉" '<span class="dot" data-trace-link="FR1__N-1">●</span>' '<span class="dot" data-trace-link="FR1__N-1">N-3</span>'
 # A87. ★novel-class を single-quote で書いた drift → quote-robust class-token 機械的網羅で捕捉 (double-quote 固定の overclaim 是正)
 if python3 -c "
 d=open('$TMP/good.html').read()

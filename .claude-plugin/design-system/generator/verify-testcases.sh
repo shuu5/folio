@@ -68,6 +68,21 @@ scope_in_act="$(perl -CSD -0777 -ne 'if (/<div class="scol in">(.*?)<\/div>/s){ 
 scope_out_act="$(perl -CSD -0777 -ne 'if (/<div class="scol out">(.*?)<\/div>/s){ my $b=$1; while ($b=~/<li><span class="b">[^<]*<\/span>(.*?)<\/li>/gs){ print "$1\n"; } }' "$BODY")"
 set_eq "scope.in 可視 == contract (順序)"  "$(qesc '.scope.in[]')"  "$scope_in_act"
 set_eq "scope.out 可視 == contract (順序)" "$(qesc '.scope.out[]')" "$scope_out_act"
+# 1a-bur. ★folio-bur: 静的テンプレ chrome ラベルの固定値 pin (visible-text-vs-attribute の "other" 型・arch idiom① 定数版)。
+#   以下は contract 由来値でなく assembler 固定文字列ゆえ set_eq の対象外だったが、 ✓→— の意味反転・列見出し書換・section
+#   ラベル捏造は読者を誤誘導する fabrication ゆえ「固定文字列 == 期待定数 (件数 or 順序)」で封じる (folio-bur audit 実証の 4 穴)。
+# (a) scope 節 h3 (✓ 試すこと / — 試さないこと): scope.in/out の li は上で pin 済だが h3 見出しは未検査だった。
+chk "scope.in h3 == '✓ 試すこと' (固定)"      "1" "$(grep -c '<div class="scol in"><h3>✓ 試すこと</h3>' "$BODY")"
+chk "scope.out h3 == '— 試さないこと' (固定)"  "1" "$(grep -c '<div class="scol out"><h3>— 試さないこと</h3>' "$BODY")"
+# (b) tc-trace-label (各 card の section ラベル): 件数 == |test_cases| かつ固定文字列のみ許容 (1 つでも捏造で件数が割れ FAIL)。
+chk "tc-trace-label '検証する要件' == |test_cases|"   "$NTC" "$(grep -c '<span class="tc-trace-label">検証する要件</span>' "$BODY")"
+chk "tc-trace-label '確かめる受入基準' == |test_cases|" "$NTC" "$(grep -c '<span class="tc-trace-label">確かめる受入基準</span>' "$BODY")"
+# (c) tc-step-k '操作' ラベル (前提/期待結果は 4e の regex literal anchor で実質 pin 済ゆえその対称化)。
+chk "tc-step-k '操作' == |test_cases|" "$NTC" "$(grep -c '<span class="tc-step-k">操作</span>' "$BODY")"
+# (d) RTM thead 列ヘッダ 4 本 (順序固定): RTM 行は 3c で pin 済だが列見出しは未検査 → 列の取り違え誤読を封じる (<th> は RTM thead のみ)。
+exp_th_bur="$(printf 'テストケース\n区分\n検証する要件\n確かめる受入基準')"
+act_th_bur="$(grep -oE '<th>[^<]*</th>' "$BODY" | sed -E 's#<th>([^<]*)</th>#\1#')"
+chk "RTM thead 列ヘッダ 4 本 == 固定 (順序)" "$exp_th_bur" "$act_th_bur"
 # 1b. core 共通 chrome (cover-head/approval/glossary の値突合 + 占有数パリティ・folio-mk9)
 verify_core_chrome
 # 1b'. reader-chip class 総数 == 2 (genuine reader-chip 1 + cross-doc-ref-chip 1。 ADR と対称・quote-robust)

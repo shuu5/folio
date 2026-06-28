@@ -363,6 +363,14 @@ cp "$TMP/base-filled.html" "$TMP/m14.html"
 perl -0777 -i -pe 's#<aside data-component="spec-machine-note" data-audience="machine">.*?</aside>\n##s' "$TMP/m14.html"
 expect_vfilled_fail "M14 ★機械層 note 脱落を件数+round-trip が捕捉" "$TMP/m14.html" "spec-machine-note"
 
+# M-bur-{a,b} ★folio-bur: machine fold summary の可視 echo 捏造 (fold 件数 intact のまま summary ラベル/per-fold 件数のみ改竄)
+cp "$TMP/base-filled.html" "$TMP/mbura.html"
+perl -0777 -i -pe 's#(<span class="mf-label">)§6\. EARS Notation Markup の地の文・運用説明・rationale#${1}§99. 捏造見出し の地の文・運用説明・rationale#' "$TMP/mbura.html"
+expect_vfilled_fail "M-bur-a ★mf-label (fold summary heading) 捏造を順序突合で捕捉" "$TMP/mbura.html" "mf-label"
+cp "$TMP/base-filled.html" "$TMP/mburb.html"
+perl -0777 -i -pe 's#(<span class="mf-count">)12 件(</span>)#${1}99 件${2}#' "$TMP/mburb.html"
+expect_vfilled_fail "M-bur-b ★mf-count (per-fold 件数) 捏造を順序突合で捕捉" "$TMP/mburb.html" "mf-count"
+
 # M15. ★原本不在 fail-closed pin (verify-spec §11 L310-311 = 機械層 contract で原本 rules.html 不在なら FAIL)。
 #   SPEC_ORIGIN_HTML で存在しない path を指し、 round-trip 照合不能を *素通さず* FAIL することを red→green で固定する。
 #   ★これが無いと将来 path 解決 (SCRIPT_DIR 相対) が壊れても緑のまま = round-trip が silent skip する回帰を検出できない。

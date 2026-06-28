@@ -179,6 +179,27 @@ chk "within-doc: 可視 drg 列 == 非空 .drivers[].grounds (順序)" "$(qesc '
 # ★ds8 ceiling round-4: 可視 justify-role 列 == .decision.justifies[].role (順序)。 round-2 で可視 req==attr は強制したが role の可視を漏らし、
 #   allowlist 内 role の *可視* swap (claim→rationale・attr は正) が素通る fail-open だった (cross-doc edge の可視 fidelity parity 漏れ)。 role は esc plain。
 chk "within-doc: 可視 justify-role 列 == .decision.justifies[].role (順序)" "$(q '.decision.justifies[].role')" "$(grep -oE '<span class="justify-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="justify-role">([^<]*)</span>#\1#')"
+# ★folio-bur: 可視テキスト echo の fidelity (visible-text-vs-attribute・id/sibling/件数は pin 済だが *可視本文* が未 pin)。
+#   id/verdict/件数 intact のまま判断宣言文・原則文・選択肢名/要約・文脈要約・driver/consequence 本文を捏造でき、 読者が
+#   別の決定/根拠を読む fail-open が残った (folio-bur audit 実証の 8 穴)。 term-inline span を body から除去した BODY_NM で
+#   抽出し、 nested term span の早期終端 (opt-name の対象外化 = round-2 で諦めた箇所) を回避する。
+BODY_NM="$(perl -CSD -0777 -pe 's{<span class="term" data-component="plain-language-term-inline"[^>]*>[^<]*</span>}{}g' "$BODY")"
+# (a) ★HIGH: decision statement (判断宣言文・ADR で最も load-bearing・dec-kick は pin 済 sibling)。
+chk "within-doc: 可視 dec-state == .decision.statement" "$(esc "$(q '.decision.statement')")" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="dec-state">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t"}')"
+# (b) option name ((opt-id,verdict) ペア pin の姉妹として (opt-id,opt-name) を順序突合・term-strip 済ゆえ [^<]* 安全)。
+chk "within-doc: 可視 (opt-id,opt-name) == .options[] [id,name] (順序)" "$(q '.options[]|[.id,.name]|@tsv' | while IFS=$'\t' read -r a b; do printf '%s\t%s\n' "$a" "$(esc "$b")"; done)" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<span class="opt-id">([^<]+)<\/span><span class="opt-name">([^<]*)<\/span>/gs){print "$1\t$2\n"}')"
+# (c) principle text (照会グラフ終端・prin-id は pin 済 sibling・silent 改竄封鎖の重要度高)。
+chk "within-doc: 可視 prin-text == .principle.text" "$(esc "$(q '.principle.text')")" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="prin-text">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t"}')"
+# (d) principle note (prin-text と同型・同 adr-principle ブロック)。
+chk "within-doc: 可視 prin-note == .principle.note" "$(esc "$(q '.principle.note')")" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="prin-note">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t"}')"
+# (e) context summary (cxid は pin 済 sibling・同順序)。
+chk "within-doc: 可視 cxh (context summary) == .context[].summary (順序)" "$(qesc '.context[].summary')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="cxh">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
+# (f) option summary (opt-name と同数対応・同順序)。
+chk "within-doc: 可視 opt-sum == .options[].summary (順序)" "$(qesc '.options[].summary')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="opt-sum">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
+# (g) driver body text (drid は pin 済・drg バッジ除去後の本文を順序突合)。
+chk "within-doc: 可視 driver 本文 == .drivers[].driver (順序)" "$(qesc '.drivers[].driver')" "$(printf '%s' "$BODY_NM" | perl -CSD -0777 -ne 'while(/<td class="drid">[^<]*<\/td><td>(.*?)<\/td>/gs){my $t=$1;$t=~s{<span class="drg">.*?</span>}{}g;$t=~s/<[^>]+>//g;$t=~s/\s+$//;print "$t\n"}')"
+# (h) consequence positive text (件数 pin 済・b● 除去後の本文を順序突合・orphan-or-count の content 層)。
+chk "within-doc: 可視 consequence-pos 本文 == .consequences.positive[].text (順序)" "$(qesc '.consequences.positive[].text')" "$(printf '%s' "$BODY_NM" | perl -CSD -0777 -ne 'while(/<li data-component="adr-consequence-pos">(.*?)<\/li>/gs){my $t=$1;$t=~s{<span class="b">[^<]*</span>}{};$t=~s/<[^>]+>//g;print "$t\n"}')"
 # 表紙 cover-meta 4 KV (状態/選択肢/結果/版) の決定的再導出突合 (research (l') と同型)。
 adr_meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
 chk "cover-meta 状態 == adr_status"          "$(esc "$(q '.meta.adr_status')")" "$(printf '%s\n' "$adr_meta_kv" | grep -F '状態' | head -1 | cut -f2)"

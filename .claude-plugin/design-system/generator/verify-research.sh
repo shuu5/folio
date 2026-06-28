@@ -208,6 +208,16 @@ chk "within-doc: ap-id→ap-name 隣接 == |approaches|" "$(q '.approaches | len
 chk "within-doc: fnid→fnbody 隣接 == |findings|"     "$(q '.findings | length')"   "$(grep -oE '<span class="fnid">[^<]*</span><div class="fnbody">' "$BODY" | wc -l | tr -d ' ')"
 chk "within-doc: oqid→oqt 隣接 == |open_questions|"  "$(q '.open_questions | length')" "$(grep -oE '<span class="oqid">[^<]*</span><p class="oqt">' "$BODY" | wc -l | tr -d ' ')"
 
+# (k3) ★folio-bur: 可視本文 echo の fidelity (id/件数は pin 済だが ap-name/fnh/oqt/q-text/scope 本文が *未 pin*)。
+#   id intact のまま本文を捏造でき読者が別の調査結果/問い/範囲を読む fail-open が残った (folio-bur audit 実証の 5 穴)。
+#   ap-name/scope は term-inline span を含みうるため body から除去した BODY_NM で抽出 (nested 早期終端回避)。findings[].detail は ceiling 据置。
+BODY_NM="$(perl -CSD -0777 -pe 's{<span class="term" data-component="plain-language-term-inline"[^>]*>[^<]*</span>}{}g' "$BODY")"
+chk "within-doc: 可視 q-text == .question.summary" "$(esc "$(q '.question.summary')")" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="q-text">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t"}')"
+chk "within-doc: 可視 fnh == .findings[].summary (順序)" "$(qesc '.findings[].summary')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="fnh">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
+chk "within-doc: 可視 ap-name == .approaches[].name (順序)" "$(qesc '.approaches[].name')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<span class="ap-name">([^<]*)<\/span>/gs){print "$1\n"}')"
+chk "within-doc: 可視 oqt == .open_questions[].text (順序)" "$(qesc '.open_questions[].text')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="oqt">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
+chk "within-doc: 可視 scope li 本文 == .question.in_scope[]+out_scope[] (順序)" "$(qesc '.question.in_scope[], .question.out_scope[]')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<li><span class="b">\xe2\x97\x8f<\/span>(.*?)<\/li>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
+
 # (l') ★表紙 cover-meta 集計の決定的再導出 (round-2/4 ceiling): 件数+範囲+状態が contract から導いた値と一致。
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
 exp_app_meta="$(q '.approaches | length')件 ($(esc "$(q '.approaches[0].id')")–$(esc "$(q '.approaches[-1].id')"))"
