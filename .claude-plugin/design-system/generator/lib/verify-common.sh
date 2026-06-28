@@ -131,18 +131,46 @@ set_eq() { # label expected-multiline actual-multiline
   fi
 }
 
-# inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、
-# <style> ブロックの *中身を除去* した body-only ビューで数える ($BODY をグローバルに設定し EXIT で掃除)。
-# ★folio-wq4: 旧版は行範囲削除 (sed '/<style>/,/</style>/d') だった。 これは <style>/</style> と *同居行* に置かれた
-#   実 DOM 捏造を巻き込んで $BODY から消し、 占有/enumeration/display/term の全 $BODY check を一括 fail-open させる
-#   支配的 substrate trick だった (捏造を <style> 同居行に置くと round-7 pin も exit 0 で再 open。 さらに単行
-#   <style>...</style> は GNU sed が同行で range を閉じず以降 EOF まで削除・未閉じ <style> も EOF まで削除)。
-#   解: perl -0777 で <style> *タグは残し中身のみ空化* する。 de-interference 目的 (CSS セレクタ text を class grep から
-#   除外) は保ったまま、 同居行の実 DOM を保全して捏造を $BODY に surface させる (count_attr_token が捕捉に転じる)。
-#   残る空 <style></style> タグは class/data-component を持たず count に無害。 未閉じ <style> は match せず残置 (安全側)。
+# inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、 <style> ブロックの
+# *中身を除去* した body-only ビューで数える ($BODY をグローバルに設定し EXIT で掃除)。
+# ★folio-wq4: 旧版は行範囲削除 (sed) → 単純 perl 置換 (中身空化) と進めたが、 独立 ceiling が後者にも複数の
+#   parser-differential fail-open を実証した: (a) コメント `<!-- <style> -->…<!-- </style> -->` の literal トークンを
+#   style 要素として mis-pair し間の実 DOM を消す (b) `</style\s*>` 小文字固定で `</STYLE>` を取りこぼし FAB を消す
+#   (c) 未閉じ <style> を残置 ('安全側' は誤り — ブラウザは EOF まで RAWTEXT 化し chrome を隠蔽する)。 正規表現の
+#   継ぎ接ぎは whack-a-mole ゆえ、 HTML tokenizer 規則に忠実な *単一パス state machine* で非描画領域を処理する:
+#     <!--      = コメントを verbatim 保持 (chrome marker を壊さない・中の <style> は style 要素として扱わない)
+#     <style..> = open タグ保持・中身のみ空化 (</style> case-insensitive・未閉じは中身を EOF まで破棄 = ブラウザ
+#                 RAWTEXT 隠蔽に忠実 → 隠された chrome が $BODY から消え floor が欠落を検出)
+#     <script.> = open+中身+close を verbatim 保持 (glossary JSON-LD DefinedTerm を死守・script は opaque ゆえ
+#                 中の <style> トークンを mis-pair しない。 render-time DOM 差替えは folio-4gz / gate F の責務)
+#   これで「非描画領域 (comment/style/script) に捏造をくるんで $BODY から消す」テキスト隠蔽クラスを一括して閉じる。
+#   byte-level 処理 (UTF-8 安全: '>' は 0x3E で継続バイトと衝突しない)。
 make_body() { # $1 = html path
   BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-  perl -0777 -pe 's{(<style\b[^>]*>).*?(</style\s*>)}{$1$2}gs' "$1" > "$BODY"
+  perl -e '
+    binmode STDIN; binmode STDOUT;
+    local $/; my $h = <STDIN>; $h = "" unless defined $h;
+    my $o = "";
+    while (length $h) {
+      if ($h =~ /(<!--|<style\b[^>]*>|<script\b[^>]*>)/si) {
+        my $tag = $1; my $at = $-[0];
+        $o .= substr($h, 0, $at);
+        $h = substr($h, $at + length($tag));
+        if ($tag eq "<!--") {
+          if ($h =~ /-->/) { my $e = $+[0]; $o .= "<!--" . substr($h, 0, $e); $h = substr($h, $e); }
+          else { $o .= "<!--" . $h; $h = ""; }
+        } elsif ($tag =~ /^<script/i) {
+          if ($h =~ m{</script\s*>}i) { my $e = $+[0]; $o .= $tag . substr($h, 0, $e); $h = substr($h, $e); }
+          else { $o .= $tag . $h; $h = ""; }
+        } else {
+          $o .= $tag;
+          if ($h =~ m{</style\s*>}i) { my $cs = $-[0]; my $e = $+[0]; $o .= substr($h, $cs, $e - $cs); $h = substr($h, $e); }
+          else { $o .= "</style>"; $h = ""; }
+        }
+      } else { $o .= $h; $h = ""; }
+    }
+    print $o;
+  ' < "$1" > "$BODY"
 }
 
 # ---- plain-language-term-inline (glossary 派生ビュー、 ADR-0042 §2.2 A) の fidelity + 用語被覆 ----

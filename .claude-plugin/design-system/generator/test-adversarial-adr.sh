@@ -599,6 +599,11 @@ cp "$TMP/base-filled.html" "$TMP/wq4adr2.html"; perl -0777 -i -pe 's{</body>}{<s
 expect_verify_fail_filled "WQ4-adr-b ★行 scope 外の偽 role を global 占有 (==|approval|・追加 0) で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr2.html"
 cp "$TMP/base-filled.html" "$TMP/wq4adr3.html"; perl -0777 -i -pe 's{</body>}{<span class="en">FAKE-EN(scope外)</span></body>}' "$TMP/wq4adr3.html"
 expect_verify_fail_filled "WQ4-adr-c ★行 scope 外の偽 en を global 占有 (==|非空 en|・追加 0) で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr3.html"
+# fix round 1 (ceiling 発見の parser-differential) が core ゆえ non-SRS でも効く:
+cp "$TMP/base-filled.html" "$TMP/wq4adr4.html"; perl -0777 -i -pe 's{</body>}{<!-- <style> --><span class="role">偽承認(comment smuggle)</span><!-- </style> --></body>}' "$TMP/wq4adr4.html"
+expect_verify_fail_filled "WQ4-adr-d ★comment 内 <style> smuggle を state machine が surface→global role で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr4.html"
+cp "$TMP/base-filled.html" "$TMP/wq4adr5.html"; perl -0777 -i -pe 's{</body>}{<style></STYLE><span class="role">偽承認(case)</span></style></body>}' "$TMP/wq4adr5.html"
+expect_verify_fail_filled "WQ4-adr-e ★case-insensitive </STYLE> 取りこぼしを閉じ global role で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr5.html"
 
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

@@ -864,6 +864,17 @@ expect_verify_fail "WQ4-d ★行 scope 外 (grow/legend 外) の偽 en を globa
 perl -0777 -pe 's{</body>}{<p>genuine見出し<style>.h{}</style><span class="role">偽承認(混在)</span></p></body>}' "$TMP/good.html" > "$TMP/wq4e.html"
 expect_verify_fail "WQ4-e ★テキスト+<style>+偽 role 混在行を surface→global role が捕捉" "$BASE" "$TMP/wq4e.html"
 
+# ===== folio-wq4 fix round 1 (独立 ceiling 発見の parser-differential): make_body を HTML tokenizer 忠実な =====
+# state machine に変更し、 非描画領域 (comment/style/script) へ捏造をくるんで $BODY から消す smuggle を一括封鎖。
+perl -0777 -pe 's{</body>}{<!-- <style> --><span class="role">偽承認(comment smuggle)</span><!-- </style> --></body>}' "$TMP/good.html" > "$TMP/wq4f1.html"
+expect_verify_fail "WQ4-f1 ★comment 内 <style> トークン smuggle (間の実 DOM 隠蔽) を state machine が surface→role 占有で捕捉" "$BASE" "$TMP/wq4f1.html"
+perl -0777 -pe 's{</body>}{<style></STYLE><span class="role">偽承認(case)</span></style></body>}' "$TMP/good.html" > "$TMP/wq4f2.html"
+expect_verify_fail "WQ4-f2 ★case-insensitive </STYLE> 取りこぼしを閉じ role 占有で捕捉" "$BASE" "$TMP/wq4f2.html"
+perl -0777 -pe 's{<div data-component="approval-block">}{<style>HIDE<div data-component="approval-block">}' "$TMP/good.html" > "$TMP/wq4f3.html"
+expect_verify_fail "WQ4-f3 ★未閉じ <style> の RAWTEXT 隠蔽 (approval 以降を browser が隠す) を floor 欠落検出で捕捉" "$BASE" "$TMP/wq4f3.html"
+perl -0777 -pe 's{</body>}{<script>z="<style>"</script><span class="role">偽承認(script smuggle)</span><script>z="</style>"</script></body>}' "$TMP/good.html" > "$TMP/wq4f4.html"
+expect_verify_fail "WQ4-f4 ★script 内 <style> トークン smuggle を opaque-script 処理で閉じ role 占有で捕捉" "$BASE" "$TMP/wq4f4.html"
+
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。
 if [[ "$fail" -ne 0 ]]; then echo "PASS=$pass FAIL=$fail"; echo "RESULT: 取りこぼしあり (round-7/wq4 含む)"; exit 1; fi
