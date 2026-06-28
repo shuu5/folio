@@ -133,44 +133,64 @@ set_eq() { # label expected-multiline actual-multiline
 
 # inline srs.css の [data-component="..."] セレクタが body 要素 grep に混入するため、 <style> ブロックの
 # *中身を除去* した body-only ビューで数える ($BODY をグローバルに設定し EXIT で掃除)。
-# ★folio-wq4: 旧版は行範囲削除 (sed) → 単純 perl 置換 (中身空化) と進めたが、 独立 ceiling が後者にも複数の
-#   parser-differential fail-open を実証した: (a) コメント `<!-- <style> -->…<!-- </style> -->` の literal トークンを
-#   style 要素として mis-pair し間の実 DOM を消す (b) `</style\s*>` 小文字固定で `</STYLE>` を取りこぼし FAB を消す
-#   (c) 未閉じ <style> を残置 ('安全側' は誤り — ブラウザは EOF まで RAWTEXT 化し chrome を隠蔽する)。 正規表現の
-#   継ぎ接ぎは whack-a-mole ゆえ、 HTML tokenizer 規則に忠実な *単一パス state machine* で非描画領域を処理する:
-#     <!--      = コメントを verbatim 保持 (chrome marker を壊さない・中の <style> は style 要素として扱わない)
-#     <style..> = open タグ保持・中身のみ空化 (</style> case-insensitive・未閉じは中身を EOF まで破棄 = ブラウザ
-#                 RAWTEXT 隠蔽に忠実 → 隠された chrome が $BODY から消え floor が欠落を検出)
-#     <script.> = open+中身+close を verbatim 保持 (glossary JSON-LD DefinedTerm を死守・script は opaque ゆえ
-#                 中の <style> トークンを mis-pair しない。 render-time DOM 差替えは folio-4gz / gate F の責務)
-#   これで「非描画領域 (comment/style/script) に捏造をくるんで $BODY から消す」テキスト隠蔽クラスを一括して閉じる。
-#   byte-level 処理 (UTF-8 安全: '>' は 0x3E で継続バイトと衝突しない)。
+# ★folio-wq4: 旧版は 行範囲削除 (sed) → 単純 perl 置換 → state machine と進めたが、 独立 ceiling が逐次に
+#   parser-differential fail-open を実証した (round-1: comment smuggle / case / 未閉じ → round-2: 属性値内 <style> /
+#   不正 close 文法 </style x>)。 これは「regex/手書きで rendering を忠実モデルする」arms race = whack-a-mole。
+#   ★方針転換 (user 判断 = fail-closed): rendering を完全モデルせず、 *genuine 不変条件* を機械強制して破る入力を
+#   *拒否* する。 genuine 生成物は (1) 全 < が esc() 済 (属性値・本文に raw < 無し) (2) style/script/comment は
+#   clean な既知形のみ という narrow shape を満たす。 単一パス scanner が clean 入力は処理し (comment=verbatim /
+#   style=中身空化 / script=verbatim 保持〔JSON-LD 死守・opaque〕)、 それを破る adversarial を fail-closed する:
+#     (a) タグ開始内の raw <  = 属性値への <style>/<script> 注入 (open-tag differential)
+#     (b) RAWTEXT の不正 close 文法 </style x> </style/>  (close-tag differential)
+#     (c) 未閉じ RAWTEXT (style/script) / (d) 未閉じコメント / (e) 未閉じタグ
+#   fail-closed 時は空 $BODY を出し全 floor check を欠落 FAIL させる + 診断を echo (verify 非0 exit)。 これで
+#   「非描画領域に捏造をくるんで $BODY から消す」テキスト隠蔽クラスを *構成的に* 封鎖する (rendering モデルの
+#   完全性証明に依らず genuine shape の機械強制で完結 = whack-a-mole の停止)。 byte-level (UTF-8 安全: '>' 0x3E)。
 make_body() { # $1 = html path
   BODY="$(mktemp)"; trap 'rm -f "$BODY"' EXIT
-  perl -e '
+  if ! perl -e '
     binmode STDIN; binmode STDOUT;
     local $/; my $h = <STDIN>; $h = "" unless defined $h;
-    my $o = "";
-    while (length $h) {
-      if ($h =~ /(<!--|<style\b[^>]*>|<script\b[^>]*>)/si) {
-        my $tag = $1; my $at = $-[0];
-        $o .= substr($h, 0, $at);
-        $h = substr($h, $at + length($tag));
-        if ($tag eq "<!--") {
-          if ($h =~ /-->/) { my $e = $+[0]; $o .= "<!--" . substr($h, 0, $e); $h = substr($h, $e); }
-          else { $o .= "<!--" . $h; $h = ""; }
-        } elsif ($tag =~ /^<script/i) {
-          if ($h =~ m{</script\s*>}i) { my $e = $+[0]; $o .= $tag . substr($h, 0, $e); $h = substr($h, $e); }
-          else { $o .= $tag . $h; $h = ""; }
-        } else {
-          $o .= $tag;
-          if ($h =~ m{</style\s*>}i) { my $cs = $-[0]; my $e = $+[0]; $o .= substr($h, $cs, $e - $cs); $h = substr($h, $e); }
-          else { $o .= "</style>"; $h = ""; }
-        }
-      } else { $o .= $h; $h = ""; }
+    my $o = ""; my $n = length($h); my $i = 0; my $fail = "";
+    while ($i < $n && $fail eq "") {
+      my $lt = index($h, "<", $i);
+      if ($lt < 0) { $o .= substr($h, $i); last; }
+      $o .= substr($h, $i, $lt - $i);
+      my $rest = substr($h, $lt, 16);
+      if (substr($h, $lt, 4) eq "<!--") {
+        my $end = index($h, "-->", $lt + 4);
+        if ($end < 0) { $fail = "unclosed-comment"; last; }
+        $o .= substr($h, $lt, $end + 3 - $lt); $i = $end + 3;
+      } elsif ($rest =~ /^<(style|script)\b/i) {
+        my $kind = lc($1);
+        my $gt = index($h, ">", $lt);
+        if ($gt < 0) { $fail = "unclosed-opentag-$kind"; last; }
+        my $opentag = substr($h, $lt, $gt + 1 - $lt);
+        if (index(substr($opentag, 1), "<") >= 0) { $fail = "raw-lt-in-$kind-opentag"; last; }
+        $o .= $opentag;
+        my $after = $gt + 1; my $tail = substr($h, $after);
+        if ($tail =~ m{</\Q$kind\E([^>]*)>}i) {
+          my $junk = $1; my $cs = $after + $-[0]; my $ce = $after + $+[0];
+          if ($junk =~ /\S/) { $fail = "malformed-close-$kind"; last; }
+          if ($kind eq "style") { $o .= "</style>"; }
+          else { $o .= substr($h, $after, $ce - $after); }
+          $i = $ce;
+        } else { $fail = "unclosed-$kind"; last; }
+      } elsif ($rest =~ m{^</?[a-zA-Z]}) {
+        my $gt = index($h, ">", $lt);
+        if ($gt < 0) { $fail = "unclosed-tag"; last; }
+        my $tag = substr($h, $lt, $gt + 1 - $lt);
+        if (index(substr($tag, 1), "<") >= 0) { $fail = "raw-lt-in-tag"; last; }
+        $o .= $tag; $i = $gt + 1;
+      } else { $o .= "<"; $i = $lt + 1; }
     }
+    if ($fail ne "") { print STDERR "make_body fail-closed: $fail\n"; exit 3; }
     print $o;
-  ' < "$1" > "$BODY"
+  ' < "$1" > "$BODY" 2>/dev/null; then
+    : > "$BODY"   # fail-closed: 空 body で全 floor check を欠落 FAIL させる (genuine shape を破る adversarial 入力)
+    echo "  [FAIL] make_body fail-closed: 非 genuine な <style>/<script>/comment/タグ構造を検出 (属性値内 raw < / 不正 close 文法 / 未閉じ 等)"
+    fail=1
+  fi
 }
 
 # ---- plain-language-term-inline (glossary 派生ビュー、 ADR-0042 §2.2 A) の fidelity + 用語被覆 ----

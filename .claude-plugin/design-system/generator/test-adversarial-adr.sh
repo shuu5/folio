@@ -604,6 +604,11 @@ cp "$TMP/base-filled.html" "$TMP/wq4adr4.html"; perl -0777 -i -pe 's{</body>}{<!
 expect_verify_fail_filled "WQ4-adr-d ★comment 内 <style> smuggle を state machine が surface→global role で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr4.html"
 cp "$TMP/base-filled.html" "$TMP/wq4adr5.html"; perl -0777 -i -pe 's{</body>}{<style></STYLE><span class="role">偽承認(case)</span></style></body>}' "$TMP/wq4adr5.html"
 expect_verify_fail_filled "WQ4-adr-e ★case-insensitive </STYLE> 取りこぼしを閉じ global role で捕捉" "$BASE_PROSE" "$BASE" "$TMP/wq4adr5.html"
+# fix round 2 (fail-closed) も core ゆえ non-SRS でも効く:
+cp "$TMP/base-filled.html" "$TMP/wq4adr6.html"; perl -0777 -i -pe 's{</body>}{<div data-x="<style>FAB</style>"><span class="role">偽承認(attr style)</span></div></body>}' "$TMP/wq4adr6.html"
+expect_verify_fail_filled "WQ4-adr-f ★属性値内 <style> を fail-closed で拒否" "$BASE_PROSE" "$BASE" "$TMP/wq4adr6.html"
+cp "$TMP/base-filled.html" "$TMP/wq4adr7.html"; perl -0777 -i -pe 's{</body>}{<style></style x><span class="role">偽承認(不正close)</span></style></body>}' "$TMP/wq4adr7.html"
+expect_verify_fail_filled "WQ4-adr-g ★不正 close 文法 </style x> を fail-closed で拒否" "$BASE_PROSE" "$BASE" "$TMP/wq4adr7.html"
 
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

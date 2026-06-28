@@ -875,6 +875,15 @@ expect_verify_fail "WQ4-f3 ★未閉じ <style> の RAWTEXT 隠蔽 (approval 以
 perl -0777 -pe 's{</body>}{<script>z="<style>"</script><span class="role">偽承認(script smuggle)</span><script>z="</style>"</script></body>}' "$TMP/good.html" > "$TMP/wq4f4.html"
 expect_verify_fail "WQ4-f4 ★script 内 <style> トークン smuggle を opaque-script 処理で閉じ role 占有で捕捉" "$BASE" "$TMP/wq4f4.html"
 
+# ===== folio-wq4 fix round 2 (独立 ceiling round-2 + user 判断=fail-closed): make_body を rendering 完全モデルでなく =====
+# genuine 不変条件 (全 < esc 済・style/script clean 形のみ) の機械強制に転換し、 破る入力を fail-closed (空 body→欠落 FAIL)。
+perl -0777 -pe 's{</body>}{<div data-x="<style>FAB</style>"><span class="role">偽承認(attr 内 style)</span></div></body>}' "$TMP/good.html" > "$TMP/wq4g1.html"
+expect_verify_fail "WQ4-g1 ★属性値内 <style> (open-tag parser-differential) を fail-closed で拒否" "$BASE" "$TMP/wq4g1.html"
+perl -0777 -pe 's{</body>}{<style></style x><span class="role">偽承認(不正close)</span></style></body>}' "$TMP/good.html" > "$TMP/wq4g2.html"
+expect_verify_fail "WQ4-g2 ★不正 close 文法 </style x> (close-tag parser-differential) を fail-closed で拒否" "$BASE" "$TMP/wq4g2.html"
+perl -0777 -pe 's{</body>}{<style></style/><span class="role">偽承認(slash close)</span></style></body>}' "$TMP/good.html" > "$TMP/wq4g3.html"
+expect_verify_fail "WQ4-g3 ★不正 close 文法 </style/> を fail-closed で拒否" "$BASE" "$TMP/wq4g3.html"
+
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。
 if [[ "$fail" -ne 0 ]]; then echo "PASS=$pass FAIL=$fail"; echo "RESULT: 取りこぼしあり (round-7/wq4 含む)"; exit 1; fi
