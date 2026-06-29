@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-26T13:43:45Z",
+  "generatedAt": "2026-06-29T03:28:46Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2097,7 +2097,7 @@
         "id": "REQ-VER-024",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-024",
-        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render は REQ-VER-025、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 script-ban 〔SRS HTML の &lt;script&gt; == 0・pack-additive 拡張〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-025",
@@ -2109,7 +2109,13 @@
         "id": "REQ-VER-026",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-026",
-        "essence": "生成 SRS が GREEN ⟺ (floor 全通過: REQ-VER-024 + 025) AND (ceiling 合格: persona-walk-srs gate I + fidelity-srs gate J)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保)。 gate I = 非エンジニア persona walk (北極星)、 gate J = fidelity (捏造/情報落ち/派生ビュー一致を機械 SSoT と突合)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層。"
+        "essence": "生成 SRS が GREEN ⟺ (floor 全通過: REQ-VER-024 + 025 + 027) AND (ceiling 合格: persona-walk-srs gate I + fidelity-srs gate J)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保)。 gate I = 非エンジニア persona walk (北極星)、 gate J = fidelity (捏造/情報落ち/派生ビュー一致を機械 SSoT と突合)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層。"
+      },
+      {
+        "id": "REQ-VER-027",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-027",
+        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) contract-bearing semantic セレクタ (.role/.who/.en/.gword/.gdef/.stamp/.fid) への ::before/::after content 注入を反転 assert (これら semantic 集合は pseudo-content を持たない不変条件) で、 (folio-459) 描画後の可視部品数が contract 由来期待件数と不一致 (comment/条件付き display:none 非描画) を検出。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 gate F と独立に honest-SKIP 報告。 検出器・期待件数導出は machine 部。"
       },
       {
         "id": "REQ-XREF-001",
