@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: ::marker fabrication (2b8 ws4o6ywe5)</title>
+<style>
+  /* census-marker (folio-2b8 / ws4o6ywe5 PE-1/PE-2): display:list-item の ::marker は content を描画できる
+     第3の pseudo だが旧版は ::before/::after しか走査しなかった。 inverse-allowlist が ::marker も走査し、
+     allowlist 外の ::marker content を捏造として捕捉することを固定する。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; display:list-item; list-style-position:inside; }
+  .fid::marker{ content:"【全要件は撤回されました】 "; color:#a00; }
+  tr{ display:block; margin:8px 0; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2" id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1" id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

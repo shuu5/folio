@@ -21,6 +21,6 @@ files checked: 52 · relations checked: 480
   [OK] how-outside
 
 warnings (1):
-  spec/verification.html [readability-floor] 人間層可視 prose 14378 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
+  spec/verification.html [readability-floor] 人間層可視 prose 14750 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
 
 clean: 0 violations

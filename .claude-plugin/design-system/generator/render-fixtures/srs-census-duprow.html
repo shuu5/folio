@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: duplicate req-id padding (459 ws4o6ywe5)</title>
+<style>
+  /* census-duprow (folio-459 / ws4o6ywe5 C2-duplicate-row): 要件行 2 件とも data-req-id="FR1" コピー。
+     count-equality (rendered 2 == 期待 2) は「どの id か」を問わず素通りさせた。 distinct data-req-id
+     == 期待件数 の追加 invariant が distinct=1≠2 を捕捉することを固定する。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  tr{ display:block; margin:8px 0; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" id="FR1a"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" id="FR1b"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1" id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

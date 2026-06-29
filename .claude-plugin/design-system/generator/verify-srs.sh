@@ -179,6 +179,16 @@ scriptN="$(perl -0777 -ne 'my $n = () = /<script\b/gi; print $n+0;' "$HTML")"
 chk "script-ban: <script> 出現 == 0 (4gz/459-script 静的封鎖)" 0 "$scriptN"
 
 echo
+echo "--- visual-deception unicode ban: bidi-override / zero-width ゼロ (次元B・ws4o6ywe5 / folio-cpf 由来の floor 化) ---"
+# 機械生成 SRS は bidi-override (U+202A-202E / U+2066-2069) も zero-width・BOM (U+200B-200D / U+2060 / U+FEFF) も
+# 一切 emit しない (verified: ec-checkout / clinic とも 0)。 これらは render してはじめて効く視覚破壊 = .resp/.tgt を
+# 視覚反転 (bidi RLO) / 可視テキストを zero-width で消去する捏造で、 DOM textContent の *論理順序* を保つため
+# fidelity ceiling すら見逃す (ws4o6ywe5 次元B)。 source/DOM に居る時点で静的・決定的に捕捉できる (render 不要)
+# ゆえ floor で封鎖する。 z-order occlusion (不透明 overlay) は render 依存ゆえ floor 射程外 (folio-cpf へ carve)。
+deceptN="$(perl -CSD -0777 -ne 'my $n = () = /[\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}-\x{200D}\x{2060}\x{FEFF}]/g; print $n+0;' "$HTML")"
+chk "visual-deception unicode (bidi-override/zero-width) == 0 (次元B 視覚破壊封鎖)" 0 "$deceptN"
+
+echo
 echo "--- gate F: render 健全性 (playwright: low-contrast / horizontal-overflow / component-overlap) ---"
 # gate F = render-gate-srs.py (light/dark × 3 viewport)。 重い playwright 検査ゆえ renderer 在環境で
 # のみ実行し、 不在環境では honest SKIP (floor 不完全と明示・PASS と詐称しない)。 bash-only の高速 floor
@@ -216,7 +226,10 @@ echo "--- gate F2 (census): 描画後 content-fidelity (pseudo-content 捏造 2b
 # pseudo-content 不変条件に照合する。 期待件数は contract から導出 (論点5: probe は schema 非依存・件数のみ注入)。
 # honest-SKIP は gate F と独立に報告する (gate identity 分離・論点4)。
 gateCensus="skip"
-CENSUS_EXPECT="ears-requirement-row=$(q '.requirements | length'),nfr-metric-row=$(q '.nfr | length')"
+# plain は .plain (平易説明) sub-slot の期待件数 = 各 FR/NFR 行に 1 つ = requirements + nfr (contract-anchor)。
+# census の DOM 自己参照 (plains.length) を廃し caller から注入する (ws4o6ywe5 B4: 全削除/改名/template 退避を封鎖)。
+CENSUS_REQN="$(q '.requirements | length')"; CENSUS_NFRN="$(q '.nfr | length')"
+CENSUS_EXPECT="ears-requirement-row=${CENSUS_REQN},nfr-metric-row=${CENSUS_NFRN},plain=$((CENSUS_REQN + CENSUS_NFRN))"
 if [[ -n "$RENDER_SKIP" ]]; then
   echo "  [SKIP] gate F2/census ($RENDER_SKIP)"
 else

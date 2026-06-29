@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: .plain clip-path (459 ws4o6ywe5 B1)</title>
+<style>
+  /* census-plainclip (folio-459 / ws4o6ywe5 C2-plain-clippath): 行は可視のまま FR2 の .plain だけ
+     clip-path:inset(100%) で読者非到達に切り落とす。 旧版の .plain 検査は checkVis 単独で clip-path を
+     見ず素通りした。 .plain へ行と同じ rendered() (checkVis ∧ area>16 ∧ !clipPathHidden) を適用し捕捉する。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  .plain{ display:block; color:#456; font-size:0.9em; }
+  tr{ display:block; margin:8px 0; }
+  tr[data-req-id="FR2"] .plain{ clip-path:inset(100%); }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する<span class="plain">商品を選ぶと残りいくつあるか出る</span></td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2" id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する<span class="plain">在庫が足りないとお知らせが出る</span></td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1" id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

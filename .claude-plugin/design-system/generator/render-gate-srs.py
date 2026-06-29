@@ -57,10 +57,10 @@ PROBE_JS = (SCRIPT_DIR / "probe-srs.js").read_text(encoding="utf-8")
 VIEWPORTS = [(375, 667), (768, 1024), (1280, 900)]
 SCHEMES = ["light", "dark"]
 
-# census (gate F sibling) の反転 assert 対象 = contract-bearing semantic セレクタ集合 (論点6 決定)。
-# これらは genuine SRS 出力で一切 pseudo-content を持たない (verified) ゆえ、 ::before/::after に content が
-# 付けば捏造 (folio-2b8)。 chrome 装飾セレクタは対象外 (genuine に pseudo-content を持つため allowlist しない)。
-CENSUS_PSEUDO_SELECTORS = ["role", "who", "en", "gword", "gdef", "stamp", "fid"]
+# census (gate F sibling) の pseudo-content inverse-allowlist は probe-srs.js __folioSrsRenderCensus 側で
+# inverse-allowlist として実装する (独立 ceiling wxnjdmjk9 強化)。 固定 selector 集合は corpus-disjoint
+# allowlist で不完全だったため廃し、 probe が body 全要素を走査して genuine chrome allowlist (3 値) の補集合を
+# 捏造とみなす。 ゆえに python 側で対象 selector を列挙する必要はない (counts のみ probe へ注入する)。
 
 
 @contextlib.contextmanager
@@ -249,7 +249,14 @@ def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_di
     可視 0 = render 破綻と判定し、 census-omission とは別の broken-render として FAIL に倒す
     (renderer 設定ミスを「omission 0=clean」と取り違えない)。
     """
-    expect_json = json.dumps({"counts": counts, "pseudo": CENSUS_PSEUDO_SELECTORS}, ensure_ascii=False)
+    # 'plain' は data-component でなく sub-slot (.plain) 期待件数ゆえ counts から分離し plainCount で注入
+    # (DOM 自己参照を廃した contract-anchor。 census 側 expect.plainCount が受領)。
+    counts = dict(counts)
+    plain_count = counts.pop("plain", None)
+    payload: dict = {"counts": counts}
+    if plain_count is not None:
+        payload["plainCount"] = plain_count
+    expect_json = json.dumps(payload, ensure_ascii=False)
     failures: list[str] = []
     total_expected = sum(counts.values())
     any_visible = False
@@ -292,33 +299,68 @@ def run_census_selftest(base_url: str) -> int:
     各 case = (fixture, 幅, scheme, 期待 kind 集合)。 同一 fixture を 375/1280 や light/dark で走らせる対が
     census の viewport/scheme 直積が実際に効いていることを証明する (条件付き隠蔽・条件付き捏造を捕捉)。
     """
-    counts = {"ears-requirement-row": 2, "nfr-metric-row": 1}
-    expect_json = json.dumps({"counts": counts, "pseudo": CENSUS_PSEUDO_SELECTORS}, ensure_ascii=False)
+    base = {"ears-requirement-row": 2, "nfr-metric-row": 1}
+    # .plain を持つ fixture は plainCount を contract-anchor として与える (DOM 自己参照を廃した検査経路)。
+    plainb = {"ears-requirement-row": 2, "nfr-metric-row": 1, "plain": 2}
+    # 各 case = (fixture, 幅, scheme, 期待 kind 集合, counts)。 counts は per-case (plainCount 注入のため)。
     cases = [
-        ("srs-census-clean.html", 1280, "light", set()),
-        ("srs-census-clean.html", 375, "dark", set()),
+        ("srs-census-clean.html", 1280, "light", set(), base),
+        ("srs-census-clean.html", 375, "dark", set(), base),
         # 2b8 pseudo-content 捏造: light/dark どちらでも .fid::after が発火
-        ("srs-census-pseudo.html", 1280, "light", {"pseudo-content-fabrication"}),
-        ("srs-census-pseudo.html", 375, "dark", {"pseudo-content-fabrication"}),
+        ("srs-census-pseudo.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        ("srs-census-pseudo.html", 375, "dark", {"pseudo-content-fabrication"}, base),
         # 459 comment omission: 静的 2 件・可視 1 件 = census-omission
-        ("srs-census-omission.html", 1280, "light", {"census-omission"}),
+        ("srs-census-omission.html", 1280, "light", {"census-omission"}, base),
         # 条件付き omission: 375 で display:none 発火・1280 で clean = viewport plumbing 証明
-        ("srs-census-responsive.html", 375, "light", {"census-omission"}),
-        ("srs-census-responsive.html", 1280, "light", set()),
+        ("srs-census-responsive.html", 375, "light", {"census-omission"}, base),
+        ("srs-census-responsive.html", 1280, "light", set(), base),
         # 条件付き 2b8: dark でのみ ::before 注入・light で clean = scheme plumbing 証明
-        ("srs-census-dark-pseudo.html", 1280, "light", set()),
-        ("srs-census-dark-pseudo.html", 1280, "dark", {"pseudo-content-fabrication"}),
+        ("srs-census-dark-pseudo.html", 1280, "light", set(), base),
+        ("srs-census-dark-pseudo.html", 1280, "dark", {"pseudo-content-fabrication"}, base),
+        # 2b8 inverse-allowlist: 旧 7 集合外の class (.resp) への ::after 注入 = allowlist 補集合 → 捏造
+        ("srs-census-pseudo-other.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        # 459 rendered() clip-path: clip-path:inset(100%) で 1 行を読者非到達 (checkVisibility は true)
+        ("srs-census-clip.html", 1280, "light", {"census-omission"}, base),
+        # 459 rendered() areaOf: transform:scale(0) で 1 行を描画域 0 に潰す (checkVisibility は true)
+        ("srs-census-transform.html", 1280, "light", {"census-omission"}, base),
+        # 459 .plain sub-slot: 行は可視のまま行内の平易説明 .plain だけ display:none = row count 素通り omission
+        ("srs-census-plainhide.html", 1280, "light", {"census-omission"}, plainb),
+        # --- ws4o6ywe5 hardening の新機構 selftest ---
+        # A1 ::marker 捏造: display:list-item の ::marker content (旧版は ::before/::after のみ走査)
+        ("srs-census-marker.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        # A2 body::before 捏造: 'body *' が body 自身を含まない射程漏れ
+        ("srs-census-body-before.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        # B2 near-zero opacity: opacity:0.004 (checkOpacity は ===0 のみ false ゆえ素通りした)
+        ("srs-census-opacity.html", 1280, "light", {"census-omission"}, base),
+        # B3 overflow 祖先クリップ: max-height:0;overflow:hidden 祖先が子を全クリップ (clipHidden 非検査)
+        ("srs-census-overflow.html", 1280, "light", {"census-omission"}, base),
+        # B3 自己 content クリップ: height:5px;overflow:hidden で content を縦切り捨て (area>16 弱閾値)
+        ("srs-census-tinyheight.html", 1280, "light", {"census-omission"}, base),
+        # B1 .plain へ rendered() 適用: .plain{clip-path:inset(100%)} (旧版は .plain を checkVis 単独判定)
+        ("srs-census-plainclip.html", 1280, "light", {"census-omission"}, plainb),
+        # B4 .plain contract-anchor: .plain 全削除で DOM 0 件 (旧版は plains.length=0 で検査 skip)
+        ("srs-census-plaindel.html", 1280, "light", {"census-omission"}, plainb),
+        # B5 .plain 非空 rendered text: .plain が zero-width のみ (checkVis=true だが prose 無)
+        ("srs-census-plainempty.html", 1280, "light", {"census-omission"}, plainb),
+        # B6 distinct req-id: 同 id 行コピーで件数水増し (count-equality は id を問わない)
+        ("srs-census-duprow.html", 1280, "light", {"census-omission"}, base),
     ]
     ok = True
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         pages: dict[tuple, object] = {}
-        for name, width, scheme, expect in cases:
+        for name, width, scheme, expect, counts in cases:
             key = (width, scheme)
             if key not in pages:
                 height = next((h for w, h in VIEWPORTS if w == width), 900)
                 pages[key] = browser.new_page(viewport={"width": width, "height": height}, color_scheme=scheme)
             page = pages[key]
+            cc = dict(counts)
+            pc = cc.pop("plain", None)
+            payload = {"counts": cc}
+            if pc is not None:
+                payload["plainCount"] = pc
+            expect_json = json.dumps(payload, ensure_ascii=False)
             result = census(page, f"{base_url}/render-fixtures/{name}", expect_json)
             kinds = {v["kind"] for v in result["violations"]}
             # 全 case で「clean 期待なら totalVisible==totalExpected」「omission 期待なら totalVisible>0 だが <expected」

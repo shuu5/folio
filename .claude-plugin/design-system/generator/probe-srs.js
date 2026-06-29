@@ -297,63 +297,151 @@ window.__folioSrsRenderProbe = function (scheme) {
  * gate F が「見えるが崩れている」を見るのに対し、 本 census は「契約上あるべき内容が描画後に存在するか・
  * 描画後に偽の内容が注入されていないか」= **描画後 content-fidelity** を見る (folio-6jb 縦軸)。
  * folio-wq4 final ceiling が carve した 2 render 依存 vector を封鎖する:
- *   (2b8) pseudo-content-fabrication — contract-bearing semantic セレクタ (.role/.who/.en/.gword/.gdef/
- *         .stamp/.fid) に ::before/::after の content で *偽テキストを注入* する捏造。 静的 grep (make_body は
- *         <style> を空化) を素通りし、 render してはじめて見える。 **反転 assert**: これら semantic セレクタは
- *         genuine 出力では一切 pseudo-content を持たない (verified) ゆえ、 content が none/normal 以外なら
- *         捏造とみなす。 allowlist 列挙でなく「semantic 集合は空」を不変条件化するため chrome CSS 拡張 (装飾用
- *         ::before 等) に drift 免疫で、 attr() 動的注入も render が解決した値を見るので捕捉する。
+ *   (2b8) pseudo-content-fabrication — 任意要素に ::before/::after の content で *偽テキストを注入* する捏造。
+ *         静的 grep (make_body は <style> を空化) を素通りし、 render してはじめて見える。 **inverse-allowlist**:
+ *         body 全要素の ::before/::after を走査し、 genuine chrome の小 allowlist (3 値・両 fixture×両 scheme で
+ *         監査確定) に厳密一致しない非空 content を捏造とみなす (集合の補集合=捏造)。 固定 semantic 集合の reverse
+ *         -assert は corpus-disjoint で contract-bearing class を取りこぼしたため廃した (独立 ceiling wxnjdmjk9)。
+ *         空/空白 content は描画されず無害ゆえ許容。 attr() 動的注入も render が解決した値を見るので捕捉する。
  *   (459)  census-omission/excess — 必須要素 (要件行/NFR 行) を comment/style 等で包み静的 grep を通しつつ
- *         **ブラウザ非描画**にする OMISSION。 描画後の *可視* element 数を contract 由来の期待件数と照合し、
- *         可視数 < 期待 を omission、 可視数 > 期待 を excess として検出する。 @media や prefers-color-scheme
- *         条件下での display:none 隠蔽も、 caller が light/dark × 複数 viewport で本 probe を呼ぶため捕捉される。
+ *         **ブラウザ非描画**にする OMISSION。 描画後の *実描画* element 数 (checkVisibility ∧ area>16 ∧ clip 祖先
+ *         なし = clip-path/transform/子崩壊も捕捉) を contract 由来期待件数と照合し、 可視<期待 を omission、
+ *         可視>期待 を excess とする。 加えて .plain (平易説明) は static-present==描画可視 を要求する (sub-slot
+ *         omission)。 **被覆の honest scope**: prefers-color-scheme と検査 3 viewport 幅 (375/768/1280) の軸のみ
+ *         走査する。 他軸の条件付き隠蔽 (@media print/orientation/その他幅・font-size:0・off-screen position・
+ *         filter/mask) は射程超ゆえ carve 済 (bd folio-cpf〔folio-4a4 css-hiding 系〕 + LLM ceiling backstop)。
  *
  * 期待件数は caller (verify-srs.sh) が contract から導出し JSON で注入する (probe は contract schema 非依存・
  * 論点5 決定)。 戻り値: { totalExpected, totalVisible, violations: [{kind, ...}] }。
  *   - totalVisible==0 && totalExpected>0 は census-omission で必ず FAIL に倒れる (T7 fail-closed: render 破綻と
  *     genuine omission を caller が区別して報告する。 描画されていない=「clean」と取り違えない)。
  *
- * @param expectJson  JSON 文字列 { counts: { "<data-component>": <int>, ... }, pseudo: ["<class>", ...] }
+ * @param expectJson  JSON 文字列 { counts: { "<data-component>": <int>, ... } } (pseudo 列挙は inverse-allowlist 化で不要)
  */
 window.__folioSrsRenderCensus = function (expectJson) {
   const expect = JSON.parse(expectJson);
-  /* 描画されているか (render probe と同基準): display:none / closed details / visibility:hidden / 完全透明を
-     不可視扱い。 census-omission は「契約要素が読者に届かない」を見るので、 この visible 判定が境界になる。 */
-  const visible = (el) =>
-    typeof el.checkVisibility === 'function'
-      ? el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true, checkOpacity: true })
-      : true;
   const snippet = (el) => ((el && el.textContent) || '').replace(/\s+/g, ' ').trim().slice(0, 40);
   const violations = [];
 
-  /* === (2b8) pseudo-content-fabrication — semantic セレクタは pseudo-content を持たない (反転 assert) === */
-  for (const cls of (expect.pseudo || [])) {
-    for (const el of document.querySelectorAll('.' + cls)) {
-      for (const pe of ['::before', '::after']) {
-        const c = getComputedStyle(el, pe).content;
-        // genuine = 'none'(pseudo 無し) か 'normal'(content 未指定)。 それ以外 (引用文字列・attr() 解決値・
-        // counter()・空文字 '""'・zero-width 等) は semantic 要素への注入ゆえ捏造とみなす。
-        if (c && c !== 'none' && c !== 'normal') {
-          violations.push({ kind: 'pseudo-content-fabrication', text: `.${cls}${pe} 「${snippet(el)}」 に content=${c}`, sel: cls, pseudo: pe, content: c });
-        }
+  /* === (2b8) pseudo-content-fabrication — inverse-allowlist (独立 ceiling wxnjdmjk9 + ws4o6ywe5 強化) ===
+     body 全要素 + body/html 自身の ::before/::after/::marker を走査し、 genuine chrome の小 allowlist に厳密一致
+     しない非空 content を捏造とみなす (集合の補集合=捏造・MEMORY「機械的完全性照合」)。 固定 semantic 集合の反転
+     assert (旧 7-set) は contract-bearing class を取りこぼしたため inverse-allowlist 化済。 さらに ws4o6ywe5 で
+     ::marker (display:list-item で任意要素に付く) と body::before/html::before ('body *' は body 自身を含まない) の
+     射程漏れを塞ぐ。 genuine chrome pseudo は 3 値のみ。 空/空白 content は描画されず無害ゆえ許容。 */
+  const CHROME_PSEUDO = [
+    { sel: '.plain', pe: '::before', content: 'やさしく言うと ' },
+    { sel: '.why', pe: '::before', content: '↳ なぜ要る' },
+    { sel: 'summary', pe: '::after', content: 'クリックで開閉' },
+  ];
+  const dequote = (s) => s.replace(/^"([\s\S]*)"$/, '$1').replace(/^'([\s\S]*)'$/, '$1');
+  const pseudoScan = [document.documentElement, document.body, ...document.querySelectorAll('body *')].filter(Boolean);
+  for (const el of pseudoScan) {
+    for (const pe of ['::before', '::after', '::marker']) {
+      const raw = getComputedStyle(el, pe).content;
+      if (!raw || raw === 'none' || raw === 'normal') continue;
+      const val = dequote(raw);
+      if (val.trim() === '') continue; // 空/空白文字列 = 描画されない = 無害
+      const ok = CHROME_PSEUDO.some((w) => w.pe === pe && el.matches(w.sel) && val === w.content);
+      if (!ok) {
+        const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+        violations.push({ kind: 'pseudo-content-fabrication', text: `${el.tagName.toLowerCase()}${cls}${pe} 「${snippet(el)}」 に content=${raw}`, pseudo: pe, content: raw });
       }
     }
   }
 
-  /* === (459) census-omission/excess — 可視 element 数 == contract 由来期待件数 === */
+  /* === 実描画判定 helper (独立 ceiling wxnjdmjk9 + ws4o6ywe5 強化) ===
+     checkVisibility は display:none/visibility/opacity===0/content-visibility のみモデル化し、 clip-path /
+     transform:scale(0) / 子要素 display:none 行崩壊 / overflow:hidden 祖先クリップ / 微小高さ overflow / near-zero
+     opacity を見ない。 これらを補い「読者に描画されない要素」を omission に倒す。 残る off-screen position /
+     font-size:0 / 非検査軸 @media / filter・mask / z-order occlusion (不透明 overlay) は floor 射程超
+     (bd folio-cpf〔folio-4a4 css-hiding 系〕) ゆえ carve + LLM ceiling (persona-walk-srs) backstop。 */
+  const checkVis = (el) =>
+    typeof el.checkVisibility === 'function'
+      ? el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true, checkOpacity: true })
+      : true;
+  const clipPathHidden = (el) => { // 祖先/自身のいずれかに clip-path/clip があれば paint されない (inset(100%) 等)
+    for (let e = el; e; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      if (cs.clipPath && cs.clipPath !== 'none') return true;
+      if (cs.clip && cs.clip !== 'auto') return true;
+    }
+    return false;
+  };
+  // bounding rect を overflow:hidden/clip 祖先の rect と交差した可視面積 (transform:scale(0)=元 rect 0 も含む)
+  const visibleArea = (el) => {
+    const r = el.getBoundingClientRect();
+    let l = r.left, t = r.top, rt = r.right, b = r.bottom;
+    for (let e = el.parentElement; e; e = e.parentElement) {
+      const cs = getComputedStyle(e);
+      const ov = (cs.overflow || '') + (cs.overflowX || '') + (cs.overflowY || '');
+      if (/hidden|clip/.test(ov)) {
+        const er = e.getBoundingClientRect();
+        l = Math.max(l, er.left); t = Math.max(t, er.top); rt = Math.min(rt, er.right); b = Math.min(b, er.bottom);
+      }
+    }
+    return Math.max(0, rt - l) * Math.max(0, b - t);
+  };
+  // 自己 overflow:hidden/clip で *縦* content (scrollHeight) が box (clientHeight) の半分超を切り捨てる (微小高さ行)。
+  // 縦に限定するのは横 overflow:hidden + text-overflow:ellipsis が genuine の正当パターンゆえ (誤検出回避)。
+  const selfContentClipped = (el) => {
+    const cs = getComputedStyle(el);
+    const ov = (cs.overflowY || '') + (cs.overflow || '');
+    if (!/hidden|clip/.test(ov)) return false;
+    return el.scrollHeight > el.clientHeight + 4 && el.clientHeight < el.scrollHeight * 0.5;
+  };
+  // 祖先連鎖の実効 opacity (near-zero = 実質不可視・checkOpacity の opacity===0 境界を補う)
+  const effOpacity = (el) => {
+    let o = 1;
+    for (let e = el; e; e = e.parentElement) {
+      const op = parseFloat(getComputedStyle(e).opacity);
+      if (!isNaN(op)) o *= op;
+    }
+    return o;
+  };
+  const MIN_OPACITY = 0.1; // これ未満は実質不可視 (genuine 契約内容は不透明)
+  const rendered = (el) =>
+    checkVis(el) && !clipPathHidden(el) && visibleArea(el) > 16 && effOpacity(el) >= MIN_OPACITY && !selfContentClipped(el);
+  const ZW = /[\u200B-\u200D\u2060\uFEFF]/g; // zero-width / BOM (.plain 空テキスト偽装の strip)
+
+  /* === (459) census-omission/excess — *実描画* 件数 == contract 由来期待件数 === */
   let totalExpected = 0, totalVisible = 0;
   for (const sel of Object.keys(expect.counts || {})) {
     const exp = expect.counts[sel];
     totalExpected += exp;
     const all = [...document.querySelectorAll(`[data-component="${sel}"]`)];
-    const vis = all.filter(visible).length;
+    const vis = all.filter(rendered).length;
     totalVisible += vis;
     if (vis !== exp) {
       violations.push({
         kind: vis < exp ? 'census-omission' : 'census-excess',
-        text: `${sel}: 可視 ${vis} 件 / 期待 ${exp} 件 (静的 ${all.length} 件)`,
+        text: `${sel}: 実描画 ${vis} 件 / 期待 ${exp} 件 (DOM ${all.length} 件)`,
         sel, visible: vis, expected: exp, total: all.length,
       });
+    }
+  }
+
+  /* === distinct req-id (folio-459 ws4o6ywe5 C2-duplicate-row) — 同 id 行コピーで件数を水増しする捏造を封鎖 ===
+     count-equality は「どの id か」を問わないため、 全行 FR1 コピー (6=期待) が素通りした。 rendered 行の
+     data-req-id が distinct かつ期待件数一致を要求する。 */
+  const REQ = 'ears-requirement-row';
+  if (expect.counts && typeof expect.counts[REQ] === 'number') {
+    const ids = [...document.querySelectorAll(`[data-component="${REQ}"]`)].filter(rendered).map((r) => r.getAttribute('data-req-id') || '');
+    const distinct = new Set(ids).size;
+    if (distinct !== expect.counts[REQ]) {
+      violations.push({ kind: 'census-omission', text: `${REQ}: distinct data-req-id ${distinct} 件 / 期待 ${expect.counts[REQ]} 件 — 重複 ID 水増し`, sel: REQ, visible: distinct, expected: expect.counts[REQ] });
+    }
+  }
+
+  /* === sub-slot omission — 平易説明 (.plain・非エンジニア向け北極星 prose) ===
+     旧版は DOM 自己参照 (plains.length) で期待件数を採り、 全削除/改名/template 退避で plains.length=0→検査 skip、
+     部分改名で 6==6 自己無矛盾を許した (ws4o6ywe5)。 修正: 期待件数を contract から caller 注入 (expect.plainCount)、
+     各 .plain は行と同じ rendered() ∧ 非空 rendered text (zero-width strip) を要求する。 */
+  if (typeof expect.plainCount === 'number') {
+    const plains = [...document.querySelectorAll('.plain')];
+    const plainOk = plains.filter((el) => rendered(el) && el.textContent.replace(ZW, '').trim() !== '').length;
+    if (plainOk !== expect.plainCount) {
+      violations.push({ kind: plainOk < expect.plainCount ? 'census-omission' : 'census-excess', text: `.plain (平易説明): 実描画+非空 ${plainOk} 件 / 期待 ${expect.plainCount} 件 (DOM ${plains.length} 件) — 非エンジニア向け prose の隠蔽/消去`, sel: '.plain', visible: plainOk, expected: expect.plainCount, total: plains.length });
     }
   }
 

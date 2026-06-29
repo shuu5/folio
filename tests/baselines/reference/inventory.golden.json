@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-29T03:28:46Z",
+  "generatedAt": "2026-06-29T14:08:32Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2097,7 +2097,7 @@
         "id": "REQ-VER-024",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-024",
-        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 script-ban 〔SRS HTML の &lt;script&gt; == 0・pack-additive 拡張〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 script-ban 〔&lt;script&gt; == 0〕 + visual-deception unicode ban 〔bidi-override / zero-width・BOM == 0・次元B〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-025",
@@ -2115,7 +2115,7 @@
         "id": "REQ-VER-027",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-027",
-        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) contract-bearing semantic セレクタ (.role/.who/.en/.gword/.gdef/.stamp/.fid) への ::before/::after content 注入を反転 assert (これら semantic 集合は pseudo-content を持たない不変条件) で、 (folio-459) 描画後の可視部品数が contract 由来期待件数と不一致 (comment/条件付き display:none 非描画) を検出。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 gate F と独立に honest-SKIP 報告。 検出器・期待件数導出は machine 部。"
+        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) 任意要素 + body/html の ::before/::after/::marker content 注入を inverse-allowlist (genuine chrome allowlist の補集合 = 捏造) で、 (folio-459) 描画後の 実描画部品数 (rendered() = checkVisibility ∧ 面積・clip-path・実効 opacity・overflow で判定) と .plain (平易説明・rendered() ∧ 非空 text) を contract 由来期待件数 (DOM 自己参照しない anchor) と照合して検出。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 被覆は prefers-color-scheme と検査 3 viewport 幅のみで、 他軸隠蔽 (font-size:0 / off-screen / 非検査軸 @media / filter / z-order occlusion 等) は floor 射程超ゆえ carve (bd folio-cpf・own-content/contain/ink-zero/shadow/coverage 等は folio-hef・LLM ceiling backstop)。 gate F と独立に honest SKIP 報告し、 検出器・期待件数導出は machine 部。"
       },
       {
         "id": "REQ-XREF-001",

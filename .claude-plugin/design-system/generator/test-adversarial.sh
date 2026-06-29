@@ -897,12 +897,23 @@ expect_srs_fail "RG1-b ★<script> コンテナで要素を包む OMISSION (459-
 sed 's#</body>#<SCRIPT>void 0;</SCRIPT></body>#' "$TMP/art.html" > "$TMP/rg1c.html"
 expect_srs_fail "RG1-c ★大文字 <SCRIPT> (case-robust) を script-ban が捕捉" "$BASE" "$TMP/rg1c.html"
 
+# ===== folio-6jb 次元B (ws4o6ywe5): visual-deception unicode ban の floor 検査 (bash floor・render 不要) =====
+# bidi-override (RLO 等) で .resp/.tgt を視覚反転 / zero-width で可視テキストを消去する render 依存攻撃を、
+# source/DOM の codepoint として静的に封鎖する (fidelity ceiling は DOM 論理順序を読み bidi を見逃す)。
+# RG1-d bidi RLO 注入 (U+202E) → visual-deception unicode ban が捕捉。
+perl -CSD -0777 -pe 's{<td class="resp">}{<td class="resp">\x{202E}} if !$d++' "$TMP/art.html" > "$TMP/rg1d.html"
+expect_srs_fail "RG1-d ★bidi-override RLO (U+202E 視覚反転) を visual-deception unicode ban が捕捉" "$BASE" "$TMP/rg1d.html"
+# RG1-e zero-width 注入 (U+200B) → visual-deception unicode ban が捕捉 (可視テキスト消去)。
+perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{200B}} if !$d++' "$TMP/art.html" > "$TMP/rg1e.html"
+expect_srs_fail "RG1-e ★zero-width (U+200B 可視テキスト消去) を visual-deception unicode ban が捕捉" "$BASE" "$TMP/rg1e.html"
+
 # ===== folio-6jb render-gate census slice 2: 描画後 content-fidelity (2b8 pseudo-content 捏造 / 459 描画後 omission) =====
 # census は render を要する gate F の sibling。 renderer 在環境 (A34 と同じ $RGRUN) でのみ実行し、 不在なら honest SKIP。
 # genuine art.html を mutate し、 静的 floor (make_body は <style> 空化 / comment verbatim) を素通りする render 依存の
 # 捏造 (semantic セレクタ ::after content) / 隠蔽 (comment・条件付き display:none で非描画) を census が捕捉することを確認する。
 # 期待件数は contract から導出 (verify-srs.sh と同経路)。 census detector は render-gate-srs.py --census が SSoT (selftest=$RGRUN --census --selftest)。
-CEXPECT="ears-requirement-row=$(yq -r '.requirements | length' "$BASE"),nfr-metric-row=$(yq -r '.nfr | length' "$BASE")"
+_REQN="$(yq -r '.requirements | length' "$BASE")"; _NFRN="$(yq -r '.nfr | length' "$BASE")"
+CEXPECT="ears-requirement-row=${_REQN},nfr-metric-row=${_NFRN},plain=$((_REQN + _NFRN))"
 expect_census_fail() { # label html  (render census が exit!=0 を期待)
   if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1; then ng "$1 (census が PASS した)"; else ok "$1"; fi
 }
@@ -920,7 +931,7 @@ else
   expect_census_pass "RG2-pass ★genuine artifact は census PASS (描画後 content-fidelity clean)" "$TMP/art.html"
   # RG2-a 2b8: semantic セレクタ .fid に ::after content で偽サフィックス注入 (<style> 追記)。 make_body は <style> 空化で静的素通り。
   perl -0777 -pe 's{</style>}{.fid::after{content:"-改竄済";}\n</style>}' "$TMP/art.html" > "$TMP/rg2a.html"
-  expect_census_fail "RG2-a ★pseudo-content 捏造 (.fid::after content=2b8) を census 反転 assert が捕捉" "$TMP/rg2a.html"
+  expect_census_fail "RG2-a ★pseudo-content 捏造 (.fid::after content=2b8) を census inverse-allowlist が捕捉" "$TMP/rg2a.html"
   # RG2-b 459-comment: 要件行 1 本を HTML コメントで包む。 静的 grep は数えるが browser 非描画 → 可視 < 期待。
   perl -0777 -pe 's{(<tr[^>]*data-component="ears-requirement-row"[^>]*>.*?</tr>)}{<!-- $1 -->}s' "$TMP/art.html" > "$TMP/rg2b.html"
   expect_census_fail "RG2-b ★comment 隠蔽 OMISSION (459-comment) を census 可視 row count が捕捉" "$TMP/rg2b.html"
@@ -933,6 +944,53 @@ else
   # RG2-e T7 fail-closed: 全要件/NFR 行を display:none。 可視 0 = render 破綻と判定し broken-render で FAIL (omission 0=clean と取り違えない)。
   perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"],[data-component="nfr-metric-row"]{display:none!important;}\n</style>}' "$TMP/art.html" > "$TMP/rg2e.html"
   expect_census_fail "RG2-e ★T7 fail-closed (全行 display:none → 可視0 を broken-render で FAIL)" "$TMP/rg2e.html"
+  # ===== RG3: slice-2 hardening (独立 ceiling wxnjdmjk9) — inverse-allowlist + rendered() property reverse-assert =====
+  # ceiling が固定 7 集合 reverse-assert / checkVisibility 単独の死角 (16 bypass) を炙り出した。 Theme A=contract-bearing
+  # class への pseudo 注入、 Theme B=clip-path/transform/子崩壊/.plain 単独隠蔽。 これらが封鎖されたことを固定する。
+  # RG3-a Theme A: 旧 7 集合外の .resp (要件本文) へ ::after content 注入 = inverse-allowlist 補集合 → 捏造。
+  perl -0777 -pe 's{</style>}{.resp::after{content:" ※撤回済";}\n</style>}' "$TMP/art.html" > "$TMP/rg3a.html"
+  expect_census_fail "RG3-a ★Theme A 7 集合外 pseudo (.resp::after) を inverse-allowlist が捕捉" "$TMP/rg3a.html"
+  # RG3-b Theme B clipHidden: 要件行を clip-path:inset(100%) で読者非到達 (checkVisibility は true)。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg3b.html"
+  expect_census_fail "RG3-b ★Theme B clip-path:inset(100%) を rendered() clip 祖先走査が捕捉" "$TMP/rg3b.html"
+  # RG3-c Theme B areaOf: 要件行を transform:scale(0) で描画域 0 に潰す (checkVisibility は true)。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{transform:scale(0);}\n</style>}' "$TMP/art.html" > "$TMP/rg3c.html"
+  expect_census_fail "RG3-c ★Theme B transform:scale(0) を rendered() area>16 判定が捕捉" "$TMP/rg3c.html"
+  # RG3-d Theme B 子崩壊: 要件行の td を display:none = 行コンテナが高さ 0 に崩壊 (checkVisibility は true)。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:none;}\n</style>}' "$TMP/art.html" > "$TMP/rg3d.html"
+  expect_census_fail "RG3-d ★Theme B td{display:none} 行崩壊を rendered() area>16 判定が捕捉" "$TMP/rg3d.html"
+  # RG3-e Theme B .plain sub-slot: 行は可視のまま .plain (平易説明) だけ display:none = row count 素通り omission。
+  perl -0777 -pe 's{</style>}{.plain{display:none;}\n</style>}' "$TMP/art.html" > "$TMP/rg3e.html"
+  expect_census_fail "RG3-e ★Theme B .plain 単独隠蔽を .plain present==visible 不変条件が捕捉" "$TMP/rg3e.html"
+  # ===== RG4: ws4o6ywe5 独立 ceiling が発見した 19 fixable leak の封鎖回帰 (Theme A scope 漏れ + Theme B 機構穴) =====
+  # 前回 hardening の *修正自体* に穴があった (ceiling-recursion)。 各機構を genuine art.html mutate で封鎖確認する。
+  # RG4-a Theme A ::marker: display:list-item の ::marker content (旧版は ::before/::after のみ走査)。
+  perl -0777 -pe 's{</style>}{.fid{display:list-item}.fid::marker{content:"【撤回済】";}\n</style>}' "$TMP/art.html" > "$TMP/rg4a.html"
+  expect_census_fail "RG4-a ★Theme A ::marker 捏造を inverse-allowlist (::marker 走査) が捕捉" "$TMP/rg4a.html"
+  # RG4-b Theme A body::before: 'body *' が body 自身を含まない射程漏れ。
+  perl -0777 -pe 's{</style>}{body::before{content:"偽の全画面宣言";display:block;}\n</style>}' "$TMP/art.html" > "$TMP/rg4b.html"
+  expect_census_fail "RG4-b ★Theme A body::before 捏造を走査集合の body/html 包含が捕捉" "$TMP/rg4b.html"
+  # RG4-c Theme B near-zero opacity: opacity:0.004 (checkOpacity は ===0 のみ false)。
+  perl -0777 -pe 's{</style>}{[data-component]{opacity:.004;}\n</style>}' "$TMP/art.html" > "$TMP/rg4c.html"
+  expect_census_fail "RG4-c ★Theme B near-zero opacity を rendered() 実効 opacity 閾値が捕捉" "$TMP/rg4c.html"
+  # RG4-d Theme B overflow 祖先クリップ: max-height:0;overflow:hidden で子を全クリップ (clipHidden 非検査だった)。
+  perl -0777 -pe 's{</style>}{.chapbody{overflow:hidden;max-height:0;}\n</style>}' "$TMP/art.html" > "$TMP/rg4d.html"
+  expect_census_fail "RG4-d ★Theme B overflow:hidden 祖先クリップを visibleArea 交差が捕捉" "$TMP/rg4d.html"
+  # RG4-e Theme B 自己 content クリップ: height:5px;overflow:hidden で本文を縦切り捨て (area>16 弱閾値)。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{display:block;height:5px;overflow:hidden;}\n</style>}' "$TMP/art.html" > "$TMP/rg4e.html"
+  expect_census_fail "RG4-e ★Theme B 微小高さ overflow を selfContentClipped が捕捉" "$TMP/rg4e.html"
+  # RG4-f Theme B .plain へ rendered() 適用: .plain{clip-path:inset(100%)} (旧版は .plain を checkVis 単独判定)。
+  perl -0777 -pe 's{</style>}{.plain{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg4f.html"
+  expect_census_fail "RG4-f ★Theme B .plain clip-path を .plain への rendered() 適用が捕捉" "$TMP/rg4f.html"
+  # RG4-g Theme B .plain contract-anchor: .plain 全削除で DOM 0 件 (旧版は plains.length=0 で検査 skip)。
+  perl -0777 -pe 's{<span class="plain"[^>]*>.*?</span>}{}gs' "$TMP/art.html" > "$TMP/rg4g.html"
+  expect_census_fail "RG4-g ★Theme B .plain 全削除を contract-anchor 期待件数が捕捉" "$TMP/rg4g.html"
+  # RG4-h Theme B .plain 非空 text: .plain 内容を zero-width に置換 (checkVis=true だが prose 無)。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>).*?(</span>)}{${1}\x{200B}${2}}gs' "$TMP/art.html" > "$TMP/rg4h.html"
+  expect_census_fail "RG4-h ★Theme B .plain zero-width 化を 非空 rendered text 要求が捕捉" "$TMP/rg4h.html"
+  # RG4-i Theme B distinct req-id: 全要件行の data-req-id を FR1 に潰す (count=N 維持・distinct=1)。
+  perl -0777 -pe 's{(data-component="ears-requirement-row" data-req-id=")FR\d+(")}{${1}FR1${2}}g' "$TMP/art.html" > "$TMP/rg4i.html"
+  expect_census_fail "RG4-i ★Theme B 重複 ID 水増しを distinct data-req-id 検査が捕捉" "$TMP/rg4i.html"
 fi
 
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
