@@ -40,6 +40,7 @@ import argparse
 import contextlib
 import functools
 import http.server
+import json
 import socketserver
 import sys
 import threading
@@ -55,6 +56,11 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROBE_JS = (SCRIPT_DIR / "probe-srs.js").read_text(encoding="utf-8")
 VIEWPORTS = [(375, 667), (768, 1024), (1280, 900)]
 SCHEMES = ["light", "dark"]
+
+# census (gate F sibling) の反転 assert 対象 = contract-bearing semantic セレクタ集合 (論点6 決定)。
+# これらは genuine SRS 出力で一切 pseudo-content を持たない (verified) ゆえ、 ::before/::after に content が
+# 付けば捏造 (folio-2b8)。 chrome 装飾セレクタは対象外 (genuine に pseudo-content を持つため allowlist しない)。
+CENSUS_PSEUDO_SELECTORS = ["role", "who", "en", "gword", "gdef", "stamp", "fid"]
 
 
 @contextlib.contextmanager
@@ -204,16 +210,178 @@ def run_selftest(base_url: str) -> int:
     return 1
 
 
+# =============================================================================
+# census gate (gate F sibling・folio-6jb 縦軸 = 描画後 content-fidelity)
+# =============================================================================
+def parse_expect(s: str) -> dict[str, int]:
+    """'comp=N,comp=N' を {comp:N} へ。 caller (verify-srs.sh) が contract から導出した期待件数。"""
+    counts: dict[str, int] = {}
+    for part in (s or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "=" not in part:
+            raise ValueError(f"--expect 形式不正 (comp=N 期待): {part!r}")
+        k, v = part.split("=", 1)
+        counts[k.strip()] = int(v.strip())
+    return counts
+
+
+def census(page, url: str, expect_json: str) -> dict:
+    page.goto(url, wait_until="load")
+    page.wait_for_timeout(150)  # web font / layout settle (gate F と同値)
+    page.evaluate(PROBE_JS)
+    return page.evaluate("(j) => window.__folioSrsRenderCensus(j)", expect_json)
+
+
+def fmt_census(result: dict, where: str) -> list[str]:
+    lines = []
+    for v in result["violations"]:
+        lines.append(f"  [census] {v['kind']}: {where} — {v['text']}")
+    return lines
+
+
+def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_dir: Path | None) -> int:
+    """描画後 content-fidelity census を light/dark × 3 viewport で検査する (gate F と同 matrix)。
+
+    pseudo-content-fabrication (2b8) は scheme 依存 / census-omission (459) は viewport・scheme 条件下の
+    隠蔽もあるため、 visual gate と同じ直積で走らせる。 T7 fail-closed: 期待 >0 なのに *全 viewport で*
+    可視 0 = render 破綻と判定し、 census-omission とは別の broken-render として FAIL に倒す
+    (renderer 設定ミスを「omission 0=clean」と取り違えない)。
+    """
+    expect_json = json.dumps({"counts": counts, "pseudo": CENSUS_PSEUDO_SELECTORS}, ensure_ascii=False)
+    failures: list[str] = []
+    total_expected = sum(counts.values())
+    any_visible = False
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        for scheme in SCHEMES:
+            for width, height in VIEWPORTS:
+                page = browser.new_page(viewport={"width": width, "height": height}, color_scheme=scheme)
+                result = census(page, f"{base_url}/{target}", expect_json)
+                where = f"{target}@{width}px/{scheme}"
+                n = len(result["violations"])
+                tv = result["totalVisible"]
+                if tv > 0:
+                    any_visible = True
+                status = "FAIL" if n else "OK"
+                print(f"  [{status}] {where} — 可視 {tv}/{result['totalExpected']} 件 / {n} 違反")
+                failures += fmt_census(result, where)
+                if screenshot_dir is not None:
+                    d = screenshot_dir / f"census-{scheme}-{width}px"
+                    d.mkdir(parents=True, exist_ok=True)
+                    page.screenshot(path=str(d / (target.replace("/", "__") + ".jpg")), full_page=True, type="jpeg", quality=80)
+                page.close()
+        browser.close()
+    # T7 fail-closed: 期待要素が *どの viewport/scheme でも* 1 件も描画されない = render 破綻。
+    if total_expected > 0 and not any_visible:
+        failures.append("  [census] broken-render: 期待要素が全 viewport/scheme で可視 0 — render 破綻 (genuine omission と区別し FAIL)")
+    print()
+    if failures:
+        print(f"render census: {len(failures)} 件の問題 (pseudo-content 捏造 / 描画後 omission / render 破綻)\n")
+        print("\n".join(failures))
+        return 1
+    print(f"render census: clean — pseudo-content 捏造 0 / 描画後 omission 0 (期待 {total_expected} 件が light+dark × 3 viewport で全可視)")
+    return 0
+
+
+def run_census_selftest(base_url: str) -> int:
+    """census detector の検出力を fixture で自己検証 (kind 完全一致・fail-closed・viewport/scheme plumbing)。
+
+    要件行 2 + NFR 行 1 を基準形状とし、 期待件数を {ears-requirement-row:2, nfr-metric-row:1} で与える。
+    各 case = (fixture, 幅, scheme, 期待 kind 集合)。 同一 fixture を 375/1280 や light/dark で走らせる対が
+    census の viewport/scheme 直積が実際に効いていることを証明する (条件付き隠蔽・条件付き捏造を捕捉)。
+    """
+    counts = {"ears-requirement-row": 2, "nfr-metric-row": 1}
+    expect_json = json.dumps({"counts": counts, "pseudo": CENSUS_PSEUDO_SELECTORS}, ensure_ascii=False)
+    cases = [
+        ("srs-census-clean.html", 1280, "light", set()),
+        ("srs-census-clean.html", 375, "dark", set()),
+        # 2b8 pseudo-content 捏造: light/dark どちらでも .fid::after が発火
+        ("srs-census-pseudo.html", 1280, "light", {"pseudo-content-fabrication"}),
+        ("srs-census-pseudo.html", 375, "dark", {"pseudo-content-fabrication"}),
+        # 459 comment omission: 静的 2 件・可視 1 件 = census-omission
+        ("srs-census-omission.html", 1280, "light", {"census-omission"}),
+        # 条件付き omission: 375 で display:none 発火・1280 で clean = viewport plumbing 証明
+        ("srs-census-responsive.html", 375, "light", {"census-omission"}),
+        ("srs-census-responsive.html", 1280, "light", set()),
+        # 条件付き 2b8: dark でのみ ::before 注入・light で clean = scheme plumbing 証明
+        ("srs-census-dark-pseudo.html", 1280, "light", set()),
+        ("srs-census-dark-pseudo.html", 1280, "dark", {"pseudo-content-fabrication"}),
+    ]
+    ok = True
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        pages: dict[tuple, object] = {}
+        for name, width, scheme, expect in cases:
+            key = (width, scheme)
+            if key not in pages:
+                height = next((h for w, h in VIEWPORTS if w == width), 900)
+                pages[key] = browser.new_page(viewport={"width": width, "height": height}, color_scheme=scheme)
+            page = pages[key]
+            result = census(page, f"{base_url}/render-fixtures/{name}", expect_json)
+            kinds = {v["kind"] for v in result["violations"]}
+            # 全 case で「clean 期待なら totalVisible==totalExpected」「omission 期待なら totalVisible>0 だが <expected」
+            # を併せ確認し、 render 破綻 (全件 0) を「clean」と取り違える tautology を塞ぐ。
+            rendered = result["totalVisible"] > 0
+            passed = rendered and kinds == expect
+            ok = ok and passed
+            verdict = "PASS" if passed else "FAIL"
+            exp = "+".join(sorted(expect)) or "clean"
+            got = ("+".join(sorted(kinds)) or "clean") if rendered else f"render 破綻 (可視 {result['totalVisible']})"
+            print(f"  [census-selftest {verdict}] {name}@{width}px/{scheme}: 期待={exp} / 実際={got} (可視 {result['totalVisible']}/{result['totalExpected']})")
+        browser.close()
+    print()
+    if ok:
+        print("census-selftest: PASS — pseudo-content-fabrication (2b8) / census-omission (459) が kind 完全一致で "
+              "発火し、 clean を誤検出せず、 viewport/scheme 直積 plumbing と fail-closed (totalVisible>0) が固定されている")
+        return 0
+    print("census-selftest: FAIL — census detector が期待通り動作しない (playwright/chromium 版 drift?)")
+    return 1
+
+
 def main() -> int:
-    ap = argparse.ArgumentParser(description="folio SRS render-gate (gate F)")
+    ap = argparse.ArgumentParser(description="folio SRS render-gate (gate F) + render census (sibling)")
     ap.add_argument("html", nargs="?", help="生成 SRS HTML (単一ファイル)。 --selftest 時は不要")
     ap.add_argument("--selftest", action="store_true", help="fixture で detector を自己検証")
+    ap.add_argument("--census", action="store_true",
+                    help="gate F でなく render census (描画後 content-fidelity: pseudo-content 捏造 / omission) を検査")
+    ap.add_argument("--expect", default="",
+                    help="census 期待件数 'comp=N,comp=N' (caller が contract から導出)。 --census 時必須")
     ap.add_argument("--base-url", default=None, help="外部 http server (html の親 dir 配信必須)")
     ap.add_argument("--screenshot-dir", default=None, help="screenshot 保存先 (CI artifact 用)")
     args = ap.parse_args()
 
     shots = Path(args.screenshot_dir) if args.screenshot_dir else None
 
+    # ---- census mode (gate F sibling) ----
+    if args.census:
+        if args.selftest:
+            if args.base_url:
+                return run_census_selftest(args.base_url)
+            with serve(SCRIPT_DIR) as base_url:
+                return run_census_selftest(base_url)
+        if not args.html:
+            print("render-gate-srs --census: <html> か --selftest が必要", file=sys.stderr)
+            return 2
+        try:
+            counts = parse_expect(args.expect)
+        except ValueError as e:
+            print(f"render-gate-srs --census: {e}", file=sys.stderr)
+            return 2
+        if not counts:
+            print("render-gate-srs --census: --expect 'comp=N,...' が必要 (期待件数なしでは census は無意味)", file=sys.stderr)
+            return 2
+        html = Path(args.html).resolve()
+        if not html.is_file():
+            print(f"render-gate-srs --census: html not found: {html}", file=sys.stderr)
+            return 2
+        if args.base_url:
+            return run_census(args.base_url, html.name, counts, shots)
+        with serve(html.parent) as base_url:
+            return run_census(base_url, html.name, counts, shots)
+
+    # ---- gate F (visual 健全性) ----
     if args.selftest:
         if args.base_url:
             return run_selftest(args.base_url)

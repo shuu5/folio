@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: dark-only pseudo fabrication</title>
+<style>
+  /* census-dark-pseudo: dark scheme でのみ .fid::after で偽テキストを注入する条件付き 2b8 捏造。
+     light で clean・dark で pseudo-content-fabrication 発火 = census の scheme 直積 plumbing 証明
+     (prefers-color-scheme 条件下の捏造を見落とさないことを固定。 solid 専用 dark-contrast と同型)。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  tr{ display:block; margin:8px 0; }
+  @media (prefers-color-scheme: dark){ .fid::before{ content:"承認済 "; color:#0a0; } }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

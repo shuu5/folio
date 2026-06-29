@@ -897,6 +897,44 @@ expect_srs_fail "RG1-b ★<script> コンテナで要素を包む OMISSION (459-
 sed 's#</body>#<SCRIPT>void 0;</SCRIPT></body>#' "$TMP/art.html" > "$TMP/rg1c.html"
 expect_srs_fail "RG1-c ★大文字 <SCRIPT> (case-robust) を script-ban が捕捉" "$BASE" "$TMP/rg1c.html"
 
+# ===== folio-6jb render-gate census slice 2: 描画後 content-fidelity (2b8 pseudo-content 捏造 / 459 描画後 omission) =====
+# census は render を要する gate F の sibling。 renderer 在環境 (A34 と同じ $RGRUN) でのみ実行し、 不在なら honest SKIP。
+# genuine art.html を mutate し、 静的 floor (make_body は <style> 空化 / comment verbatim) を素通りする render 依存の
+# 捏造 (semantic セレクタ ::after content) / 隠蔽 (comment・条件付き display:none で非描画) を census が捕捉することを確認する。
+# 期待件数は contract から導出 (verify-srs.sh と同経路)。 census detector は render-gate-srs.py --census が SSoT (selftest=$RGRUN --census --selftest)。
+CEXPECT="ears-requirement-row=$(yq -r '.requirements | length' "$BASE"),nfr-metric-row=$(yq -r '.nfr | length' "$BASE")"
+expect_census_fail() { # label html  (render census が exit!=0 を期待)
+  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1; then ng "$1 (census が PASS した)"; else ok "$1"; fi
+}
+expect_census_pass() { # label html
+  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1; then ok "$1"; else ng "$1 (census FAIL)"; fi
+}
+if [[ -z "$RGRUN" ]]; then
+  echo "  [SKIP] RG2 census detector (playwright renderer 不在 — CI/uv で render-gate-srs.py --census を実行)"
+else
+  # census detector の自己検出力 (fixture・kind 完全一致・viewport/scheme plumbing・fail-closed)
+  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --selftest >/dev/null 2>&1; then
+    ok "RG2-selftest census detector (pseudo-content 2b8 / 描画後 omission 459 × light/dark × viewport) 全 PASS"
+  else ng "RG2-selftest census detector が FAIL"; fi
+  # 正対照: genuine artifact は census PASS (捏造/隠蔽なし)
+  expect_census_pass "RG2-pass ★genuine artifact は census PASS (描画後 content-fidelity clean)" "$TMP/art.html"
+  # RG2-a 2b8: semantic セレクタ .fid に ::after content で偽サフィックス注入 (<style> 追記)。 make_body は <style> 空化で静的素通り。
+  perl -0777 -pe 's{</style>}{.fid::after{content:"-改竄済";}\n</style>}' "$TMP/art.html" > "$TMP/rg2a.html"
+  expect_census_fail "RG2-a ★pseudo-content 捏造 (.fid::after content=2b8) を census 反転 assert が捕捉" "$TMP/rg2a.html"
+  # RG2-b 459-comment: 要件行 1 本を HTML コメントで包む。 静的 grep は数えるが browser 非描画 → 可視 < 期待。
+  perl -0777 -pe 's{(<tr[^>]*data-component="ears-requirement-row"[^>]*>.*?</tr>)}{<!-- $1 -->}s' "$TMP/art.html" > "$TMP/rg2b.html"
+  expect_census_fail "RG2-b ★comment 隠蔽 OMISSION (459-comment) を census 可視 row count が捕捉" "$TMP/rg2b.html"
+  # RG2-c 条件付き omission: 狭幅でのみ NFR 行を display:none。 census の viewport 直積が条件付き隠蔽を捕捉。
+  perl -0777 -pe 's{</style>}{\@media(max-width:400px){[data-component="nfr-metric-row"]{display:none!important;}}\n</style>}' "$TMP/art.html" > "$TMP/rg2c.html"
+  expect_census_fail "RG2-c ★条件付き隠蔽 (@media 狭幅 display:none) を census viewport 直積が捕捉" "$TMP/rg2c.html"
+  # RG2-d 条件付き 2b8: dark scheme でのみ ::after content 注入。 census の scheme 直積が条件付き捏造を捕捉。
+  perl -0777 -pe 's{</style>}{\@media(prefers-color-scheme:dark){.fid::after{content:"承認済";}}\n</style>}' "$TMP/art.html" > "$TMP/rg2d.html"
+  expect_census_fail "RG2-d ★条件付き捏造 (@media dark .fid::after) を census scheme 直積が捕捉" "$TMP/rg2d.html"
+  # RG2-e T7 fail-closed: 全要件/NFR 行を display:none。 可視 0 = render 破綻と判定し broken-render で FAIL (omission 0=clean と取り違えない)。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"],[data-component="nfr-metric-row"]{display:none!important;}\n</style>}' "$TMP/art.html" > "$TMP/rg2e.html"
+  expect_census_fail "RG2-e ★T7 fail-closed (全行 display:none → 可視0 を broken-render で FAIL)" "$TMP/rg2e.html"
+fi
+
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。
 if [[ "$fail" -ne 0 ]]; then echo "PASS=$pass FAIL=$fail"; echo "RESULT: 取りこぼしあり (round-7/wq4 含む)"; exit 1; fi

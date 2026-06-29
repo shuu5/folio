@@ -291,3 +291,76 @@ window.__folioSrsRenderProbe = function (scheme) {
 
   return { scheme, textChecked, gradientSkipped, violations };
 };
+
+/*
+ * folio SRS render census probe — gate F (visual 健全性) の *sibling gate*。
+ * gate F が「見えるが崩れている」を見るのに対し、 本 census は「契約上あるべき内容が描画後に存在するか・
+ * 描画後に偽の内容が注入されていないか」= **描画後 content-fidelity** を見る (folio-6jb 縦軸)。
+ * folio-wq4 final ceiling が carve した 2 render 依存 vector を封鎖する:
+ *   (2b8) pseudo-content-fabrication — contract-bearing semantic セレクタ (.role/.who/.en/.gword/.gdef/
+ *         .stamp/.fid) に ::before/::after の content で *偽テキストを注入* する捏造。 静的 grep (make_body は
+ *         <style> を空化) を素通りし、 render してはじめて見える。 **反転 assert**: これら semantic セレクタは
+ *         genuine 出力では一切 pseudo-content を持たない (verified) ゆえ、 content が none/normal 以外なら
+ *         捏造とみなす。 allowlist 列挙でなく「semantic 集合は空」を不変条件化するため chrome CSS 拡張 (装飾用
+ *         ::before 等) に drift 免疫で、 attr() 動的注入も render が解決した値を見るので捕捉する。
+ *   (459)  census-omission/excess — 必須要素 (要件行/NFR 行) を comment/style 等で包み静的 grep を通しつつ
+ *         **ブラウザ非描画**にする OMISSION。 描画後の *可視* element 数を contract 由来の期待件数と照合し、
+ *         可視数 < 期待 を omission、 可視数 > 期待 を excess として検出する。 @media や prefers-color-scheme
+ *         条件下での display:none 隠蔽も、 caller が light/dark × 複数 viewport で本 probe を呼ぶため捕捉される。
+ *
+ * 期待件数は caller (verify-srs.sh) が contract から導出し JSON で注入する (probe は contract schema 非依存・
+ * 論点5 決定)。 戻り値: { totalExpected, totalVisible, violations: [{kind, ...}] }。
+ *   - totalVisible==0 && totalExpected>0 は census-omission で必ず FAIL に倒れる (T7 fail-closed: render 破綻と
+ *     genuine omission を caller が区別して報告する。 描画されていない=「clean」と取り違えない)。
+ *
+ * @param expectJson  JSON 文字列 { counts: { "<data-component>": <int>, ... }, pseudo: ["<class>", ...] }
+ */
+window.__folioSrsRenderCensus = function (expectJson) {
+  const expect = JSON.parse(expectJson);
+  /* 描画されているか (render probe と同基準): display:none / closed details / visibility:hidden / 完全透明を
+     不可視扱い。 census-omission は「契約要素が読者に届かない」を見るので、 この visible 判定が境界になる。 */
+  const visible = (el) =>
+    typeof el.checkVisibility === 'function'
+      ? el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true, checkOpacity: true })
+      : true;
+  const snippet = (el) => ((el && el.textContent) || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+  const violations = [];
+
+  /* === (2b8) pseudo-content-fabrication — semantic セレクタは pseudo-content を持たない (反転 assert) === */
+  for (const cls of (expect.pseudo || [])) {
+    for (const el of document.querySelectorAll('.' + cls)) {
+      for (const pe of ['::before', '::after']) {
+        const c = getComputedStyle(el, pe).content;
+        // genuine = 'none'(pseudo 無し) か 'normal'(content 未指定)。 それ以外 (引用文字列・attr() 解決値・
+        // counter()・空文字 '""'・zero-width 等) は semantic 要素への注入ゆえ捏造とみなす。
+        if (c && c !== 'none' && c !== 'normal') {
+          violations.push({ kind: 'pseudo-content-fabrication', text: `.${cls}${pe} 「${snippet(el)}」 に content=${c}`, sel: cls, pseudo: pe, content: c });
+        }
+      }
+    }
+  }
+
+  /* === (459) census-omission/excess — 可視 element 数 == contract 由来期待件数 === */
+  let totalExpected = 0, totalVisible = 0;
+  for (const sel of Object.keys(expect.counts || {})) {
+    const exp = expect.counts[sel];
+    totalExpected += exp;
+    const all = [...document.querySelectorAll(`[data-component="${sel}"]`)];
+    const vis = all.filter(visible).length;
+    totalVisible += vis;
+    if (vis !== exp) {
+      violations.push({
+        kind: vis < exp ? 'census-omission' : 'census-excess',
+        text: `${sel}: 可視 ${vis} 件 / 期待 ${exp} 件 (静的 ${all.length} 件)`,
+        sel, visible: vis, expected: exp, total: all.length,
+      });
+    }
+  }
+
+  return { totalExpected, totalVisible, violations };
+};
+
+// page.evaluate(PROBE_JS) の *完了値* が関数 (= 直前の window 代入式の値) だと playwright がそれを
+// 「呼ぶべき関数」と見なし arg=null で自動 call してしまう (census は JSON.parse(null)→null で crash)。
+// 完了値を undefined に固定し、 本ファイル評価は probe 定義だけに留める (caller が __folioSrs* を明示 call する)。
+void 0;

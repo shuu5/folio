@@ -13,6 +13,9 @@
 #   gate F  render 健全性     : render-gate-srs.py (playwright・light/dark × 3 viewport) で low-contrast /
 #                               horizontal-overflow / component-overlap を検出。 renderer 在環境で実行し、
 #                               不在環境では honest SKIP (PASS と詐称しない・floor 不完全と明示)。
+#   gate F2 描画後 content    : render-gate-srs.py --census (gate F の sibling・folio-6jb 縦軸)。 静的 floor を
+#           (census)            素通りする render 依存の捏造 (pseudo-content 2b8) / 隠蔽 (描画後 omission 459) を、
+#                               contract 由来期待件数 + semantic セレクタ pseudo-content 不変条件で検出。 honest SKIP は gate F と独立。
 #   gate G  内容完全性(no-TBD): MUST 部品の必須スロット非空 (verify-fab --artifact) + placeholder トークン (TBD/未定 等) =0
 #   gate H  fidelity meta     : fidelity-sync-meta の 3 項目が *非空白* で埋まる
 #   visual-first              : 各章 (footer 除く) に非 prose 部品が ≥1 (字だけの章 =0)
@@ -181,33 +184,54 @@ echo "--- gate F: render 健全性 (playwright: low-contrast / horizontal-overfl
 # のみ実行し、 不在環境では honest SKIP (floor 不完全と明示・PASS と詐称しない)。 bash-only の高速 floor
 # が要るとき (敵対スイート等) は SRS_SKIP_RENDER=1 で明示的に外す。 gateF = pass | fail | skip。
 RENDER_GATE="$SCRIPT_DIR/render-gate-srs.py"
-gateF="skip"
+# render skip 判定 + RUNNER 検出を gate F / census で共有する (重複検出を避ける)。 SRS_SKIP_RENDER=1
+# (敵対 bash floor) / render-gate-srs.py 不在 / playwright 不在 はいずれも honest SKIP (PASS 詐称しない)。
+RENDER_SKIP=""; RUNNER=""
 if [[ "${SRS_SKIP_RENDER:-0}" == "1" ]]; then
-  echo "  [SKIP] gate F (SRS_SKIP_RENDER=1 — bash floor のみ。 render-gate-srs.py を別途実行せよ)"
+  RENDER_SKIP="SRS_SKIP_RENDER=1 — bash floor のみ。 render-gate-srs.py を別途実行せよ"
 elif [[ ! -f "$RENDER_GATE" ]]; then
-  echo "  [SKIP] gate F (render-gate-srs.py 不在)"
+  RENDER_SKIP="render-gate-srs.py 不在"
 else
-  RUNNER=""
   if python3 -c "import playwright" >/dev/null 2>&1; then RUNNER="python3"
   elif command -v uv >/dev/null 2>&1; then RUNNER="uv run --with playwright==1.60.0 python"
   elif [[ -x "$HOME/.local/bin/uv" ]]; then RUNNER="$HOME/.local/bin/uv run --with playwright==1.60.0 python"
   fi
-  if [[ -z "$RUNNER" ]]; then
-    echo "  [SKIP] gate F (playwright renderer 不在 — CI または uv 環境で render-gate-srs.py を実行)"
-  else
-    echo "  render-gate-srs.py を実行 ($RUNNER)..."
-    if $RUNNER "$SCRIPT_DIR/render-gate-srs.py" "$HTML" 2>&1 | sed 's/^/    /'; then gateF="pass"; else gateF="fail"; fail=1; fi
-  fi
+  [[ -z "$RUNNER" ]] && RENDER_SKIP="playwright renderer 不在 — CI または uv 環境で render-gate-srs.py を実行"
+fi
+
+gateF="skip"
+if [[ -n "$RENDER_SKIP" ]]; then
+  echo "  [SKIP] gate F ($RENDER_SKIP)"
+else
+  echo "  render-gate-srs.py を実行 ($RUNNER)..."
+  if $RUNNER "$RENDER_GATE" "$HTML" 2>&1 | sed 's/^/    /'; then gateF="pass"; else gateF="fail"; fail=1; fi
+fi
+
+echo
+echo "--- gate F2 (census): 描画後 content-fidelity (pseudo-content 捏造 2b8 / 描画後 omission 459) ---"
+# gate F の sibling gate (folio-6jb 縦軸)。 gate F が「見えるが崩れている」を見るのに対し、 census は
+# 「契約上あるべき内容が描画後に存在するか・偽の内容が注入されていないか」を見る。 静的 floor (make_body は
+# <style> 空化 / comment verbatim 保持) を素通りする render 依存の捏造 (2b8 = ::after content) と隠蔽
+# (459 = comment/display:none で非描画) を、 実 render で contract 由来期待件数と semantic セレクタの
+# pseudo-content 不変条件に照合する。 期待件数は contract から導出 (論点5: probe は schema 非依存・件数のみ注入)。
+# honest-SKIP は gate F と独立に報告する (gate identity 分離・論点4)。
+gateCensus="skip"
+CENSUS_EXPECT="ears-requirement-row=$(q '.requirements | length'),nfr-metric-row=$(q '.nfr | length')"
+if [[ -n "$RENDER_SKIP" ]]; then
+  echo "  [SKIP] gate F2/census ($RENDER_SKIP)"
+else
+  echo "  render-gate-srs.py --census --expect '$CENSUS_EXPECT' を実行 ($RUNNER)..."
+  if $RUNNER "$RENDER_GATE" --census --expect "$CENSUS_EXPECT" "$HTML" 2>&1 | sed 's/^/    /'; then gateCensus="pass"; else gateCensus="fail"; fail=1; fi
 fi
 
 echo
 echo "=========================================================================="
 if [[ "$fail" -eq 0 ]]; then
-  if [[ "$gateF" == "pass" ]]; then
-    echo "RESULT: floor PASS (gate A-F + visual-first) — ただし CEILING=PENDING (*GREEN ではない*)"
+  if [[ "$gateF" == "pass" && "$gateCensus" == "pass" ]]; then
+    echo "RESULT: floor PASS (gate A-F + census + visual-first) — ただし CEILING=PENDING (*GREEN ではない*)"
   else
-    echo "RESULT: floor PASS (gate A-E,G,H + visual-first / gate F 未実行) — ただし CEILING=PENDING (*GREEN ではない*)"
-    echo "  ※ gate F (render) は未実行 (renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
+    echo "RESULT: floor PASS (gate A-E,G,H + visual-first / render gate 未完: gateF=$gateF census=$gateCensus) — ただし CEILING=PENDING (*GREEN ではない*)"
+    echo "  ※ render gate (F=見た目崩れ / census=描画後 content-fidelity) が未実行 (renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
   fi
   echo "  ceiling = persona-walk-srs + fidelity-srs (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
   echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
