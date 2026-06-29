@@ -884,6 +884,19 @@ expect_verify_fail "WQ4-g2 ★不正 close 文法 </style x> (close-tag parser-d
 perl -0777 -pe 's{</body>}{<style></style/><span class="role">偽承認(slash close)</span></style></body>}' "$TMP/good.html" > "$TMP/wq4g3.html"
 expect_verify_fail "WQ4-g3 ★不正 close 文法 </style/> を fail-closed で拒否" "$BASE" "$TMP/wq4g3.html"
 
+# ===== folio-6jb render-gate census slice 1: 静的 script-ban (4gz render-time DOM-swap / 459 script-container) =====
+# SRS は <script>==0 (verified) ゆえ任意の <script> = 捏造コンテナ。 render を要さず pack-additive 静的 invariant
+# (この doc-type の HTML は <script>==0) で原理封鎖する。 検査は verify-srs.sh floor ゆえ expect_srs_fail。
+# art.html=健全充填済 artifact を mutate し script 注入のみで FAIL を分離 (script-ban 固有の検出を確認)。
+sed 's#</body>#<script>document.querySelector(".who").textContent="偽の取締役会が承認";</script></body>#' "$TMP/art.html" > "$TMP/rg1a.html"
+expect_srs_fail "RG1-a ★注入 <script> (render-time DOM-swap container=4gz) を script-ban が捕捉" "$BASE" "$TMP/rg1a.html"
+# 459 script-container: 必須要素を <script type=template> で包むと静的 grep を素通しつつ browser 非描画 → script-ban が捕捉。
+sed 's#<body>#<body><script type="text/template"><tr data-component="ears-requirement-row" data-req-id="FR99">隠した要件</tr></script>#' "$TMP/art.html" > "$TMP/rg1b.html"
+expect_srs_fail "RG1-b ★<script> コンテナで要素を包む OMISSION (459-script) を script-ban が捕捉" "$BASE" "$TMP/rg1b.html"
+# case-robust: 大文字 <SCRIPT> も タグ境界 (\b) + case-insensitive で捕捉。
+sed 's#</body>#<SCRIPT>void 0;</SCRIPT></body>#' "$TMP/art.html" > "$TMP/rg1c.html"
+expect_srs_fail "RG1-c ★大文字 <SCRIPT> (case-robust) を script-ban が捕捉" "$BASE" "$TMP/rg1c.html"
+
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。
 if [[ "$fail" -ne 0 ]]; then echo "PASS=$pass FAIL=$fail"; echo "RESULT: 取りこぼしあり (round-7/wq4 含む)"; exit 1; fi

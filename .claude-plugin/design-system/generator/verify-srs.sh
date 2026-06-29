@@ -165,6 +165,17 @@ vf="$(perl -0777 -ne '
 chk "visual-first: 字だけの章 (非prose部品なし) == 0" 0 "$vf"
 
 echo
+echo "--- script-ban: SRS HTML は <script> ゼロ (4gz render-time DOM-swap / 459 script-container OMISSION を静的封鎖) ---"
+# SRS は <script> を一切 emit しない (verified)。 ゆえに任意の <script> は捏造コンテナ = (a) 検証通過後に
+# innerHTML/insertAdjacentHTML で genuine な要件/承認/章を捏造差替えする render-time DOM-swap (folio-4gz)、
+# (b) 必須要素を <script> で包み静的 grep を素通しつつブラウザ非描画にする OMISSION (folio-459 script-container)。
+# render を要さず pack-additive 静的 invariant (この doc-type の HTML は <script>==0) で原理封鎖する
+# (render census でなく静的 floor・render ゼロコスト・script-free 5 pack 共通の fab-free invariant の SRS 適用)。
+# raw $HTML を case-insensitive・タグ境界 (\b) で count (head/body 双方を被覆・make_body の body-only view に依存しない)。
+scriptN="$(perl -0777 -ne 'my $n = () = /<script\b/gi; print $n+0;' "$HTML")"
+chk "script-ban: <script> 出現 == 0 (4gz/459-script 静的封鎖)" 0 "$scriptN"
+
+echo
 echo "--- gate F: render 健全性 (playwright: low-contrast / horizontal-overflow / component-overlap) ---"
 # gate F = render-gate-srs.py (light/dark × 3 viewport)。 重い playwright 検査ゆえ renderer 在環境で
 # のみ実行し、 不在環境では honest SKIP (floor 不完全と明示・PASS と詐称しない)。 bash-only の高速 floor
