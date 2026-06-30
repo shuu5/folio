@@ -1,0 +1,15 @@
+<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: transform:scaleX squash omission (FF2 / round-3d)</title>
+<style>
+  /* census-squashx (round-3d wf_6e852552 FF2 scaleX): FR1 行を transform:scaleX(0.02) で横圧縮する (高さ無傷ゆえ
+     最小可読高 floor を素通り)。 per-char 横密度 floor (可視幅/(文字数×fontSize) < 0.15) が読者非可読を omission に倒す。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; } tr{ display:block; margin:8px 0; }
+  tr.crushx{ transform: scaleX(0.02); transform-origin: left; }
+</style></head><body>
+<table>
+  <tr class="crushx" data-component="ears-requirement-row" data-req-id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body></html>

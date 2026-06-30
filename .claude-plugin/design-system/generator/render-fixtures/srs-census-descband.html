@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: descendant overflow micro-band omission (FF2 / round-3c)</title>
+<style>
+  /* census-descband (folio-hef S1 / round-3c wf_534bb2c7 FF2 descendant band):
+     FR1 行 text を .band{line-height:1; height:2px; overflow:hidden} 子孫 wrapper で 2px glyph-top band に
+     クリップする (同位置・off-screen でなく ink は 2px 帯だけ paint・可読不能)。 旧 area-only 閾値は 293px×2px=586 で
+     素通った。 visibleTextArea の最小可読高 floor が 2px<6.4px の fragment を非算入し FR1 を omission に倒す。
+     FR2/NFR1 は intact ゆえ census-omission を kind 完全一致で固定する。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  tr{ display:block; margin:8px 0; }
+  .band{ display:inline-block; line-height:1; height:2px; overflow:hidden; vertical-align:top; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1"><td><span class="band"><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</span></td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

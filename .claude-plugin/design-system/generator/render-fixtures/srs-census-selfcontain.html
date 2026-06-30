@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: self contain:paint clip (FF2 self / folio-hef S1 ceiling)</title>
+<style>
+  /* census-selfcontain (folio-hef S1・独立 ceiling wf_b544a704):
+     counted 行 *自身* に contain:paint を当て、 text-bearing 子 (td) を position で box 外へ押し出す。
+     contain:paint は子の paint を行 box にクリップするため td テキストが読者から消える。 行の box は非0
+     (visibleArea>16) ゆえ祖先走査の FF2 を素通りした (祖先でなく自身の self-clip)。 selfPaintClipsContent
+     が行の content rect (Range) と self-clip box の交差 ≤16 を omission と判定する。 FR1 のみ隠し FR2/NFR1
+     は可視に残すため totalVisible=2>0 (T7 broken-render に倒れず) かつ可視 ears 1<期待 2 = census-omission。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  tr{ display:block; margin:8px 0; }
+  tr.hide{ contain: paint; }
+  tr.hide td{ position: relative; top: -2000px; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" class="hide"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

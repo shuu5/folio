@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-29T14:08:32Z",
+  "generatedAt": "2026-06-30T07:44:47Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2097,7 +2097,7 @@
         "id": "REQ-VER-024",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-024",
-        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 script-ban 〔&lt;script&gt; == 0〕 + visual-deception unicode ban 〔bidi-override / zero-width・BOM == 0・次元B〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 hidden-render ban 群 〔&lt;script&gt; / whole-tag &lt;template&gt; / nested browsing context / inline-only (replaced・interactive・form-associated 要素 〔img…button + progress/meter〕 + url(data:)) / scroll-pseudo / list-marker (@counter-style / 文字列 list-style) == 0〕 + visual-deception ban 〔bidi-override codepoint / zero-width・BOM / &lt;bdo&gt;・unicode-bidi override == 0・次元B〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-025",
@@ -2115,7 +2115,7 @@
         "id": "REQ-VER-027",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-027",
-        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) 任意要素 + body/html の ::before/::after/::marker content 注入を inverse-allowlist (genuine chrome allowlist の補集合 = 捏造) で、 (folio-459) 描画後の 実描画部品数 (rendered() = checkVisibility ∧ 面積・clip-path・実効 opacity・overflow で判定) と .plain (平易説明・rendered() ∧ 非空 text) を contract 由来期待件数 (DOM 自己参照しない anchor) と照合して検出。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 被覆は prefers-color-scheme と検査 3 viewport 幅のみで、 他軸隠蔽 (font-size:0 / off-screen / 非検査軸 @media / filter / z-order occlusion 等) は floor 射程超ゆえ carve (bd folio-cpf・own-content/contain/ink-zero/shadow/coverage 等は folio-hef・LLM ceiling backstop)。 gate F と独立に honest SKIP 報告し、 検出器・期待件数導出は machine 部。"
+        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) 任意要素 + body/html の ::before/::after/::marker content 注入を inverse-allowlist (genuine chrome allowlist の補集合 = 捏造) で、 (folio-459) 描画後の 実描画部品数 (rendered() = checkVisibility ∧ 面積・clip-path・実効 opacity・overflow で判定) と .plain (平易説明・rendered() ∧ 非空 text) を contract 由来期待件数 (DOM 自己参照しない anchor) と照合し、 さらに (folio-hef S1) 要素自身の content による replaced-element 捏造を own-content scan・contain:paint クリップ + 縦潰し (transform:scaleY / 微小 band) を rendered() の contain 祖先交差 + 最小可読高 floor・CSS image sink (background-image 等の data:/外部 url()・静的 url-ban を回避する CSS escape / image-set も正規化値で) を computed-style image-sink census・generated-content scroll pseudo (::scroll-button/::scroll-marker) を pseudo 走査拡張で封鎖して検出 (declarative shadow DOM 等は REQ-VER-024 の静的 ban 群が担う)。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 被覆は prefers-color-scheme と検査 3 viewport 幅のみで、 他軸隠蔽 (off-screen / 非検査軸 @media / filter / z-order occlusion 等) は floor 射程超ゆえ carve (bd folio-cpf・ink-zero/coverage/free-prose 等は folio-hef・LLM ceiling backstop)。 gate F と独立に honest SKIP 報告し、 検出器・期待件数導出は machine 部。"
       },
       {
         "id": "REQ-XREF-001",

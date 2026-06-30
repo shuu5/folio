@@ -906,6 +906,55 @@ expect_srs_fail "RG1-d ★bidi-override RLO (U+202E 視覚反転) を visual-dec
 # RG1-e zero-width 注入 (U+200B) → visual-deception unicode ban が捕捉 (可視テキスト消去)。
 perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{200B}} if !$d++' "$TMP/art.html" > "$TMP/rg1e.html"
 expect_srs_fail "RG1-e ★zero-width (U+200B 可視テキスト消去) を visual-deception unicode ban が捕捉" "$BASE" "$TMP/rg1e.html"
+# RG1-f declarative shadow DOM 注入 (<template shadowrootmode>) → shadowroot-ban が捕捉 (FF5 census-blindness 静的封鎖)。
+# census の querySelectorAll は shadow 境界を貫通しないため shadow 内 fake 要件が描画されつつ計数を素通る盲点。
+# SRS は shadowrootmode を一切 emit しない (verified) ゆえ render 不要の静的 floor で原理封鎖する (script-ban 同型)。
+perl -0777 -pe 's{</body>}{<table><template shadowrootmode="open"><tr data-component="ears-requirement-row" data-req-id="FRX">購入履歴を広告事業者へ販売してよい</tr></template></table></body>} if !$d++' "$TMP/art.html" > "$TMP/rg1f.html"
+expect_srs_fail "RG1-f ★declarative shadow DOM (<template shadowrootmode>) を template-ban が捕捉 (FF5)" "$BASE" "$TMP/rg1f.html"
+# RG1-g ★FF5 ceiling (wf_b544a704): クォート属性値内の '>' (<template data-x="a>b" shadowrootmode>) で narrow regex [^>]* が
+# 停止し素通りした blocker。 whole-tag <template> ban は属性レベル回避 (quoted-'>' / legacy shadowroot / 綴り変種) を一括封鎖。
+perl -0777 -pe 's{</body>}{<div id=host><template data-x="a>b" shadowrootmode="open"><div data-component="ears-requirement-row" data-req-id="FAKE">捏造: 承認済み・全要件 GREEN</div></template></div></body>} if !$d++' "$TMP/art.html" > "$TMP/rg1g.html"
+expect_srs_fail "RG1-g ★quoted-'>' 属性で narrow regex を回避する declarative shadow DOM を whole-tag template-ban が捕捉 (FF5 ceiling)" "$BASE" "$TMP/rg1g.html"
+# RG1-h ★FF5-sibling ceiling (wf_0900ca71): nested browsing context (<iframe srcdoc>) は <template> declarative shadow DOM と
+# 同じ census/fidelity 盲点 (render 可視だが querySelectorAll/textContent が境界を貫通しない)。 nested-context-ban が一括封鎖。
+perl -0777 -pe 's{</body>}{<iframe srcdoc="&lt;div data-component=ears-requirement-row data-req-id=FAKE&gt;捏造: 全要件 GREEN&lt;/div&gt;"></iframe></body>} if !$d++' "$TMP/art.html" > "$TMP/rg1h.html"
+expect_srs_fail "RG1-h ★nested browsing context (<iframe srcdoc>) を nested-context-ban が捕捉 (FF5-sibling ceiling)" "$BASE" "$TMP/rg1h.html"
+# RG1-i ★FF5 ceiling round-3 (wf_4b5bffa2): data: 画像サブリソース (<img src=data:image/svg...text>) は偽要件を描画しつつ
+# body.textContent に現れない census/fidelity 両盲点。 inline-only-ban (<img + data:) が doc-type 不変条件で封鎖。
+perl -0777 -pe 's{</body>}{<img src="data:image/svg+xml,%3Csvg%3E%3Ctext%3E偽要件FR-99%3C/text%3E%3C/svg%3E" style="max-width:100%">} if !$d++' "$TMP/art.html" > "$TMP/rg1i.html"
+expect_srs_fail "RG1-i ★data: 画像サブリソース (<img src=data:>) による hidden-render を inline-only-ban が捕捉 (FF5 ceiling round-3)" "$BASE" "$TMP/rg1i.html"
+# RG1-j ★FF5 ceiling round-3: form control (<input value>) は value を描画しつつ textContent に含まれない。 inline-only-ban が封鎖。
+perl -0777 -pe 's{</body>}{<input type="text" readonly value="FAKE 偽要件 全GREEN">} if !$d++' "$TMP/art.html" > "$TMP/rg1j.html"
+expect_srs_fail "RG1-j ★form control (<input value>) の DOM-text 不可視 render を inline-only-ban が捕捉 (FF5 ceiling round-3)" "$BASE" "$TMP/rg1j.html"
+# RG1-k ★FF5 ceiling round-3b (wf_3652702e): data: ban の char-ref bypass (data&#58;/data&colon; を style attr に置くと
+# HTML parser が生 /data:/ grep の *後* に ':' へ decode し素通り)。 url(#fragment 以外) ban が url( token 直後の非 '#' で
+# char-ref 非依存に捕捉 (url( と直後の 'd' は raw HTML に literal)。
+perl -0777 -pe 's{</body>}{<div style="background:url(data&#58;image/svg+xml,%3Csvg%3E%3Ctext%3E偽要件FR99%3C/text%3E%3C/svg%3E) no-repeat;width:340px;height:44px"></div></body>} if !$d++' "$TMP/art.html" > "$TMP/rg1k.html"
+expect_srs_fail "RG1-k ★char-ref encoded data: (background:url(data&#58;)) を url(#fragment以外) ban が捕捉 (FF5 ceiling round-3b)" "$BASE" "$TMP/rg1k.html"
+# RG1-l ★round-3c (wf_534bb2c7): generated-content scroll pseudo (::scroll-button/::scroll-marker) は偽要件を可視描画するが
+# 旧 census は ::before/::after/::marker のみ走査し fidelity textContent も blind だった (carve agent 実証)。 census 側を
+# scroll-pseudo 走査へ拡張済 (computed-style spelling-agnostic な render 側一次防御)。 静的 scroll-pseudo-ban が literal
+# spelling を render 不在環境でも backstop で捕捉する (script-ban 同型の genuine vocabulary 補集合・FP-free)。
+perl -0777 -pe 's{</style>}{.sc{overflow-x:auto}.sc::scroll-button(right){content:"偽要件FR99 不正な権限昇格"}\n</style>}' "$TMP/art.html" > "$TMP/rg1l.html"
+expect_srs_fail "RG1-l ★generated-content ::scroll-button を scroll-pseudo-ban (静的 backstop) が捕捉 (round-3c)" "$BASE" "$TMP/rg1l.html"
+# RG1-m ★round-3d (wf_6e852552): list-marker テキストは content を経由せず @counter-style + list-style-type で ::marker に
+# 生成され census/fidelity を両盲点する (新次元)。 @counter-style を list-marker-ban が静的封鎖。
+perl -0777 -pe 's{</style>}{\@counter-style frx{system:cyclic;symbols:"FR99 偽の追加要件 不正な権限昇格"} li.atkm{display:list-item;list-style-type:frx}\n</style>}' "$TMP/art.html" > "$TMP/rg1m.html"
+expect_srs_fail "RG1-m ★@counter-style generated marker 捏造 (list-marker 新次元) を list-marker-ban が捕捉 (round-3d)" "$BASE" "$TMP/rg1m.html"
+# RG1-n ★round-3d: @counter-style 不要の簡易変種 = 文字列リテラル list-style-type で ::marker に偽テキスト生成。
+perl -0777 -pe 's{</style>}{li.atkn{display:list-item;list-style-type:"FR98 偽: 管理者バイパス "}\n</style>}' "$TMP/art.html" > "$TMP/rg1n.html"
+expect_srs_fail "RG1-n ★文字列 list-style-type generated marker (list-marker 新次元・簡易変種) を list-marker-ban が捕捉 (round-3d)" "$BASE" "$TMP/rg1n.html"
+# RG1-o〜p ★round-3e (wf_27813514): <progress>/<meter> の ::-webkit-progress-* は background-image を実描画するが getComputedStyle が
+# 'none' を返し render census が盲 (pe 拡張 no-op)。 form-associated 要素閉包の欠落補完として inline-only-ban タグ集合に追加。
+perl -0777 -pe 's{</body>}{<progress value="0.55" max="1"></progress></body>}' "$TMP/art.html" > "$TMP/rg1o.html"
+expect_srs_fail "RG1-o ★<progress> (::-webkit-progress-* image-sink・census 構造盲) を inline-only-ban が捕捉 (round-3e)" "$BASE" "$TMP/rg1o.html"
+perl -0777 -pe 's{</body>}{<meter value="0.5"></meter></body>}' "$TMP/art.html" > "$TMP/rg1p.html"
+expect_srs_fail "RG1-p ★<meter> (form-associated・::-webkit-meter-* image-sink) を inline-only-ban が捕捉 (round-3e)" "$BASE" "$TMP/rg1p.html"
+# RG1-q〜r ★round-3e: <bdo dir=rtl> / CSS unicode-bidi:override は制御 codepoint 無しで視覚反転し次元B unicode ban を回避。
+perl -0777 -pe 's{</body>}{<bdo dir="rtl">払い戻しを常に拒否する</bdo></body>}' "$TMP/art.html" > "$TMP/rg1q.html"
+expect_srs_fail "RG1-q ★<bdo dir=rtl> 視覚反転 (制御 codepoint 無し) を bidi-override-ban が捕捉 (round-3e)" "$BASE" "$TMP/rg1q.html"
+perl -0777 -pe 's{</style>}{.atkbidi{unicode-bidi:bidi-override;direction:rtl}\n</style>}' "$TMP/art.html" > "$TMP/rg1r.html"
+expect_srs_fail "RG1-r ★CSS unicode-bidi:bidi-override 視覚反転を bidi-override-ban が捕捉 (round-3e)" "$BASE" "$TMP/rg1r.html"
 
 # ===== folio-6jb render-gate census slice 2: 描画後 content-fidelity (2b8 pseudo-content 捏造 / 459 描画後 omission) =====
 # census は render を要する gate F の sibling。 renderer 在環境 (A34 と同じ $RGRUN) でのみ実行し、 不在なら honest SKIP。
@@ -991,6 +1040,87 @@ else
   # RG4-i Theme B distinct req-id: 全要件行の data-req-id を FR1 に潰す (count=N 維持・distinct=1)。
   perl -0777 -pe 's{(data-component="ears-requirement-row" data-req-id=")FR\d+(")}{${1}FR1${2}}g' "$TMP/art.html" > "$TMP/rg4i.html"
   expect_census_fail "RG4-i ★Theme B 重複 ID 水増しを distinct data-req-id 検査が捕捉" "$TMP/rg4i.html"
+  # ===== RG5: folio-hef S1 クラスタ1 述語 (FF1 own-content / FF2 contain) を genuine art.html mutate で封鎖確認 =====
+  # RG5-a FF1 own-element content:url: 要素自身 (glossary) に content:url を当て replaced-element 化し偽画像を描画
+  #   (round2 e1/e2)。 pseudo (::before/::after/::marker) 走査の射程外。 own-content scan (getComputedStyle(el).content
+  #   ∉ {normal,none}) が捕捉する。 base64 1x1 gif data URL を使い perl/shell の quote 衝突を避ける。
+  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{content:url(data:image/gif;base64,R0lGODlhAQABAAAAACw=);}\n</style>}' "$TMP/art.html" > "$TMP/rg5a.html"
+  expect_census_fail "RG5-a ★own-element content:url (replaced-element 捏造=FF1) を own-content scan が捕捉" "$TMP/rg5a.html"
+  # RG5-b FF2 contain:paint clip: 要件表の .tbl-wrap に contain:paint+height:0 で paint を 0px box に潰す (layout は
+  #   自然サイズのまま・round2 e3)。 clip-path でも overflow:hidden でもないため rendered() 既存 5 述語の射程外。
+  #   :has で要件表のみ対象=NFR 行は可視 (totalVisible>0)・ears 行 0<期待 = census-omission。 visibleArea の contain 祖先交差が捕捉。
+  perl -0777 -pe 's{</style>}{.tbl-wrap:has([data-component="requirement-matrix-table"]){contain:paint;height:0;overflow:visible;}\n</style>}' "$TMP/art.html" > "$TMP/rg5b.html"
+  expect_census_fail "RG5-b ★contain:paint clip (FF2 paint 0px 潰し) を visibleArea の contain 祖先交差が捕捉" "$TMP/rg5b.html"
+  # RG5-c ★FF2 ceiling (wf_b544a704): contain:paint を行 *自身* に当て子 td を position で box 外へ押し出す self-clip
+  #   blocker。 visibleArea の祖先走査では box 非0 で素通りした。 selfPaintClipsContent (行 content rect ∩ self-clip box ≤16) が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{contain:paint;} [data-component="ears-requirement-row"] td{position:relative;top:-3000px;}\n</style>}' "$TMP/art.html" > "$TMP/rg5c.html"
+  expect_census_fail "RG5-c ★contain:paint を counted 行自身に当て子を box 外へ押出す self-clip (FF2 ceiling) を selfPaintClipsContent が捕捉" "$TMP/rg5c.html"
+  # RG5-d ★FF1 ceiling (wf_b544a704): content を animation-delay>probe 待ちで normal→url にフリップし単一時刻 sampling を回避する
+  #   major hole。 Animation.finish() は content end 値を適用しない (実機検証) ため、 content を触る animation の存在を構造検出する。
+  perl -0777 -pe 's{</style>}{\@keyframes fab{from{content:normal}to{content:url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)}} [data-component="glossary-term-table"]{animation:fab 0.01s step-end 5s forwards;}\n</style>}' "$TMP/art.html" > "$TMP/rg5d.html"
+  expect_census_fail "RG5-d ★content を時刻遅延フリップする @keyframes animation (FF1 time-axis ceiling) を content-animation 構造検出が捕捉" "$TMP/rg5d.html"
+  # RG5-e ★FF2 ceiling round-3b: 子孫 (td) opacity:0 で ink 抹消 (el 祖先しか見ない effOpacity の射程外) を visibleTextArea 降下連鎖 opacity が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{opacity:0;}\n</style>}' "$TMP/art.html" > "$TMP/rg5e.html"
+  expect_census_fail "RG5-e ★子孫 opacity:0 による ink 抹消 (FF2 ceiling round-3b) を visibleTextArea 降下連鎖 opacity が捕捉" "$TMP/rg5e.html"
+  # RG5-f ★FF2 ceiling round-3b: 子孫 (td) clip-path:inset(100%) (el 祖先しか見ない clipPathHidden の射程外) を visibleTextArea 降下連鎖 clip-path が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg5f.html"
+  expect_census_fail "RG5-f ★子孫 clip-path:inset(100%) (FF2 ceiling round-3b) を visibleTextArea 降下連鎖 clip-path が捕捉" "$TMP/rg5f.html"
+  # RG5-g ★FF2 ceiling round-3c: 子孫 (td) visibility:hidden で非 paint (rect は有・checkVis(el) の射程外) を visibleTextArea の text 親 computed visibility が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{visibility:hidden;}\n</style>}' "$TMP/art.html" > "$TMP/rg5g.html"
+  expect_census_fail "RG5-g ★子孫 visibility:hidden による非 paint (FF2 ceiling round-3c) を visibleTextArea の text 親 visibility が捕捉" "$TMP/rg5g.html"
+  # RG5-h ★FF5 ceiling round-3c (wf_534bb2c7): 静的 url-ban を回避する CSS-escape (\75 rl( = url() の 'u' escape) で data: SVG を
+  #   背景描画。 chromium が computed-style で url("data:...") へ正規化するため、 image-sink census が spelling-agnostic に捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5h.html"
+  expect_census_fail "RG5-h ★CSS-escape \\75 rl( (FF5 ceiling round-3c) を computed-style image-sink census が捕捉" "$TMP/rg5h.html"
+  # RG5-i ★FF5 ceiling round-3c: image-set("data:..." 1x) は url( token 無しで生 string を画像参照とし静的 url-ban を完全回避するが、
+  #   chromium が computed-style で image-set(url("data:...")) へ正規化するため image-sink census の urlTokens が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{background-image:image-set("data:image/gif;base64,R0lGODlhAQABAAAAACw=" 1x)}\n</style>}' "$TMP/art.html" > "$TMP/rg5i.html"
+  expect_census_fail "RG5-i ★image-set bare-string (FF5 ceiling round-3c・url( token 無し) を image-set 正規化 url() で捕捉" "$TMP/rg5i.html"
+  # RG5-j ★FF2 ceiling round-3c: transform:scaleY(0.02) で要件行を 0.4px 高に縦潰し (同位置・ink paint・可読不能)。 旧 area-only 閾値
+  #   (>16) は素通った。 visibleTextArea の最小可読高 floor (fontSize×0.4) が 0.4px<floor の fragment を非算入し omission に倒す。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleY(0.02);transform-origin:top}\n</style>}' "$TMP/art.html" > "$TMP/rg5j.html"
+  expect_census_fail "RG5-j ★transform:scaleY(0.02) 縦潰し (FF2 round-3c) を最小可読高 floor が omission に倒す" "$TMP/rg5j.html"
+  # RG5-k ★FF2 ceiling round-3c: 子孫 overflow 微小 band (line-height:1+height:2px) で text を 2px glyph-top band にクリップ
+  #   (同位置・ink は 2px 帯だけ paint・可読不能)。 旧 area-only 閾値は 293px×2px=586 で素通った。 最小可読高 floor が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;line-height:1;height:2px;overflow:hidden}\n</style>}' "$TMP/art.html" > "$TMP/rg5k.html"
+  expect_census_fail "RG5-k ★子孫 overflow 微小 band (line-height:1+height:2px) (FF2 round-3c) を最小可読高 floor が捕捉" "$TMP/rg5k.html"
+  # RG5-l ★FF5 ceiling round-3d (wf_6e852552): ::first-letter は background-image を実描画する (旧 pe 集合 [null,::before,::after] 外)。
+  #   \\75 rl(data:) を ::first-letter 背景に当て偽要件を描画。 FF5 pe 拡張 (::first-line/::first-letter/::backdrop) が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]::first-letter{padding:0 470px 0 0;background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5l.html"
+  expect_census_fail "RG5-l ★::first-letter image-sink (FF5 ceiling round-3d) を pe 拡張 image-sink census が捕捉" "$TMP/rg5l.html"
+  # RG5-m ★FF5 ceiling round-3d: ::first-line の background-image image-sink を pe 拡張で捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]::first-line{background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5m.html"
+  expect_census_fail "RG5-m ★::first-line image-sink (FF5 ceiling round-3d) を pe 拡張 image-sink census が捕捉" "$TMP/rg5m.html"
+  # RG5-n ★FF2 ceiling round-3d: transform:scaleX(0.02) 横潰し (縦 floor 素通り) を per-char 横密度 floor が omission に倒す。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleX(0.02);transform-origin:left}\n</style>}' "$TMP/art.html" > "$TMP/rg5n.html"
+  expect_census_fail "RG5-n ★transform:scaleX(0.02) 横潰し (FF2 round-3d) を per-char 横密度 floor が捕捉" "$TMP/rg5n.html"
+  # RG5-o ★FF2 ceiling round-3d: letter-spacing 超負値の glyph 重畳 (transform でない別機構) を横密度 floor が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{letter-spacing:-0.95em}\n</style>}' "$TMP/art.html" > "$TMP/rg5o.html"
+  expect_census_fail "RG5-o ★letter-spacing 重畳 (FF2 round-3d・非 transform) を per-char 横密度 floor が捕捉" "$TMP/rg5o.html"
+  # RG5-p ★list-marker ceiling round-3e: list-style-type:var(--x) で文字列を custom property に退避 (静的 ban 回避) しつつ
+  #   ::marker に偽要件描画。 render 側 computed-style list-marker census (getComputedStyle(el).listStyleType) が spelling-agnostic に捕捉。
+  perl -0777 -pe 's{</body>}{<style>:root{--fkx:"FR99 偽要件 不正権限昇格 "}li.atkv{display:list-item;list-style-position:inside;list-style-type:var(--fkx)}</style><ul><li class="atkv"></li></ul></body>}' "$TMP/art.html" > "$TMP/rg5p.html"
+  expect_census_fail "RG5-p ★list-style-type:var() generated marker (静的 ban 回避) を render 側 list-marker census が捕捉 (round-3e)" "$TMP/rg5p.html"
+  # RG5-q ★FF2 ceiling round-3e Attack E: word-spacing で空白幅を膨張させ node-average density を持ち上げつつ letter-spacing で内容 glyph 重畳。
+  #   per-glyph (空白を分母除外) が平均 gaming を封鎖。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{letter-spacing:-0.92em;word-spacing:18em}\n</style>}' "$TMP/art.html" > "$TMP/rg5q.html"
+  expect_census_fail "RG5-q ★word-spacing avg-gaming (FF2 round-3e Attack E) を per-glyph (空白除外) が捕捉" "$TMP/rg5q.html"
+  # RG5-r ★FF2 ceiling round-3e Attack B: CJK letter-spacing -0.80em (advance 0.2fs) を script-aware per-glyph (CJK 0.5fs 閾値) が捕捉。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td, [data-component="ears-requirement-row"] td *{letter-spacing:-0.80em}\n</style>}' "$TMP/art.html" > "$TMP/rg5r.html"
+  expect_census_fail "RG5-r ★CJK letter-spacing -0.80em stroke 融合 (FF2 round-3e Attack B) を script-aware per-glyph が捕捉" "$TMP/rg5r.html"
+  # RG5-s ★FF2 ceiling round-3e Attack D: 強い scaleY 縦潰し (td display:block・transform は table-row には無効ゆえ td を対象)。
+  #   minH 0.5 bump (8px) が捕捉。 ★scaleY ~0.33 超は fragment 高が line-height 依存で minH 直上に残る degraded-partial 残差
+  #   (agent 評価 minor・部分可読) = best-effort tier で許容し、 ここでは明確に severe な 0.30 を pin する。
+  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleY(0.30);transform-origin:top}\n</style>}' "$TMP/art.html" > "$TMP/rg5s.html"
+  expect_census_fail "RG5-s ★scaleY(0.30) 強縦潰し (FF2 round-3e Attack D) を minH 0.5 bump が捕捉" "$TMP/rg5s.html"
+  # RG5-t ★bidi ceiling round-3f: unicode-bidi:\62 idi-override (CSS escape で静的 bidi-override-ban を回避) を render 側
+  #   computed unicode-bidi census が spelling-agnostic に捕捉 (image-sink で学んだ parser-differential を bidi へ適用)。
+  perl -0777 -pe 's{</body>}{<style>.atkbidi{unicode-bidi:\\62 idi-override;direction:rtl}</style><p class="atkbidi">払い戻しを常に拒否する</p></body>}' "$TMP/art.html" > "$TMP/rg5t.html"
+  expect_census_fail "RG5-t ★unicode-bidi escape (静的 ban 回避) を render 側 computed unicode-bidi census が捕捉 (round-3f)" "$TMP/rg5t.html"
+  # RG5-u ★list-marker ceiling round-3f: @counter-\73 tyle (escape) で allowlist builtin (lower-roman) を再定義し computed を
+  #   allowlist 名のまま偽 marker 描画。 CSSOM CSSCounterStyleRule の存在検査 (escape-robust mirror) が捕捉。
+  perl -0777 -pe 's{</style>}{\@counter-\\73 tyle lower-roman{system:cyclic;symbols:"FR99偽 管理者を無断付与";suffix:" "}\n</style>}' "$TMP/art.html" > "$TMP/rg5u.html"
+  expect_census_fail "RG5-u ★@counter-style escape で builtin override (static ban 回避) を CSSOM census が捕捉 (round-3f)" "$TMP/rg5u.html"
 fi
 
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、

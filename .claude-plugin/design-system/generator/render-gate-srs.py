@@ -344,6 +344,62 @@ def run_census_selftest(base_url: str) -> int:
         ("srs-census-plainempty.html", 1280, "light", {"census-omission"}, plainb),
         # B6 distinct req-id: 同 id 行コピーで件数水増し (count-equality は id を問わない)
         ("srs-census-duprow.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 クラスタ1 述語の新機構 selftest ---
+        # FF1 own-element content: 要素自身に content:url(svg) で replaced-element 捏造 (pseudo 走査の射程外)
+        ("srs-census-owncontent.html", 1280, "light", {"own-content-fabrication"}, base),
+        # FF2 contain:paint clip: contain:paint+height:0 祖先が paint を 0px box に潰す (rendered() 5 述語の射程外)
+        ("srs-census-contain.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 ceiling wf_b544a704 が捕捉した hole の回帰 selftest ---
+        # FF1 time-axis: content を animation-delay>150ms で normal→url にフリップ (probe 前 getAnimations().finish() で封鎖)
+        ("srs-census-anim.html", 1280, "light", {"own-content-fabrication"}, base),
+        # FF2 self-contain: counted 行自身に contain:paint + 子を position で box 外へ押出し (visibleTextArea で捕捉)
+        ("srs-census-selfcontain.html", 1280, "light", {"census-omission"}, base),
+        # FF2 descendant-scope: clip を子孫 wrapper に置き text を押出し (round-2・visibleTextArea の per-fragment+全clip-chain で捕捉)
+        ("srs-census-descendant.html", 1280, "light", {"census-omission"}, base),
+        # FF2 descendant opacity: 子孫 span に opacity:0 で ink 抹消 (round-3b・visibleTextArea の降下連鎖 opacity 積で捕捉)
+        ("srs-census-descopacity.html", 1280, "light", {"census-omission"}, base),
+        # FF2 descendant clip-path: 子孫 span に clip-path:inset(100%) (round-3b・visibleTextArea の降下連鎖 clip-path で捕捉)
+        ("srs-census-descclip.html", 1280, "light", {"census-omission"}, base),
+        # FF2 descendant visibility:hidden: 子孫 span に visibility:hidden (round-3c・rect 有・非paint を text 親 computed visibility で捕捉)
+        ("srs-census-descvis.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 ceiling round-3c (wf_534bb2c7) の収束 fix 回帰 selftest ---
+        # FF5 image-sink (CSS-escaped url): \75 rl(data:SVG) を computed-style 正規化 (url("data:...")) で spelling-agnostic 捕捉
+        ("srs-census-imgsink-escape.html", 1280, "light", {"image-sink-fabrication"}, base),
+        # FF5 image-sink (image-set bare-string): image-set(data:) を computed-style 正規化で捕捉 (url( token 無し綴りを収束)
+        ("srs-census-imgsink-imageset.html", 1280, "light", {"image-sink-fabrication"}, base),
+        # generated-content ::scroll-button(dir): direction 全変種走査で content 捏造を捕捉 (旧 ::before/after/marker 走査の盲点)
+        ("srs-census-scrollbutton.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        # generated-content ::scroll-marker: scroll-marker-group scroller の marker content 捏造を捕捉
+        ("srs-census-scrollmarker.html", 1280, "light", {"pseudo-content-fabrication"}, base),
+        # FF2 transform:scaleY 縦潰し: 0.4px 高を最小可読高 floor (fontSize×0.4) が非算入 → omission (旧 area-only 閾値の射程穴)
+        ("srs-census-squashy.html", 1280, "light", {"census-omission"}, base),
+        # FF2 子孫 overflow 微小 band: line-height:1+height:2px の 2px band を最小可読高 floor が非算入 → omission
+        ("srs-census-descband.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 ceiling round-3d (wf_6e852552) の bounded fix 回帰 selftest ---
+        # FF5 ::first-letter image-sink: background-image を実描画する ::first-letter (旧 pe 集合外) を pe 拡張で捕捉
+        ("srs-census-imgsink-firstletter.html", 1280, "light", {"image-sink-fabrication"}, base),
+        # FF5 ::first-line image-sink: ::first-line の background-image を pe 拡張で捕捉
+        ("srs-census-imgsink-firstline.html", 1280, "light", {"image-sink-fabrication"}, base),
+        # FF2 transform:scaleX 横潰し: 縦 floor を素通る横圧縮を per-char 横密度 floor が omission に倒す
+        ("srs-census-squashx.html", 1280, "light", {"census-omission"}, base),
+        # FF2 letter-spacing 重畳: transform でない横潰しを per-char 横密度 floor が捕捉
+        ("srs-census-smear.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 ceiling round-3e (wf_27813514) → round-3f bounded fix の回帰 selftest ---
+        # list-marker var(): list-style-type:var(--x) で文字列 marker (静的 ban 回避) を render 側 computed-style census が捕捉
+        ("srs-census-listmarker.html", 1280, "light", {"list-marker-fabrication"}, base),
+        # FF2 word-spacing avg-gaming (Attack E): 空白膨張で node-average を持ち上げる gaming を per-glyph (空白除外) が捕捉
+        ("srs-census-wordspace.html", 1280, "light", {"census-omission"}, base),
+        # FF2 CJK letter-spacing -0.80em (Attack B): CJK stroke 融合 (advance 0.2fs) を script-aware per-glyph (CJK 0.5fs) が捕捉
+        ("srs-census-cjkcrush.html", 1280, "light", {"census-omission"}, base),
+        # FF2 scaleY(0.34) (Attack D): 縦 floor 6.4px 直上潰しを minH 0.5 bump (8px) が捕捉
+        ("srs-census-squashy034.html", 1280, "light", {"census-omission"}, base),
+        # --- folio-hef S1 ceiling round-3f (wf_20e96424) → round-3g bounded fix の回帰 selftest ---
+        # bidi escape: unicode-bidi:\62 idi-override (静的 ban 回避) を render 側 computed unicode-bidi census が捕捉
+        ("srs-census-bidiescape.html", 1280, "light", {"bidi-override-fabrication"}, base),
+        # char overlap: per-char span 分割 + 負 margin 重畳 (各字 natural advance) を element union-vs-sum coverage が捕捉
+        ("srs-census-charoverlap.html", 1280, "light", {"census-omission"}, base),
+        # @counter-style builtin override: lower-roman 再定義 (computed は allowlist 名のまま) を CSSOM CSSCounterStyleRule census が捕捉
+        ("srs-census-counterstyle.html", 1280, "light", {"list-marker-fabrication"}, base),
     ]
     ok = True
     with sync_playwright() as p:

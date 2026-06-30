@@ -308,8 +308,9 @@ window.__folioSrsRenderProbe = function (scheme) {
  *         なし = clip-path/transform/子崩壊も捕捉) を contract 由来期待件数と照合し、 可視<期待 を omission、
  *         可視>期待 を excess とする。 加えて .plain (平易説明) は static-present==描画可視 を要求する (sub-slot
  *         omission)。 **被覆の honest scope**: prefers-color-scheme と検査 3 viewport 幅 (375/768/1280) の軸のみ
- *         走査する。 他軸の条件付き隠蔽 (@media print/orientation/その他幅・font-size:0・off-screen position・
- *         filter/mask) は射程超ゆえ carve 済 (bd folio-cpf〔folio-4a4 css-hiding 系〕 + LLM ceiling backstop)。
+ *         走査する。 他軸の条件付き隠蔽 (@media print/orientation/その他幅・off-screen position・filter/mask) は
+ *         射程超ゆえ carve 済 (bd folio-cpf〔folio-4a4 css-hiding 系〕 + LLM ceiling backstop)。 font-size:0 は
+ *         visibleTextArea の最小可読高 floor (絶対 4px) が被覆ゆえ carve でない (round-3c)。
  *
  * 期待件数は caller (verify-srs.sh) が contract から導出し JSON で注入する (probe は contract schema 非依存・
  * 論点5 決定)。 戻り値: { totalExpected, totalVisible, violations: [{kind, ...}] }。
@@ -350,12 +351,162 @@ window.__folioSrsRenderCensus = function (expectJson) {
     }
   }
 
+  /* === (round-3c wf_534bb2c7) generated-content scroll pseudo-elements — ::scroll-button(dir) / ::scroll-marker ===
+     これら generated-content pseudo は content を持ち偽要件を可視描画するが、 上の pseudoScan は ::before/::after/
+     ::marker のみ走査した射程穴 (carve agent 実証: census exit0 で FR99/FR98 が可視・fidelity textContent も blind)。
+     genuine SRS は scroll container を一切使わない (verified) ゆえ、 これら scroll pseudo の非空 content を捏造とみなす
+     (genuine vocabulary 補集合)。 ::scroll-button は functional ゆえ direction 全変種を走査し 1 要素 1 件に dedup。
+     computed-style 走査ゆえ CSS escape も spelling-agnostic に正規化済で robust (verify-srs.sh 静的 ban の render 側補完)。 */
+  const SCROLL_BTN_DIRS = ['up', 'down', 'left', 'right', 'block-start', 'block-end', 'inline-start', 'inline-end'];
+  const flagScrollPseudo = (el, pe, raw) => {
+    if (!raw || raw === 'none' || raw === 'normal' || dequote(raw).trim() === '') return false;
+    const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+    violations.push({ kind: 'pseudo-content-fabrication', text: `${el.tagName.toLowerCase()}${cls}${pe} 「${snippet(el)}」 に content=${raw}`, pseudo: pe, content: raw });
+    return true;
+  };
+  for (const el of pseudoScan) {
+    try { flagScrollPseudo(el, '::scroll-marker', getComputedStyle(el, '::scroll-marker').content); } catch (e) { /* pseudo 非対応 browser */ }
+    for (const d of SCROLL_BTN_DIRS) {
+      let raw; try { raw = getComputedStyle(el, `::scroll-button(${d})`).content; } catch (e) { continue; }
+      if (flagScrollPseudo(el, `::scroll-button(${d})`, raw)) break; // 同一要素の direction quirk 重複を回避
+    }
+  }
+
+  /* === (round-3f wf_27813514) list-marker census — list-style-type 由来の generated marker 偽テキスト ===
+     ::marker テキストは content でなく list-style-type + @counter-style (symbols/prefix/suffix) / 文字列リテラルで生成され、
+     静的 list-marker-ban は var() 間接化 (list-style-type:var(--x)) と CSS escape (@counter-\73 tyle) で回避された (ceiling 実証)。
+     chromium は computed-style で両者を解決するため render 側で getComputedStyle(el).listStyleType を spelling-agnostic に走査し、
+     marker を描画する list-item で (a) 引用符付き文字列値 or (b) 標準キーワード allowlist 外の ident (= @counter-style 参照) を
+     捏造 marker とみなす (image-sink/scroll-pseudo と同型・folio-wq4 教訓: literal ban でなく computed 正規化値で閉じる)。
+     genuine SRS の computed listStyleType は {disc, none} のみ (verified) ゆえ FP-free。 静的 ban は render 不在 backstop。 */
+  const STD_LIST_STYLE = new Set(['none', 'disc', 'circle', 'square', 'decimal', 'decimal-leading-zero',
+    'lower-roman', 'upper-roman', 'lower-alpha', 'upper-alpha', 'lower-latin', 'upper-latin', 'lower-greek',
+    'armenian', 'georgian', 'cjk-decimal', 'cjk-ideographic', 'hebrew', 'hiragana', 'hiragana-iroha',
+    'katakana', 'katakana-iroha', 'arabic-indic', 'thai', 'devanagari', 'korean-hangul-formal',
+    'disclosure-open', 'disclosure-closed']);
+  for (const el of pseudoScan) {
+    let lcs; try { lcs = getComputedStyle(el); } catch (e) { continue; }
+    if (!/list-item/.test(lcs.display || '')) continue; // marker を実描画する list-item のみ (list-style-type は継承するが marker box は list-item のみ)
+    const lst = (lcs.listStyleType || '').trim();
+    if (!lst || lst === 'none') continue;
+    if (/^["']/.test(lst) || !STD_LIST_STYLE.has(lst.toLowerCase())) { // 引用符付き文字列 or 標準キーワード外 ident (= @counter-style 参照)
+      const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+      violations.push({ kind: 'list-marker-fabrication', text: `${el.tagName.toLowerCase()}${cls} に非標準 list-style-type=${lst} (generated marker 捏造)`, listStyleType: lst });
+    }
+  }
+
+  /* === (round-3g wf_20e96424) @counter-style CSSOM census — allowlist builtin 名 override を escape-robust に捕捉 ===
+     上の list-marker census は allowlist 帰属を信頼するが、 @counter-style は allowlist builtin 名 (lower-roman 等) を再定義し
+     computed list-style-type を allowlist 名のまま偽 marker を描画できる (ceiling 実証)・escaped @counter-\73 tyle は静的 ban も回避。
+     genuine SRS は @counter-style を一切使わない (CSSCounterStyleRule=0・verified) ゆえ CSSOM 上の CSSCounterStyleRule の *存在自体*
+     を捏造とみなす (静的 @counter-style ban の render 側 escape-robust mirror・CSSOM は escape を解決済)。 */
+  const collectCounterStyle = (rules, out) => {
+    for (const r of rules) {
+      if (r.type === 11 || (r.constructor && r.constructor.name === 'CSSCounterStyleRule')) out.push(r);
+      else if (r.cssRules) { try { collectCounterStyle(r.cssRules, out); } catch (e) { /* @import cross-origin 等 */ } }
+    }
+  };
+  try {
+    const csr = [];
+    for (const ss of document.styleSheets) { try { collectCounterStyle(ss.cssRules, csr); } catch (e) { /* cross-origin sheet */ } }
+    for (const r of csr) violations.push({ kind: 'list-marker-fabrication', text: `@counter-style ${r.name || '?'} 定義 (allowlist builtin override で偽 marker・CSSOM census)`, counterStyle: r.name });
+  } catch (e) { /* CSSOM 非対応 */ }
+
+  /* === (round-3g wf_20e96424) bidi-override render census — computed unicode-bidi で escape-robust に視覚反転を捕捉 ===
+     静的 bidi-override-ban (verify-srs.sh) は source literal grep ゆえ CSS escape (\62 idi-override) で回避された (ceiling 実証・
+     image-sink で学んだ parser-differential を bidi で再発)。 chromium は computed unicode-bidi へ escape を解決するため render 側で
+     spelling-agnostic に走査し、 'override' を含む値 (bidi-override / isolate-override) を視覚反転捏造とみなす。 genuine の computed
+     unicode-bidi は {normal, isolate} のみ (override=0・verified・isolate≠override ゆえ table UA 既定を誤検出しない) で FP-free。 */
+  for (const el of pseudoScan) {
+    let ub; try { ub = getComputedStyle(el).unicodeBidi; } catch (e) { continue; }
+    if (ub && /override/.test(ub)) {
+      const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+      violations.push({ kind: 'bidi-override-fabrication', text: `${el.tagName.toLowerCase()}${cls} に unicode-bidi=${ub} (制御 codepoint 無し視覚反転)`, unicodeBidi: ub });
+    }
+  }
+
+  /* === (FF1) own-element content-fabrication (folio-hef S1) — 要素自身の content で replaced-element 捏造 ===
+     pseudo (::before/::after/::marker) でなく *要素自身* に content:url(...) を当てると replaced element 化し
+     偽 SVG/画像として描画される (glossary/acceptance 等を消して偽内容を捏造・round2 FF1 e1/e2)。 上の pseudo
+     走査は getComputedStyle(el, pe) のみで要素自身の content を読まない射程穴。 genuine SRS は regular element の
+     content を normal/none 以外に設定しない (srs.css verified: 全 content: は ::before/::after pseudo) =
+     positive invariant「要素自身の content ∈ {normal, none}」の補集合を捏造とみなす (β: 構造的不変条件)。 */
+  for (const el of pseudoScan) {
+    const own = getComputedStyle(el).content;
+    if (!own || own === 'none' || own === 'normal') continue;
+    if (dequote(own).trim() === '') continue; // 空 content は描画されない = 無害
+    const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+    violations.push({ kind: 'own-content-fabrication', text: `${el.tagName.toLowerCase()}${cls} 自身に content=${own} (replaced-element 捏造)`, content: own });
+  }
+
+  /* === (FF5 folio-hef S1・round-3c wf_534bb2c7) computed-style image-sink census — spelling-agnostic ===
+     静的 url-ban (verify-srs.sh) は CSS-escape (\75 rl) / image-set() bare-string / 無数の綴りで回避される
+     (partial-enum・folio-wq4 parser-differential 教訓)。 chromium は全綴りを computed-style で canonical
+     url("data:...") へ正規化済 (実機確認: \75 rl→url(data:) / image-set→image-set(url(data:)))。 ゆえ render 側で
+     image 系計算値プロパティ (要素 + ::before/::after) の url() を spelling-agnostic に走査し、 target が
+     same-document #fragment 以外 (data:/外部/別 doc) を捏造 image sink とみなす (β: 構造的不変条件の補集合)。
+     genuine SRS は image url()=0 (srs.css verified)・url(#gradient) は same-doc fragment 判定で allow。
+     mask-image は folio-cpf carve (occlusion 系)・content は own-content/pseudo arm で被覆ゆえ対象外。 */
+  const IMG_PROPS = ['backgroundImage', 'borderImageSource', 'listStyleImage'];
+  // computed-style は url() を常に "..." 引用形へ正規化する (image-set / CSS escape も同様)。 引用内の data: URL は
+  // SVG の xmlns='...' 等で ' や " を含むため、 素朴な [^"')]* は早期終端する。 引用/非引用 3 形を escape 込みで抽出する。
+  const urlTokens = (v) => {
+    const out = [];
+    const re = /url\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|([^)\s]*))\s*\)/g;
+    let m;
+    while ((m = re.exec(v))) out.push(m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]));
+    return out;
+  };
+  const sameDocFrag = (raw) => { try { const u = new URL(raw, document.baseURI); return u.hash !== '' && u.href.split('#')[0] === new URL(document.baseURI).href.split('#')[0]; } catch (e) { return false; } };
+  // (round-3d wf_6e852552) ::first-line / ::first-letter も background-image / border-image / list-style-image を実描画する
+  // (ceiling 実証: ::first-letter{padding:0 470px;background:\75 rl(data:SVG)} で偽要件を背景描画・census/url-ban 両盲点)。
+  // 旧 [null,::before,::after] の射程外ゆえ pe 集合へ追加 (::backdrop も防御的に・genuine ec/clinic は 0 件=FP-free)。
+  for (const el of pseudoScan) {
+    for (const pe of [null, '::before', '::after', '::first-line', '::first-letter', '::backdrop']) {
+      let cs; try { cs = getComputedStyle(el, pe); } catch (e) { continue; }
+      for (const prop of IMG_PROPS) {
+        const v = cs[prop];
+        if (!v || v === 'none') continue;
+        for (const tok of urlTokens(v)) {
+          if (!tok || sameDocFrag(tok)) continue;
+          const cls = el.className && typeof el.className === 'string' ? '.' + el.className.trim().replace(/\s+/g, '.') : '';
+          violations.push({ kind: 'image-sink-fabrication', text: `${el.tagName.toLowerCase()}${cls}${pe || ''} の ${prop} に外部/data: image sink url(${tok.slice(0, 40)}…) (image-sink 捏造)`, prop, content: v });
+        }
+      }
+    }
+  }
+
+  /* === (FF1 time-axis・独立 ceiling wf_b544a704) content を animation で時刻遅延フリップする捏造 — *直接 content-keyframe のみ* ===
+     content を時刻 0 で normal、 animation-delay 後に url() へ step フリップする直接 content-keyframe animation を、
+     走る animation の keyframes が content を normal/none 以外へ触れば flag する (genuine SRS は content を animate
+     しない・srs.css verified = positive invariant の補集合)。 Animation.finish() は content end 値を適用しない
+     (chromium 実機検証済) ため keyframe を *構造的*に検査する。 ★保証範囲は「直接 content-keyframe animation」に限る:
+     content を @container style-query / カスタムプロパティで gate し gate 値を transition / infinite-keyframe で時刻
+     駆動すると content が keyframe に現れず本検査を素通る (round-2 ceiling wf_0900ca71 e6/e7・実描画確認済)。 この
+     CSS-gated 時間軸 reveal と interaction-state gated (:target/:hover/:checked) reveal は behavioral 多時刻 sampling
+     でも収束しない partial-enum 境界ゆえ floor 射程外として carve (REQ-VER-027 + folio-cpf・LLM ceiling =
+     persona-walk-srs / fidelity-srs backstop・user 判断 2026-06-30)。 */
+  let docAnims;
+  try { docAnims = document.getAnimations(); } catch (e) { docAnims = []; }
+  for (const a of docAnims) {
+    let kfs;
+    try { kfs = a.effect && a.effect.getKeyframes ? a.effect.getKeyframes() : []; } catch (e) { kfs = []; }
+    const hit = kfs.some((k) => k && typeof k.content === 'string' && k.content !== 'normal' && k.content !== 'none' && dequote(k.content).trim() !== '');
+    if (hit) {
+      const tgt = a.effect && a.effect.target;
+      const cls = tgt && tgt.className && typeof tgt.className === 'string' ? '.' + tgt.className.trim().replace(/\s+/g, '.') : '';
+      const tag = tgt && tgt.tagName ? tgt.tagName.toLowerCase() : '?';
+      violations.push({ kind: 'own-content-fabrication', text: `${tag}${cls} に content を時刻フリップする animation (時間 reveal 捏造)`, content: 'animated-content' });
+    }
+  }
+
   /* === 実描画判定 helper (独立 ceiling wxnjdmjk9 + ws4o6ywe5 強化) ===
      checkVisibility は display:none/visibility/opacity===0/content-visibility のみモデル化し、 clip-path /
      transform:scale(0) / 子要素 display:none 行崩壊 / overflow:hidden 祖先クリップ / 微小高さ overflow / near-zero
      opacity を見ない。 これらを補い「読者に描画されない要素」を omission に倒す。 残る off-screen position /
-     font-size:0 / 非検査軸 @media / filter・mask / z-order occlusion (不透明 overlay) は floor 射程超
-     (bd folio-cpf〔folio-4a4 css-hiding 系〕) ゆえ carve + LLM ceiling (persona-walk-srs) backstop。 */
+     非検査軸 @media / filter・mask / z-order occlusion (不透明 overlay) は floor 射程超 (bd folio-cpf〔folio-4a4
+     css-hiding 系〕) ゆえ carve + LLM ceiling (persona-walk-srs) backstop。 font-size:0 は visibleTextArea の最小
+     可読高 floor (絶対 4px) が被覆ゆえ carve でない (round-3c 検証: census-omission 発火)。 */
   const checkVis = (el) =>
     typeof el.checkVisibility === 'function'
       ? el.checkVisibility({ visibilityProperty: true, checkVisibilityCSS: true, opacityProperty: true, checkOpacity: true })
@@ -368,14 +519,18 @@ window.__folioSrsRenderCensus = function (expectJson) {
     }
     return false;
   };
-  // bounding rect を overflow:hidden/clip 祖先の rect と交差した可視面積 (transform:scale(0)=元 rect 0 も含む)
+  // bounding rect を overflow:hidden/clip 祖先の rect と交差した可視面積 (transform:scale(0)=元 rect 0 も含む)。
+  // (FF2 folio-hef S1) contain:paint/strict/content 祖先も descendant の paint を border-box にクリップするため
+  // overflow:hidden と同様に交差源に含める (height:0+overflow:visible+contain:paint で layout は自然サイズのまま
+  // paint だけ 0px に潰す round2 FF2 e3 を封鎖。 genuine SRS は contain を使わない・verified)。
   const visibleArea = (el) => {
     const r = el.getBoundingClientRect();
     let l = r.left, t = r.top, rt = r.right, b = r.bottom;
     for (let e = el.parentElement; e; e = e.parentElement) {
       const cs = getComputedStyle(e);
       const ov = (cs.overflow || '') + (cs.overflowX || '') + (cs.overflowY || '');
-      if (/hidden|clip/.test(ov)) {
+      const containsPaint = /\b(paint|strict|content)\b/.test(cs.contain || '');
+      if (/hidden|clip/.test(ov) || containsPaint) {
         const er = e.getBoundingClientRect();
         l = Math.max(l, er.left); t = Math.max(t, er.top); rt = Math.min(rt, er.right); b = Math.min(b, er.bottom);
       }
@@ -390,6 +545,102 @@ window.__folioSrsRenderCensus = function (expectJson) {
     if (!/hidden|clip/.test(ov)) return false;
     return el.scrollHeight > el.clientHeight + 4 && el.clientHeight < el.scrollHeight * 0.5;
   };
+  // (FF2 folio-hef S1・独立 ceiling wf_b544a704 + round-2 wf_0900ca71 + round-3b wf_3652702e) counted 要素の *実描画テキスト面積*。
+  // 各テキスト node の fragment rect (Range.getClientRects) を、 その text node の祖先連鎖 (el 含む・text→el 降下連鎖) 上の
+  // 全 clip 機構 (overflow:hidden/clip + contain:paint/strict/content の box 交差 + clip-path/clip 不可視化 + 連鎖 opacity 積
+  // < MIN_OPACITY) を畳み込んだ可視面積の総和。 これで self-clip (round-1)・子孫 wrapper の clip/opacity (round-2/3b
+  // descendant-scope: el の祖先しか見ない visibleArea/clipPathHidden/effOpacity の射程外)・union 膨張 (per-fragment 加算で
+  // box 内 decoy fragment のみ算入) を一括測定する。 ≤16 = テキストが読者に paint されない = omission。 box 内に収まる
+  // genuine は full text area で非該当・横 ellipsis 等は先頭 fragment が box 内ゆえ面積 >16。
+  // ★floor 射程外 carve: (a) decoy を box 内に残し genuine を押し出す content *置換* (「見えるが正文でない」) は fidelity
+  //   ceiling (gate J) 領分。 (b) -webkit-text-fill-color:transparent 等の *ink 抹消* (rect は出るが字形 ink ゼロ) は
+  //   geometric な本測定の射程外で ink 計測 (S2 相当・gate F low-contrast) の領分 (REQ-VER-027 carve・round-3b)。
+  const visibleTextArea = (el) => {
+    let walker;
+    try { walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null); }
+    catch (e) { return Infinity; } // 走査不能なら omission に倒さない (fail-open でなく既存 arm に委ねる)
+    let total = 0;
+    const charRects = []; // (round-3g) readable 文字の clipped bbox を element 全体で収集し union-vs-sum で inter-glyph 重畳を検出
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (!n.nodeValue || !n.nodeValue.trim()) continue;
+      // (round-3b/3c) 子孫 visibility:hidden/collapse は layout(rect)を持つが非 paint。 checkVis(el)/effOpacity は el の
+      // 祖先しか見ず子孫の visibility を捕捉できない。 visibility は継承ゆえ text の親要素 computed が実効値 (最寄り setter)。
+      const pe = n.parentElement;
+      if (pe && /hidden|collapse/.test(getComputedStyle(pe).visibility)) continue;
+      const clips = [];
+      let opChain = 1, clipHiddenChain = false;
+      for (let a = n.parentElement; a; a = a.parentElement) {
+        const cs = getComputedStyle(a);
+        const ov = (cs.overflow || '') + (cs.overflowX || '') + (cs.overflowY || '');
+        if (/hidden|clip/.test(ov) || /\b(paint|strict|content)\b/.test(cs.contain || '')) clips.push(a.getBoundingClientRect());
+        // (round-3b wf_3652702e) 子孫 wrapper の clip-path/clip・near-zero opacity も text を不可視化する。 el の祖先しか
+        // 見ない clipPathHidden/effOpacity の射程外 (text→el の *降下* 連鎖) ゆえ text node 単位に本ループで評価する。
+        if ((cs.clipPath && cs.clipPath !== 'none') || (cs.clip && cs.clip !== 'auto')) clipHiddenChain = true;
+        const op = parseFloat(cs.opacity); if (!isNaN(op)) opChain *= op;
+      }
+      if (clipHiddenChain || opChain < MIN_OPACITY) continue; // この text node は clip-path/clip or 実効 opacity 不足で不可視
+      // (round-3c wf_534bb2c7 / round-3f wf_27813514) 最小可読 *高* floor: post-clip 可視高が fontSize×0.5 未満の fragment は
+      // 面積に算入しない。 transform:scaleY(tiny) で潰す / 子孫 overflow 微小 band を omission に倒す (旧 area-only 閾値の射程穴・
+      // round-3f で 0.4→0.5 へ bump し強い scaleY 縦潰しを捕捉)。 ★fragment 高は line-height 依存ゆえ scaleY ~0.33 超は minH 直上に
+      // 残る degraded-partial 残差 (部分可読・minor) = best-effort tier 許容。 floor は fontSize 相対ゆえ sub/sup・縮小バッジ
+      // (~0.7-0.85em) を誤検出しない (font-size:0 は絶対 floor 4px が捕捉)。
+      const fs = pe ? (parseFloat(getComputedStyle(pe).fontSize) || 16) : 16;
+      const minH = Math.max(4, fs * 0.5);
+      let rects;
+      try { const rg = document.createRange(); rg.selectNodeContents(n); rects = rg.getClientRects(); }
+      catch (e) { continue; }
+      let nodeArea = 0;
+      for (const r of rects) {
+        let l = r.left, t = r.top, rt = r.right, b = r.bottom;
+        for (const c of clips) { l = Math.max(l, c.left); t = Math.max(t, c.top); rt = Math.min(rt, c.right); b = Math.min(b, c.bottom); }
+        const vw = Math.max(0, rt - l), vh = Math.max(0, b - t);
+        if (vh < minH) continue; // 縦潰し (scaleY / 微小 band) で読めない fragment は非算入
+        nodeArea += vw * vh;
+      }
+      // (round-3f wf_27813514) per-glyph 可読 advance floor: 旧 node-average 横密度は word-spacing で空白幅を膨張させると
+      // 平均が閾値非依存に持ち上がり内容 glyph の重畳 (ink-soup) を素通した (ceiling Attack E)・単一閾値では CJK 潰し
+      // (advance 2.9px) と genuine latin (density 0.61) を分離不能だった (Attack B)。 ゆえ *各 non-ws 文字* の advance を
+      // Range で 1 字ずつ測り (空白は分母から除外し平均 gaming を封鎖)、 advance < fontSize×MIN_ADV または 高 < minH を
+      // 非可読とみなし、 過半が非可読なら node 全体を非算入する。 per-char ゆえ CJK 重畳も latin と独立に弾く。 genuine は
+      // 全 non-ws 字が advance ≥~0.5fs (latin)・≥~0.9fs (CJK)・句読点 ~0.25fs で閾値 (CJK 0.5fs / latin 0.12fs) を上回り FP-free。
+      const txt = n.nodeValue;
+      let readable = 0, nonWs = 0;
+      for (let i = 0; i < txt.length; i++) {
+        if (!txt[i].trim()) continue; // 空白は分母から除外 (word-spacing 平均 gaming 封鎖)
+        nonWs++;
+        try {
+          const cr = document.createRange(); cr.setStart(n, i); cr.setEnd(n, i + 1);
+          let cw = 0, ch = 0, bl = Infinity, bt = Infinity, br = -Infinity, bb = -Infinity;
+          for (const rr of cr.getClientRects()) {
+            let l = rr.left, t = rr.top, rt = rr.right, b = rr.bottom;
+            for (const c of clips) { l = Math.max(l, c.left); t = Math.max(t, c.top); rt = Math.min(rt, c.right); b = Math.min(b, c.bottom); }
+            const w = Math.max(0, rt - l), h = Math.max(0, b - t);
+            cw = Math.max(cw, w); ch = Math.max(ch, h);
+            if (w > 0 && h > 0) { bl = Math.min(bl, l); bt = Math.min(bt, t); br = Math.max(br, rt); bb = Math.max(bb, b); }
+          }
+          const isCJK = /[　-ヿ㐀-䶿一-鿿豈-﫿＀-￯]/.test(txt[i]);
+          if (cw >= fs * (isCJK ? CJK_MIN_ADV : LATIN_MIN_ADV) && ch >= minH) { readable++; if (br > bl) charRects.push([bl, bt, br, bb]); }
+        } catch (e) { /* Range 不能字は skip */ }
+      }
+      if (nonWs > 0 && readable < nonWs * 0.5) continue; // 過半の文字が advance/高さ 不足 = 潰し → node 非算入
+      total += nodeArea;
+    }
+    // (round-3g wf_20e96424) inter-glyph 重畳検査: per-glyph advance floor は各文字を *孤立して* 測るため、 本文を 1 文字ずつ
+    // span 分割し margin/position で全グリフを同一帯に重畳すると (各字 natural advance を保つ) 素通る ink-blob を見逃した (ceiling 実証)。
+    // element 全体の readable 文字 bbox を grid raster し union(被覆面積) と sum(per-char 面積) を比較、 union < sum×0.5 = 重畳 crush
+    // として非可読に倒す。 genuine は tile 配置で union/sum≈1.05 (僅かな grid 丸めで sum 超)・攻撃重畳は ~0.14 で大 margin・多行 prose も
+    // y 帯が分かれ union≈sum ゆえ FP-free (実測)。
+    if (charRects.length > 1) {
+      let sumA = 0; const G = 3, cells = new Set();
+      for (const [l, t, r, b] of charRects) {
+        sumA += Math.max(0, r - l) * Math.max(0, b - t);
+        for (let x = Math.floor(l / G); x <= Math.floor((r - 0.01) / G); x++)
+          for (let y = Math.floor(t / G); y <= Math.floor((b - 0.01) / G); y++) cells.add(x + ',' + y);
+      }
+      if (sumA > 0 && cells.size * G * G < sumA * 0.5) return 0; // inter-glyph 重畳 = 読者非可読 = omission
+    }
+    return total;
+  };
   // 祖先連鎖の実効 opacity (near-zero = 実質不可視・checkOpacity の opacity===0 境界を補う)
   const effOpacity = (el) => {
     let o = 1;
@@ -400,8 +651,11 @@ window.__folioSrsRenderCensus = function (expectJson) {
     return o;
   };
   const MIN_OPACITY = 0.1; // これ未満は実質不可視 (genuine 契約内容は不透明)
+  // 各文字の可視 advance 下限 (×fontSize)。 CJK は複雑 stroke ゆえ半角幅未満で融合し非可読 (Attack B: -0.80em=0.2fs を弾く)・
+  // latin/記号は単純形ゆえ低くても可読 (句読点 ~0.25fs)。 script 別閾値で「非可読 CJK」と「genuine 細 latin」の分離不能を解消。
+  const CJK_MIN_ADV = 0.5, LATIN_MIN_ADV = 0.12;
   const rendered = (el) =>
-    checkVis(el) && !clipPathHidden(el) && visibleArea(el) > 16 && effOpacity(el) >= MIN_OPACITY && !selfContentClipped(el);
+    checkVis(el) && !clipPathHidden(el) && visibleArea(el) > 16 && effOpacity(el) >= MIN_OPACITY && !selfContentClipped(el) && visibleTextArea(el) > 16;
   const ZW = /[\u200B-\u200D\u2060\uFEFF]/g; // zero-width / BOM (.plain 空テキスト偽装の strip)
 
   /* === (459) census-omission/excess — *実描画* 件数 == contract 由来期待件数 === */

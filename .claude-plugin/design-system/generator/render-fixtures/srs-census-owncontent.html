@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: own-element content-fabrication (FF1 / folio-hef S1)</title>
+<style>
+  /* census-owncontent (folio-hef S1 / round2 FF1 e1/e2):
+     pseudo (::before/::after) でなく *要素自身* に content:url(...) を当て replaced element 化し
+     偽 SVG を描画する捏造。 上の pseudo 走査 (getComputedStyle(el,pe)) は要素自身の content を読まない
+     射程穴ゆえ素通りした。 own-content-fabrication arm が getComputedStyle(el).content を読み
+     normal/none 以外を捏造として固定する。 要件行 2 / NFR 行 1 は intact ゆえ census-omission は鳴らず
+     own-content-fabrication のみ発火することを kind 完全一致で固定する。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  /* 本物の用語定義を消して偽 SVG (1x1 緑画素) を描画 = replaced-element 捏造 */
+  .fake-gloss{ content: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='40'%3E%3Crect%20width='120'%20height='40'%20fill='green'/%3E%3C/svg%3E"); }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+<div class="fake-gloss">在庫引当 — 注文確定時に在庫を確保すること</div>
+</body>
+</html>

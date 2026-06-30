@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: descendant opacity ink-hide (FF2 / folio-hef S1 ceiling round-3b)</title>
+<style>
+  /* census-descopacity (folio-hef S1・独立 ceiling wf_3652702e round-3b):
+     counted 行の text を包む *子孫* span に opacity:0 を当て ink を抹消する。 el(行) の祖先しか見ない effOpacity
+     は子孫 opacity を捕捉できず素通りした。 visibleTextArea が各 text node の降下連鎖の opacity 積 < MIN_OPACITY を
+     不可視と畳み込むことで FR1 を omission 化する。 FR1 のみ隠し FR2/NFR1 可視で totalVisible=2>0・可視 ears 1<期待 2。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  tr{ display:block; margin:8px 0; }
+  .inner{ opacity:0; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1"><td><span class="inner"><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する</span></td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する</td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>
