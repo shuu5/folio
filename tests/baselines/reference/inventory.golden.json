@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-30T07:44:47Z",
+  "generatedAt": "2026-06-30T14:22:03Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2116,6 +2116,12 @@
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-027",
         "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) 任意要素 + body/html の ::before/::after/::marker content 注入を inverse-allowlist (genuine chrome allowlist の補集合 = 捏造) で、 (folio-459) 描画後の 実描画部品数 (rendered() = checkVisibility ∧ 面積・clip-path・実効 opacity・overflow で判定) と .plain (平易説明・rendered() ∧ 非空 text) を contract 由来期待件数 (DOM 自己参照しない anchor) と照合し、 さらに (folio-hef S1) 要素自身の content による replaced-element 捏造を own-content scan・contain:paint クリップ + 縦潰し (transform:scaleY / 微小 band) を rendered() の contain 祖先交差 + 最小可読高 floor・CSS image sink (background-image 等の data:/外部 url()・静的 url-ban を回避する CSS escape / image-set も正規化値で) を computed-style image-sink census・generated-content scroll pseudo (::scroll-button/::scroll-marker) を pseudo 走査拡張で封鎖して検出 (declarative shadow DOM 等は REQ-VER-024 の静的 ban 群が担う)。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 被覆は prefers-color-scheme と検査 3 viewport 幅のみで、 他軸隠蔽 (off-screen / 非検査軸 @media / filter / z-order occlusion 等) は floor 射程超ゆえ carve (bd folio-cpf・ink-zero/coverage/free-prose 等は folio-hef・LLM ceiling backstop)。 gate F と独立に honest SKIP 報告し、 検出器・期待件数導出は machine 部。"
+      },
+      {
+        "id": "REQ-VER-028",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-028",
+        "essence": "verify-census-vocab.sh (決定的 CI floor) は render census の closure 語彙 SSoT (srs.census-vocab.yaml = assembler が描画する data-component ∪ data-prose-slot ∪ recognized class の閉集合) が assemble-srs.sh + lib/common.sh の emit 集合と bijection (emit == vocab) であることを assert し、 新部品の追加・改名・削除で語彙未更新を非ゼロ exit で赤にして語彙鮮度を機械強制する (S4/S5 = 全描画要素 ↔ 期待要素の全単射が消費する基盤)。 folio verify-srs は起動時に同 SSoT を pack-level yq で読み census probe へ carry する。 ★census 語彙は照会 graph (srs.rolemap.yaml の .roles) には足さず別 file に分離する (verify-graph.sh 非破壊・M-A 監査補正)。"
       },
       {
         "id": "REQ-XREF-001",

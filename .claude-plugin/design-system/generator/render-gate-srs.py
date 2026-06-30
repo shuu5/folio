@@ -241,7 +241,8 @@ def fmt_census(result: dict, where: str) -> list[str]:
     return lines
 
 
-def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_dir: Path | None) -> int:
+def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_dir: Path | None,
+               vocab: dict | None = None) -> int:
     """描画後 content-fidelity census を light/dark × 3 viewport で検査する (gate F と同 matrix)。
 
     pseudo-content-fabrication (2b8) は scheme 依存 / census-omission (459) は viewport・scheme 条件下の
@@ -256,6 +257,11 @@ def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_di
     payload: dict = {"counts": counts}
     if plain_count is not None:
         payload["plainCount"] = plain_count
+    # census closure 語彙 SSoT (folio-hef.3): verify-srs.sh が srs.census-vocab.yaml から導出した語彙を
+    # probe payload (expect.vocab) へ carry する。 S4 (folio-hef.4) の closure 判定 (描画要素 ↔ 期待要素の
+    # 全単射) が消費する基盤。 本 slice では probe は受領のみ (bijection 本体は S4)。
+    if vocab is not None:
+        payload["vocab"] = vocab
     expect_json = json.dumps(payload, ensure_ascii=False)
     failures: list[str] = []
     total_expected = sum(counts.values())
@@ -446,6 +452,9 @@ def main() -> int:
                     help="gate F でなく render census (描画後 content-fidelity: pseudo-content 捏造 / omission) を検査")
     ap.add_argument("--expect", default="",
                     help="census 期待件数 'comp=N,comp=N' (caller が contract から導出)。 --census 時必須")
+    ap.add_argument("--vocab", default="",
+                    help="census closure 語彙 SSoT JSON (verify-srs.sh が srs.census-vocab.yaml から導出)。 "
+                         "--census 時に probe payload (expect.vocab) へ carry = S4 bijection 基盤 (任意)")
     ap.add_argument("--base-url", default=None, help="外部 http server (html の親 dir 配信必須)")
     ap.add_argument("--screenshot-dir", default=None, help="screenshot 保存先 (CI artifact 用)")
     args = ap.parse_args()
@@ -470,14 +479,26 @@ def main() -> int:
         if not counts:
             print("render-gate-srs --census: --expect 'comp=N,...' が必要 (期待件数なしでは census は無意味)", file=sys.stderr)
             return 2
+        # --vocab (census closure 語彙 SSoT・folio-hef.3) は任意。 与えられたら JSON を validate し
+        # (serve 前 = browser-free fail-closed)、 payload へ carry する。 不正 JSON は tool error。
+        vocab = None
+        if args.vocab:
+            try:
+                vocab = json.loads(args.vocab)
+            except (ValueError, TypeError) as e:
+                print(f"render-gate-srs --census: --vocab JSON 不正: {e}", file=sys.stderr)
+                return 2
+            if not isinstance(vocab, dict):
+                print("render-gate-srs --census: --vocab は JSON object であること", file=sys.stderr)
+                return 2
         html = Path(args.html).resolve()
         if not html.is_file():
             print(f"render-gate-srs --census: html not found: {html}", file=sys.stderr)
             return 2
         if args.base_url:
-            return run_census(args.base_url, html.name, counts, shots)
+            return run_census(args.base_url, html.name, counts, shots, vocab)
         with serve(html.parent) as base_url:
-            return run_census(base_url, html.name, counts, shots)
+            return run_census(base_url, html.name, counts, shots, vocab)
 
     # ---- gate F (visual 健全性) ----
     if args.selftest:

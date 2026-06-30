@@ -71,6 +71,13 @@ jobs:
       - name: folio verify-graph (deterministic floor — 照会 graph 終端完備)
         run: .claude-plugin/bin/folio verify-graph
 
+      # render census 語彙 整合 gate (folio-hef.3)。 assemble-srs.sh + lib/common.sh が emit する
+      # data-component / data-prose-slot token == srs.census-vocab.yaml を bijection assert する deterministic
+      # floor。 新部品追加・改名・削除で語彙未更新を赤にし、 census closure 語彙 (S4/S5 = render census 全描画
+      # 要素 ↔ 期待要素の全単射の基盤) の鮮度を機械強制する。 graph 系 (rolemap) には触れない (M-A 非破壊)。
+      - name: SRS census-vocab 整合 gate (deterministic floor — emit == census-vocab)
+        run: .claude-plugin/design-system/generator/verify-census-vocab.sh
+
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
       #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)

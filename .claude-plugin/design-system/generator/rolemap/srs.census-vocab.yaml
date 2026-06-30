@@ -1,0 +1,79 @@
+# folio engine — SRS-pack render census 語彙 SSoT (folio-hef.3)
+#
+# render census (gate F2 / probe-srs.js __folioSrsRenderCensus・folio-6jb 縦軸 = 描画後 content-fidelity)
+# が「描画されてよい genuine 要素の閉集合」を判定するための *closure 語彙* の唯一の出所 (SSoT)。
+# closure = 『assemble-srs.sh + lib/common.sh が描画する data-component token』∪『data-prose-slot』∪
+#           『render census が genuine とみなす chrome class (probe-srs.js CHROME_PSEUDO mirror)』。
+#
+# 消費経路 (本 slice = folio-hef.3 が配線する):
+#   (1) verify-srs.sh が起動時に *pack-level yq* で本 file を読み (graph-common.sh core reader 流用せず
+#       = lib/ 無改変)、 件数注入機構の拡張として render-gate-srs.py --vocab → probe-srs.js の census payload
+#       (expect.vocab) へ注入する。 S4 (folio-hef.4) の closure 判定本体 (描画要素 ↔ 期待要素の全単射) が
+#       この語彙を消費する基盤。 本 slice では payload へ carry するのみ (bijection 本体は S4)。
+#   (2) CI 整合 gate (verify-census-vocab.sh・ci.yml) が『assemble-srs.sh + lib/common.sh が emit する
+#       data-component token == data_components』を assert する。 ズレ (新部品追加・部品改名・部品削除で
+#       語彙未更新) を赤にし、 語彙更新を機械強制する (= SSoT 鮮度の guarantee)。 同 gate は prose_slots も
+#       同型に bijection assert する。
+#
+# ★M-A 監査補正 (3 reviewer 収束): 本 file は *新規 pack 資産* であり、 既存 srs.rolemap.yaml の .roles には
+#   足さない。 srs.rolemap.yaml は照会 graph (抽象ロール graph) の SSoT で、 verify-graph.sh が
+#   roles ⊆ GRAPH_ROLE_ALLOWLIST を hard-FAIL assert する。 census closure 語彙 (data-component token) を
+#   .roles へ混ぜると即 FAIL するため、 別 file へ分離した。 verify-graph.sh は <pack>.rolemap.yaml を
+#   明示名で開くのみ (rolemap/ を glob しない) ゆえ、 本 file の追加は verify-graph に副作用ゼロ (非破壊)。
+#
+# 前提: yq (mikefarah v4) が PATH に在ること (verify-srs.sh / verify-census-vocab.sh が依存)。
+pack: srs
+
+# === data-component token の閉集合 ===
+# assemble-srs.sh (SRS-pack 固有 emitter) + lib/common.sh (core chrome emitter = doc-cover-band /
+# chapter-deck-band / glossary-term-table / fidelity-sync-meta / approval-block / plain-language-term-inline)
+# が data-component="..." で描画する token の *全集合*。 SRS grep だけだと core chrome (lib/common.sh 由来)
+# が漏れるため、 CI gate は両 file を走査し、 lib/common.sh の perl 文字列内 `data-component=\"...\"` の
+# backslash-escape 形も拾う (robust 抽出)。 本 list == emit 集合 を CI gate が bijection assert する。
+data_components:
+  # --- SRS-pack 固有 (assemble-srs.sh) ---
+  - acceptance-criteria-checklist
+  - actor-stakeholder-table
+  - constraint-callout
+  - ears-requirement-row
+  - nfr-hero-metrics
+  - nfr-metric-row
+  - nfr-metrics-table
+  - priority-badge
+  - requirement-matrix-table
+  - requirement-type-color-tokens
+  - rtm-collapse
+  - rtm-grid
+  - scope-summary-panel
+  - section-lead-callout
+  - source-trace-origin
+  - source-trace-row
+  # --- core chrome (lib/common.sh・SRS grep だけでは漏れる 6 件) ---
+  - approval-block
+  - chapter-deck-band
+  - doc-cover-band
+  - fidelity-sync-meta
+  - glossary-term-table
+  - plain-language-term-inline
+
+# === data-prose-slot token の閉集合 ===
+# opus 充填対象の空 prose スロット (data-prose-slot="...")。 assemble-srs.sh + lib/common.sh が emit。
+# CI gate が emit 集合 == 本 list を bijection assert する (新スロット追加で語彙更新を機械強制)。
+prose_slots:
+  - chapter-lead
+  - cover-summary
+  - plain
+  - rationale
+  - rtm-summary
+
+# === render census が genuine とみなす chrome class (recognized class) ===
+# probe-srs.js CHROME_PSEUDO の genuine pseudo-content carrier (3 値・両 fixture × 両 scheme で監査確定) の
+# mirror。 これら以外の要素への ::before/::after content は捏造とみなす (inverse-allowlist)。 本 slice では
+# S4 の bijection が消費する基盤として carry する (probe-srs.js が live SSoT・将来 S4 で拡張しうる)。
+recognized_classes:
+  - selector: ".plain"   # 平易説明 sub-slot carrier (::before 'やさしく言うと ')
+    pseudo: "::before"
+  - selector: ".why"     # rationale carrier (::before '↳ なぜ要る')
+    pseudo: "::before"
+  - selector: "summary"  # rtm-collapse 開閉トリガ (::after 'クリックで開閉')・class でなく tag
+    pseudo: "::after"

@@ -47,6 +47,17 @@ fail=0
 make_body "$HTML"        # body-only ($BODY、 CSS セレクタ混入回避)
 has() { local c; c="$(grep -c "data-component=\"$1\"" "$BODY")"; [[ "$c" -ge 1 ]] && echo 1 || echo 0; }
 
+# ---- render census 語彙 SSoT (folio-hef.3)。 起動時に *pack-level yq* で読み (graph-common.sh core reader
+#      流用せず = lib/ 無改変)、 件数注入機構の拡張として gate F2 census の probe payload (expect.vocab) へ
+#      carry する。 S4 (folio-hef.4) の closure 判定 (描画要素 ↔ 期待要素の全単射) が消費する基盤。 本 slice は
+#      配線のみ (bijection 本体は S4)。 fail-closed: 不在/data_components 空は tool error (誤 green に倒さない)。 ----
+CENSUS_VOCAB="$SCRIPT_DIR/rolemap/srs.census-vocab.yaml"
+[[ -f "$CENSUS_VOCAB" ]] || { echo "verify-srs: census-vocab not found: $CENSUS_VOCAB" >&2; exit 2; }
+[[ "$(yq -r '.data_components // [] | length' "$CENSUS_VOCAB" 2>/dev/null)" -ge 1 ]] \
+  || { echo "verify-srs: census-vocab の .data_components が空/不正: $CENSUS_VOCAB" >&2; exit 2; }
+CENSUS_VOCAB_JSON="$(yq -o=json -I=0 '{"pack": .pack, "data_components": .data_components, "prose_slots": .prose_slots, "recognized_classes": .recognized_classes}' "$CENSUS_VOCAB")" \
+  || { echo "verify-srs: census-vocab を JSON 化できない: $CENSUS_VOCAB" >&2; exit 2; }
+
 echo "=========================================================================="
 echo "folio verify-srs — 生成 SRS プレゼン floor (taxonomy §5.2 gate A-H + visual-first)"
 echo "  html:     $HTML"
@@ -313,8 +324,10 @@ CENSUS_EXPECT="ears-requirement-row=${CENSUS_REQN},nfr-metric-row=${CENSUS_NFRN}
 if [[ -n "$RENDER_SKIP" ]]; then
   echo "  [SKIP] gate F2/census ($RENDER_SKIP)"
 else
-  echo "  render-gate-srs.py --census --expect '$CENSUS_EXPECT' を実行 ($RUNNER)..."
-  if $RUNNER "$RENDER_GATE" --census --expect "$CENSUS_EXPECT" "$HTML" 2>&1 | sed 's/^/    /'; then gateCensus="pass"; else gateCensus="fail"; fail=1; fi
+  echo "  render-gate-srs.py --census --expect '$CENSUS_EXPECT' --vocab <census-vocab> を実行 ($RUNNER)..."
+  # --vocab = census 語彙 SSoT (folio-hef.3)。 件数注入 (--expect) の拡張として probe へ closure 語彙を carry
+  #   する (S4 bijection の基盤・本 slice では probe は受領のみ)。
+  if $RUNNER "$RENDER_GATE" --census --expect "$CENSUS_EXPECT" --vocab "$CENSUS_VOCAB_JSON" "$HTML" 2>&1 | sed 's/^/    /'; then gateCensus="pass"; else gateCensus="fail"; fail=1; fi
 fi
 
 echo
