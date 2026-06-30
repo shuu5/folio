@@ -40,9 +40,13 @@ for f in "$VOCAB_FILE" "$ASSEMBLE" "$COMMON"; do
   [[ -f "$f" ]] || { echo "verify-census-vocab: 入力不在: $f" >&2; exit 2; }
 done
 
-# emit 抽出 (両 file・escape 形両対応・kebab-case token のみ・sort -u)。
+# emit 抽出 (両 file・escape 形両対応・閉じ引用符まで full token・sort -u)。
+# ★full token 捕捉 (folio-hef.3 ceiling): 旧 [a-z][a-z-]* は digit/大文字 suffix で token を
+#   途中切断し、「既存 vocab token + 数字」(例 doc-cover-band2) で新部品を命名すると切断後が
+#   既存 vocab と一致して bijection が silent PASS する穴があった。閉じ引用符 (or escape backslash)
+#   まで full に取り、列挙でなく完全捕捉する (partial-enumeration trap 回避・engine doctrine)。
 emit_tokens() { # $1 = 属性名 (data-component | data-prose-slot)
-  grep -ohP "$1"'=\\?"\K[a-z][a-z-]*' "$ASSEMBLE" "$COMMON" | LC_ALL=C sort -u
+  grep -ohP "$1"'=\\?"\K[^"\\]+' "$ASSEMBLE" "$COMMON" | LC_ALL=C sort -u
 }
 # vocab list 抽出 (yq・sort -u)。 list 欠落/空は空文字列 = 後段の bijection が fail に倒す。
 vocab_list() { # $1 = yq path (.data_components | .prose_slots)
