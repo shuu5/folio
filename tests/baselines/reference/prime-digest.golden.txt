@@ -262,7 +262,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 117 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 118 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -377,13 +377,14 @@ REQ-VER-025 [requirement] spec/verification.html#req-ver-025
 REQ-VER-026 [requirement] spec/verification.html#req-ver-026
 REQ-VER-027 [requirement] spec/verification.html#req-ver-027
 REQ-VER-028 [requirement] spec/verification.html#req-ver-028
+REQ-VER-029 [requirement] spec/verification.html#req-ver-029
 REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
 REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
 REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
 
 # 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
-# 117 nodes · 99 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 118 nodes · 99 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
 # 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs

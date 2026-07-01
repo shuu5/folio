@@ -1121,6 +1121,29 @@ else
   #   allowlist 名のまま偽 marker 描画。 CSSOM CSSCounterStyleRule の存在検査 (escape-robust mirror) が捕捉。
   perl -0777 -pe 's{</style>}{\@counter-\\73 tyle lower-roman{system:cyclic;symbols:"FR99偽 管理者を無断付与";suffix:" "}\n</style>}' "$TMP/art.html" > "$TMP/rg5u.html"
   expect_census_fail "RG5-u ★@counter-style escape で builtin override (static ban 回避) を CSSOM census が捕捉 (round-3f)" "$TMP/rg5u.html"
+  # ===== RG6: folio-hef.2 (S2) 可読性軸 census — FF3 ink 計測 + FF4 codepoint allowlist =====
+  # .plain (gate I 看板) を render してはじめて効く字種攻撃で判読不能化する。 (FF3) 字幅ありインク0 の blank glyph で
+  # 「在るのに読めない」omission、 (FF4) base にインクが乗る overlay / filler / 非 corpus-script 文字で判読不能化を、
+  # それぞれ render-time の ink 計測 / codepoint allowlist 補集合が捕捉することを固定する。 RG6-e は M-D 厳守の
+  # FP-safety 正対照: 正当な結合文字 (NFD アクセント) は誤検出せず census PASS のまま (β 違反を踏むとここが false-FAIL)。
+  # RG6-a FF3 ink: .plain 内容を字幅ありインク0 の U+2800 (BRAILLE BLANK) に置換。 trim 非空を素通りするが ink=0 = omission。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>).*?(</span>)}{${1}\x{2800}\x{2800}\x{2800}${2}}s if !$d++' "$TMP/art.html" > "$TMP/rg6a.html"
+  expect_census_fail "RG6-a ★.plain blank-glyph (U+2800 字幅ありインク0) を FF3 ink 計測が omission として捕捉" "$TMP/rg6a.html"
+  # RG6-b FF4 overlay: .plain に取り消し線 overlay (U+0336 LONG STROKE) を重畳。 base にインクがあり FF3 は素通り (omission 不発)
+  #   だが codepoint allowlist の補集合が U+0336 を捕捉する (ink 計測では原理的に見えない攻撃を FF4 が担う)。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0336}} if !$d++' "$TMP/art.html" > "$TMP/rg6b.html"
+  expect_census_fail "RG6-b ★.plain 取り消し線 overlay (U+0336) を FF4 codepoint allowlist 補集合が捕捉" "$TMP/rg6b.html"
+  # RG6-c FF4 static-ban gap: U+0334 TILDE OVERLAY は visual-deception unicode ban (bidi/zero-width のみ) に *無い* ゆえ
+  #   静的検査を素通りするが、 FF4 allowlist の補集合が render-time で捕捉する (positive closure が blocklist 漏れを被覆する実証)。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0334}} if !$d++' "$TMP/art.html" > "$TMP/rg6c.html"
+  expect_census_fail "RG6-c ★.plain U+0334 tilde overlay (static-ban に無い gap) を FF4 補集合が捕捉 (positive closure)" "$TMP/rg6c.html"
+  # RG6-d FF4 filler: U+3164 HANGUL FILLER を .plain に注入 (whitespace でも zero-width でもなく static-ban も漏らす filler)。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{3164}} if !$d++' "$TMP/art.html" > "$TMP/rg6d.html"
+  expect_census_fail "RG6-d ★.plain U+3164 Hangul filler を FF4 補集合が捕捉" "$TMP/rg6d.html"
+  # RG6-e FF4 FP-safety (★M-D 正対照): 正当な NFD アクセント (U+0301) は allowlist 内ゆえ census PASS のまま (誤検出ゼロ)。
+  #   \p{M} 一括 reject の β 違反を踏むとここが false-FAIL になる (多言語結合文字の誤検出を render path で固定で防ぐ)。
+  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0301}} if !$d++' "$TMP/art.html" > "$TMP/rg6e.html"
+  expect_census_pass "RG6-e ★.plain 正当 NFD アクセント (U+0301) は FF4 で誤検出せず census PASS (FP-safety・M-D)" "$TMP/rg6e.html"
 fi
 
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、

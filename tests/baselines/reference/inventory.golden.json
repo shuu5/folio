@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-06-30T14:22:03Z",
+  "generatedAt": "2026-07-01T01:43:01Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2121,6 +2121,12 @@
         "id": "REQ-VER-028",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-028",
+        "essence": "gate F2 census の可読性軸 (folio-hef.2 / S2) は .plain (gate I 看板) の字種健全性を render-time で検査し、 REQ-VER-027 が S2 へ carve した穴を塞ぐ: (FF3) 字幅ありインク0 の blank glyph (U+2800/U+3164) を canvas ink 計測で census-omission に、 (FF4) base にインクが乗る overlay (U+0336 等)・filler・非 script 文字を corpus 実 script の閉集合 allowlist 補集合で plain-charclass-fabrication に倒す。 監査補正 M-D に従い正当結合文字は誤検出しない (allowlist 詳細・static-ban との所掌分界・conformance は machine 部)。"
+      },
+      {
+        "id": "REQ-VER-029",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-029",
         "essence": "verify-census-vocab.sh (決定的 CI floor) は render census の closure 語彙 SSoT (srs.census-vocab.yaml = assembler が描画する data-component ∪ data-prose-slot ∪ recognized class の閉集合) が assemble-srs.sh + lib/common.sh の emit 集合と bijection (emit == vocab) であることを assert し、 新部品の追加・改名・削除で語彙未更新を非ゼロ exit で赤にして語彙鮮度を機械強制する (S4/S5 = 全描画要素 ↔ 期待要素の全単射が消費する基盤)。 folio verify-srs は起動時に同 SSoT を pack-level yq で読み census probe へ carry する。 ★census 語彙は照会 graph (srs.rolemap.yaml の .roles) には足さず別 file に分離する (verify-graph.sh 非破壊・M-A 監査補正)。"
       },
       {

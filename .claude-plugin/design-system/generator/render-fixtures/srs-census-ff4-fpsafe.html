@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render census fixture: .plain legitimate combining (folio-hef.2 FF4 FP-safety)</title>
+<style>
+  /* census-ff4-fpsafe (folio-hef.2 FF4 FP-safety / 監査補正 M-D): .plain に *正当な* 字種を含めても
+     誤検出しないことを固定する。 FR1 = NFD アクセント (e + U+0301 COMBINING ACUTE = &#769; → café 相当) +
+     欧文約物 (em-dash U+2014) + 全角括弧 (U+FF08/FF09)、 FR2 = 結合濁点 (か + U+3099 COMBINING VOICED
+     SOUND MARK = &#12441; → が 相当) + 矢印 (U+2192) + 全角感嘆 (U+FF01)。 これらは allowlist 内
+     (U+0300-036F 除 overlay / General Punctuation 可視部 / Arrows / 全角形 / ひらがなブロック) ゆえ
+     plain-charclass-fabrication を発火してはならない (finding folio-hef.2 #1: 著者が cover/chapter-lead/
+     rationale で em-dash/→ を実使用する字種を .plain でも誤検出しない)。 両 .plain とも ink を持つため
+     census-omission も発火しない (= clean 期待)。 \p{M} 一括 reject の β 違反や General Punctuation/Arrows/
+     全角形の未列挙を踏むとここが false-positive になる (M-D が警告する正当字種の誤検出)。 */
+  body{ margin:0; padding:24px; font:16px/1.6 system-ui, sans-serif; }
+  .fid{ font-weight:700; }
+  .plain{ display:inline-block; min-width:160px; min-height:20px; color:#456; font-size:0.9em; }
+  tr{ display:block; margin:8px 0; }
+</style>
+</head>
+<body>
+<table>
+  <tr data-component="ears-requirement-row" data-req-id="FR1" id="FR1"><td><span class="fid">FR1</span> 利用者が商品を選ぶと在庫数を表示する<span class="plain">caf&#769;e で確定する — 在庫を先に確保（NFD アクセント・em-dash・全角括弧）</span></td></tr>
+  <tr data-component="ears-requirement-row" data-req-id="FR2" id="FR2"><td><span class="fid">FR2</span> 在庫不足なら警告を表示する<span class="plain">か&#12441;ぞえて在庫を知らせる（確保→確定・結合濁点・矢印！）</span></td></tr>
+  <tr data-component="nfr-metric-row" data-req-id="NFR1" id="NFR1"><td><span class="fid">NFR1</span> 応答時間は 2 秒以内</td></tr>
+</table>
+</body>
+</html>

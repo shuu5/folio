@@ -658,6 +658,75 @@ window.__folioSrsRenderCensus = function (expectJson) {
     checkVis(el) && !clipPathHidden(el) && visibleArea(el) > 16 && effOpacity(el) >= MIN_OPACITY && !selfContentClipped(el) && visibleTextArea(el) > 16;
   const ZW = /[\u200B-\u200D\u2060\uFEFF]/g; // zero-width / BOM (.plain 空テキスト偽装の strip)
 
+  /* === (FF3+FF4 folio-hef.2) .plain (gate I 看板 = 非エンジニア向け平易説明) の可読性 census ===
+     S1 までの .plain census は「rendered() ∧ ZW strip 後 trim 非空」で在否を見たが二つの穴が残った:
+       (FF3) 字幅ありインク0 の blank glyph (U+2800 Braille / U+3164 Hangul filler 等) は trim() が
+             whitespace と見なさず「非空」を素通りするが、 読者には何も描画されない (= 実質 omission)。
+             → 非空 heuristic を **ink 計測** へ一般化する。 文字を pinned font (noto-cjk) で canvas に描き
+             1 pixel でも alpha>0 が無ければ ink=0 = 不可視とみなす (parseColor と同じ canvas 技法を流用)。
+       (FF4) 取り消し線 overlay (U+0336 COMBINING LONG STROKE OVERLAY 等) は base 文字に重なり base には
+             ink があるため ink 計測では捕捉できない。 blank/filler/zero-width/非 corpus-script 文字も含め
+             「.plain に出現してよい文字」は本来 SRS corpus の実 script に閉じる。 → render-time の
+             **positive allowlist** (corpus 実 script = ASCII + 和文 [かな/漢字/和文句読点] + 欧文約物/矢印/全角 ASCII + 正当結合文字) の
+             **補集合**を捏造とみなす。 監査補正 M-D 厳守: \p{M} (開集合=β 違反) に手を伸ばさず *閉集合*を
+             列挙し「それ以外を弾く」。 正当な結合文字 (NFD アクセント U+0300-0333/0339-036F・結合濁点
+             U+3099/309A) は allowlist に含め false-positive にしない。 判読不能化する overlay (U+0334-0338 =
+             tilde/short-stroke/long-stroke/short-solidus/long-solidus overlay) だけを allowlist から carve する。
+
+     ── static unicode-ban (verify-srs.sh) と FF4 (render-time positive) の codepoint 所掌分界 (M-D point 2) ──
+       static-ban = verify-srs.sh の "visual-deception unicode ban" + "bidi-override-ban" (source-grep・whole-doc・
+                 render 不要)。 bidi-override (U+202A-202E/2066-2069・<bdo>・unicode-bidi:*override) と
+                 zero-width/BOM (U+200B-200D/2060/FEFF) *のみ* を弾く no-render backstop。 blank glyph
+                 (U+2800/3164)・filler (U+115F/FFA0)・取り消し線 overlay (U+0334-0338) は **含まない**。
+       FF4       = renderer 在時の .plain 完全 closure。 allowlist の補集合ゆえ static-ban が漏らす
+                 blank/filler/overlay + 非 corpus-script 文字を全て捕捉する (render-time・positive)。 .plain では
+                 zero-width も allowlist 外ゆえ FF4 でも二重に捕捉される (defense-in-depth)。
+       ∴ blank/filler/overlay 等の新ベクタを **static-ban へ逐次追加しない** (blocklist drift = β 違反)。 .plain は
+         FF4 の補集合が render path で被覆する。 static-ban は whole-doc の bidi/zero-width no-render backstop に
+         留める (epic 語彙の「gate K」= この static unicode-ban を指す)。
+     ── 射程外 carve (本 slice の floor 範囲外・LLM ceiling / 専用 follow-up backstop) ──
+       (a) 正当結合文字の多重 stacking (Zalgo) で判読不能化する density 攻撃 (各 codepoint は allowlist 内ゆえ
+           本 codepoint allowlist では捕捉不能・count/density gate の領分)。 (b) .plain 以外の slot
+           (ears-requirement-row 等) の字種健全性 (REQ-ID/英語術語で codepoint 集合が広く別 allowlist が要る)。 */
+  // 任意文字を pinned font で canvas 描画し ink (alpha>0 pixel) の有無を返す (FF3)。 glyph の ink 有無は
+  // font-size 非依存ゆえ固定 32px で測る (size 由来の非決定を排除・glyph coverage は family で固定)。
+  const _inkCv = document.createElement('canvas');
+  const _inkCtx = _inkCv.getContext('2d', { willReadFrequently: true });
+  const charHasInk = (ch, family) => {
+    const S = 48;
+    _inkCv.width = S; _inkCv.height = S;
+    _inkCtx.clearRect(0, 0, S, S);
+    _inkCtx.font = '32px ' + (family || 'sans-serif');
+    _inkCtx.textBaseline = 'middle';
+    _inkCtx.fillStyle = '#000';
+    _inkCtx.fillText(ch, 2, S / 2);
+    const d = _inkCtx.getImageData(0, 0, S, S).data;
+    for (let i = 3; i < d.length; i += 4) if (d[i] !== 0) return true;
+    return false;
+  };
+  // 文字列に 1 つでも ink を持つ非空白文字があるか (FF3)。 genuine prose は先頭文字で即 true。
+  const textHasInk = (text, family) => {
+    for (const ch of text) { if (!ch.trim()) continue; if (charHasInk(ch, family)) return true; }
+    return false;
+  };
+  // 判読不能化する overlay 結合文字 (合字に重なる取り消し線系)。 NFD アクセント等の正当結合文字とは別物ゆえ carve。
+  const isOverlayMark = (cp) => cp >= 0x0334 && cp <= 0x0338; // tilde/short-stroke/long-stroke/short-solidus/long-solidus overlay
+  // .plain に出現してよい文字の closed allowlist (corpus 実 script + 正当結合文字、 M-D point 1)。 補集合=捏造。
+  const plainCharAllowed = (cp) =>
+    cp === 0x09 || cp === 0x0A || cp === 0x0D ||                       // tab / LF / CR
+    (cp >= 0x20 && cp <= 0x7E) ||                                      // ASCII printable
+    ((cp >= 0x0300 && cp <= 0x036F) && !isOverlayMark(cp)) ||          // 結合分音記号 (NFD アクセント) 除 overlay
+    (cp >= 0x2010 && cp <= 0x2027) ||                                  // General Punct 可視部 (— U+2014 / … U+2026 / 各種引用符・bullet・leader)
+    (cp >= 0x2030 && cp <= 0x205E) ||                                  // General Punct 可視部 続き (‰/prime/guillemet/※ U+203B 等)。 zero-width(200B-200D)/bidi(202A-202E,2066-2069)/各種 space は range 外=補集合で捕捉 (defense-in-depth)
+    (cp >= 0x2190 && cp <= 0x21FF) ||                                  // Arrows (→ U+2192 / ↔ U+2194・全て可視 glyph)
+    (cp >= 0x3000 && cp <= 0x303F) ||                                  // CJK 記号・句読点 (、。「」・ 等)
+    (cp >= 0x3040 && cp <= 0x309F) ||                                  // ひらがな (結合濁点 U+3099/309A 含む)
+    (cp >= 0x30A0 && cp <= 0x30FF) ||                                  // カタカナ (ー 含む)
+    (cp >= 0x3400 && cp <= 0x4DBF) ||                                  // CJK 拡張 A (稀用漢字・防御的)
+    (cp >= 0x4E00 && cp <= 0x9FFF) ||                                  // CJK 統合漢字
+    (cp >= 0xF900 && cp <= 0xFAFF) ||                                  // CJK 互換漢字
+    (cp >= 0xFF01 && cp <= 0xFF60);                                    // 全角 ASCII 変種/全角括弧 (！？％（） 等)。 halfwidth hangul filler U+FFA0 は range 外で carve
+
   /* === (459) census-omission/excess — *実描画* 件数 == contract 由来期待件数 === */
   let totalExpected = 0, totalVisible = 0;
   for (const sel of Object.keys(expect.counts || {})) {
@@ -693,9 +762,29 @@ window.__folioSrsRenderCensus = function (expectJson) {
      各 .plain は行と同じ rendered() ∧ 非空 rendered text (zero-width strip) を要求する。 */
   if (typeof expect.plainCount === 'number') {
     const plains = [...document.querySelectorAll('.plain')];
-    const plainOk = plains.filter((el) => rendered(el) && el.textContent.replace(ZW, '').trim() !== '').length;
+    // (FF3) 非空 heuristic を ink 計測へ一般化: rendered ∧ ZW strip 後非空 ∧ **ink>0** の .plain のみ計上。
+    // blank glyph (U+2800/U+3164) は trim 非空でも ink=0 ゆえ脱落し census-omission に倒れる。
+    const plainOk = plains.filter((el) => {
+      if (!rendered(el)) return false;
+      const txt = el.textContent.replace(ZW, '');
+      if (txt.trim() === '') return false;
+      return textHasInk(txt, getComputedStyle(el).fontFamily);
+    }).length;
     if (plainOk !== expect.plainCount) {
-      violations.push({ kind: plainOk < expect.plainCount ? 'census-omission' : 'census-excess', text: `.plain (平易説明): 実描画+非空 ${plainOk} 件 / 期待 ${expect.plainCount} 件 (DOM ${plains.length} 件) — 非エンジニア向け prose の隠蔽/消去`, sel: '.plain', visible: plainOk, expected: expect.plainCount, total: plains.length });
+      violations.push({ kind: plainOk < expect.plainCount ? 'census-omission' : 'census-excess', text: `.plain (平易説明): 実描画+ink 非空 ${plainOk} 件 / 期待 ${expect.plainCount} 件 (DOM ${plains.length} 件) — 非エンジニア向け prose の隠蔽/消去/blank-glyph 化`, sel: '.plain', visible: plainOk, expected: expect.plainCount, total: plains.length });
+    }
+  }
+
+  /* === (FF4 folio-hef.2) .plain codepoint allowlist — overlay/blank/filler/非script を render-time 補集合で弾く ===
+     ink 計測 (FF3) で捕捉できない base 重畳 overlay (U+0336 等) と、 blank/filler/zero-width/非 corpus-script 文字を
+     codepoint allowlist の補集合で弾く。 plainCount 注入の有無に関わらず描画 .plain を走査する (在否でなく字種の健全性)。 */
+  for (const el of document.querySelectorAll('.plain')) {
+    if (!rendered(el)) continue; // 非描画 .plain は上の census-omission が扱う
+    const bad = new Set();
+    for (const ch of el.textContent) { const cp = ch.codePointAt(0); if (!plainCharAllowed(cp)) bad.add(cp); }
+    if (bad.size) {
+      const list = [...bad].slice(0, 8).map((c) => 'U+' + c.toString(16).toUpperCase().padStart(4, '0')).join(',');
+      violations.push({ kind: 'plain-charclass-fabrication', text: `.plain「${snippet(el)}」 に allowlist 外 codepoint (${list}) — overlay/blank/filler 等で判読不能化`, sel: '.plain', codepoints: list });
     }
   }
 

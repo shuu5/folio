@@ -406,6 +406,17 @@ def run_census_selftest(base_url: str) -> int:
         ("srs-census-charoverlap.html", 1280, "light", {"census-omission"}, base),
         # @counter-style builtin override: lower-roman 再定義 (computed は allowlist 名のまま) を CSSOM CSSCounterStyleRule census が捕捉
         ("srs-census-counterstyle.html", 1280, "light", {"list-marker-fabrication"}, base),
+        # --- folio-hef.2 (S2) 可読性軸 census: FF3 ink 計測 + FF4 codepoint allowlist の回帰 selftest ---
+        # FF3 blank-glyph: .plain が字幅ありインク0 の U+2800 (zero-width でも whitespace でもなく旧非空 heuristic を素通り) を
+        #   ink 計測が omission に倒す。 U+2800 は allowlist 外ゆえ FF4 も同時発火 (defense-in-depth)。
+        ("srs-census-ff3-blankglyph.html", 1280, "light", {"census-omission", "plain-charclass-fabrication"}, plainb),
+        # FF4 overlay: .plain に取り消し線 overlay (U+0336) を重畳。 base に ink があり FF3 は素通り (omission 不発) するが
+        #   codepoint allowlist の補集合が U+0336 を捕捉する (gate K static blocklist の render 側 positive 対)。
+        ("srs-census-ff4-overlay.html", 1280, "light", {"plain-charclass-fabrication"}, plainb),
+        # FF4 FP-safety (M-D): 正当字種 (NFD アクセント U+0301・結合濁点 U+3099・em-dash U+2014・矢印 U+2192・全角 U+FF01/FF08/FF09)
+        #   は allowlist 内ゆえ誤検出せず clean。 \p{M} 一括 reject の β 違反や General Punctuation/Arrows/全角形の未列挙を
+        #   踏むとここが false-positive になる (著者が実使用する正当字種の誤検出を固定で防ぐ・finding folio-hef.2 #1)。
+        ("srs-census-ff4-fpsafe.html", 1280, "light", set(), plainb),
     ]
     ok = True
     with sync_playwright() as p:
