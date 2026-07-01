@@ -3480,6 +3480,33 @@ folio_cmd_verify_cross_doc_dup() {
 }
 
 # ============================================================================
+# ceiling-anchors / ceiling-precheck / ceiling-adjudicate: 決定的 ceiling helper 3 本 (folio-mzn.1.1)
+#   reviewer workflow (folio-mzn) の常設 ceiling を algorithmic に下支えする thin dispatch (verify-srs と同型)。
+#   - ceiling-anchors    : contract prose slot → SSoT anchor manifest (JSON)。 verify-laundering 一次防壁。
+#   - ceiling-precheck   : floor が真に CEILING=PENDING を出したか (SKIP masquerade 排除)。 起動順序不変条件。
+#   - ceiling-adjudicate : normalized findings → advisory verdict (FAIL でも exit0・REQ-VER-026)。
+#   ★機械/LLM 境界: 数える・対応づける・順序を担保する = algorithmic のみ。 自由文の意味判定は LLM reviewer の領分。
+# ============================================================================
+folio_cmd_ceiling_anchors() {
+  local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local s="${bin_dir}/../design-system/generator/ceiling-anchors.sh"
+  [[ -f "$s" ]] || { echo "folio ceiling-anchors: ceiling-anchors.sh not found ($s)" >&2; return 2; }
+  bash "$s" "$@"
+}
+folio_cmd_ceiling_precheck() {
+  local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local s="${bin_dir}/../design-system/generator/ceiling-precheck.sh"
+  [[ -f "$s" ]] || { echo "folio ceiling-precheck: ceiling-precheck.sh not found ($s)" >&2; return 2; }
+  bash "$s" "$@"
+}
+folio_cmd_ceiling_adjudicate() {
+  local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local s="${bin_dir}/../design-system/generator/ceiling-adjudicate.sh"
+  [[ -f "$s" ]] || { echo "folio ceiling-adjudicate: ceiling-adjudicate.sh not found ($s)" >&2; return 2; }
+  bash "$s" "$@"
+}
+
+# ============================================================================
 # dispatch
 # ============================================================================
 
@@ -3523,6 +3550,19 @@ Subcommands:
         [--strict]         人間=engine は判断しない、 yzv 決定④)。 cross_doc graph で説明済の echo は非フラグ。
         [--show-declared]  既定 advisory (exit 0)。 --strict で undeclared HIGH があれば exit 1 (CI 非配線)。
                            ★字句重複のみ検出し意味的 paraphrase は構造上検出しない (検出 clean ≠ 必要の証明)。
+  ceiling-anchors          contract の各 prose slot を SSoT source に対応づけた anchor manifest (JSON) を stdout へ
+        <contract.yaml>    (folio-mzn.1.1)。 verify-laundering 一次防壁 = ceiling reviewer が生成 HTML(DOM) を自己参照
+                           する二重 SSoT を封じ contract を anchor にさせる必須入力。 slot↔SSoT は fidelity-srs §2 が
+                           canonical (srs のみ対応)。 exit 0=出力成功 / 2=tool error
+  ceiling-precheck         floor (verify-srs stdout) が *真に* CEILING=PENDING を出したかを fail-closed 確認
+        [<floor-out.txt>]  (folio-mzn.1.1・省略時 stdin)。 honest-SKIP (renderer 不在の [SKIP]) が PENDING を偽装する
+                           masquerade を排除し起動順序不変条件 (floor→ceiling) を機械で担保。 exit 0=真の PENDING /
+                           1=floor 未通過 / 3=SKIP masquerade / 2=tool error
+  ceiling-adjudicate       normalized findings (JSON) を集計し advisory verdict を stdout (VERDICT=PASS|FAIL|
+        [<findings.json>]  ESCALATE|PENDING) へ (folio-mzn.1.1・省略時 stdin)。 machinery (期待 lens 全走+floor=PENDING)
+                           裏打ち・upheld critical→FAIL / upheld high|uncertain critical→ESCALATE。 ★severity は LLM
+                           ラベルを数えるだけ (再判定しない)。 ★verdict に依らず exit 0 (advisory・REQ-VER-026)・
+                           不正/空 JSON 等 tool error のみ 2。
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
@@ -3568,6 +3608,21 @@ EOF
   verify-cross-doc-dup)
     shift
     folio_cmd_verify_cross_doc_dup "$@"
+    exit $?
+    ;;
+  ceiling-anchors)
+    shift
+    folio_cmd_ceiling_anchors "$@"
+    exit $?
+    ;;
+  ceiling-precheck)
+    shift
+    folio_cmd_ceiling_precheck "$@"
+    exit $?
+    ;;
+  ceiling-adjudicate)
+    shift
+    folio_cmd_ceiling_adjudicate "$@"
     exit $?
     ;;
   *)
