@@ -89,6 +89,16 @@ severity 目安: **critical** = 捏造 (存在しない理由・要件・RTM 行
 
 **clean 時も**、 突合した全 prose スロット (`cover-summary` / `chapter-lead-NN` / `plain-FRx` / `plain-NFRx` / `rationale-FRx` / `rtm-summary`) と接地した contract フィールドを**列挙して報告する** (空の clean は突合の証拠にならない — sibling の [persona-walk-srs](persona-walk-srs.md) / [readability-walk](readability-walk.md) の anti-empty-green 規律と対称)。
 
+### 機械可読 block (凍結・commit-check が消費する)
+
+本文末尾に、 orchestrator (folio-verify skill) が読み ceiling-commit-check が数えるための機械可読 block を必ず出す (severity ラベルは本 agent = LLM が付ける = 境界の LLM 側。 機械はこれを**数えるだけ**。 sibling の [completeness-critic-srs](completeness-critic-srs.md) / [persona-walk-srs](persona-walk-srs.md) と同一位置・対称形):
+
+```json
+{"agent":"fidelity-srs","doc_type":"srs","findings":[{"id":"F1","severity":"critical","axis":"prose","location":"rationale-FR5 ↔ requirements[4].rationale_source"}],"summary":{"critical":1,"high":0,"medium":0,"low":0}}
+```
+
+`findings[]` は上の human-readable findings と 1:1 対応し (`id` / `severity` / `axis` (a)prose・(b)term-inline・(c)consistency・(d)vmethod / `location`)、 `summary` は severity 別件数。 fidelity-srs の severity は既に canonical (critical/high/medium/low) ゆえ orchestrator の enum remap を要さない。 clean 時は `"findings":[]` + `summary` 全 0 を出す。
+
 ## 4. read-only (MUST)
 
 本 agent は **review のみ**。 `Read` / `Grep` / `Glob` / `Bash` (yq での contract 列挙) で検査し findings を返すだけで、 **自ら HTML/contract/manifest を Edit/Write しない**。 修正は caller (orchestrator) が adjudication の上で適用する (prose 捏造は manifest の retreat-to-literal、 矛盾は contract の見直し)。 findings を機械挙動に defer せず、 **SSoT (contract) を intent anchor として判定**する。

@@ -3480,12 +3480,13 @@ folio_cmd_verify_cross_doc_dup() {
 }
 
 # ============================================================================
-# ceiling-anchors / ceiling-precheck / ceiling-adjudicate: 決定的 ceiling helper 3 本 (folio-mzn.1.1)
+# ceiling-anchors / ceiling-precheck / ceiling-commit-check: 決定的 ceiling helper 3 本 (folio-mzn.1.1 / commit-check は folio-6p0)
 #   reviewer workflow (folio-mzn) の常設 ceiling を algorithmic に下支えする thin dispatch (verify-srs と同型)。
-#   - ceiling-anchors    : contract prose slot → SSoT anchor manifest (JSON)。 verify-laundering 一次防壁。
-#   - ceiling-precheck   : floor が真に CEILING=PENDING を出したか (SKIP masquerade 排除)。 起動順序不変条件。
-#   - ceiling-adjudicate : normalized findings → advisory verdict (FAIL でも exit0・REQ-VER-026)。
-#   ★機械/LLM 境界: 数える・対応づける・順序を担保する = algorithmic のみ。 自由文の意味判定は LLM reviewer の領分。
+#   - ceiling-anchors      : contract prose slot → SSoT anchor manifest (JSON)。 verify-laundering 一次防壁。
+#   - ceiling-precheck     : floor が真に CEILING=PENDING を出したか (SKIP masquerade 排除)。 起動順序不変条件。
+#   - ceiling-commit-check : normalized findings → 単一 default-block コミット述語 (GREEN 許可可否・folio-6p0)。
+#   ★機械/LLM 境界: 数える・対応づける・順序担保・default-block 保証 = algorithmic のみ。 verdict の裁定
+#     (どの finding が効くか・GREEN 可否・ESCALATE/FAIL) は LLM 合成の領分 (機械は裁定しない・partial-enum trap 回避)。
 # ============================================================================
 folio_cmd_ceiling_anchors() {
   local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
@@ -3499,10 +3500,10 @@ folio_cmd_ceiling_precheck() {
   [[ -f "$s" ]] || { echo "folio ceiling-precheck: ceiling-precheck.sh not found ($s)" >&2; return 2; }
   bash "$s" "$@"
 }
-folio_cmd_ceiling_adjudicate() {
+folio_cmd_ceiling_commit_check() {
   local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
-  local s="${bin_dir}/../design-system/generator/ceiling-adjudicate.sh"
-  [[ -f "$s" ]] || { echo "folio ceiling-adjudicate: ceiling-adjudicate.sh not found ($s)" >&2; return 2; }
+  local s="${bin_dir}/../design-system/generator/ceiling-commit-check.sh"
+  [[ -f "$s" ]] || { echo "folio ceiling-commit-check: ceiling-commit-check.sh not found ($s)" >&2; return 2; }
   bash "$s" "$@"
 }
 
@@ -3558,11 +3559,11 @@ Subcommands:
         [<floor-out.txt>]  (folio-mzn.1.1・省略時 stdin)。 honest-SKIP (renderer 不在の [SKIP]) が PENDING を偽装する
                            masquerade を排除し起動順序不変条件 (floor→ceiling) を機械で担保。 exit 0=真の PENDING /
                            1=floor 未通過 / 3=SKIP masquerade / 2=tool error
-  ceiling-adjudicate       normalized findings (JSON) を集計し advisory verdict を stdout (VERDICT=PASS|FAIL|
-        [<findings.json>]  ESCALATE|PENDING) へ (folio-mzn.1.1・省略時 stdin)。 machinery (期待 lens 全走+floor=PENDING)
-                           裏打ち・upheld critical→FAIL / upheld high|uncertain critical→ESCALATE。 ★severity は LLM
-                           ラベルを数えるだけ (再判定しない)。 ★verdict に依らず exit 0 (advisory・REQ-VER-026)・
-                           不正/空 JSON 等 tool error のみ 2。
+  ceiling-commit-check     normalized findings (JSON) に対する単一 default-block コミット述語 (folio-6p0・省略時
+        [<findings.json>]  stdin)。 GREEN 許可可否を stdout COMMIT=OK|BLOCKED へ。 機械は verdict を裁定せず (それは
+                           LLM 合成)、「machinery-clean ∧ 全 GREEN 反転帯 finding が verdict==refuted」でなければ
+                           BLOCKED (refuted / 明示 medium・low 以外は全 block = 列挙漏れによる穴が開かない)。 exit
+                           0=OK / 1=BLOCKED / 2=tool error。 ★fail-closed: caller は exit!=0 を GREEN 不可として扱う。
 
 完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
@@ -3620,9 +3621,9 @@ EOF
     folio_cmd_ceiling_precheck "$@"
     exit $?
     ;;
-  ceiling-adjudicate)
+  ceiling-commit-check)
     shift
-    folio_cmd_ceiling_adjudicate "$@"
+    folio_cmd_ceiling_commit_check "$@"
     exit $?
     ;;
   *)

@@ -56,6 +56,16 @@ model: opus
 
 「問題なし」も**歩いた経路と確認内容 (章・読んだ部品・開いた fold) を列挙**して報告する (空の green は実 walk の証拠にならない)。 本 agent は **read-only** — ファイルを書き換えない。 findings は caller (orchestrator) が adjudication し、 妥当なものを修正に回す。
 
+### 機械可読 block (凍結・commit-check が消費する)
+
+本文末尾に、 orchestrator (folio-verify skill) が読み ceiling-commit-check が数えるための機械可読 block を必ず出す (severity ラベルは本 agent = LLM が付ける = 境界の LLM 側。 機械はこれを**数えるだけ**。 sibling の [fidelity-srs](fidelity-srs.md) / [completeness-critic-srs](completeness-critic-srs.md) と同一位置・対称形):
+
+```json
+{"agent":"persona-walk-srs","doc_type":"srs","findings":[{"id":"F1","severity":"blocker","axis":"readability","location":"chapter-deck-band-04 (nfr-metrics-table)"}],"summary":{"blocker":1,"major":0,"minor":0,"polish":0}}
+```
+
+`findings[]` は上の verdict + 重さの findings と 1:1 対応し (`id` / `severity` / `axis`=readability / `location`)、 `summary` は重さ別件数。 **本 agent の `severity` は gate I の native 語彙 (`blocker` / `major` / `minor` / `polish`) のまま emit する** — orchestrator (folio-verify skill) が canonical へ enum remap する (`blocker`→critical / `major`→high / `minor`→medium / `polish`→low。 これで「blocker=北極星 miss=fail-closed」が canonical の critical へ保存される)。 clean 時は `"findings":[]` + `summary` 全 0 を出す。
+
 ## 5. scope 境界 (重複しない)
 
 - **正確性 (捏造 / 情報落ち / 歪み) は検査しない** — それは gate J = [fidelity-srs](fidelity-srs.md) の領分。 本 agent は「**書いてある内容が読めるか**」だけを見る (内容が SSoT に忠実かは問わない)。 ただし「読んでいて明らかに辻褄が合わない」と persona が感じた点は、 fidelity 判定でなく**読書体験の躓き**として報告してよい。
