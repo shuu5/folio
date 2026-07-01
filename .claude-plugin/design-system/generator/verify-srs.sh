@@ -21,7 +21,7 @@
 #   visual-first              : 各章 (footer 除く) に非 prose 部品が ≥1 (字だけの章 =0)
 #
 # ★floor 通過しても GREEN を宣言しない: ceiling=PENDING を返す (taxonomy §5.1「floor 単独 GREEN 禁止」)。
-#   GREEN ⟺ (floor 全通過) AND (ceiling 合格)。 ceiling = persona-walk-srs + fidelity-srs (S5.2)。
+#   GREEN ⟺ (floor 全通過) AND (ceiling 合格)。 ceiling = persona-walk-srs + fidelity-srs + completeness-critic-srs (S5.2 + mzn.1.2)。
 #   exit 0 は「floor PASS」を意味し「GREEN」ではない (caller は exit 0 を GREEN に流用してはならない)。
 #
 # usage: verify-srs.sh <contract.yaml> <generated.html>
@@ -348,7 +348,7 @@ if [[ "$fail" -eq 0 ]]; then
     echo "RESULT: floor PASS (gate A-E,G,H + visual-first / render gate 未完: gateF=$gateF census=$gateCensus) — ただし CEILING=PENDING (*GREEN ではない*)"
     echo "  ※ render gate (F=見た目崩れ / census=描画後 content-fidelity) が未実行 (renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
   fi
-  echo "  ceiling = persona-walk-srs + fidelity-srs (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
+  echo "  ceiling = persona-walk-srs + fidelity-srs + completeness-critic-srs (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
   echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
   exit 0
 else

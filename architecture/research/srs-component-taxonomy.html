@@ -280,12 +280,13 @@
 </tbody>
 </table>
 
-<h3>§5.3. Ceiling &mdash; 意味判定 (LLM persona + fidelity)</h3>
+<h3>§5.3. Ceiling &mdash; 意味判定 (LLM persona + fidelity + completeness)</h3>
 <table>
 <thead><tr><th>gate</th><th>条件</th><th>判定手段</th></tr></thead>
 <tbody>
 <tr><td><strong>I. persona walk</strong> <span class="badge-new">★</span></td><td><strong>非エンジニア persona</strong> が生成 HTML を index から歩いて「何が要件か・なぜ要るか・どう検証されるか」を<em>頑張れば読める</em>。 専門エンジニアがなんとか読める水準では不合格 (北極星)。</td><td>persona-walk ceiling (LLM review)</td></tr>
 <tr><td><strong>J. fidelity check</strong></td><td>生成 HTML が機械 SSoT の正確な要約 &mdash; 情報落ち / 歪み / <strong>捏造</strong> が無い。 派生ビュー (<code>plain-language-term-inline</code> 等) が SSoT と一致。 要件間 consistency (矛盾) もここで surface (5.2.6、 完全機械化は過剰主張ゆえ ceiling の領分、 critic #5 への配置判断)。</td><td>fidelity check (機械 SSoT 突合)</td></tr>
+<tr><td><strong>K. completeness critic</strong> <span class="badge-new">★</span></td><td>生成 HTML が機械 SSoT (contract) の求める構成要素・意味内容を<em>意味的に</em>満たす &mdash; 存在するが空 / 存在するが的外れ / 意味カバレッジ欠落が無い (&sect;5.2.6 集合完全性の軸)。 floor gate A/G が部品・slot の<em>存在</em>を数えて通っても、 中身が意味的に空・的外れな箇所 (goals と requirements の意味被覆漏れ・nfr/constraint/actor 章の実質空・RTM 要約の脱落) を検出。 <em>2→3 翼 amendment (folio-mzn.1.4 landing) で第 3 翼として GREEN 判定に参加。</em></td><td>completeness-critic ceiling (LLM review)</td></tr>
 </tbody>
 </table>
 

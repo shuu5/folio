@@ -242,7 +242,7 @@
     <tr><td>② 段階4 walk の順序</td><td>二段 (索引型先行 → 記述型後追い)</td><td>索引型 (SRS / ADR / research / glossary / test-cases) を先に歩き、 記述型 (architecture / vision) を後で追う。 要件索引型を脱した descriptive pack が engine フロンティア。</td></tr>
     <tr><td>③ vision の扱い</td><td>含む (段階3 architecture の後)</td><td>記述型 2 例目として vision pack を suite に入れる (<code>folio-c5r.4</code>)。</td></tr>
     <tr><td>④ constitution</td><td>一律機械的に生成 + SRS との重複検出 → warning + folio 適用可否は人間</td><td>constitution を生成するか否かを engine に判断させない (一律生成 = 冪等)。 生成物が SRS goals 等と重複していないかを検出し、 重複が多ければ人間に warning を出す。 重複の多寡から folio 適用可否を人間が最終判断する。 検出が clean でも「必要の証明」ではない。</td></tr>
-    <tr><td>⑤ 段階4 合格条件</td><td>三層 (機械 floor / ceiling / 人間最終判断)</td><td>floor = graph 双方向 + 重複検出、 ceiling = persona (gate I) + fidelity (gate J)、 その上に人間の最終判断を必ず置く。</td></tr>
+    <tr><td>⑤ 段階4 合格条件</td><td>三層 (機械 floor / ceiling / 人間最終判断)</td><td>floor = graph 双方向 + 重複検出、 ceiling = persona (gate I) + fidelity (gate J) + completeness (gate K)、 その上に人間の最終判断を必ず置く。</td></tr>
   </tbody>
 </table>
 

@@ -500,8 +500,8 @@ uv run --with playwright==1.60.0 python render-gate-srs.py --selftest           
 - **gate H** fidelity meta: fidelity-sync-meta の 3 項目が *非空白* で充填。
 - **visual-first**: 各章 (footer 除く) に非 prose 部品 ≥1。
 - ★**floor 通過でも GREEN を宣言せず `CEILING=PENDING` を返す** (taxonomy §5.1「floor 単独 GREEN 禁止」)。
-  GREEN ⟺ floor 全通過 ∧ ceiling (persona-walk-srs + fidelity-srs) 合格。 **exit 0 は floor PASS であって GREEN ではない**。
-  ceiling は **S5.2 で制度化済** (`agents/persona-walk-srs` = gate I / `agents/fidelity-srs` = gate J)。 敵対回帰 A22-A33 が各 bash gate の fail-closed を、 A34 (= `render-gate-srs.py --selftest`) が gate F detector の検出力を固定。
+  GREEN ⟺ floor 全通過 ∧ ceiling (persona-walk-srs + fidelity-srs + completeness-critic-srs) 合格。 **exit 0 は floor PASS であって GREEN ではない**。
+  ceiling は **S5.2 で制度化** (`agents/persona-walk-srs` = gate I / `agents/fidelity-srs` = gate J)、 **gate K = `agents/completeness-critic-srs` は folio-mzn.1.2 で追加・folio-mzn.1.4 landing で 2→3 翼 amendment 済**。 敵対回帰 A22-A33 が各 bash gate の fail-closed を、 A34 (= `render-gate-srs.py --selftest`) が gate F detector の検出力を固定。
 
 ## 範囲 (S4 リッチ化スライス)
 
