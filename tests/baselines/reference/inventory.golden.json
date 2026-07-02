@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-01T01:43:01Z",
+  "generatedAt": "2026-07-02T04:24:32Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -2097,7 +2097,7 @@
         "id": "REQ-VER-024",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-024",
-        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 hidden-render ban 群 〔&lt;script&gt; / whole-tag &lt;template&gt; / nested browsing context / inline-only (replaced・interactive・form-associated 要素 〔img…button + progress/meter〕 + url(data:)) / scroll-pseudo / list-marker (@counter-style / 文字列 list-style) == 0〕 + visual-deception ban 〔bidi-override codepoint / zero-width・BOM / &lt;bdo&gt;・unicode-bidi override == 0・次元B〕 を検査する。 ★floor 通過は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 hidden-render ban 群 〔&lt;script&gt; / whole-tag &lt;template&gt; / nested browsing context / inline-only (replaced・interactive・form-associated 要素 〔img…button + progress/meter〕 + url(data:)) / scroll-pseudo / list-marker (@counter-style / 文字列 list-style) == 0〕 + visual-deception ban 〔bidi-override codepoint / zero-width・BOM / &lt;bdo&gt;・unicode-bidi override == 0・次元B〕 を検査する (★024 の blocking arm = gate A–E,G,H + visual-first + census-count 〔部品件数の静的 DOM count 照合〕; 静的 hidden-render ban 群と visual-deception ban は fabrication-free-by-construction 〔rules §12〕 で構成上排除済の脅威の warn 級 backstop = 非 blocking・意味権威は ceiling gate J・§3.9 intro 参照)。 ★blocking arm 全 PASS は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目) + REQ-VER-027 (gate F2 census)、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-025",
@@ -2109,25 +2109,25 @@
         "id": "REQ-VER-026",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-026",
-        "essence": "生成 SRS が GREEN ⟺ (floor 全通過: REQ-VER-024 + 025 + 027) AND (ceiling 合格: persona-walk-srs gate I + fidelity-srs gate J)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保)。 gate I = 非エンジニア persona walk (北極星)、 gate J = fidelity (捏造/情報落ち/派生ビュー一致を機械 SSoT と突合)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層。"
+        "essence": "生成 SRS が GREEN ⟺ (blocking floor 全通過: REQ-VER-024 の blocking arm 〔gate A–E,G,H + visual-first + census-count = 部品件数の静的 DOM count 照合〕 + 025 render 健全性) AND (ceiling 合格: gate I persona-walk-srs〔可読性 = REQ-VER-028 の意味権威〕 + gate J fidelity-srs〔捏造 = REQ-VER-027 の意味権威〕 + gate K completeness-critic-srs〔意味カバレッジ〕)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保・静的 hidden-render ban 群と census 捏造/可読性検出は warn 級 backstop で blocking しない)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層 (北極星 = gate I の非エンジニア可読性)。"
       },
       {
         "id": "REQ-VER-027",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-027",
-        "essence": "gate F2 (census、 描画後 content-fidelity、 render-gate-srs.py --census) は gate F (見た目崩れ) の sibling として、 静的 floor (make_body は &lt;style&gt; 空化 / comment verbatim) を素通りする render 依存の捏造・隠蔽を実 render で捕捉する: (folio-2b8) 任意要素 + body/html の ::before/::after/::marker content 注入を inverse-allowlist (genuine chrome allowlist の補集合 = 捏造) で、 (folio-459) 描画後の 実描画部品数 (rendered() = checkVisibility ∧ 面積・clip-path・実効 opacity・overflow で判定) と .plain (平易説明・rendered() ∧ 非空 text) を contract 由来期待件数 (DOM 自己参照しない anchor) と照合し、 さらに (folio-hef S1) 要素自身の content による replaced-element 捏造を own-content scan・contain:paint クリップ + 縦潰し (transform:scaleY / 微小 band) を rendered() の contain 祖先交差 + 最小可読高 floor・CSS image sink (background-image 等の data:/外部 url()・静的 url-ban を回避する CSS escape / image-set も正規化値で) を computed-style image-sink census・generated-content scroll pseudo (::scroll-button/::scroll-marker) を pseudo 走査拡張で封鎖して検出 (declarative shadow DOM 等は REQ-VER-024 の静的 ban 群が担う)。 fail-closed (T7): 期待要素が全 viewport/scheme で可視 0 = render 破綻として FAIL。 被覆は prefers-color-scheme と検査 3 viewport 幅のみで、 他軸隠蔽 (off-screen / 非検査軸 @media / filter / z-order occlusion 等) は floor 射程超ゆえ carve (bd folio-cpf・ink-zero/coverage/free-prose 等は folio-hef・LLM ceiling backstop)。 gate F と独立に honest SKIP 報告し、 検出器・期待件数導出は machine 部。"
+        "essence": "gate F2 census (render-gate-srs.py --census) は render 依存の捏造・隠蔽を実 render で検出する gate F の sibling。 境界 (§3.9 intro) 下では gate F2 の全 6 class が warn 級 backstop (非 blocking) — 捏造検出 (1)/(3)/(4)/(5)/(6) の意味権威は ceiling gate J (fidelity-srs) にあり (fabrication-free-by-construction ゆえ捏造再検査は重複)、 実描画件数照合 (class 2) も render 依存の warn 検査である。 blocking の部品件数照合は census-count arm (REQ-VER-024 blocking arm・静的 DOM count) が render を要さず担う。 機構詳細 (folio-2b8/459/hef の 6 class・fail-closed T7 〔測定系 tool-integrity error = warn 指摘とは別軸で非零 exit〕・honest SKIP) は machine 部。"
       },
       {
         "id": "REQ-VER-028",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-028",
-        "essence": "gate F2 census の可読性軸 (folio-hef.2 / S2) は .plain (gate I 看板) の字種健全性を render-time で検査し、 REQ-VER-027 が S2 へ carve した穴を塞ぐ: (FF3) 字幅ありインク0 の blank glyph (U+2800/U+3164) を canvas ink 計測で census-omission に、 (FF4) base にインクが乗る overlay (U+0336 等)・filler・非 script 文字を corpus 実 script の閉集合 allowlist 補集合で plain-charclass-fabrication に倒す。 監査補正 M-D に従い正当結合文字は誤検出しない (allowlist 詳細・static-ban との所掌分界・conformance は machine 部)。"
+        "essence": "境界 (§3.9 intro) 下では、 .plain の可読性 (字種・平易さ) の意味権威は ceiling gate I (persona-walk-srs) にあり、 本 render-time 字種 census (FF3 ink 計測 / FF4 閉集合 allowlist・folio-hef.2 S2) は warn 級 backstop (非 blocking) である。 blank glyph・overlay・非 script 文字を捕捉する機構詳細と M-D 監査補正・conformance は machine 部。"
       },
       {
         "id": "REQ-VER-029",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-029",
-        "essence": "verify-census-vocab.sh (決定的 CI floor) は render census の closure 語彙 SSoT (srs.census-vocab.yaml = assembler が描画する data-component ∪ data-prose-slot ∪ recognized class の閉集合) が assemble-srs.sh + lib/common.sh の emit 集合と bijection (emit == vocab) であることを assert し、 新部品の追加・改名・削除で語彙未更新を非ゼロ exit で赤にして語彙鮮度を機械強制する (S4/S5 = 全描画要素 ↔ 期待要素の全単射が消費する基盤)。 folio verify-srs は起動時に同 SSoT を pack-level yq で読み census probe へ carry する。 ★census 語彙は照会 graph (srs.rolemap.yaml の .roles) には足さず別 file に分離する (verify-graph.sh 非破壊・M-A 監査補正)。"
+        "essence": "verify-census-vocab.sh (決定的 CI floor) は closure 語彙 SSoT (srs.census-vocab.yaml) と assemble-srs.sh + lib/common.sh の emit 集合の bijection (emit == vocab) を assert し、 新部品の追加・改名・削除での語彙未更新を非ゼロ exit で強制する。 境界 (§3.9 intro) 下では捏造検出の意味権威が ceiling gate J にあるため、 本 gate は語彙鮮度の floor のみを担い、 census closure の全単射基盤 (S4/S5) を消費しない。 SSoT 配線 (folio verify-srs 起動時 yq 読込・census probe carry)・graph 非破壊 (M-A) は machine 部。"
       },
       {
         "id": "REQ-XREF-001",
