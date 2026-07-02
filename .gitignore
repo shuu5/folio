@@ -34,3 +34,6 @@ worktrees/
 .beads/issues.jsonl
 .beads/interactions.jsonl
 embeddeddolt/
+
+# srs-ceiling-oracle 実行生成物 (dev-time・folio-mzn.1.5)
+.claude-plugin/design-system/generator/oracle/out/

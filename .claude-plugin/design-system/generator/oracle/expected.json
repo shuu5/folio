@@ -1,0 +1,17 @@
+{
+  "_comment": "srs-ceiling-oracle の期待 verdict SSoT (folio-mzn.1.5 S11)。expect_commit = ceiling-commit-check の COMMIT 値。expect_detector = BLOCKED のとき GREEN 反転帯 (未 refute) の finding を最低 1 件上げるべき lens (OR 集合 — completeness↔fidelity の境界は isolated reviewer には曖昧で両方から valid に上がりうるため、いずれか 1 lens の検出で attribution 成立とする)。fixture の変異内容は build-fixtures.sh が SSoT。",
+  "contract": "contract/ec-checkout.srs.yaml",
+  "fixtures": [
+    { "name": "golden", "expect_commit": "OK",
+      "defect": "なし (清浄 = 生成器の正規出力)" },
+    { "name": "fab-rationale", "expect_commit": "BLOCKED",
+      "expect_detector": ["fidelity-srs"],
+      "defect": "捏造 rationale — contract に無い取締役会承認と自動フォールバック挙動を rationale-FR2 が主張 (gate J)" },
+    { "name": "vacuous-plain", "expect_commit": "BLOCKED",
+      "expect_detector": ["completeness-critic-srs", "persona-walk-srs"],
+      "defect": "意味的に空の plain — plain-FR1 が非空だが何も説明しない (gate K 実質空 / gate I 北極星 miss)" },
+    { "name": "omission-lead", "expect_commit": "BLOCKED",
+      "expect_detector": ["completeness-critic-srs", "fidelity-srs"],
+      "defect": "意味カバレッジ欠落 — 機能要件章 lead が FR1 のみを章の唯一の内容と主張し FR2〜FR6 を意味的に落とす (gate K / gate J 歪み)" }
+  ]
+}
