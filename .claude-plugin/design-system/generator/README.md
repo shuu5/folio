@@ -499,6 +499,8 @@ uv run --with playwright==1.60.0 python render-gate-srs.py --selftest           
 - **gate G** 内容完全性: 必須スロット非空 (--artifact) + placeholder トークン (TBD/未定 等・case-insensitive・日本語含む) =0。
 - **gate H** fidelity meta: fidelity-sync-meta の 3 項目が *非空白* で充填。
 - **visual-first**: 各章 (footer 除く) に非 prose 部品 ≥1。
+- **census-count** (blocking arm・folio-mzn.3): 計数部品の **source DOM 静的件数 == contract 期待件数** (`ears-requirement-row` == `.requirements` 数 ∧ `nfr-metric-row` == `.nfr` 数 ∧ `.plain` == 両者の和・render 不要の算術照合、 REQ-VER-024)。
+- ★**機械/LLM 検証境界** (verification §3.9 = SSoT・folio-mzn.2/mzn.3): **blocking arm = gate A–E,G,H + visual-first + census-count (+ gate F)**。 静的 hidden-render ban 群 (script/template/nested-context/inline-only/scroll-pseudo/list-marker) + visual-deception ban (unicode/bidi-override) + **gate F2 render census の全 class は warn 級 backstop (非 blocking・exit を上げない)** — fabrication-free-by-construction (rules §12) で構成上排除済の脅威の再検査ゆえ、 捏造の意味権威は ceiling gate J・可読性は gate I。 gate F2 の **T7 render 破綻は測定系 tool-integrity error として exit 2** (gate 判定と別軸・「omission 0 = clean」と取り違えない)。
 - ★**floor 通過でも GREEN を宣言せず `CEILING=PENDING` を返す** (taxonomy §5.1「floor 単独 GREEN 禁止」)。
   GREEN ⟺ floor 全通過 ∧ ceiling (persona-walk-srs + fidelity-srs + completeness-critic-srs) 合格。 **exit 0 は floor PASS であって GREEN ではない**。
   ceiling は **S5.2 で制度化** (`agents/persona-walk-srs` = gate I / `agents/fidelity-srs` = gate J)、 **gate K = `agents/completeness-critic-srs` は folio-mzn.1.2 で追加・folio-mzn.1.4 landing で 2→3 翼 amendment 済**。 敵対回帰 A22-A33 が各 bash gate の fail-closed を、 A34 (= `render-gate-srs.py --selftest`) が gate F detector の検出力を固定。

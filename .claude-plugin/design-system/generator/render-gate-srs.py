@@ -247,8 +247,11 @@ def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_di
 
     pseudo-content-fabrication (2b8) は scheme 依存 / census-omission (459) は viewport・scheme 条件下の
     隠蔽もあるため、 visual gate と同じ直積で走らせる。 T7 fail-closed: 期待 >0 なのに *全 viewport で*
-    可視 0 = render 破綻と判定し、 census-omission とは別の broken-render として FAIL に倒す
-    (renderer 設定ミスを「omission 0=clean」と取り違えない)。
+    可視 0 = render 破綻と判定し、 census-omission とは別の broken-render = 測定系 tool-integrity error
+    として exit 2 に倒す (renderer 設定ミスを「omission 0=clean」と取り違えない)。
+
+    exit: 0 = census clean / 1 = census finding (6 class — REQ-VER-027 境界下で caller が warn 級 backstop
+    に写像する) / 2 = 測定系 tool-integrity error (T7 render 破綻 = gate 判定と別軸・REQ-VER-027)。
     """
     # 'plain' は data-component でなく sub-slot (.plain) 期待件数ゆえ counts から分離し plainCount で注入
     # (DOM 自己参照を廃した contract-anchor。 census 側 expect.plainCount が受領)。
@@ -286,12 +289,19 @@ def run_census(base_url: str, target: str, counts: dict[str, int], screenshot_di
                     page.screenshot(path=str(d / (target.replace("/", "__") + ".jpg")), full_page=True, type="jpeg", quality=80)
                 page.close()
         browser.close()
-    # T7 fail-closed: 期待要素が *どの viewport/scheme でも* 1 件も描画されない = render 破綻。
-    if total_expected > 0 and not any_visible:
-        failures.append("  [census] broken-render: 期待要素が全 viewport/scheme で可視 0 — render 破綻 (genuine omission と区別し FAIL)")
     print()
+    # T7 fail-closed: 期待要素が *どの viewport/scheme でも* 1 件も描画されない = render 破綻 = 測定系
+    # tool-integrity error (REQ-VER-027)。 census finding (exit 1) と別軸の exit 2 に倒す — 境界 (§3.9) 下で
+    # caller (verify-srs.sh) が exit 1 を warn 級 backstop へ落としても、 T7 は測定不能ゆえ非零 exit のまま
+    # 伝播し「omission 0 = clean」と取り違えない。
+    if total_expected > 0 and not any_visible:
+        if failures:
+            print("\n".join(failures))
+        print("render census: broken-render (T7) — 期待要素が全 viewport/scheme で可視 0 = render 破綻。"
+              " 測定系 tool-integrity error として exit 2 (census finding=exit 1 と別軸・REQ-VER-027)", file=sys.stderr)
+        return 2
     if failures:
-        print(f"render census: {len(failures)} 件の問題 (pseudo-content 捏造 / 描画後 omission / render 破綻)\n")
+        print(f"render census: {len(failures)} 件の問題 (pseudo-content 捏造 / 描画後 omission)\n")
         print("\n".join(failures))
         return 1
     print(f"render census: clean — pseudo-content 捏造 0 / 描画後 omission 0 (期待 {total_expected} 件が light+dark × 3 viewport で全可視)")
@@ -506,10 +516,14 @@ def main() -> int:
         if not html.is_file():
             print(f"render-gate-srs --census: html not found: {html}", file=sys.stderr)
             return 2
-        if args.base_url:
-            return run_census(args.base_url, html.name, counts, shots, vocab)
-        with serve(html.parent) as base_url:
-            return run_census(base_url, html.name, counts, shots, vocab)
+        try:
+            if args.base_url:
+                return run_census(args.base_url, html.name, counts, shots, vocab)
+            with serve(html.parent) as base_url:
+                return run_census(base_url, html.name, counts, shots, vocab)
+        except Exception as e:  # census 測定系 tool-integrity error: exit 1 は genuine census finding 専用に予約 (REQ-VER-026/027)
+            print(f"render-gate-srs --census: 測定系 tool-integrity error (render 破綻/renderer 例外): {e}", file=sys.stderr)
+            return 2
 
     # ---- gate F (visual 健全性) ----
     if args.selftest:
