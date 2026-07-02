@@ -124,9 +124,14 @@ emit_doc_glossary() {
 }
 
 # footer は core_emit_footer に glossary-pack 別のタグ列を渡す (本文 SSoT 行は共通)。
+# ★instance タグは hardcode せず contract (.footer.instance_tag) から取る (folio-c5r.3 ceiling
+#   BLK-FOOTER-INSTANCE-TAG: instance#1 リテラルの hardcode は 2nd instance の成果物に虚偽の出自を
+#   表示し gen-meta と自己矛盾した)。欠落時の既定は instance 非依存の中立句 (虚偽番号を出さない)。
 emit_footer_band() {
-  local genmeta; genmeta="$(q '.footer.gen_meta // "folio design-system generator"')"
-  core_emit_footer '<span>folio design system</span><span>glossary-pack</span><span>folio self-host (instance#1)</span><span>canonical-name SSoT + dual-audience term</span>'
+  local genmeta itag
+  genmeta="$(q '.footer.gen_meta // "folio design-system generator"')"
+  itag="$(q '.footer.instance_tag // "dual-audience canonical vocabulary"')"
+  core_emit_footer "<span>folio design system</span><span>glossary-pack</span><span>$(esc "$itag")</span><span>canonical-name SSoT + dual-audience term</span>"
   printf '<p class="gen-meta">%s</p>\n' "$(esc "$genmeta")"
 }
 

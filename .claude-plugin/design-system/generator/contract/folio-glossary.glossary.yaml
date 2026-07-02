@@ -59,6 +59,9 @@ cover:
       value: "約 12 分"
 footer:
   gen_meta: "folio design-system generator — glossary-pack (instance #1 / folio self-host)"
+  # instance タグ (footer chrome の出自 span)。 assembler の hardcode を contract 由来へ parametrize
+  # (folio-c5r.3 ceiling BLK-FOOTER-INSTANCE-TAG)。 本値は旧 hardcode と同一 = 出力 byte 不変。
+  instance_tag: "folio self-host (instance#1)"
 # approval-block (core_emit_approval_block) — doc-meta 形 (spec-pack 同型)。 用語集は
 # vocabulary.yaml SSoT から派生する自己適用ゆえ stamp は self (= 承認済以外) で表示される。
 approval:

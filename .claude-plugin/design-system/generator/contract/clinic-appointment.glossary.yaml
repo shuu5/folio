@@ -1,0 +1,319 @@
+# clinic-appointment.glossary.yaml — machine SSoT for the glossary-pack instance #2 (clinic domain)
+# doc_type: glossary (canonical vocabulary)。 glossary pack (folio-1uc・instance #1 = folio self-host) の
+# 汎用性実証となる 2nd instance (folio-c5r.3・yzv 決定②: 段階4 二段 walk の索引型先行群に glossary を追加)。
+# Source SSoT (read-only): clinic suite 5 contract の glossary 節 —
+#   clinic-appointment.srs.yaml (12) / clinic-appointment.testcases.yaml (+6) /
+#   clinic-architecture.arch.yaml (+3) / clinic-double-booking.adr.yaml (+3) /
+#   clinic-double-booking.research.yaml (+1) = union 25 terms (共有語の def は contract 間で統一済・verbatim 継承)。
+# Each term is dual-audience: human layer = plain definition (prose slot, opus-authored) /
+# machine layer = structured record (canonical・en・slug (id-safe [A-Za-z0-9-])・domain・formal_def・
+# cross-doc anchors data-xref-target = 当該語が load-bearing な clinic suite doc_id)。
+# fabrication-free: every visible token derives from this contract. plain definitions live in the
+# prose manifest (clinic-glossary.prose.yaml) and are injected by inject-prose.sh (core, unmodified).
+doc_type: glossary
+doc_id: clinic-glossary
+title: "clinic 予約 用語集 — canonical vocabulary"
+version: "1.0.0"
+source_spec: "contract/clinic-appointment.srs.yaml ほか clinic suite 5 contract の glossary 節 (read-only union)"
+source_vocab: "(clinic suite は外部 vocabulary.yaml を持たない — suite contract 群が語彙の SSoT)"
+term_set_id: "clinic:glossary"
+term_set_name: "clinic 予約管理 canonical vocabulary"
+# graph node 識別 + 前方照会 (verify-graph.sh が読む)。 rolemap は glossary doc-type に principle_edge
+# (role=implementation) を pin するため、 instance #2 も P-5 (canonical naming) へ前方照会する。
+# ★この edge は「glossary という doc-type が canonical-name SSoT を担う」という *doc-type レベルの実装根拠*
+# (folio framework の原則) であって、 clinic システム自体の統治構造の主張ではない — clinic に constitution が
+# 無い事実 (yzv 決定④・ゼロ生成デモ = folio-c5r.2) とは独立。 glossary の照会 graph 完全参加
+# (canonical-vocabulary role) は folio-0ds / folio-1sn の core 同期後。
+meta:
+  doc_id: "GLOSSARY-CLINIC-APPT"
+  doc_type: "glossary"
+  title: "clinic 予約 用語集"
+  eyebrow_left: "用語集 (Glossary)"
+  eyebrow_right: "clinic 予約管理 — canonical vocabulary"
+  subtitle: "クリニック予約システムの文書一式で使う言葉の canonical 定義集 — 非エンジニアにも届く平易定義 + 機械可読 term レコードの dual-audience 用語集"
+  version: "1.0.0"
+  reader: "クリニック予約の文書一式を読む全ての人 — 院長・受付スタッフなど非エンジニアの読者と、 用語を参照する機械 (CLI / 他 spec の .term) の双方"
+cross_doc_refs:
+  - rel: "constitution"
+    target: "P-5"
+    note: "canonical naming principle — glossary doc-type が canonical-name SSoT を担う実装根拠 (framework 原則・clinic 統治構造の主張ではない)"
+graph:
+  principle_edge:
+    target_doc_id: "FOLIO-CONSTITUTION"
+    role: "implementation"
+cover:
+  # eyebrow / title / subtitle / reader / cover-summary は .meta.* (core cover-head/_tail) が SSoT。
+  # ここは bespoke の cover-meta dl (verify-glossary §6 が .cover.meta[] を突合) のみを持つ。
+  meta:
+    - label: "doc-type"
+      value: "glossary (用語集)"
+    - label: "status"
+      value: "active"
+    - label: "version"
+      value: "1.0.0"
+    - label: "用語数"
+      value: "25"
+    - label: "読了目安"
+      value: "約 9 分"
+footer:
+  gen_meta: "folio design-system generator — glossary-pack (instance #2 / clinic domain)"
+  # instance タグ (footer chrome の出自 span・contract 由来 = BLK-FOOTER-INSTANCE-TAG の恒久処方)。
+  instance_tag: "clinic domain (instance#2)"
+# approval — core chrome の approval block (verify_core_chrome が (role,who,when,stamp) 順序突合)。
+# instance #1 同型: 人の承認チェーンでなく文書メタ (種別/生成) を chrome に載せる。
+approval:
+  - role: "文書種別"
+    who: "glossary (canonical vocabulary)"
+    when: "v1.0.0"
+    stamp: "active"
+  - role: "生成 (engine glossary-pack)"
+    who: "folio design system"
+    when: "2026-07-02 生成"
+    stamp: "生成"
+# glossary — core chrome の用語帯 (このページ自体の読み方を説く 3 語・verify_core_chrome が (term,en,def) 順序突合)。
+# terms[] (本文の 25 語) とは別物: ここは「この用語集ページの仕組み」の説明。
+glossary:
+  - term: "dual-audience"
+    en: "dual-audience"
+    def: "1 つのページを、 人が読む平易な説明と機械が読む正確な記録の両方に使う作り。 この用語集では各語が平易定義 (人) と term レコード (機械) を併せ持つ。"
+  - term: "machine layer"
+    en: "machine layer"
+    def: "各語の折り畳み (details) の中にある、 機械が参照するための構造化記録 (正式名・anchor・domain・JSON-LD)。"
+  - term: "canonical"
+    en: "canonical"
+    def: "言葉の正しい定義の置き場を「ここ 1 か所だけ」と決めた基準のこと。 clinic の文書一式はこの用語集の定義を参照し、 意味の食い違いを防ぐ。"
+# terms[] — canonical / en / slug / domain / formal_def / plain_slot / cross_refs。
+# formal_def は clinic suite contract の def を verbatim 継承 (glossary が canonical の置き場になる)。
+# domain 3 区分: clinic-domain (予約業務の言葉) / engineering (実現方式の言葉) / verification (確かめ方の言葉)。
+# cross_refs = 当該語が load-bearing な clinic suite の doc_id (data-xref-target anchor)。
+terms:
+  # ---- clinic-domain: 予約業務の言葉 (12) ----
+  - canonical: "診療枠"
+    en: "appointment slot"
+    slug: "appointment-slot"
+    domain: "clinic-domain"
+    formal_def: "「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。"
+    plain_slot: "plain-appointment-slot"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "ダブルブッキング"
+    en: "double booking"
+    slug: "double-booking"
+    domain: "clinic-domain"
+    formal_def: "同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。"
+    plain_slot: "plain-double-booking"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "満枠"
+    en: "fully booked"
+    slug: "fully-booked"
+    domain: "clinic-domain"
+    formal_def: "その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。"
+    plain_slot: "plain-fully-booked"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "無断キャンセル"
+    en: "no-show"
+    slug: "no-show"
+    domain: "clinic-domain"
+    formal_def: "予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。"
+    plain_slot: "plain-no-show"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ARCH-CLINIC-APPT"
+  - canonical: "リマインド通知"
+    en: "reminder notification"
+    slug: "reminder-notification"
+    domain: "clinic-domain"
+    formal_def: "予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。"
+    plain_slot: "plain-reminder-notification"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "チェックイン"
+    en: "check-in"
+    slug: "check-in"
+    domain: "clinic-domain"
+    formal_def: "予約した患者が来院し、 受付を済ませて「来ました」と記録すること。"
+    plain_slot: "plain-check-in"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+  - canonical: "本人確認"
+    en: "identity verification"
+    slug: "identity-verification"
+    domain: "clinic-domain"
+    formal_def: "予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。"
+    plain_slot: "plain-identity-verification"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "休診日"
+    en: "clinic holiday"
+    slug: "clinic-holiday"
+    domain: "clinic-domain"
+    formal_def: "クリニックが診療を行わない日。 この日には予約を受け付けない。"
+    plain_slot: "plain-clinic-holiday"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "診療時間外"
+    en: "outside clinic hours"
+    slug: "outside-clinic-hours"
+    domain: "clinic-domain"
+    formal_def: "その日の診療を行っていない時間帯。 予約は受け付けない。"
+    plain_slot: "plain-outside-clinic-hours"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "診療カレンダー"
+    en: "clinic calendar"
+    slug: "clinic-calendar"
+    domain: "clinic-domain"
+    formal_def: "診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。"
+    plain_slot: "plain-clinic-calendar"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "ARCH-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "要配慮個人情報"
+    en: "sensitive personal information"
+    slug: "sensitive-personal-information"
+    domain: "clinic-domain"
+    formal_def: "受診歴や病歴など、 漏れると不利益が大きいため特に慎重に扱う個人情報。"
+    plain_slot: "plain-sensitive-personal-information"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+  - canonical: "個情法"
+    en: "APPI (Act on the Protection of Personal Information)"
+    slug: "appi"
+    domain: "clinic-domain"
+    formal_def: "個人情報の取り扱いルールを定めた日本の法律 (個人情報保護法)。"
+    plain_slot: "plain-appi"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+  # ---- engineering: 実現方式の言葉 (7) ----
+  - canonical: "楽観ロック"
+    en: "optimistic locking"
+    slug: "optimistic-locking"
+    domain: "engineering"
+    formal_def: "普段はロックせず処理を進め、 確定の瞬間にだけ「他とぶつかっていないか」を条件で確かめる方式。 ぶつかった側だけが失敗する。"
+    plain_slot: "plain-optimistic-locking"
+    cross_refs:
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+  - canonical: "悲観ロック"
+    en: "pessimistic locking"
+    slug: "pessimistic-locking"
+    domain: "engineering"
+    formal_def: "処理の前から対象を確保し、 終わるまで他の人を入れない方式。 確実だが押さえている間ふさがる。"
+    plain_slot: "plain-pessimistic-locking"
+    cross_refs:
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+  - canonical: "条件付き更新"
+    en: "conditional update"
+    slug: "conditional-update"
+    domain: "engineering"
+    formal_def: "「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。"
+    plain_slot: "plain-conditional-update"
+    cross_refs:
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+      - "ARCH-CLINIC-APPT"
+  - canonical: "トランザクション"
+    en: "transaction"
+    slug: "transaction"
+    domain: "engineering"
+    formal_def: "「全部成功」か「全部やらなかった」かのどちらかになる、 分けられない一塊の処理。"
+    plain_slot: "plain-transaction"
+    cross_refs:
+      - "ADR-CLINIC-0001"
+      - "ARCH-CLINIC-APPT"
+  - canonical: "ホットスポット"
+    en: "hotspot"
+    slug: "hotspot"
+    domain: "engineering"
+    formal_def: "申込や処理が一箇所に集中して詰まりやすくなる場所。 人気の枠などで起きる。"
+    plain_slot: "plain-hotspot"
+    cross_refs:
+      - "ADR-CLINIC-0001"
+      - "RES-CLINIC-0001"
+  - canonical: "スループット"
+    en: "throughput"
+    slug: "throughput"
+    domain: "engineering"
+    formal_def: "一定の時間にさばける処理の量。 大きいほどピーク時に詰まりにくい。"
+    plain_slot: "plain-throughput"
+    cross_refs:
+      - "RES-CLINIC-0001"
+  - canonical: "連携アダプタ"
+    en: "integration adapter"
+    slug: "integration-adapter"
+    domain: "engineering"
+    formal_def: "外部システムとの間に置く翻訳役。 外部の都合や形式の違いをここで吸収し、 システム内へ持ち込ませない。"
+    plain_slot: "plain-integration-adapter"
+    cross_refs:
+      - "ARCH-CLINIC-APPT"
+  # ---- verification: 確かめ方の言葉 (6) ----
+  - canonical: "テストケース"
+    en: "test case"
+    slug: "test-case"
+    domain: "verification"
+    formal_def: "「この状況で・こう操作したら・こうなるべき」を 1 件にまとめた、 正しさの確かめ方。"
+    plain_slot: "plain-test-case"
+    cross_refs:
+      - "TC-CLINIC-APPT"
+  - canonical: "受入基準"
+    en: "acceptance criteria"
+    slug: "acceptance-criteria"
+    domain: "verification"
+    formal_def: "「これが満たせていれば合格」と事前に決めておく、 要件ごとの確かめどころ。"
+    plain_slot: "plain-acceptance-criteria"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "トレーサビリティ"
+    en: "traceability"
+    slug: "traceability"
+    domain: "verification"
+    formal_def: "どのテストがどの要件・受入基準を確かめているかを、 たどれるようにつないでおくこと。"
+    plain_slot: "plain-traceability"
+    cross_refs:
+      - "SRS-CLINIC-APPT"
+      - "TC-CLINIC-APPT"
+  - canonical: "正常系"
+    en: "happy path"
+    slug: "happy-path"
+    domain: "verification"
+    formal_def: "想定どおりに正しく使われたときに、 期待どおり動くかを確かめるテスト。"
+    plain_slot: "plain-happy-path"
+    cross_refs:
+      - "TC-CLINIC-APPT"
+  - canonical: "異常系"
+    en: "error path"
+    slug: "error-path"
+    domain: "verification"
+    formal_def: "間違った操作や競合など、 困った状況でも安全に振る舞うかを確かめるテスト。"
+    plain_slot: "plain-error-path"
+    cross_refs:
+      - "TC-CLINIC-APPT"
+  - canonical: "境界値"
+    en: "boundary value"
+    slug: "boundary-value"
+    domain: "verification"
+    formal_def: "「残り 0」「ちょうど満枠」など、 境目の値で正しく振る舞うかを確かめるテスト。"
+    plain_slot: "plain-boundary-value"
+    cross_refs:
+      - "TC-CLINIC-APPT"
