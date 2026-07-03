@@ -49,6 +49,46 @@ expect_warn() {
   fi
 }
 
+# expect_abort <label> <contract.yaml> [expected_stderr_substring] — assemble 段の contract fail-closed (folio-bhe)。
+#   abort 系の reason substring は stderr の label 語で判定可 (verify FAIL 系 pin の「FAIL 行にしか出ない値」
+#   基準とは別・c5r.2 実証)。
+expect_abort() {
+  local label="$1" c="$2" want="${3:-}" out rc
+  total=$((total+1))
+  out="$("$ASSEMBLE" "$c" 2>&1 >/dev/null)"; rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    echo "  [SLIP] $label — assemble が abort せず生成した (exit 0)"
+  elif [[ -n "$want" && "$out" != *"$want"* ]]; then
+    echo "  [SLIP] $label — abort したが理由が想定外 (期待 '$want' / 実: $(printf '%s' "$out" | tail -1))"
+  else
+    echo "  [OK]   $label — 生成前 abort"; pass=$((pass+1))
+  fi
+}
+# expect_vfail_contract <label> <contract.yaml> <html> [fail-substr] — 改竄 contract を verify へ渡し FAIL を要求
+#   (verify 側独立 pin の FAIL 経路を発火させる・principle 敵対の expect_vprefill_fail 同旨・ceiling wf_7edab13c major 是正)。
+#   ★fail-substr は FAIL 行にしか出ない値 ("expected 6, got 7" 等) にする — label 語は [OK] 行にも出て判別力ゼロ。
+expect_vfail_contract() {
+  local label="$1" c="$2" html="$3" want="${4:-}" out rc
+  total=$((total+1))
+  out="$("$VERIFY" --filled "$MANIFEST" "$c" "$html" 2>&1)"; rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    echo "  [SLIP] $label — verify が通過させた (exit 0)"
+  elif [[ -n "$want" && "$out" != *"$want"* ]]; then
+    echo "  [SLIP] $label — FAIL したが理由が想定外 (期待 '$want')"
+  else
+    echo "  [OK]   $label — block (exit 非0)"; pass=$((pass+1))
+  fi
+}
+# arch_base <dst.yaml> — contract を TMP へコピーし、 cross_doc が相対参照する SRS/ADR contract も同じ dir へ
+#   コピーする (assemble-arch のパス解決は CONTRACT_DIR 相対の素朴連結 = 兄弟配置が前提・絶対パスは解決不能)。
+#   コピー先で参照が巻き添え failure し expect_abort が「mutation 以外の理由」で偽 [OK] 化するのを防ぐ
+#   (principle 敵対の bd_base と同旨)。
+arch_base() {
+  local d; d="$(dirname "$1")"
+  cp "$CONTRACT" "$1"
+  cp "$HERE/contract/clinic-appointment.srs.yaml" "$HERE/contract/clinic-double-booking.adr.yaml" "$d/"
+}
+
 # baseline sanity: 正常生成物は PASS すべき
 total=$((total+1))
 if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" >/dev/null 2>&1; then
@@ -56,11 +96,90 @@ if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" >/dev/null 2>&1; then
 else
   echo "  [SLIP] baseline が FAIL した (テスト前提崩壊)"; fi
 
+# baseline sanity: arch_base コピー (cross_doc 絶対化のみ・無改竄) は assemble を通過すべき
+#   (これが崩れると以降の expect_abort が「mutation 以外の理由」で全 false-pass する)
+total=$((total+1))
+arch_base "$TMP/base-sanity.yaml"
+if "$ASSEMBLE" "$TMP/base-sanity.yaml" >/dev/null 2>&1; then
+  echo "  [OK]   baseline arch_base コピーは assemble PASS"; pass=$((pass+1))
+else
+  echo "  [SLIP] arch_base コピーが assemble FAIL (helper 前提崩壊)"; fi
+
 # --- ③ 固定章 + 必須要素 (件数) ---
 expect_fail "decision-card マーカー削除 (件数)"  "$(mut 1 's{<div data-component="arch-decision-card" id="ad-AD-1">}{<div data-component="arch-decision-XXX" id="ad-AD-1">}')"
 expect_fail "component-row マーカー削除 (件数)"  "$(mut 2 's{<tr data-component="component-row" id="comp-web-front">}{<tr data-component="component-XXX" id="comp-web-front">}')"
 expect_fail "chapter-deck-band 削除 (8 章崩れ)"  "$(mut 3 's{data-component="chapter-deck-band" class="tint-warn"}{data-component="chapter-XXX" class="tint-warn"}')"
 expect_fail "mermaid pre 削除 (図 件数)"         "$(mut 4 's{<pre class="mermaid">flowchart TB}{<pre class="XXX">flowchart TB}')"
+
+# --- ③b ★band 見出し (folio-bhe: instance hardcode 封鎖 + 数詞 fabrication・principle-pack c5r.2 CH1-CH9 同型。
+#     amendment 対称の CH7/CH8 は arch に amendment 章が無いため N/A) ---
+# BH1/BH2. chapters.* 欠落 → 生成前 abort (band 見出しは contract 必須・neutral default を置かない)
+arch_base "$TMP/bh1.yaml"; yq -i 'del(.chapters.components)' "$TMP/bh1.yaml"
+expect_abort "BH1 ★chapters.components 欠落を abort (band 見出しは contract 必須)" "$TMP/bh1.yaml" "chapters.components 欠落"
+arch_base "$TMP/bh2.yaml"; yq -i 'del(.chapters.runtime)' "$TMP/bh2.yaml"
+expect_abort "BH2 ★chapters.runtime 欠落を abort (band 見出しは contract 必須)" "$TMP/bh2.yaml" "chapters.runtime 欠落"
+# BH3. chapters 数詞改竄 (6→7・実件数 6 のまま) → 生成前 abort (件数 fabrication)
+arch_base "$TMP/bh3.yaml"; yq -i '.chapters.components = "システムを 7 つの部品に分け、 何を担当するか"' "$TMP/bh3.yaml"
+# ★pin substring は guard 固有語 "components 実件数" (旧 "不一致" は srs/adr doc_id guard とも共有・ceiling wf_6166a844 是正)
+expect_abort "BH3 ★chapters.components 数詞 7≠components 実件数 6 を生成前 abort (件数 fabrication)" "$TMP/bh3.yaml" "components 実件数"
+# BH4. 全角数字 (数詞照合の回避表記) → 生成前 abort
+arch_base "$TMP/bh4.yaml"; yq -i '.chapters.components = "システムを ６ つの部品に分け、 何を担当するか"' "$TMP/bh4.yaml"
+expect_abort "BH4 ★chapters の全角数字 (数詞照合回避) を生成前 abort" "$TMP/bh4.yaml" "全角数字"
+# BH5. 漢数字 (ASCII 照合回避) → 数詞必須の肯定形で生成前 abort (回避表記の blocklist 列挙をしない)
+arch_base "$TMP/bh5.yaml"; yq -i '.chapters.components = "システムを 六 つの部品に分け、 何を担当するか"' "$TMP/bh5.yaml"
+expect_abort "BH5 ★chapters の漢数字数詞 (ASCII 照合回避) を数詞必須で生成前 abort" "$TMP/bh5.yaml" "ASCII 数字の件数"
+# BH6-BH8. HTML band h2 改竄 (contract は正) → verify FAIL (band h2 fidelity)
+expect_fail "BH6 ★HTML band h2 件数改竄 (6→7 つの部品)"          "$(mut 70 's{<h2>システムを 6 つの部品に分け}{<h2>システムを 7 つの部品に分け}')"
+expect_fail "BH7 ★HTML band h2 ドメイン差替 (二重予約→会計)"     "$(mut 71 's{<h2>二重予約をどう止めるか、 部品がどう連携するか</h2>}{<h2>会計をどう締めるか、 部品がどう連携するか</h2>}')"
+expect_fail "BH8 ★HTML band h2 pack 固定文言の改竄 (品質→速度)"   "$(mut 72 's{<h2>どんな品質をどこまで目指すか</h2>}{<h2>どんな速度をどこまで目指すか</h2>}')"
+# BH9/BH10. additive-decoy 系 (ceiling wf_7edab13c blocker の pin): 置換でなく *追加* — 同一行に decoy h2 を注入 /
+#   同一行に捏造 band を丸ごと packing。行ベース抽出だと末尾の real h2 を拾い素通り (要素単位抽出で fail-closed)。
+expect_fail "BH9 ★同一行 decoy h2 注入 (real h2 は無傷・偽「9 つの部品」が描画される)" "$(mut 73 's{(<h2>システムを 6 つの部品に分け)}{<h2>システムを 9 つの部品に分け、 何を担当するか</h2>$1}')"
+expect_fail "BH10 ★同一行 9 本目 band packing (行数 8 のまま要素数 9)" "$(mut 74 's{(<section data-component="chapter-deck-band" class="tint-warn")}{<section data-component="chapter-deck-band" class="tint-info"><span class="num">09</span><h2>捏造の章</h2></section>$1}')"
+# BH11/BH12. ★verify 側独立数詞 pin (c5r.2 CH4/CH9 相当・ceiling wf_7edab13c major の pin): contract+HTML の
+#   *両側* を辻褄合わせても verify が |components| から独立再導出して捕捉する (assemble guard 回帰への defense-in-depth)。
+arch_base "$TMP/bh11.yaml"; yq -i '.chapters.components = "システムを 7 つの部品に分け、 何を担当するか"' "$TMP/bh11.yaml"
+expect_vfail_contract "BH11 ★両側辻褄合わせ (contract+HTML=7 つの部品) を verify が独立数詞 pin で捕捉" "$TMP/bh11.yaml" \
+  "$(mut 75 's{<h2>システムを 6 つの部品に分け}{<h2>システムを 7 つの部品に分け}')" "expected 6, got 7"
+arch_base "$TMP/bh12.yaml"; yq -i '.chapters.components = "システムを 六 つの部品に分け、 何を担当するか"' "$TMP/bh12.yaml"
+expect_vfail_contract "BH12 ★両側漢数字 (六 つの部品) を verify の ASCII 数詞必須で捕捉" "$TMP/bh12.yaml" \
+  "$(mut 76 's{<h2>システムを 6 つの部品に分け}{<h2>システムを 六 つの部品に分け}')" "(ASCII 数詞なし=半角必須)"
+# BH13. 第 2 数詞の偽件数併記 (先頭 6 は正・後続 9 が偽) → 全出現照合で生成前 abort (head -1 是正の pin)
+arch_base "$TMP/bh13.yaml"; yq -i '.chapters.components = "システムを 6 つの部品に分け、 何を担当するか — 実は 9 つの部品もある"' "$TMP/bh13.yaml"
+expect_abort "BH13 ★第 2 数詞の偽件数併記 (6 正 + 9 偽) を全出現照合で生成前 abort" "$TMP/bh13.yaml" "数詞 9 が components 実件数 6 と不一致"
+# BH14-BH16. ★genuine-shape 不変条件の pin (ceiling wf_6166a844 blocker C1/A1 + minor A2): 狭い正規表現の
+#   パーサ差分 (属性付き decoy h2 / 大文字 SECTION・H2 / band 範囲外 h2) を要素単位・ci・attribute-tolerant 抽出で封鎖。
+expect_fail "BH14 ★属性付き decoy <h2 class> を band 内注入 (attribute-tolerant 抽出 + NH2≠8 で封鎖)" "$(mut 77 's{(<h2>システムを 6 つの部品に分け、 何を担当するか</h2>)}{$1<h2 class="decoy">実は 9 つの部品に分けた</h2>}')"
+expect_fail "BH15 ★大文字 <SECTION>/<H2> で捏造 9 章目 (case-insensitive count で封鎖)" "$(mut 78 's{(<section data-component="chapter-deck-band" class="tint-violet"><span class="num">08)}{<SECTION data-component="chapter-deck-band" class="tint-brand"><span class="num">09</span><span class="kicker">FAKE</span><H2>捏造9章</H2></SECTION>$1}')"
+expect_fail "BH16 ★band 範囲外の bare <h2> (全 <h2>==8 不変条件で封鎖)" "$(mut 79 's{(<div class="chapbody">)}{$1<h2>範囲外の捏造見出し</h2>}')"
+# BH17/BH18. ★components-only 収束の positive pin (ceiling wf_966c2160): 数詞/全角 guard は components のみ。
+#   runtime の全角固有名詞 (「Ｇ７世代」) と SEMANTIC な偽件数 (「9 個の部品」= 任意 unit 語で機械列挙不能) は floor で
+#   捕捉せず ceiling/fidelity 領分 (machine/LLM 境界)。round2 の runtime 全角 abort は components-only へ収束し撤回。
+total=$((total+1))
+arch_base "$TMP/bh17.yaml"; yq -i '.chapters.runtime = "Ｇ７世代の予約エンジンで二重予約を止める流れ"' "$TMP/bh17.yaml"
+if "$ASSEMBLE" "$TMP/bh17.yaml" >/dev/null 2>&1; then echo "  [OK]   BH17 ★runtime の全角固有名詞は assemble PASS (全角/数詞 guard は components のみ)"; pass=$((pass+1)); else echo "  [SLIP] BH17 runtime 全角が誤 reject (components-only 収束が崩れた)"; fi
+total=$((total+1))
+arch_base "$TMP/bh18.yaml"; yq -i '.chapters.runtime = "24 時間の予約フローで二重予約を止める仕組み"' "$TMP/bh18.yaml"
+if "$ASSEMBLE" "$TMP/bh18.yaml" >/dev/null 2>&1; then echo "  [OK]   BH18 ★runtime の ASCII 数字も assemble PASS (runtime は数詞 guard なし)"; pass=$((pass+1)); else echo "  [SLIP] BH18 runtime の ASCII 数字が誤 reject された"; fi
+# BH19. ★複合語 false-match 回避の pin (ceiling wf_966c2160 major): components 見出しが「N つの部品グループ/群」を
+#   含んでも部分文字列 false-match せず正当な「N つの部品」count だけ照合する (perl negative-lookahead)。
+total=$((total+1))
+arch_base "$TMP/bh19.yaml"; yq -i '.chapters.components = "システムを 6 つの部品に分け、 3 つの部品グループに整理する"' "$TMP/bh19.yaml"
+if "$ASSEMBLE" "$TMP/bh19.yaml" >/dev/null 2>&1; then echo "  [OK]   BH19 ★複合語「部品グループ」を含む正当な components 見出しは assemble PASS"; pass=$((pass+1)); else echo "  [SLIP] BH19 複合語を含む見出しが誤 reject された (false-match)"; fi
+# BH20/BH21. ★CJK 句読点直前の偽件数を捕捉 (ceiling wf_191f044b major の pin): scx 版 \p{Han}/\p{Katakana} は
+#   。、「」・ を除外に混入させ「9 つの部品、」を素通したが、 sc= 版は句読点を境界扱いし偽件数を捕捉する (assemble+verify parity)。
+arch_base "$TMP/bh20.yaml"; yq -i '.chapters.components = "システムを 6 つの部品に分けます、 実は 9 つの部品、 本来より多い"' "$TMP/bh20.yaml"
+expect_abort "BH20 ★読点直前の偽件数「9 つの部品、」を生成前 abort (sc= 句読点境界)" "$TMP/bh20.yaml" "数詞 9 が components 実件数 6 と不一致"
+arch_base "$TMP/bh21.yaml"; yq -i '.chapters.components = "システムを 6 つの部品に分ける。 実は 9 つの部品。"' "$TMP/bh21.yaml"
+expect_abort "BH21 ★句点直前の偽件数「9 つの部品。」を生成前 abort (sc= 句読点境界)" "$TMP/bh21.yaml" "数詞 9 が components 実件数 6 と不一致"
+# BH22. ★ゼロ幅文字 injection (ceiling wf_cb58ae5a blocker): 数字と unit の間に ZWSP を挟むと数詞照合の隣接が壊れ
+#   偽件数「9<ZWSP>つの部品」が hidden 化する不可視版 BH13。 Default_Ignorable クラス拒否で生成前 abort。
+ZWSP=$'​'
+arch_base "$TMP/bh22.yaml"; VAL22="システムを 6 つの部品に分け、 実は 9${ZWSP}つの部品ある" yq -i '.chapters.components = strenv(VAL22)' "$TMP/bh22.yaml"
+expect_abort "BH22 ★ゼロ幅文字 injection「9<ZWSP>つの部品」を生成前 abort (不可視 fabrication)" "$TMP/bh22.yaml" "不可視/format 文字"
+# BH23. ★verify 側でも rendered 見出しの不可視文字を検出 (HTML 経路の ZWSP injection・assemble と parity)。
+#   contract は正常だが HTML h2 に ZWSP を注入 → band 見出し不可視文字 chk で FAIL (h2 fidelity より先に不可視で捕捉)。
+expect_fail "BH23 ★HTML band 見出しへの ZWSP 注入を verify が捕捉" "$(mut 80 "s{システムを 6 つの部品に分け}{システムを 6 つの部品に分${ZWSP}け}")"
 
 # --- ② navigable id アンカー (削除/改名) ---
 expect_fail "decision anchor 改名 (ad-AD-1→ad-FAKE)" "$(mut 5 's{id="ad-AD-1"}{id="ad-FAKE"}')"

@@ -54,6 +54,14 @@ cross_doc:
   adr_doc_id: ADR-CLINIC-0001
   adr_html: clinic-double-booking.adr.html
 
+# ★band 見出しのうち instance 固有の 2 章 (folio-bhe・principle-pack folio-c5r.2 と同型)。 components は件数入り
+#   (「N つの部品」の ASCII 半角数詞 == |components| を assemble/verify 両段で強制・全角/漢数字は照合回避ゆえ拒否)、
+#   runtime は純ドメイン文言 (数詞 guard なし・fidelity のみ)。 他 6 章の band 見出しは pack 不変文言 (assembler 固定・verify が pin)。
+#   件数/ドメインを code に焼くと 2nd instance が偽件数・偽ドメインを表示する (fabrication 面ゆえ fail-closed 必須)。
+chapters:
+  components: "システムを 6 つの部品に分け、 何を担当するか"
+  runtime: "二重予約をどう止めるか、 部品がどう連携するか"
+
 # §1 課題と背景 (context)。 problem = 何を解こうとしているか / actors = 関わる人・外部システム。
 context:
   problem: 一番こわいのは同じ時間に 2 人を入れてしまう事故 (ダブルブッキング)。 加えて来院忘れと患者の取り違えも防ぎたい。 担当範囲は空き確認から予約・変更・当日受付まで。 診察内容や会計は別の仕組みに任せる。

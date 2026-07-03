@@ -111,6 +111,51 @@ validate() {
   pmissing="$(comm -23 <(q '.decisions[].refs.principle[]' | sort -u) <(q '.principle.id' | sort -u))"
   [[ -z "$pmissing" ]] || { echo "assemble-arch: ★principle 照会の dangling: refs.principle が principle.id でない: $pmissing" >&2; errs=1; }
 
+  # ★chapters (band 見出しのうち instance 固有の 2 章) は contract 必須 (folio-bhe・principle-pack folio-c5r.2 と同型)。
+  #   components = 件数入り (「N つの部品」の ASCII 数詞 == |components| を強制)・runtime = 純ドメイン文言
+  #   (数詞 guard なし・fidelity は verify-arch が担う)。 件数/ドメインを code に焼くと 2nd instance が偽件数・
+  #   偽ドメインを表示する (fabrication 面ゆえ neutral default を置かず fail-closed 必須)。
+  #   ★数詞は ASCII 半角の「N つの部品」を **必須** とする肯定形 (c5r.2 ceiling round1): 「数詞があれば照合」の
+  #   任意形だと漢数字「六 つの部品」・丸数字等が照合を素通りする (回避表記の blocklist 列挙は partial-enum trap)。
+  #   全角数字の明示 guard は defense-in-depth (★bracket 式 [０-９] は C locale で multibyte を byte 分解し
+  #   誤 match するため、 明示 alternation で locale 非依存に)。
+  local ck cv ns n tcnt
+  for ck in components runtime; do
+    cv="$(q ".chapters.${ck} // \"\"")"
+    [[ -n "$cv" ]] || { echo "assemble-arch: ★chapters.${ck} 欠落 (band 見出しは contract 必須・instance hardcode 禁止)" >&2; errs=1; }
+    # ★不可視/format 文字 (ゼロ幅スペース・BOM・word-joiner 等) を全 band 見出しで拒否 (ceiling wf_cb58ae5a blocker):
+    #   数字と unit の間に挟むと「9<ZWSP>つの部品」で数詞照合の隣接を壊し偽件数を hidden 化する injection。
+    #   コードポイント列挙でなく Default_Ignorable_Code_Point クラス全体を fail-closed (partial-enum trap 回避・genuine-shape:
+    #   人間可読な見出しに不可視文字が入る正当理由は無い)。
+    if [[ -n "$cv" ]] && perl -CSD -Mutf8 -ne 'exit(/\p{Default_Ignorable_Code_Point}/?0:1)' <<<"$cv"; then
+      echo "assemble-arch: ★chapters.${ck} に不可視/format 文字 (ゼロ幅・BOM 等・見出しに非 genuine・数詞照合を無効化する injection): $cv" >&2; errs=1
+    fi
+  done
+  # ★数詞/全角 guard は components 見出しのみ (件数「N つの部品」を持つ唯一の見出し・ceiling wf_966c2160 で components-only へ収束)。
+  #   全角禁止の唯一の目的は ASCII 件数照合の回避封鎖ゆえ、 件数照合を持たない runtime には課さない (runtime の全角固有名詞
+  #   「Ｇ７世代」等を誤 reject しない)。 runtime の SEMANTIC な偽件数 (「9 個の部品」等) は任意 unit 語で機械列挙不能 =
+  #   ceiling/fidelity 領分 (machine/LLM 境界・folio-5se へ申送り)。
+  cv="$(q '.chapters.components // ""')"
+  if grep -qE '０|１|２|３|４|５|６|７|８|９' <<<"$cv"; then
+    echo "assemble-arch: ★chapters.components に全角数字 (ASCII 件数照合の回避表記・半角で書く): $cv" >&2; errs=1
+  fi
+  if [[ -n "$cv" ]]; then
+    # ★複合語 false-match 除去 (ceiling wf_966c2160 major): 「N つの部品グループ/群」等の部分文字列 match を防ぐため、
+    #   unit 直後が漢字/カタカナ *文字*/長音 (複合語継続) なら不採用 (perl negative-lookahead)。 全出現==|components| を要求 (肯定形)。
+    #   ★sc= (Script property) 必須 (ceiling wf_191f044b major): \p{Han}/\p{Katakana} は既定 Script_Extensions(scx) 解決で
+    #   CJK 句読点 。、「」・ が scx=Han/Kana を持つため除外に混入し、 節末の偽件数「9 つの部品、」を素通しする fail-open。
+    #   \p{sc=Han}/\p{sc=Katakana} は script *文字* のみ束縛し句読点(sc=Common)を除外集合から外す (ー は sc≠Kana ゆえ明示リテラル)。
+    #   perl は -CSD (I/O を UTF-8) + -Mutf8 (プログラム内日本語リテラルも UTF-8 = 両方必須。片方だと byte/char 不一致で無 match)。
+    ns="$(perl -CSD -Mutf8 -ne 'while(/([0-9]+)\s*つの部品(?![\p{sc=Han}\p{sc=Katakana}ー])/g){print "$1\n"}' <<<"$cv" || true)"
+    if [[ -z "$ns" ]]; then
+      echo "assemble-arch: ★chapters.components に ASCII 数字の件数「N つの部品」が無い (数詞は半角 ASCII 必須 = 漢数字等の照合回避を封鎖): $cv" >&2; errs=1
+    else
+      tcnt="$(q '.components | length')"
+      while IFS= read -r n; do
+        [[ "$n" == "$tcnt" ]] || { echo "assemble-arch: ★chapters.components の数詞 ${n} が components 実件数 ${tcnt} と不一致 (件数 fabrication)" >&2; errs=1; }
+      done <<<"$ns"
+    fi
+  fi
   core_validate_glossary_substring "assemble-arch" || errs=1
   [[ "$errs" -eq 0 ]] || { echo "assemble-arch: contract validation FAILED (fail-closed)" >&2; exit 1; }
 }
@@ -417,8 +462,10 @@ build() {
   emit_cover
   band info   "課題と背景"                "何を解こうとしているか、 誰が関わるか"            "$ICO_MAP";     emit_context;    band_end
   band ok     "ソリューション戦略"        "全体を貫く設計方針と、 それぞれの理由"            "$ICO_COMPASS"; emit_strategy;   band_end
-  band info   "部品の組み立て"            "システムを 6 つの部品に分け、 何を担当するか"      "$ICO_BLOCKS";  emit_components; band_end
-  band violet "動いているときの流れ"      "二重予約をどう止めるか、 部品がどう連携するか"      "$ICO_ARROW";   emit_runtime;    band_end
+  # ★components/runtime の band 見出しは contract .chapters.* 由来 (instance 固有の件数/ドメイン文言を code に
+  #   焼かない・folio-bhe・validate() が存在 + 数詞==実件数を fail-closed 済)。 他 6 章は pack 不変文言。
+  band info   "部品の組み立て"            "$(q '.chapters.components')"                        "$ICO_BLOCKS";  emit_components; band_end
+  band violet "動いているときの流れ"      "$(q '.chapters.runtime')"                            "$ICO_ARROW";   emit_runtime;    band_end
   band brand  "アーキテクチャ決定"        "何を決めたか・なぜその案か・どの要件と判断につながるか" "$ICO_GAVEL";   emit_decisions;  band_end
   band ok     "品質特性"                  "どんな品質をどこまで目指すか"                      "$ICO_GAUGE";   emit_quality;    band_end
   band warn   "リスク"                    "何が危うく、 どう抑えるか"                          "$ICO_ALERT";   emit_risks;      band_end

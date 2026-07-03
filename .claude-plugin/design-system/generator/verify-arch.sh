@@ -49,7 +49,17 @@ echo "architecture-description-pack fabrication-free + 固定章 + 照会 graph 
 echo "  contract: $CONTRACT  (部品 $NCOMP / 決定 $NDEC / 品質 $NQA / リスク $NRISK / 図 $NDIAG / SRS照会 $NSRS / ADR照会 $NADR)"
 
 # ============ ③ 固定章 + 必須要素 (arc42 8 章 + 件数 = contract 導出) ============
-chk "arc42 固定 8 章 (chapter-deck-band)" "8" "$(grep -c 'data-component="chapter-deck-band"' "$BODY")"
+## ★genuine-shape 不変条件 (ceiling wf_7edab13c + wf_6166a844 blocker 是正): band/h2 を狭い正規表現
+##   (行単位・素タグ・大文字小文字区別) で数えると、 行 packing / 属性付き decoy <h2 class> / 大文字 <SECTION>/<H2>
+##   がパーサ差分で素通る (verify の要素モデル ≠ ブラウザの要素モデル = round1 が塞いだ穴の再発)。make_body と同じ
+##   genuine-shape 姿勢で「本物が emit する狭い形」を case-insensitive + attribute-tolerant に数え逸脱を fail-closed にする。
+##   本物 = band-section 8・全 <h2> 8 (全て band 内・1 band=1 h2)。この 3 不変条件は **h2/band-marked 経路の** decoy
+##   (追加/大文字/範囲外 h2) を封鎖する。 h2 以外の要素 (styled <p>/<div> や data-component 無しの classed section) による
+##   見出し擬態は不変条件の射程外 = ceiling reviewer 領分 (任意の可視自由文の意味検証は persona-walk/fidelity・machine/LLM 境界・folio-5se)。
+NBAND="$(perl -CSD -0777 -ne '$n++ while m{<section\b[^>]*data-component="chapter-deck-band"}gi; END{print $n+0}' "$BODY")"
+NH2ALL="$(perl -CSD -0777 -ne '$n++ while m{<h2\b}gi; END{print $n+0}' "$BODY")"
+chk "arc42 固定 8 章 (band-section 要素数・ci)"          "8" "$NBAND"
+chk "全 <h2> 要素数 == 8 (band 外/属性 decoy/大文字 h2 封鎖・ci)" "8" "$NH2ALL"
 chk "decision-card 数 == |decisions|"     "$NDEC"   "$(grep -c 'data-component="arch-decision-card"' "$BODY")"
 chk "component-row 数 == |components|"     "$NCOMP"  "$(grep -c 'data-component="component-row"' "$BODY")"
 chk "quality-row 数 == |quality|"         "$NQA"    "$(grep -c 'data-component="quality-row"' "$BODY")"
@@ -59,6 +69,58 @@ chk "arch-actor 数 == |actors|"           "$NACTOR" "$(grep -o 'class="arch-act
 chk "diagram (mermaid pre) 数 == |diagrams|" "$NDIAG" "$(grep -c 'class="mermaid"' "$BODY")"
 chk "figcaption 数 == |diagrams|"         "$NDIAG"  "$(grep -c '<figcaption>' "$BODY")"
 chk "principle-terminal == 1"             "1"       "$(grep -c 'data-component="principle-terminal"' "$BODY")"
+
+# ============ ③b ★band 見出し fidelity (folio-bhe・principle-pack folio-c5r.2 と同型) ============
+# components/runtime の band h2 は contract .chapters.* 由来 (instance 固有の件数/ドメイン文言を code に焼くと
+# 2nd instance が偽件数・偽ドメインを表示する)。 他 6 章の h2 は pack 不変文言を pin (assembler drift 検出)。
+# ★抽出は要素単位・case-insensitive・attribute-tolerant (ceiling wf_7edab13c + wf_6166a844 blocker 是正):
+#   band section と h2 を /gis + <h2\b[^>]*> で走査し、各 band 内の <h2> が **ちょうど 1 個** でなければ位置 token を
+#   崩して FAIL させる。属性付き decoy <h2 class> は attribute-tolerant 抽出で 2 個目として数えられ poison になる。
+#   大文字 <SECTION>/<H2> は /i で本物と同じく見え、範囲外 h2 は上の NH2ALL==8 が捕捉する (三重の genuine-shape)。
+BAND_H2S="$(perl -CSD -0777 -ne 'while (m{<section\b[^>]*data-component="chapter-deck-band"[^>]*>(.*?)</section>}gis){ my $b=$1; my @h=($b =~ m{<h2\b[^>]*>(.*?)</h2>}gis); print scalar(@h)==1 ? "$h[0]\n" : "(band 内 h2 数=".scalar(@h)."≠1)\n"; }' "$BODY")"
+band_h2_at() { sed -n "${1}p" <<<"$BAND_H2S"; }
+chk "band h2[1] == context (pack 固定)"      "何を解こうとしているか、 誰が関わるか"                    "$(band_h2_at 1)"
+chk "band h2[2] == strategy (pack 固定)"     "全体を貫く設計方針と、 それぞれの理由"                    "$(band_h2_at 2)"
+chk "band h2[3] == esc(chapters.components)" "$(esc "$(q '.chapters.components')")"                     "$(band_h2_at 3)"
+chk "band h2[4] == esc(chapters.runtime)"    "$(esc "$(q '.chapters.runtime')")"                        "$(band_h2_at 4)"
+chk "band h2[5] == decisions (pack 固定)"    "何を決めたか・なぜその案か・どの要件と判断につながるか"  "$(band_h2_at 5)"
+chk "band h2[6] == quality (pack 固定)"      "どんな品質をどこまで目指すか"                             "$(band_h2_at 6)"
+chk "band h2[7] == risks (pack 固定)"        "何が危うく、 どう抑えるか"                                "$(band_h2_at 7)"
+chk "band h2[8] == glossary (pack 固定)"     "本文に出てくる専門語のやさしい説明"                       "$(band_h2_at 8)"
+# ★数詞 == 派生実件数 (件数は machine floor の領分・verification §3.9)。 HTML h2 == contract は上で一致済ゆえ
+#   contract 側の値で判定する (assemble-arch validate と detect↔remediate parity)。
+#   ★ASCII 半角の「N つの部品」を必須とする肯定形 (c5r.2 ceiling round1): 数詞なし = 不合格に倒す
+#   (漢数字「六 つの部品」等の回避表記は「必須数詞なし」で一律 FAIL・回避表記の blocklist 列挙をしない)。
+# ★全出現照合 + 複合語 false-match 除去 (ceiling wf_6166a844 minor + wf_966c2160 major 是正):
+#   head -1 の先頭のみ照合は第 2 数詞の偽件数併記を素通し、 素朴 grep は「N つの部品グループ/群」の部分文字列に
+#   誤 match して正当な見出しを誤 reject する。 unit 直後がカタカナ/漢字/長音 (複合語継続) なら不採用 (perl negative-lookahead)、
+#   その上で全出現==expected + ≥1 存在 (肯定形) を要求。 assemble validate と同一ロジック (detect↔remediate parity)。
+#   perl は -CSD (I/O UTF-8) + -Mutf8 (プログラム内日本語リテラルも UTF-8 = 両方必須)。
+band_numchk() { # $1=label $2=heading-text $3=unit-literal $4=expected-count
+  local ns n bad=""
+  # ★$ENV{UNIT} は byte 列ゆえ utf8::decode で char 化してから regex 補間 (-CSD で入力は char・decode 無しだと byte/char 不一致で無 match)。
+  # ★sc= (Script property) 必須 (ceiling wf_191f044b major): \p{Han}/\p{Katakana} は scx 解決で CJK 句読点 。、「」・ を除外に
+  #   混入させ節末の偽件数を素通す fail-open。 \p{sc=…} は script 文字のみ束縛 (assemble と同一・detect↔remediate parity)。
+  ns="$(UNIT="$3" perl -CSD -Mutf8 -ne 'my $u=$ENV{UNIT}; utf8::decode($u); while(/([0-9]+)\s*\Q$u\E(?![\p{sc=Han}\p{sc=Katakana}ー])/g){print "$1\n"}' <<<"$2" || true)"
+  if [[ -z "$ns" ]]; then chk "$1" "$4" "(ASCII 数詞なし=半角必須)"; return; fi
+  while IFS= read -r n; do [[ "$n" == "$4" ]] || bad="$n"; done <<<"$ns"
+  chk "$1" "$4" "${bad:-$4}"
+}
+# ★全角数字は components 見出しのみ禁止 (ASCII 件数照合の回避封鎖が唯一の目的・ceiling wf_966c2160 で components-only へ収束)。
+#   件数照合を持たない runtime には課さない (全角固有名詞「Ｇ７世代」等を誤 reject しない)。 HTML==contract fidelity が上で
+#   成立済ゆえ contract 値で判定 (assemble と parity)。 runtime の SEMANTIC 偽件数は ceiling/fidelity 領分 (machine/LLM 境界)。
+# (★bracket 式 [０-９] は C locale で multibyte を byte 分解し誤 match するため、 明示 alternation で locale 非依存に)
+chk "band 数詞: chapters.components に全角数字なし (件数照合の回避封鎖)" "0" \
+  "$(q '.chapters.components' | grep -cE '０|１|２|３|４|５|６|７|８|９' || true)"
+# ★不可視/format 文字 (ゼロ幅・BOM 等) を全 8 見出しで拒否 (ceiling wf_cb58ae5a blocker・assemble と parity):
+#   「9<ZWSP>つの部品」の隣接破壊で偽件数を hidden 化する injection を Default_Ignorable クラス全体で fail-closed。
+chk "band 見出し (全 8) に不可視/format 文字なし (ゼロ幅 injection 封鎖)" "0" \
+  "$(printf '%s' "$BAND_H2S" | perl -CSD -Mutf8 -ne '$n++ while /\p{Default_Ignorable_Code_Point}/g; END{print $n+0}')"
+# ★band_numchk (prose の「N つの部品」== |components|) は自由文から件数を parse する best-effort fabrication guard。
+#   不可視・ASCII・全角・漢数字・複合語・句読点境界の各面は上記 guard 群 + sc= lookahead で閉じたが、可視の exotic 表記
+#   (々/〇 等の非語形成 Han・中点・homoglyph 数字) は自由文の意味 fidelity ゆえ機械 floor で列挙不能 = ceiling/fidelity 領分
+#   (machine/LLM 境界・folio-5se/folio-7vd へ申送り)。floor は「検査できた範囲が緑」を honest に主張する。
+band_numchk "band 数詞: chapters.components「N つの部品」== components 実件数" "$(q '.chapters.components')" 'つの部品' "$NCOMP"
 
 # ============ ② navigable id アンカー (照会されうる全ノードに id= ・集合一致) ============
 # decision→ad-<id> / component→comp-<id> / quality→qa-<id> / risk→risk-<id> を contract id から再導出して集合突合。
