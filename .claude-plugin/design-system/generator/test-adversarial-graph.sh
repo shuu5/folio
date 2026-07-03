@@ -38,11 +38,15 @@ expect_pass_warn() { local label="$1" d="$2" w="$3"; shift 3
 
 echo "照会 graph adversarial regression (fail-closed / warn-correct expected):"
 
-# H0. happy path: exit 0 / 終端完備=5 / FLOOR-OK
-#   B6 (folio-8ct) で spec-pack (FOLIO-RULES → constitution・principle_edge) を corpus へ追加し終端完備=4→5 に増えた。
+# H0. happy path: exit 0 / 終端完備=11 / FLOOR-OK
+#   corpus 実値の来歴: B6 (folio-8ct) spec-pack で 4→5、 glossary×2 + testcases + arch + relations/verification spec で
+#   5→10 (folio-dls の drift を本 cell で吸収)、 c5r.11 裁定 B2 (test→SRS forward 再写像) で TC-CLINIC-APPT が
+#   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)。
+#   ★「終端到達: TC-CLINIC-APPT」substring は B2 の意味 pin (backward への退行は count と substring の両方で割れる)。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=5 孤立(warn)=1"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=5 / 孤立=1 / FLOOR-OK / exit 0)"
+if run "$D" && [[ "$RUNOUT" == *"終端完備=11 孤立(warn)=1"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+   && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
+  ok "H0 happy path (終端完備=11 / 孤立=1 / TC 終端到達 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL
@@ -115,13 +119,19 @@ yq -i '.decision.justifies[0].role = "verification"' "$D/contract/clinic-double-
 expect_fail "G13 ★edges 削除で corpus 改竄を隠す複合攻撃を FAIL" "$D" "floor 武装解除ガード"
 
 # W1. 孤立は warn (exit 0): inline principle 喪失で clinic 鎖が連鎖孤立しても FAIL でない。
-#     総数 (孤立=4) だけでなく *どの鎖が孤立したか* (ADR/research/SRS-CLINIC 3 鎖 + 既存 EC) を個別 substring で
-#     固定する (minor#2: 総数照合だけだと corpus 増減で false-pass・別経路で総数 4 の改竄を見逃しうる)。
+#     総数だけでなく *どの鎖が孤立したか* を個別 substring で固定する (minor#2: 総数照合だけだと corpus 増減で
+#     false-pass・別経路で総数一致の改竄を見逃しうる)。
+#     ★arch pack が同 id 終端 (PRIN-SAFETY-FIRST) を冗長供給するため ADR 単独の喪失では孤立しない
+#       (folio-dls drift の真因)。 clinic 鎖の全終端 route を断つには ADR + arch の両 principle.id を空にする。
+#     ★TC-CLINIC-APPT の連鎖孤立 = c5r.11 B2 の意図挙動 pin (SRS が終端未到達なら test も道連れ = 根本原因の表面化)。
+#       GLOSSARY-CLINIC-APPT は自前 route (→FOLIO-CONSTITUTION) を持つため孤立しない。
 D="$(mktmp)"; yq -i '.principle.id = ""' "$D/contract/clinic-double-booking.adr.yaml"
-if run "$D" && [[ "$RUNOUT" == *"孤立(warn)=4"* \
+yq -i '.principle.id = ""' "$D/contract/clinic-architecture.arch.yaml"
+if run "$D" && [[ "$RUNOUT" == *"孤立(warn)=6"* \
    && "$RUNOUT" == *"孤立: ADR-CLINIC-0001"* && "$RUNOUT" == *"孤立: RES-CLINIC-0001"* \
-   && "$RUNOUT" == *"孤立: SRS-CLINIC-APPT"* && "$RUNOUT" == *"孤立: SRS-EC-CHECKOUT"* ]]; then
-  ok "W1 inline principle 喪失 → clinic 3 鎖 + EC が個別に孤立 warn (exit 0)"
+   && "$RUNOUT" == *"孤立: SRS-CLINIC-APPT"* && "$RUNOUT" == *"孤立: ARCH-CLINIC-APPT"* \
+   && "$RUNOUT" == *"孤立: TC-CLINIC-APPT"* && "$RUNOUT" == *"孤立: SRS-EC-CHECKOUT"* ]]; then
+  ok "W1 全終端 route 喪失 → clinic 5 鎖 (TC 連鎖孤立含む) + EC が個別に孤立 warn (exit 0)"
 else ng "W1 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -3 | tr '\n' '|'))"; fi
 
 # W2. 孤立 warn の代表: ADR-less な EC SRS は孤立 warn (happy path でも常時)
