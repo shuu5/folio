@@ -4,6 +4,8 @@ A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Cod
 
 **Status**: Phase X5-γ (選択的完成)。 現行 `v1.2.0`、 v1.0 昇格基準は [ADR-0030](./design-intent/decisions/ADR-0030-v1-stability-criteria.html) (accepted) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に、 design-intent 空間 dir は X4-G/ADR-0048 で `architecture/` → `design-intent/` に rename、 概念「verification」「architecture」は dir 名と独立に存続)。 folio は自身の rules を self-host する。
 
+> **Ecosystem** — folio は Claude Code plugin エコシステム（cc-session / scribe / scriptorium / folio）で **別軸の独立系統**に立つ（他 plugin 無依存・自前 hook + architecture-doc 生成で自己完結）。命名二層での役割は **architect**。`cc-session → scribe → scriptorium` の単方向スタックとは別レイヤに位置する。4 plugin の層・役割・依存の俯瞰は sibling **scriptorium** repo の `docs/ecosystem-overview.md`（命名二層表 + 依存図）に集約。
+
 ## Install
 
 **Prerequisites**: `bash` + `jq` + `yq` ([mikefarah v4.x](https://github.com/mikefarah/yq)) + GNU `realpath` (Linux 標準)。 **Supported**: **Linux canonical** (sandbox + CI 共に ubuntu-latest で検証)。 macOS / Windows は post-1.0 で fix 予定の best-effort 状態。
