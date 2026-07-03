@@ -6,7 +6,7 @@
 #                           / delta-marker / dual-audience-structural / xref-resolve / xref-uniqueness
 #                           / xref-tooltip-consistency / xref-completeness / glossary / nav-regen-drift
 #                           / nav-dead-link / cluster-reachability / ears-coverage / render-safety / readability-floor
-#                           / how-outside (warn-only soft-warn = HOW-outside content gate floor-1+2、 engine 設計 §10 B5-II)、
+#                           / how-outside (floor-2 = block 〔ADR-0047〕 / floor-1 = warn、 engine 設計 §10 B5-II)、
 #                           ADR-0020/0025/0028/0033/0034/0035/0037/0039)
 #   (2) tests/runner.sh   = sandbox 全 scenario (cli-golden / hook / agent-structural、 ADR-0013/0018)
 #   (3) render-gate       = render-safety ceiling (playwright headless render、 verification.html

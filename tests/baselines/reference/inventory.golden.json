@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-02T04:24:32Z",
+  "generatedAt": "2026-07-03T07:31:54Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -129,6 +129,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
@@ -187,6 +188,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
@@ -504,6 +506,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0039-presentation-template-layer.html",
           "research/presentation-design-patterns.html",
           "decisions/ADR-0037-render-safety-ceiling.html",
@@ -731,6 +734,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
@@ -1170,6 +1174,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html"
         ],
@@ -1258,6 +1263,28 @@
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+      "title": "ADR-0047 — HOW-outside floor-2 (P-11 4-enum) の CI hard-block 昇格 (staged rollout 完了)",
+      "summary": "design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.1.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0020-validate-scope.html",
+          "spec/rules.html",
+          "spec/verification.html"
         ]
       }
     },
@@ -1672,6 +1699,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0046-architecture-description-pack.html",
         "essence": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3。 文書規律エンジンに"
+      },
+      {
+        "id": "ADR-0047",
+        "class": "decision",
+        "ssot": "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+        "essence": "design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。"
       },
       {
         "id": "P-1",
@@ -2241,6 +2274,10 @@
       },
       {
         "from": "spec/folio-self-spec.html",
+        "to": "ADR-0047"
+      },
+      {
+        "from": "spec/folio-self-spec.html",
         "to": "P-10"
       },
       {
@@ -2374,6 +2411,10 @@
       {
         "from": "spec/rules.html",
         "to": "ADR-0041"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "ADR-0047"
       },
       {
         "from": "spec/rules.html",

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.1.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0047">
+<meta name="folio-adr-date" content="2026-07-03">
+<title>ADR-0047 — HOW-outside floor-2 (P-11 4-enum) の CI hard-block 昇格 (staged rollout 完了)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0047-how-outside-floor2-hard-gate.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0047 — HOW-outside floor-2 (P-11 4-enum) の CI hard-block 昇格 (staged rollout 完了)",
+  "folio:version": "1.1.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0020-validate-scope.html" },
+    { "@id": "../spec/rules.html" },
+    { "@id": "../spec/verification.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">architecture</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0047</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0047 — HOW-outside floor-2 (P-11 4-enum) の CI hard-block 昇格</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-03 &middot; folio v1.1.0 &middot; design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> §2.2 が定めた staged rollout (soft-warn &rarr; 誤検出率の実測 &rarr; 許容内なら新 ADR で CI hard gate 昇格) の<strong>次段 = 完了段</strong>の記録である。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 の what-only = agent-only 立場は<strong>覆さない</strong> — 意味判定 (概念 HOW) は LLM ceiling のままとし、 意味判定の射程外にある<em>構文検出可能な部分集合</em>のみを deterministic block へ引き上げる refine である。 user 承認 = Tier B grill (2026-07-03) で方向確定 + 本 ADR 本文承認。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-promotion">§2.1 floor-2 の hard-block 昇格 (scope と様式)</a></li>
+  <li class="toc--sub"><a href="#s2-2-escape">§2.2 正式な逃げ道 = code/機械層 mask の明文化</a></li>
+  <li class="toc--sub"><a href="#s2-3-refine">§2.3 ADR-0028 §2.3 との関係 (syntactic-subset refine)</a></li>
+  <li class="toc--sub"><a href="#s2-4-rollback">§2.4 撤退条件 (rollback plan)</a></li>
+  <li class="toc--sub"><a href="#s2-5-distribution">§2.5 配布 (plugin 固定・全 consumer 適用)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0047</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-07-03</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0043 (次段 — §2.2 の staged rollout 〔soft-warn &rarr; 実測 &rarr; 新 ADR で hard 昇格〕 を本 ADR が完了させる。 3-tier enforcement / plugin 固定配布は不変)、 ADR-0028 (refine — §2.3 what-only = agent-only は概念 HOW について不変。 本 ADR は意味判定の射程外にある構文検出可能な部分集合 〔P-11 4-enum 明示 primitive〕 のみを deterministic block へ引き上げる。 supersede ではない)、 ADR-0020 (整合 — validate の exit 意味論 0/1/2 を変えず、 floor-2 の報告 channel を warn から violation へ移すのみ)。 規範 = rules.html REQ-CI-012 (what-only gate の merge block MUST は当初から規範・本 ADR は enforcement 実体の部分機械化) + rules §10.2 enforcement 注記 (011/012 = agent-only の記述を二相へ改訂)。 検証 = tests/scenarios/how-outside-validate.yaml (warn 着地の golden を violation/exit 1 へ更新) + how-outside-clean.yaml (clean 側 不変)。 接地 = bd folio-pgb (B5-II folio-6us handoff・needs-user)。 実測 = 生涯 TP 1 件 (rules.html の LC_ALL=C・言い換えで解消済) / FP 0 件 / 現 corpus warn 0 件</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> §2.2 は、 design-intent (WHAT/WHY) 本文への HOW 混入を止める <strong>floor-2 = P-11 4-enum の保守的構文検出</strong> (環境変数の具体値 / バイナリ path / OS コマンド / 明示ツール起動) を導入し、 その enforcement を <strong>staged rollout</strong> — 当初は soft-warn (exit 非影響の advisory) で着地させ、 誤検出率を実測し、 許容内と確認後に新 ADR (user 承認) で CI hard gate へ昇格 — と定めた。 本 ADR はその昇格判断を記録する。</p>
+
+<p><strong>実測結果 (self-host corpus)</strong>: soft-warn 稼働以来、 floor-2 が emit した warn は生涯<strong>ちょうど 1 件</strong> — <code>rules.html</code> 内の環境変数具体値 (真陽性)。 これは P-11 違反として言い換えで解消済みであり (検出 &rarr; remediate の意図されたループが 1 巡実証された)、 <strong>偽陽性は 0 件</strong>、 現 corpus の warn は 0 件である。 観測母数が 1 件と薄いことは判断時に明示的に認識されている (§3)。</p>
+
+<p><strong>昇格を今行う根拠は 3 つ</strong>。 (1) 検出は<em>構文限定</em>であり「この文は意味的に HOW か」という曖昧判定を一切含まない — 誤検出を構造的に抑える設計そのものが統計的立証の薄さを補う。 (2) 正当な primitive 言及には <code>&lt;code&gt;</code> 包みという<em>有界な逃げ道</em>が既に存在する (§2.2) — 万一誤検出が出ても是正コストは「囲んで終わり」であり、 不当 merge block が行き止まりにならない (bounded-and-fixable)。 (3) folio を導入する downstream consumer が未観測の現時点は、 hard 化の影響が実質 folio 自身に閉じる<strong>最も安い窓</strong>である — consumer が現れた後の昇格は移行負担を伴う。 方向は Tier B 一括 grill (2026-07-03) で user が確定した。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-promotion">§2.1 floor-2 の hard-block 昇格 (scope と様式)</h3>
+<p><code>folio validate</code> の HOW-outside gate のうち <strong>floor-2 (P-11 4-enum 構文検出) を violation (exit 1・merge block) へ昇格</strong>する。 4 primitive カテゴリ (env-var-value / binary-path / os-command / tool-invocation) は<strong>一括昇格</strong>とする — 実測で偽陽性 0 のためカテゴリ別段階化の便益がなく、 gate ロジックの分岐複雑化だけが残るため。 <strong>floor-1 (照会リンク存在) は warn 据置</strong> — 本昇格の実測対象外であり誤検出特性が別物のため、 昇格判断を別途行う。 exit code 意味論は <a href="./ADR-0020-validate-scope.html">ADR-0020</a> の 0 = clean / 1 = violation / 2 = tool error を不変とし、 専用 exit code は新設しない。 scope は spec_path (design-intent 空間) のみ・constitution は skip・decisions/ (frozen) と research は対象外 — ADR-0043 §2.2 の scope を変えない。</p>
+
+<h3 id="s2-2-escape">§2.2 正式な逃げ道 = code/機械層 mask の明文化</h3>
+<p>floor-2 は可視の<em>地の文</em>のみを走査し、 <code>&lt;code&gt;</code> / <code>&lt;pre&gt;</code> / <code>aside.machine-readable</code> / chrome 領域は検出前に mask される (既存設計)。 本 ADR はこれを「<strong>正当な primitive 言及の正式経路</strong>」として明文化する: spec が構造や慣習の説明のために環境変数名・ツール名等へ言及する必要があるときは、 コード書体 (<code>&lt;code&gt;</code>) で括る — これは同時に「実装断片は地の文 (散文の規範) ではなくコードとして明示的に区別されている」という P-11 の意図の表現でもあり、 逃げ道と規律が一致する。 明示 suppression marker / per-spec allowlist は<strong>導入しない</strong> (YAGNI) — 地の文で読ませたい正当な primitive という実例は self-host corpus に一度も現れておらず、 例外機構の追加は ADR-0028 が退けた複雑性の再導入になるため。 実例が出た時点で §2.4 の経路で再検討する。</p>
+
+<h3 id="s2-3-refine">§2.3 ADR-0028 §2.3 との関係 (syntactic-subset refine)</h3>
+<p>規範 <a href="../spec/rules.html#req-ci-012">REQ-CI-012</a> (what-only gate の merge block MUST) は当初から block を規範宣言しており、 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 が定めたのは「その enforcement <em>実体</em>を deterministic hard gate にせず LLM ceiling に置く」という実装判断だった — 根拠は<em>意味的判定</em>の機械化精度 (偽陽性/偽陰性) の低さ。 本 ADR はこの立場を<strong>覆さない</strong>。 明示 primitive の<em>有無</em>は構文の問題であって意味判定の射程外 (ADR-0043 §2.2 の切り分け) であり、 本昇格は REQ-CI-012 の enforcement 実体を<strong>二相化</strong>する refine である: <strong>構文検出可能な部分集合 (P-11 4-enum) = deterministic floor block</strong> / <strong>概念 HOW (P-3 portability 依存の記述) = 従来どおり LLM ceiling (spec-review-ssot lens) の advisory</strong>。 supersede ではなく、 ADR-0028 の精度懸念が当たる領域 (意味判定) は agent-only のまま残る。</p>
+
+<h3 id="s2-4-rollback">§2.4 撤退条件 (rollback plan)</h3>
+<p>昇格後に「正当な地の文であって <code>&lt;code&gt;</code> 包みによる是正が合理的でない」<strong>confirmed な偽陽性が 1 件でも観測されたら</strong>、 floor-2 の報告 channel を warn へ戻し (channel flip のみの可逆変更・検出ロジックは不変)、 事象を issue tracker に記録した上で suppression 機構の要否を再検討する。 判断者は user (P-10 と同じ承認系)。 「<code>&lt;code&gt;</code> で囲めば足りる誤検出」は撤退事由にならない — それは §2.2 の正式経路による是正である。</p>
+
+<h3 id="s2-5-distribution">§2.5 配布 (plugin 固定・全 consumer 適用)</h3>
+<p>配布は ADR-0043 §2.3 の <strong>plugin 固定</strong> (gate toggle の userConfig 変数を新設しない) を踏襲し、 昇格は <code>folio validate</code> を使う全 consumer に自動適用される。 self-CI のみ block とする 1 段緩衝は採らない (§4)。 deployment corpus (任意 consumer の spec) 上の誤検出率は未測だが、 §2.2 の有界な逃げ道と §2.4 の撤退条件がその不確実性を引き受ける。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: design-intent 本文への明示 HOW 混入が merge で構造的に阻止され、 ADR-0043 §3 が「払うもの」として挙げた「昇格まで保証が弱い (folio-pgb)」が解消する。 REQ-CI-012 の block MUST が (構文部分集合について) 機械保証になる。 検出 &rarr; remediate のループは実測 1 巡で機能実証済み。</li>
+  <li><strong>払うもの</strong>: 正当な primitive 言及は <code>&lt;code&gt;</code> 包みが authoring 規律として必須になる (逃げ道は既存・追加学習コストは小)。 観測母数 1 件 (self-host のみ) で踏み切るため、 未測の consumer corpus で偽陽性が出るリスクを §2.4 の撤退条件で引き受ける。 sandbox の how-outside 系 golden は warn 着地から violation/exit 1 へ更新する。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (全 consumer の CI 挙動を変える enforcement 昇格・配布後の再降格は移行を伴う) / <em>surprising</em> (N=1 の実測で昇格する判断は「統計的十分性」でなく「構文限定設計 + 有界逃げ道 + 最安の窓」という根拠構造に依る — rationale 無しには意外) / <em>real-trade-off</em> (一律 block vs self-CI 緩衝 vs 恒久 soft-warn の実トレードオフ、 §4) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>self-CI のみ block・consumer は warn 据置 (却下)</strong>: folio 自身で運用実績を積む 1 段緩衝。 だが consumer/self を判別する新しい config 機構が必要で、 ADR-0043 §4 が userConfig 拡張を却下した経緯 (runtime 未読・新機構実装) と同じ複雑性を再導入する。 緩衝の便益 (未測 corpus の FP 回避) は §2.2 の逃げ道 + §2.4 の撤退条件で代替できる。</li>
+  <li><strong>per-category staged 昇格 (却下)</strong>: 高シグナルの env-var-value / binary-path を先行 block し os-command / tool-invocation を warn 継続する案。 最も保守的だが、 実測 FP 0 の現状でカテゴリ別 exit 分岐の複雑化に見合う便益がない。</li>
+  <li><strong>明示 suppression marker / allowlist の同時導入 (却下)</strong>: 地の文例外を authored で宣言できるが、 実例ゼロの段階での例外機構は YAGNI であり、 無差別 suppress の乱用面も開く。 実例が出てから §2.4 経由で再検討する。</li>
+  <li><strong>soft-warn 恒久化 = 昇格見送り (却下)</strong>: 誤 block リスクはゼロだが、 HOW 混入の再発を merge で止められない状態が恒久化し、 ADR-0043 が明示した staged rollout の完了段が宙に浮く。</li>
+  <li><strong>実測母数の拡充を昇格の前提にする (却下)</strong>: clinic demo spec 一式や実 consumer corpus での再実測は根拠を厚くするが、 前者は未生成 (roadmap 後段)・後者は未観測であり、 昇格が不定期限で後ろ倒しになる。 統計的十分性の代わりに「構文限定 + 有界逃げ道 + 撤退条件」の構造で引き受ける。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>起点 = <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> §2.2 staged rollout (soft-warn 着地) + その follow-up 追跡 (decisions/README register)。</li>
+  <li>実測 = self-host corpus: 生涯 warn 1 件 (真陽性・remediate 済) / 偽陽性 0 / 現 corpus 0。</li>
+  <li>承認 = Tier B 一括 grill (2026-07-03) で方向確定 + 本 ADR 本文の user 承認。</li>
+  <li>規範反映 = <a href="../spec/rules.html#s10-2">rules §10.2</a> enforcement 注記 (011/012 = agent-only の記述を「012 は二相: 構文部分集合 = deterministic block / 概念 HOW = ceiling」へ改訂)。 REQ-CI-012 本文は不変 (当初から block MUST)。</li>
+  <li>検証反映 = <code>tests/scenarios/how-outside-validate.yaml</code> (warn 着地 golden &rarr; violation/exit 1) + <code>how-outside-clean.yaml</code> (clean 側 不変) + tier2 hook (<code>content-boundary</code>) は advisory のまま (advisory &sube; guarantee の関係は不変)。</li>
+  <li>issue tracker = bd folio-pgb (B5-II folio-6us handoff・needs-user 解消)。</li>
+</ul>
+</section>
+
+<footer class="doc-footer">
+  <p>ADR-0047 — folio architecture decision record。 frozen (歴史資産・P-10)。</p>
+</footer>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0046-architecture-description-pack.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0046 — architecture-description pack (engine 段階3) — 記述型 doc-type の floor 三本柱 + 案A cross-document 照会 + core 無改変</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

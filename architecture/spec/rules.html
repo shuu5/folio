@@ -26,6 +26,7 @@
     { "@id": "./README.html" }
   ],
   "dc:isReferencedBy": [
+    { "@id": "../decisions/ADR-0047-how-outside-floor2-hard-gate.html" },
     { "@id": "../decisions/ADR-0045-spec-pack-machine-layer-round-trip.html" },
     { "@id": "../decisions/ADR-0044-spec-pack-folio-self-host.html" },
     { "@id": "../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
@@ -851,7 +852,7 @@ flowchart TB
 </aside>
 
 <aside class="informative" data-audience="machine">
-  <p><strong>gate enforcement 実体 (X5-γ、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement)</strong>: 各 gate は性質に応じ 2 層で enforce する。 <strong>deterministic floor</strong> (<code>folio validate</code>、 CI block/warn): REQ-CI-010 / 016 (実装済) + REQ-CI-013 vocabulary (<code>vocabulary.yaml</code> opt-in、 block) + REQ-CI-015 delta-marker (block) + REQ-CI-014 EARS-coverage (warn)。 <strong>LLM ceiling</strong> (Phase F review agent、 authoring advisory、 CI hard gate にしない): REQ-CI-011 declarative-form (<code>spec-review-temporal</code>) + REQ-CI-012 what-only (<code>spec-review-ssot</code>)。 011/012 は意味的判定ゆえ決定的 gate に向かず、 review agent が authoring 時に担保する。 本 §10.2 table の 7 gate 宣言は規範として不変、 enforcement 実体のみを本 aside が確定する。</p>
+  <p><strong>gate enforcement 実体 (X5-γ、 <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> 二層 enforcement)</strong>: 各 gate は性質に応じ 2 層で enforce する。 <strong>deterministic floor</strong> (<code>folio validate</code>): REQ-CI-010 / 016 (実装済) + REQ-CI-013 vocabulary (<code>vocabulary.yaml</code> opt-in) + REQ-CI-015 delta-marker + REQ-CI-014 EARS-coverage — 各 gate の block/warn disposition は本 §10.2 overview 表の「結果」列が正本 (本 aside は層割当のみを確定し disposition を再掲しない)。 <strong>LLM ceiling</strong> (Phase F review agent、 authoring advisory): REQ-CI-011 declarative-form (<code>spec-review-temporal</code>) は意味的判定ゆえ決定的 gate に向かず、 review agent が authoring 時に担保する。 <strong>REQ-CI-012 what-only は二相</strong> (<a class="xref" href="../decisions/ADR-0047-how-outside-floor2-hard-gate.html" data-tooltip="design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。">ADR-0047</a> が <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> §2.3 を syntactic-subset refine): 構文検出可能な部分集合 (P-11 4-enum 明示 primitive = HOW-outside floor-2) は <strong>deterministic floor block</strong>、 概念 HOW (P-3 portability 依存の記述) は従来どおり LLM ceiling (<code>spec-review-ssot</code>) の advisory。 正当な primitive 言及はコード書体 (<code>code</code>/<code>pre</code>/機械層) で括る — mask が正式経路 (ADR-0047 §2.2)。 本 §10.2 table の 7 gate 宣言は規範として不変、 enforcement 実体のみを本 aside が確定する。</p>
 </aside>
 
 <div class="spec-list">
@@ -987,7 +988,7 @@ flowchart TB
 
 <p data-audience="machine">3 条件が<strong>すべて真の時のみ</strong> ADR を offer する (sparingly)。 いずれか 1 つでも偽なら ADR にしない — 可逆な決定 / context 無しで自明な決定 / trade-off の無い決定は spec 本文 (WHAT) や <code>vocabulary.yaml</code> に吸収し、 重厚な ADR (HTML+JSON-LD、 user 承認) を濫造しない。 folio の高コスト ADR と高い 3 条件 bar は相互補強する (少数精鋭に絞る価値が高い)。</p>
 
-<p class="informative" data-audience="machine"><strong>ADR-less ≠ orphan (照会 graph との関係)</strong>: 3 条件を満たす決定が無い文書一式が ADR を持たないのは正当な状態であり、 それ自体は照会 graph の欠陥ではない。 照会 graph の不変条件は「principle 終端への到達」であって ADR の有無ではない — 終端充足は ADR 内蔵 principle / 上位層 constitution への照会 / 自前 constitution のいずれでもよい。 原則接地を意図的に持たない文書一式は、 生成 contract の <code>meta.terminal_waiver</code> に理由を明示宣言する (rationale 必須・宣言済みは可視一覧)。 未宣言の孤立は照会 graph 検査 (<code>verify-graph</code>) が block する — 「接地する」か「持たないと明言する」かの二択で、 無言の欠落だけを禁止する (機構詳細は design-system generator README)。</p>
+<p class="informative" data-audience="machine"><strong>ADR-less ≠ orphan (照会 graph との関係)</strong>: 3 条件を満たす決定が無い文書一式が ADR を持たないのは正当な状態であり、 それ自体は照会 graph の欠陥ではない。 照会 graph の不変条件は「principle 終端への到達」であって ADR の有無ではない — 終端充足は ADR 内蔵 principle / 上位層 constitution への照会 / 自前 constitution のいずれでもよい。 原則接地を意図的に持たない文書一式は、 その意図を理由付きで明示宣言する — 「接地する」か「持たないと明言する」かの二択で、 照会 graph 検査が禁止するのは<em>無言の</em>欠落だけである (宣言 field・rationale 必須・可視一覧などの機構詳細は design-system generator README が正本)。</p>
 </section>
 
 </section>

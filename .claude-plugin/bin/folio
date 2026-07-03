@@ -766,12 +766,13 @@ folio_prose_only() {
 }
 
 # ============================================================================
-# HOW-outside content gate (gate (r)、 warn channel = soft-warn 着地)
+# HOW-outside content gate (gate (r)、 floor-2 = violation/block 〔ADR-0047〕 / floor-1 = warn 据置)
 #   engine 設計 §10 論点⑤⑦ (architecture/research/document-discipline-engine-design.html) の
 #   B5-II 実装。 design-intent (WHAT/WHY) と実装・検証 (HOW) を content として分離する規律 (P-3 /
-#   P-11 / P-13) を spec_path scope で機械検査する 2 段 floor。 両 floor とも warn channel に出し
-#   (exit code 非影響)、 staged rollout (soft-warn 実測 → 誤検出率許容内なら新 ADR で CI hard gate 化)
-#   の第一段に留める。 概念 HOW (P-3 portability) の意味判定は ceiling = spec-review-ssot lens が担う。
+#   P-11 / P-13) を spec_path scope で機械検査する 2 段 floor。 floor-2 (P-11 4-enum 構文検出) は
+#   violation channel (exit 1・merge block) — staged rollout (soft-warn 実測 → 新 ADR で hard 化) は
+#   ADR-0047 (2026-07-03) で完了。 floor-1 (照会リンク存在) は実測対象外ゆえ warn channel 据置。
+#   概念 HOW (P-3 portability) の意味判定は ceiling = spec-review-ssot lens が担う (ADR-0028 不変)。
 # ============================================================================
 
 # folio_check_inbody_refs (floor-1 照会リンク存在 / link-integrity 延長):
@@ -835,9 +836,10 @@ folio_check_inbody_refs() {
 #   code/pre/chrome/aside を mask した上で残存 HTML tag を除去した可視テキストのみを走査するため、
 #   <code> 内の正当な構造参照 (例 <code>FOLIO_ARCHITECT_CONTEXT</code> の env var 名や <code>tests/</code>
 #   の dir 名) を誤検出しない。 P-11 は名前ではなく「本文への直接記述」 を禁ずるため、 検出対象は地の文に
-#   裸書きされた primitive に限る (保守的 = 誤検出率を抑え soft-warn 信号の信頼性を保つ。 staged rollout:
-#   実測後に新 ADR で CI hard gate 化)。 検出を "rel\t[how-outside] ..." 行で stdout (warn channel)。
-#   重複は (category, token) で uniq。 引数: $1=body, $2=rel。
+#   裸書きされた primitive に限る (保守的 = 誤検出率を抑える)。 staged rollout は ADR-0047 (2026-07-03) で
+#   完了 = 検出は violation channel (exit 1・merge block)。 code/pre/機械層 mask が正当な言及の正式経路
+#   (ADR-0047 §2.2)・confirmed FP 1 件で warn へ戻す撤退条件つき (§2.4)。 検出を "rel\t[how-outside] ..."
+#   行で stdout。 重複は (category, token) で uniq。 引数: $1=body, $2=rel。
 folio_check_how_primitives() {
   local body="$1" rel="$2" text cat tok
   # prose_only (code/pre/chrome/aside mask) → 残存 HTML tag を space 置換し可視テキスト化 (tag 属性の誤検出回避)。
@@ -1810,7 +1812,7 @@ folio_cmd_validate() {
   local files_checked=0 relations_checked=0 link_fail=0 struct_fail=0 revlink_fail=0
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0 render_safety_fail=0
   local floor_fail=0 floor_warn=0   # gate (q) readability-floor (REQ-VER-023、 ADR-0039 §2.7 / P-14)
-  local how_warn=0 how_seen=0   # gate (r) HOW-outside content gate (warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13、 scope=spec_path)
+  local how_warn=0 how_fail=0 how_seen=0   # gate (r) HOW-outside content gate (floor-2=block ADR-0047 / floor-1=warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13、 scope=spec_path)
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
@@ -1930,15 +1932,16 @@ folio_cmd_validate() {
       local rsv
       while IFS= read -r rsv; do [[ -n "$rsv" ]] && { violations+=("$rsv"); render_safety_fail=1; }; done < <(folio_check_render_safety "$body" "$rel")
 
-      # gate (r) HOW-outside content gate — floor-1 照会リンク存在 + floor-2 P-11 4-enum (warn channel、 soft-warn 着地)。
+      # gate (r) HOW-outside content gate — floor-1 照会リンク存在 (warn 据置) + floor-2 P-11 4-enum
+      # (violation channel = CI hard-block・ADR-0047 で staged rollout 完了。 floor-1 は実測対象外ゆえ warn 継続)。
       # scope = spec_path (WHAT domain) ゆえ subdir==spec のみ走査する (decision=WHY / research=exploration は
-      # HOW 参照がより許容され、 frozen / 探索の性質ゆえ soft-warn 第一段の対象外。 engine 設計 §10 論点⑤)。
+      # HOW 参照がより許容され、 frozen / 探索の性質ゆえ対象外。 engine 設計 §10 論点⑤・scope は ADR-0043 §2.2 不変)。
       # constitution.html は loop 冒頭 (@type==FolioConstitution) で skip 済ゆえ本 gate には到達しない (P-11 定義自身)。
       if [[ "$subdir" == "spec" ]]; then
         how_seen=$((how_seen + 1))
         local hw
         while IFS= read -r hw; do [[ -n "$hw" ]] && { warnings+=("$hw"); how_warn=1; }; done < <(folio_check_inbody_refs "$body" "$rel" "$f")
-        while IFS= read -r hw; do [[ -n "$hw" ]] && { warnings+=("$hw"); how_warn=1; }; done < <(folio_check_how_primitives "$body" "$rel")
+        while IFS= read -r hw; do [[ -n "$hw" ]] && { violations+=("$hw"); how_fail=1; }; done < <(folio_check_how_primitives "$body" "$rel")
       fi
 
       # --- xref gates (ADR-0034 §2.6): resolve/tooltip = universal、 completeness = opt-in meta ---
@@ -2208,8 +2211,9 @@ folio_cmd_validate() {
   if [[ "$render_safety_fail" -eq 1 ]]; then printf '  [FAIL] render-safety\n'; else printf '  [OK] render-safety\n'; fi
   if [[ "$floor_fail" -eq 1 ]]; then printf '  [FAIL] readability-floor\n'
   elif [[ "$floor_warn" -eq 1 ]]; then printf '  [WARN] readability-floor\n'; else printf '  [OK] readability-floor\n'; fi
-  # gate (r) HOW-outside content gate (warn-only soft-warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13)。 spec/ doc 不在なら SKIP。
+  # gate (r) HOW-outside content gate (floor-2 P-11 4-enum = block 〔ADR-0047〕 / floor-1 照会リンク = warn)。 spec/ doc 不在なら SKIP。
   if [[ "$how_seen" -eq 0 ]]; then printf '  [SKIP] how-outside (spec/ doc 無し = scope=spec_path)\n'
+  elif [[ "$how_fail" -eq 1 ]]; then printf '  [FAIL] how-outside\n'
   elif [[ "$how_warn" -eq 1 ]]; then printf '  [WARN] how-outside\n'; else printf '  [OK] how-outside\n'; fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
@@ -3530,7 +3534,7 @@ Subcommands:
                            --root で scan/inventory.json 場所を override = inventory と対称)
   validate [--root <dir>]  spec 集合の 18-gate 検査 (link-integrity / jsonld / broken-reverse / vocabulary /
                            delta-marker / dual-audience / xref ×4 / glossary / nav ×3 / ears-coverage /
-                           render-safety / readability-floor / how-outside (warn、 B5-II)、 ADR-0020/0025/0028/0033/0034/0035/0039、
+                           render-safety / readability-floor / how-outside (floor-2=block ADR-0047 / floor-1=warn)、 ADR-0020/0025/0028/0033/0034/0035/0039、
                            exit 0=clean/1=violation/2=tool error、 --root で検査 root override)
   fix [--root <dir>]       forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を target に
                            materialize (双方向 link、 ADR-0025、 idempotent、 exit 0=success/2=tool error)
