@@ -147,6 +147,18 @@ amendment:
     - constitution を編集し SemVer bump + delta marker を inline 追加
     - version control の review (PR / diff) で trace を確定する
 
+# ===== band 見出し (chapters) + footer instance タグ =====
+# ★folio-c5r.2: tier/amendment の band h2 と footer の instance タグは contract 由来 (assembler への
+#   instance 固有 hardcode 禁止・c5r.3 glossary footer と同根)。 見出し内の数詞「N 原則 / N ステップ」は
+#   実件数との一致を assemble/verify 両段が machine floor で強制する (件数 fabrication 封鎖)。
+chapters:
+  always: 例外なく常に守る 9 原則 — folio の土台
+  ask_first: user 承認を取ってから変えてよい 3 原則
+  never: 踏み越え禁止の 2 原則 — 守りの最後の線
+  amendment: 変更を ADR と版に必ず残す 5 ステップ
+footer:
+  instance_tag: folio engine B4 (instance#4)
+
 # ===== inbound 照会 (他 doc → principle id) = 照会終端 node が *受ける* edge のみ =====
 # ★principle は前方照会を持たない (終端)。 受ける照会 (inbound) を self-declared で宣言し、
 #   verify_cross_doc_refs を target=self で再利用して ref が principles[].id に実在することを fail-closed で確かめる

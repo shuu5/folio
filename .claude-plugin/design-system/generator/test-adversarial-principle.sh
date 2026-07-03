@@ -105,6 +105,51 @@ expect_abort "A9 改行を含む値を abort" "$TMP/a9.yaml" "tab/改行"
 cp "$BASE" "$TMP/a10.yaml"; yq -i '.glossary += [{"term":"drif","en":"x","plain_short":"y","def":"z。"}]' "$TMP/a10.yaml"
 expect_abort "A10 glossary 部分文字列ペア (drif ⊂ drift) を abort" "$TMP/a10.yaml" "部分文字列"
 
+# === ★chapters band 見出し (folio-c5r.2: instance hardcode 封鎖 + 数詞 fabrication) ===
+
+# CH1. chapters.always 欠落 → abort (band 見出しは contract 必須・neutral default を置かない)
+cp "$BASE" "$TMP/ch1.yaml"; yq -i 'del(.chapters.always)' "$TMP/ch1.yaml"
+expect_abort "CH1 ★chapters.always 欠落を abort (band 見出しは contract 必須)" "$TMP/ch1.yaml" "chapters.always 欠落"
+
+# CH2. chapters 数詞改竄 (9→8・実件数 9 のまま) → 生成前 abort (件数 fabrication)
+cp "$BASE" "$TMP/ch2.yaml"; yq -i '.chapters.always = "例外なく常に守る 8 原則 — folio の土台"' "$TMP/ch2.yaml"
+expect_abort "CH2 ★chapters.always 数詞 8≠Always 実件数 9 を生成前 abort (件数 fabrication)" "$TMP/ch2.yaml" "不一致"
+
+# CH3. HTML band h2 改竄 (contract は正) → verify FAIL (band h2 fidelity)
+sed 's#例外なく常に守る 9 原則 — folio の土台#例外なく常に守る 9 原則 — folio の礎#' "$TMP/base.html" > "$TMP/ch3.html"
+expect_vprefill_fail "CH3 ★HTML band h2 改竄を verify が捕捉 (band h2 fidelity)" "$BASE" "$TMP/ch3.html" "band h2"
+
+# CH4. ★verify 独立数詞 pin: contract 数詞と HTML h2 の両方を 8 に辻褄合わせ → h2 fidelity は一致するが
+#      verify 自身の数詞照合 (contract 数詞 == 派生実件数) が assembler へ defer せず独立に捕捉することを pin。
+f="$(bd_canon ch4)"; yq -i '.chapters.always = "例外なく常に守る 8 原則 — folio の土台"' "$f"
+sed 's#例外なく常に守る 9 原則 — folio の土台#例外なく常に守る 8 原則 — folio の土台#' "$TMP/base.html" > "$TMP/ch4.html"
+expect_vprefill_fail "CH4 ★contract+HTML 両側の数詞辻褄合わせを verify 数詞照合が捕捉" "$f" "$TMP/ch4.html" "数詞"
+
+# CH5. ★全角数字回避 (「８ 原則」は ASCII 数詞照合を素通り) → 生成前 abort (表記封鎖)
+cp "$BASE" "$TMP/ch5.yaml"; yq -i '.chapters.always = "例外なく常に守る ８ 原則 — folio の土台"' "$TMP/ch5.yaml"
+expect_abort "CH5 ★chapters の全角数字 (数詞照合回避) を生成前 abort" "$TMP/ch5.yaml" "全角数字"
+
+# CH6. ★漢数字回避 (「九 原則」は ASCII 数詞照合に掛からない) → ASCII 数詞必須の肯定形が生成前 abort
+#      (実件数 9 と意味は一致していても、 照合不能な表記自体を却下 = 回避表記の列挙をしない封鎖)。
+#      ★bd_base で decisions_dir を絶対化し、 abort 理由を意図した check に分離 (A8 と同じ理由分離・round2 nit)。
+bd_base "$TMP/ch6.yaml"; yq -i '.chapters.always = "例外なく常に守る 九 原則 — folio の土台"' "$TMP/ch6.yaml"
+expect_abort "CH6 ★chapters の漢数字数詞 (ASCII 照合回避) を数詞必須で生成前 abort" "$TMP/ch6.yaml" "ASCII 数字の件数"
+
+# CH7. ★amendment「N ステップ」数詞改竄 (4≠steps 実件数 5) → 生成前 abort (原則側 CH2 の amendment 対称 pin)
+bd_base "$TMP/ch7.yaml"; yq -i '.chapters.amendment = "変更を ADR と版に必ず残す 4 ステップ"' "$TMP/ch7.yaml"
+expect_abort "CH7 ★chapters.amendment 数詞 4≠steps 実件数 5 を生成前 abort" "$TMP/ch7.yaml" "不一致"
+
+# CH8. ★amendment verify 独立数詞 pin (CH4 の amendment 対称): contract+HTML 両側を 4 ステップに辻褄合わせ
+#      → h2 fidelity は一致するが verify のステップ数詞照合が独立に捕捉
+f="$(bd_canon ch8)"; yq -i '.chapters.amendment = "変更を ADR と版に必ず残す 4 ステップ"' "$f"
+sed 's#変更を ADR と版に必ず残す 5 ステップ#変更を ADR と版に必ず残す 4 ステップ#' "$TMP/base.html" > "$TMP/ch8.html"
+expect_vprefill_fail "CH8 ★amendment 両側数詞辻褄合わせを verify ステップ数詞照合が捕捉" "$f" "$TMP/ch8.html" "expected 5, got 4"
+
+# CH9. ★漢数字回避の verify 側 pin: contract+HTML 両側を「九 原則」に辻褄合わせ → verify の ASCII 数詞必須が捕捉
+f="$(bd_canon ch9)"; yq -i '.chapters.always = "例外なく常に守る 九 原則 — folio の土台"' "$f"
+sed 's#例外なく常に守る 9 原則 — folio の土台#例外なく常に守る 九 原則 — folio の土台#' "$TMP/base.html" > "$TMP/ch9.html"
+expect_vprefill_fail "CH9 ★漢数字数詞の両側辻褄合わせを verify の ASCII 数詞必須が捕捉" "$f" "$TMP/ch9.html" "ASCII 数詞なし"
+
 # === ★baseline-diff gate (silent change の機械的排除・doc_type:constitution) ===
 # mutated contract から HTML を再生成 → 他 gate は通り baseline-diff のみが捕捉する (golden は committed に解決)。
 
@@ -114,7 +159,9 @@ bash "$ASM" "$f" "$TMP/bd1.html" >/dev/null 2>&1 || ng "BD1 setup (asm 失敗)"
 expect_vprefill_fail "BD1 ★silent change (statement 改竄・amended_by/版bump 無) を baseline-diff が捕捉" "$f" "$TMP/bd1.html" "silent change"
 
 # BD2. ★tier 改竄: P-1 Always→Never (amended_by 無・版 bump 無) → baseline-diff FAIL
+#      ★攻撃者は band 見出しの数詞も辻褄合わせる (生成段の数詞整合を通過させ、 baseline-diff の単独検出力を検証)。
 f="$(bd_canon bd2)"; yq -i '(.principles[] | select(.id=="P-1")).tier = "Never"' "$f"
+yq -i '.chapters.always = "例外なく常に守る 8 原則 — folio の土台" | .chapters.never = "踏み越え禁止の 3 原則 — 守りの最後の線"' "$f"
 bash "$ASM" "$f" "$TMP/bd2.html" >/dev/null 2>&1 || ng "BD2 setup (asm 失敗)"
 expect_vprefill_fail "BD2 ★tier 改竄 (Always→Never・amended_by/版bump 無) を baseline-diff が捕捉" "$f" "$TMP/bd2.html" "silent change"
 
@@ -132,14 +179,16 @@ yq -i '(.principles[] | select(.id=="P-2")).statement += " 既存 amended_by を
 bash "$ASM" "$f" "$TMP/bd4.html" >/dev/null 2>&1 || ng "BD4 setup (asm 失敗)"
 expect_vprefill_fail "BD4 ★新規 amended_by 欠落 (版bump 有・既存 ADR 使い回し) を baseline-diff が捕捉" "$f" "$TMP/bd4.html" "silent change"
 
-# BD5. ★principle 追加: P-15 を amended_by/版bump 無で追加 → baseline-diff FAIL
+# BD5. ★principle 追加: P-15 を amended_by/版bump 無で追加 → baseline-diff FAIL (数詞は辻褄合わせ・BD2 同様)
 f="$(bd_canon bd5)"
 yq -i '.principles += [{"id":"P-15","heading":"捏造原則","statement":"これは黙って足された原則です。","tier":"Always"}]' "$f"
+yq -i '.chapters.always = "例外なく常に守る 10 原則 — folio の土台"' "$f"
 bash "$ASM" "$f" "$TMP/bd5.html" >/dev/null 2>&1 || ng "BD5 setup (asm 失敗)"
 expect_vprefill_fail "BD5 ★principle 追加 (amended_by/版bump 無) を baseline-diff が捕捉" "$f" "$TMP/bd5.html" "silent change"
 
-# BD6. ★principle 削除: P-12 を版bump 無で削除 → baseline-diff FAIL
+# BD6. ★principle 削除: P-12 を版bump 無で削除 → baseline-diff FAIL (数詞は辻褄合わせ・BD2 同様)
 f="$(bd_canon bd6)"; yq -i 'del(.principles[] | select(.id=="P-12"))' "$f"
+yq -i '.chapters.never = "踏み越え禁止の 1 原則 — 守りの最後の線"' "$f"
 bash "$ASM" "$f" "$TMP/bd6.html" >/dev/null 2>&1 || ng "BD6 setup (asm 失敗)"
 expect_vprefill_fail "BD6 ★principle 削除 (版bump 無) を baseline-diff が捕捉" "$f" "$TMP/bd6.html" "silent change"
 

@@ -139,6 +139,35 @@ chk "within-doc: 可視 heading 列 == principles(tier順).heading" \
 chk "within-doc: pid→ph 隣接 == |principles|" "$(q '.principles | length')" \
   "$(grep -oE '<span class="pid">[^<]*</span><h3 class="ph">' "$BODY" | wc -l | tr -d ' ')"
 
+# 4b. ★band 見出し fidelity (folio-c5r.2): tier/amendment の band h2 は contract .chapters.* 由来
+#     (instance#4 焼き込み見出しが 2nd instance に偽件数を表示する hardcode の封鎖・c5r.3 footer と同根)。
+#     versioning/inbound/glossary の h2 は pack 不変文言を pin (assembler drift 検出)。
+BAND_H2S="$(grep 'data-component="chapter-deck-band"' "$BODY" | sed -E 's#.*<h2>([^<]*)</h2>.*#\1#')"
+band_h2_at() { sed -n "${1}p" <<<"$BAND_H2S"; }
+chk "band h2[1] == esc(chapters.always)"     "$(esc "$(q '.chapters.always')")"    "$(band_h2_at 1)"
+chk "band h2[2] == esc(chapters.ask_first)"  "$(esc "$(q '.chapters.ask_first')")" "$(band_h2_at 2)"
+chk "band h2[3] == esc(chapters.never)"      "$(esc "$(q '.chapters.never')")"     "$(band_h2_at 3)"
+chk "band h2[4] == versioning (pack 固定)"    "原則をどう変えると版がどう上がるか"   "$(band_h2_at 4)"
+chk "band h2[5] == esc(chapters.amendment)"  "$(esc "$(q '.chapters.amendment')")" "$(band_h2_at 5)"
+chk "band h2[6] == inbound (pack 固定)"       "原則は照会の終端 — 受ける照会だけをここに示す" "$(band_h2_at 6)"
+chk "band h2[7] == glossary (pack 固定)"      "本文に出てくる専門語のやさしい説明"   "$(band_h2_at 7)"
+# ★数詞 == 派生実件数 (件数は machine floor の領分・verification §3.9)。 HTML h2 == contract は上で一致済ゆえ
+#   contract 側の値で判定する (assemble-principle validate と detect↔remediate parity)。
+#   ★ASCII 半角の「N 原則 / N ステップ」を必須とする肯定形 (c5r.2 ceiling round1): 数詞なし = 不合格に倒す
+#   (漢数字「九 原則」等の回避表記は「必須数詞なし」で一律 FAIL・回避表記の blocklist 列挙をしない)。
+band_numchk() { # $1=label $2=heading-text $3=unit-literal $4=expected-count
+  local n; n="$(grep -oE "[0-9]+[[:space:]]*$3" <<<"$2" | grep -oE '[0-9]+' | head -1 || true)"
+  chk "$1" "$4" "${n:-(ASCII 数詞なし=半角必須)}"
+}
+# 全角数字は数詞照合を素通りする表記ゆえ chapters 値では禁止 (assemble と parity・照合回避封鎖)。
+# (★bracket 式 [０-９] は C locale で multibyte を byte 分解し誤 match するため、 明示 alternation で locale 非依存に)
+chk "band 数詞: chapters.* に全角数字なし" "0" \
+  "$(q '[.chapters.always, .chapters.ask_first, .chapters.never, .chapters.amendment] | join("\n")' | grep -cE '０|１|２|３|４|５|６|７|８|９' || true)"
+band_numchk "band 数詞: chapters.always「N 原則」== Always 実件数"       "$(q '.chapters.always')"    '原則'     "$(q '[.principles[] | select(.tier=="Always")] | length')"
+band_numchk "band 数詞: chapters.ask_first「N 原則」== Ask-first 実件数" "$(q '.chapters.ask_first')" '原則'     "$(q '[.principles[] | select(.tier=="Ask-first")] | length')"
+band_numchk "band 数詞: chapters.never「N 原則」== Never 実件数"         "$(q '.chapters.never')"     '原則'     "$(q '[.principles[] | select(.tier=="Never")] | length')"
+band_numchk "band 数詞: chapters.amendment「N ステップ」== steps 実件数" "$(q '.chapters.amendment')" 'ステップ' "$(q '.amendment.steps | length')"
+
 # 5. ★tier badge fidelity: 可視 tier ラベル列 + badge class 列が contract tier 写像と順序一致 (controlled value・tier-grouped)。
 exp_tlabel="$(tg_field '.tier' | while IFS= read -r t; do [[ -n "$t" ]] && printf '%s\n' "$(esc "${TIER_LABEL[$t]:-$t}")"; done)"
 act_tlabel="$(grep -oE '<span data-component="principle-tier-badge"[^>]*>[^<]*</span>' "$BODY" | sed -E 's#.*>([^<]*)</span>#\1#')"

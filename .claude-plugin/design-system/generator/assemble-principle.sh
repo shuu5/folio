@@ -98,6 +98,51 @@ validate() {
     fi
   fi
   core_validate_glossary_substring "assemble-principle" || errs=1
+  # ★chapters (tier/amendment band 見出し) は contract 必須 (folio-c5r.2)。 instance#4 固有の件数入り見出し
+  #   ("9 原則 — folio の土台" 等) を code に焼くと 2nd instance が偽の件数・偽の出自を表示する
+  #   (glossary footer instance_tag = folio-c5r.3 BLK-FOOTER-INSTANCE-TAG と同根)。 件数入り文言は
+  #   fabrication 面ゆえ neutral default を置かず fail-closed 必須とする。
+  local ck cv ncnt tcnt
+  local -A CK_TIER=( [always]=Always [ask_first]=Ask-first [never]=Never )
+  for ck in always ask_first never amendment; do
+    cv="$(q ".chapters.${ck} // \"\"")"
+    [[ -n "$cv" ]] || { echo "assemble-principle: ★chapters.${ck} 欠落 (band 見出しは contract 必須・instance hardcode 禁止)" >&2; errs=1; }
+  done
+  # ★見出し内の数詞 == 派生実件数 (件数は machine floor の領分・verification §3.9): 「N 原則」は当該 tier の
+  #   principles 実件数、 「N ステップ」は amendment.steps 実件数と一致必須 (件数 fabrication を生成段で封鎖)。
+  #   ★数詞は ASCII 半角の「N 原則 / N ステップ」を **必須** とする肯定形 (c5r.2 ceiling round1):
+  #   「数詞があれば照合」の任意形だと漢数字「九 原則」・丸数字等が照合を素通りする (回避表記の
+  #   blocklist 列挙は partial-enum trap)。 canonical 表記を必須化すれば回避表記は「必須数詞なし」で
+  #   一律 abort になり、 表記列挙なしで全回避経路が閉じる。
+  #   全角数字の明示 guard は defense-in-depth として残す (★bracket 式 [０-９] は C locale で multibyte を
+  #   byte 分解し誤 match するため、 明示 alternation で locale 非依存に)。
+  for ck in always ask_first never amendment; do
+    cv="$(q ".chapters.${ck} // \"\"")"
+    if grep -qE '０|１|２|３|４|５|６|７|８|９' <<<"$cv"; then
+      echo "assemble-principle: ★chapters.${ck} に全角数字 (数詞照合を回避する表記・半角で書く): $cv" >&2; errs=1
+    fi
+  done
+  for ck in always ask_first never; do
+    cv="$(q ".chapters.${ck} // \"\"")"
+    [[ -n "$cv" ]] || continue  # 欠落は上の必須 check が既に errs 済
+    ncnt="$(grep -oE '[0-9]+[[:space:]]*原則' <<<"$cv" | grep -oE '[0-9]+' | head -1 || true)"
+    if [[ -z "$ncnt" ]]; then
+      echo "assemble-principle: ★chapters.${ck} に ASCII 数字の件数「N 原則」が無い (数詞は半角 ASCII 必須 = 漢数字等の照合回避を封鎖): $cv" >&2; errs=1
+    else
+      tcnt="$(q "[.principles[] | select(.tier == \"${CK_TIER[$ck]}\")] | length")"
+      [[ "$ncnt" == "$tcnt" ]] || { echo "assemble-principle: ★chapters.${ck} の数詞 ${ncnt} が tier ${CK_TIER[$ck]} 実件数 ${tcnt} と不一致 (件数 fabrication)" >&2; errs=1; }
+    fi
+  done
+  cv="$(q '.chapters.amendment // ""')"
+  if [[ -n "$cv" ]]; then
+    ncnt="$(grep -oE '[0-9]+[[:space:]]*ステップ' <<<"$cv" | grep -oE '[0-9]+' | head -1 || true)"
+    if [[ -z "$ncnt" ]]; then
+      echo "assemble-principle: ★chapters.amendment に ASCII 数字の件数「N ステップ」が無い (数詞は半角 ASCII 必須 = 漢数字等の照合回避を封鎖): $cv" >&2; errs=1
+    else
+      tcnt="$(q '.amendment.steps | length')"
+      [[ "$ncnt" == "$tcnt" ]] || { echo "assemble-principle: ★chapters.amendment の数詞 ${ncnt} が amendment.steps 実件数 ${tcnt} と不一致 (件数 fabrication)" >&2; errs=1; }
+    fi
+  fi
   [[ "$errs" -eq 0 ]] || { echo "assemble-principle: contract validation FAILED (fail-closed)" >&2; exit 1; }
 }
 
@@ -240,19 +285,24 @@ emit_inbound() {
 # emit_glossary (glossary-term-table) は lib/common.sh (core) を使う。
 
 # footer は core_emit_footer に principle-pack 別のタグ列を渡す (本文 SSoT 行は共通)。
+# ★instance タグは hardcode せず contract (.footer.instance_tag) から取る (folio-c5r.3 BLK-FOOTER-INSTANCE-TAG
+#   と同根: instance#4 リテラルは 2nd instance の成果物に虚偽の出自を表示する)。 欠落時の既定は instance 非依存の中立句。
 emit_footer() {
-  core_emit_footer '<span>folio design system</span><span>principle-pack</span><span>folio engine B4 (instance#4)</span><span>照会終端 + baseline-diff</span>'
+  local itag; itag="$(q '.footer.instance_tag // "canonical immutable principles"')"
+  core_emit_footer "<span>folio design system</span><span>principle-pack</span><span>$(esc "$itag")</span><span>照会終端 + baseline-diff</span>"
 }
 
 build() {
   emit_head "$(q '.meta.title')"
   printf '<div class="page" data-component="requirement-type-color-tokens">\n'
   emit_cover
-  band ok     "いつも守る原則 (Always)"        "例外なく常に守る 9 原則 — folio の土台"          "$ICO_ALWAYS";   emit_tier Always;     band_end
-  band warn   "変える前に確認する原則 (Ask-first)" "user 承認を取ってから変えてよい 3 原則"        "$ICO_ASK";      emit_tier Ask-first;  band_end
-  band bad    "絶対にやらない原則 (Never)"      "踏み越え禁止の 2 原則 — 守りの最後の線"          "$ICO_NEVER";    emit_tier Never;      band_end
+  # ★tier/amendment の band 見出しは contract .chapters.* 由来 (instance 固有の件数入り文言を code に焼かない・
+  #   folio-c5r.2)。 versioning/inbound/glossary の見出しは pack 不変文言ゆえ code 側に残す。
+  band ok     "いつも守る原則 (Always)"        "$(q '.chapters.always')"                        "$ICO_ALWAYS";   emit_tier Always;     band_end
+  band warn   "変える前に確認する原則 (Ask-first)" "$(q '.chapters.ask_first')"                  "$ICO_ASK";      emit_tier Ask-first;  band_end
+  band bad    "絶対にやらない原則 (Never)"      "$(q '.chapters.never')"                          "$ICO_NEVER";    emit_tier Never;      band_end
   band brand  "版の上げ方 / Versioning"          "原則をどう変えると版がどう上がるか"              "$ICO_VERSION";  emit_versioning;      band_end
-  band violet "原則を変える手順 / Amendment"      "変更を ADR と版に必ず残す 5 ステップ"            "$ICO_AMEND";    emit_amendment;       band_end
+  band violet "原則を変える手順 / Amendment"      "$(q '.chapters.amendment')"                      "$ICO_AMEND";    emit_amendment;       band_end
   band info   "この憲法を参照する文書 / inbound"  "原則は照会の終端 — 受ける照会だけをここに示す"  "$ICO_INBOUND";  emit_inbound;         band_end
   band brand  "用語集 / この文書で使う専門語"      "本文に出てくる専門語のやさしい説明"              "$ICO_BOOK";     emit_glossary;        band_end
   printf '</div>\n'

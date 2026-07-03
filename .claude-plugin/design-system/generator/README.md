@@ -121,7 +121,11 @@ frozen `architecture/spec/constitution.html` から **read-only で忠実抽出*
 読み比べで実証する (frozen constitution.html は **絶対に編集しない** = P-10。 生成は別ファイル)。
 
 - **入力 contract** (`contract/folio-constitution.principle.yaml`) — principle-pack schema: meta(doc_type:constitution) / approval /
-  decisions_dir / principles(id/heading/statement/tier/amended_by) / versioning(s5) / amendment(s6) / inbound / glossary。
+  decisions_dir / principles(id/heading/statement/tier/amended_by) / versioning(s5) / amendment(s6) /
+  **chapters(always/ask_first/never/amendment = band 章見出し・必須)** / **footer(instance_tag・任意)** / inbound / glossary。
+  ★chapters は folio-c5r.2 で contract 化 (instance 固有の件数入り見出しを code に焼かない)。 tier 見出しは
+  「N 原則」・amendment 見出しは「N ステップ」を **ASCII 半角数詞で必須** 記載し、 N == 派生実件数を
+  assemble/verify 両段が強制する (漢数字・全角等の照合回避表記は fail-closed で却下)。
   ★構造差 (principle の hallmark): **前方照会を持たない** (照会の終端) / **inbound のみ受ける** / **amended_by = 改訂来歴の別軸 edge** /
   **tier (Always/Ask-first/Never) で原則を 3 群に分類**。
 - **決定的 assembler** (`assemble-principle.sh`) — `lib/common.sh` (core) を source。 cover骨格/glossary/footer/term-inline (mark_terms)/band/esc/finalize は共用 (core)、
@@ -142,9 +146,10 @@ frozen `architecture/spec/constitution.html` から **read-only で忠実抽出*
   - **③inbound fail-closed** (doc_type:constitution のみ): core の `verify_cross_doc_refs` を **target=self** で再利用し、 inbound.ref が
     principles[].id に実在 (dangling 0 = phantom 照会捕捉) / role 抽象 allowlist / (ref,role) ペア集合一致 を確かめる (照会終端 node の局所整合)。
   ★floor 通過は `CEILING=PENDING` (taxonomy §5.1)。 graph 全体の終端完備 (全チェーンが principle で終端) は **B5 (folio-983) へ切出し**。 専用 ceiling agent 制度化は follow-up。
-- **敵対回帰** = `test-adversarial-principle.sh` (A1-A10 assemble abort / BD1-BD7 ★baseline-diff (silent change 6 + 正当改訂 PASS 1) /
-  ★BD8-BD11+A11 cell-quality errata 回帰 (doc_type flip abort+FAIL / heading-only silent / amended_by 消去 / version downgrade / empty amended_by:[] 整合) /
-  T1 終端 / IB1-IB5 inbound / F1-F16 fabrication-free / C1-C6 core chrome / J1-J2 inject = 54 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
+- **敵対回帰** = `test-adversarial-principle.sh` (A1-A10 assemble abort / ★CH1-CH9 chapters band 見出し (欠落 abort / 数詞
+  fabrication 両段 / 全角・漢数字回避封鎖 / verify 独立数詞 pin 原則+ステップ・folio-c5r.2) / BD1-BD7 ★baseline-diff (silent change 6 + 正当改訂 PASS 1・
+  攻撃者が chapters 数詞も辻褄合わせる形) / ★BD8-BD11+A11 cell-quality errata 回帰 (doc_type flip abort+FAIL / heading-only silent / amended_by 消去 / version downgrade / empty amended_by:[] 整合) /
+  T1 終端 / IB1-IB5 inbound / F1-F16 fabrication-free / C1-C6 core chrome / J1-J2 inject = 75 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
   ★baseline-diff 系は mutated contract を **canonical basename のサブdir** に置き committed golden へ解決させる (別名だと「golden 不在」FAIL で silent-change 検出を検証できない false-pass になる)。
 
 ```bash
