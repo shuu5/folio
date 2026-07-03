@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-03T07:31:54Z",
+  "generatedAt": "2026-07-03T10:51:36Z",
   "folioVersion": "1.1.0",
   "specs": [
     {
@@ -40,6 +40,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html",
           "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "decisions/ADR-0034-object-term-xref-system.html",
@@ -129,6 +130,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
@@ -539,6 +541,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0038-constitution-p14-human-readability.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html",
           "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html"
@@ -568,6 +571,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
           "decisions/ADR-0024-folio-init-scope.html"
@@ -596,6 +600,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html"
         ],
         "dc:references": [
@@ -679,6 +684,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html"
         ],
         "dc:references": [
@@ -1289,6 +1295,29 @@
       }
     },
     {
+      "@id": "decisions/ADR-0048-design-intent-dir-rename.html",
+      "title": "ADR-0048 — design-intent 空間 dir rename (architecture/ → design-intent/)",
+      "summary": "folio の設計意図空間 dir を architecture/ から design-intent/ へ rename し、 dir 名を canonical 語彙 design-intent space と一致させる — constitution は無改訂 (layout 非依存設計による P-10 amendment 不要)・consumer 公開 default も同時変更・単一 atomic 実行。 語彙「architecture」 (doc-type architecture-description / constitution §1 の用法) は dir 名と独立に存続する —",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0022-x4-0-canonical-layout.html",
+          "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+          "decisions/ADR-0021-constitution-x4-amendment.html",
+          "decisions/ADR-0026-test-placement-model.html",
+          "spec/folio-self-spec.html#s2-folio-layout",
+          "spec/rules.html"
+        ]
+      }
+    },
+    {
       "@id": "decisions/README.html",
       "title": "folio decisions index",
       "summary": "folio Layer 0 の ADR cluster",
@@ -1705,6 +1734,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
         "essence": "design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。"
+      },
+      {
+        "id": "ADR-0048",
+        "class": "decision",
+        "ssot": "decisions/ADR-0048-design-intent-dir-rename.html",
+        "essence": "folio の設計意図空間 dir を architecture/ から design-intent/ へ rename し、 dir 名を canonical 語彙 design-intent space と一致させる — constitution は無改訂 (layout 非依存設計による P-10 amendment 不要)・consumer 公開 default も同時変更・単一 atomic 実行。 語彙「architecture」 (doc-type architecture-description / constitution §1 の用法) は dir 名と独立に存続する —"
       },
       {
         "id": "P-1",
