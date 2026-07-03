@@ -268,11 +268,20 @@ per-pack verify が建物の各部屋の配線を見るのに対し、 こちら
     (`target_docid_expr`) は別 expr ゆえ vacuum の巻き添えにならず有効に残るため、 **「有効照会先 ⟹ `declared_cnt` 正整数」**
     を pin して expr vacuum (cexpr 自体の null 化も含む) を捕捉する。
   - **(2) graph reachability (global)** — contract glob → edge union → principle 終端への到達可能性を
-    `{終端完備 / 孤立=warn / external-ref=warn}` に展開。 **終端は domain-local principle を許容** (ADR inline `principle:` を
+    `{終端完備 / 免除=warn (宣言済) / 孤立=hard FAIL}` に展開。 **終端は domain-local principle を許容** (ADR inline `principle:` を
     graph node に昇格 = constitution に不在でも終端)。 **逆方向** (ADR→SRS の justifies) は reachability では SRS→ADR と辿り
     局所の要件 ID 実在は既存 verify-adr が担う (§10④「逆方向=局所」)。 **amended_by は来歴 meta-edge ゆえ reachability から除外**。
-    **dangling (graph 不在 node 先) = hard FAIL**。 **孤立 (例: ADR-less な EC SRS) / external-ref (inbound.from・amended_by.adr の
-    folio-self 先) = warn** (exit 0・advisory)。 graph 構造は有限ゆえ floor が例外的に exhaustive (§10.1)。
+    **dangling (graph 不在 node 先) = hard FAIL**。 **★孤立 = block (folio-ulz 批准・Tier B grill 2026-07-03)**:
+    未宣言の孤立 (principle 終端へ到達不能・免除宣言なし) は **hard FAIL** — default-block + 明示宣言の型
+    (mzn.1 裁定機構・c5r.1 declared/undeclared と同型) で、 「接地する」か「持たないと明言する」かの二択にし
+    **無言の欠落だけ**を禁止する。 免除宣言 = contract の `meta.terminal_waiver` (string・**rationale 必須**・空/非文字列は
+    宣言不備 FAIL の fail-closed)。 意味論は「**原則接地を意図的に持たない**」の宣言であって ADR 要否ではない
+    (**ADR-less ≠ orphan** — 終端充足は ADR 内蔵 principle / 上位層 constitution 照会 / 自前 constitution の複数手段。
+    ADR-worthy な決定 (rules §10.3 の 3 条件全真) を持たない suite が ADR を持たないのは規範上正当な状態)。
+    宣言済みは **可視一覧 warn** で列挙 (silent 化させない)。 **stale 宣言** (終端到達済みなのに waiver 残存) も warn。
+    宣言例 = `contract/ec-checkout.srs.yaml` (単独 SRS 最小 demo の grandfather = 免除機構の dogfood)。
+    external-ref (inbound.from・amended_by.adr の folio-self 先) = warn (exit 0・advisory)。
+    graph 構造は有限ゆえ floor が例外的に exhaustive (§10.1)。
 - **graph ceiling** = 照会 note / role の **真正性** は意味判定ゆえ **既存 fidelity-* lens** (fidelity-adr/research/principle) の射程。
   新 agent は不要 (§10⑦)。 CI gate (floor∧ceiling) 統合は **B5-III (folio-hi6)** が担う。
 

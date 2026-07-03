@@ -5,7 +5,8 @@
 #   - rolemap floor pin (edge.role == rolemap[node.type]) を *どちら側の改竄でも* (二重担保) FAIL
 #   - SRS の exploration 不在 (forbidden_roles) を corpus scan で実証し密輸を FAIL
 #   - dangling 照会 (graph 不在 node 先) / rolemap roles allowlist 逸脱 / rolemap 不在 / doc_id 欠落・重複 を FAIL
-#   - 孤立 (ADR-less SRS / inline principle 喪失) は warn = exit 0 (advisory・FAIL でない)
+#   - 孤立 = block (folio-ulz 批准 2026-07-03): 未宣言の孤立 (principle 終端へ到達不能・免除宣言なし) は hard FAIL。
+#     免除宣言 (meta.terminal_waiver・rationale 必須) 済みは warn 降格 + 可視一覧。 stale 宣言 (終端到達済み) は warn。
 #   - external-ref (folio-self inbound/amended_by) は warn = exit 0
 # SRS/ADR/research/principle の test-adversarial-*.sh と同型 (敵対の検出力を固定 = ceiling 機械化下限)。
 # ★FAIL 系は理由 substring を検証し「想定 gate 以外の巻き添え FAIL」での false-pass を弾く。
@@ -41,12 +42,14 @@ echo "照会 graph adversarial regression (fail-closed / warn-correct expected):
 # H0. happy path: exit 0 / 終端完備=11 / FLOOR-OK
 #   corpus 実値の来歴: B6 (folio-8ct) spec-pack で 4→5、 glossary×2 + testcases + arch + relations/verification spec で
 #   5→10 (folio-dls の drift を本 cell で吸収)、 c5r.11 裁定 B2 (test→SRS forward 再写像) で TC-CLINIC-APPT が
-#   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)。
+#   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)。 folio-ulz 批准 (block+免除宣言) で
+#   EC は meta.terminal_waiver 宣言済み → 免除(warn)=1・孤立(block)=0 が happy path の実値。
 #   ★「終端到達: TC-CLINIC-APPT」substring は B2 の意味 pin (backward への退行は count と substring の両方で割れる)。
+#   ★「免除: SRS-EC-CHECKOUT」substring は免除宣言の可視一覧 pin (silent 化の退行を検出)。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=11 孤立(warn)=1"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
-   && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=11 / 孤立=1 / TC 終端到達 / FLOOR-OK / exit 0)"
+if run "$D" && [[ "$RUNOUT" == *"終端完備=11 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+   && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
+  ok "H0 happy path (終端完備=11 / 免除=1 / 孤立=0 / TC 終端到達 / EC 免除可視 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL
@@ -118,25 +121,54 @@ D="$(mktmp)"; yq -i 'del(.edges)' "$D/rolemap/adr.rolemap.yaml"
 yq -i '.decision.justifies[0].role = "verification"' "$D/contract/clinic-double-booking.adr.yaml"
 expect_fail "G13 ★edges 削除で corpus 改竄を隠す複合攻撃を FAIL" "$D" "floor 武装解除ガード"
 
-# W1. 孤立は warn (exit 0): inline principle 喪失で clinic 鎖が連鎖孤立しても FAIL でない。
+# W1. 未宣言孤立は block (exit 1): inline principle 喪失で clinic 鎖が連鎖孤立すると hard FAIL (folio-ulz)。
 #     総数だけでなく *どの鎖が孤立したか* を個別 substring で固定する (minor#2: 総数照合だけだと corpus 増減で
 #     false-pass・別経路で総数一致の改竄を見逃しうる)。
 #     ★arch pack が同 id 終端 (PRIN-SAFETY-FIRST) を冗長供給するため ADR 単独の喪失では孤立しない
 #       (folio-dls drift の真因)。 clinic 鎖の全終端 route を断つには ADR + arch の両 principle.id を空にする。
 #     ★TC-CLINIC-APPT の連鎖孤立 = c5r.11 B2 の意図挙動 pin (SRS が終端未到達なら test も道連れ = 根本原因の表面化)。
 #       GLOSSARY-CLINIC-APPT は自前 route (→FOLIO-CONSTITUTION) を持つため孤立しない。
+#       EC は免除宣言済みゆえ孤立でなく免除 warn のまま (block は未宣言の 5 鎖のみ = default-block + 明示宣言)。
 D="$(mktmp)"; yq -i '.principle.id = ""' "$D/contract/clinic-double-booking.adr.yaml"
 yq -i '.principle.id = ""' "$D/contract/clinic-architecture.arch.yaml"
-if run "$D" && [[ "$RUNOUT" == *"孤立(warn)=6"* \
+if ! run "$D" && [[ "$RUNOUT" == *"孤立(block)=5"* \
    && "$RUNOUT" == *"孤立: ADR-CLINIC-0001"* && "$RUNOUT" == *"孤立: RES-CLINIC-0001"* \
    && "$RUNOUT" == *"孤立: SRS-CLINIC-APPT"* && "$RUNOUT" == *"孤立: ARCH-CLINIC-APPT"* \
-   && "$RUNOUT" == *"孤立: TC-CLINIC-APPT"* && "$RUNOUT" == *"孤立: SRS-EC-CHECKOUT"* ]]; then
-  ok "W1 全終端 route 喪失 → clinic 5 鎖 (TC 連鎖孤立含む) + EC が個別に孤立 warn (exit 0)"
+   && "$RUNOUT" == *"孤立: TC-CLINIC-APPT"* && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* \
+   && "$RUNOUT" == *"RESULT: FAIL"* ]]; then
+  ok "W1 全終端 route 喪失 → 未宣言の clinic 5 鎖 (TC 連鎖含む) が個別に孤立 block・宣言済み EC は免除 warn (exit 1)"
 else ng "W1 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -3 | tr '\n' '|'))"; fi
 
-# W2. 孤立 warn の代表: ADR-less な EC SRS は孤立 warn (happy path でも常時)
+# W2. 免除宣言の代表: ADR-less な EC SRS は terminal_waiver 宣言済みゆえ warn 降格 (happy path でも常時可視)
 D="$(mktmp)"
-expect_pass_warn "W2 ADR-less EC SRS は孤立 warn (exit 0)" "$D" "孤立: SRS-EC-CHECKOUT"
+expect_pass_warn "W2 免除宣言済み EC SRS は warn 降格 + 可視一覧 (exit 0)" "$D" "免除: SRS-EC-CHECKOUT"
+
+# U1. ★block 方向の pin (folio-ulz 核心): EC の免除宣言を削除 → 未宣言孤立が hard FAIL (exit 1)。
+#     「免除宣言なし」は孤立 FAIL 行にのみ出る値 (substring が想定 gate を一意に指す)。
+D="$(mktmp)"; yq -i 'del(.meta.terminal_waiver)' "$D/contract/ec-checkout.srs.yaml"
+expect_fail "U1 ★免除宣言なしの孤立 SRS を block (exit 1)" "$D" "孤立: SRS-EC-CHECKOUT"
+
+# U2. ★rationale 必須の fail-closed: 免除宣言の理由が空文字 → 宣言不備 FAIL (実質 advisory 化する空宣言を封鎖)。
+D="$(mktmp)"; yq -i '.meta.terminal_waiver = ""' "$D/contract/ec-checkout.srs.yaml"
+expect_fail "U2 ★理由なし免除宣言 (空文字) を宣言不備で FAIL" "$D" "免除宣言不備: SRS-EC-CHECKOUT"
+
+# U2b. ★型不正も同経路で fail-closed: 理由が文字列でない (map) → 宣言不備 FAIL。
+D="$(mktmp)"; yq -i '.meta.terminal_waiver = {"note": "x"}' "$D/contract/ec-checkout.srs.yaml"
+expect_fail "U2b ★非文字列の免除宣言 (map) を宣言不備で FAIL" "$D" "免除宣言不備: SRS-EC-CHECKOUT"
+
+# U2c. ★空白種の回避経路封鎖: 全角スペース U+3000 のみの理由も blank と判定し宣言不備 FAIL
+#      (c5r.2 全角数字と同型の回避ベクタ。 NBSP も同経路で除去)。
+D="$(mktmp)"; yq -i '.meta.terminal_waiver = "　　"' "$D/contract/ec-checkout.srs.yaml"
+expect_fail "U2c ★全角スペースのみの免除宣言を宣言不備で FAIL" "$D" "免除宣言不備: SRS-EC-CHECKOUT"
+
+# U2d. ★NBSP (U+00A0) のみの理由も blank と判定し宣言不備 FAIL (実装が名指しで除去する空白種の pin —
+#      claimed capability を敵対固定する)。
+D="$(mktmp)"; NB=$' '; yq -i ".meta.terminal_waiver = \"${NB}${NB}\"" "$D/contract/ec-checkout.srs.yaml"
+expect_fail "U2d ★NBSP のみの免除宣言を宣言不備で FAIL" "$D" "免除宣言不備: SRS-EC-CHECKOUT"
+
+# U3. ★stale 宣言の正直さ: 終端到達済み doc に waiver を足す → silent 無視せず可視 warn (exit 0)。
+D="$(mktmp)"; yq -i '.meta.terminal_waiver = "stale test"' "$D/contract/clinic-appointment.srs.yaml"
+expect_pass_warn "U3 ★終端到達済み doc の stale 免除宣言は可視 warn (exit 0)" "$D" "免除宣言が stale: SRS-CLINIC-APPT"
 
 # W3. external-ref warn: folio-self の inbound 系統と amended_by 系統が *両方* emit され、 contract外 warn で
 #     advisory (exit 0) になることを固定する (nit#5: substring 'contract外' だけでは両系統 emission を区別できない)。

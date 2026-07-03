@@ -18,6 +18,12 @@ meta:
   version: "1.2"
   date: "2026-06-15"
   reader: EC 事業の事業責任者 — プログラミング・会計の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+  # 免除宣言 (folio-ulz 批准・default-block + 明示宣言)。 verify-graph が読む (assemble は非消費 = 生成物不変)。
+  # ADR-less ≠ orphan (別軸): 本 suite が ADR を持たないのは ADR-worthy な決定 (不可逆・意外な rationale・
+  # 真の trade-off の 3 条件全真) が無いためで、 それ自体は正当な状態 = graph の欠陥ではない。
+  # それとは独立の宣言として、 本 suite は原則接地 (principle 終端への到達経路) を意図的に持たない —
+  # その意図を無言の欠落と区別して明示するのが本 waiver (終端充足は ADR 以外の手段でも可能・上位憲章照会等)。
+  terminal_waiver: "単独 SRS の最小 demo (instance #1)。 ADR-worthy な決定を持たず原則接地を意図的に持たない (免除宣言機構の dogfood 例)"
 
 # 承認記録 (9.2.2 Front Matter)
 approval:

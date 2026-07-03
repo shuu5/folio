@@ -6,14 +6,19 @@
 #   (1) rolemap floor (scope = 各 contract): edge.role == rolemap[node.type] を pin (co-author + enforce・二重担保)、
 #       rolemap roles ⊆ 抽象 allowlist、 SRS exploration 不在 scan (forbidden_roles)。  → 違反 = hard FAIL
 #   (2) graph reachability (global): contract glob → edge union → principle 終端への到達可能性を
-#       {終端完備 / 孤立 = warn / external-ref = warn} に展開。 dangling 照会 (graph 不在 node 先) = hard FAIL。
+#       {終端完備 / 免除 = warn (宣言済) / 孤立 = hard FAIL} に展開。 dangling 照会 (graph 不在 node 先) = hard FAIL。
 #       amended_by は来歴 meta-edge ゆえ reachability から除外 (rolemap external.meta=true)。
 #
 # 決定的 → floor (CI hard = guarantee)・意味的 → ceiling (advisory) の二分 (engine doc §10⑦):
 #   graph 構造は有限ゆえ floor が *例外的に exhaustive* (folio の「floor は検査できた範囲だけ green」が当てはまらない稀領域)。
 #   照会 note / role の *真正性* は意味判定ゆえ ceiling = 既存 fidelity-* lens に委ねる (本 script の射程外)。
-# 孤立 = warn は engine doc 確定 (follow-up: ADR-less 孤立 SRS の warn→block 昇格 policy)。 exit code:
-#   floor 違反 / dangling 有 → 1。 warn のみ (孤立 / external-ref) → 0 (advisory)。
+# ★孤立 = block は folio-ulz 批准 (Tier B grill 2026-07-03)。 default-block + 明示宣言:
+#   - 未宣言の孤立 (principle 終端へ到達不能・免除宣言なし) = hard FAIL。 無言の欠落だけを禁止する。
+#   - 免除宣言 = contract の meta.terminal_waiver (string・rationale 必須・fail-closed: 空/非文字列は FAIL)。
+#     意味論は「原則接地を意図的に持たない」の宣言 (ADR 要否ではない。 ADR-less ≠ orphan — 終端充足は
+#     ADR 内蔵 principle / 上位層 constitution 照会 / 自前 constitution の複数手段)。 宣言済みは可視一覧 warn。
+#   - stale 宣言 (終端到達済みなのに waiver 残存) = warn (宣言の正直さを保つ・silent 化させない)。
+# exit code: floor 違反 / dangling / 未宣言孤立 / 宣言不備 → 1。 warn のみ (免除 / stale / external-ref) → 0。
 #
 # 用法: verify-graph.sh [--contract-dir <dir>] [--rolemap-dir <dir>]
 #   既定 contract-dir = <script>/contract、 rolemap-dir = <script>/rolemap。
@@ -65,7 +70,7 @@ mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)
 
 echo "照会 graph 終端完備検証 (rolemap floor + reachability): $CONTRACT_DIR"
 
-declare -A ISDOC DOCPACK TERMINAL
+declare -A ISDOC DOCPACK DOCFILE TERMINAL
 DOCIDS=()           # 決定的順 (sort 済 contract 由来) の doc_id 列
 EDGES=()            # "src|dst|direction|cbase|from_node" (graph reachability 用・dst は doc_id か terminal id)
 EXTREFS=()          # external-ref warn 行
@@ -85,7 +90,7 @@ for CONTRACT in "${CONTRACTS[@]}"; do
   if [[ -n "${ISDOC[$did]:-}" ]]; then
     printf '  [FAIL] %-'"$CHKW"'s doc_id 重複: %s\n' "$cbase" "$did"; fail=1; continue
   fi
-  ISDOC[$did]=1; DOCPACK[$did]="$pack"; DOCIDS+=("$did")
+  ISDOC[$did]=1; DOCPACK[$did]="$pack"; DOCFILE[$did]="$CONTRACT"; DOCIDS+=("$did")
 
   # (sanity) rolemap roles ⊆ 抽象 allowlist
   bad="$(rolemap_roles_invalid "$rolemap" | tr '\n' ' ' | sed 's/ *$//')"
@@ -206,14 +211,32 @@ reaches_terminal() {
   return 1
 }
 
-# ===== reachability 展開 ({終端完備 / 孤立=warn}) =====
-declare -i ncomplete=0 nisolated=0
+# ===== reachability 展開 ({終端完備 / 免除=warn / 孤立=block}) — folio-ulz 批准 (2026-07-03) =====
+declare -i ncomplete=0 nisolated=0 nwaived=0 nmalformed=0
 for did in "${DOCIDS[@]}"; do
+  cfile="${DOCFILE[$did]}"
+  wpresent="$(yq -r '(.meta // {}) | has("terminal_waiver")' "$cfile")"
   if reaches_terminal "$did"; then
     printf '  [OK]   %-'"$CHKW"'s 終端完備\n' "終端到達: $did (${DOCPACK[$did]})"
     ncomplete+=1
+    # stale 宣言の正直さ: 終端到達済みなのに waiver が残ると宣言と実態が乖離するため可視 warn (silent 無視しない)。
+    [[ "$wpresent" != "true" ]] || warnmsg "免除宣言が stale: $did (${DOCPACK[$did]}) — 終端到達済みなのに terminal_waiver が残存 (宣言の削除を推奨)"
+  elif [[ "$wpresent" == "true" ]]; then
+    # 宣言あり: rationale 必須を fail-closed で強制 (string かつ非空白のみ有効。 空/型不正は宣言不備 FAIL)。
+    # 空白判定は 全角スペース U+3000 / NBSP も除去してから行う (空白種の回避経路封鎖・c5r.2 全角数字と同型。
+    # 理由の「質」は機械の領分外 = 可視一覧 warn が人間 review 面・意味判定を floor に持ち込まない)。
+    wtag="$(yq -r '.meta.terminal_waiver | tag' "$cfile")"
+    wreason="$(yq -r '.meta.terminal_waiver // ""' "$cfile" | tr '\n' ' ')"
+    wtrim="${wreason//[$'\t\r ']/}"; wtrim="${wtrim//　/}"; wtrim="${wtrim//$' '/}"
+    if [[ "$wtag" != "!!str" || -z "$wtrim" ]]; then
+      printf '  [FAIL] %-'"$CHKW"'s terminal_waiver の理由が空/非文字列 (rationale 必須・fail-closed)\n' "免除宣言不備: $did (${DOCPACK[$did]})"; fail=1; nmalformed+=1
+    else
+      warnmsg "免除: $did (${DOCPACK[$did]}) — 原則接地を持たない宣言 (理由: $wreason)"
+      nwaived+=1
+    fi
   else
-    warnmsg "孤立: $did (${DOCPACK[$did]}) — principle 終端へ到達不能"
+    # 未宣言の孤立 = block (folio-ulz)。 接地するか、 持たないと明言するかの二択 — 無言の欠落だけが FAIL。
+    printf '  [FAIL] %-'"$CHKW"'s principle 終端へ到達不能 (免除宣言なし = block。 meta.terminal_waiver に理由を宣言するか終端経路を張る)\n' "孤立: $did (${DOCPACK[$did]})"; fail=1
     nisolated+=1
   fi
 done
@@ -227,9 +250,10 @@ if [[ "${#WARNS[@]}" -gt 0 ]]; then
 fi
 
 echo "  ----"
-printf '  終端完備=%d 孤立(warn)=%d warn合計=%d\n' "$ncomplete" "$nisolated" "$nwarn"
+# 集計の完結性: 全 doc が {終端完備 / 免除 / 孤立 / 宣言不備} のいずれかに必ず分類される (総和 == doc 総数)。
+printf '  終端完備=%d 免除(warn)=%d 孤立(block)=%d 宣言不備(block)=%d warn合計=%d\n' "$ncomplete" "$nwaived" "$nisolated" "$nmalformed" "$nwarn"
 if [[ "$fail" -ne 0 ]]; then
-  echo "  RESULT: FAIL (floor 違反 / dangling)"
+  echo "  RESULT: FAIL (floor 違反 / dangling / 未宣言孤立 / 宣言不備)"
   exit 1
 fi
 echo "  RESULT: FLOOR-OK (warn は advisory・graph ceiling = 既存 fidelity-* lens の射程)"

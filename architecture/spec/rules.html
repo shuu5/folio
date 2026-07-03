@@ -986,6 +986,8 @@ flowchart TB
 </div>
 
 <p data-audience="machine">3 条件が<strong>すべて真の時のみ</strong> ADR を offer する (sparingly)。 いずれか 1 つでも偽なら ADR にしない — 可逆な決定 / context 無しで自明な決定 / trade-off の無い決定は spec 本文 (WHAT) や <code>vocabulary.yaml</code> に吸収し、 重厚な ADR (HTML+JSON-LD、 user 承認) を濫造しない。 folio の高コスト ADR と高い 3 条件 bar は相互補強する (少数精鋭に絞る価値が高い)。</p>
+
+<p class="informative" data-audience="machine"><strong>ADR-less ≠ orphan (照会 graph との関係)</strong>: 3 条件を満たす決定が無い文書一式が ADR を持たないのは正当な状態であり、 それ自体は照会 graph の欠陥ではない。 照会 graph の不変条件は「principle 終端への到達」であって ADR の有無ではない — 終端充足は ADR 内蔵 principle / 上位層 constitution への照会 / 自前 constitution のいずれでもよい。 原則接地を意図的に持たない文書一式は、 生成 contract の <code>meta.terminal_waiver</code> に理由を明示宣言する (rationale 必須・宣言済みは可視一覧)。 未宣言の孤立は照会 graph 検査 (<code>verify-graph</code>) が block する — 「接地する」か「持たないと明言する」かの二択で、 無言の欠落だけを禁止する (機構詳細は design-system generator README)。</p>
 </section>
 
 </section>
