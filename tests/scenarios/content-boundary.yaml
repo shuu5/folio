@@ -27,7 +27,7 @@ scenarios:
   - name: "spec 本文に裸 env-var (NAME=value) → advisory 発火・非ブロッキング (exit 0)"
     given:
       env: {}
-      file_path: "architecture/spec/feature.html"
+      file_path: "design-intent/spec/feature.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="spec"></head>
@@ -41,7 +41,7 @@ scenarios:
   - name: "spec 本文に裸 os-command (rm -rf) → advisory (category=os-command)"
     given:
       env: {}
-      file_path: "architecture/spec/feature.html"
+      file_path: "design-intent/spec/feature.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="spec"></head>
@@ -55,7 +55,7 @@ scenarios:
   - name: "絶対 path で spec_path 配下の spec 本文に裸 primitive → advisory (実機の絶対 path 入力)"
     given:
       env: {}
-      file_path: "/home/user/folio/architecture/spec/feature.html"
+      file_path: "/home/user/folio/design-intent/spec/feature.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="spec"></head>
@@ -69,7 +69,7 @@ scenarios:
   - name: "<code> 内 primitive は mask → 非検出 (advisory なし・exit 0)"
     given:
       env: {}
-      file_path: "architecture/spec/feature.html"
+      file_path: "design-intent/spec/feature.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="spec"></head>
@@ -82,7 +82,7 @@ scenarios:
   - name: "spec_path 外 (decisions/) の裸 primitive は非走査 (scope=spec_path・exit 0)"
     given:
       env: {}
-      file_path: "architecture/decisions/ADR-9999-x.html"
+      file_path: "design-intent/decisions/ADR-9999-x.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="adr"></head>
@@ -95,7 +95,7 @@ scenarios:
   - name: "Edit tool は対象外 (部分編集ゆえ全文 content なし・exit 0)"
     given:
       env: {}
-      file_path: "architecture/spec/feature.html"
+      file_path: "design-intent/spec/feature.html"
     when:
       tool: "Edit"
     expect:
@@ -104,7 +104,7 @@ scenarios:
   - name: "非 .html は対象外 (exit 0)"
     given:
       env: {}
-      file_path: "architecture/spec/notes.md"
+      file_path: "design-intent/spec/notes.md"
       content: "EXAMPLE_VAR=somevalue"
     when:
       tool: "Write"
@@ -114,7 +114,7 @@ scenarios:
   - name: "HOW なし clean spec は無音通過 (exit 0)"
     given:
       env: {}
-      file_path: "architecture/spec/feature.html"
+      file_path: "design-intent/spec/feature.html"
       content: |
         <!DOCTYPE html>
         <html><head><meta name="folio-doc-type" content="spec"></head>

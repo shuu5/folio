@@ -2,7 +2,7 @@
 
 A clean-slate, AI-Agent-first **architecture spec-writing framework + Claude Code plugin harness** (META FRAMEWORK, Layer 0). HTML-only, future-anchor philosophy.
 
-**Status**: Phase X5-γ (選択的完成)。 現行 `v1.1.0`、 v1.0 昇格基準は [ADR-0030](./architecture/decisions/ADR-0030-v1-stability-criteria.html) (accepted) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout (`architecture/` design-intent + repo-root `tests/` HOW-test) へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に rename、 概念「verification」は spec 名・`folio validate` として存続)。 folio は自身の rules を self-host する。
+**Status**: Phase X5-γ (選択的完成)。 現行 `v1.2.0`、 v1.0 昇格基準は [ADR-0030](./design-intent/decisions/ADR-0030-v1-stability-criteria.html) (accepted) で定義。 試作層 (`scratch/`) は X4-C (ADR-0023) で canonical layout へ物理移植済 (HOW-test dir は X4-F/ADR-0026 で `verification/` → `tests/` に、 design-intent 空間 dir は X4-G/ADR-0048 で `architecture/` → `design-intent/` に rename、 概念「verification」「architecture」は dir 名と独立に存続)。 folio は自身の rules を self-host する。
 
 ## Install
 
@@ -25,22 +25,22 @@ mkdir my-project && cd my-project
 /folio-architect この project に folio を導入し、 最初の design-intent spec を整備せよ
 ```
 
-adoption-aware Phase A が greenfield 検出 → `folio init` で構造生成 → onboarding grill (1 問ずつ + 推奨回答) で実体を引き出し → Phase E で非 hollow な constitution / overview を materialize → Phase F で 4-agent quality review ([ADR-0031](./architecture/decisions/ADR-0031-mattpocock-authoring-absorption.html) protocol-only authoring 吸収)。
+adoption-aware Phase A が greenfield 検出 → `folio init` で構造生成 → onboarding grill (1 問ずつ + 推奨回答) で実体を引き出し → Phase E で非 hollow な constitution / overview を materialize → Phase F で 4-agent quality review ([ADR-0031](./design-intent/decisions/ADR-0031-mattpocock-authoring-absorption.html) protocol-only authoring 吸収)。
 
 ## 2-Layer Architecture (at a glance)
 
 ```
 Layer 0 — folio (this repo)            : rules + plugin harness 一体配布
                 ↓ provides rules + harness (via folio.config.yaml)
-Layer 1 — <consumer-project>/          : architecture/ spec + implementation in same repo
+Layer 1 — <consumer-project>/          : design-intent/ spec + implementation in same repo
 ```
 
 ## Entry points
 
 | file / dir | role |
 |---|---|
-| [`architecture/spec/constitution.html`](./architecture/spec/constitution.html) | folio の 14 不変原則 (編集禁止) |
-| [`architecture/`](./architecture/) | design-intent 空間 (spec / decisions / research / assets、 self-host) |
+| [`design-intent/spec/constitution.html`](./design-intent/spec/constitution.html) | folio の 14 不変原則 (編集禁止) |
+| [`design-intent/`](./design-intent/) | design-intent 空間 (spec / decisions / research / assets、 self-host) |
 | [`tests/`](./tests/) | sandbox verification framework (scenarios / fixtures / golden / runner.sh、 X4-F で verification/ から rename) |
 | [`CLAUDE.md`](./CLAUDE.md) | Claude Code project instructions |
 | [`.claude-plugin/`](./.claude-plugin/) + [`hooks/`](./hooks/) | plugin harness (manifest + CLI + hook 宣言 / script) |
@@ -49,9 +49,9 @@ Layer 1 — <consumer-project>/          : architecture/ spec + implementation i
 
 **Published spec site (canonical)**: <https://shuu5.github.io/folio/> — GitHub Pages, always available.
 
-- [Architecture](https://shuu5.github.io/folio/architecture/) · [Constitution](https://shuu5.github.io/folio/architecture/spec/constitution.html) · [ADR index](https://shuu5.github.io/folio/architecture/decisions/README.html)
+- [Design-intent](https://shuu5.github.io/folio/design-intent/) · [Constitution](https://shuu5.github.io/folio/design-intent/spec/constitution.html) · [ADR index](https://shuu5.github.io/folio/design-intent/decisions/README.html)
 
-**Local preview** (offline / pre-publish): serve the repo root, then open `/architecture/`:
+**Local preview** (offline / pre-publish): serve the repo root, then open `/design-intent/`:
 
 ```bash
 # repo root から (specs の ../../common.css 等を解決するため root 配信が必須)

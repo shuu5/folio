@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / 説明文 / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`contract` / `data-slot-id` / `plain-language-term-inline` / `principle` / `tier` / `amended_by` / `inbound` / `Always` / `Ask-first` / `Never` / `gate J` 等) は英語のまま維持する。
 
-生成 principle プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を principle-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-principle](persona-walk-principle.md) = gate I 同型)。 principle は constitution doc-type (不変原則) で、 SRS の `fidelity-srs` (gate J) / ADR の `fidelity-adr` (gate J) / research の `fidelity-research` (gate J) と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (principles〔id / heading / statement / tier / amended_by〕/ versioning / amendment / inbound) と **「動かせない約束を、 不変性の段階 (tier) と共に宣言し、 照会の終端として受ける照会だけを記録する」hallmark** が固有。
+生成 principle プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を principle-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-principle](persona-walk-principle.md) = gate I 同型)。 principle は constitution doc-type (不変原則) で、 SRS の `fidelity-srs` (gate J) / ADR の `fidelity-adr` (gate J) / research の `fidelity-research` (gate J) と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (principles〔id / heading / statement / tier / amended_by〕/ versioning / amendment / inbound) と **「動かせない約束を、 不変性の段階 (tier) と共に宣言し、 照会の終端として受ける照会だけを記録する」hallmark** が固有。
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|
@@ -18,7 +18,7 @@ model: opus
 
 ## 1. 担当軸の定義
 
-生成 principle プレゼン HTML は、 機械 SSoT (`*.principle.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
+生成 principle プレゼン HTML は、 機械 SSoT (`*.principle.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
 
 floor (`verify-principle.sh`) が決定的に被覆するのは **構造の集合一致と機械可読 key の整合、 および決定的フィールド値**: 件数 (principles / amendment 来歴 / inbound / versioning rules / amendment steps / glossary / approval)・id 一意性・可視 pid/heading 順序・tier badge fidelity (可視ラベル・class・row class)・**statement の決定的可視テキスト (badge-strip 後 == esc(contract.statement))**・amendment 来歴 (data-amended-adr 集合/件数・可視 `<b>` == attr)・cover-meta 集計の再導出・終端強制 (前方照会 chip 無)・baseline-diff (statement/tier/増減の silent change を amended_by→実在ADR+版bump で正当化必須)・inbound 集合一致 / dangling 0 / (ref,role) ペア一致 / 可視 `<b>` == data-inbound-ref・term-inline の機械的派生・no-TBD・prose 全充填と**注入忠実** (`--filled`: HTML の prose == manifest の prose)。 本 agent はこれらを**再検査しない** (§5 scope)。
 
@@ -26,7 +26,7 @@ floor (`verify-principle.sh`) が決定的に被覆するのは **構造の集�
 
 ## 2. 何を検査するか
 
-caller は **(principle contract.yaml, 生成 HTML)** を渡す (manifest は渡さない — 手編集後の HTML も再検証できるよう、 floor 同様に成果物と SSoT のみで判定する)。 `Bash` で `yq` を使い contract の各フィールドを列挙し、 HTML 側の対応 prose を grounding して**意味的に**突合する。 元の frozen `architecture/spec/constitution.html` は参照しない — 本 agent の SSoT は **principle contract YAML** であり、 contract が frozen constitution.html を忠実抽出したかは契約作成者の責務 (本 agent の二者突合の外)。
+caller は **(principle contract.yaml, 生成 HTML)** を渡す (manifest は渡さない — 手編集後の HTML も再検証できるよう、 floor 同様に成果物と SSoT のみで判定する)。 `Bash` で `yq` を使い contract の各フィールドを列挙し、 HTML 側の対応 prose を grounding して**意味的に**突合する。 元の frozen `design-intent/spec/constitution.html` は参照しない — 本 agent の SSoT は **principle contract YAML** であり、 contract が frozen constitution.html を忠実抽出したかは契約作成者の責務 (本 agent の二者突合の外)。
 
 ### (a) prose fidelity (opus 生成スロット ↔ contract source)
 
@@ -114,13 +114,13 @@ severity 目安: **critical** = 捏造 (heading/statement に無い義務・禁�
 - **読みやすさ (わかりやすさ) は検査しない** — gate I 同型 = [persona-walk-principle](persona-walk-principle.md) の領分。 本 agent は「**書いてある内容が SSoT に忠実か**」だけを見る (読めるかは問わない)。
 - **幾何 render 崩れは検査しない** — gate F (playwright render-gate、 ADR-0037) の領分。
 - **要件定義書 (SRS) の fidelity は [fidelity-srs](fidelity-srs.md)・設計判断記録 (ADR) の fidelity は [fidelity-adr](fidelity-adr.md)・調査記録 (research) の fidelity は [fidelity-research](fidelity-research.md) の領分** — 検査対象 schema (要件 / NFR / RTM / 受入 ‖ context / drivers / options / decision ‖ question / findings / approaches / outcome) と hallmark が違う。 本 agent は principle schema (principles〔id / heading / statement / tier / amended_by〕/ versioning / amendment / inbound) に固有。
-- folio 自身の dual-audience spec (1-DOM co-author の essence ↔ EARS normative) の fidelity は [spec-review-fidelity](spec-review-fidelity.md) の領分。 本 agent の対象は **2 ファイル (principle contract YAML = SSoT / 生成 HTML = 派生)** の突合に限る (frozen `architecture/spec/constitution.html` の検査でもない)。
+- folio 自身の dual-audience spec (1-DOM co-author の essence ↔ EARS normative) の fidelity は [spec-review-fidelity](spec-review-fidelity.md) の領分。 本 agent の対象は **2 ファイル (principle contract YAML = SSoT / 生成 HTML = 派生)** の突合に限る (frozen `design-intent/spec/constitution.html` の検査でもない)。
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §7.3 (妥当性 = ceiling 領分)
-- [engine 設計 doc](../architecture/research/document-discipline-engine-design.html) §9 (B4 principle / constitution pack 設計合意 — 照会終端・不変性・baseline-diff gate)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §7.3 (妥当性 = ceiling 領分)
+- [engine 設計 doc](../design-intent/research/document-discipline-engine-design.html) §9 (B4 principle / constitution pack 設計合意 — 照会終端・不変性・baseline-diff gate)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
 - generator: `.claude-plugin/design-system/generator/` (`assemble-principle.sh` / `inject-prose.sh` / `verify-principle.sh` floor = 構造 fabrication-free + 終端強制 + baseline-diff + inbound proof)
 - principle contract schema: `.claude-plugin/design-system/generator/contract/folio-constitution.principle.yaml` (instance#4 / principles〔id・heading・statement・tier・amended_by〕・versioning・amendment・inbound〔受ける照会のみ・終端〕・glossary)
 - [persona-walk-principle](persona-walk-principle.md) (ceiling のもう片翼 = gate I 同型) / [fidelity-srs](fidelity-srs.md) (要件定義書用・対象 schema が異なる) / [fidelity-adr](fidelity-adr.md) (設計判断記録用・hallmark が異なる) / [fidelity-research](fidelity-research.md) (調査記録用・hallmark が異なる) / [spec-review-fidelity](spec-review-fidelity.md) (folio 自身用・対象が異なる)

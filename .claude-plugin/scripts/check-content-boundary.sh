@@ -20,13 +20,13 @@
 # 判定:
 #   - Write tool のみ (Edit は new_string 部分編集ゆえ全文 content を持たず本 gate の射程外。 path-boundary と対称)
 #   - file_path が .html
-#   - file_path が spec_path (既定 architecture/spec/) 配下 (= WHAT domain。 decisions/research は一次資料層で対象外)
+#   - file_path が spec_path (既定 design-intent/spec/) 配下 (= WHAT domain。 decisions/research は一次資料層で対象外)
 #   - content を folio_mask_prose で prose 化 → folio_how_primitive_scan で P-11 4-primitive 検出
 #   → 検出あり: advisory を stderr に出して exit 0 (非ブロッキング shaping)
 #   → 検出なし: 無音 exit 0
 #
 # 環境変数:
-#   FOLIO_SPEC_PATH  既定 "architecture/spec/"
+#   FOLIO_SPEC_PATH  既定 "design-intent/spec/"
 #
 # 共通ロジックは plugin-lib.sh に集約 (path-boundary / jsonld-lint と同型の DRY)。
 

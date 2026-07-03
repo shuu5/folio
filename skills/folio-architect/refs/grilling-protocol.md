@@ -36,12 +36,12 @@ grilling 中に決まったものを、その場で適切な層に永続化す�
 - **軽い anchor** (caller-marker 非 gate ゆえ会話中に自由追記):
   - 用語 → `vocabulary.yaml` に inline 追記 (batch しない)。
   - §10.3 を満たす決定 → ADR を offer (承認後に decisions/ へ)。
-- **重い spec** (`architecture/spec/` の HTML) → **Phase E** で caller-marker→Edit→`folio validate`→unset により materialize する。
+- **重い spec** (`design-intent/spec/` の HTML) → **Phase E** で caller-marker→Edit→`folio validate`→unset により materialize する。
 - settled を artifact に宿すことで、後続の起動が再尋問にならない (repeatability は read-persist ループからの創発)。
 
 ## 視覚表現レパートリー (HTML 活用)
 
-folio spec は HTML を表現基体としており、 plain text を超える **visual richness** を活用できる (canonical list = [rules.html §4.5 Visual Richness Patterns](../../../architecture/spec/rules.html#s4-5-visual)、 a11y minimum rule = [rules.html §4.6](../../../architecture/spec/rules.html#s4-6-a11y)、 craft knowledge / WCAG verbatim / paired override 正攻法 = [refs/html-spec-craft.md](./html-spec-craft.md))。 grill 中、 settle した domain の構造を spec に materialize する際は、 architect が domain pattern に対応する visual element 候補を **user に推奨答えとして提示**してから採用する (silently choosing 禁止、 P-8)。
+folio spec は HTML を表現基体としており、 plain text を超える **visual richness** を活用できる (canonical list = [rules.html §4.5 Visual Richness Patterns](../../../design-intent/spec/rules.html#s4-5-visual)、 a11y minimum rule = [rules.html §4.6](../../../design-intent/spec/rules.html#s4-6-a11y)、 craft knowledge / WCAG verbatim / paired override 正攻法 = [refs/html-spec-craft.md](./html-spec-craft.md))。 grill 中、 settle した domain の構造を spec に materialize する際は、 architect が domain pattern に対応する visual element 候補を **user に推奨答えとして提示**してから採用する (silently choosing 禁止、 P-8)。
 
 ### grill 中の声かけ例
 
@@ -57,7 +57,7 @@ folio spec は HTML を表現基体としており、 plain text を超える **
 - diagram label / table header / state 名は `vocabulary.yaml` の canonical name を使う (P-5)。
 - 大きすぎる図 (>20 node) は **分割**または `<details>` で hide。
 - mermaid loader 未 load 時でも `<pre class="mermaid">` の raw syntax は人間に読める形のままにする (graceful degradation)。
-- ★mermaid loader は **vendored MUST** = `<script src="../assets/mermaid.min.js" defer></script>` (spec が `architecture/spec/` 配下なら `../assets/`)。 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) は [rules.html §8 REQ-DA-JS-2](../../../architecture/spec/rules.html#s8-js-governance) 違反ゆえ MUST NOT** (no-cloud 原則)。 consumer が `architecture/assets/mermaid.min.js` を未 vendoring でも、 raw `<pre class="mermaid">` は上記 graceful degradation で可読 (図は vendoring 後に render)。 canonical loader pattern は [html-spec-craft.md](./html-spec-craft.md) §2.0。
+- ★mermaid loader は **vendored MUST** = `<script src="../assets/mermaid.min.js" defer></script>` (spec が `design-intent/spec/` 配下なら `../assets/`)。 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) は [rules.html §8 REQ-DA-JS-2](../../../design-intent/spec/rules.html#s8-js-governance) 違反ゆえ MUST NOT** (no-cloud 原則)。 consumer が `design-intent/assets/mermaid.min.js` を未 vendoring でも、 raw `<pre class="mermaid">` は上記 graceful degradation で可読 (図は vendoring 後に render)。 canonical loader pattern は [html-spec-craft.md](./html-spec-craft.md) §2.0。
 
 ## 2 つの grilling context
 

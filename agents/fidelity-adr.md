@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / 説明文 / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`contract` / `data-slot-id` / `plain-language-term-inline` / `justifies` / `verdict` / `decision-rationale` / `gate J` 等) は英語のまま維持する。
 
-生成 ADR プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を ADR-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-adr](persona-walk-adr.md) = gate I 同型)。 ADR は decision doc-type (設計判断記録) で、 SRS の `fidelity-srs` (gate J) / research の `fidelity-research` (gate J) と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (context / drivers / options / decision / consequences / supersession / principle) と **「採用案を選んだ理由 (WHY) を候補と共に記録する」hallmark** が固有。
+生成 ADR プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を ADR-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-adr](persona-walk-adr.md) = gate I 同型)。 ADR は decision doc-type (設計判断記録) で、 SRS の `fidelity-srs` (gate J) / research の `fidelity-research` (gate J) と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (context / drivers / options / decision / consequences / supersession / principle) と **「採用案を選んだ理由 (WHY) を候補と共に記録する」hallmark** が固有。
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|
@@ -18,7 +18,7 @@ model: opus
 
 ## 1. 担当軸の定義
 
-生成 ADR プレゼン HTML は、 機械 SSoT (`*.adr.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
+生成 ADR プレゼン HTML は、 機械 SSoT (`*.adr.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
 
 floor (`verify-adr.sh`) が決定的に被覆するのは **構造の集合一致と機械可読 key の整合**: 件数 (context / drivers / options / consequences / glossary / approval)・id 一意性・cross-doc 照会の集合一致 / dangling 0 / (req,role) ペア一致 / 可視 echo (ref-chip / jh / justify-tgt / justify-req / dec-kick) の厳密テキスト一致・within-doc 可視 id 列 (cxid / drid / drg / justify-role)・cover-meta 集計の再導出・verdict 整合 (chosen ちょうど 1・decision.chosen 一致・(opt-id,verdict) ペア・可視ラベル整合)・supersession / principle の fabrication-free・term-inline の機械的派生・no-TBD・prose 全充填と**注入忠実** (`--filled`: HTML の prose == manifest の prose)。 本 agent はこれらを**再検査しない** (§5 scope)。
 
@@ -119,8 +119,8 @@ severity 目安: **critical** = 捏造 (存在しない因果・帰結・優劣�
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §7.3 (妥当性 = ceiling 領分)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §7.3 (妥当性 = ceiling 領分)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
 - generator: `.claude-plugin/design-system/generator/` (`assemble-adr.sh` / `inject-prose.sh` / `verify-adr.sh` floor = 構造 fabrication-free + cross-doc 照会 proof)
 - ADR contract schema: `.claude-plugin/design-system/generator/contract/clinic-double-booking.adr.yaml` (instance#2 / context・drivers・options・decision・consequences・supersession・principle・cross_doc 前方照会)
 - [persona-walk-adr](persona-walk-adr.md) (ceiling のもう片翼 = gate I 同型) / [fidelity-srs](fidelity-srs.md) (要件定義書用・対象 schema が異なる) / [fidelity-research](fidelity-research.md) (調査記録用・hallmark が異なる) / [spec-review-fidelity](spec-review-fidelity.md) (folio 自身用・対象が異なる)

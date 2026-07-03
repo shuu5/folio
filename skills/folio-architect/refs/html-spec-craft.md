@@ -8,7 +8,7 @@ folio Layer 0 spec HTML を「読みやすく / accessible に」書くための
 
 ## 0. 適用範囲
 
-- folio `architecture/spec/` 配下の HTML spec、 ADR、 constitution
+- folio `design-intent/spec/` 配下の HTML spec、 ADR、 constitution
 - folio-architect skill が生成する HTML spec の templating reference
 - folio rules.html `§4.6` Accessibility Minimum Rules の補強材料
 
@@ -54,9 +54,9 @@ mermaid を採用する spec の `<head>` に置く loader は **vendored 1 file
 <script src="../assets/mermaid.min.js" defer></script>
 ```
 
-- パスは spec の位置に対する相対 (folio 慣習: spec が `architecture/spec/` 配下なら `../assets/` = `architecture/assets/mermaid.min.js`)。 folio 自身の全 spec (constitution / rules / relations / self-spec / verification / README) がこの形を使う。
-- **runtime CDN (`https://cdn.jsdelivr.net/npm/mermaid...` / `unpkg` / ES module `import ... from 'https://...'`) は MUST NOT** — [rules.html §8 REQ-DA-JS-2](../../../architecture/spec/rules.html#s8-js-governance) が「library は vendoring (no runtime CDN)」「ES modules + `fetch()` は file:// 破綻ゆえ不使用」と規定する。 no-cloud 原則 (生成物が外部 fetch なしで完結) にも整合。
-- **consumer は mermaid.min.js を自分で vendoring する** (`folio init` は assets/ を scaffold しない = REQ-DA-JS-2 の「自分の lib は自分で vendor」)。 未 vendoring の段階でも raw `<pre class="mermaid">` syntax は人間に可読 (graceful degradation、 §8 / grilling-protocol.md)。 図の visual render は consumer が `architecture/assets/mermaid.min.js` を置いた時点で有効化される。
+- パスは spec の位置に対する相対 (folio 慣習: spec が `design-intent/spec/` 配下なら `../assets/` = `design-intent/assets/mermaid.min.js`)。 folio 自身の全 spec (constitution / rules / relations / self-spec / verification / README) がこの形を使う。
+- **runtime CDN (`https://cdn.jsdelivr.net/npm/mermaid...` / `unpkg` / ES module `import ... from 'https://...'`) は MUST NOT** — [rules.html §8 REQ-DA-JS-2](../../../design-intent/spec/rules.html#s8-js-governance) が「library は vendoring (no runtime CDN)」「ES modules + `fetch()` は file:// 破綻ゆえ不使用」と規定する。 no-cloud 原則 (生成物が外部 fetch なしで完結) にも整合。
+- **consumer は mermaid.min.js を自分で vendoring する** (`folio init` は assets/ を scaffold しない = REQ-DA-JS-2 の「自分の lib は自分で vendor」)。 未 vendoring の段階でも raw `<pre class="mermaid">` syntax は人間に可読 (graceful degradation、 §8 / grilling-protocol.md)。 図の visual render は consumer が `design-intent/assets/mermaid.min.js` を置いた時点で有効化される。
 - loader を classic `<script src defer>` (single-file) にするのは REQ-DA-JS-2 の「single-file classic `<script>` か inline」要件 + `defer` で DOMContentLoaded 後 render のため。
 
 ### 2.1 accTitle / accDescr 構文 (mermaid v11.15.0 verbatim)
@@ -209,7 +209,7 @@ classDef safe     fill:#E6FFE6,stroke:#006600,stroke-width:2px,color:#000000
 | a11y (現状) | `accTitle` / `accDescr` | CLI SVG に title/desc 可 | 限定的 | 最も高い (手動) | spec autolink | 中 |
 | folio 適合 | **採用中** | 1.x 切替 cost > benefit | 不適合 | アイコン用途のみ | W3C 依存で過剰 | HTML-first と重複 |
 
-★ **結論**: folio 1.x での mermaid 切替 ROI は低い。 現状維持 + `accTitle` / `accDescr` 必須化 + paired override の方が現実的。 D2 は CLI install (Go) が必要で folio の "vendored 1 file (`assets/mermaid.min.js`) + Claude が text syntax で描ける" model と相性が悪い (folio は runtime CDN を使わない = [REQ-DA-JS-2](../../../architecture/spec/rules.html#s8-js-governance))。 Bikeshed は W3C 依存が強く独立 spec には過剰。 inline SVG は手書きコストが高くアーキテクチャ図には不適。
+★ **結論**: folio 1.x での mermaid 切替 ROI は低い。 現状維持 + `accTitle` / `accDescr` 必須化 + paired override の方が現実的。 D2 は CLI install (Go) が必要で folio の "vendored 1 file (`assets/mermaid.min.js`) + Claude が text syntax で描ける" model と相性が悪い (folio は runtime CDN を使わない = [REQ-DA-JS-2](../../../design-intent/spec/rules.html#s8-js-governance))。 Bikeshed は W3C 依存が強く独立 spec には過剰。 inline SVG は手書きコストが高くアーキテクチャ図には不適。
 
 出典: D2 FAQ (https://d2lang.com/tour/faq/) + Bikeshed docs (https://speced.github.io/bikeshed/)
 

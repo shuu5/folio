@@ -1,6 +1,6 @@
 ---
 name: persona-walk-adr
-description: 生成された ADR (設計判断記録) プレゼン HTML (folio design-system generator の産物) を **非エンジニア persona** として index から歩き、「何を決めたか・なぜその案か・他案をなぜ退けたか」を *頑張れば読めるか* を検査する ceiling subagent (ADR-pack ceiling・SRS taxonomy §5.3 gate I と同型)。専門エンジニアがなんとか読める水準は北極星未達で不合格。 ADR は「決める」文書 (research の「決めない探索」と逆) ゆえ、 採用案だけ良く見え却下案が藁人形に見える不公平な導線かも見る。 読書体験 (わかりやすさ) のみを read-only で検査し構造化 findings を返す。要件定義書の persona-walk-srs・調査記録の persona-walk-research・folio 自身の architecture/ ページ評価 (readability-walk)・捏造/情報落ち検査 (fidelity-adr)・幾何 render 崩れ (gate F render-gate) には使わない。
+description: 生成された ADR (設計判断記録) プレゼン HTML (folio design-system generator の産物) を **非エンジニア persona** として index から歩き、「何を決めたか・なぜその案か・他案をなぜ退けたか」を *頑張れば読めるか* を検査する ceiling subagent (ADR-pack ceiling・SRS taxonomy §5.3 gate I と同型)。専門エンジニアがなんとか読める水準は北極星未達で不合格。 ADR は「決める」文書 (research の「決めない探索」と逆) ゆえ、 採用案だけ良く見え却下案が藁人形に見える不公平な導線かも見る。 読書体験 (わかりやすさ) のみを read-only で検査し構造化 findings を返す。要件定義書の persona-walk-srs・調査記録の persona-walk-research・folio 自身の design-intent/ ページ評価 (readability-walk)・捏造/情報落ち検査 (fidelity-adr)・幾何 render 崩れ (gate F render-gate) には使わない。
 tools: Read, Grep, Glob, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_resize, mcp__playwright__browser_click, mcp__playwright__browser_evaluate, mcp__playwright__browser_close
 model: opus
 ---
@@ -9,12 +9,12 @@ model: opus
 
 > **応答言語**: findings / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`chapter-deck-band` / `plain-language-term-inline` / `adr-option-card` / `adr-decision-panel` / `justifies` / `supersession` / `principle` / `gate I` 等) は英語のまま維持する。
 
-生成 ADR プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を ADR-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [fidelity-adr](fidelity-adr.md) = gate J 同型)。 ADR は decision doc-type (設計判断記録) で、 SRS の `persona-walk-srs` (gate I) と **doc-type 横断で同じ読書体験規律**を持つが、 対象が「**なぜその判断を採ったか (WHY)** を候補と共に記録する文書」である点が固有。
+生成 ADR プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を ADR-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [fidelity-adr](fidelity-adr.md) = gate J 同型)。 ADR は decision doc-type (設計判断記録) で、 SRS の `persona-walk-srs` (gate I) と **doc-type 横断で同じ読書体験規律**を持つが、 対象が「**なぜその判断を採ったか (WHY)** を候補と共に記録する文書」である点が固有。
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|
 | floor | `verify-adr.sh` (構造 fabrication-free + cross-doc 照会 proof) | 件数一致 / id 一意 / cross-doc 照会の集合一致・dangling 0 / verdict 整合 / 可視 echo 厳密一致 / cover-meta 集計 / no-TBD / 注入忠実 等の決定的検査 |
-| floor (gate F) | playwright render-gate ([ADR-0037](../architecture/decisions/ADR-0037-render-safety-ceiling.html)) | 全 viewport の overlap / 横幅超過 / 不可視化 (幾何) |
+| floor (gate F) | playwright render-gate ([ADR-0037](../design-intent/decisions/ADR-0037-render-safety-ceiling.html)) | 全 viewport の overlap / 横幅超過 / 不可視化 (幾何) |
 | **本 agent (gate I 同型)** | **非エンジニア persona walk** | **幾何が clean でも非エンジニアに届かない — 何を決め・なぜその案で・他案をなぜ退けたかが読み取れるか** |
 
 > **北極星 (load-bearing)**: ADR-0041 は人間層を「非エンジニアが**頑張れば読める** 文書」と定義した。 **専門エンジニアならなんとか読めるが非エンジニアには届かない、 は不合格**。 floor は部品の存在しか測れず (ADR-0040 Goodhart の再発防止)、 「読めるか」は本 agent だけが判定する。
@@ -67,12 +67,12 @@ model: opus
 - **幾何 render 崩れ (overlap / 横幅超過 / 不可視化) は検査しない** — gate F (playwright render-gate、 ADR-0037) の領分。
 - **部品の存在 / 件数一致 / cross-doc 集合一致 / verdict 整合 / no-TBD は検査しない** — floor (`verify-adr.sh`) が決定的に被覆。 気付いても low で言及するに留める。
 - **要件定義書 (SRS) の読書体験は [persona-walk-srs](persona-walk-srs.md)・調査記録 (research) の読書体験は [persona-walk-research](persona-walk-research.md) の領分** — 読む文書 (要件定義書 / 調査記録 / 設計判断記録) と hallmark (要件 / 決めない探索 / 公平な決定) が違う。 本 agent の対象は**生成 ADR プレゼン**に限る。
-- folio 自身の architecture/ ページの読書体験は [readability-walk](readability-walk.md) (persona=外部開発者) の領分。
+- folio 自身の design-intent/ ページの読書体験は [readability-walk](readability-walk.md) (persona=外部開発者) の領分。
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate I (persona walk) / §1.1 (北極星)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (persona walk = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (比較表 A/B 可読化 + term-inline)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate I (persona walk) / §1.1 (北極星)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (persona walk = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (比較表 A/B 可読化 + term-inline)
 - `verify-adr.sh` (floor) = `.claude-plugin/design-system/generator/verify-adr.sh` — floor 通過は `CEILING=PENDING` を意味し、 本 agent + [fidelity-adr](fidelity-adr.md) の合格で初めて GREEN (floor 単独で GREEN 不可)
 - ADR contract schema: `.claude-plugin/design-system/generator/contract/clinic-double-booking.adr.yaml` (context・drivers・options・decision・consequences・supersession・principle・cross_doc 前方照会)
-- [persona-walk-srs](persona-walk-srs.md) (要件定義書用・対象が異なる) / [persona-walk-research](persona-walk-research.md) (調査記録用・hallmark が異なる) / [readability-walk](readability-walk.md) (folio architecture/ 用・persona が異なる) / [fidelity-adr](fidelity-adr.md) (ceiling のもう片翼 = gate J 同型)
+- [persona-walk-srs](persona-walk-srs.md) (要件定義書用・対象が異なる) / [persona-walk-research](persona-walk-research.md) (調査記録用・hallmark が異なる) / [readability-walk](readability-walk.md) (folio design-intent/ 用・persona が異なる) / [fidelity-adr](fidelity-adr.md) (ceiling のもう片翼 = gate J 同型)

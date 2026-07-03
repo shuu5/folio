@@ -4,7 +4,7 @@ ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
   bin/folio inventory が relations.html §4.1 schema 準拠の inventory.json を生成する。
-  scan 対象は relations.html §4.4.1 (architecture/spec/ + architecture/decisions/ + architecture/research/ の
+  scan 対象は relations.html §4.4.1 (design-intent/spec/ + design-intent/decisions/ + design-intent/research/ の
   <head> JSON-LD を持つ .html)。 conformance は golden baseline との byte-exact diff で検証し、
   非決定的 field (generatedAt) は normalize.exclude_paths で除外する (REQ-VER-010 / REQ-VER-011)。
 

@@ -16,7 +16,7 @@ scenarios:
   - name: "marker unset → deny on spec file"
     given:
       env: {}
-      file_path: "architecture/spec/rules.html"
+      file_path: "design-intent/spec/rules.html"
     when:
       tool: "Edit"
     expect:
@@ -27,7 +27,7 @@ scenarios:
     given:
       env:
         FOLIO_ARCHITECT_CONTEXT: "folio-architect"
-      file_path: "architecture/spec/rules.html"
+      file_path: "design-intent/spec/rules.html"
     when:
       tool: "Edit"
     expect:
@@ -37,7 +37,7 @@ scenarios:
     given:
       env:
         FOLIO_ARCHITECT_CONTEXT: "random-tool"
-      file_path: "architecture/spec/rules.html"
+      file_path: "design-intent/spec/rules.html"
     when:
       tool: "Edit"
     expect:
@@ -56,7 +56,7 @@ scenarios:
   - name: "Write tool on spec → deny when unset"
     given:
       env: {}
-      file_path: "architecture/spec/new-spec.html"
+      file_path: "design-intent/spec/new-spec.html"
     when:
       tool: "Write"
     expect:
@@ -69,7 +69,7 @@ scenarios:
     # 絶対 path が配下と認識されず gate bypass (allow) になる security 回帰 → expect=2 で lock-in。
     given:
       env: {}
-      file_path: "/home/user/folio/architecture/spec/rules.html"
+      file_path: "/home/user/folio/design-intent/spec/rules.html"
     when:
       tool: "Edit"
     expect:

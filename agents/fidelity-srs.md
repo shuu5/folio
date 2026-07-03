@@ -9,11 +9,11 @@ model: opus
 
 > **応答言語**: findings / 説明文 / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`contract` / `data-slot-id` / `plain-language-term-inline` / `RTM` / `EARS` / `gate J` 等) は英語のまま維持する。
 
-[SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.3 が定義する **ceiling gate J (fidelity check)** の常設形態。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-srs](persona-walk-srs.md) = gate I)。
+[SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.3 が定義する **ceiling gate J (fidelity check)** の常設形態。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-srs](persona-walk-srs.md) = gate I)。
 
 ## 1. 担当軸の定義
 
-生成 SRS プレゼン HTML は、 機械 SSoT (`contract.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
+生成 SRS プレゼン HTML は、 機械 SSoT (`contract.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
 
 floor (`folio verify-srs` の gate A-H + `verify-fabrication-free`) が決定的に被覆するのは **構造の集合一致と機械可読 key の整合**: 部品存在 (A)・RTM 集合一致 (C・要件行 ↔ contract requirements)・要件 ID 健全性 (D)・term-inline の機械的派生 (E)・no-TBD (G)・prose 全充填と**注入忠実** (`--filled`: HTML の prose == manifest の prose)。 本 agent はこれらを**再検査しない** (§3 scope)。
 
@@ -112,7 +112,7 @@ severity 目安: **critical** = 捏造 (存在しない理由・要件・RTM 行
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate J (fidelity check) / §5.3 末尾 aside (EC proof = 捏造 RTM 行検出) / §7.3 (検証手法妥当性 = ceiling 領分)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate J (fidelity check) / §5.3 末尾 aside (EC proof = 捏造 RTM 行検出) / §7.3 (検証手法妥当性 = ceiling 領分)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
 - generator: `.claude-plugin/design-system/generator/` (`assemble-srs.sh` / `inject-prose.sh` / `verify-srs.sh` floor / `verify-fabrication-free.sh --filled` 注入忠実)
 - [persona-walk-srs](persona-walk-srs.md) (ceiling のもう片翼 = gate I) / [spec-review-fidelity](spec-review-fidelity.md) (folio 自身用・対象が異なる)

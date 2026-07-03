@@ -210,4 +210,4 @@ ceiling は複数 round 回してよい (skeleton は最大 2 round)。各 round
 - Pass1 lens: `agents/{fidelity-srs,persona-walk-srs,completeness-critic-srs}.md` (出力 JSON block・severity 語彙)
 - Pass2 refuter: `agents/finding-refuter.md` (§1 GREEN 反転帯対応表 / §4 axis 別 anchor / §5 verdict JSON)
 - 雛形: `skills/folio-architect/SKILL.md` (disable-model-invocation・canonical bin path・Phase F 並列 spawn)
-- SRS taxonomy: `architecture/research/srs-component-taxonomy.html` §5.1 (判定式 `GREEN ⟺ floor AND ceiling`) / §5.3 (gate I/J/K)
+- SRS taxonomy: `design-intent/research/srs-component-taxonomy.html` §5.1 (判定式 `GREEN ⟺ floor AND ceiling`) / §5.3 (gate I/J/K)

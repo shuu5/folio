@@ -12,7 +12,7 @@
     "note": "all observations are from REAL Edit/Write tool calls (live hooks fired), not mock payloads. deny/notify messages were surfaced to the agent in this session (transcript-visible here), but file-system state is the authoritative assertion per research §2.6."
   },
   "hooks_under_test": [
-    "caller-marker (PreToolUse Edit|Write|NotebookEdit) — gates architecture/spec/ by marker file OR env var",
+    "caller-marker (PreToolUse Edit|Write|NotebookEdit) — gates design-intent/spec/ by marker file OR env var",
     "path-boundary (PreToolUse Write) — denies folio-doc-type=spec .html outside spec_path",
     "jsonld-lint (PostToolUse Write) — notifies on parse-fail / missing @context|@id|@type / string @context",
     "readme-index (PostToolUse Write) — notifies when new .html not listed in cluster README.html"
@@ -21,7 +21,7 @@
     {
       "id": "S-A",
       "name": "happy-path (正規 spec を書けるか — 最重要)",
-      "operation": "Write architecture/spec/e2e-probe.html (object @context + @id + @type + meta folio-doc-type=spec)",
+      "operation": "Write design-intent/spec/e2e-probe.html (object @context + @id + @type + meta folio-doc-type=spec)",
       "marker": "set",
       "expected": { "file_created": true, "pretool_deny": false, "posttool_notify": ["readme-index"] },
       "observed": {
@@ -37,27 +37,27 @@
     {
       "id": "S-B1",
       "name": "guardrail: marker 無しで spec 編集",
-      "operation": "Write architecture/spec/e2e-b1.html (no marker, no env)",
+      "operation": "Write design-intent/spec/e2e-b1.html (no marker, no env)",
       "marker": "unset",
       "expected": { "file_created": false, "pretool_deny": "caller-marker" },
       "observed": {
         "file_created": false,
         "pretool_deny": "caller-marker",
-        "deny_message": "folio caller marker check: edit of architecture/spec/ requires FOLIO_ARCHITECT_CONTEXT='folio-architect' OR marker file '.folio/architect-active'"
+        "deny_message": "folio caller marker check: edit of design-intent/spec/ requires FOLIO_ARCHITECT_CONTEXT='folio-architect' OR marker file '.folio/architect-active'"
       },
       "result": "PASS",
-      "interpretation": "live hook の決定的確認点。PreToolUse caller-marker が deny し file 不在。絶対 path が /architecture/spec/ で正しく match。"
+      "interpretation": "live hook の決定的確認点。PreToolUse caller-marker が deny し file 不在。絶対 path が /design-intent/spec/ で正しく match。"
     },
     {
       "id": "S-B2",
       "name": "guardrail: spec_path 外で spec を作成",
-      "operation": "Write architecture/random-e2e/e2e-b2.html (folio-doc-type=spec, outside spec_path)",
+      "operation": "Write design-intent/random-e2e/e2e-b2.html (folio-doc-type=spec, outside spec_path)",
       "marker": "set",
       "expected": { "file_created": false, "pretool_deny": "path-boundary" },
       "observed": {
         "file_created": false,
         "pretool_deny": "path-boundary",
-        "deny_message": "folio path boundary check: spec files (folio-doc-type=spec) must be created under architecture/spec/"
+        "deny_message": "folio path boundary check: spec files (folio-doc-type=spec) must be created under design-intent/spec/"
       },
       "result": "PASS",
       "interpretation": "marker SET でも (caller-marker は spec_path 外なので非 gate=通過) path-boundary が spec content + spec_path 外を検出し deny。誤った場所への spec 作成を捕捉。"
@@ -65,7 +65,7 @@
     {
       "id": "S-B3",
       "name": "guardrail: string 形式 @context",
-      "operation": "Write architecture/spec/e2e-b3.html (string @context, marker set)",
+      "operation": "Write design-intent/spec/e2e-b3.html (string @context, marker set)",
       "marker": "set",
       "expected": { "file_created": true, "pretool_deny": false, "posttool_notify": ["jsonld-lint", "readme-index"] },
       "observed": {
@@ -81,7 +81,7 @@
     {
       "id": "S-B4",
       "name": "guardrail: valid だが README 未掲載",
-      "operation": "Write architecture/spec/e2e-b4.html (valid object JSON-LD, not in README, marker set)",
+      "operation": "Write design-intent/spec/e2e-b4.html (valid object JSON-LD, not in README, marker set)",
       "marker": "set",
       "expected": { "file_created": true, "pretool_deny": false, "posttool_notify": ["readme-index"] },
       "observed": {
@@ -97,7 +97,7 @@
     {
       "id": "S-C1",
       "name": "false-positive: 非 spec HTML を spec_path 外に作成",
-      "operation": "Write architecture/random-e2e/e2e-c1.html (plain HTML, no folio-doc-type=spec, marker unset)",
+      "operation": "Write design-intent/random-e2e/e2e-c1.html (plain HTML, no folio-doc-type=spec, marker unset)",
       "marker": "unset",
       "expected": { "file_created": true, "pretool_deny": false, "posttool_notify": [] },
       "observed": { "file_created": true, "pretool_deny": false, "posttool_notify": [] },
@@ -132,7 +132,7 @@
     {
       "id": "S-E1",
       "name": "marker-ux: set→unset 後の deny 復帰",
-      "operation": "rm -f .folio/architect-active; Write architecture/spec/e2e-e.html",
+      "operation": "rm -f .folio/architect-active; Write design-intent/spec/e2e-e.html",
       "marker": "unset (after set→unset cycle)",
       "expected": { "file_created": false, "pretool_deny": "caller-marker" },
       "observed": {

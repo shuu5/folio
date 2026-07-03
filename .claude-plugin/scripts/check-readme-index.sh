@@ -69,7 +69,7 @@ case "$rc" in
   *) folio_deny \
        "folio README index check: cannot read cluster index (fail-closed)" \
        "  index: ${readme}" \
-       "  reference: architecture/spec/README.html §2 (cluster index)" ;;
+       "  reference: design-intent/spec/README.html §2 (cluster index)" ;;
 esac
 
 folio_deny \
@@ -77,4 +77,4 @@ folio_deny \
   "  file: ${file_path}" \
   "  index: ${readme}" \
   "  fix: add an entry for '${base}' to the §2 File Inventory table in ${readme}" \
-  "  reference: architecture/spec/README.html §2 (cluster index), architecture/spec/relations.html §4 (inventory)"
+  "  reference: design-intent/spec/README.html §2 (cluster index), design-intent/spec/relations.html §4 (inventory)"

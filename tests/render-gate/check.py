@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """folio render-safety ceiling — playwright 視覚 render gate。
 
-corpus 全 page (repo-root index.html + architecture/**/*.html) を headless chromium で
+corpus 全 page (repo-root index.html + design-intent/**/*.html) を headless chromium で
 **3 viewport (375 / 768 / 1280)** で render し、 render 後の DOM 幾何から (a) mermaid flowchart の
 text-block overlap (実 <pre class="mermaid"> を持つ page のみ実質発火) と (b) **chrome 崩れ**
 (horizontal-overflow / nav-over-content の 2 arm、 ADR-0039 §2.8) を検出する。
@@ -279,7 +279,7 @@ def run_selftest(base_url: str) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="folio render-safety ceiling (playwright render gate)")
-    ap.add_argument("--root", default="architecture", help="corpus ディレクトリ (REPO_ROOT 相対、 再帰)。 repo-root index.html は常に対象に加える")
+    ap.add_argument("--root", default="design-intent", help="corpus ディレクトリ (REPO_ROOT 相対、 再帰)。 repo-root index.html は常に対象に加える")
     ap.add_argument("--base-url", default=None, help="外部 http server (REPO_ROOT 配信必須、 未指定なら自前起動)")
     ap.add_argument("--selftest", action="store_true", help="fixture で detector を自己検証")
     ap.add_argument("--screenshot-dir", default=None, help="全 page × viewport の full-page screenshot 保存先 (CI artifact 用、 golden ではない)")

@@ -32,5 +32,5 @@ expect:
 
 # === 実装メモ (X4-D) ===
 # ADR-0027 §2.6 (a) structural の HOW = runner.sh の agent-structural handler。 agents/ + skills/ は
-# spec_path (architecture/spec/) 外ゆえ caller-marker 不要、 folio validate scan 対象外 (architecture/ のみ)。
+# spec_path (design-intent/spec/) 外ゆえ caller-marker 不要、 folio validate scan 対象外 (design-intent/ のみ)。
 # GREEN 条件: 5 agent の frontmatter 妥当 + read-only tools + SKILL が folio:<name> を全参照 → exit 0。

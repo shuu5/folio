@@ -21,7 +21,7 @@ scenarios:
   - name: "spec を spec_path 配下に作成 → allow"
     given:
       env: {}
-      file_path: "architecture/spec/new-feature.html"
+      file_path: "design-intent/spec/new-feature.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -32,10 +32,10 @@ scenarios:
     expect:
       exit_code: 0
 
-  - name: "spec を spec_path 外 (architecture/random/) で作成 → deny"
+  - name: "spec を spec_path 外 (design-intent/random/) で作成 → deny"
     given:
       env: {}
-      file_path: "architecture/random/new-feature.html"
+      file_path: "design-intent/random/new-feature.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -64,7 +64,7 @@ scenarios:
   - name: "ADR (.html, doc-type=adr) を spec_path 外で作成 → allow"
     given:
       env: {}
-      file_path: "architecture/decisions/ADR-9999-test.html"
+      file_path: "design-intent/decisions/ADR-9999-test.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -78,7 +78,7 @@ scenarios:
   - name: "Edit tool は対象外 → allow (たとえ spec を spec_path 外で編集しても)"
     given:
       env: {}
-      file_path: "architecture/random/spec.html"
+      file_path: "design-intent/random/spec.html"
     when:
       tool: "Edit"
     expect:
@@ -87,7 +87,7 @@ scenarios:
   - name: "非 .html を spec_path 外で作成 → allow"
     given:
       env: {}
-      file_path: "architecture/random/notes.md"
+      file_path: "design-intent/random/notes.md"
       content: "some markdown"
     when:
       tool: "Write"
@@ -97,7 +97,7 @@ scenarios:
   - name: "属性順序 reverse (content 先 → name 後) でも検出"
     given:
       env: {}
-      file_path: "architecture/random/spec.html"
+      file_path: "design-intent/random/spec.html"
       content: |
         <html><head>
         <meta content="spec" name="folio-doc-type">
@@ -111,7 +111,7 @@ scenarios:
   - name: "single quote 属性 content='spec' でも検出 (R2-M3 fix)"
     given:
       env: {}
-      file_path: "architecture/random/spec.html"
+      file_path: "design-intent/random/spec.html"
       content: |
         <html><head>
         <meta name='folio-doc-type' content='spec'>
@@ -125,7 +125,7 @@ scenarios:
   - name: "content='spec-draft' (prefix 一致) は spec ではない → allow (R2-H1 fix)"
     given:
       env: {}
-      file_path: "architecture/random/draft.html"
+      file_path: "design-intent/random/draft.html"
       content: |
         <html><head>
         <meta name="folio-doc-type" content="spec-draft">
@@ -141,7 +141,7 @@ scenarios:
     # 実機ではこれが常態。 expect=0 が第2 branch を lock-in。
     given:
       env: {}
-      file_path: "/home/user/folio/architecture/spec/abs-spec.html"
+      file_path: "/home/user/folio/design-intent/spec/abs-spec.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -155,7 +155,7 @@ scenarios:
   - name: "絶対 path で spec_path 外に spec 作成 → deny (実機の絶対 path 入力で gate 動作)"
     given:
       env: {}
-      file_path: "/home/user/folio/architecture/random/abs-spec.html"
+      file_path: "/home/user/folio/design-intent/random/abs-spec.html"
       content: |
         <!DOCTYPE html>
         <html><head>

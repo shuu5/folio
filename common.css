@@ -1118,7 +1118,7 @@ dl.glossary dt:target {
 }
 
 /* ========================================================================
- * Landing hero 層 (ADR-0039 §2.2、 folio build が生成する architecture/index.html)。
+ * Landing hero 層 (ADR-0039 §2.2、 folio build が生成する design-intent/index.html)。
  *   4 層 template の (1) hero 一文 (2) 単一 CTA (3) 読者別 3 カード を様式化する。
  *   型 (構造 = grid/card) は build が所有し、 文言は curated region folio:landing-hero に
  *   人間が author する。 JS なし・CSS grid のみ・狭幅では auto-fit が 1 カラムに収束する。

@@ -195,7 +195,7 @@ run_cli_scaffold() {
   req_id=$(yq -r '.req_id // "(unknown)"' "$scenario")
   golden=$(yq -r '.golden' "$scenario")                    # SCRIPT_DIR (verification dir) 相対
   exp_exit=$(yq -r '.expect.exit_code // 0' "$scenario")
-  validate_root=$(yq -r '.validate_root // "architecture"' "$scenario")   # 生成 tree 内の validate root
+  validate_root=$(yq -r '.validate_root // "design-intent"' "$scenario")   # 生成 tree 内の validate root
 
   local -a cmd=()
   while IFS= read -r c; do [[ -n "$c" ]] && cmd+=("$c"); done < <(yq -r '.command[]' "$scenario")

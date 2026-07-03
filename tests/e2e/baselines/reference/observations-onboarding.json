@@ -47,13 +47,13 @@
         "adr_worthiness_applied": "ADR-0001 (random base62 採用) が §10.3 3 条件 (hard-to-reverse / surprising / real trade-off) を §1 で明示 list 化して justification、 §3 Alternatives Considered で 2 案 (sequential counter / hybrid sequential+random) 評価、 §4 Consequences で birthday paradox (62^7 ≈ 3.5 × 10^12) 計算まで含む textbook-quality、 status=accepted で dc:isReferencedBy が constitution + overview 両方を逆引き",
         "phase_f_review_executed": "vocabulary.yaml コメントが 'Phase F review (X4-D) の feedback により redirect / binding / live / 未存在 / random code を追補' と明記 = 4-agent review (ears/vocabulary/ssot/temporal) 実行 + feedback 反映の間接 evidence",
         "produced_files": [
-          "folio.config.yaml (159B、 init 生成、 folio_version=^0.5 + spec_path=architecture/spec/ + caller_marker_* + review_model=opus)",
-          "architecture/spec/README.html (2313B、 init lazy + Phase E で実 part 反映)",
-          "architecture/decisions/README.html (1864B、 init 生成)",
-          "architecture/research/README.html (1541B、 init 生成)",
-          "architecture/spec/constitution.html (4054B、 Phase E materialize、 project 固有 P-1/P-2)",
-          "architecture/spec/overview.html (8013B、 Phase E materialize、 8 REQ × EARS 5-pattern)",
-          "architecture/decisions/ADR-0001-random-base62.html (5085B、 Phase C 中に worthiness 判定 → 起票)",
+          "folio.config.yaml (159B、 init 生成、 folio_version=^0.5 + spec_path=design-intent/spec/ + caller_marker_* + review_model=opus)",
+          "design-intent/spec/README.html (2313B、 init lazy + Phase E で実 part 反映)",
+          "design-intent/decisions/README.html (1864B、 init 生成)",
+          "design-intent/research/README.html (1541B、 init 生成)",
+          "design-intent/spec/constitution.html (4054B、 Phase E materialize、 project 固有 P-1/P-2)",
+          "design-intent/spec/overview.html (8013B、 Phase E materialize、 8 REQ × EARS 5-pattern)",
+          "design-intent/decisions/ADR-0001-random-base62.html (5085B、 Phase C 中に worthiness 判定 → 起票)",
           "vocabulary.yaml (5753B、 persist-as-you-go、 11 terms × enriched schema)"
         ]
       }
@@ -78,7 +78,7 @@
     {
       "id": "F-3",
       "title": "folio inventory --root が --root を無視し呼出 cwd の inventory.json を上書き",
-      "detail": "folio inventory --root /tmp/.../architecture を実行すると scan は cwd の architecture/ (folio repo 31 specs) で実施され、 output も cwd 直下の inventory.json に書かれる (--root 未反映)。 validate/fix は --root 対応済なので inventory のみ非対称。 inventory.json は .gitignore で git 上は無害だが UX 問題 + consumer onboarding で混乱を生む。",
+      "detail": "folio inventory --root /tmp/.../design-intent を実行すると scan は cwd の design-intent/ (folio repo 31 specs) で実施され、 output も cwd 直下の inventory.json に書かれる (--root 未反映)。 validate/fix は --root 対応済なので inventory のみ非対称。 inventory.json は .gitignore で git 上は無害だが UX 問題 + consumer onboarding で混乱を生む。",
       "task": "#92",
       "severity": "medium (実害小、 但し consumer-facing 一貫性欠落)"
     }

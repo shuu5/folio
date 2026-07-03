@@ -2,8 +2,8 @@
 
 要件定義書 (SRS) ビジュアル design system の部品庫。機械 SSoT から **人間が読めるプレゼン HTML** を生成する generator (epic c5g / S4) と consumer がここを参照する。
 
-- **設計の WHAT (taxonomy / done-condition)** = `architecture/research/srs-component-taxonomy.html` (ISO/IEC/IEEE 29148:2018 接地、37 部品)。
-- **決定 (WHY)** = `architecture/decisions/ADR-0041-human-layer-visual-design-system.html`。
+- **設計の WHAT (taxonomy / done-condition)** = `design-intent/research/srs-component-taxonomy.html` (ISO/IEC/IEEE 29148:2018 接地、37 部品)。
+- **決定 (WHY)** = `design-intent/decisions/ADR-0041-human-layer-visual-design-system.html`。
 - 本 dir は **HOW 実装** (P-11 部分隔離ゆえ `.claude-plugin/` 配下、CSS/HTML 許容)。
 
 ## ファイル

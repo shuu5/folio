@@ -1,6 +1,6 @@
 ---
 name: persona-walk-srs
-description: 生成された SRS プレゼン HTML (folio design-system generator の産物) を **非エンジニア persona** として index から歩き、「何が要件か・なぜ要るか・どう検証されるか」を *頑張れば読めるか* を検査する ceiling subagent (SRS taxonomy §5.3 gate I)。専門エンジニアがなんとか読める水準は北極星未達で不合格。読書体験 (わかりやすさ) のみを read-only で検査し構造化 findings を返す。folio 自身の architecture/ ページ評価 (readability-walk)・捏造/情報落ち検査 (fidelity-srs)・幾何 render 崩れ (gate F render-gate) には使わない。
+description: 生成された SRS プレゼン HTML (folio design-system generator の産物) を **非エンジニア persona** として index から歩き、「何が要件か・なぜ要るか・どう検証されるか」を *頑張れば読めるか* を検査する ceiling subagent (SRS taxonomy §5.3 gate I)。専門エンジニアがなんとか読める水準は北極星未達で不合格。読書体験 (わかりやすさ) のみを read-only で検査し構造化 findings を返す。folio 自身の design-intent/ ページ評価 (readability-walk)・捏造/情報落ち検査 (fidelity-srs)・幾何 render 崩れ (gate F render-gate) には使わない。
 tools: Read, Grep, Glob, Bash, mcp__playwright__browser_navigate, mcp__playwright__browser_snapshot, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_resize, mcp__playwright__browser_click, mcp__playwright__browser_evaluate, mcp__playwright__browser_close
 model: opus
 ---
@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`chapter-deck-band` / `plain-language-term-inline` / `RTM` / `EARS` / `gate I` 等) は英語のまま維持する。
 
-[SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.3 が定義する **ceiling gate I (persona walk)** の常設形態。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 本 agent は ceiling の片翼 (もう片翼は [fidelity-srs](fidelity-srs.md))。
+[SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.3 が定義する **ceiling gate I (persona walk)** の常設形態。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 本 agent は ceiling の片翼 (もう片翼は [fidelity-srs](fidelity-srs.md))。
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|
@@ -71,11 +71,11 @@ model: opus
 - **正確性 (捏造 / 情報落ち / 歪み) は検査しない** — それは gate J = [fidelity-srs](fidelity-srs.md) の領分。 本 agent は「**書いてある内容が読めるか**」だけを見る (内容が SSoT に忠実かは問わない)。 ただし「読んでいて明らかに辻褄が合わない」と persona が感じた点は、 fidelity 判定でなく**読書体験の躓き**として報告してよい。
 - **幾何 render 崩れ (overlap / 横幅超過 / 不可視化) は検査しない** — gate F (playwright render-gate、 S5.3) の領分。
 - **部品の存在 / RTM 集合一致 / no-TBD は検査しない** — floor (`folio verify-srs`) が決定的に被覆。 気付いても low で言及するに留める。
-- folio 自身の architecture/ ページの読書体験は [readability-walk](readability-walk.md) (persona=外部開発者) の領分。 本 agent の対象は**生成 SRS プレゼン**に限る。
+- folio 自身の design-intent/ ページの読書体験は [readability-walk](readability-walk.md) (persona=外部開発者) の領分。 本 agent の対象は**生成 SRS プレゼン**に限る。
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate I (persona walk) / §1.1 (北極星)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (persona walk = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (密表 A/B 可読化 + term-inline)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式) / §5.3 gate I (persona walk) / §1.1 (北極星)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (persona walk = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (密表 A/B 可読化 + term-inline)
 - `folio verify-srs` (floor) = `.claude-plugin/design-system/generator/verify-srs.sh` — floor 通過は `CEILING=PENDING` を返し、 本 agent + fidelity-srs の合格で初めて GREEN
 - [readability-walk](readability-walk.md) (姉妹 lens・persona/対象が異なる) / [fidelity-srs](fidelity-srs.md) (ceiling のもう片翼 = gate J)

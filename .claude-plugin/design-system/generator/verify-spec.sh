@@ -349,7 +349,7 @@ chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%
 
 # ============================================================================
 # 11. ★原本↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
-#     原本 (architecture/spec/rules.html) を *直 grep して生成 path から独立に* 再抽出し、 生成物の機械層と
+#     原本 (design-intent/spec/rules.html) を *直 grep して生成 path から独立に* 再抽出し、 生成物の機械層と
 #     双方向 (完全性 = 原本の全機械層が生成物に / no-fabrication = 生成物の機械層が全て原本に) を照合する。
 #     ★順序付き (集合でない): 両側を sort せず document 順の配列のまま diff する (人間層 §4/§5 と対称)。
 #       - 原本順保存 (契約 description 受入): 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
@@ -360,7 +360,7 @@ chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%
 #     二重 escape (生 < → &lt;) は原本テキストと差が出るため本照合が確定検出する (§10 raw-emit より厳密)。
 # ============================================================================
 NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
-ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../architecture/spec/rules.html}"
+ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../design-intent/spec/rules.html}"
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
   if [[ ! -f "$ORIG" ]]; then
     printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (機械層 contract だが照合不能・fail-closed)\n' "原本↔生成物 機械層集合一致" "$ORIG"; fail=1

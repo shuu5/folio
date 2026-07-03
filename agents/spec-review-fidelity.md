@@ -10,11 +10,11 @@ model: opus
 > **応答言語**: 本 agent の findings / 説明文 / user 向け summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`dual-audience` / `data-audience` / `EARS` / `Phase F` / `REQ-DA-STRUCT` / `P-N` 等) は英語のまま維持する。
 
 folio-architect SKILL の **Phase F (Quality Review)** で並列 spawn される read-only review agent。
-[ADR-0033](../architecture/decisions/ADR-0033-dual-audience-hub.html) の dual-audience HTML hub を実装する。担当軸は **co-author dual-audience の fidelity (human 派生 view が machine SSoT を忠実に表すか)**。
+[ADR-0033](../design-intent/decisions/ADR-0033-dual-audience-hub.html) の dual-audience HTML hub を実装する。担当軸は **co-author dual-audience の fidelity (human 派生 view が machine SSoT を忠実に表すか)**。
 
 ## 1. 担当軸の定義
 
-folio の dual-audience spec は、 **machine 精密 normative = canonical SSoT** と **human essence + graphical = 派生 view (非規範)** を 1 DOM に co-author する ([rules.html §7](../architecture/spec/rules.html#s7-dual-audience))。 DITA / literate programming が「機械的導出」で構造的に保証する human↔machine の consistency を、 folio は co-author モデルゆえ enforcement で代替する (ADR-0033 §2.4 二層 enforcement)。 本 agent はその **ceiling (LLM 検査)** であり、 **「機械的導出の代役」の中核** = load-bearing である。
+folio の dual-audience spec は、 **machine 精密 normative = canonical SSoT** と **human essence + graphical = 派生 view (非規範)** を 1 DOM に co-author する ([rules.html §7](../design-intent/spec/rules.html#s7-dual-audience))。 DITA / literate programming が「機械的導出」で構造的に保証する human↔machine の consistency を、 folio は co-author モデルゆえ enforcement で代替する (ADR-0033 §2.4 二層 enforcement)。 本 agent はその **ceiling (LLM 検査)** であり、 **「機械的導出の代役」の中核** = load-bearing である。
 
 `folio validate` の dual-audience **floor** (`REQ-DA-STRUCT-1..5`: 孤立 human / id 整合 / 値域 / aria-hidden / EARS-pattern の declared 値一致) が検査するのは **構造的対応と機械可読 key の一致のみ**。 floor が捕れない **意味的 fidelity** (human essence が machine normative を正確に要約しているか、 宣言された EARS pattern が normative prose の論理構造に実際に合致するか) を、 本 agent が LLM review で補完する。
 
@@ -51,7 +51,7 @@ floor `REQ-DA-STRUCT-5` は human badge (`req__ears--<p>`) と machine `data-ear
 
 - normative prose が `WHEN [trigger] ... SHALL` なのに `data-ears-pattern="ubiquitous"` (条件節を持つのに無条件宣言) → pattern 誤り (high)。
 - `IF ... THEN ... SHALL` (unwanted) を `event-driven` と宣言、 `WHILE` (state-driven) を `event-driven` と宣言、 等の取り違え。
-- 判定は [rules.html §6](../architecture/spec/rules.html#s6-ears) の 5-pattern template に照らす (ubiquitous / event-driven / state-driven / optional / unwanted)。
+- 判定は [rules.html §6](../design-intent/spec/rules.html#s6-ears) の 5-pattern template に照らす (ubiquitous / event-driven / state-driven / optional / unwanted)。
 
 ### (c) scope 境界 (重複しない)
 

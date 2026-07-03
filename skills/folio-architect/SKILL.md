@@ -1,6 +1,6 @@
 ---
 name: folio-architect
-description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。architecture/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A で adoption-state を検出し greenfield (onboarding grilling → constitution/overview を lazy materialize) / maintenance に分岐、Phase C で refs/grilling-protocol.md に沿い gap-driven に grill、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 5 review agent (folio:spec-review-ears/vocabulary/ssot/temporal/fidelity) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
+description: folio spec edit の唯一の正規 author entry point (7-Phase PR Cycle orchestrator)。design-intent/spec/ 配下の spec HTML を編集する際に user が明示起動する。Phase A で adoption-state を検出し greenfield (onboarding grilling → constitution/overview を lazy materialize) / maintenance に分岐、Phase C で refs/grilling-protocol.md に沿い gap-driven に grill、Phase E で caller marker を set→編集→folio validate→unset、Phase F で 5 review agent (folio:spec-review-ears/vocabulary/ssot/temporal/fidelity) を並列 spawn して品質検証する。folio-self-spec.html §7.1 準拠。
 disable-model-invocation: true
 ---
 
@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html §7.1 の **7-Phase PR Cycle (A〜G)** を main-session で順次 orchestrate する。
 
-`architecture/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL の **Phase E** で caller marker を set しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
+`design-intent/spec/` 配下の spec HTML は caller-marker hook で gate されており、本 SKILL の **Phase E** で caller marker を set しないと Edit/Write が deny される。本 SKILL を使わずに spec を編集しようとすると hook が止める。
 
 > **本 SKILL は SKILL のまま (subagent 化しない)**。Phase F で review agent を並列 spawn する側は main-session でなければならない (subagent は subagent を spawn できない = nesting 制約)。`disable-model-invocation: true` で、Claude が spec 編集を予期して自動起動し marker を即 set/unset する事故を防ぐ。起動は user が明示的に `/folio-architect` で行う。
 
@@ -37,7 +37,7 @@ folio spec edit の**唯一の正規 author entry point**。folio-self-spec.html
 ## Phase A — Discovery (MUST、adoption-aware)
 
 1. **todo list を作成**し、本タスクで編集する spec / 達成条件を列挙する。
-2. **`folio.config.yaml` を load** する (あれば)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = architecture/spec/`、`review_model = opus`) を用いる。
+2. **`folio.config.yaml` を load** する (あれば)。`spec_path` / `caller_marker_*` / `review_model` の override を確認する。folio 自身 (Layer 0) を編集する場合は `.claude-plugin/plugin.json` userConfig の default (`spec_path = design-intent/spec/`、`review_model = opus`) を用いる。
 3. **adoption-state を検出**して分岐する (ADR-0031 §2.3)。判定は **design-intent spec の実体の有無**による:
    - **greenfield** (`spec_path` に実体ある spec が無い — `constitution.html` 不在 / cluster README skeleton のみ) → **onboarding grilling 分岐**。構造 (config + cluster README) が未生成なら先に `~/.claude/plugins/folio/.claude-plugin/bin/folio init` を実行する (CLI なので caller-marker 不要、構造のみ決定論生成、canonical path は §「folio CLI の解決」)。次いで Phase C で onboarding grill を行い、引き出した実体から constitution / overview を **Phase E で lazy-materialize** する (中身がある時のみ。空 placeholder は書かない)。
    - **established** (実体 spec あり) → **maintenance 分岐**。通常の spec 編集 (Phase B 探索 → Phase C で変更の未解決点を grill)。
@@ -88,11 +88,11 @@ env は実行中の hook に伝播しないため、**session 内での正規 sp
 mkdir -p .folio && touch .folio/architect-active
 ```
 
-これ以降、`architecture/spec/` 配下の Edit/Write が caller-marker hook で allow される。
+これ以降、`design-intent/spec/` 配下の Edit/Write が caller-marker hook で allow される。
 
 ### Step 2: spec を編集
 
-通常の Edit / Write tool で `architecture/spec/` 配下の spec HTML を編集する。
+通常の Edit / Write tool で `design-intent/spec/` 配下の spec HTML を編集する。
 
 - path-boundary / jsonld-lint / readme-index hook は別途有効。新規 spec は `spec_path` 配下に置き、JSON-LD は object 形式 `@context` にする。
 - README index に未掲載の新 spec は readme-index hook が notify する → cluster README の inventory にも追記する。
@@ -120,16 +120,16 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 ```
 
 - [ ] Step 1 で marker を set したか
-- [ ] 編集が `architecture/spec/` 配下に収まっているか (spec_path 外は path-boundary が deny)
+- [ ] 編集が `design-intent/spec/` 配下に収まっているか (spec_path 外は path-boundary が deny)
 - [ ] Step 3 で `folio validate` が clean か
 - [ ] Step 4 で marker を削除したか
-- [ ] domain の構造を反映する **HTML 視覚要素** (mermaid stateDiagram / sequenceDiagram / flowchart / classDiagram / erDiagram、 `<table>` / `<details>` / `<dl>` 等) を selective に採用したか (canonical list は [rules.html §4.5](../../architecture/spec/rules.html#s4-5-visual)、 grill 時の声かけは [refs/grilling-protocol.md `## 視覚表現レパートリー`](./refs/grilling-protocol.md))。 plain text に止まらず folio の HTML 表現メリットを活用する。
-- [ ] 編集した mermaid 図 / spec text が **a11y minimum rule** ([rules.html §4.6](../../architecture/spec/rules.html#s4-6-a11y)) を満たすか: (a) WCAG 2.2 SC 1.4.3 contrast 4.5:1 (normal) / 3:1 (large)、 (b) mermaid 図に `accTitle` / `accDescr` 付与、 (c) `classDef` / `style` で `fill` を override する場合 `color` paired 指定 (`primaryTextColor` 継承による白文字事故の防止)。 根拠 verbatim quote + paired override 正攻法は [refs/html-spec-craft.md](./refs/html-spec-craft.md) §1-§2 を参照。
-- [ ] mermaid を採用した spec の loader が **vendored** (`<script src="../assets/mermaid.min.js" defer></script>`) で、 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) を使っていない**か ([rules.html §8 REQ-DA-JS-2](../../architecture/spec/rules.html#s8-js-governance) vendoring MUST / no-cloud、 canonical loader pattern = [refs/html-spec-craft.md §2.0](./refs/html-spec-craft.md))。 consumer が `architecture/assets/mermaid.min.js` 未 vendoring でも raw `<pre class="mermaid">` は graceful degradation で可読。
+- [ ] domain の構造を反映する **HTML 視覚要素** (mermaid stateDiagram / sequenceDiagram / flowchart / classDiagram / erDiagram、 `<table>` / `<details>` / `<dl>` 等) を selective に採用したか (canonical list は [rules.html §4.5](../../design-intent/spec/rules.html#s4-5-visual)、 grill 時の声かけは [refs/grilling-protocol.md `## 視覚表現レパートリー`](./refs/grilling-protocol.md))。 plain text に止まらず folio の HTML 表現メリットを活用する。
+- [ ] 編集した mermaid 図 / spec text が **a11y minimum rule** ([rules.html §4.6](../../design-intent/spec/rules.html#s4-6-a11y)) を満たすか: (a) WCAG 2.2 SC 1.4.3 contrast 4.5:1 (normal) / 3:1 (large)、 (b) mermaid 図に `accTitle` / `accDescr` 付与、 (c) `classDef` / `style` で `fill` を override する場合 `color` paired 指定 (`primaryTextColor` 継承による白文字事故の防止)。 根拠 verbatim quote + paired override 正攻法は [refs/html-spec-craft.md](./refs/html-spec-craft.md) §1-§2 を参照。
+- [ ] mermaid を採用した spec の loader が **vendored** (`<script src="../assets/mermaid.min.js" defer></script>`) で、 **runtime CDN (`https://cdn.jsdelivr.net/...` 等) を使っていない**か ([rules.html §8 REQ-DA-JS-2](../../design-intent/spec/rules.html#s8-js-governance) vendoring MUST / no-cloud、 canonical loader pattern = [refs/html-spec-craft.md §2.0](./refs/html-spec-craft.md))。 consumer が `design-intent/assets/mermaid.min.js` 未 vendoring でも raw `<pre class="mermaid">` は graceful degradation で可読。
 
 ### presentation pass (ADR-0040 / rules §11.5、 圧縮対象ページの編集で MUST)
 
-living spec (+ cluster README) の章を新規作成・実質改訂したら、 **人間層プレゼン圧縮の規律を同じ編集内で適用する** (基準の SSoT は [rules.html §11.5](../../architecture/spec/rules.html#s11-5-compression) — 本 SKILL に基準を複製しない)。 これを怠ると新章から元の「字の壁」に逆戻りする (恒久規律、 ADR-0040 §2.4 — 既存 corpus の一括変換は別道具 **folio-compress** が担い、 本 pass はその後の維持を担う):
+living spec (+ cluster README) の章を新規作成・実質改訂したら、 **人間層プレゼン圧縮の規律を同じ編集内で適用する** (基準の SSoT は [rules.html §11.5](../../design-intent/spec/rules.html#s11-5-compression) — 本 SKILL に基準を複製しない)。 これを怠ると新章から元の「字の壁」に逆戻りする (恒久規律、 ADR-0040 §2.4 — 既存 corpus の一括変換は別道具 **folio-compress** が担い、 本 pass はその後の維持を担う):
 
 - [ ] 章冒頭に **章要旨** `<p class="section-essence" data-audience="human">` (1〜3 文、 降格 prose の正確な要約) を置いたか
 - [ ] informative 地の文・運用注記・歴史的経緯を **`data-audience="machine"` へ降格**したか (削除は禁止 — 降格のみ。 仕分けの残す/降格は §11.5 仕分け規律)

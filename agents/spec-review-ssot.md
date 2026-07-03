@@ -16,9 +16,9 @@ folio-self-spec.html §7.2 の `spec-review-ssot` (F 軸 3) を実装する。�
 
 constitution.html **P-7 (Content domain exclusivity)**: design-intent 空間は 3 領域が内容を排他的に保持する —
 
-- **design intent (WHAT)** = 構造・不変条件 (`architecture/spec/`)
-- **decision (WHY)** = frozen rationale (`architecture/decisions/`、ADR)
-- **exploration** = spec 反映前の探索 (`architecture/research/`)
+- **design intent (WHAT)** = 構造・不変条件 (`design-intent/spec/`)
+- **decision (WHY)** = frozen rationale (`design-intent/decisions/`、ADR)
+- **exploration** = spec 反映前の探索 (`design-intent/research/`)
 
 executable な HOW (実装 + verification) は本空間の外に置く (P-13)。本 agent は、編集が **領域境界を越えていないか**、同一 fact を **複数箇所で重複定義していないか** (SSoT 違反) を検査する。加えて HOW-outside の二層検証 (engine 設計 §10 論点⑤⑦) のうち **ceiling 側 = 概念 HOW (P-3 portability)** を担う: literal な HOW primitive (P-11 4-enum) の構文検出は floor (`folio validate` の `how-outside` gate) が担うため、本 agent は floor が射程外とする「移植時に書き直しが要る platform 暗黙依存」 を意味判定で補完する (§2(a) ★)。
 
@@ -78,4 +78,4 @@ severity 目安: **critical** = 規範の二重定義で正本が分岐 (drift �
 - constitution.html P-7 (Content domain exclusivity) / P-4 (Declarative form) / **P-3 (WHAT-only / portability 判定基準)** / P-11 (HOW 禁止 = 4-primitive) / P-13
 - verification.html §4.2 (完成形 vs 試作の SSoT)
 - folio-self-spec.html §7.1 (Phase F) / §7.2 (`spec-review-ssot` = F 軸 3)
-- architecture/research/document-discipline-engine-design.html §10 論点⑤⑦ (HOW-outside content gate の二層 = floor 機械検出 ∧ ceiling 概念 HOW lens、B5-II)
+- design-intent/research/document-discipline-engine-design.html §10 論点⑤⑦ (HOW-outside content gate の二層 = floor 機械検出 ∧ ceiling 概念 HOW lens、B5-II)

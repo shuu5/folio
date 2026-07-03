@@ -16,7 +16,7 @@ scenarios:
   - name: "新 pattern (object @context + 必須 key) → allow"
     given:
       env: {}
-      file_path: "architecture/spec/new-spec.html"
+      file_path: "design-intent/spec/new-spec.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -36,7 +36,7 @@ scenarios:
   - name: "旧 pattern @context 文字列 → deny (dogfood failure 検出)"
     given:
       env: {}
-      file_path: "architecture/spec/legacy.html"
+      file_path: "design-intent/spec/legacy.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -57,7 +57,7 @@ scenarios:
   - name: "必須 key 不在 (@id 抜け) → deny"
     given:
       env: {}
-      file_path: "architecture/spec/incomplete.html"
+      file_path: "design-intent/spec/incomplete.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -77,7 +77,7 @@ scenarios:
   - name: "JSON 構文壊れ → deny"
     given:
       env: {}
-      file_path: "architecture/spec/broken.html"
+      file_path: "design-intent/spec/broken.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -98,7 +98,7 @@ scenarios:
   - name: "JSON-LD block 不在 (普通の HTML) → allow"
     given:
       env: {}
-      file_path: "architecture/random/plain.html"
+      file_path: "design-intent/random/plain.html"
       content: |
         <!DOCTYPE html>
         <html><head><title>plain page</title></head>
@@ -111,7 +111,7 @@ scenarios:
   - name: "Edit tool は対象外 → allow (試作 minimum scope)"
     given:
       env: {}
-      file_path: "architecture/spec/existing.html"
+      file_path: "design-intent/spec/existing.html"
       content: ""
     when:
       tool: "Edit"
@@ -121,7 +121,7 @@ scenarios:
   - name: "非 .html (.md) → allow"
     given:
       env: {}
-      file_path: "architecture/notes.md"
+      file_path: "design-intent/notes.md"
       content: "some markdown"
     when:
       tool: "Write"
@@ -131,7 +131,7 @@ scenarios:
   - name: "新 pattern (object @context、 stakeholders 等 folio:* 拡張あり) → allow"
     given:
       env: {}
-      file_path: "architecture/spec/with-stakeholders.html"
+      file_path: "design-intent/spec/with-stakeholders.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -153,7 +153,7 @@ scenarios:
   - name: "JSON-LD 開始 tag と data が同一行 → allow (R1-H1 fix verify)"
     given:
       env: {}
-      file_path: "architecture/spec/inline.html"
+      file_path: "design-intent/spec/inline.html"
       content: '<!DOCTYPE html><html><head><script type="application/ld+json">{"@context":{"folio":"https://folio.dev/spec/v1/"},"@id":"./inline.html","@type":"schema:TechArticle"}</script></head></html>'
     when:
       tool: "Write"
@@ -163,7 +163,7 @@ scenarios:
   - name: "single quote type 属性 → allow (R2-H2 fix verify、 新 pattern 内容)"
     given:
       env: {}
-      file_path: "architecture/spec/single-quote.html"
+      file_path: "design-intent/spec/single-quote.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -183,7 +183,7 @@ scenarios:
   - name: "single quote + 旧 pattern @context 文字列 → deny (R2-H2 fix で hook が起動かつ deny)"
     given:
       env: {}
-      file_path: "architecture/spec/single-quote-legacy.html"
+      file_path: "design-intent/spec/single-quote-legacy.html"
       content: |
         <!DOCTYPE html>
         <html><head>
@@ -204,7 +204,7 @@ scenarios:
   - name: "@context 空 object {} → allow (R2-M2 trace、 試作 scope は構造のみ check)"
     given:
       env: {}
-      file_path: "architecture/spec/empty-context.html"
+      file_path: "design-intent/spec/empty-context.html"
       content: |
         <!DOCTYPE html>
         <html><head>

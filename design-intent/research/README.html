@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="cluster-readme">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.1.0">
+<meta name="folio-glossary-automark" content="enabled">
+<meta name="folio-status" content="active">
+<title>folio — design-intent/research/</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./README.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "folio research index",
+  "folio:version": "1.1.0"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-purpose">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li aria-current="page">research</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>design-intent/research/ — 要望 + 調査資料</h1>
+  <div class="meta">v1.1.0 &middot; user 要望 + 業界調査 + plugin scope の集約</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="cluster-nav" aria-label="関連 cluster"><a href="../spec/README.html">spec/</a> &middot; <a href="../decisions/README.html">decisions/</a> &middot; <a href="../glossary.html">glossary</a></nav>
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-purpose">§1. Purpose</a></li>
+  <li><a href="#s2-contents">§2. Contents</a></li>
+  <li><a href="#s3-rules">§3. Rules</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+
+<aside class="informative">
+<p>本 dir は試作 plugin 開発のための <strong>情報集約場所</strong>。 user 要望、 業界ベストプラクティス調査、 plugin scope 候補等を HTML 形式で随時追加する。 試作 plugin が完成したら撤去 or archive。</p>
+</aside>
+
+<section id="s1-purpose" class="informative">
+<h2>§1. Purpose</h2>
+
+<p>試作 plugin の開発に必要な情報を user-Claude 対話で集める場所。 議論を memo 化、 業界調査結果を整理、 plugin の最小 scope を確定する材料を蓄積する。</p>
+</section>
+
+<section id="s2-contents" class="informative">
+<h2>§2. Contents</h2>
+
+<p>本 <span class="term" data-term="cluster" data-tooltip="design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。">cluster</span> の実在 doc (exploration 領域ゆえ随時変動):</p>
+<ul>
+  <li><a href="plugin-architecture-research.html"><code>plugin-architecture-research.html</code></a> — plugin 最小構成の業界調査 (<a href="../decisions/ADR-0003-plugin-architecture.html">ADR-0003</a> の source)</li>
+  <li><a href="plugin-sandbox-verification-research.html"><code>plugin-sandbox-verification-research.html</code></a> — <span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> verification framework の調査 (<a href="../decisions/ADR-0013-verification-framework.html">ADR-0013</a> の source)</li>
+  <li><a href="spec-graph-management-research.html"><code>spec-graph-management-research.html</code></a> — <span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span> graph (<span class="term" data-term="inventory" data-tooltip="design-intent 空間の全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。">inventory</span> / relations) 管理の調査</li>
+  <li><a href="presentation-design-patterns.html"><code>presentation-design-patterns.html</code></a> — human-first presentation layer の設計根拠調査 (grill 2026-06-10 決定 6 件の実装前提、 <span class="term" data-term="landing" data-tooltip="design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。">landing</span>/<span class="term" data-term="chrome" data-tooltip="folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。">chrome</span>/開示/型システム 6 軸 + blueprint)</li>
+  <li><a href="srs-component-taxonomy.html"><code>srs-component-taxonomy.html</code></a> — 要件定義書 (SRS) ビジュアル design system の部品 taxonomy を <strong>ISO/IEC/IEEE 29148:2018</strong> + use-case + <span class="term" data-term="EARS" data-tooltip="Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。">EARS</span> + RTM に接地し、 完全性の done-condition (<span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span> + <span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span> 二層) を確定 (<a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.6 γ scope の具体化、 epic folio-c5g / S2 の成果物)</li>
+  <li><a href="document-discipline-engine-design.html"><code>document-discipline-engine-design.html</code></a> — 文書規律エンジン (C) の B0 設計 design-of-record (3 層構造 / 照会=抽象ロール graph / HOW-outside 3-tier / constitution optional-but-special / 単一版 additive / instance#2=ADR-pack 実証)。 北極星 folio-7wn の実装記録 (epic folio-0dv / B0=folio-9ay 合意 + B1=folio-bwc 実証、 後段で正式 <span class="term" data-term="ADR" data-tooltip="Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。">ADR</span> 化予定の探索メモ)</li>
+  <li><a href="doctype-coverage-audit.html"><code>doctype-coverage-audit.html</code></a> — 文書型 被覆完全性 監査 (2026-06-24・doctype-completeness-audit wf_8e16a043 の design-of-record)。folio engine は canonical 約 17 doc-type 中 5 種のみ生成可と確定し、全 gap を優先度付きで <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span> 化 (<span class="term" data-term="architecture-description" data-tooltip="構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。">architecture-description</span>=P1 構造的 novel / glossary=P1 安価 <span class="term" data-term="keystone" data-tooltip="機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。">keystone</span> 他)。post-B6 完全 doc-suite 被覆 roadmap (epic <code>folio-c5r</code>) の起点・コード無し射程 (<code>folio-dxq</code>) も併記</li>
+  <li><a href="x4-plan.html"><code>x4-plan.html</code></a> — Phase X4 分解 + 着手計画 (<strong>status=superseded</strong>、 履歴として保持)</li>
+  <li><a href="constitution-x4-amendment-proposal.html"><code>constitution-x4-amendment-proposal.html</code></a> — <span class="term" data-term="constitution" data-tooltip="folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。">constitution</span> X4 amendment 提案 (<strong>status=superseded</strong>、 履歴として保持)</li>
+  <li><a href="spec-readme-worklog-archive.html"><code>spec-readme-worklog-archive.html</code></a> — spec/README 作業ログ archive (2026-05 期 Change Log + Phase X3 解消済 defer 行、 <strong>status=superseded</strong>、 ADR-0039 §2.4 の撤去先)</li>
+</ul>
+
+<p>命名は kebab-case.html (exploration 領域なので柔軟、 ただし reader 体験のため統一)。 新規追加時は本 §2 に<strong>実在 file のみ</strong>追記する (hollow index 防止)。</p>
+</section>
+
+<section id="s3-rules" class="informative">
+<h2>§3. Rules</h2>
+
+<ul>
+  <li><strong>exploration 領域 (research/) なので folio rule に縛られない</strong>。 markup 正規性、 declarative form 等は不要、 自由に書く。</li>
+  <li>file 内容は random draft / 思考 memo / 引用 / link 等 何でも可。</li>
+  <li>基本 HTML で書く (Markdown は research/ 内では避ける、 visual scan 統一のため)。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

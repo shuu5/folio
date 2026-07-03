@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / 説明文 / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`contract` / `data-slot-id` / `plain-language-term-inline` / `leads_to` / `open_questions` / `outcome` / `gate J` 等) は英語のまま維持する。
 
-生成 research プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を research-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-research](persona-walk-research.md) = gate I 同型)。 research は exploration doc-type (taxonomy §6.2) で、 SRS の `fidelity-srs` (gate J) / ADR の同型 agent と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (question / findings / approaches / open_questions / outcome) と **「決めない」hallmark** が固有。
+生成 research プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)` ([SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1・§5.3 が定義する二層モデルの一般形を research-pack へ適用)。 本 agent は ceiling の片翼 (もう片翼は [persona-walk-research](persona-walk-research.md) = gate I 同型)。 research は exploration doc-type (taxonomy §6.2) で、 SRS の `fidelity-srs` (gate J) / ADR の同型 agent と **doc-type 横断で同じ二層規律**を持つが、 検査対象 schema (question / findings / approaches / open_questions / outcome) と **「決めない」hallmark** が固有。
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|
@@ -18,7 +18,7 @@ model: opus
 
 ## 1. 担当軸の定義
 
-生成 research プレゼン HTML は、 機械 SSoT (`*.research.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
+生成 research プレゼン HTML は、 機械 SSoT (`*.research.yaml`) を入力に **構造は決定的に組み立て (捏造不能)・prose 読みやすさスロットのみ opus が充填**するハイブリッド生成 ([ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html))。 contract が **canonical SSoT**、 HTML は**派生成果物**。 本 agent はその HTML が contract の **正確な要約**か (情報落ち / 歪み / 捏造が無いか) を contract と突合する LLM review であり、 ceiling の load-bearing な片翼。
 
 floor (`verify-research.sh`) が決定的に被覆するのは **構造の集合一致と機械可読 key の整合**: 件数 (findings / approaches / open_questions / glossary / approval)・id 一意性・cross-doc 前方照会の集合一致 / dangling 0 / 可視 echo (チップ / oc-resolved / cover ref-chip) の厳密テキスト一致・cover-meta 集計の再導出・term-inline の機械的派生・no-TBD・prose 全充填と**注入忠実** (`--filled`: HTML の prose == manifest の prose)。 本 agent はこれらを**再検査しない** (§5 scope)。
 
@@ -115,8 +115,8 @@ severity 目安: **critical** = 捏造 (存在しない判定・因果・実体 
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §6.2 (research = exploration 拡張パック) / §7.3 (妥当性 = ceiling 領分)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式 GREEN ⟺ floor AND ceiling) / §5.3 gate J (fidelity check) / §6.2 (research = exploration 拡張パック) / §7.3 (妥当性 = ceiling 領分)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (fidelity = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (ハイブリッド生成 = 構造決定的・prose のみ opus)
 - generator: `.claude-plugin/design-system/generator/` (`assemble-research.sh` / `inject-prose.sh` / `verify-research.sh` floor = 構造 fabrication-free + cross-doc 前方照会 proof)
 - research contract schema: `.claude-plugin/design-system/generator/contract/clinic-double-booking.research.yaml` (instance#3 / question・findings・approaches・open_questions・outcome・cross_doc)
 - [persona-walk-research](persona-walk-research.md) (ceiling のもう片翼 = gate I 同型) / [fidelity-srs](fidelity-srs.md) (要件定義書用・対象 schema が異なる) / [spec-review-fidelity](spec-review-fidelity.md) (folio 自身用・対象が異なる)

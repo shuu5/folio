@@ -2,7 +2,7 @@
 # folio engine tr0 (folio-nxp) — bootstrap extractor: verification.html → folio-verification.spec.yaml (one-shot)
 #
 # ★extract-rules-spec.sh の doc-type=spec 2例目への FORK (w1f rules self-host の verification 版)。 共有 core (lib/) 無改変。
-# architecture/spec/verification.html を *read-only* で走査し、 spec-pack contract (folio-verification.spec.yaml) の
+# design-intent/spec/verification.html を *read-only* で走査し、 spec-pack contract (folio-verification.spec.yaml) の
 # DRAFT を起こす one-shot スクリプト。 ★出力は人間 (= 次サイクル admin) レビュー前提 (機械抽出の下書き)。
 #
 # ★verification 固有差分 (rules.html に無い): 機械層に <div class="demoted" data-audience="machine"> を 4 箇所持つ
@@ -25,12 +25,12 @@
 #   警告を出して fail-loud にする。 人間層プレゼン (essence + subhead + 表 + 図 + 要件) は従来どおり構造化 field へ抽出する。
 #
 # usage: extract-verification-spec.sh [<verification.html>] > <draft contract.yaml>   (LOG は stderr)
-#        既定 <verification.html> = <repo-root>/architecture/spec/verification.html
+#        既定 <verification.html> = <repo-root>/design-intent/spec/verification.html
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VERIF="${1:-$REPO_ROOT/architecture/spec/verification.html}"
+VERIF="${1:-$REPO_ROOT/design-intent/spec/verification.html}"
 [[ -f "$VERIF" ]] || { echo "extract-verification-spec: verification.html not found: $VERIF" >&2; exit 1; }
 command -v perl >/dev/null || { echo "extract-verification-spec: perl required" >&2; exit 1; }
 
@@ -358,7 +358,7 @@ my ($preamble_blocks, $pre_exp) = extract_machine_blocks($preamble_region);
 
 # ===== YAML 出力 =====
 print "# folio engine tr0 (folio-nxp) — spec-pack contract (instance#2 doc-type=spec / verification self-host)\n";
-print "# ★機械抽出 DRAFT (scripts/extract-verification-spec.sh が architecture/spec/verification.html から起こした)。 人間レビュー前提。\n";
+print "# ★機械抽出 DRAFT (scripts/extract-verification-spec.sh が design-intent/spec/verification.html から起こした)。 人間レビュー前提。\n";
 print "# doc_type = spec (folio verification framework spec)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。\n";
 print "# ★抽出範囲 = verification.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1 / tr0)。\n";
 print "#   機械層 = data-audience=\"machine\" の <p>/<aside>/<ul>/<div class=\"demoted\"> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture。\n";

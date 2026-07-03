@@ -1,13 +1,13 @@
 # render-gate — render-safety ceiling (playwright 視覚 render gate)
 
-corpus 全 page (repo-root index.html + architecture/**/*.html) を実ブラウザ (headless chromium) で
+corpus 全 page (repo-root index.html + design-intent/**/*.html) を実ブラウザ (headless chromium) で
 **3 viewport (375 / 768 / 1280)** で render し、 render **後** の DOM 幾何から **mermaid flowchart の
 text-block overlap** と **chrome 崩れ** (意図しない横スクロール / nav と本文の重なり、 ADR-0039 §2.8)
 を検出する verification 層。 二層 render-safety の **ceiling**。
 
 ## なぜ要るか — pure-bash floor の死角
 
-`folio validate` の **render-safety** gate (REQ-VER-021、 `architecture/spec/verification.html`) は
+`folio validate` の **render-safety** gate (REQ-VER-021、 `design-intent/spec/verification.html`) は
 pure-bash で動くため render 後の DOM 幾何を見れない。 そのため「既知の overlap-prone パターン
 (`<pre class="mermaid">` 内の subgraph 多行タイトル)」を static pattern-lint するに留まる (floor)。
 
@@ -21,7 +21,7 @@ pure-bash で動くため render 後の DOM 幾何を見れない。 そのた�
 | **ceiling** | **本 gate (playwright、 CI)** | **folio dogfood (CI-only)** | **flowchart の cluster/node/label 幾何 overlap + clip (4 class) + chrome 幾何 (2 class)、 3 viewport (REQ-VER-022)** |
 
 ceiling は browser 依存ゆえ consumer の `folio validate` には入れない。 folio 自身の CI で dogfood する。
-spec trace は `architecture/spec/verification.html` の REQ-VER-022 (floor は REQ-VER-021)。
+spec trace は `design-intent/spec/verification.html` の REQ-VER-022 (floor は REQ-VER-021)。
 
 ## 検出する欠陥 class (probe.js)
 
@@ -122,11 +122,11 @@ python3 tests/render-gate/check.py --selftest
 python3 tests/render-gate/check.py --screenshot-dir /tmp/render-shots
 
 # 外部 http server を使う (未指定なら自前で空きポートに起動)。 server は REPO_ROOT を配信すること
-# (fixture/spec が ../../../architecture/assets/mermaid.min.js を参照するため、 root がずれると 404):
+# (fixture/spec が ../../../design-intent/assets/mermaid.min.js を参照するため、 root がずれると 404):
 python3 tests/render-gate/check.py --base-url http://127.0.0.1:8777
 ```
 
-`check.py` は repo-root `index.html` + `architecture/**/*.html` の全 page を自動 discover する
+`check.py` は repo-root `index.html` + `design-intent/**/*.html` の全 page を自動 discover する
 (chrome 幾何は全 page が対象)。 mermaid の期待図数は実 `<pre class="mermaid">` 数 (prose 内の
 escaped 言及・HTML コメント内は対象外) — 対象一覧を手で持たないため page / figure の増減に追従する。
 
@@ -189,4 +189,4 @@ mermaid / chromium 版を上げて幾何が変わり selftest が落ちれば dr
 job が赤でも物理的に merge を止めるには、 GitHub の branch protection / ruleset で render-gate を
 **required status check** に登録する必要がある (ci.yml だけでは強制化されない)。
 
-二層の正式 decision 記録は `architecture/decisions/ADR-0037-render-safety-ceiling.html`。
+二層の正式 decision 記録は `design-intent/decisions/ADR-0037-render-safety-ceiling.html`。

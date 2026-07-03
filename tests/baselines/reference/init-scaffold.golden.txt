@@ -1,11 +1,11 @@
-architecture/decisions/README.html
-architecture/index.html
-architecture/research/README.html
-architecture/spec/README.html
+design-intent/decisions/README.html
+design-intent/index.html
+design-intent/research/README.html
+design-intent/spec/README.html
 folio.config.yaml
 --- folio.config.yaml ---
 folio_version: "^1.0"
-spec_path: "architecture/spec/"
+spec_path: "design-intent/spec/"
 caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
 caller_marker_value: "folio-architect"
 review_model: "opus"

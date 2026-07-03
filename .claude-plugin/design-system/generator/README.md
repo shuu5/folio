@@ -33,7 +33,7 @@ prose.yaml ───────────────────────
 ## ADR-pack = instance#2 (folio engine B1 / folio-bwc / rule-of-three)
 
 SRS generator の機構を **別 doc-type (ADR / 設計判断記録)** へ適用した二例目。 狙い = SRS-pack ∩ ADR-pack の
-共通項を炙り engine core を抽出可能にする (抽出自体は後続別 bd)。 設計記録 = `architecture/research/document-discipline-engine-design.html` (B0 6 論点)。
+共通項を炙り engine core を抽出可能にする (抽出自体は後続別 bd)。 設計記録 = `design-intent/research/document-discipline-engine-design.html` (B0 6 論点)。
 
 - **入力 contract** (`contract/clinic-double-booking.adr.yaml`) — ADR-pack schema: meta(adr_status) / approval /
   cross_doc / context / drivers / options(pros/cons/verdict) / decision(chosen+justifies) / consequences(positive/negative) /
@@ -117,7 +117,7 @@ SRS/ADR generator の機構を **3 例目の doc-type (research / 調査記録 =
 
 SRS/ADR/research generator の機構を **4 例目の doc-type (constitution / 不変原則 = 「照会の終端」doc)** へ適用した四例目。
 照会の抽象ロール `principle` (B0 论点2 = 照会終端) を実 doc-type として cover する。 題材 = folio 自身の 14 不変原則を
-frozen `architecture/spec/constitution.html` から **read-only で忠実抽出**し、 「engine が folio 原則を再現できる」を
+frozen `design-intent/spec/constitution.html` から **read-only で忠実抽出**し、 「engine が folio 原則を再現できる」を
 読み比べで実証する (frozen constitution.html は **絶対に編集しない** = P-10。 生成は別ファイル)。
 
 - **入力 contract** (`contract/folio-constitution.principle.yaml`) — principle-pack schema: meta(doc_type:constitution) / approval /
@@ -162,7 +162,7 @@ frozen `architecture/spec/constitution.html` から **read-only で忠実抽出*
 
 ## spec-pack = instance#5 (folio engine B6 / folio-8ct / self-dogfood endgame)
 
-SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules / Layer 1 普遍規約 = 「EARS 章立て規範文 + 非終端 照会」doc)** へ適用した五例目。 狙い = **★core (`lib/{common,verify-common,graph-common}.sh` + `inject-prose.sh`) を 1 バイトも変えず純粋 pack として挿さるか**を folio 自身の `architecture/spec/rules.html` で実証する (rule-of-three の **B6 完成サイン** = engine が folio 文書型を再現できる self-dogfood)。 挿さった証拠 = `git diff --stat lib/ inject-prose.sh` 空 + 既存 4 pack 非回帰 + sandbox 40/40 + validate clean。 ★frozen でない `rules.html` は **読むだけで一切編集しない** (非破壊・生成は別ファイル `/tmp/folio-design-samples/b6-spec/`)。
+SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules / Layer 1 普遍規約 = 「EARS 章立て規範文 + 非終端 照会」doc)** へ適用した五例目。 狙い = **★core (`lib/{common,verify-common,graph-common}.sh` + `inject-prose.sh`) を 1 バイトも変えず純粋 pack として挿さるか**を folio 自身の `design-intent/spec/rules.html` で実証する (rule-of-three の **B6 完成サイン** = engine が folio 文書型を再現できる self-dogfood)。 挿さった証拠 = `git diff --stat lib/ inject-prose.sh` 空 + 既存 4 pack 非回帰 + sandbox 40/40 + validate clean。 ★frozen でない `rules.html` は **読むだけで一切編集しない** (非破壊・生成は別ファイル `/tmp/folio-design-samples/b6-spec/`)。
 
 - **入力 contract** (`contract/folio-rules.spec.yaml`) — spec-pack schema: meta(doc_type:rules) / approval / graph(principle_edge) / **machine_preamble** / sections(id/tint/kicker/heading/essence/blocks[]/**machine_blocks[]**) / requirements(id/ears_pattern/essence/statement) / references(非終端 照会) / glossary。 ★機械抽出 DRAFT を `scripts/extract-rules-spec.sh` が起こす (人間レビュー前提)。
   - **block types** (section 内 content・document 順): `prose` / `note`(aside) / `list` / `code`(lines[]・改行回避) / `table`(caption/headers/rows) / `mermaid`(source_lines[]・source-text 表現) / `subhead`(heading/essence) / `requirements`(ids[])。 ★**未対応 block type は silent drop せず fail-closed abort** (no silent caps)。
@@ -186,7 +186,7 @@ SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules 
 
 ### spec-pack FORK = verification self-host (folio engine tr0 / folio-nxp / doc-type=spec 2例目)
 
-spec-pack (rules) を **doc-type=spec の 2 例目** (`architecture/spec/verification.html`) へ適用した FORK。 狙い = w1f の rules self-host を別 folio 文書型 (spec) へ広げる。 **★共有 core (`lib/*.sh` + `inject-prose.sh`) + 共有 spec-pack スクリプト (`extract-rules-spec.sh` / `assemble-spec.sh` / `verify-spec.sh`) を 1 バイトも触らず、 新ファイルの新設のみで挿す** (FORK = 並列安全・rule-of-three pack 層)。 ★frozen でない `verification.html` は **読むだけで一切編集しない** (非破壊・生成は `/tmp/folio-design-samples/tr0-verif/`)。
+spec-pack (rules) を **doc-type=spec の 2 例目** (`design-intent/spec/verification.html`) へ適用した FORK。 狙い = w1f の rules self-host を別 folio 文書型 (spec) へ広げる。 **★共有 core (`lib/*.sh` + `inject-prose.sh`) + 共有 spec-pack スクリプト (`extract-rules-spec.sh` / `assemble-spec.sh` / `verify-spec.sh`) を 1 バイトも触らず、 新ファイルの新設のみで挿す** (FORK = 並列安全・rule-of-three pack 層)。 ★frozen でない `verification.html` は **読むだけで一切編集しない** (非破壊・生成は `/tmp/folio-design-samples/tr0-verif/`)。
 
 - **新ファイル**: `.claude-plugin/scripts/extract-verification-spec.sh` (extractor fork) / `assemble-verification.sh` / `verify-verification.sh` / `test-adversarial-verification.sh` / `contract/folio-verification.spec.yaml` / `prose/folio-verification.prose.yaml`。
 - **★verification 固有差分 = 機械層 `demoted`** (rules.html に無い): verification.html は機械層に `<div class="demoted" data-audience="machine">` を 4 箇所持つ (ADR-0040 圧縮の機械層降格分・中身は `<p>`/`<ul>`/`<pre><code>`)。 現 extractor は `<p>/<aside>/<ul>` のみ拾い div は死角ゆえ、 fork は **div.demoted を machine_block `type: demoted` として balanced div で inner を逐語 capture** (round-trip 被覆)。 assemble は `<div data-component="spec-machine-demoted" data-audience="machine">` で RAW emit (二重 escape 厳禁)、 verify は件数 + 双方向 *順序付き* round-trip に demoted を含める。 ★demoted は `<pre><code>` を内包しうるため extractor の section block scan から mask して human-layer code 誤捕捉を防ぐ (machine_blocks は別途 capture ゆえ無損失)。
@@ -319,7 +319,7 @@ folio verify-cross-doc-dup --contract-dir /tmp/x/contract --rolemap-dir /tmp/x/r
 ## engine core 抽出 (B2 / folio-5ua / rule-of-three)
 
 SRS-pack (instance#1) ∩ ADR-pack (instance#2) の共通項を **共有ライブラリ層 `lib/`** へ引き上げた非破壊リファクタ
-(`architecture/research/document-discipline-engine-design.html` §7 の経験的地図に接地)。 core / pack 境界の基準 =
+(`design-intent/research/document-discipline-engine-design.html` §7 の経験的地図に接地)。 core / pack 境界の基準 =
 「その機構を新 doc-type に持ち込んで改変が要るか」 — 改変ゼロ = core、 doc-type 固有 = pack。
 
 - **`lib/common.sh`** (assemble 共通層) — `assemble-srs.sh` / `assemble-adr.sh` が source する core idiom:
@@ -571,7 +571,7 @@ glossary-term-table / priority-badge / fidelity-sync-meta。
 
 ## Trace
 
-ADR-0042 / taxonomy `architecture/research/srs-component-taxonomy.html` §3/§5 / design system `../catalog.html` `../srs.css` / 承認 example `../example-srs.html`。
+ADR-0042 / taxonomy `design-intent/research/srs-component-taxonomy.html` §3/§5 / design system `../catalog.html` `../srs.css` / 承認 example `../example-srs.html`。
 ceiling review 4 ラウンド反映: wf_41fcbde3 (第一スライス: escape 追加 / 改行 phantom / acceptance 無検証 等)、 wf_82c7b956 (リッチ化:
 **esc の patsub_replacement 破綻** = 第一スライスで追加した escape が bash 5.2 で無効だった blocker / A1 の否定検証 false-pass /
 nfr.hero null 漏れ / RTM 行ラベル欠落 / cover ID レンジ / actor.tint CSS allowlist)、 wf_e20518f2 (③ prose fidelity 4-lens:

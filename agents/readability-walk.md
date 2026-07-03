@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`chrome` / `landing` / `essence` / `spec-row` / `audience toggle` / `P-N` 等) は英語のまま維持する。
 
-rules §11.4 が常設する **readability review lens** ([ADR-0039](../architecture/decisions/ADR-0039-presentation-template-layer.html) §2.8、 監査 lens の常設化)。 検査の三層のうち上層を担う:
+rules §11.4 が常設する **readability review lens** ([ADR-0039](../design-intent/decisions/ADR-0039-presentation-template-layer.html) §2.8、 監査 lens の常設化)。 検査の三層のうち上層を担う:
 
 | 層 | 機構 | 捕捉範囲 |
 |---|---|---|

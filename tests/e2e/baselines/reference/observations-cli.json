@@ -8,7 +8,7 @@
     "host": "ipatho-server-2",
     "branch": "main (fb5bc1c、 S5 統合検証 = 歩ける website epic close 後)",
     "cwd": "/home/shuu5/projects/local-projects/folio",
-    "cli_load": "bin/folio は bash CLI ゆえ plugin load/session freshness 非依存。 `.claude-plugin/bin/folio <subcmd>` を直接実行 (走査 base = cwd 相対 architecture/、 --root で override)。",
+    "cli_load": "bin/folio は bash CLI ゆえ plugin load/session freshness 非依存。 `.claude-plugin/bin/folio <subcmd>` を直接実行 (走査 base = cwd 相対 design-intent/、 --root で override)。",
     "primary_assertion": "exit code + chained state。 init exit 0 + scaffold tree (folio build で index.html も生成)、 validate exit 0/1 + 15-gate 結果、 fix exit 0 + reverse/xref/glossary materialize、 build exit 0 + nav index 再生成、 inventory exit 0 + 件数 + object-graph node 数、 prime exit 0 + Tier 1 digest + object-graph index。",
     "rewalk_rationale": "前回 walk (observations-cli@2026-06-01、 #118) は nav (ADR-0035/0036) SHIP より前で、 validate を 12-gate、 init を 4 file scaffold、 remediate を fix 単独、 inventory/prime を 33 specs・87-node object-graph と記録していた。 本 re-walk は nav slice (S1-S5、 a69b965〜fb5bc1c、 epic folio-aad) で追加された機構を live lifecycle で被覆し直す: (a) validate が 15-gate (nav-regen-drift + nav-dead-link + cluster-reachability 追加、 fresh consumer で graceful OK)、 (b) folio init が folio build を内蔵し index.html も scaffold する (4→5 file)、 (c) ★remediate が 2 ツール化 = consumer が spec を追加すると nav-regen-drift も RED になり、 fix (graph/xref/glossary) では閉じず folio build (nav index 再生成) が必要、 (d) spec graph 成長 (33→37 specs、 object-graph 87→91 nodes / 77→76 edges)。 #118 系の e2e 規律 (dated walk は retroactive edit せず re-walk + supersession で更新) に従う。 folio-rf6。",
     "note": "S-I の spec mutation は bash heredoc (Edit/Write tool だと path-boundary hook が doc-type=spec を gate しうる、 hook は bash 非対象)。 fix の reverse 挿入 anchor (#89) は multi-line 整形 JSON-LD (行頭 \"@type\": / 行末 \"key\": [) を要するため fixture を複数行で作成する (単一行 JSON-LD は fail-closed)。 lazy init は spec を seed しないため最小 spec alpha/beta を自前作成。"
@@ -25,18 +25,18 @@
     {
       "id": "S-H",
       "name": "CLI lifecycle: init → validate (lazy init = 構造 + nav index、 fresh consumer project が 15-gate で out-of-the-box clean か)",
-      "operation": "TMP=$(mktemp -d); folio init $TMP → tree 観察 → folio validate --root $TMP/architecture",
+      "operation": "TMP=$(mktemp -d); folio init $TMP → tree 観察 → folio validate --root $TMP/design-intent",
       "expected": {
         "init_exit": 0,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html", "architecture/index.html"],
+        "init_files": ["folio.config.yaml", "design-intent/spec/README.html", "design-intent/decisions/README.html", "design-intent/research/README.html", "design-intent/index.html"],
         "validate_exit": 0,
         "validate_clean": true
       },
       "observed": {
         "init_exit": 0,
-        "init_message": "folio init: scaffolding consumer canonical layout ... / create folio.config.yaml + 3 cluster README / folio build: wrote architecture/index.html / done (existing files preserved, missing files created)",
+        "init_message": "folio init: scaffolding consumer canonical layout ... / create folio.config.yaml + 3 cluster README / folio build: wrote design-intent/index.html / done (existing files preserved, missing files created)",
         "init_files_created": 5,
-        "init_files": ["folio.config.yaml", "architecture/spec/README.html", "architecture/decisions/README.html", "architecture/research/README.html", "architecture/index.html"],
+        "init_files": ["folio.config.yaml", "design-intent/spec/README.html", "design-intent/decisions/README.html", "design-intent/research/README.html", "design-intent/index.html"],
         "lazy_note": "constitution.html / overview.html は seed されない (ADR-0031 §2.3): folio-architect の greenfield onboarding grilling が引き出した時に Phase E で lazy-materialize。 index.html は init が folio build を内蔵して生成する (ADR-0035、 fresh consumer に歩ける入口を与える)。",
         "validate_exit": 0,
         "validate_summary": "files checked: 3 · relations checked: 0",
@@ -83,7 +83,7 @@
         "validate_after_fix_exit": 1,
         "validate_after_fix_summary": "broken-reverse OK、 だが nav-regen-drift 残 (violations (1)) = ★fix は nav index を再生成しない",
         "build_exit": 0,
-        "build_message": "folio build: wrote architecture/index.html",
+        "build_message": "folio build: wrote design-intent/index.html",
         "validate_green_exit": 0,
         "validate_green_summary": "15-gate clean: 0 violations (build で nav-regen-drift 解消)",
         "fix_again_exit": 0,

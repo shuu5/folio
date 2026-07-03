@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 > **応答言語**: 本 SKILL の出力 (提案・要約・user 向けメッセージ) は **user の使用言語** (default = global CLAUDE.md = 日本語) で行う。folio canonical 用語 (`section-essence` / `data-audience` / `EARS` / `REQ-*` / `P-N` 等) は英語のまま維持する。
 
-既存ページを「人間層 = time-box 付きプレゼン / 機械層 = 無制限の原稿」(ADR-0040) へ一括変換する。**圧縮基準の単一 SSoT は [rules.html §11.5](../../architecture/spec/rules.html#s11-5-compression)** — time-box (目標/上限の字数)・章要旨/章図の語彙・仕分け規律・一次資料層の定義はそちらを読む。本 SKILL は手順だけを定める (基準・数値を複製するとドリフトする)。
+既存ページを「人間層 = time-box 付きプレゼン / 機械層 = 無制限の原稿」(ADR-0040) へ一括変換する。**圧縮基準の単一 SSoT は [rules.html §11.5](../../design-intent/spec/rules.html#s11-5-compression)** — time-box (目標/上限の字数)・章要旨/章図の語彙・仕分け規律・一次資料層の定義はそちらを読む。本 SKILL は手順だけを定める (基準・数値を複製するとドリフトする)。
 
 **folio-architect との分担** (ADR-0040 §2.4): architect の presentation pass = 新規/改訂章に圧縮規律を**以後ずっと**守らせる恒久装置。本 SKILL = 規律導入前に書かれた**既存 corpus の一括変換**。1 回の migration が終われば本 SKILL の出番は減り、 architect 側が引き継ぐ。
 

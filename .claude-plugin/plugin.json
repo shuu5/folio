@@ -1,6 +1,6 @@
 {
   "name": "folio",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "license": "MIT",
   "description": "folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness. minimal scope = ADR-0003/0007: 1 skill + 6 hook + 7 script + 1 CLI.",
   "author": {
@@ -12,8 +12,8 @@
     "spec_path": {
       "type": "string",
       "title": "Spec Path",
-      "default": "architecture/spec/",
-      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live. canonical default = architecture/spec/ (folio self-host、 X4-C で scratch/ から物理移植済、 ADR-0023)。"
+      "default": "design-intent/spec/",
+      "description": "Relative path (from consumer project root) where folio-managed spec HTML files live. canonical default = design-intent/spec/ (folio self-host、 X4-C で scratch/ から物理移植済、 ADR-0023)。"
     },
     "caller_marker_env": {
       "type": "string",

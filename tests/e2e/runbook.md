@@ -38,7 +38,7 @@ RED→fix→validate GREEN / inventory 件数・prime digest 形式)。これは
 
 ## marker 機構 (caller-marker hook)
 
-`architecture/spec/` 配下の Edit/Write は caller-marker hook で gate される。次のどちらかで allow:
+`design-intent/spec/` 配下の Edit/Write は caller-marker hook で gate される。次のどちらかで allow:
 - env var `FOLIO_ARCHITECT_CONTEXT=folio-architect` (cld 起動時 set、session 内変更不可)
 - marker file `.folio/architect-active` 存在 (mid-session で `touch`/`rm`、folio-architect SKILL が使う方式)
 
@@ -52,7 +52,7 @@ set: `mkdir -p .folio && touch .folio/architect-active` / unset: `rm -f .folio/a
 
 **操作**:
 1. `mkdir -p .folio && touch .folio/architect-active` (marker set)
-2. `architecture/spec/e2e-probe.html` を Write。content は object 形式 JSON-LD
+2. `design-intent/spec/e2e-probe.html` を Write。content は object 形式 JSON-LD
    (`@context` object + `@id` + `@type`) + `<meta name="folio-doc-type" content="spec">` 付き。
 
 **期待観察**:
@@ -61,7 +61,7 @@ set: `mkdir -p .folio && touch .folio/architect-active` / unset: `rm -f .folio/a
 - readme-index notify が出る (specs/README.html に e2e-probe.html 未掲載のため、PostToolUse exit 2)。
 - jsonld-lint は通知**しない** (object 形式で valid)。
 
-**後始末**: `rm -f .folio/architect-active` → `rm -f architecture/spec/e2e-probe.html`
+**後始末**: `rm -f .folio/architect-active` → `rm -f design-intent/spec/e2e-probe.html`
 
 ---
 
@@ -69,13 +69,13 @@ set: `mkdir -p .folio && touch .folio/architect-active` / unset: `rm -f .folio/a
 
 ### B1: marker 無しで spec 編集 → deny
 
-**操作**: marker UNSET (`rm -f .folio/architect-active`) の状態で `architecture/spec/e2e-b1.html` を Write。
+**操作**: marker UNSET (`rm -f .folio/architect-active`) の状態で `design-intent/spec/e2e-b1.html` を Write。
 
 **期待観察**: file **不在** (caller-marker が PreToolUse deny)。← live hook の決定的確認点。
 
 ### B2: spec_path 外で spec を作成 → deny
 
-**操作**: marker SET で `architecture/random-e2e/e2e-b2.html` を Write。
+**操作**: marker SET で `design-intent/random-e2e/e2e-b2.html` を Write。
 content に `<meta name="folio-doc-type" content="spec">` 付き (spec_path 外)。
 
 **期待観察**: file **不在** (caller-marker は spec_path 外なので非 gate=通過、path-boundary が
@@ -83,7 +83,7 @@ spec content + spec_path 外を検出して PreToolUse deny)。
 
 ### B3: string 形式 @context で spec 作成 → notify
 
-**操作**: marker SET で `architecture/spec/e2e-b3.html` を Write。
+**操作**: marker SET で `design-intent/spec/e2e-b3.html` を Write。
 content の JSON-LD `@context` を string 形式 (`"@context": "https://schema.org/"`) にする。
 
 **期待観察**: file **作成される** + jsonld-lint notify (PostToolUse exit 2、@context must be object)。
@@ -91,14 +91,14 @@ readme-index notify も併発する (未掲載のため) — 主 assertion は j
 
 ### B4: valid だが README 未掲載で spec 作成 → notify
 
-**操作**: marker SET で `architecture/spec/e2e-b4.html` を Write。
+**操作**: marker SET で `design-intent/spec/e2e-b4.html` を Write。
 content は valid な object JSON-LD だが specs/README.html に未掲載。
 
 **期待観察**: file **作成される** + readme-index notify (PostToolUse exit 2)。
 jsonld-lint は通知しない (valid object)。
 
-**S-B 後始末**: `rm -f .folio/architect-active architecture/spec/e2e-b3.html architecture/spec/e2e-b4.html`
-+ `rm -rf architecture/random-e2e/`
+**S-B 後始末**: `rm -f .folio/architect-active design-intent/spec/e2e-b3.html design-intent/spec/e2e-b4.html`
++ `rm -rf design-intent/random-e2e/`
 
 ---
 
@@ -107,7 +107,7 @@ jsonld-lint は通知しない (valid object)。
 **目的**: spec_path 外 / 非 spec は gate されない、を実証する (過剰 deny がない)。
 
 **操作** (marker UNSET):
-1. C1: `architecture/random-e2e/e2e-c1.html` を Write (plain HTML、folio-doc-type=spec **無し**)。
+1. C1: `design-intent/random-e2e/e2e-c1.html` を Write (plain HTML、folio-doc-type=spec **無し**)。
 2. C2: `README.md` (markdown、spec_path 外) を Edit。
 
 **期待観察**:
@@ -116,7 +116,7 @@ jsonld-lint は通知しない (valid object)。
 - C2: Edit **allow** (caller-marker は spec_path 外なので非 gate。markdown は path-boundary/
   jsonld/readme の matcher=.html 対象外)。
 
-**後始末**: `rm -rf architecture/random-e2e/` + `git checkout -- README.md`
+**後始末**: `rm -rf design-intent/random-e2e/` + `git checkout -- README.md`
 
 ---
 
@@ -143,7 +143,7 @@ jsonld-lint は通知しない (valid object)。
 **観察**:
 - set→edit→unset フローの成立は **S-A で実証される** (set 後に spec が書け、unset 後は…)。
 - E1 (unset 復帰確認): S-A/S-B の marker SET 群の後、`rm -f .folio/architect-active` してから
-  `architecture/spec/e2e-e.html` を Write → file **不在** (deny 復帰)。marker 残留による fail-open が
+  `design-intent/spec/e2e-e.html` を Write → file **不在** (deny 復帰)。marker 残留による fail-open が
   ないことを実証する (SKILL Step 3「unset を怠ると fail-open」の裏取り)。
 - SKILL 経由の正規 UX (user が `/folio-architect` で起動 → marker 自動 set/unset) は
   `disable-model-invocation: true` のため agent からは起動できない。これは user が手動で
@@ -223,11 +223,11 @@ PreCompact hook は stdout 非注入のため ADR-0007 amend (2026-05-25) で除
 **操作** (すべて bash):
 1. `TMP=$(mktemp -d)` で temp consumer project root を作る。
 2. `bash .claude-plugin/bin/folio init "$TMP"` → exit code + scaffold tree を観察。
-3. `bash .claude-plugin/bin/folio validate --root "$TMP/architecture"` → exit code + 15-gate 結果を観察。
+3. `bash .claude-plugin/bin/folio validate --root "$TMP/design-intent"` → exit code + 15-gate 結果を観察。
 
 **期待観察** (ADR-0031 lazy init + ADR-0035 nav 後):
-- init **exit 0** + `folio.config.yaml` + `architecture/spec/README.html` +
-  `architecture/{decisions,research}/README.html` + `architecture/index.html` (計 **5 file**: 構造 4 + folio build 内蔵で生成する nav 入口 index.html、 ADR-0035) を create + 「existing files preserved」message。
+- init **exit 0** + `folio.config.yaml` + `design-intent/spec/README.html` +
+  `design-intent/{decisions,research}/README.html` + `design-intent/index.html` (計 **5 file**: 構造 4 + folio build 内蔵で生成する nav 入口 index.html、 ADR-0035) を create + 「existing files preserved」message。
   constitution / overview は **seed されない** (実体は folio-architect の greenfield onboarding grilling が
   引き出した時に Phase E で lazy-materialize。空 placeholder を残さない)。spec/README は実在 file のみ `dc:hasPart` 宣言 (生成直後は part 0)。
 - validate **exit 0 clean** (files checked: **3** = 3 cluster README、relations 0、15-gate すべて OK = nav 3 gate [nav-regen-drift / nav-dead-link / cluster-reachability] も fresh consumer で graceful: init が index.html を build 済ゆえ drift/dead-link/到達性すべて成立)。
@@ -248,14 +248,14 @@ temp project 上で edit→validate→fix→build→validate を **chain** す�
 bash で代替再現)。spec 作成・mutation は **bash で行う** (Edit/Write tool だと path-boundary hook が
 `folio-doc-type=spec` を gate しうる。hook は bash を対象としない = 正規の fixture 経路)。
 
-**操作** (すべて bash、S-H の `$TMP/architecture/spec/` 上):
+**操作** (すべて bash、S-H の `$TMP/design-intent/spec/` 上):
 1. bash heredoc で最小 spec 2 本を `spec/` に作成: `alpha.html` (object JSON-LD、forward `dc:references → ./beta.html`、
    reverse は付けない) + `beta.html` (object JSON-LD、relation 無し)。validate は root 配下全 .html を scan するため
    README hasPart 登録は broken-reverse 検証に不要 (throwaway probe spec)。 ★各 spec は **`folio-doc-type=spec` + `folio-version` + `folio-status` (例 `draft`) の meta を必ず付ける** — `folio-status` が**空/無の spec は folio build の status グルーピングが index から黙って除外**するため、 status を欠くと spec を追加しても index.html が drift せず **nav-regen-drift が発火しない** (= broken-reverse 1 件だけになり、 (2) の「2 violations」を再現できない)。 ★JSON-LD は**複数行整形** (各 key を改行、行頭 `"@type":`) で作る — fix の reverse 挿入 anchor は単一行 JSON-LD では不在で fail-closed (#89)。
-2. `folio validate --root "$TMP/architecture"` → RED (nav-regen-drift + broken-reverse、 spec 追加で index.html も graph から drift)。
-3. `folio fix --root "$TMP/architecture"` → reverse materialize (broken-reverse 解消、 nav-regen-drift は残る)。
+2. `folio validate --root "$TMP/design-intent"` → RED (nav-regen-drift + broken-reverse、 spec 追加で index.html も graph から drift)。
+3. `folio fix --root "$TMP/design-intent"` → reverse materialize (broken-reverse 解消、 nav-regen-drift は残る)。
 4. `folio validate` 再走 → nav-regen-drift だけ残り依然 exit 1。
-5. `folio build --root "$TMP/architecture"` → nav index 再生成。
+5. `folio build --root "$TMP/design-intent"` → nav index 再生成。
 6. `folio validate` 再走 → clean (exit 0)。
 7. `folio fix` 再走 → 冪等 no-op。
 
@@ -263,7 +263,7 @@ bash で代替再現)。spec 作成・mutation は **bash で行う** (Edit/Writ
 - (2) validate **exit 1** + violations (2): `[FAIL] nav-regen-drift` (`index.html [nav-regen-drift] 生成 index.html が graph から drift (folio build で再生成 ...)`) + `[FAIL] broken-reverse` (`spec/alpha.html [broken-reverse] dc:references -> spec/beta.html (target missing reverse dc:isReferencedBy ...)`)。
 - (3) fix **exit 0** + `+1 reverse @id spec/beta.html` + beta.html に `dc:isReferencedBy → ./alpha.html` materialize (broken-reverse のみ解消)。
 - (4) validate **exit 1** + violations (1): `[FAIL] nav-regen-drift` のみ (★fix は graph 担当で nav index を再生成しない)。
-- (5) build **exit 0** + `folio build: wrote architecture/index.html`。
+- (5) build **exit 0** + `folio build: wrote design-intent/index.html`。
 - (6) validate **exit 0 clean** (15-gate OK、relations checked に reverse +1)。
 - (7) fix **exit 0** + 「already complete: graph is bidirectional + opt-in xref/glossary materialized + glossary tooltips populated (0 changes)」、再 validate exit 0 (冪等性)。
 
@@ -338,7 +338,7 @@ deterministic floor。semantic ceiling = 本 S-K)。
 - [ ] (X4-D) S-G を **plugin reload 後の fresh session** で walk し `baselines/reference/observations-architect.json` を埋めた
 - [ ] (X4-E) S-H〜S-J を **本 session で walk** (bash-CLI = session 非依存) し `baselines/reference/observations-cli.json` を埋めた
 - [ ] (Slice 1) S-K を **plugin reload 後の fresh session** で walk し `baselines/reference/observations-onboarding.json` を埋めた (非 hollow constitution = criterion H、ADR-0031)
-- [ ] probe file を全削除した (`architecture/spec/e2e-*.html` / `architecture/random-e2e/` / `architecture/spec/e2e-x4d-seed.html`、README.md 復元)
+- [ ] probe file を全削除した (`design-intent/spec/e2e-*.html` / `design-intent/random-e2e/` / `design-intent/spec/e2e-x4d-seed.html`、README.md 復元)
 - [ ] temp consumer project を全削除した (`rm -rf /tmp/folio-e2e-consumer-*`、S-H/S-I/S-K)
 - [ ] marker file を unset した (`rm -f .folio/architect-active`)
 - [ ] sandbox 全 GREEN を維持した (現 32 scenario file / 64 assertion PASS、0 fail、marker cleanup 後に runner 実行)

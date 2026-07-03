@@ -12,7 +12,7 @@
 #     必ず (新規 amended_by → 実在 ADR の照会) + (版 bump) を強制する = silent change を機械的に不可能化
 #     (constitution = optional-but-special・B0 決定③ guarantee=CI / 決定④ P-10 一般化=改訂は ADR 経由で照会記録)。
 #
-# ★忠実抽出: 14 原則 (id/heading/statement/tier/amended_by) は frozen architecture/spec/constitution.html
+# ★忠実抽出: 14 原則 (id/heading/statement/tier/amended_by) は frozen design-intent/spec/constitution.html
 #   (§2.1 Always / §2.2 Ask-first / §2.3 Never) から *read-only で* 抽出した。 frozen constitution.html は
 #   絶対に編集しない (P-10)。 本 pack の生成物は別ファイルで、 「engine が folio 原則を再現できる」を読み比べで実証する。
 #
@@ -46,7 +46,7 @@ approval:
 
 # ★amended_by の照会先 ADR 実在確認に使う decisions dir (contract dir 起点の相対パス)。
 #   baseline-diff gate が「新規 amended_by → 実在 ADR」を確かめる際に decisions_dir/ADR-xxxx-*.html を glob する。
-decisions_dir: ../../../../architecture/decisions
+decisions_dir: ../../../../design-intent/decisions
 
 # ===== 14 不変原則 (表示順 = tier 順: Always → Ask-first → Never) =====
 # id / heading (見出し) / statement (宣言文・frozen constitution.html の <dd> 本文を忠実転記) / tier / amended_by。

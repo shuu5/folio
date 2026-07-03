@@ -20,9 +20,9 @@
   "dc:title": "folio e2e integration test cluster index",
   "folio:version": "0.1.0-draft",
   "dc:references": [
-    { "@id": "../../architecture/spec/verification.html" },
+    { "@id": "../../design-intent/spec/verification.html" },
     { "@id": "../README.html" },
-    { "@id": "../../architecture/decisions/ADR-0013-verification-framework.html" }
+    { "@id": "../../design-intent/decisions/ADR-0013-verification-framework.html" }
   ]
 }
 </script>
@@ -35,7 +35,7 @@
 </header>
 
 <aside class="informative">
-<p>本 cluster は folio plugin を<strong>ひとまとまりの道具</strong>として実シナリオで使い、 想定通り動くかを観察する <a href="../../architecture/spec/verification.html#s4-1-3step">verification.html §4.1 Step 2 (worktree integration)</a> の試作実装。 <a href="../README.html">sandbox 単体テスト (../scenarios/ + runner.sh)</a> が hook script を mock payload で個別検証するのに対し、 本 e2e は <strong>live load 済 plugin の 4 hook + marker + SKILL を実際の Edit/Write tool 操作で発火させ</strong>、 道具としての統合挙動を end-to-end で検証する。</p>
+<p>本 cluster は folio plugin を<strong>ひとまとまりの道具</strong>として実シナリオで使い、 想定通り動くかを観察する <a href="../../design-intent/spec/verification.html#s4-1-3step">verification.html §4.1 Step 2 (worktree integration)</a> の試作実装。 <a href="../README.html">sandbox 単体テスト (../scenarios/ + runner.sh)</a> が hook script を mock payload で個別検証するのに対し、 本 e2e は <strong>live load 済 plugin の 4 hook + marker + SKILL を実際の Edit/Write tool 操作で発火させ</strong>、 道具としての統合挙動を end-to-end で検証する。</p>
 </aside>
 
 <section id="s1-purpose" class="informative">
@@ -50,7 +50,7 @@
     <tr><td>前提</td><td>yq + jq</td><td>folio plugin が load 済 session (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)</td></tr>
   </tbody>
 </table>
-<p>一次 assertion を「file 作成有無」とする理由: PreToolUse の deny は transcript に確実には現れない (<a href="../../architecture/research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a> / Issue #39344 等)。 一方 file system 上の作成/不在は決定的に観察できる。 PreToolUse deny → file 不在、 PostToolUse notify → file 存在 + 通知、 という対応で hook の発火を間接的かつ確実に判定する。</p>
+<p>一次 assertion を「file 作成有無」とする理由: PreToolUse の deny は transcript に確実には現れない (<a href="../../design-intent/research/plugin-sandbox-verification-research.html#s2-6-deny-bug">research §2.6</a> / Issue #39344 等)。 一方 file system 上の作成/不在は決定的に観察できる。 PreToolUse deny → file 不在、 PostToolUse notify → file 存在 + 通知、 という対応で hook の発火を間接的かつ確実に判定する。</p>
 </section>
 
 <section id="s2-inventory" class="informative">
@@ -90,7 +90,7 @@
 <h2>§4. 実行前提</h2>
 <ul>
   <li>folio plugin が load 済の Claude Code session であること (<code>~/.claude/plugins/folio</code> symlink + cld auto discovery)。 未 load の session では hook が発火せず e2e は無意味。</li>
-  <li>worktree 内で実行し、 probe file (<code>architecture/spec/e2e-*.html</code> / <code>architecture/random-e2e/</code> 等) は walk 後に全削除すること (working tree を汚さない)。</li>
+  <li>worktree 内で実行し、 probe file (<code>design-intent/spec/e2e-*.html</code> / <code>design-intent/random-e2e/</code> 等) は walk 後に全削除すること (working tree を汚さない)。</li>
   <li>marker file <code>.folio/architect-active</code> は <code>.gitignore</code> 済。 walk 完了後は必ず <code>rm -f</code> すること (残留すると sandbox の caller-marker unset→deny scenario が壊れ、 fail-open リスクも残る)。</li>
   <li>sandbox 単体テスト (<code>../scenarios/*.yaml</code>) の全 GREEN (現 32 scenario file / 64 assertion PASS、 0 fail) を walk 前後で維持すること。</li>
 </ul>
@@ -99,10 +99,10 @@
 <section id="s5-references" class="informative">
 <h2>§5. References</h2>
 <ul>
-  <li><a href="../../architecture/spec/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-009</a> — e2e integration test の規範 REQ</li>
-  <li><a href="../../architecture/spec/verification.html#s4-1-3step">verification.html §4.1 Step 2</a> — agent-driven runbook 方式</li>
+  <li><a href="../../design-intent/spec/verification.html#s3-6-verification-specific">verification.html §3.6 REQ-VER-009</a> — e2e integration test の規範 REQ</li>
+  <li><a href="../../design-intent/spec/verification.html#s4-1-3step">verification.html §4.1 Step 2</a> — agent-driven runbook 方式</li>
   <li><a href="../README.html">../README.html</a> — verification cluster index (sandbox 単体テスト)</li>
-  <li><a href="../../architecture/decisions/ADR-0013-verification-framework.html">ADR-0013</a> — verification framework 採用決定</li>
+  <li><a href="../../design-intent/decisions/ADR-0013-verification-framework.html">ADR-0013</a> — verification framework 採用決定</li>
   <li><a href="runbook.md">runbook.md</a> — 5 シナリオ手順書</li>
 </ul>
 </section>

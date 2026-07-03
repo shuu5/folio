@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # assemble-glossary.sh — folio glossary-pack (instance #1, folio self-host) deterministic assembler
 # doc_type: glossary (canonical vocabulary)。 機械 SSoT = contract/folio-glossary.glossary.yaml
-# (architecture/vocabulary.yaml + architecture/glossary.html 由来、 read-only source)。
+# (design-intent/vocabulary.yaml + design-intent/glossary.html 由来、 read-only source)。
 #
 # 設計:
 #   - 全 visible token は contract YAML 由来 (fabrication-free)。 plain 定義のみ prose スロットで後注入。

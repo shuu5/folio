@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # folio engine tr0 (folio-hd0) — bootstrap extractor: relations.html → folio-relations.spec.yaml (one-shot)
 #
-# architecture/spec/relations.html を *read-only* で走査し、 spec-pack contract (folio-relations.spec.yaml) の
+# design-intent/spec/relations.html を *read-only* で走査し、 spec-pack contract (folio-relations.spec.yaml) の
 # DRAFT を起こす one-shot スクリプト。 ★出力は人間 (= 次サイクル admin) レビュー前提 (機械抽出の下書き)。
 # ★spec-pack fork (scripts/extract-rules-spec.sh から fork・共有 core 無改変)。 relations の section/meta/graph へ差し替えただけ。
 #
@@ -20,12 +20,12 @@
 #   警告を出して fail-loud にする。 人間層プレゼン (essence + subhead + 表 + 図 + 要件) は従来どおり構造化 field へ抽出する。
 #
 # usage: extract-relations-spec.sh [<relations.html>] > <draft contract.yaml>   (LOG は stderr)
-#        既定 <relations.html> = <repo-root>/architecture/spec/relations.html
+#        既定 <relations.html> = <repo-root>/design-intent/spec/relations.html
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-RELATIONS="${1:-$REPO_ROOT/architecture/spec/relations.html}"
+RELATIONS="${1:-$REPO_ROOT/design-intent/spec/relations.html}"
 [[ -f "$RELATIONS" ]] || { echo "extract-relations-spec: relations.html not found: $RELATIONS" >&2; exit 1; }
 command -v perl >/dev/null || { echo "extract-relations-spec: perl required" >&2; exit 1; }
 
@@ -327,7 +327,7 @@ my ($preamble_blocks, $pre_exp) = extract_machine_blocks($preamble_region);
 
 # ===== YAML 出力 =====
 print "# folio engine tr0 (folio-hd0) — spec-pack contract (relations dual-audience self-host・spec-pack fork)\n";
-print "# ★機械抽出 DRAFT (scripts/extract-relations-spec.sh が architecture/spec/relations.html から起こした)。 人間レビュー前提。\n";
+print "# ★機械抽出 DRAFT (scripts/extract-relations-spec.sh が design-intent/spec/relations.html から起こした)。 人間レビュー前提。\n";
 print "# doc_type = spec (spec 間の関係性表現規約)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。\n";
 print "# ★抽出範囲 = relations.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。\n";
 print "#   機械層 = data-audience=\"machine\" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture。\n";

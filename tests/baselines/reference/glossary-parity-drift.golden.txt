@@ -14,7 +14,7 @@ files checked: 0 · relations checked: 0
   [OK] glossary
   [FAIL] nav-regen-drift
   [OK] nav-dead-link
-  [SKIP] cluster-reachability (architecture cluster dir 無し)
+  [SKIP] cluster-reachability (design-intent cluster dir 無し)
   [OK] ears-coverage
   [OK] render-safety
   [OK] readability-floor

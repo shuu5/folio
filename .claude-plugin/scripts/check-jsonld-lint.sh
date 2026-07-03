@@ -58,7 +58,7 @@ if ! reason=$(folio_jsonld_structural_check "$ldjson"); then
   folio_deny \
     "folio JSON-LD lint: ${reason}" \
     "  file: ${file_path}" \
-    "  reference: architecture/spec/relations.html §3.2 (required @context/@id/@type, @context object)"
+    "  reference: design-intent/spec/relations.html §3.2 (required @context/@id/@type, @context object)"
 fi
 
 exit 0

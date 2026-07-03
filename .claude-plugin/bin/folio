@@ -4,9 +4,9 @@
 # 実装済 subcommand: version / help / init / inventory / prime / validate / fix / build
 #
 # inventory subcommand (REQ-VER-010):
-#   relations.html §4.4.1 の scan 対象 (architecture/spec/ + architecture/decisions/ +
-#   architecture/research/ の <head> JSON-LD を持つ .html) を走査し、 §4.1 schema 準拠の
-#   inventory.json を生成する (走査 base = architecture/、 出力先 = repo-root を decouple)。
+#   relations.html §4.4.1 の scan 対象 (design-intent/spec/ + design-intent/decisions/ +
+#   design-intent/research/ の <head> JSON-LD を持つ .html) を走査し、 §4.1 schema 準拠の
+#   inventory.json を生成する (走査 base = design-intent/、 出力先 = repo-root を decouple)。
 #   constitution.html は spec graph の対象外 (不変 framework anchor、 FolioConstitution schema =
 #   spec の @context-object+@id 規約と別形) のため scan から除外する (X4-C / ADR-0023)。
 #   cwd = repo root 前提 (REQ-VER-011 「at repo root」)。
@@ -57,7 +57,7 @@ folio_extract_summary() {
   printf '%s' "$seg" | sed -e 's/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g; s/&quot;/"/g; s/&#39;/'"'"'/g; s/&middot;/·/g'
 }
 
-# 相対 @id ($1) を、 その spec が属する subdir ($2) 起点で解決し architecture ($3) 相対へ
+# 相対 @id ($1) を、 その spec が属する subdir ($2) 起点で解決し design-intent ($3) 相対へ
 # 正規化して返す。 #anchor は保持。 例 (subdir=spec):
 #   ./rules.html#s4-format        -> spec/rules.html#s4-format
 #   ./constitution.html           -> spec/constitution.html
@@ -78,7 +78,7 @@ folio_resolve_relpath() {
 # JSON-LD block ($1) から relation を集約した object を返す (§4.1 specs[].relations)。
 # relation = 値が [{ "@id": ... }, ...] 形式の dc:* / folio:* 等のプロパティ
 # (dc:title=string / folio:version=string / folio:stakeholders=[string] は形が違うので自動除外)。
-# 各 @id は subdir ($2) 起点で architecture ($3) 相対へ正規化。 無ければ "{}"。
+# 各 @id は subdir ($2) 起点で design-intent ($3) 相対へ正規化。 無ければ "{}"。
 folio_build_relations() {
   local block="$1" subdir="$2" arch_abs="$3" pairs lines k rawid res
   pairs=$(printf '%s' "$block" | jq -r '
@@ -102,7 +102,7 @@ folio_build_relations() {
 }
 
 # 1 spec file ($1) から inventory entry (compact JSON) を stdout に返す。
-# JSON-LD block が無い / parse 不能なら return 1 (caller が skip)。 $2 = architecture 絶対 path。
+# JSON-LD block が無い / parse 不能なら return 1 (caller が skip)。 $2 = design-intent 絶対 path。
 folio_build_entry() {
   local f="$1" arch_abs="$2" rel subdir block doctype status version title summary stakeholders relations
 
@@ -163,8 +163,8 @@ folio_build_entry() {
 folio_cmd_inventory() {
   command -v jq >/dev/null 2>&1 || { echo "folio inventory: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  # --- arg parse: --root <dir> (default architecture、 validate/fix と対称、 #92) ---
-  local root="architecture"
+  # --- arg parse: --root <dir> (default design-intent、 validate/fix と対称、 #92) ---
+  local root="design-intent"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root) [[ $# -ge 2 ]] || { echo "folio inventory: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
@@ -180,7 +180,7 @@ folio_cmd_inventory() {
 
   local arch_abs
   arch_abs=$(realpath -m "$root")
-  [[ -d "$arch_abs" ]] || { echo "folio inventory: scan root not found: ${root} (--root で指定するか cwd/architecture を用意)" >&2; exit 1; }
+  [[ -d "$arch_abs" ]] || { echo "folio inventory: scan root not found: ${root} (--root で指定するか cwd/design-intent を用意)" >&2; exit 1; }
 
   local folio_version generated_at out_file
   folio_version=$(jq -r '.version // "unknown"' "$plugin_json")
@@ -318,8 +318,8 @@ folio_prime_emit_digest() {
 folio_cmd_prime() {
   command -v jq >/dev/null 2>&1 || { echo "folio prime: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  # --- arg parse: --root <dir> (default architecture、 validate/fix/inventory と対称) ---
-  local root="architecture"
+  # --- arg parse: --root <dir> (default design-intent、 validate/fix/inventory と対称) ---
+  local root="design-intent"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root) [[ $# -ge 2 ]] || { echo "folio prime: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
@@ -335,7 +335,7 @@ folio_cmd_prime() {
 
   local arch_abs
   arch_abs=$(realpath -m "$root")
-  [[ -d "$arch_abs" ]] || { echo "folio prime: scan root not found: ${root} (--root で指定するか cwd/architecture を用意)" >&2; exit 1; }
+  [[ -d "$arch_abs" ]] || { echo "folio prime: scan root not found: ${root} (--root で指定するか cwd/design-intent を用意)" >&2; exit 1; }
 
   local inv="$(dirname "$arch_abs")/inventory.json"
 
@@ -532,13 +532,13 @@ folio_materialize_reverse() {
 
 # folio fix: spec graph を走査し forward A→B (6 dual pair、 B が scan 対象) の reverse B→A を
 # target B の <head> JSON-LD に materialize する (REQ-REL-002、 ADR-0025 §2.1)。 idempotent。
-# default root = architecture、 --root <dir> で test isolation (validate と対称)。
+# default root = design-intent、 --root <dir> で test isolation (validate と対称)。
 # exit 0 = success (materialize 実行 or 既に完備) / 2 = tool error (fail-closed)。
 folio_cmd_fix() {
   command -v jq >/dev/null 2>&1 || { echo "folio fix: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
   command -v realpath >/dev/null 2>&1 || { echo "folio fix: realpath not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  local root="architecture"
+  local root="design-intent"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root) [[ $# -ge 2 ]] || { echo "folio fix: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
@@ -767,7 +767,7 @@ folio_prose_only() {
 
 # ============================================================================
 # HOW-outside content gate (gate (r)、 floor-2 = violation/block 〔ADR-0047〕 / floor-1 = warn 据置)
-#   engine 設計 §10 論点⑤⑦ (architecture/research/document-discipline-engine-design.html) の
+#   engine 設計 §10 論点⑤⑦ (design-intent/research/document-discipline-engine-design.html) の
 #   B5-II 実装。 design-intent (WHAT/WHY) と実装・検証 (HOW) を content として分離する規律 (P-3 /
 #   P-11 / P-13) を spec_path scope で機械検査する 2 段 floor。 floor-2 (P-11 4-enum 構文検出) は
 #   violation channel (exit 1・merge block) — staged rollout (soft-warn 実測 → 新 ADR で hard 化) は
@@ -1504,7 +1504,7 @@ folio_xref_tooltip_resync_doc() {
 folio_glossary_vocab_path() {
   local root_abs="$1" cand
   local cands=("${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml")
-  [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] && cands+=("${CLAUDE_PLUGIN_ROOT}/architecture/vocabulary.yaml")
+  [[ -n "${CLAUDE_PLUGIN_ROOT:-}" ]] && cands+=("${CLAUDE_PLUGIN_ROOT}/design-intent/vocabulary.yaml")
   for cand in "${cands[@]}"; do
     [[ -f "$cand" ]] && { printf '%s' "$cand"; return 0; }
   done
@@ -1779,7 +1779,7 @@ folio_xref_build_objectgraph() {
 #       (parse + @context/@id/@type + @context==object、 REQ-CI-016、 ADR-0004 Option B Light)
 #   (c) broken-reverse — forward (§5.1 の 6 dual pair) A→B で B が scan 対象なのに reverse B→A
 #       が欠ける場合 violation (REQ-REL-004、 fix = folio_cmd_fix と detect↔remediate 対)
-# default root = architecture、 --root <dir> で検査 root を override する (test isolation、 §2.3 MUST)。
+# default root = design-intent、 --root <dir> で検査 root を override する (test isolation、 §2.3 MUST)。
 # external URL check と prose gate は試作 scope 外 (§2.2、 Phase X4+)。
 # exit 0=clean / 1=violation 検出 / 2=tool error (jq 不在・root 不在等、 fail-closed)。
 folio_cmd_validate() {
@@ -1790,8 +1790,8 @@ folio_cmd_validate() {
 
   command -v jq >/dev/null 2>&1 || { echo "folio validate: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  # --- arg parse: --root <dir> (default architecture) ---
-  local root="architecture"
+  # --- arg parse: --root <dir> (default design-intent) ---
+  local root="design-intent"
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root)
@@ -2146,7 +2146,7 @@ folio_cmd_validate() {
   #     (consumer は folio init 後 build 前でも dead-end を warn で気付ける = ADR §1 が中心に据える consumer defect。
   #     index marker に nest すると consumer の post-init/pre-build window で未検査になる、 ceiling 指摘)。 regen-drift
   #     には *内包されない* (regen-drift は index を byte-diff するだけで README dead-end / empty-cluster を見ない)。
-  #     architecture cluster dir が 1 つでも在れば走る。 self-root (spec/ に @type FolioConstitution) = block /
+  #     design-intent cluster dir が 1 つでも在れば走る。 self-root (spec/ に @type FolioConstitution) = block /
   #     consumer = warn (ADR §2.5)。 ---
   if [[ -d "${root_abs}/spec" || -d "${root_abs}/decisions" || -d "${root_abs}/research" ]]; then
     nav_reach_seen=1
@@ -2204,7 +2204,7 @@ folio_cmd_validate() {
   elif [[ "$nav_drift_fail" -eq 1 ]]; then printf '  [FAIL] nav-regen-drift\n'; else printf '  [OK] nav-regen-drift\n'; fi
   if [[ "$nav_seen" -eq 0 ]]; then printf '  [SKIP] nav-dead-link (生成 index 無し)\n'
   elif [[ "$nav_deadlink_fail" -eq 1 ]]; then printf '  [FAIL] nav-dead-link\n'; else printf '  [OK] nav-dead-link\n'; fi
-  if [[ "$nav_reach_seen" -eq 0 ]]; then printf '  [SKIP] cluster-reachability (architecture cluster dir 無し)\n'
+  if [[ "$nav_reach_seen" -eq 0 ]]; then printf '  [SKIP] cluster-reachability (design-intent cluster dir 無し)\n'
   elif [[ "$nav_reach_fail" -eq 1 ]]; then printf '  [FAIL] cluster-reachability\n'
   elif [[ "$nav_reach_warn" -eq 1 ]]; then printf '  [WARN] cluster-reachability\n'; else printf '  [OK] cluster-reachability\n'; fi
   if [[ "$ears_warn" -eq 1 ]]; then printf '  [WARN] ears-coverage\n'; else printf '  [OK] ears-coverage\n'; fi
@@ -2239,7 +2239,7 @@ folio_cmd_validate() {
 
 # ============================================================================
 # init helpers — consumer canonical layout を scaffold (REQ-VER-014、 ADR-0024)
-#   生成物 = 純粋な構造のみ (ADR-0031 が ADR-0024 §2.1 seed を revise): architecture/{spec,
+#   生成物 = 純粋な構造のみ (ADR-0031 が ADR-0024 §2.1 seed を revise): design-intent/{spec,
 #   decisions,research} の cluster README (P-6 entry point) + folio.config.yaml (§2.5 defaults)。
 #   spec/{constitution,overview}.html の本文 (実体) は seed しない — folio-architect の greenfield
 #   onboarding grilling が中身を引き出した時のみ lazy-materialize する (folio-self-spec §7.1、 ADR-0031)。
@@ -2274,7 +2274,7 @@ folio_cmd_init() {
 
   local target arch
   target=$(realpath -m "${1:-.}")
-  arch="${target}/architecture"
+  arch="${target}/design-intent"
 
   mkdir -p "$target" || { echo "folio init: cannot create target directory: ${target} (fail-closed)" >&2; exit 2; }
   echo "folio init: scaffolding consumer canonical layout at ${target}"
@@ -2284,13 +2284,13 @@ folio_cmd_init() {
   # --- folio.config.yaml (§2.5 defaults、 P-2 YAML 例外) ---
   folio_init_write "${target}/folio.config.yaml" "$target" <<'YAML' || rc=1
 folio_version: "^1.0"
-spec_path: "architecture/spec/"
+spec_path: "design-intent/spec/"
 caller_marker_env: "FOLIO_ARCHITECT_CONTEXT"
 caller_marker_value: "folio-architect"
 review_model: "opus"
 YAML
 
-  # --- architecture/spec/ (design-intent WHAT cluster、 P-7) ---
+  # --- design-intent/spec/ (design-intent WHAT cluster、 P-7) ---
   folio_init_write "${arch}/spec/README.html" "$target" <<'HTML' || rc=1
 <!DOCTYPE html>
 <html lang="ja">
@@ -2302,7 +2302,7 @@ YAML
 <meta name="folio-version" content="0.1.0-draft">
 <meta name="folio-status" content="active">
 <meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>architecture/spec/ — spec index</title>
+<title>design-intent/spec/ — spec index</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
@@ -2321,18 +2321,18 @@ YAML
 <body>
 
 <header class="doc-header">
-  <h1>architecture/spec/ — spec index</h1>
+  <h1>design-intent/spec/ — spec index</h1>
   <div class="meta">v0.1.0-draft &middot; status: active &middot; project design-intent (WHAT) cluster の entry point</div>
 </header>
 
 
 <aside class="informative">
-<p>本 dir (<code>architecture/spec/</code>) はこの project の <strong>design-intent spec</strong> (構造・不変条件・WHAT) を集約する cluster です。 spec file は <a href="https://folio.dev/">folio</a> framework の rules に従い HTML + JSON-LD で記述します。 共通 stylesheet (<code>common.css</code>) は project root に任意で配置してください。</p>
+<p>本 dir (<code>design-intent/spec/</code>) はこの project の <strong>design-intent spec</strong> (構造・不変条件・WHAT) を集約する cluster です。 spec file は <a href="https://folio.dev/">folio</a> framework の rules に従い HTML + JSON-LD で記述します。 共通 stylesheet (<code>common.css</code>) は project root に任意で配置してください。</p>
 </aside>
 
 <section id="s1-purpose" class="informative">
 <h2>§1. Purpose</h2>
-<p>本 README は <strong>spec/ cluster の index</strong> (entry point) です。 cluster 内の spec を一望し、 reader (人間 / AI agent) のナビゲーションを支えます。 主な人間読者は<strong>仕様・要件を参照する導入済みの開発者</strong>です — project 全体の俯瞰や他 cluster への入口は <code>architecture/index.html</code> (landing) が担います。</p>
+<p>本 README は <strong>spec/ cluster の index</strong> (entry point) です。 cluster 内の spec を一望し、 reader (人間 / AI agent) のナビゲーションを支えます。 主な人間読者は<strong>仕様・要件を参照する導入済みの開発者</strong>です — project 全体の俯瞰や他 cluster への入口は <code>design-intent/index.html</code> (landing) が担います。</p>
 </section>
 
 <section id="s2-contents" class="informative">
@@ -2345,7 +2345,7 @@ YAML
 </html>
 HTML
 
-  # --- architecture/decisions/ (decision WHY cluster、 P-7) ---
+  # --- design-intent/decisions/ (decision WHY cluster、 P-7) ---
   folio_init_write "${arch}/decisions/README.html" "$target" <<'HTML' || rc=1
 <!DOCTYPE html>
 <html lang="ja">
@@ -2357,7 +2357,7 @@ HTML
 <meta name="folio-version" content="0.1.0-draft">
 <meta name="folio-status" content="active">
 <meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>architecture/decisions/ — ADR index</title>
+<title>design-intent/decisions/ — ADR index</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
@@ -2376,13 +2376,13 @@ HTML
 <body>
 
 <header class="doc-header">
-  <h1>architecture/decisions/ — Architecture Decision Records</h1>
+  <h1>design-intent/decisions/ — Architecture Decision Records</h1>
   <div class="meta">v0.1.0-draft &middot; status: active &middot; decision (WHY) cluster の entry point</div>
 </header>
 
 
 <aside class="informative">
-<p>本 dir (<code>architecture/decisions/</code>) はこの project の <strong>Architecture Decision Records (ADR)</strong> を保持する cluster です。 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置します。</p>
+<p>本 dir (<code>design-intent/decisions/</code>) はこの project の <strong>Architecture Decision Records (ADR)</strong> を保持する cluster です。 各 ADR は <code>ADR-NNNN-&lt;slug&gt;.html</code> の命名で配置します。</p>
 </aside>
 
 <section id="s1-purpose" class="informative">
@@ -2399,7 +2399,7 @@ HTML
 </html>
 HTML
 
-  # --- architecture/research/ (exploration cluster、 P-7) ---
+  # --- design-intent/research/ (exploration cluster、 P-7) ---
   folio_init_write "${arch}/research/README.html" "$target" <<'HTML' || rc=1
 <!DOCTYPE html>
 <html lang="ja">
@@ -2411,7 +2411,7 @@ HTML
 <meta name="folio-version" content="0.1.0-draft">
 <meta name="folio-status" content="active">
 <meta name="folio-stakeholders" content="Developer, AI Agent">
-<title>architecture/research/ — exploration index</title>
+<title>design-intent/research/ — exploration index</title>
 <link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
@@ -2430,13 +2430,13 @@ HTML
 <body>
 
 <header class="doc-header">
-  <h1>architecture/research/ — exploration</h1>
+  <h1>design-intent/research/ — exploration</h1>
   <div class="meta">v0.1.0-draft &middot; status: active &middot; exploration cluster の entry point</div>
 </header>
 
 
 <aside class="informative">
-<p>本 dir (<code>architecture/research/</code>) は spec に反映する前の <strong>探索・調査資料</strong>を集約する cluster です。 自由形式で memo / 調査結果 / 設計案を蓄積し、 確定した内容を spec/ や decisions/ に昇格させます。</p>
+<p>本 dir (<code>design-intent/research/</code>) は spec に反映する前の <strong>探索・調査資料</strong>を集約する cluster です。 自由形式で memo / 調査結果 / 設計案を蓄積し、 確定した内容を spec/ や decisions/ に昇格させます。</p>
 </aside>
 
 <section id="s1-purpose" class="informative">
@@ -2553,21 +2553,21 @@ folio_build_emit_index() {
 <meta name="folio-doc-type" content="nav-index">
 <meta name="folio-generated" content="folio-build">
 <meta name="folio-status" content="active">
-<title>architecture — index</title>
+<title>design-intent — index</title>
 <link rel="stylesheet" href="../common.css">
 <script type="application/ld+json">
 {
   "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
   "@id": "./index.html",
   "@type": "schema:CollectionPage",
-  "dc:title": "architecture index"
+  "dc:title": "design-intent index"
 }
 </script>
 </head>
 <body>
 
 <header class="doc-header">
-  <h1>architecture — index</h1>
+  <h1>design-intent — index</h1>
 </header>
 
 HEAD
@@ -2580,12 +2580,12 @@ HEAD
   # 単一 CTA (§2.2 (2)) は placeholder では意図的に省略する: build は consumer の repo README URL を
   # 知り得ず、 相対 ../README.md は Pages で raw .md 配信・存在も非保証のため、 安全な決定的 default 先が
   # 構築不能。 偽の行き先を置くのは §2.2 の「正直でない入口を作らない」方針に反する。 CTA は人間が
-  # curated region に author して 4 層を完成させる (folio-self の実例 = architecture/index.html)。 ---
+  # curated region に author して 4 層を完成させる (folio-self の実例 = design-intent/index.html)。 ---
   printf '<section class="landing-hero">\n<!-- folio:landing-hero -->\n'
   if [[ -n "$hero" ]]; then
     printf '%s\n' "$hero"
   else
-    printf '<p class="landing-tagline">この <code>architecture/</code> は本 project の design-intent 空間です (spec = WHAT / decisions = WHY / research = exploration)。 この hero 文言は <code>folio:landing-hero</code> region を編集して project の価値提案に書き換えられます。</p>\n'
+    printf '<p class="landing-tagline">この <code>design-intent/</code> は本 project の design-intent 空間です (spec = WHAT / decisions = WHY / research = exploration)。 この hero 文言は <code>folio:landing-hero</code> region を編集して project の価値提案に書き換えられます。</p>\n'
     printf '<nav class="reader-cards" aria-label="読者別の入口">\n'
     [[ -f "${root_abs}/spec/README.html" ]] && \
       printf '  <a class="reader-card" href="spec/README.html"><span class="reader-card__act">仕様・要件を調べる →</span><span class="reader-card__desc">spec — design intent (WHAT)</span></a>\n'
@@ -2766,7 +2766,7 @@ HEAD2
       "$(folio_build_attresc "$slug")" "$(folio_build_htesc "$canon")" "$(folio_build_htesc "$def")"
   done <<< "$rows"
 
-  printf '</dl>\n\n<p class="nav-back"><a href="./index.html">&larr; architecture index</a></p>\n</body>\n</html>\n'
+  printf '</dl>\n\n<p class="nav-back"><a href="./index.html">&larr; design-intent index</a></p>\n</body>\n</html>\n'
 }
 
 # folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
@@ -2779,7 +2779,7 @@ folio_cmd_build() {
   command -v jq >/dev/null 2>&1 || { echo "folio build: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
   command -v realpath >/dev/null 2>&1 || { echo "folio build: realpath not found (fail-closed)" >&2; exit 2; }
 
-  local root="architecture" check=0
+  local root="design-intent" check=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root) [[ $# -ge 2 ]] || { echo "folio build: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
@@ -3011,14 +3011,14 @@ folio_chrome_skip_target() {
 }
 
 # breadcrumb nav (+ base_url 設定時 BreadcrumbList JSON-LD) を emit。 $1=rel $2=base_url (空可)。
-# 階層は rel から決定: root 直下 = architecture > leaf、 cluster page = architecture > cluster > leaf、
-# cluster README = architecture > cluster (現在地)。 現在地は aria-current="page" で link なし。
+# 階層は rel から決定: root 直下 = design-intent > leaf、 cluster page = design-intent > cluster > leaf、
+# cluster README = design-intent > cluster (現在地)。 現在地は aria-current="page" で link なし。
 folio_chrome_breadcrumb() {
   local rel="$1" base="$2" rr leaf cl
   rr=$(folio_chrome_rootrel "$rel")
   leaf=$(folio_chrome_leaf_label "$rel")
   printf '<nav class="breadcrumb" aria-label="パンくず"><ol>\n'
-  printf '  <li><a href="%sindex.html">architecture</a></li>\n' "$rr"
+  printf '  <li><a href="%sindex.html">design-intent</a></li>\n' "$rr"
   if [[ "$rel" == */* ]]; then
     cl="${rel%%/*}"
     if [[ "${rel##*/}" == "README.html" ]]; then
@@ -3033,7 +3033,7 @@ folio_chrome_breadcrumb() {
   printf '</ol></nav>\n'
   if [[ -n "$base" ]]; then
     local items
-    items="{\"@type\":\"ListItem\",\"position\":1,\"name\":\"architecture\",\"item\":\"${base}/index.html\"}"
+    items="{\"@type\":\"ListItem\",\"position\":1,\"name\":\"design-intent\",\"item\":\"${base}/index.html\"}"
     if [[ "$rel" == */* ]]; then
       cl="${rel%%/*}"
       if [[ "${rel##*/}" == "README.html" ]]; then
@@ -3321,7 +3321,7 @@ folio_nav_is_self_root() {
   return 1
 }
 
-# README ($1) が自 cluster の外 (親 = architecture top-level / 他 cluster / home) へ向かう <a href> を
+# README ($1) が自 cluster の外 (親 = design-intent top-level / 他 cluster / home) へ向かう <a href> を
 # 1 本以上持つか (return 0=有 / 1=dead-end)。 相対 href が '../' で始まる = cluster dir を出る、 で判定する。
 # heuristic (ADR-0035 §4 で明示授権): target file の実在も sibling cluster への実到達も検査しない (../無関係
 # file への link でも dead-end 回避になる)。 厳密化 (realpath -e 実在 + 自 cluster 戻り除外) は 1.0.0 後 (#119 系)。
@@ -3528,7 +3528,7 @@ Subcommands:
   help, --help             本ヘルプ
   init [<dir>]             consumer canonical layout を scaffold (省略時 cwd、 ADR-0024)
                            (idempotent: 既存 file preserve、 exit 0=success/2=tool error)
-  inventory [--root <dir>] inventory.json 生成 (relations.html §4、 default cwd/architecture、
+  inventory [--root <dir>] inventory.json 生成 (relations.html §4、 default cwd/design-intent、
                            --root で scan/output root を override = validate/fix と対称)
   prime [--root <dir>]     Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen、
                            --root で scan/inventory.json 場所を override = inventory と対称)
@@ -3569,7 +3569,7 @@ Subcommands:
                            BLOCKED (refuted / 明示 medium・low 以外は全 block = 列挙漏れによる穴が開かない)。 exit
                            0=OK / 1=BLOCKED / 2=tool error。 ★fail-closed: caller は exit!=0 を GREEN 不可として扱う。
 
-完成形 spec: architecture/spec/folio-self-spec.html §7.2 + ADR-0003
+完成形 spec: design-intent/spec/folio-self-spec.html §7.2 + ADR-0003
 EOF
     ;;
   init)

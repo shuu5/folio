@@ -14,7 +14,7 @@ description: |
   REQ-VER-007 と同パターンで試作導入)。 verification.html §3 への REQ-VER-008 正式追加、
   rules.html への正式 REQ 追加、 README.html §6.2 deferred trace の更新は親/Phase 6 の担当
   (spec 編集 = caller marker 必要のため本 worktree では行わない)。
-  Reference: ADR-0003 §2.1/§2.2, architecture/spec/README.html §2 (cluster index),
+  Reference: ADR-0003 §2.1/§2.2, design-intent/spec/README.html §2 (cluster index),
   relations.html §4 (inventory), verification.html §3 REQ-VER-002.
 
   cwd 前提: 本 scenario は fixture README を実ディスクから読むため、 runner は REPO_ROOT を

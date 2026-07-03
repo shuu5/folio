@@ -9,7 +9,7 @@ model: opus
 
 > **応答言語**: findings / 説明文 / summary は **user の使用言語** (default = global CLAUDE.md = 日本語) で出力する。folio canonical 用語 (`contract` / `anchor manifest` / `data-slot-id` / `RTM` / `EARS` / `upper_need` / `gate A` / `gate G` / `gate I` / `gate J` 等) は英語のまま維持する。
 
-[SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.3 が定義する ceiling (意味判定) を completeness 軸へ拡張する一翼 (§5.2.6 集合完全性の ceiling 昇格)。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 ceiling は複数 lens の束で、 既存の 2 翼は [persona-walk-srs](persona-walk-srs.md) (gate I = 読みやすさ) と [fidelity-srs](fidelity-srs.md) (gate J = 捏造/歪み)。 本 agent は**第 3 の ceiling lens = 意味的完全性 (completeness)** を担い、 他 2 翼と領分が重ならない (§5)。 SSoT の ceiling は folio-mzn.1.4 landing で **2→3 翼 amend 済** (taxonomy §5.3 gate K / `verify-srs.sh` L24)、 本 lens は co-equal な第 3 翼 (gate K) として GREEN 判定に参加する。
+[SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.3 が定義する ceiling (意味判定) を completeness 軸へ拡張する一翼 (§5.2.6 集合完全性の ceiling 昇格)。 生成 SRS プレゼンの完全性判定は **floor (機械) + ceiling (意味) の二層**で、 `GREEN ⟺ (floor 全通過) AND (ceiling 合格)`。 ceiling は複数 lens の束で、 既存の 2 翼は [persona-walk-srs](persona-walk-srs.md) (gate I = 読みやすさ) と [fidelity-srs](fidelity-srs.md) (gate J = 捏造/歪み)。 本 agent は**第 3 の ceiling lens = 意味的完全性 (completeness)** を担い、 他 2 翼と領分が重ならない (§5)。 SSoT の ceiling は folio-mzn.1.4 landing で **2→3 翼 amend 済** (taxonomy §5.3 gate K / `verify-srs.sh` L24)、 本 lens は co-equal な第 3 翼 (gate K) として GREEN 判定に参加する。
 
 | lens | 問い | 領分 |
 |---|---|---|
@@ -118,7 +118,7 @@ completeness-critic を全 doc-type parametric 1 本にするか type 別 (-srs 
 
 ## 参照
 
-- [SRS 部品 taxonomy](../architecture/research/srs-component-taxonomy.html) §5.1 (判定式 `GREEN ⟺ floor AND ceiling`) / §5.2 gate A・G (存在の floor) / §5.3 gate I・J・K (ceiling 3 翼) / §5.2.6 (集合の completeness/consistency)
-- [ADR-0041](../architecture/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (ceiling = co-equal gate) / [ADR-0042](../architecture/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (構造決定的・prose のみ opus = 完全性は prose 充填の意味被覆で崩れうる)
+- [SRS 部品 taxonomy](../design-intent/research/srs-component-taxonomy.html) §5.1 (判定式 `GREEN ⟺ floor AND ceiling`) / §5.2 gate A・G (存在の floor) / §5.3 gate I・J・K (ceiling 3 翼) / §5.2.6 (集合の completeness/consistency)
+- [ADR-0041](../design-intent/decisions/ADR-0041-human-layer-visual-design-system.html) §2.5 (ceiling = co-equal gate) / [ADR-0042](../design-intent/decisions/ADR-0042-hybrid-generation-dense-table-readability.html) (構造決定的・prose のみ opus = 完全性は prose 充填の意味被覆で崩れうる)
 - [fidelity-srs](fidelity-srs.md) (gate J = 捏造/歪み・領分が異なる) / [persona-walk-srs](persona-walk-srs.md) (gate I = 読みやすさ・領分が異なる) / [readability-walk](readability-walk.md) (folio 自身用・anti-empty-green の範)
 - floor: `.claude-plugin/design-system/generator/verify-srs.sh` (gate A-H の決定的検査) — floor 通過は `CEILING=PENDING`、 ceiling の合格で初めて GREEN。 SSoT の ceiling は folio-mzn.1.4 landing で **3 翼 (persona + fidelity + completeness)** = `verify-srs.sh` L24 / taxonomy §5.3 gate I・J・K へ amend 済

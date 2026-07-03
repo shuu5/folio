@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # folio engine B6 (folio-8ct) — bootstrap extractor: rules.html → folio-rules.spec.yaml (one-shot)
 #
-# architecture/spec/rules.html を *read-only* で走査し、 spec-pack contract (folio-rules.spec.yaml) の
+# design-intent/spec/rules.html を *read-only* で走査し、 spec-pack contract (folio-rules.spec.yaml) の
 # DRAFT を起こす one-shot スクリプト。 ★出力は人間 (= 次サイクル admin) レビュー前提 (機械抽出の下書き)。
 #
 # 抽出する属性マーク (rules.html の構造化された人間層):
@@ -19,12 +19,12 @@
 #   警告を出して fail-loud にする。 人間層プレゼン (essence + subhead + 表 + 図 + 要件) は従来どおり構造化 field へ抽出する。
 #
 # usage: extract-rules-spec.sh [<rules.html>] > <draft contract.yaml>   (LOG は stderr)
-#        既定 <rules.html> = <repo-root>/architecture/spec/rules.html
+#        既定 <rules.html> = <repo-root>/design-intent/spec/rules.html
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-RULES="${1:-$REPO_ROOT/architecture/spec/rules.html}"
+RULES="${1:-$REPO_ROOT/design-intent/spec/rules.html}"
 [[ -f "$RULES" ]] || { echo "extract-rules-spec: rules.html not found: $RULES" >&2; exit 1; }
 command -v perl >/dev/null || { echo "extract-rules-spec: perl required" >&2; exit 1; }
 
@@ -329,7 +329,7 @@ my ($preamble_blocks, $pre_exp) = extract_machine_blocks($preamble_region);
 
 # ===== YAML 出力 =====
 print "# folio engine B6 (folio-8ct) — spec-pack contract (instance#5 / self-dogfood)\n";
-print "# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が architecture/spec/rules.html から起こした)。 人間レビュー前提。\n";
+print "# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が design-intent/spec/rules.html から起こした)。 人間レビュー前提。\n";
 print "# doc_type = rules (Layer 1 consumer universal rules)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。\n";
 print "# ★抽出範囲 = rules.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。\n";
 print "#   機械層 = data-audience=\"machine\" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture (旧版は範囲外として LOG のみ・skip→capture に反転)。\n";

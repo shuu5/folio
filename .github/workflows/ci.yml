@@ -60,7 +60,7 @@ jobs:
           jq --version
           yq --version
 
-      # deterministic floor。 root 既定 = architecture/ (CWD = repo root 前提)。 exit 1 で merge block。
+      # deterministic floor。 root 既定 = design-intent/ (CWD = repo root 前提)。 exit 1 で merge block。
       - name: folio validate (deterministic floor — 18 gate)
         run: .claude-plugin/bin/folio validate
 

@@ -3,13 +3,13 @@ req_id: "REQ-VER-013"
 ears_pattern: "event-driven"
 kind: "cli-golden"
 description: |
-  folio validate が spec 集合 (architecture/{spec,decisions,research} の <head> JSON-LD .html) を横断し、
+  folio validate が spec 集合 (design-intent/{spec,decisions,research} の <head> JSON-LD .html) を横断し、
   内部 link-integrity (anchor + fs ref) + jsonld structural の 2 gate を検査する (ADR-0020、 REQ-CI-010/016)。
-  本 scenario は clean 集合 (現 architecture、 全 link 解決 + 全 jsonld valid) に対し exit 0 + clean report を検証する。
+  本 scenario は clean 集合 (現 design-intent、 全 link 解決 + 全 jsonld valid) に対し exit 0 + clean report を検証する。
   violation 検出 (missing file ref / broken anchor / jsonld 構造違反) は spawn が fixtures + validate-violations.yaml で別途実証する (REQ-VER-013)。
 
 # --- cli-golden scenario (stdout capture 版、 verification.html §3.2 + REQ-VER-011/013) ---
-command: ["validate"]                                   # bin/folio に渡す引数列 (既定 = architecture を検査)
+command: ["validate"]                                   # bin/folio に渡す引数列 (既定 = design-intent を検査)
 capture: "stdout"                                       # validate の report を stdout 捕捉
 compare: "text"                                         # plain text byte-exact 比較
 golden: "baselines/reference/validate-clean.golden.txt" # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
@@ -19,7 +19,7 @@ expect:
 
 # === RED 状態メモ (Track 3 spawn = feature-dev 実装前) ===
 # 本 scenario は現時点で RED (validate 未実装、 golden 不在)。 GREEN にするため spawn が実装する:
-#   1. bin/folio validate       — architecture/{spec,decisions,research} を横断し 2 gate 検査 (ADR-0020 §2.1):
+#   1. bin/folio validate       — design-intent/{spec,decisions,research} を横断し 2 gate 検査 (ADR-0020 §2.1):
 #                                   (a) internal link-integrity: dc:references @id を folio_resolve_relpath で
 #                                       解決 → target file 存在 + #anchor は target 内 id 存在 (REQ-CI-010 b+c)
 #                                   (b) jsonld structural: parse + @context/@id/@type + @context==object

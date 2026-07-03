@@ -3,7 +3,7 @@
    要件定義書 (SRS) ビジュアル design system の中核 register。
    視覚言語 = deck帯 × B2高密度 (ADR-0041)。テーマ = 環境追従 prefers-color-scheme。
    styling は意味クラス、taxonomy 識別は [data-component] 属性 (floor gate A)。
-   taxonomy = architecture/research/srs-component-taxonomy.html
+   taxonomy = design-intent/research/srs-component-taxonomy.html
    =========================================================================== */
 
 /* ---- requirement-type-color-tokens (meta / 全 register が共有・両テーマ定義) ---- */

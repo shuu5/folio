@@ -1,5 +1,5 @@
 # folio engine B6 (folio-8ct) — spec-pack contract (instance#5 / self-dogfood)
-# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が architecture/spec/rules.html から起こした)。 人間レビュー前提。
+# ★機械抽出 DRAFT (scripts/extract-rules-spec.sh が design-intent/spec/rules.html から起こした)。 人間レビュー前提。
 # doc_type = rules (Layer 1 consumer universal rules)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。
 # ★抽出範囲 = rules.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。
 #   機械層 = data-audience="machine" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture (旧版は範囲外として LOG のみ・skip→capture に反転)。
@@ -45,7 +45,7 @@ sections:
     tint: "brand"
     kicker: "§2 / ディレクトリ"
     heading: "§2. Directory Structure (Layer 1 consumer project)"
-    essence: "Layer 1 consumer の directory layout と folio.config.yaml の構造を定める。folio が govern するのは architecture/ の 3 domain のみで、 実装適合性 test の location は規定しない (P-13(b))。"
+    essence: "Layer 1 consumer の directory layout と folio.config.yaml の構造を定める。folio が govern するのは design-intent/ の 3 domain のみで、 実装適合性 test の location は規定しない (P-13(b))。"
     blocks:
       - type: code
         lines:
@@ -54,7 +54,7 @@ sections:
           - "├── CLAUDE.md (or AGENTS.md)          # platform-specific binding (P-2 例外、 P-11 root 例外)"
           - "├── folio.config.yaml                 # folio plugin consume 宣言 + userConfig override"
           - "│"
-          - "├── architecture/                     # Layer 1 design-intent 空間 (folio rules で書かれた、 P-7 3-domain)"
+          - "├── design-intent/                     # Layer 1 design-intent 空間 (folio rules で書かれた、 P-7 3-domain)"
           - "│   ├── index.html                    # walkable nav (folio build が graph から生成、 generated-view、 ADR-0035)"
           - "│   ├── spec/                         # design intent (WHAT、 cwd で context 即判定)"
           - "│   │   ├── README.html               # spec entry point (constitution P-6)"
@@ -66,21 +66,21 @@ sections:
           - "│"
           - "├── <test dir>                       # HOW-test (実装適合性): consumer の stack 慣習 (tests/ 等)、 folio 非規定 (P-13(b)、 ADR-0026)"
           - "│"
-          - "└── <実装本体 dir>                    # HOW-impl (architecture/spec/ に従う)"
+          - "└── <実装本体 dir>                    # HOW-impl (design-intent/spec/ に従う)"
           - "    ├── (scribe の場合) skills/, agents/, commands/"
           - "    ├── (TS webapp の場合) src/, components/, app/"
           - "    └── ..."
       - type: code
         lines:
           - "folio_version: \"^0.4\"                  # folio framework の依存 version (semver range)"
-          - "spec_path: \"architecture/spec/\"        # default、 userConfig で override 可能"
+          - "spec_path: \"design-intent/spec/\"        # default、 userConfig で override 可能"
           - "caller_marker_env: \"FOLIO_ARCHITECT_CONTEXT\""
           - "caller_marker_value: \"folio-architect\""
           - "review_model: \"opus\"                   # optional、 Phase F specialist の model"
     machine_blocks:
-      - { type: prose, html: "folio が govern するのは <code>architecture/</code> の 3 domain (design intent / decision / exploration) のみ (<a href=\"./constitution.html#p-7\">P-7</a>、 <a href=\"../decisions/ADR-0022-x4-0-canonical-layout.html\">ADR-0022</a>)。 実装適合性 test (HOW-test) は consumer の stack 慣習 (<code>tests/</code> 等) に置き、 folio は location を規定しない (<a href=\"./constitution.html#p-13\">P-13</a> (b)、 <a href=\"../decisions/ADR-0026-test-placement-model.html\">ADR-0026</a>)。 一般 documentation (Diátaxis tutorial / how-to / explanation 等) や AI-steering context は consumer の<strong>自由領域</strong>で folio は規定しない (consumer が <code>docs/</code> 等で任意に持つ)。" }
+      - { type: prose, html: "folio が govern するのは <code>design-intent/</code> の 3 domain (design intent / decision / exploration) のみ (<a href=\"./constitution.html#p-7\">P-7</a>、 <a href=\"../decisions/ADR-0022-x4-0-canonical-layout.html\">ADR-0022</a>)。 実装適合性 test (HOW-test) は consumer の stack 慣習 (<code>tests/</code> 等) に置き、 folio は location を規定しない (<a href=\"./constitution.html#p-13\">P-13</a> (b)、 <a href=\"../decisions/ADR-0026-test-placement-model.html\">ADR-0026</a>)。 一般 documentation (Diátaxis tutorial / how-to / explanation 等) や AI-steering context は consumer の<strong>自由領域</strong>で folio は規定しない (consumer が <code>docs/</code> 等で任意に持つ)。" }
       - { type: prose, html: "<strong>folio.config.yaml 構造</strong> (schema 詳細は <a href=\"folio-self-spec.html#s8-plugin\">folio-self-spec.html §8</a>):" }
-      - { type: prose, html: "<strong>cwd で context 即判定</strong>: AI Agent は cwd が <code>&lt;consumer&gt;/</code> 配下なら consumer project 編集中、 <code>&lt;consumer&gt;/architecture/spec/</code> 配下なら Layer 1 spec 編集中、 <code>&lt;consumer&gt;/skills/</code> 等の実装 dir 配下なら実装編集中、 と物理 dir で判定可能。 folio Layer 0 編集の判定は <a href=\"folio-self-spec.html#s7-4-defense\">folio-self-spec.html §7.4 5-Layer Defense</a> を参照。" }
+      - { type: prose, html: "<strong>cwd で context 即判定</strong>: AI Agent は cwd が <code>&lt;consumer&gt;/</code> 配下なら consumer project 編集中、 <code>&lt;consumer&gt;/design-intent/spec/</code> 配下なら Layer 1 spec 編集中、 <code>&lt;consumer&gt;/skills/</code> 等の実装 dir 配下なら実装編集中、 と物理 dir で判定可能。 folio Layer 0 編集の判定は <a href=\"folio-self-spec.html#s7-4-defense\">folio-self-spec.html §7.4 5-Layer Defense</a> を参照。" }
   - id: "s3"
     tint: "violet"
     kicker: "§3 / 命名"
@@ -92,9 +92,9 @@ sections:
         items:
           - "全 HTML file 名: <code>kebab-case.html</code> (例: <code>spec-taxonomy.html</code>)。 snake_case / camelCase 禁止。"
           - "<span class=\"term\" data-term=\"ADR\" data-tooltip=\"Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。\">ADR</span>: <code>ADR-NNNN-&lt;slug&gt;.html</code> (4 桁 ID)。"
-          - "<span class=\"term\" data-term=\"vocabulary\" data-tooltip=\"folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。\">vocabulary</span> (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or architecture/、 <a class=\"xref\" href=\"./constitution.html#p-2\" data-tooltip=\"format は HTML + common.css のみ\">P-2</a> YAML 例外)。"
+          - "<span class=\"term\" data-term=\"vocabulary\" data-tooltip=\"folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。\">vocabulary</span> (Layer 1 consumer): <code>vocabulary.yaml</code> (project root or design-intent/、 <a class=\"xref\" href=\"./constitution.html#p-2\" data-tooltip=\"format は HTML + common.css のみ\">P-2</a> YAML 例外)。"
           - "config: <code>folio.config.yaml</code> (consumer project root、 P-2 YAML 例外)。"
-          - "entry point: 各 <span class=\"term\" data-term=\"cluster\" data-tooltip=\"architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。\">cluster</span> は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。"
+          - "entry point: 各 <span class=\"term\" data-term=\"cluster\" data-tooltip=\"design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。\">cluster</span> は <code>README.html</code> を持つ MUST (orphan 例外、 constitution P-6)。"
       - { type: prose, html: "<strong><code>vocabulary.yaml</code> の schema</strong> (<a href=\"constitution.html#p-5\">P-5</a> canonical naming SSoT): <code>terms:</code> の配列で、 各 entry は <code>canonical</code> (正準名、 MUST) と <code>forbidden</code> (禁止 synonym の配列 — vocabulary gate REQ-CI-013 が prose 内検出に使う) を持つ。 <ins class=\"delta\" data-delta-id=\"D-2026-05-28-001\" data-delta-date=\"2026-05-28\">加えて各 entry は optional に <code>definition</code> (1 行定義)、 <code>relationships</code> (他 canonical 名との関係を述べる配列)、 <code>flagged_ambiguities</code> (grilling で surface した未解決の曖昧点の配列) を持ってよい。 これらは glossary を <code>folio-architect</code> grilling (<a href=\"folio-self-spec.html#s7-1-7phase\">Phase C</a>) と <code>spec-review-vocabulary</code> agent の grounding として豊かにする (<a href=\"../decisions/ADR-0031-mattpocock-authoring-absorption.html\">ADR-0031</a> §2.4)。 <strong>後方互換</strong>: vocabulary gate は <code>forbidden</code> のみ読むため、 optional field の有無は既存の gate 挙動に影響しない。</ins>" }
   - id: "s4"
     tint: "info"
@@ -295,7 +295,7 @@ sections:
     tint: "info"
     kicker: "§9 / 照会 (xref)"
     heading: "§9. Object Cross-Reference (in-band xref + no-JS hover tooltip)"
-    essence: "architecture 内 defined-object の in-band cross-reference・no-JS hover tooltip・完全性 enforcement を hybrid で定める (in-band id が SSoT、 lint/AI-graph/glossary は projection)。 穴は folio fix が materialize・完全性は validate・採用は opt-in。"
+    essence: "design-intent 空間内 defined-object の in-band cross-reference・no-JS hover tooltip・完全性 enforcement を hybrid で定める (in-band id が SSoT、 lint/AI-graph/glossary は projection)。 穴は folio fix が materialize・完全性は validate・採用は opt-in。"
     blocks:
       - type: mermaid
         caption: "図 §9: xref のライフサイクル (in-band id = SSoT → fix が materialize → gate・tooltip・AI-graph が派生)。"
@@ -349,7 +349,7 @@ sections:
       - type: requirements
         ids: ["REQ-GLOSS-001", "REQ-GLOSS-002", "REQ-GLOSS-003"]
     machine_blocks:
-      - { type: note, html: "<p>本 §9 は architecture 内の <strong><span class=\"term\" data-term=\"defined-object\" data-tooltip=\"一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。\">defined-object</span></strong> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) への <strong>in-band cross-reference</strong> markup 規約と、 その <strong>no-JS hover tooltip</strong> + <strong>完全性 enforcement</strong> を定める (<a href=\"../decisions/ADR-0034-object-term-xref-system.html\">ADR-0034</a>、 <a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a> dual-audience hub の object 参照網への拡張)。 architecture は <strong>hybrid</strong> = canonical 定義は各 object の in-band HTML 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph、 <a href=\"#s10-2\">REQ-CI</a> 系の deterministic floor) を<strong>生成</strong>する (DB-as-SSoT 却下、 <a href=\"./constitution.html#p-2\">P-2</a> HTML / <a href=\"./constitution.html#p-13\">P-13</a> no-build と整合)。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (<a href=\"verification.html#s3-ears\">REQ-VER-017/018</a>) が担う。 採用は <strong>opt-in/conditional-normative</strong> (REQ-XREF-002) — completeness gate を有効化した spec のみ orphan-mention を block する。</p>" }
+      - { type: note, html: "<p>本 §9 は design-intent 空間内の <strong><span class=\"term\" data-term=\"defined-object\" data-tooltip=\"一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。\">defined-object</span></strong> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) への <strong>in-band cross-reference</strong> markup 規約と、 その <strong>no-JS hover tooltip</strong> + <strong>完全性 enforcement</strong> を定める (<a href=\"../decisions/ADR-0034-object-term-xref-system.html\">ADR-0034</a>、 <a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a> dual-audience hub の object 参照網への拡張)。 design-intent 空間は <strong>hybrid</strong> = canonical 定義は各 object の in-band HTML 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph、 <a href=\"#s10-2\">REQ-CI</a> 系の deterministic floor) を<strong>生成</strong>する (DB-as-SSoT 却下、 <a href=\"./constitution.html#p-2\">P-2</a> HTML / <a href=\"./constitution.html#p-13\">P-13</a> no-build と整合)。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (<a href=\"verification.html#s3-ears\">REQ-VER-017/018</a>) が担う。 採用は <strong>opt-in/conditional-normative</strong> (REQ-XREF-002) — completeness gate を有効化した spec のみ orphan-mention を block する。</p>" }
       - { type: prose, html: "defined-object への inline 参照は <strong>untyped な xref</strong> とする (typed/directional relation は file-level JSON-LD = <a href=\"relations.html#s5-1-pattern\">relations §5</a> に留め object-level は roadmap、 untyped ゆえ <code>folio fix</code> の auto-materialize が成立する)。 markup form:" }
       - { type: prose, html: "<code>href</code> は referencing doc から下記 registry の SSoT-doc への相対 path + <code>#&lt;id&gt;</code> (canonical ID を小文字化した定義 site の <code>id</code>)。 decision (ADR) は file 自体が定義 site のため anchor 無し (file への相対 path)。 <code>data-tooltip</code> は §9.2 essence 抽出 contract が生成する定義 essence (<code>folio fix</code> がコピー)。 <strong>rule (§) は doc 跨ぎで一意な canonical token を持たない</strong> (「§7.3」は曖昧) ため <strong>explicit xref tier</strong> = resolve 検査 + tooltip + graph edge は得るが裸言及の auto-gap 検出はしない (auto-materialize 対象外)。" }
       - { type: prose, html: "<strong>marking 正規化</strong>: 上記 resolve の前提は「全 object が id 付き SSoT 要素を持つ」 こと。 rules.html の全 canonical object (<code>REQ-CI-*</code> / <code>REQ-DA-*</code> / <code>REQ-CM-*</code> / <code>REQ-ADR-*</code> / <code>REQ-XREF-*</code>) は <a href=\"#s7-2-canonical-pattern\">§7.2</a> form 2 の id 付き spec-row を SSoT 定義 site として持ち、 この前提を満たす (旧 EARS-list / 概要 table 形は spec-row へ正規化し、 <a href=\"#s10-2\">§10.2</a> の table は spec-row への cov-link に転換)。" }
@@ -433,9 +433,9 @@ sections:
         headers: ["ページ種別", "主たる人間読者層", "提示の力点"]
         rows:
           - ["入口層 — landing (index.html) / cluster README.html", "folio を知らない初見の外部開発者", "hero 一文 + 読者別導線 + dead-end ゼロ (landing template、 ADR-0039 §2.2)。 専門用語は xref / glossary hover で即解決"]
-          - ["spec 本文層 — architecture/spec/*.html", "folio を導入済みで仕様を参照・検索する既習 consumer 開発者", "essence・表・図が常時可視、 EARS 全文は fold (§7 dual-audience)。 ページ内目次 + prev-next で検索性"]
-          - ["decisions 層 — architecture/decisions/*.html", "設計経緯を時系列で辿る維持者", "ADR 番号順の prev-next chain (決定的順序)。 frozen 本文は不変、 chrome のみ build が維持"]
-          - ["glossary — architecture/glossary.html", "初見〜既習の横断参照", "vocabulary.yaml 由来の生成 view。 本文からは hover tooltip (§9.5) で遷移なし参照"]
+          - ["spec 本文層 — design-intent/spec/*.html", "folio を導入済みで仕様を参照・検索する既習 consumer 開発者", "essence・表・図が常時可視、 EARS 全文は fold (§7 dual-audience)。 ページ内目次 + prev-next で検索性"]
+          - ["decisions 層 — design-intent/decisions/*.html", "設計経緯を時系列で辿る維持者", "ADR 番号順の prev-next chain (決定的順序)。 frozen 本文は不変、 chrome のみ build が維持"]
+          - ["glossary — design-intent/glossary.html", "初見〜既習の横断参照", "vocabulary.yaml 由来の生成 view。 本文からは hover tooltip (§9.5) で遷移なし参照"]
       - { type: subhead, heading: "§11.2 表示層 remediate の分業 (build / fix)", essence: "表示層 regen は folio build が一元所有、 folio fix は graph materialize 専任。 validate の violation message は対応する remediate tool を名指しする MUST。" }
       - { type: subhead, heading: "§11.3 層別既定表示 + audience toggle (ADR-0039 §2.4 / §2.5)", essence: "no-JS では class 無しで全文可視へ graceful degrade (AI・検索・印刷は不変)。 fold ネスト 2 段上限・<summary> 要旨 1 文・印刷時全展開は MUST。 生成 SRS プレゼンの既定表示は §12 が定める。" }
       - { type: subhead, heading: "§11.4 presentation 変更の検査手続き (readability lens + user walk、 ADR-0039 §2.8)", essence: "" }
@@ -553,8 +553,8 @@ requirements:
     statement: "REQ-XREF-003: Each xref SHALL remain a working baseline link (click → definition) and SHALL carry, in data-tooltip, the plain-text essence of the object's definition per the §9.2 essence-extraction contract, rendered as a no-JS CSS-only tooltip."
   - id: "REQ-XREF-004"
     ears_pattern: "ubiquitous"
-    essence: "各 canonical object ID は architecture 全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。"
-    statement: "REQ-XREF-004: Each canonical object ID SHALL be defined exactly once as an id-bearing SSoT element across architecture, and SHALL NOT be renumbered or reused (ID immutability)。"
+    essence: "各 canonical object ID は design-intent 空間全体で id 付き SSoT 要素として 1 度だけ定義し、 renumber / reuse しない (ReqIF Identifiable、 ID 不変性)。"
+    statement: "REQ-XREF-004: Each canonical object ID SHALL be defined exactly once as an id-bearing SSoT element across the design-intent space, and SHALL NOT be renumbered or reused (ID immutability)。"
   - id: "REQ-GLOSS-001"
     ears_pattern: "optional"
     essence: "手動 (explicit) mark した glossary 用語は span.term[data-term] で表す MUST。 data-term は vocabulary.yaml canonical に解決、 data-tooltip はその escape 済 definition と一致。 Class B で未 mark は gap-lint せず。"
@@ -614,7 +614,7 @@ requirements:
   - id: "REQ-ADR-001"
     ears_pattern: "event-driven"
     essence: "authoring 中に surface した決定が (a) 不可逆 ・ (b) rationale 無しでは意外 ・ (c) viable な代替間の真の trade-off の 3 条件すべてを満たす時、 folio-architect は ADR として記録するよう offer する MUST。"
-    statement: "REQ-ADR-001: WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives, folio-architect SHALL offer to record it as an ADR in architecture/decisions/ (起票自体は decisions/README §5 の user 承認に従う)。"
+    statement: "REQ-ADR-001: WHEN a design decision surfaced during authoring is simultaneously (a) hard to reverse, (b) surprising without its rationale, and (c) a genuine trade-off between viable alternatives, folio-architect SHALL offer to record it as an ADR in design-intent/decisions/ (起票自体は decisions/README §5 の user 承認に従う)。"
 
 # 非終端 照会 (前方・他文書へ)。 constitution P-x (role=implementation) / ADR (rationale) / verification REQ-VER (verification)。
 references:
@@ -657,7 +657,7 @@ glossary:
   - { term: "gate", en: "gate", def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。" }
   - { term: "ADR", en: "ADR", def: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。" }
   - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。" }
-  - { term: "cluster", en: "cluster", def: "architecture/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。" }
+  - { term: "cluster", en: "cluster", def: "design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。" }
   - { term: "progressive disclosure", en: "progressive disclosure", def: "情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。" }
   - { term: "dual-audience", en: "dual-audience", def: "1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。" }
   - { term: "essence", en: "essence", def: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。" }
@@ -673,6 +673,6 @@ glossary:
   - { term: "SSoT", en: "SSoT", def: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。" }
   - { term: "dogfood", en: "dogfood", def: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。" }
   - { term: "remediate", en: "remediate", def: "validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。" }
-  - { term: "landing", en: "landing", def: "architecture/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。" }
+  - { term: "landing", en: "landing", def: "design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。" }
   - { term: "frozen", en: "frozen", def: "accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。" }
   - { term: "chrome", en: "chrome", def: "folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。" }
