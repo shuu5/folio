@@ -45,6 +45,10 @@ fail=0
 declare -i nwarn=0
 make_body "$HTML"
 
+# ★cross-doc 照会は opt-in (folio-qvv 裁定A・assemble と同一単位 = .cross_doc 節の有無)。 発火 = 従来の全検査。
+#   非発火 = 照会痕跡ゼロ (KV/chip/aside/data-vision-ref/xref-link 全て 0) を fail-closed で検査 (注入封鎖)。
+XDOC="$(q 'has("cross_doc")')"
+
 # ★band 見出し (h2) は全て pack 不変 = literal pin。 章数 NCHAP_EXP はこの配列長から導出 (magic「==7」を書かない・bhe 教訓)。
 EXPECTED_H2=(
   "目指す状態を、 一文で言い切る"
@@ -90,7 +94,9 @@ chk "risk card == |risks|"            "$NR"  "$(perl -CSD -0777 -ne '$n++ while 
 chk "vision-feature-list == 1"        "1"    "$(perl -CSD -0777 -ne '$n++ while m{data-component="vision-feature-list"}g; END{print $n+0}' "$BODY")"
 chk "principle-terminal == 1"         "1"    "$(perl -CSD -0777 -ne '$n++ while m{<div\b[^>]*data-component="principle-terminal"}gi; END{print $n+0}' "$BODY")"
 chk "vision-non-goals == 1"           "1"    "$(perl -CSD -0777 -ne '$n++ while m{<div\b[^>]*data-component="vision-non-goals"}gi; END{print $n+0}' "$BODY")"
-chk "no-restate aside == 3 (問題/関係者/成功基準)" "3" "$(perl -CSD -0777 -ne '$n++ while m{<aside\b[^>]*data-component="no-restate-note"}gi; END{print $n+0}' "$BODY")"
+chk "no-restate aside == (cross_doc 有:3/無:0)" "$([[ "$XDOC" == "true" ]] && echo 3 || echo 0)" "$(perl -CSD -0777 -ne '$n++ while m{<aside\b[^>]*data-component="no-restate-note"}gi; END{print $n+0}' "$BODY")"
+# feature 照会行 (ad-ref-row) も opt-in 単位に従う (非発火で 1 本でも在れば注入)。
+chk "ad-ref-row == (cross_doc 有:|features|/無:0)" "$([[ "$XDOC" == "true" ]] && echo "$NF" || echo 0)" "$(perl -CSD -0777 -ne '$n++ while m{class="ad-ref-row claim"}g; END{print $n+0}' "$BODY")"
 # pitch (opt-in): 在れば pitch-grammar 1 + rows == |pitch.rows|、 無ければ両方 0。
 chk "vision-pitch-grammar == (pitch 有:1/無:0)" "$([[ "$NPITCH" != "0" ]] && echo 1 || echo 0)" "$(perl -CSD -0777 -ne '$n++ while m{data-component="vision-pitch-grammar"}g; END{print $n+0}' "$BODY")"
 chk "pitch row == |pitch.rows|" "$NPITCH" "$(perl -CSD -0777 -ne '$n++ while m{<div class="vm-pg-row">}g; END{print $n+0}' "$BODY")"
@@ -116,20 +122,29 @@ chk_empty "risks id 一意"            "$(q '.risks[].id'                    | s
 chk_empty "success_criteria.for_goal ⊆ objectives.id" \
   "$(LC_ALL=C comm -23 <(q '.success_criteria.entries[].for_goal' | LC_ALL=C sort -u) <(q '.objectives[].id' | LC_ALL=C sort -u) | tr '\n' ' ')"
 
-# ============ ① 照会グラフ整合 (cross-doc 前方照会・core 共通スケルトン) ============
+# ============ ① 照会グラフ整合 (cross-doc 前方照会・core 共通スケルトン・opt-in) ============
 # SRS 充足照会 (role=claim・data-vision-ref/data-vision-role)。 vision は SRS のみ照会 (ADR 根拠照会は持たない)。
 SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
-verify_cross_doc_refs \
-  --label-prefix "cross-doc(SRS)" --target-label "SRS" \
-  --target-abs "$SRS_ABS" --target-rel "$SRS_REL" \
-  --key-attr "data-vision-ref" --role-attr "data-vision-role" \
-  --keys-expr '.features[].refs.srs[]' \
-  --count-expr '[.features[].refs.srs[]] | length' \
-  --nonempty-count-expr '[ .features[].refs.srs[] | select((. // "") != "") ] | length' \
-  --pair-expr '.features[].refs.srs[] | [., "claim"] | @tsv' \
-  --target-ids-expr '.requirements[].id' \
-  --contract-docid-expr '.cross_doc.srs_doc_id' \
-  --target-docid-expr '.meta.doc_id'
+if [[ "$XDOC" == "true" ]]; then
+  verify_cross_doc_refs \
+    --label-prefix "cross-doc(SRS)" --target-label "SRS" \
+    --target-abs "$SRS_ABS" --target-rel "$SRS_REL" \
+    --key-attr "data-vision-ref" --role-attr "data-vision-role" \
+    --keys-expr '.features[].refs.srs[]' \
+    --count-expr '[.features[].refs.srs[]] | length' \
+    --nonempty-count-expr '[ .features[].refs.srs[] | select((. // "") != "") ] | length' \
+    --pair-expr '.features[].refs.srs[] | [., "claim"] | @tsv' \
+    --target-ids-expr '.requirements[].id' \
+    --contract-docid-expr '.cross_doc.srs_doc_id' \
+    --target-docid-expr '.meta.doc_id'
+else
+  # 非発火: contract 側の片肺残存 (assemble と parity) + HTML 側の照会属性注入を封鎖。
+  chk "非発火 contract: refs.srs 総数 == 0 (片肺なし)" "0" "$NSRS"
+  chk "非発火 contract: no_restate/srs_code 残存なし" "false false false false" \
+    "$(q '.problem | has("no_restate")') $(q '.stakeholders | has("no_restate")') $(q '.success_criteria | has("no_restate")') $(q '.non_goals | has("srs_code")')"
+  chk "非発火: data-vision-ref == 0 (照会属性注入封鎖)" "0" "$(grep -o 'data-vision-ref=' "$BODY" | wc -l | tr -d ' ')"
+  chk "非発火: data-vision-role == 0" "0" "$(grep -o 'data-vision-role=' "$BODY" | wc -l | tr -d ' ')"
+fi
 
 # per-feature 照会 fidelity (card-keyed)。 各 feature (id=f-<lc>) スコープ内の (data-vision-ref, claim) を feature id へ束ねて突合。
 # ★lowercase は shell (${id,,}) で行う: mikefarah yq に jq の ascii_downcase は無い (silent empty expected = fail-open)。
@@ -160,7 +175,8 @@ xref_code_bad="$(perl -CSD -0777 -ne '
 ' "$BODY")"
 chk_empty "可視 xref-code == 兄弟 data-vision-ref 属性 (照会コードの可視捏造封鎖)" "$xref_code_bad"
 # xref-code 総数 == SRS照会 (feature) + no-restate aside(3) + non-goals(1)。 no-restate/non-goals も xref-code を持つ。
-chk "可視 xref-code 総数 == |SRS照会|+no-restate3+non-goals1" "$((NSRS + 3 + 1))" "$(grep -o '<span class="xref-code">' "$BODY" | wc -l | tr -d ' ')"
+# 非発火は照会リンク自体が無い = 0 (注入封鎖)。
+chk "可視 xref-code 総数 == (発火:|SRS照会|+4/非発火:0)" "$([[ "$XDOC" == "true" ]] && echo $((NSRS + 3 + 1)) || echo 0)" "$(grep -o '<span class="xref-code">' "$BODY" | wc -l | tr -d ' ')"
 
 # 1h. href 遷移先 fidelity (feature SRS claim の飛び先を contract 派生値へ束縛)。 (href, data-vision-ref) == <srs_html>#<ref>。
 SRS_HTML_E="$(esc "$(q '.cross_doc.srs_html')")"
@@ -168,21 +184,25 @@ exp_srs_href="$(q '.features[].refs.srs[]' | while IFS= read -r _r; do [[ -n "$_
 act_srs_href="$(perl -CSD -0777 -ne 'while (/\bhref="([^"]*)"\s+data-vision-ref="([^"]*)"/g){ print "$1\t$2\n"; }' "$BODY" | LC_ALL=C sort -u)"
 LC_ALL=C set_eq "href: SRS claim (href, FR) == <srs_html>#<ref>" "$exp_srs_href" "$act_srs_href"
 
-# ============ cross-doc-ref-chip 可視 echo 厳密一致 (vision は <b> 1 個 = SRS のみ) ============
-chk "cross-doc: ref-chip ブロック == 1" "1" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
-srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
-chip_bad="$(SRS="$srs_id_e" perl -CSD -Mutf8 -0777 -ne '
-  my $srs=$ENV{SRS}; utf8::decode($srs); my @bad;
-  while (/<([A-Za-z][\w-]*)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
-    my ($tag,$in)=($1,$2); push @bad,"chip:NESTED" if $in=~/<\Q$tag\E\b/;
-    my @bs=$in=~/<b>([^<]*)<\/b>/g;
-    if (@bs!=1){push @bad,"chip:".scalar(@bs)."B"; next}
-    push @bad,"chip:b1\x{2260}$bs[0]" if $bs[0] ne $srs;
-    my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"chip:VIS" if $vis ne " 照会先: ${srs}の要件・受入基準 (このビジョンの「何を作るか」の具体)";
-  }
-  print join(" ", @bad);
-' "$BODY")"
-chk_empty "cross-doc: ref-chip 可視 echo == テンプレ+doc_id (swap/平文/nested 封鎖)" "$chip_bad"
+# ============ cross-doc-ref-chip 可視 echo 厳密一致 (vision は <b> 1 個 = SRS のみ・opt-in) ============
+if [[ "$XDOC" == "true" ]]; then
+  chk "cross-doc: ref-chip ブロック == 1" "1" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
+  srs_id_e="$(esc "$(q '.cross_doc.srs_doc_id')")"
+  chip_bad="$(SRS="$srs_id_e" perl -CSD -Mutf8 -0777 -ne '
+    my $srs=$ENV{SRS}; utf8::decode($srs); my @bad;
+    while (/<([A-Za-z][\w-]*)\b[^>]*\bdata-component="cross-doc-ref-chip"[^>]*>(.*?)<\/\1>/gs) {
+      my ($tag,$in)=($1,$2); push @bad,"chip:NESTED" if $in=~/<\Q$tag\E\b/;
+      my @bs=$in=~/<b>([^<]*)<\/b>/g;
+      if (@bs!=1){push @bad,"chip:".scalar(@bs)."B"; next}
+      push @bad,"chip:b1\x{2260}$bs[0]" if $bs[0] ne $srs;
+      my $vis=$in; $vis=~s/<[^>]+>//g; push @bad,"chip:VIS" if $vis ne " 照会先: ${srs}の要件・受入基準 (このビジョンの「何を作るか」の具体)";
+    }
+    print join(" ", @bad);
+  ' "$BODY")"
+  chk_empty "cross-doc: ref-chip 可視 echo == テンプレ+doc_id (swap/平文/nested 封鎖)" "$chip_bad"
+else
+  chk "非発火: cross-doc-ref-chip == 0 (偽照会チップ注入封鎖)" "0" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
+fi
 
 # ============ core 共通 chrome (cover-head/approval/reader-chip 占有・vision は glossary 表を持たない) ============
 # ★verify_core_chrome (core) を呼ばず inline する: vision は用語集章を持たない = glossary 表が無い。 core の glossary
@@ -220,15 +240,19 @@ chk "core-chrome: vcount stamp == |approval|" "$nap" "$(count_attr_token class s
 # (3) role/en global 占有 (glossary 表なし = |非空 en| 0・追加 home なし)
 chk "core-chrome: vcount role global == |approval|" "$nap" "$(count_attr_token class role < "$BODY")"
 chk "core-chrome: vcount en global == 0 (glossary 表なし)" "0" "$(count_attr_token class en < "$BODY")"
-chk "core-chrome: reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
+chk "core-chrome: reader-chip class 総数 == (発火:2/非発火:1)" "$([[ "$XDOC" == "true" ]] && echo 2 || echo 1)" "$(count_attr_token class reader-chip < "$BODY")"
 
 # ============ cover-meta KV (種別/構成/照会先/版) の決定的再導出突合 ============
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
 chk "cover-meta 種別"   "vision (ビジョン — なぜ作るか)" "$(printf '%s\n' "$meta_kv" | grep -F '種別' | head -1 | cut -f2)"
 chk "cover-meta 構成"   "$(esc "${NCHAP_EXP} 章 (目標 ${NG} / 成功基準 ${NSC} / 機能方向 ${NF} / 関係者 ${NST} / リスク ${NR} / 原則 1)")" "$(printf '%s\n' "$meta_kv" | grep -F '構成' | head -1 | cut -f2)"
-chk "cover-meta 照会先" "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(printf '%s\n' "$meta_kv" | grep -F '照会先' | head -1 | cut -f2)"
+if [[ "$XDOC" == "true" ]]; then
+  chk "cover-meta 照会先" "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(printf '%s\n' "$meta_kv" | grep -F '照会先' | head -1 | cut -f2)"
+else
+  chk "cover-meta 照会先 行なし (非発火)" "0" "$(printf '%s\n' "$meta_kv" | grep -cF '照会先')"
+fi
 chk "cover-meta 版"     "v$(q '.meta.version') / $(q '.meta.date')" "$(printf '%s\n' "$meta_kv" | grep -F '版' | head -1 | cut -f2)"
-chk "cover-meta KV 総数 == 4" "4" "$(printf '%s\n' "$meta_kv" | grep -c .)"
+chk "cover-meta KV 総数 == (発火:4/非発火:3)" "$([[ "$XDOC" == "true" ]] && echo 4 || echo 3)" "$(printf '%s\n' "$meta_kv" | grep -c .)"
 # ★自文書 doc_id (data-doc-id 属性) fidelity (ceiling wf_64344fbe low 是正・rendered contract 値の floor 被覆)。
 chk "data-doc-id == .meta.doc_id" "$(esc "$(q '.meta.doc_id')")" \
   "$(perl -CSD -0777 -ne 'if(/\bdata-doc-id="([^"]*)"/){print "$1"}' "$BODY")"
@@ -257,9 +281,12 @@ chk "可視 north-star narrative == .north_star.narrative" "$(esc "$(q '.north_s
   "$(perl -CSD -0777 -ne 'if(/data-component="vision-north-star"[^>]*>.*?<\/div>\s*<p>([^<]*)<\/p>/s){print "$1"}' "$BODY")"
 chk "可視 principle narrative == .principle.narrative" "$(esc "$(q '.principle.narrative')")" \
   "$(perl -CSD -0777 -ne 'if(/data-component="principle-terminal"[^>]*>.*?<\/div>\s*<p>([^<]*)<\/p>/s){print "$1"}' "$BODY")"
-# problem paragraphs (§2・id="problem" 開始〜<aside まで scope し、 その内の全 <p> を emission 順抽出・段落数非依存)。
+# problem paragraphs (§2・id="problem" 開始〜chapbody の閉じ </div> まで scope し、 その内の全 <p> を emission 順抽出・
+#   段落数非依存)。 ★終端は <aside でなく最初の </div> (= chapbody 閉じ): 非発火 (opt-in・aside なし) でも scope が
+#   成立し、 発火時も aside 内に <p>/<div> は無いため抽出結果は両 mode で不変 (qvv 裁定A)。 band の <section> は
+#   見出し帯のみで本文は外側 chapbody に居るため </section> は終端に使えない (次章の lead を誤食する)。
 set_eq "可視 problem paragraphs == .problem.paragraphs[]" "$(qesc '.problem.paragraphs[]')" \
-  "$(perl -CSD -0777 -ne 'if(/(<p id="problem">.*?)<aside\b/s){my $blk=$1; while($blk=~/<p[^>]*>([^<]*)<\/p>/g){print "$1\n"}}' "$BODY")"
+  "$(perl -CSD -0777 -ne 'if(/(<p id="problem">.*?)<\/div>/s){my $blk=$1; while($blk=~/<p[^>]*>([^<]*)<\/p>/g){print "$1\n"}}' "$BODY")"
 # pitch rows (key/value/ref_label) — opt-in
 if [[ "$NPITCH" != "0" ]]; then
   set_eq "可視 pitch key == .pitch.rows[].key" "$(qesc '.pitch.rows[].key')" \
@@ -275,12 +302,18 @@ if [[ "$NPITCH" != "0" ]]; then
     "$(q '.pitch.rows[].ref_label' | while IFS= read -r v; do esc "↔ $v"; printf '\n'; done)" \
     "$(perl -CSD -0777 -ne 'while(/<a class="vm-pg-ref" href="[^"]*">([^<]*)<\/a>/g){print "$1\n"}' "$BODY")"
 fi
-# no-restate aside 本文 (問題/関係者/成功基準 の順) + non-goals 本文
+# no-restate aside 本文 (問題/関係者/成功基準 の順) + non-goals 本文 (opt-in: 非発火は照会リンクなしの本文形)
+if [[ "$XDOC" == "true" ]]; then
 set_eq "可視 no-restate 本文 == .{problem,stakeholders,success_criteria}.no_restate.text" \
   "$( { q '.problem.no_restate.text'; q '.stakeholders.no_restate.text'; q '.success_criteria.no_restate.text'; } | while IFS= read -r v; do esc "$v"; printf '\n'; done )" \
   "$(perl -CSD -0777 -ne 'while(/<aside data-component="no-restate-note">(.*?) <a class="xref-link"/gs){print "$1\n"}' "$BODY")"
 chk "可視 non-goals 本文 == .non_goals.text" "$(esc "$(q '.non_goals.text')")" \
   "$(perl -CSD -0777 -ne 'if(/<div data-component="vision-non-goals"><p class="vm-ng-title">[^<]*<\/p>\s*<p>(.*?) <a class="xref-link"/s){print "$1"}' "$BODY")"
+else
+chk "可視 non-goals 本文 (非発火・照会リンクなし) == .non_goals.text" "$(esc "$(q '.non_goals.text')")" \
+  "$(perl -CSD -0777 -ne 'if(/<div data-component="vision-non-goals"><p class="vm-ng-title">[^<]*<\/p>\s*<p>([^<]*)<\/p>/s){print "$1"}' "$BODY")"
+chk "非発火: xref-link == 0 (aside/非目標 照会リンク注入封鎖)" "0" "$(grep -o 'class="xref-link"' "$BODY" | wc -l | tr -d ' ')"
+fi
 # ★no-restate / non-goals の照会リンク 三つ組 (href, xref-code, xref-label) fidelity (ceiling wf_64344fbe high 是正):
 #   兄弟の xref-code (SRS 章コード) は突合していたが xref-label (可視参照ラベル 4 本) と href (遷移先 4 本) が未突合で
 #   捏造がすり抜けた (feature の label/href は L#feature で束縛済なのに aside/非目標だけ非対称に欠落)。 aside/非目標の
@@ -291,6 +324,7 @@ chk "可視 non-goals 本文 == .non_goals.text" "$(esc "$(q '.non_goals.text')"
 #   (§2 問題章が「アクター定義」を誤引用する mis-citation が floor PASS)。 emission 順 (problem→stakeholders→
 #   success_criteria→非目標) は contract exp 順と一致するゆえ positional で body と同 index を共有し帰属を束縛する
 #   (positional ⊇ set = 既存捕捉を緩めない・bhe「各巡の blocker は前巡自身の fix の回帰」の実証)。
+if [[ "$XDOC" == "true" ]]; then
 SRS_HTML_A="$(q '.cross_doc.srs_html')"
 exp_aside="$( {
   printf '%s\t%s\t%s\n' "$(esc "$SRS_HTML_A")"                                        "$(esc "$(q '.problem.no_restate.srs_code')")"          "$(esc "$(q '.problem.no_restate.srs_label')")"
@@ -300,6 +334,7 @@ exp_aside="$( {
 } )"
 act_aside="$(perl -CSD -0777 -ne 'while(/<a class="xref-link" href="([^"]*)"><span class="xref-code">([^<]*)<\/span><span class="xref-label">([^<]*)<\/span><\/a>/g){print "$1\t$2\t$3\n"}' "$BODY")"
 set_eq "可視 no-restate/非目標 照会 (href, code, label) == contract 派生 (emission 順)" "$exp_aside" "$act_aside"
+fi
 # principle-terminal pt-id / pt-text
 chk "principle-terminal pt-id == principle.id" "$(esc "$(q '.principle.id')")" \
   "$(perl -CSD -0777 -ne 'if(/<span class="pt-id">([^<]*)<\/span>/){print "$1"}' "$BODY")"

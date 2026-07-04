@@ -183,6 +183,8 @@ principle:
 #   (`[]` の splat は空・`null` の splat は null 1 件という yq quirk)。 空配列で「用語集は空」を honest に宣言し core 無改変を保つ。
 glossary: []
 
-# footer の生成メタ (tag 列は assembler 固定)。
+# footer の生成メタ。 instance_tag は head <meta generator> + footer tag 列の instance 出自 (hardcode 禁止・
+#   folio-c5r.3 恒久処方の vision 展開・assemble validate が非空を強制)。
 footer:
   gen_meta: folio design-system generator — vision-pack (folio-c5r.4 / instance#1)
+  instance_tag: instance#1

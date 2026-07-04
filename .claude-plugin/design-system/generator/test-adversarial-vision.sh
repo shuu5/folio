@@ -182,6 +182,41 @@ expect_fail "V59 ★data-doc-id 捏造 (自文書 doc_id)" "$(mut 59 's{data-doc
 #   ↔ stakeholders chip(§2アクター定義) を入替。 chip 集合は不変ゆえ sorted set なら素通るが positional で帰属崩れを捕捉。
 expect_fail "V60 ★cross-aside chip 並べ替え (集合保存・§2問題章がアクター定義を誤引用)" "$(mut 60 's{<span class="xref-code">SRS §3</span><span class="xref-label">上位ニーズ N-1〜N-4 \(SRS-CLINIC-APPT\)</span>}{ZZAZZ}; s{<span class="xref-code">SRS §2</span><span class="xref-label">アクター定義 \(SRS-CLINIC-APPT\)</span>}{<span class="xref-code">SRS §3</span><span class="xref-label">上位ニーズ N-1〜N-4 (SRS-CLINIC-APPT)</span>}; s{ZZAZZ}{<span class="xref-code">SRS §2</span><span class="xref-label">アクター定義 (SRS-CLINIC-APPT)</span>}')"
 
+# --- ★cross_doc opt-in 非発火 (folio-qvv 裁定A): 非発火 baseline + 痕跡ゼロ不変条件 + 片肺 contract abort ---
+# 非発火 contract = clinic から cross_doc/no_restate/srs_* を全て畳み refs.srs を空配列化した派生 (folio-self と同形)。
+NFC="$TMP/nf.yaml"
+vision_base "$NFC"
+yq -i 'del(.cross_doc) | del(.problem.no_restate) | del(.stakeholders.no_restate) | del(.success_criteria.no_restate) | del(.non_goals.srs_code) | del(.non_goals.srs_label) | (.features[].refs.srs) = []' "$NFC"
+NFRAW="$TMP/nf-raw.html"; NFGOOD="$TMP/nf-good.html"
+total=$((total+1))
+if "$ASSEMBLE" "$NFC" > "$NFRAW" 2>/dev/null && "$INJECT" "$MANIFEST" "$NFRAW" "$NFGOOD" >/dev/null 2>&1 \
+   && "$VERIFY" --artifact "$NFC" "$NFGOOD" >/dev/null 2>&1; then
+  echo "  [OK]   V61 ★非発火 baseline (cross_doc なし) assemble→inject→verify PASS"; pass=$((pass+1))
+else
+  echo "  [SLIP] V61 非発火 baseline が FAIL (opt-in 化の回帰)"; fi
+mutnf() { local n="$1" prog="$2"; local m="$TMP/nf-m$n.html"; perl -0777 -pe "$prog" "$NFGOOD" > "$m"; printf '%s' "$m"; }
+expect_fail_nf() {
+  local label="$1" html="$2"
+  total=$((total+1))
+  if "$VERIFY" --artifact "$NFC" "$html" >/dev/null 2>&1; then
+    echo "  [SLIP] $label — verify が改竄を通過させた (exit 0)"
+  else
+    echo "  [OK]   $label — block (exit 非0)"; pass=$((pass+1))
+  fi
+}
+expect_fail_nf "V62 ★非発火に no-restate aside 注入 (偽照会)" "$(mutnf 62 's{(<p id="problem">)}{<aside data-component="no-restate-note">捏造照会 <a class="xref-link" href="fake.html"><span class="xref-code">SRS §9</span><span class="xref-label">捏造先</span></a></aside>$1}')"
+expect_fail_nf "V63 ★非発火に cross-doc-ref-chip 注入 (偽照会先チップ)" "$(mutnf 63 's{(<div class="reader-chip">)}{<div class="reader-chip" data-component="cross-doc-ref-chip">偽 照会先: <b>FAKE-SRS</b></div>$1}')"
+expect_fail_nf "V64 ★非発火に data-vision-ref 照会行注入" "$(mutnf 64 's{(<div class="vm-feat" id="f-1">.*?<p class="vm-cd">[^<]*</p>)}{$1<div class="ad-ref-row claim"><span class="ad-ref-lab">実現する要件</span><a class="xref-link" href="fake.html#FR1" data-vision-ref="FR1" data-vision-role="claim"><span class="xref-code">FR1</span></a></div>}s')"
+expect_fail_nf "V65 ★非発火に cover-meta 照会先 KV 注入" "$(mutnf 65 's{(<span class="m"><span class="k">版</span>)}{<span class="m"><span class="k">照会先</span><span class="v">FAKE-SRS</span></span>$1}')"
+# 片肺 contract (cross_doc なしで照会データ残存) の assemble abort
+cp "$NFC" "$TMP/a7.yaml"; yq -i '.features[0].refs.srs = ["FR1"]' "$TMP/a7.yaml"
+expect_abort "V66 ★片肺 contract: cross_doc なしの refs.srs を abort" "$TMP/a7.yaml" "cross_doc 節なしで SRS 照会"
+cp "$NFC" "$TMP/a8.yaml"; yq -i '.problem.no_restate = {"text":"x","srs_code":"SRS §3","srs_label":"y"}' "$TMP/a8.yaml"
+expect_abort "V67 ★片肺 contract: cross_doc なしの no_restate を abort" "$TMP/a8.yaml" "no_restate が存在"
+# instance 出自タグの fail-closed (c5r.3 恒久処方の vision 展開)
+vision_base "$TMP/a9.yaml"; yq -i 'del(.footer.instance_tag)' "$TMP/a9.yaml"
+expect_abort "V68 ★instance_tag 欠落を abort (虚偽出自の fail-closed)" "$TMP/a9.yaml" "instance_tag 欠落"
+
 # --- floor 単独 GREEN 禁止 (CEILING=PENDING 強制) ---
 total=$((total+1))
 if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" 2>/dev/null | grep -q 'GREEN'; then

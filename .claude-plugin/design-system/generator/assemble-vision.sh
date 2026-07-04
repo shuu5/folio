@@ -41,6 +41,17 @@ CONTRACT_DIR="$(cd "$(dirname "$CONTRACT")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 # vision は glossary 章を持たない (専門語は本文で括弧併記) ゆえ term-inline は使わず esc 直で描画する。
 
+# ★cross-doc 照会は opt-in (folio-qvv 裁定A 2026-07-04): .cross_doc 節が contract に在れば従来の全検査 + 全描画
+#   (KV/chip/no-restate aside/feature 照会行/non-goals 照会リンク)、 無ければ照会痕跡ゼロで出力する。
+#   SRS を持たない instance (folio-self) が照会を捏造せず honest に立つための pack 汎化 (pitch/goal_tree opt-in と
+#   同精神)。 片肺 contract (cross_doc なしで refs.srs/no_restate/srs_code が残存) は validate() が fail-closed で拒否。
+#   verify-vision.sh が同じ opt-in 単位で非発火の痕跡ゼロを検査する (detect↔verify parity)。
+XDOC="$(q 'has("cross_doc")')"
+# ★instance 出自タグは hardcode せず contract (.footer.instance_tag) から取る (folio-c5r.3 ceiling blocker の恒久処方
+#   を vision へ横展開: instance#2 成果物が虚偽の出自 instance#1 を表示し gen-meta と自己矛盾するのを防ぐ)。
+#   head <meta generator> と footer tag 列の 2 箇所に埋まる。 validate() が非空を強制 (fail-closed)。
+ITAG="$(q '.footer.instance_tag')"
+
 # ---- icon SVG (vision-pack 固有。 共用 ICO_SHIELD/USER は lib/common.sh) ----
 ICO_STAR='<path d="M12 2l2.4 6.9H22l-5.8 4.2 2.2 6.9-6.4-4.2-6.4 4.2 2.2-6.9L2 8.9h7.6z"/>'
 ICO_ALERT='<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'
@@ -79,23 +90,37 @@ validate() {
   scmissing="$(comm -23 <(q '.success_criteria.entries[].for_goal' | sort -u) <(q '.objectives[].id' | sort -u))"
   [[ -z "$scmissing" ]] || { echo "assemble-vision: ★success_criteria.for_goal の dangling: objectives に実在しない: $scmissing" >&2; errs=1; }
 
-  # ★cross-doc 前方照会の終端解決 (SRS): 参照先 SRS contract 実在 + doc_id 一致 + 各 srs ref が SRS 要件に実在 + 空 ref 禁止。
-  local srs_rel srs_abs srs_docid expect_docid missing n_srs n_srs_ne
-  srs_rel="$(q '.cross_doc.srs_contract')"; srs_abs="${CONTRACT_DIR}/${srs_rel}"
-  if [[ ! -f "$srs_abs" ]]; then
-    echo "assemble-vision: cross_doc.srs_contract が見つからない: $srs_rel (照会先 SRS 不在)" >&2; errs=1
+  # ★cross-doc 前方照会 (opt-in・qvv 裁定A): cross_doc 節が在れば終端解決を全検査 (SRS 実在 + doc_id 一致 +
+  #   dangling 0 + 空 ref 禁止)、 無ければ照会系 key の残存を拒否 (非発火なのに照会データがある片肺 contract を fail-closed)。
+  local srs_rel srs_abs srs_docid expect_docid missing n_srs n_srs_ne sect
+  n_srs="$(q '[.features[].refs.srs[]] | length')"
+  if [[ "$XDOC" == "true" ]]; then
+    srs_rel="$(q '.cross_doc.srs_contract')"; srs_abs="${CONTRACT_DIR}/${srs_rel}"
+    if [[ ! -f "$srs_abs" ]]; then
+      echo "assemble-vision: cross_doc.srs_contract が見つからない: $srs_rel (照会先 SRS 不在)" >&2; errs=1
+    else
+      srs_docid="$(yq -r '.meta.doc_id' "$srs_abs")"; expect_docid="$(q '.cross_doc.srs_doc_id')"
+      [[ "$srs_docid" == "$expect_docid" ]] || { echo "assemble-vision: cross_doc.srs_doc_id ($expect_docid) が SRS contract の doc_id ($srs_docid) と不一致" >&2; errs=1; }
+      n_srs_ne="$(q '[ .features[].refs.srs[] | select((. // "") != "") ] | length')"
+      [[ "$n_srs" == "$n_srs_ne" ]] || { echo "assemble-vision: ★SRS 照会の空 ref (有効 $n_srs_ne/$n_srs 件・空/null は壊れた前方参照ゆえ禁止)" >&2; errs=1; }
+      missing="$(comm -23 <(q '.features[].refs.srs[]' | sort -u) <(yq -r '.requirements[].id' "$srs_abs" | sort -u))"
+      [[ -z "$missing" ]] || { echo "assemble-vision: ★SRS 照会の dangling: refs.srs が SRS 要件に実在しない: $missing" >&2; errs=1; }
+    fi
   else
-    srs_docid="$(yq -r '.meta.doc_id' "$srs_abs")"; expect_docid="$(q '.cross_doc.srs_doc_id')"
-    [[ "$srs_docid" == "$expect_docid" ]] || { echo "assemble-vision: cross_doc.srs_doc_id ($expect_docid) が SRS contract の doc_id ($srs_docid) と不一致" >&2; errs=1; }
-    n_srs="$(q '[.features[].refs.srs[]] | length')"; n_srs_ne="$(q '[ .features[].refs.srs[] | select((. // "") != "") ] | length')"
-    [[ "$n_srs" == "$n_srs_ne" ]] || { echo "assemble-vision: ★SRS 照会の空 ref (有効 $n_srs_ne/$n_srs 件・空/null は壊れた前方参照ゆえ禁止)" >&2; errs=1; }
-    missing="$(comm -23 <(q '.features[].refs.srs[]' | sort -u) <(yq -r '.requirements[].id' "$srs_abs" | sort -u))"
-    [[ -z "$missing" ]] || { echo "assemble-vision: ★SRS 照会の dangling: refs.srs が SRS 要件に実在しない: $missing" >&2; errs=1; }
+    [[ "$n_srs" == "0" ]] || { echo "assemble-vision: ★cross_doc 節なしで SRS 照会 (refs.srs) が $n_srs 件 (opt-in 片肺 contract・非発火なら refs.srs は空配列 [] を明示)" >&2; errs=1; }
+    for sect in problem stakeholders success_criteria; do
+      [[ "$(q ".${sect} | has(\"no_restate\")")" == "false" ]] || { echo "assemble-vision: ★cross_doc 節なしで .${sect}.no_restate が存在 (opt-in 片肺 contract)" >&2; errs=1; }
+    done
+    { [[ "$(q '.non_goals | has("srs_code")')" == "false" ]] && [[ "$(q '.non_goals | has("srs_label")')" == "false" ]]; } \
+      || { echo "assemble-vision: ★cross_doc 節なしで .non_goals.srs_code/srs_label が存在 (opt-in 片肺 contract)" >&2; errs=1; }
   fi
 
   # principle 終端: id/text 必須 (照会 graph の終端・空だと終端不備)
   [[ -n "$(q '.principle.id // ""')" ]]   || { echo "assemble-vision: principle.id 欠落 (照会 graph の終端が無い)" >&2; errs=1; }
   [[ -n "$(q '.principle.text // ""')" ]] || { echo "assemble-vision: principle.text 欠落" >&2; errs=1; }
+
+  # instance 出自タグ: 非空必須 (hardcode 復活・欠落による虚偽出自を fail-closed で拒否・c5r.3 恒久処方)
+  [[ -n "$ITAG" && "$ITAG" != "null" ]] || { echo "assemble-vision: .footer.instance_tag 欠落 (instance 出自タグは contract 由来・hardcode 禁止)" >&2; errs=1; }
 
   # ★pitch (opt-in) の内部照会 anchor 実在検証: pitch.rows[].ref_anchor ⊆ {本文の生成 anchor 集合} (dangling 内部 link を拒否)。
   #   生成 anchor = northstar / problem / st-<n> / g-<n> / sc-<n> / f-<n> / r-<n> / principle-<id> (build と同一導出)。
@@ -179,7 +204,7 @@ CSS
 
 emit_head() {
   printf '<!DOCTYPE html>\n<html lang="ja" data-doc-id="%s" data-doc-type="vision">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' "$(esc "$(q '.meta.doc_id')")"
-  printf '<meta name="generator" content="folio vision-pack assembler (folio-c5r.4 / instance#1) — deterministic structure, prose slots unfilled">\n'
+  printf '<meta name="generator" content="folio vision-pack assembler (folio-c5r.4 / %s) — deterministic structure, prose slots unfilled">\n' "$(esc "$ITAG")"
   printf '<title>%s</title>\n<style>\n' "$(esc "$1")"
   cat "$CSS"
   emit_vision_css
@@ -192,11 +217,18 @@ emit_cover() {
   local n_g n_sc n_f n_st n_r
   n_g="$(q '.objectives | length')"; n_sc="$(q '.success_criteria.entries | length')"
   n_f="$(q '.features | length')"; n_st="$(q '.stakeholders.entries | length')"; n_r="$(q '.risks | length')"
-  printf '<div class="cover-meta"><span class="m"><span class="k">種別</span><span class="v">%s</span></span><span class="m"><span class="k">構成</span><span class="v">%s</span></span><span class="m"><span class="k">照会先</span><span class="v">%s</span></span><span class="m"><span class="k">版</span><span class="v">v%s / %s</span></span></div>\n' \
-    "vision (ビジョン — なぜ作るか)" "$(esc "${NCHAP} 章 (目標 ${n_g} / 成功基準 ${n_sc} / 機能方向 ${n_f} / 関係者 ${n_st} / リスク ${n_r} / 原則 1)")" \
-    "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
-  # ★cross-doc 前方照会の可視チップ (照会先 SRS の要件・受入基準・案A)。 ★CJK 規律: <b> 閉じ直後に助詞 (の) を空白なしで置く。
-  printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s 照会先: <b>%s</b>の要件・受入基準 (このビジョンの「何を作るか」の具体)</div>\n' "$ICO_USER" "$(esc "$(q '.cross_doc.srs_doc_id')")"
+  if [[ "$XDOC" == "true" ]]; then
+    printf '<div class="cover-meta"><span class="m"><span class="k">種別</span><span class="v">%s</span></span><span class="m"><span class="k">構成</span><span class="v">%s</span></span><span class="m"><span class="k">照会先</span><span class="v">%s</span></span><span class="m"><span class="k">版</span><span class="v">v%s / %s</span></span></div>\n' \
+      "vision (ビジョン — なぜ作るか)" "$(esc "${NCHAP} 章 (目標 ${n_g} / 成功基準 ${n_sc} / 機能方向 ${n_f} / 関係者 ${n_st} / リスク ${n_r} / 原則 1)")" \
+      "$(esc "$(q '.cross_doc.srs_doc_id')")" "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
+    # ★cross-doc 前方照会の可視チップ (照会先 SRS の要件・受入基準・案A)。 ★CJK 規律: <b> 閉じ直後に助詞 (の) を空白なしで置く。
+    printf '<div class="reader-chip" data-component="cross-doc-ref-chip">%s 照会先: <b>%s</b>の要件・受入基準 (このビジョンの「何を作るか」の具体)</div>\n' "$ICO_USER" "$(esc "$(q '.cross_doc.srs_doc_id')")"
+  else
+    # 非発火 (opt-in): 照会先 KV と ref-chip を出さない (「無ければ出さない」= pitch/goal_tree と同じ痕跡ゼロ規律)。
+    printf '<div class="cover-meta"><span class="m"><span class="k">種別</span><span class="v">%s</span></span><span class="m"><span class="k">構成</span><span class="v">%s</span></span><span class="m"><span class="k">版</span><span class="v">v%s / %s</span></span></div>\n' \
+      "vision (ビジョン — なぜ作るか)" "$(esc "${NCHAP} 章 (目標 ${n_g} / 成功基準 ${n_sc} / 機能方向 ${n_f} / 関係者 ${n_st} / リスク ${n_r} / 原則 1)")" \
+      "$(esc "$(q '.meta.version')")" "$(esc "$(q '.meta.date')")"
+  fi
   core_emit_approval_block
   core_emit_cover_tail
 }
@@ -235,7 +267,7 @@ emit_problem() {
     if [[ "$first" -eq 1 ]]; then printf '<p id="problem">%s</p>\n' "$(esc "$p")"; first=0
     else printf '<p>%s</p>\n' "$(esc "$p")"; fi
   done < <(q '.problem.paragraphs[]')
-  emit_no_restate '.problem.no_restate'
+  if [[ "$XDOC" == "true" ]]; then emit_no_restate '.problem.no_restate'; fi
 }
 
 # ---- §3 関係者 (vision-stakeholder-list = ST-<n> カード + no-restate → SRS §2) ----
@@ -250,7 +282,7 @@ emit_stakeholders() {
       "$(esc "$(q '.stakeholders.entries[] | select(.id=="'"$id"'") | .gain')")"
   done
   printf '</div>\n'
-  emit_no_restate '.stakeholders.no_restate'
+  if [[ "$XDOC" == "true" ]]; then emit_no_restate '.stakeholders.no_restate'; fi
 }
 
 # ---- §4 目標 (vision-objective-list = G-<n>) + 成功基準 (vision-success-criteria = SC-<n>) + 目標ツリー図 (optional) ----
@@ -287,7 +319,7 @@ emit_objectives() {
     done < <(q '.goal_tree.lines[]')
     printf '</pre>\n<figcaption><span class="diag-tag">目標ツリー</span>%s</figcaption>\n</figure>\n' "$(esc "$(q '.goal_tree.caption')")"
   fi
-  emit_no_restate '.success_criteria.no_restate' "$(q '.success_criteria.no_restate.srs_anchor // ""')"
+  if [[ "$XDOC" == "true" ]]; then emit_no_restate '.success_criteria.no_restate' "$(q '.success_criteria.no_restate.srs_anchor // ""')"; fi
 }
 
 # ---- §5 主要機能の方向 (vision-feature-list = F-<n> + SRS 充足照会 claim 行) ----
@@ -301,13 +333,16 @@ emit_features() {
       "$(esc "${id,,}")" "$(esc "$id")" \
       "$(esc "$(q '.features[] | select(.id=="'"$id"'") | .name')")" \
       "$(esc "$(q '.features[] | select(.id=="'"$id"'") | .desc')")"
-    printf '<div class="ad-ref-row claim"><span class="ad-ref-lab">実現する要件</span>'
-    while IFS= read -r fr; do
-      [[ -n "$fr" ]] || continue
-      printf '<a class="xref-link" href="%s#%s" data-vision-ref="%s" data-vision-role="claim"><span class="xref-code">%s</span><span class="xref-label" data-srs-label-ref="%s">%s</span></a>' \
-        "$(esc "$SRS_HTML")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "${SRS_LABEL[$fr]}")"
-    done < <(q '.features[] | select(.id=="'"$id"'") | .refs.srs[]')
-    printf '</div></div>\n'
+    if [[ "$XDOC" == "true" ]]; then
+      printf '<div class="ad-ref-row claim"><span class="ad-ref-lab">実現する要件</span>'
+      while IFS= read -r fr; do
+        [[ -n "$fr" ]] || continue
+        printf '<a class="xref-link" href="%s#%s" data-vision-ref="%s" data-vision-role="claim"><span class="xref-code">%s</span><span class="xref-label" data-srs-label-ref="%s">%s</span></a>' \
+          "$(esc "$SRS_HTML")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "$fr")" "$(esc "${SRS_LABEL[$fr]}")"
+      done < <(q '.features[] | select(.id=="'"$id"'") | .refs.srs[]')
+      printf '</div>'
+    fi
+    printf '</div>\n'
   done
   printf '</div>\n'
 }
@@ -324,10 +359,14 @@ emit_risks() {
       "$(esc "$(q '.risks[] | select(.id=="'"$id"'") | .desc')")"
   done
   printf '</div>\n'
-  # 非目標 (SRS 範囲章へ文書単位照会)
+  # 非目標 (発火時は SRS 範囲章へ文書単位照会・非発火時は本文のみ = 照会痕跡ゼロ)
   printf '<div data-component="vision-non-goals"><p class="vm-ng-title">非目標 (このビジョンでは作らない、 と決めていること)</p>\n'
-  printf '<p>%s <a class="xref-link" href="%s"><span class="xref-code">%s</span><span class="xref-label">%s</span></a></p>\n</div>\n' \
-    "$(esc "$(q '.non_goals.text')")" "$(esc "$(q '.cross_doc.srs_html')")" "$(esc "$(q '.non_goals.srs_code')")" "$(esc "$(q '.non_goals.srs_label')")"
+  if [[ "$XDOC" == "true" ]]; then
+    printf '<p>%s <a class="xref-link" href="%s"><span class="xref-code">%s</span><span class="xref-label">%s</span></a></p>\n</div>\n' \
+      "$(esc "$(q '.non_goals.text')")" "$(esc "$(q '.cross_doc.srs_html')")" "$(esc "$(q '.non_goals.srs_code')")" "$(esc "$(q '.non_goals.srs_label')")"
+  else
+    printf '<p>%s</p>\n</div>\n' "$(esc "$(q '.non_goals.text')")"
+  fi
 }
 
 # ---- §7 指針価値 (principle-terminal = 照会 graph の終端 + narrative) ----
@@ -338,7 +377,7 @@ emit_principle() {
 }
 
 emit_footer() {
-  core_emit_footer '<span>folio design system</span><span>vision-pack</span><span>folio engine 段階3 後 (instance#1)</span><span>Pichler 骨 + Wiegers 選抜 + 原則終端</span>'
+  core_emit_footer "<span>folio design system</span><span>vision-pack</span><span>folio engine 段階3 後 ($(esc "$ITAG"))</span><span>Pichler 骨 + Wiegers 選抜 + 原則終端</span>"
 }
 
 # mermaid render JS (goal_tree がある時だけ emit・defer 済みで window.mermaid 利用可)。
@@ -384,8 +423,10 @@ build() {
 validate
 # ★SRS 由来 ラベル map (fabrication-free・FR=requirements[].label を verbatim)。 validate() が SRS 実在 +
 #   全 srs ref が SRS に実在を保証済ゆえ、 参照される全 ref の label は欠落なし。 SRS contract は read-only (無編集)。
-#   verify-vision.sh が同一導出で fidelity 突合。
-SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
+#   verify-vision.sh が同一導出で fidelity 突合。 非発火 (cross_doc なし) は map 不要 (照会行を描かない)。
 declare -A SRS_LABEL
-while IFS=$'\t' read -r _id _lbl; do [[ -n "$_id" ]] && SRS_LABEL["$_id"]="$_lbl"; done < <(yq -r '.requirements[] | [.id, .label] | @tsv' "$SRS_ABS")
+if [[ "$XDOC" == "true" ]]; then
+  SRS_REL="$(q '.cross_doc.srs_contract')"; SRS_ABS="${CONTRACT_DIR}/${SRS_REL}"
+  while IFS=$'\t' read -r _id _lbl; do [[ -n "$_id" ]] && SRS_LABEL["$_id"]="$_lbl"; done < <(yq -r '.requirements[] | [.id, .label] | @tsv' "$SRS_ABS")
+fi
 core_finalize "assemble-vision"
