@@ -122,7 +122,7 @@ components:
   - id: calendar-adapter
     name: 連携アダプタ
     kind: external
-    responsibility: 診療カレンダー等の外部と橋渡しし、 形式の違いを吸収する (連携アダプタ)。
+    responsibility: 診療カレンダー等の外部と橋渡しし、 形式の違いを吸収する (連携アダプタ = DDD で anti-corruption layer と呼ばれるパターン)。
     separation_reason: 外部の都合をシステム内に持ち込まず、 ここで翻訳して隔離する。
 
 # §4 動いているときの流れ (runtime)。 二重予約防止フロー (同時申込の sequence) を 1 本記述する。
@@ -203,12 +203,12 @@ glossary:
   - { term: ダブルブッキング, en: double booking,        plain_short: 二重予約,               def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
   - { term: 満枠,           en: fully booked,          plain_short: 空きなし,               def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
   - { term: 無断キャンセル,  en: no-show,               plain_short: 連絡なく来ないこと,     def: 予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。 }
-  - { term: リマインド通知,  en: reminder,              plain_short: 思い出し通知,           def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
-  - { term: 本人確認,        en: identity check,        plain_short: 本人かの確かめ,         def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: リマインド通知,  en: reminder notification, plain_short: 思い出し通知,           def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: 本人確認,        en: identity verification, plain_short: 本人かの確かめ,         def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
   - { term: 診療カレンダー,  en: clinic calendar,       plain_short: 診療予定表,             def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
   - { term: 条件付き更新,    en: conditional update,    plain_short: 条件を満たすときだけ書き換え, def: 「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。 }
   - { term: トランザクション, en: transaction,           plain_short: ひとまとめの処理,       def: 「全部成功」か「全部やらなかった」かのどちらかになる、 分けられない一塊の処理。 }
-  - { term: 連携アダプタ,    en: anti-corruption layer, plain_short: 外部との橋渡し,         def: 外部システムとの間に置く翻訳役。 外部の都合や形式の違いをここで吸収し、 システム内へ持ち込ませない。 }
+  - { term: 連携アダプタ,    en: integration adapter,   plain_short: 外部との橋渡し,         def: 外部システムとの間に置く翻訳役。 外部の都合や形式の違いをここで吸収し、 システム内へ持ち込ませない。 }
 
 # 図 (diagrams = C4 Context / Container + sequence の 3 図)。 mermaid DSL を行配列で保持 (core_validate_strings は
 #   各行を 1 行 string として検査・改行なし)。 assembler が esc して <pre class="mermaid"> へ join 出力 (raw DSL 露出 = gate I blocker・folio-97z)。

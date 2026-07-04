@@ -113,5 +113,5 @@ glossary:
   - { term: 悲観ロック, en: pessimistic locking, plain_short: 先に押さえる方式, def: 処理の前から対象を確保し、 終わるまで他の人を入れない方式。 確実だが押さえている間ふさがる。 }
   - { term: 条件付き更新, en: conditional update, plain_short: 条件を満たすときだけ書き換え, def: 「残数が 1 以上のときだけ減らす」のように、 条件が成り立つ場合だけデータを書き換える一回の操作。 }
   - { term: 満枠, en: fully booked, plain_short: 空きなし, def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
-  - { term: ホットスポット, en: hot spot, plain_short: 集中する一点, def: 申込や処理が一箇所に集中して詰まりやすくなる場所。 人気の枠などで起きる。 }
+  - { term: ホットスポット, en: hotspot, plain_short: 集中する一点, def: 申込や処理が一箇所に集中して詰まりやすくなる場所。 人気の枠などで起きる。 }
   - { term: スループット, en: throughput, plain_short: さばける処理量, def: 一定の時間にさばける処理の量。 大きいほどピーク時に詰まりにくい。 }

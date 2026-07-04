@@ -116,11 +116,11 @@ glossary:
   - { term: ダブルブッキング, en: double booking,    plain_short: 二重予約,          def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
   - { term: 満枠,           en: fully booked,      plain_short: 空きなし,          def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
   - { term: 無断キャンセル,  en: no-show,           plain_short: 連絡なく来ないこと,        def: 予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。 }
-  - { term: リマインド通知,  en: reminder,          plain_short: 思い出し通知,      def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: リマインド通知,  en: reminder notification, plain_short: 思い出し通知,      def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
   - { term: チェックイン,    en: check-in,          plain_short: 来院の受付・記録,        def: 予約した患者が来院し、 受付を済ませて「来ました」と記録すること。 }
-  - { term: 本人確認,        en: identity check,    plain_short: 本人かの確かめ,    def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
-  - { term: 休診日,          en: closed day,        plain_short: 診療しない日,      def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
-  - { term: 診療時間外,      en: off hours,         plain_short: 診療していない時間, def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
-  - { term: 要配慮個人情報,  en: sensitive data,    plain_short: 特に守る情報,      def: 受診歴や病歴など、 漏れると不利益が大きいため特に慎重に扱う個人情報。 }
+  - { term: 本人確認,        en: identity verification, plain_short: 本人かの確かめ,    def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 休診日,          en: clinic holiday,    plain_short: 診療しない日,      def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
+  - { term: 診療時間外,      en: outside clinic hours, plain_short: 診療していない時間, def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
+  - { term: 要配慮個人情報,  en: sensitive personal information, plain_short: 特に守る情報,      def: 受診歴や病歴など、 漏れると不利益が大きいため特に慎重に扱う個人情報。 }
   - { term: 診療カレンダー,  en: clinic calendar,   plain_short: 診療予定表,        def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
-  - { term: 個情法,          en: privacy act,       plain_short: 個人情報の法律,    def: 個人情報の取り扱いルールを定めた日本の法律 (個人情報保護法)。 }
+  - { term: 個情法,          en: "APPI (Act on the Protection of Personal Information)", plain_short: 個人情報の法律,    def: 個人情報の取り扱いルールを定めた日本の法律 (個人情報保護法)。 }

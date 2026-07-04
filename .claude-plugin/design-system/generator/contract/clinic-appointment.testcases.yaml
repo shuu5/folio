@@ -172,16 +172,16 @@ glossary:
   - { term: テストケース,     en: test case,       plain_short: 試し方の 1 件,        def: 「この状況で・こう操作したら・こうなるべき」を 1 件にまとめた、 正しさの確かめ方。 }
   - { term: トレーサビリティ, en: traceability,    plain_short: 要件との結びつき,      def: どのテストがどの要件・受入基準を確かめているかを、 たどれるようにつないでおくこと。 }
   - { term: 受入基準,         en: acceptance criteria, plain_short: 合格と言える条件, def: 「これが満たせていれば合格」と事前に決めておく、 要件ごとの確かめどころ。 }
-  - { term: 正常系,           en: normal case,     plain_short: うまくいく筋道,        def: 想定どおりに正しく使われたときに、 期待どおり動くかを確かめるテスト。 }
-  - { term: 異常系,           en: abnormal case,   plain_short: うまくいかない筋道,    def: 間違った操作や競合など、 困った状況でも安全に振る舞うかを確かめるテスト。 }
+  - { term: 正常系,           en: happy path,      plain_short: うまくいく筋道,        def: 想定どおりに正しく使われたときに、 期待どおり動くかを確かめるテスト。 }
+  - { term: 異常系,           en: error path,      plain_short: うまくいかない筋道,    def: 間違った操作や競合など、 困った状況でも安全に振る舞うかを確かめるテスト。 }
   - { term: 境界値,           en: boundary value,  plain_short: ぎりぎりの値,          def: 「残り 0」「ちょうど満枠」など、 境目の値で正しく振る舞うかを確かめるテスト。 }
   - { term: 診療枠,           en: appointment slot, plain_short: 予約できる時間帯,     def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
   - { term: ダブルブッキング, en: double booking,  plain_short: 二重予約,              def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
   - { term: 満枠,             en: fully booked,    plain_short: 空きなし,              def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
-  - { term: リマインド通知,   en: reminder,        plain_short: 思い出し通知,          def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
-  - { term: 本人確認,         en: identity check,  plain_short: 本人かの確かめ,        def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
-  - { term: 休診日,           en: closed day,      plain_short: 診療しない日,          def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
-  - { term: 診療時間外,       en: off hours,       plain_short: 診療していない時間,    def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
+  - { term: リマインド通知,   en: reminder notification, plain_short: 思い出し通知,          def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: 本人確認,         en: identity verification, plain_short: 本人かの確かめ,        def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 休診日,           en: clinic holiday,  plain_short: 診療しない日,          def: クリニックが診療を行わない日。 この日には予約を受け付けない。 }
+  - { term: 診療時間外,       en: outside clinic hours, plain_short: 診療していない時間,    def: その日の診療を行っていない時間帯。 予約は受け付けない。 }
   - { term: 診療カレンダー,   en: clinic calendar, plain_short: 診療予定表,            def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
 
 footer:
