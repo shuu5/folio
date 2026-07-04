@@ -134,7 +134,18 @@ test_cases[].steps[]|.test_cases[].steps[]
 test_cases[].expected|.test_cases[].expected
 scope.in[]|.scope.in[]
 scope.out[]|.scope.out[]'
+LEAVES[vision]='north_star.text|.north_star.text
+north_star.narrative|.north_star.narrative
+problem.paragraphs[]|.problem.paragraphs[]
+stakeholders.gain|.stakeholders.entries[].gain
+objectives.desc|.objectives[].desc
+success_criteria.desc|.success_criteria.entries[].desc
+features.desc|.features[].desc
+risks.desc|.risks[].desc
+non_goals.text|.non_goals.text
+principle.narrative|.principle.narrative'
 # glossary = 比較対象なし (用語 def は SSoT コピーで全 pack に複製 = 構造上の全一致ゆえ除外)。
+# vision の no_restate/pitch/principle.text は navigational meta / 短文マーケ句 / 共有終端規約で不掲載 (arch と同方針)。
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)

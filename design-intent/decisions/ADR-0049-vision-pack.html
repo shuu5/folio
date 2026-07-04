@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.1.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0049">
+<meta name="folio-adr-date" content="2026-07-04">
+<title>ADR-0049 — vision pack (engine 段階3 後) — 記述型 doc-type 2 例目「なぜ作るか」の lean hybrid schema + 自前 inline principle 自己終端 + opt-in 要素 + core 無改変</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0049-vision-pack.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0049 — vision pack (engine 段階3 後)",
+  "folio:version": "1.1.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../research/document-discipline-engine-design.html" },
+    { "@id": "./ADR-0046-architecture-description-pack.html" },
+    { "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
+    { "@id": "./ADR-0041-human-layer-visual-design-system.html" },
+    { "@id": "./ADR-0042-hybrid-generation-dense-table-readability.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0049</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0049 — vision pack (engine 段階3 後)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-04 &middot; folio v1.2.0 &middot; engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3 後。 文書規律エンジンに<strong>記述型 doc-type の 2 例目</strong> = vision (「なぜ作るか」= 北極星・目標・機能の方向を描く文書) を追加する設計を確定する。 <a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> の architecture-description (記述型 1 例目) が確立した<strong>floor 三本柱</strong> (照会 graph 整合 + navigable id アンカー + 固定章/必須要素) を、 <strong>Pichler Product Vision Board の骨 + Wiegers Vision&amp;Scope の測定可能要素を選抜移植した lean hybrid</strong> schema (7 章) へ適用する。 SRS の要件へは<strong>照会するだけで再掲しない (案A)</strong>・上位の principle は clinic 母体が constitution ゼロ生成ゆえ<strong>自前の inline principle で自己終端</strong>する。 設計の探索は demo-walk grill (2026-07-04) で行い、 本 ADR は実装 + 検証 + land 後の forward decision を記録する。 <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> の visual design system・<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> の hybrid 生成を記述型 2 例目へ適用し、 engine core 抽出完了 (<a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> §2.4) が 2 例目でも <strong>core 無改変</strong>で保たれることを確認する (rule-of-three 継続)。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-schema">§2.1 schema (Pichler 骨 + Wiegers 選抜の lean hybrid・7 章)</a></li>
+  <li class="toc--sub"><a href="#s2-2-floor">§2.2 floor 三本柱の流用 + vision 固有の件数 guard 不要化</a></li>
+  <li class="toc--sub"><a href="#s2-3-terminal">§2.3 自前 inline principle 自己終端 + vision&rarr;SRS backward 照会</a></li>
+  <li class="toc--sub"><a href="#s2-4-optin">§2.4 Moore pitch opt-in + 目標ツリー図 optional (必須化しない)</a></li>
+  <li class="toc--sub"><a href="#s2-5-principles">§2.5 横断原則 (core 無改変 / clinic 先 / glossary 章なし)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0049</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-07-04</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0046 (基盤 — 記述型 doc-type の floor 三本柱 〔照会 graph + navigable id + 固定章/必須要素〕 + 案A cross-document 照会 + core 無改変 を vision-pack へ流用。 vision は architecture-description に続く記述型 2 例目 = rule-of-three 3 例目の descriptive)、 ADR-0043 (照会 graph 終端完備検証 〔verify_cross_doc_refs + verify-graph.sh〕 を vision の floor 背骨に流用)、 ADR-0041 (人間層 visual design system を vision へ適用)、 ADR-0042 (構造=決定的組立 / prose=opus 充填の hybrid を vision へ適用)。 設計 design-of-record = engine 設計 doc + doctype-coverage-audit (vision は完全 doc-suite の「なぜ作るか」層)。 接地 = engine epic folio-0dv / sub-epic folio-c5r 段階3 後 folio-c5r.4 (admin-direct build / land 〔本 ADR で記録〕)。 先行 land = folio-bhe (arch band 見出しの instance hardcode を contract 化 + genuine-shape floor 硬化・vision build 前の予防規律)。 follow-up = folio-5se (vision 専用 ceiling agent = fidelity-vision + persona-walk-vision) / folio-qvv (folio-self vision self-host = 北極星 folio-7wn を記述型 instance#2 として生成) / folio-bf4f (arch band_numchk 撤去可否・非 blocking)。 起点 = user demo-walk grill 2026-07-04 (記述型は抽象論点だけでは非エンジニア判断不能ゆえ opus モックアップ &rarr; :8729 walk &rarr; PASS で論点確定。 walk が 7 章粒度 / id 5 種の切り方 / 北極星文の読み味を確定)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>engine epic <strong>folio-0dv</strong> は folio の文書規律を一般化した汎用文書生成エンジンを構築する。 その sub-epic <strong>folio-c5r</strong> は「任意プロジェクト向けの完全な文書一式」を被覆する roadmap である。 <a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> が要件索引型を脱した<strong>初の記述型 doc-type</strong> = architecture-description (構造の WHAT) を追加した。 完全 doc-suite にはもう一つ、 索引型でも構造記述でもない層 — <strong>「なぜ作るか」を描く vision (ビジョン)</strong> — が欠けていた。</p>
+
+<p><strong>gap — 「なぜ作るか」層が engine に欠けている</strong>。 SRS は<em>振る舞い</em>の WHAT、 architecture は<em>構造</em>の WHAT、 ADR は個別判断の WHY を記録するが、 プロジェクト全体が<strong>どの状態を目指し (北極星)・何を成功と測り (目標・成功基準)・どの方向の機能で実現するか</strong>を高度から束ねる文書は無かった。 vision はこの最上流の「なぜ」を担い、 下位の SRS/arch/ADR は最終的にこの意図へ遡れるようにする。</p>
+
+<p><strong>framing — vision は「なぜ作るか」であって「何を作るか」でない</strong>。 vision と SRS の二重記述 (no-restate 問題) が最大の設計不確実点だった。 vision は北極星・why-it-matters・目標という<strong>別の高度</strong>を描き、 具体の要件・受入基準・アクター役割は SRS の領分ゆえ、 vision はそれらを<strong>照会するだけで再掲しない</strong> (案A・§2.3)。 goals (vision の測定物差し = 経営がいつ「成功」と言えるか) と acceptance criteria (SRS の機械検証可能な合格条件) は<em>高さの違う 2 つの物差し</em>であり同一物の再掲でない、 という区別が no-restate の核心である。</p>
+
+<p>vision も記述型 pack ゆえ、 設計 grill (2026-07-04) は <a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> と同じく <strong>demo-walk-first</strong> で進めた — opus でモックアップを生成し <code>:8729</code> で walk し、 反応で 7 章粒度・id 5 種の切り方・北極星文の読み味を確定してから本物の決定的 pack を構築した。 clinic 診療予約 vision を母体 (instance#1) に本物 pack を構築・検証し、 本 ADR はその実装 + 検証 + land 後の forward decision を記録する。 build に先立ち、 arch pack の band 見出しに残っていた instance 固有 hardcode (件数/ドメイン文言) を contract 化し genuine-shape floor を硬化する <strong>folio-bhe</strong> を独立先行 land した (vision assembler が同じ罠を掘らない予防規律)。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-schema">§2.1 schema (Pichler 骨 + Wiegers 選抜の lean hybrid・7 章)</h3>
+
+<p>vision pack は <strong>Pichler Product Vision Board の lean な骨</strong> (北極星 / 対象 / ニーズ / 機能 / 価値) に <strong>Wiegers Vision&amp;Scope の測定可能要素</strong> (目標 + 成功基準 + 非目標) を選抜移植した <strong>lean hybrid</strong> を schema に採る (arc42+C4 を採った arch と同じ「業界の骨を選抜合成する」様式)。 章立ては固定 <strong>7 章</strong>: 北極星 / 解くに値する問題 / 関係者 / 目標+成功基準 / 主要機能の方向 / リスク+非目標 / 指針価値。 id 付き離散 node は <strong>5 種</strong>: ST (関係者) / G (目標) / SC (成功基準) / F (機能の方向) / R (リスク)。 arch と同じく<strong>固定章の集合が floor の検査単位</strong>を与える (§2.2)。 vision は<strong>用語集章を持たない</strong> — 高度な narrative ゆえ専門語は本文で括弧併記し、 用語 SSoT は下位の索引型 (SRS 以下) が担う。 North Star Framework の metric 駆動を<strong>採らない</strong>: 質的 vision (北極星 folio-7wn 自身が定量 metric を持たない反例) を排除するため、 成功基準は任意の測定物差しに留め metric を必須化しない。</p>
+
+<h3 id="s2-2-floor">§2.2 floor 三本柱の流用 + vision 固有の件数 guard 不要化</h3>
+
+<p>vision の floor は <a href="./ADR-0046-architecture-description-pack.html#s2-2-floor">ADR-0046</a> の<strong>三本柱をそのまま流用</strong>する: (a) 照会 graph 整合 (features&rarr;SRS 充足照会が実在 FR を role 通り指す・<code>verify_cross_doc_refs</code> 流用) / (b) navigable id アンカー (ST/G/SC/F/R の各 node に安定 id を emit・案A 照会を人間が辿れる) / (c) 固定 7 章 + 各章の必須要素存在。 加えて<strong>genuine-shape 構造不変条件</strong> (folio-bhe 教訓: band/h2 を要素単位・case-insensitive・attribute-tolerant に数え decoy 見出しを封鎖) と可視テキスト fabrication-free (属性 intact でも可視だけ捏造する fail-open を全 node で封鎖) を課す。</p>
+<p>★<strong>arch の件数 guard (band_numchk / 全角 / 不可視文字) は vision に不要</strong>。 arch の band 見出しは instance 固有の件数 (「6 つの部品」) を持ち、 その count fabrication を封鎖する guard が要ったが、 vision の 7 つの band 見出しは<strong>全て pack 不変</strong> (件数・ドメイン非依存の汎用フレーズ) ゆえ literal pin で足りる。 章数 (7) は verify の期待見出し配列長から<strong>単一 SSoT 導出</strong>し、 magic「==7」を書かない (folio-bhe ceiling が arc42 専用「==8」の pack 流用破綻を反面教師として教えた)。 cover の構成件数 (目標 3 / 機能 4 等) は contract 配列長から導出し instance hardcode しない (folio-bhe 予防規律を最初から適用)。</p>
+
+<h3 id="s2-3-terminal">§2.3 自前 inline principle 自己終端 + vision&rarr;SRS backward 照会</h3>
+
+<p>vision は照会 graph の<strong>終端を自前の inline principle</strong> (指針価値・例 PRIN-PATIENT-TRUST) で持ち、 <strong>自己終端</strong>する。 母体 clinic は constitution をゼロ生成する (index 型 suite ゆえ) ため外部 principle へ forward できず、 終端手段は inline principle か SRS 連鎖の 2 択に絞られ、 arch 先例 (inline) に倣い inline principle に確定した。 vision&rarr;SRS の照会 edge は <strong>backward</strong> (arch&rarr;SRS の完全ミラー): reachability は SRS&rarr;vision となり、 vision の backward edge が<strong>edgeless な SRS へ終端到達路を供給</strong>する (SRS は自前終端を持たず、 arch と vision の 2 経路から終端到達する冗長構造)。 ★inline principle の<strong>genuine 性</strong> (グラフ充足のための作文でなく本物の判断規則か = 北極星の言い換えでなくトレードオフ時にどちらへ倒すかを実際に決める規則か) は機械 floor で裁けず、 <strong>ceiling の明示的検査観点</strong>として課す (folio-5se の vision 専用 fidelity lens へ焼き込む)。</p>
+
+<h3 id="s2-4-optin">§2.4 Moore pitch opt-in + 目標ツリー図 optional (必須化しない)</h3>
+
+<p>北極星文は<strong>自由叙述を既定</strong>とし (捏造/歪みは ceiling が検査)、 Moore の elevator-pitch 文法 (対象顧客 / ニーズ / カテゴリ / 独自価値 / 競合との違い) は<strong>任意追加 slot (opt-in)</strong> とする — contract に pitch がある時だけ穴埋め表を描画し、 各穴と本文の章の対応を floor が内部照会 anchor で検査する。 目標ツリー図 (北極星&rarr;目標&rarr;成功基準の mermaid) も<strong>optional</strong> — ある時だけ描画忠実性を検査する。 いずれも<strong>必須化しない</strong>: 質的 vision (metric 無しの folio-7wn が反例) を排除しないため。 opt-in 要素の不在でも floor が PASS することを敵対テストで pin する。</p>
+
+<h3 id="s2-5-principles">§2.5 横断原則 (core 無改変 / clinic 先 / glossary 章なし)</h3>
+<ul>
+  <li>★<strong>core (lib/ + inject-prose.sh) 無改変</strong> — 記述型 2 例目も byte-identity で挿さる。 <a href="./ADR-0046-architecture-description-pack.html#s2-4-principles">ADR-0046</a> §2.4 の core 抽出完了 doctrine が 2 例目でも保たれ、 rule-of-three (pack 追加は core 不変) を継続実証。 pack 追加物は contract YAML + assemble-vision.sh + rolemap + verify-vision.sh + prose manifest + test-adversarial-vision.sh + CONTENT_LEAVES[vision] 登録 のみ。 記述型共通 helper の抽出は<strong>見送る</strong> (rule-of-three の 3 例目で別途判断)。</li>
+  <li><strong>clinic 先 &rarr; folio-self vision は後</strong> — 境界の明確な clinic 診療予約 vision (instance#1) で assembler を先に証明し、 最難の meta &times; 記述型である folio-self vision (北極星 folio-7wn 自身の self-host) は後の self-dogfood 段階で instance#2 として回収する (folio-qvv・arch の folio-self-spec 後回しと同型)。</li>
+  <li><strong>glossary 章なし</strong> — vision は高度 narrative ゆえ用語集章を持たず、 専門語は本文で括弧併記する (用語 SSoT は下位索引型が担う)。 verify_core_chrome の glossary chrome 突合が空 glossary で mikefarah yq の collect+@tsv quirk (空入力 phantom 行) に当たるため、 vision verify は cover-head/approval/reader-chip の chrome 検査を <strong>core 無改変のまま inline</strong> (glossary 4 検査を除いた faithful subset) する。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<ul>
+  <li><strong>得るもの</strong>: 完全 doc-suite に「なぜ作るか」の最上流層が加わり、 下位の SRS/arch/ADR が最終的に vision の意図 (北極星・指針価値) へ遡れる。 案A で vision が SRS を再掲せず照会で繋がり (no-restate = drift 源排除)、 vision の backward edge が edgeless な SRS へ終端到達路を冗長供給する。 記述型 2 例目でも floor 三本柱が流用でき、 engine core が無改変で保たれ engine 汎用性の射程が「なぜ作るか」層へ広がる。 opt-in 設計 (Moore pitch / 目標ツリー) で質的 vision と定量 vision の双方を排除しない。</li>
+  <li><strong>払うもの</strong>: <strong>意味 fidelity は ceiling 前提</strong> — 北極星文の genuine 性・inline principle が作文でないこと・章リードの件数 (「3 つの目標」等) が配列長に忠実かは機械 floor で裁けず、 vision 専用 ceiling agent (folio-5se) の制度化を前提とする。 可視 exotic encoding での件数捏造等も machine/LLM 境界ドクトリン上 ceiling 領分 (floor は不可視クラス + algorithmic のみ)。 pack ごとに contract を維持する。</li>
+  <li><strong>ADR-worthiness</strong> (<a href="../spec/rules.html#s10-3">rules §10.3</a>): <em>hard-to-reverse</em> (7 章 schema・floor 三本柱流用・自己終端モデル・案A は consumer が vision doc を生成し始めると転換が高コスト) / <em>surprising</em> (索引型でも構造記述でもない第三の記述型 / vision が edgeless SRS へ終端路を供給する backward edge / metric 必須化を質的 vision 反例で排除) / <em>real-trade-off</em> (inline 自己終端 vs 外部接地・opt-in vs 必須・no-restate 案A vs 転写・metric 駆動 vs 質的 の 4 種以上の実トレードオフ) の 3 条件を満たす。</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives</h2>
+<ul>
+  <li><strong>(終端) 外部 principle へ forward 接地する</strong> — 不採用。 母体 clinic は constitution ゼロ生成ゆえ外部 principle が存在せず forward 不能。 自前 inline principle で自己終端する (arch 先例と同型)。</li>
+  <li><strong>(照会) vision が SRS の要件/受入基準を inline 転写する</strong> — 不採用。 SRS が既に SSoT を持ち二重保持 = drift 源。 vision は北極星/why の別高度に徹し、 具体は SRS へ照会する (案A)。 goals (経営の物差し) と acceptance (機械検証条件) の高さの違いが再掲でないことの根拠。</li>
+  <li><strong>(schema) North Star Framework の metric 駆動を必須化する</strong> — 不採用。 質的 vision (定量 metric を持たない北極星 folio-7wn が反例) を排除してしまう。 成功基準は任意の測定物差しに留め metric を必須化しない。</li>
+  <li><strong>(opt-in) Moore pitch / 目標ツリー図を必須化する</strong> — 不採用。 上と同根で質的 vision を排除する。 opt-in / optional とし、 不在でも floor PASS を敵対テストで pin する。</li>
+  <li><strong>(母体) folio-self vision を先に構築する</strong> — 不採用。 meta &times; 記述型は最難で 2 例目段階で de-risk できない。 clinic で証明してから folio-self vision を後の self-dogfood 段階で self-host する (folio-qvv)。</li>
+</ul>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<p>design-of-record (探索): engine 設計 doc (doc-type &rarr; pack 写像) + doctype-coverage-audit (完全 doc-suite の gap SSoT・vision =「なぜ作るか」層)。 基盤: <a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> (記述型 doc-type の floor 三本柱 + 案A cross-document 照会 + core 無改変 を vision へ流用・vision は記述型 2 例目)・<a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> (照会 graph 終端完備検証を floor 背骨に流用)・<a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> (人間層 visual design system を適用)・<a href="./ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (構造=決定的組立 / prose=opus 充填の hybrid を適用)。 原則接地: <a href="../spec/constitution.html#p-7">P-7</a> (3-domain・design intent = なぜ作るかの WHAT) / <a href="../spec/constitution.html#p-4">P-4</a> (declarative) / <a href="../spec/constitution.html#p-10">P-10</a> (ADR 昇格は user 承認)。 追跡: bd engine epic folio-0dv / sub-epic folio-c5r 段階3 後 folio-c5r.4 (admin-direct build・contract YAML + assemble-vision.sh + rolemap/vision.rolemap.yaml + verify-vision.sh + prose manifest + test-adversarial-vision.sh + CONTENT_LEAVES[vision] 登録)。 先行 land: folio-bhe (arch band 見出しの instance hardcode を contract 化 + genuine-shape floor 硬化・main 146b7ea・vision build 前の予防規律)。 follow-up: folio-5se (vision 専用 ceiling agent = fidelity-vision + persona-walk-vision・inline principle genuine 性 / 章リード件数 fidelity / 可視 count-fidelity をここへ委譲) / folio-qvv (folio-self vision self-host = 北極星 folio-7wn を記述型 instance#2 として生成) / folio-bf4f (arch band_numchk 撤去可否・非 blocking・count-fidelity 全面 ceiling 化の scope refinement)。 決定の経緯: user demo-walk grill 2026-07-04 (opus モックアップ &rarr; <code>:8729</code> walk &rarr; PASS「これでよい」で 7 章粒度 / id 5 種 / 北極星文の読み味を確定・論点 4/5 の暫定裁定を walk で確定)。 検証: floor 全 GREEN を admin 独立再走 (assemble / verify pre-fill + filled + artifact 3 mode PASS・敵対 vision 58/58・graph 敵対 25/25 〔H0 終端完備 11&rarr;12 / W1 全終端喪失で clinic 6 鎖孤立へ更新〕・sandbox 41/41 回帰 0・core 〔lib/ + inject-prose.sh + assemble-srs.sh + srs.css〕 diff 空 = 無改変・verify-graph FLOOR-OK 〔VISION-CLINIC-APPT 終端完備・SRS へ backward 終端路供給〕・cross-doc-dup clean・<code>folio validate</code> clean) + 独立 ceiling wf_64344fbe (3 レンズ opus・fail-open 敵対 gate-cert / silent field-drop 完全性 / 設計整合+inline principle genuine 性 → refute)。 GREEN-flipping high 1 件を捕捉: no-restate/非目標 aside と Moore pitch の contract 由来可視値 (xref-label 4 本・href 4 本・pitch ref_label) が emit されるのに verify 未突合 = 兄弟 (srs_code/value/href の一部) は検査済なのに label/href だけ非対称に欠落し捏造がすり抜ける fail-open (admin の self-test が試さなかった injection = author&ne;certifier の load-bearing 実証)。 → verify に (href, code, label) 三つ組 set_eq + pitch ref_label set_eq + data-doc-id chk を追加して閉塞 (ceiling の正確な repro を実弾で block 確認・敵対 V56-V59 で pin)。 ★最重要検査観点 = inline principle PRIN-PATIENT-TRUST の genuine 性は肯定判定 (北極星の言い換えでなく「予約を守る &gt; 機能数 &gt; 開発の速さ」の sacrifice-order を名指す operational な判断規則・grill が課した ceiling 観点 PASS)。 features&rarr;SRS edge の意味妥当性・prose 件数一致も肯定。 独立 ceiling は 3 巡で収束 (初回 3-lens + gate 修正後の独立 re-cert &times;2・author&ne;certifier の load-bearing 実証 = admin が build した gate の fail-open を独立 reviewer だけが 2 度突いた): 巡2 = 三つ組を sorted-set にした自 fix 回帰 (4 chip を aside 間で集合保存的に並べ替えると本文↔chip 帰属 desync が素通る) を捕捉 → positional 化で修正 (bhe「各巡の blocker は前巡自身の fix の回帰」の再演)。 巡3 = 反実仮想 (sorted-set 復元で全 permutation が fail-open 再現・positional で全 block) まで実証し aside/pitch/cross-doc に残存 fail-open 無しを系統 sweep で確認・GREEN。 全 fail-open は敵対 V56-V60 で pin (敵対 58&rarr;63)。 残 advisory (低・follow-up): footer.gen_meta 死フィールド (arch 同挙動) / success_criteria aside の #AC1 section-jump anchor (defensible) / pitch「競合との違い」の r-1 anchor (章 coverage 優先で存置)。 gate funnel で pre-existing の spec/verification round-trip drift (folio-nufl・vision 無関係) も検出・別途起票。 version: 本 ADR 文書版 = 1.1.0 (記録する capability は engine epic folio-0dv・後方互換追加。 folio 本体は v1.2.0)。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0048-design-intent-dir-rename.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0048 — design-intent 空間 dir rename (architecture/ → design-intent/)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

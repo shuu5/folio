@@ -1,0 +1,25 @@
+# folio 文書規律エンジン roadmap 段階3 後 (folio-c5r.4) — vision-pack prose manifest (③「読みやすさの足場」)
+#
+# opus 著作物。 決定的 assembler が空で出力した data-prose-slot に inject-prose.sh が HTML escape して注入する。
+# slot-id ↔ 散文の 1:1 対応 (集合一致を inject が fail-closed 検査)。
+#
+# 各値は機械 SSoT (contract/clinic-appointment.vision.yaml) 接地。 捏造/歪曲/脱落は fidelity ceiling
+# (folio-5se: fidelity-vision + persona-walk-vision) の検査対象。 値は単一行 (tab/改行禁止)。
+#   - vision の prose スロットは cover-summary と 章リード (chapter-lead-NN) のみ。 北極星文・関係者の便益・目標・
+#     成功基準・機能の方向・リスク・原則は *決定的値* (contract 接地) ゆえ prose でなく、 fidelity ceiling が
+#     contract と直接突合する (arch の plain-AD/rationale-AD に相当する「決定カードのやさしい層」は vision に無い)。
+#   - 章リードが述べる件数 (「3 つの目標」「4 本」等) は contract 配列長に忠実であること (fidelity ceiling が検査・
+#     機械 floor は prose 件数を parse しない = machine/LLM 境界)。
+
+slots:
+  # ---- 表紙: このビジョンが約束すること (cover-summary) ----
+  cover-summary: "予約が「ちゃんと取れている」ことを患者も受付も疑わなくていいクリニックを目指し、 その実現を 3 つの目標と 3 つの成功基準で測れるようにした、 診療予約システムの出発点となる文書です。 具体的に何を作るか (要件・受入基準) は SRS-CLINIC-APPT へ照会します。"
+
+  # ---- 章リード (各章の導入・章構成接地) ----
+  chapter-lead-01: "ビジョンの中心は次の一文です。 以降の章はすべて、 この一文を「誰のために・何を・どう測って」実現するかの展開です。"
+  chapter-lead-02: "電話と紙台帳の運用には、 個人の注意ではどうにもならない構造的な穴があります。 放置すると信頼が削られ、 経営に跳ね返ります。 だからいま、 仕組みとして解きます。"
+  chapter-lead-03: "同じ仕組みでも、 立場によって「うれしさ」は違います。 このビジョンが誰に何を約束するかを、 関係者ごとに「得るもの」の高さで書きます。"
+  chapter-lead-04: "北極星は方向であって物差しではありません。 3 つの目標に割り、 それぞれに「達成できたと言える数字」(成功基準) を付けて、 測れる形にします。"
+  chapter-lead-05: "ビジョンは「作る機能の一覧表」ではありません。 目標を実現するための機能の方向を 4 本にまとめ、 具体の要件は SRS へ照会します。"
+  chapter-lead-06: "ビジョンには「やらないこと」も書きます。 実現を脅かすリスクを 3 つ挙げてどう抑えるかを示し、 軸を守るための非目標をはっきりさせます。"
+  chapter-lead-07: "ビジョンの最後に、 このプロジェクトの判断の突き当たりになる原則を 1 つだけ置きます。 以降のすべての文書 (要件・設計・判断記録) は、 最終的にこの原則に行き着きます。"

@@ -1,0 +1,188 @@
+# folio 文書規律エンジン roadmap 段階3 後 (folio-c5r.4) — vision-pack 入力 contract インスタンス (instance#1 / 記述型)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT と同一ドメイン・suite 一貫)。
+# doc-type = vision (なぜ作るか)。 記述型 (descriptive) doc-type の 2 例目 (arch = 1 例目)。
+# schema = Pichler Product Vision Board の骨 + Wiegers Vision&Scope の測定可能要素を選抜移植した lean hybrid。
+# 章立て = 7 章 (北極星 / 問題 / 関係者 / 目標+成功基準 / 機能方向 / リスク+非目標 / 指針価値)。 glossary 章は持たない
+#   (vision は高度な narrative ゆえ専門語は本文で括弧併記する・SRS 以下の索引型が用語 SSoT を担う)。
+#
+# ★この pack の核 = cross-doc 照会 (案A = 別文書 link・再掲ゼロ) と inline principle 終端:
+#   features[].refs.srs[] (claim) → SRS-CLINIC-APPT の要件 (FR) を *充足照会* (arch decisions→SRS と同型・backward)。
+#   principle (terminal)          → 照会 graph の終端 (これ以上遡らない・vision 自身が持つ domain-local 原則)。
+#   問題/関係者/目標/非目標 の no-restate aside は SRS の該当章へ *文書単位照会* ((b) 形・N-x deep-link は張らない)。
+#   verify-vision.sh が照会先 contract に当該 ID が実在することを fail-closed で確かめる。
+#
+# 構造 (北極星 / 関係者 / 目標 / 成功基準 / 機能 / リスク / 原則) は contract から決定的組立 (捏造不可)。
+# prose スロット (cover-summary / chapter-lead-NN) のみ opus が後充填。 北極星文・叙述本体は contract 接地の
+#   決定的値 (fidelity ceiling = 捏造/歪みの検査対象・folio-5se)。
+# core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three: core byte-identity が最重 gate)。
+#
+# 読者 = クリニックの事業責任者 (医療や IT の専門知識は不要・専門語はやさしい言葉を併記)。
+
+doc_type: vision
+
+meta:
+  doc_id: VISION-CLINIC-APPT
+  title: クリニック診療予約 — ビジョン
+  eyebrow_left: folio design-system / vision
+  eyebrow_right: Pichler 骨 + Wiegers 選抜
+  subtitle: なぜこのシステムを作るのか。 北極星 (目指す状態) と、 そこへ向かう目標・成功基準・機能の方向をまとめる
+  version: "0.1"
+  date: "2026-06-10"
+  reader: クリニックの事業責任者 — 医療や IT の専門知識は不要 (専門語はやさしい言葉を併記)
+
+# 承認記録 (SRS / arch と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-10 承認
+    stamp: 承認済
+  - role: レビュー (事務長)
+    who: 鈴木 大輔
+    when: 2026-06-08 レビュー
+    stamp: レビュー済
+  - role: 作成 (企画)
+    who: 企画チーム
+    when: 2026-06-05 起票
+    stamp: 作成
+
+# ★cross-doc 照会の解決先 (案A)。 verify-vision.sh が参照先 SRS contract を読み、 照会 ID 実在 + doc_id 一致を確かめる。
+#   *_contract は contract/ dir 起点の相対パス。 rendered link 先 (*.html / #anchor) は assembler が emit。
+#   vision は ADR を照会しない (arch と違い決定記録への根拠照会を持たない = why の高度が違う)。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  # 照会チップの title は assembler が参照先 .meta.title から live 導出 (folio-c5r.13・手書き title 廃止=drift 防止)
+  srs_html: clinic-appointment.srs.html
+
+# §1 北極星 (north_star)。 text = 目指す状態を言い切る一文 (vision の中心) / narrative = なぜその状態かの叙述本体。
+#   両方 contract 接地の決定的値 (捏造/歪みは fidelity ceiling が検査)。
+north_star:
+  text: 予約が「ちゃんと取れている」ことを、 患者も受付も疑わなくていいクリニックにする。
+  narrative: いまは、 予約が取れているはずなのに来院したら席がない・電話で取ったはずが台帳に無い、 ということが起こりえます。 そのたびに患者は不安になり、 受付は謝罪と調整に追われます。 このプロジェクトの目指す状態は、 「予約 = 守られる約束」が当たり前になり、 患者が確認の電話をかける必要も、 受付が取り合いを調停する必要もなくなることです。
+
+# ★Moore elevator-pitch 文法 (opt-in・任意 slot)。 在れば pitch.rows[] を穴埋め表として描画し、 各穴↔本文の章を
+#   照会 anchor で結ぶ (穴と章要素の整合を verify が floor 検査)。 無ければ pitch 表自体を出さない (必須化しない
+#   = 質的 vision に metric 無しの反例があるため・grill 論点5)。 ref_anchor は本文の実在 anchor (verify が実在検証)。
+pitch:
+  rows:
+    - { key: 対象顧客,   value: 地域クリニックに通う患者と、 受付・診療を支えるスタッフ,                  ref_anchor: st-1,    ref_label: §3 関係者 }
+    - { key: ニーズ,     value: 同じ枠の取り合い・来院忘れ・取り違えの不安なく、 予約を受け付けたい,        ref_anchor: problem, ref_label: §2 問題 }
+    - { key: カテゴリ,   value: 診療予約の受付システム,                                                  ref_anchor: f-1,     ref_label: §5 機能の方向 }
+    - { key: 独自価値,   value: 枠の確定を「人の注意」でなく「仕組み」で守る,                            ref_anchor: g-1,     ref_label: §4 目標 }
+    - { key: 競合との違い, value: 電話 + 紙台帳や汎用カレンダーと違い、 二重予約 (同じ枠に 2 人) が構造的に起きない, ref_anchor: r-1,     ref_label: §6 リスク }
+
+# §2 解くに値する問題 (problem)。 paragraphs = why 叙述 (段落配列・決定的) / no_restate = SRS への文書単位照会 aside。
+problem:
+  paragraphs:
+    - 電話で受け、 紙の台帳に書く運用では、 同じ枠を同時に 2 人へ案内してしまう瞬間を仕組みとして防げません。 電話は同時に鳴り、 台帳は一冊しかなく、 書く手は一つだからです。 起きた二重予約 (同じ枠に 2 人を入れてしまう事故) の後始末は、 待たせるか断るかの二択しかありません。
+    - より深刻なのは、 事故そのものより信頼の削られ方です。 予約が信用できないと、 患者は「本当に取れているか」を電話で確認し、 早めに来院して席を確保しようとします。 確認電話が増えるほど受付は詰まり、 新しい予約を取りにくくなり、 さらに不安が増える — この悪循環が始まると、 スタッフの注意力では止められません。 来院忘れ (連絡なく来ないこと) で空いたままになる枠、 同姓や聞き間違いによる取り違えも、 同じく「人の注意だけに頼る」構造から生まれています。
+  no_restate:
+    text: この章は「なぜ解くに値するか」だけを述べています。 個々の上位ニーズ (誰が・何を求めたか) の一覧は、 次の文書がすでに整理しているので、 ここでは繰り返しません。
+    srs_code: SRS §3
+    srs_label: 上位ニーズ N-1〜N-4 (SRS-CLINIC-APPT)
+
+# §3 関係者 (stakeholders = ST-1..5)。 name = 立場 / gain = このビジョンがその立場に約束する「得るもの」(高度 = 操作でなく便益)。
+stakeholders:
+  entries:
+    - { id: ST-1, name: 患者,                          gain: 取れた予約は必ず守られるという安心。 確認の電話も、 席取りの早め来院も要らなくなる。 }
+    - { id: ST-2, name: 受付スタッフ,                  gain: 枠の取り合いの調停と謝罪対応から解放され、 目の前の患者への案内に時間を使える。 }
+    - { id: ST-3, name: 医師,                          gain: 診療枠どおりの診察リズム。 突然の 2 人同時来院や空白枠に診療ペースを乱されない。 }
+    - { id: ST-4, name: 院長 (経営),                   gain: クレーム・機会損失・風評リスクの削減。 「予約の信頼」という無形の資産を守れる。 }
+    - { id: ST-5, name: 外部サービス (通知・診療カレンダー), gain: 連携先として、 予定と通知の「唯一の出どころ」の役割がはっきりする。 }
+  no_restate:
+    text: 各関係者がシステム上で担う具体的な役割 (誰が何を操作するか) は、 次の文書の領分です。 ここでは「何を得るか」だけを書いています。
+    srs_code: SRS §2
+    srs_label: アクター定義 (SRS-CLINIC-APPT)
+
+# §4 目標 (objectives = G-1..3) + 成功基準 (success_criteria = SC-1..3・for_goal で対応 G を指す) + 目標ツリー図 (optional)。
+#   objectives = 北極星を分けた到達目標 / success_criteria = 各目標を「達成できたと言える数字」に落とした物差し。
+objectives:
+  - { id: G-1, name: 取り合いのない予約, desc: 二重予約が「注意していたのに起きた」ではなく「仕組みとして起きない」状態にする。 }
+  - { id: G-2, name: 空き枠が生きる運用, desc: 来院忘れとキャンセル後の放置で枠が無駄になることを減らし、 診られるはずの患者を診る。 }
+  - { id: G-3, name: いつでも本人,       desc: 予約から当日受付まで、 別人の予約として扱う取り違えを起こさない。 }
+
+success_criteria:
+  entries:
+    - { id: SC-1, name: 枠競合クレーム 0 件,       desc: 稼働開始から 3 か月間で、 「同じ枠に 2 人」を原因とするクレームが 0 件。,       for_goal: G-1 }
+    - { id: SC-2, name: 無断キャンセル率 半減,     desc: リマインド通知 (思い出し通知) の導入前と比べ、 連絡なく来ない率を半分にする。,   for_goal: G-2 }
+    - { id: SC-3, name: 取り違えインシデント 0 件, desc: 通年で、 別人の予約として処理してしまった件数が 0 件。,                     for_goal: G-3 }
+  no_restate:
+    text: SC はビジョンの物差し (経営がいつ「成功」と言えるか) です。 仕様として機械的に検証できる合格条件は、 次の文書が別に持ちます。 高さが違う 2 つの物差しであり、 同じものの再掲ではありません。
+    srs_code: SRS AC1〜AC5
+    srs_anchor: AC1
+    srs_label: 受入基準 (SRS-CLINIC-APPT)
+
+# ★目標ツリー図 (goal_tree = optional)。 在れば mermaid で 北極星 → 目標 (G) → 成功基準 (SC) の割りを描く。
+#   無ければ図自体を出さない (grill 論点5・任意)。 lines は mermaid DSL を行配列で保持 (改行なし・assembler が esc して join)。
+goal_tree:
+  caption: "図 1 — 目標ツリー (任意の図): 北極星 → 目標 (G) → 成功基準 (SC) の割り方"
+  lines:
+    - flowchart TB
+    - '  NS["北極星<br/>予約が『ちゃんと取れている』ことを<br/>患者も受付も疑わなくていい"]'
+    - '  G1["G-1 取り合いのない予約"]'
+    - '  G2["G-2 空き枠が生きる運用"]'
+    - '  G3["G-3 いつでも本人"]'
+    - '  SC1["SC-1 枠競合クレーム 0 件<br/>(3 か月)"]'
+    - '  SC2["SC-2 無断キャンセル率 半減"]'
+    - '  SC3["SC-3 取り違え 0 件<br/>(通年)"]'
+    - '  NS --> G1'
+    - '  NS --> G2'
+    - '  NS --> G3'
+    - '  G1 --> SC1'
+    - '  G2 --> SC2'
+    - '  G3 --> SC3'
+
+# §5 主要機能の方向 (features = F-1..4)。 ★照会の主役 (edge-bearing node = claim)。 desc = 方向 (機能一覧でなく方向) /
+#   refs.srs[] = SRS の要件 ID (claim・充足照会)。 具体の要件は SRS が SSoT・ここは方向と照会のみ (再掲ゼロ)。
+features:
+  - id: F-1
+    name: 枠の確定を仕組みで守る
+    desc: 空きの確認から予約の確定までを一つの流れにし、 同じ枠の取り合いが起きても確定は必ず 1 件になるようにする。
+    refs:
+      srs: [FR1, FR2, FR3]
+  - id: F-2
+    name: 決めた診療時間の外では受けない
+    desc: 診療カレンダー (診療予定表) を唯一の出どころとし、 休診日や時間外の予約が紛れ込まない。
+    refs:
+      srs: [FR4]
+  - id: F-3
+    name: 忘れる前に、 思い出させる
+    desc: キャンセル・変更を簡単にし、 前日には思い出し通知を届けて、 枠が黙って無駄になる前に動けるようにする。
+    refs:
+      srs: [FR5, FR6]
+  - id: F-4
+    name: 本人であることを、 確かめ続ける
+    desc: 予約のときも当日の受付のときも本人確認を通し、 別人の予約として進んでしまう道をふさぐ。
+    refs:
+      srs: [FR7]
+
+# §6 リスク (risks = R-1..3) + 非目標 (non_goals)。 risk = 実現を脅かす何か / desc = 中身。
+#   non_goals = あえて作らないと決めていること (軸を守るための線引き・SRS 範囲章へ照会)。
+risks:
+  - { id: R-1, name: 現場が使わず、 電話運用に戻る, desc: 操作が受付の実際の手の動きに合わないと、 忙しい時間帯に台帳へ逆戻りし、 二重管理で事故がむしろ増える。 }
+  - { id: R-2, name: 外部の予定表・通知への依存,   desc: 診療カレンダーと通知サービスを「唯一の出どころ」にするからこそ、 その停止や設定ミスが信頼の穴になる。 }
+  - { id: R-3, name: 機能が膨らみ、 軸がぼける,     desc: カルテや会計まで抱え込むと「予約を守る」という一点の完成度が下がり、 北極星から遠ざかる。 }
+
+non_goals:
+  text: 診察内容・カルテの記録、 会計・診療報酬の請求、 検査結果の通知やオンライン診療は作りません。 これらが不要だからではなく、 「予約という約束を守る」一点に完成度を集中させるためです (R-3 の予防)。 対象範囲の正確な線引きは、 次の文書が持ちます。
+  srs_code: SRS §2
+  srs_label: 範囲 (SRS-CLINIC-APPT)
+
+# §7 指針価値 (principle = 照会 graph の終端・vision 自身が持つ domain-local 原則)。 id/text = 判断規則そのもの /
+#   narrative = 「北極星の言い換えでなく判断の規則」であることを示す叙述 (★genuine 性 = グラフ充足のための作文でない
+#   ことを ceiling が検査する対象・grill 論点2 付帯条件)。
+principle:
+  id: PRIN-PATIENT-TRUST
+  text: 患者との約束 (予約) を守ることを、 機能の多さや開発の速さより優先する。 迷ったら、 予約が守られる側に倒す。
+  narrative: これは北極星の言い換えではなく、 判断の規則です。 北極星は「目指す状態」を描きますが、 この原則は「トレードオフが起きたとき、 どちらを選ぶか」を決めます。 たとえば「確定を速く見せるために確認を省く」提案は、 速さより約束を優先するこの原則によって退けられます。 機能追加・設計変更・締切の判断がぶつかったとき、 ここが最後の判定基準です。
+
+# ★glossary は空配列で明示宣言する (vision は用語集章を持たない = 専門語は本文で括弧併記)。 assembler は .glossary を
+#   参照しない (glossary 章を emit しない) ゆえ出力に影響しないが、 verify_core_chrome (core) の glossary chrome 突合が
+#   絶対 key を要求する: key 不在だと mikefarah yq の `.glossary[]` が null 1 件を吐き spurious mismatch になる
+#   (`[]` の splat は空・`null` の splat は null 1 件という yq quirk)。 空配列で「用語集は空」を honest に宣言し core 無改変を保つ。
+glossary: []
+
+# footer の生成メタ (tag 列は assembler 固定)。
+footer:
+  gen_meta: folio design-system generator — vision-pack (folio-c5r.4 / instance#1)

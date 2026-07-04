@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-03T11:24:12Z",
+  "generatedAt": "2026-07-04T02:17:48Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -1126,7 +1126,8 @@
       "relations": {
         "dc:isReferencedBy": [
           "decisions/ADR-0046-architecture-description-pack.html",
-          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html"
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0049-vision-pack.html"
         ],
         "dc:references": [
           "decisions/ADR-0038-constitution-p14-human-readability.html",
@@ -1155,7 +1156,8 @@
         "dc:isReferencedBy": [
           "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
-          "decisions/ADR-0044-spec-pack-folio-self-host.html"
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
+          "decisions/ADR-0049-vision-pack.html"
         ],
         "dc:references": [
           "decisions/ADR-0041-human-layer-visual-design-system.html",
@@ -1182,7 +1184,8 @@
         "dc:isReferencedBy": [
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0046-architecture-description-pack.html",
-          "decisions/ADR-0044-spec-pack-folio-self-host.html"
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
+          "decisions/ADR-0049-vision-pack.html"
         ],
         "dc:references": [
           "research/document-discipline-engine-design.html",
@@ -1261,7 +1264,8 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
-          "research/doctype-coverage-audit.html"
+          "research/doctype-coverage-audit.html",
+          "decisions/ADR-0049-vision-pack.html"
         ],
         "dc:references": [
           "research/document-discipline-engine-design.html",
@@ -1314,6 +1318,28 @@
           "decisions/ADR-0026-test-placement-model.html",
           "spec/folio-self-spec.html#s2-folio-layout",
           "spec/rules.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0049-vision-pack.html",
+      "title": "ADR-0049 — vision pack (engine 段階3 後)",
+      "summary": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3 後。 文書規律エンジンに",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.1.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0046-architecture-description-pack.html",
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html"
         ]
       }
     },
@@ -1390,7 +1416,8 @@
           "research/doctype-coverage-audit.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
-          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html"
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0049-vision-pack.html"
         ]
       }
     },
@@ -1740,6 +1767,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0048-design-intent-dir-rename.html",
         "essence": "folio の設計意図空間 dir を architecture/ から design-intent/ へ rename し、 dir 名を canonical 語彙 design-intent space と一致させる — constitution は無改訂 (layout 非依存設計による P-10 amendment 不要)・consumer 公開 default も同時変更・単一 atomic 実行。 語彙「architecture」 (doc-type architecture-description / constitution §1 の用法) は dir 名と独立に存続する —"
+      },
+      {
+        "id": "ADR-0049",
+        "class": "decision",
+        "ssot": "decisions/ADR-0049-vision-pack.html",
+        "essence": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3 後。 文書規律エンジンに"
       },
       {
         "id": "P-1",

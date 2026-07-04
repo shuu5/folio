@@ -39,17 +39,19 @@ expect_pass_warn() { local label="$1" d="$2" w="$3"; shift 3
 
 echo "照会 graph adversarial regression (fail-closed / warn-correct expected):"
 
-# H0. happy path: exit 0 / 終端完備=11 / FLOOR-OK
+# H0. happy path: exit 0 / 終端完備=12 / FLOOR-OK
 #   corpus 実値の来歴: B6 (folio-8ct) spec-pack で 4→5、 glossary×2 + testcases + arch + relations/verification spec で
 #   5→10 (folio-dls の drift を本 cell で吸収)、 c5r.11 裁定 B2 (test→SRS forward 再写像) で TC-CLINIC-APPT が
-#   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)。 folio-ulz 批准 (block+免除宣言) で
-#   EC は meta.terminal_waiver 宣言済み → 免除(warn)=1・孤立(block)=0 が happy path の実値。
+#   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)、 c5r.4 (vision-pack) で
+#   VISION-CLINIC-APPT が inline principle PRIN-PATIENT-TRUST で終端完備化し 11→12 (vision→SRS backward が SRS へ
+#   独立終端路も供給する = W1 参照)。 folio-ulz 批准 (block+免除宣言) で EC は meta.terminal_waiver 宣言済み →
+#   免除(warn)=1・孤立(block)=0 が happy path の実値。
 #   ★「終端到達: TC-CLINIC-APPT」substring は B2 の意味 pin (backward への退行は count と substring の両方で割れる)。
 #   ★「免除: SRS-EC-CHECKOUT」substring は免除宣言の可視一覧 pin (silent 化の退行を検出)。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=11 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+if run "$D" && [[ "$RUNOUT" == *"終端完備=12 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
    && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=11 / 免除=1 / 孤立=0 / TC 終端到達 / EC 免除可視 / FLOOR-OK / exit 0)"
+  ok "H0 happy path (終端完備=12 / 免除=1 / 孤立=0 / TC 終端到達 / EC 免除可視 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL
@@ -125,18 +127,21 @@ expect_fail "G13 ★edges 削除で corpus 改竄を隠す複合攻撃を FAIL" 
 #     総数だけでなく *どの鎖が孤立したか* を個別 substring で固定する (minor#2: 総数照合だけだと corpus 増減で
 #     false-pass・別経路で総数一致の改竄を見逃しうる)。
 #     ★arch pack が同 id 終端 (PRIN-SAFETY-FIRST) を冗長供給するため ADR 単独の喪失では孤立しない
-#       (folio-dls drift の真因)。 clinic 鎖の全終端 route を断つには ADR + arch の両 principle.id を空にする。
+#       (folio-dls drift の真因)。 ★c5r.4 (vision-pack) 追加で SRS-CLINIC-APPT は vision→SRS backward edge 経由でも
+#       vision の inline principle (PRIN-PATIENT-TRUST) に終端到達できる = 3 つ目の独立終端源。 clinic 鎖の全終端
+#       route を断つには ADR + arch (PRIN-SAFETY-FIRST) + vision (PRIN-PATIENT-TRUST) の 3 principle.id を空にする。
 #     ★TC-CLINIC-APPT の連鎖孤立 = c5r.11 B2 の意図挙動 pin (SRS が終端未到達なら test も道連れ = 根本原因の表面化)。
 #       GLOSSARY-CLINIC-APPT は自前 route (→FOLIO-CONSTITUTION) を持つため孤立しない。
-#       EC は免除宣言済みゆえ孤立でなく免除 warn のまま (block は未宣言の 5 鎖のみ = default-block + 明示宣言)。
+#       EC は免除宣言済みゆえ孤立でなく免除 warn のまま (block は未宣言の 6 鎖のみ = default-block + 明示宣言)。
 D="$(mktmp)"; yq -i '.principle.id = ""' "$D/contract/clinic-double-booking.adr.yaml"
 yq -i '.principle.id = ""' "$D/contract/clinic-architecture.arch.yaml"
-if ! run "$D" && [[ "$RUNOUT" == *"孤立(block)=5"* \
+yq -i '.principle.id = ""' "$D/contract/clinic-appointment.vision.yaml"
+if ! run "$D" && [[ "$RUNOUT" == *"孤立(block)=6"* \
    && "$RUNOUT" == *"孤立: ADR-CLINIC-0001"* && "$RUNOUT" == *"孤立: RES-CLINIC-0001"* \
    && "$RUNOUT" == *"孤立: SRS-CLINIC-APPT"* && "$RUNOUT" == *"孤立: ARCH-CLINIC-APPT"* \
-   && "$RUNOUT" == *"孤立: TC-CLINIC-APPT"* && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* \
-   && "$RUNOUT" == *"RESULT: FAIL"* ]]; then
-  ok "W1 全終端 route 喪失 → 未宣言の clinic 5 鎖 (TC 連鎖含む) が個別に孤立 block・宣言済み EC は免除 warn (exit 1)"
+   && "$RUNOUT" == *"孤立: TC-CLINIC-APPT"* && "$RUNOUT" == *"孤立: VISION-CLINIC-APPT"* \
+   && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* && "$RUNOUT" == *"RESULT: FAIL"* ]]; then
+  ok "W1 全終端 route 喪失 → 未宣言の clinic 6 鎖 (TC/vision 連鎖含む) が個別に孤立 block・宣言済み EC は免除 warn (exit 1)"
 else ng "W1 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -3 | tr '\n' '|'))"; fi
 
 # W2. 免除宣言の代表: ADR-less な EC SRS は terminal_waiver 宣言済みゆえ warn 降格 (happy path でも常時可視)
