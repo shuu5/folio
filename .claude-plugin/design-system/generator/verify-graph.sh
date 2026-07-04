@@ -44,6 +44,12 @@ done
 # 空に/削除すると necnt=0 で pin ループが 0 回 = corpus edge 無検査になり「二重担保」が無言で解除される。
 # その構造的 floor 解除を hard FAIL にする (G2 が roles[] 値改竄を捕捉するのに対し、 本ガードは edges 宣言除去を捕捉)。
 GRAPH_EDGELESS_PACKS='srs|principle'
+# ★opt-in cross_doc を許す pack の allowlist (folio-qvv 裁定A・ceiling round-1 major 是正)。 非発火 (照会 0 件 +
+#   照会先なし) を OK にする緩和は **この allowlist の pack に限る**。 pack 判定なしで緩めると ADR/arch の切断
+#   contract (edges 全喪失) まで graph 層 PASS になり、 gate 単体の fail-closed 独立性を失う (assemble 層の
+#   cross_doc 必須に依存する fail-open・ceiling 実弾再現済み)。 opt-in を新 pack へ広げる時はここへ明示追加 =
+#   pack ごとの批准を強制する (default-block・mzn.1 と同型)。
+GRAPH_XDOC_OPTIONAL_PACKS='vision'
 
 command -v yq >/dev/null || { echo "verify-graph: yq required" >&2; exit 2; }
 # core reader (additive 新規 core file) を fail-closed guard (欠落/source 失敗を false-green に倒さない)。
@@ -139,8 +145,17 @@ for CONTRACT in "${CONTRACTS[@]}"; do
     for rr in "${eroles[@]}"; do [[ "$rr" == "$exp" ]] || mism+=" '$rr'"; done
     chk_empty "$cbase: edge[$fn] role 全件 == rolemap[$fn]=$exp (pin)" "${mism# }"
     # graph edge 収集 (dangling は pass 2)。 target doc_id は edge ごとに 1 つ (cross_doc.*_doc_id)。
+    # ★opt-in cross_doc (folio-qvv 裁定A): 照会 0 件 *かつ* 照会先なし = honest な非発火 (edge を張らない) を
+    #   **GRAPH_XDOC_OPTIONAL_PACKS の pack に限り** 許容 (ceiling round-1 major 是正: pack 判定なしの緩和は
+    #   ADR/arch の切断 contract まで素通しにする scope-leak)。 照会が 1 件以上あるのに照会先が空 = 片肺、
+    #   および opt-in 非対象 pack の照会先喪失は従来どおり hard FAIL (宙に浮いた照会 / gate 単体 fail-closed)。
+    #   逆向き (照会先ありで照会 0 件 = vacuum 署名) は上の vacuum ガードが捕捉済み。
     if [[ -z "$tgt" || "$tgt" == "null" ]]; then
-      printf '  [FAIL] %-'"$CHKW"'s edge[%s] 照会先 doc_id が空\n' "$cbase" "$fn"; fail=1
+      if [[ "$declared_cnt" == "0" ]] && printf '%s' "$pack" | grep -qxE "$GRAPH_XDOC_OPTIONAL_PACKS"; then
+        printf '  [OK]   %-'"$CHKW"'s edge[%s] 非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)\n' "$cbase" "$fn"
+      else
+        printf '  [FAIL] %-'"$CHKW"'s edge[%s] 照会先 doc_id が空 (照会 %s 件 / opt-in 対象 pack: %s)\n' "$cbase" "$fn" "$declared_cnt" "$GRAPH_XDOC_OPTIONAL_PACKS"; fail=1
+      fi
     else
       EDGES+=("$did|$tgt|$dir|$cbase|$fn")
     fi

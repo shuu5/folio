@@ -39,19 +39,22 @@ expect_pass_warn() { local label="$1" d="$2" w="$3"; shift 3
 
 echo "照会 graph adversarial regression (fail-closed / warn-correct expected):"
 
-# H0. happy path: exit 0 / 終端完備=12 / FLOOR-OK
+# H0. happy path: exit 0 / 終端完備=13 / FLOOR-OK
 #   corpus 実値の来歴: B6 (folio-8ct) spec-pack で 4→5、 glossary×2 + testcases + arch + relations/verification spec で
 #   5→10 (folio-dls の drift を本 cell で吸収)、 c5r.11 裁定 B2 (test→SRS forward 再写像) で TC-CLINIC-APPT が
 #   終端完備化し 10→11・孤立 2→1 (残 = ADR-less な SRS-EC-CHECKOUT のみ)、 c5r.4 (vision-pack) で
 #   VISION-CLINIC-APPT が inline principle PRIN-PATIENT-TRUST で終端完備化し 11→12 (vision→SRS backward が SRS へ
 #   独立終端路も供給する = W1 参照)。 folio-ulz 批准 (block+免除宣言) で EC は meta.terminal_waiver 宣言済み →
-#   免除(warn)=1・孤立(block)=0 が happy path の実値。
+#   免除(warn)=1・孤立(block)=0 が happy path の実値。 folio-qvv (folio-self vision) で VISION-FOLIO が
+#   inline principle PRIN-READER-FLOOR により終端完備化し 12→13 (cross_doc 非発火 = 照会 edge なしの初例)。
 #   ★「終端到達: TC-CLINIC-APPT」substring は B2 の意味 pin (backward への退行は count と substring の両方で割れる)。
 #   ★「免除: SRS-EC-CHECKOUT」substring は免除宣言の可視一覧 pin (silent 化の退行を検出)。
+#   ★「非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)」substring は qvv 裁定A の可視 pin (silent skip 化の退行を検出)。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=12 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+if run "$D" && [[ "$RUNOUT" == *"終端完備=13 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+   && "$RUNOUT" == *"終端到達: VISION-FOLIO"* && "$RUNOUT" == *"非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)"* \
    && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=12 / 免除=1 / 孤立=0 / TC 終端到達 / EC 免除可視 / FLOOR-OK / exit 0)"
+  ok "H0 happy path (終端完備=13 / 免除=1 / 孤立=0 / TC+VISION-FOLIO 終端到達 / 非発火可視 / EC 免除可視 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL
@@ -108,6 +111,22 @@ expect_fail "G14 ★role/count expr 協調 vacuum で corpus swap 隠蔽を FAIL
 #      (a)側 pin (rolemap に forbidden role 不在) で FAIL。 G4 は corpus側 (b) を突くので「二重担保」両面を固定する。
 D="$(mktmp)"; yq -i '.roles.requirements = "exploration"' "$D/rolemap/srs.rolemap.yaml"
 expect_fail "G15 ★rolemap roles に forbidden exploration 宣言を (a)側 pin で FAIL" "$D" "rolemap に forbidden role 'exploration' 不在"
+
+# G16. ★opt-in cross_doc の片肺 (folio-qvv 裁定A の FAIL 側 pin): 非発火 contract (folio-vision) に照会だけ
+#      復活させる (cross_doc なしで refs.srs 1 件) → 「宙に浮いた照会」を graph 層でも FAIL (assemble 層の
+#      fail-closed と二重担保。 非発火許容の緩和が片肺まで素通しにしない事を敵対固定)。
+D="$(mktmp)"; yq -i '.features[0].refs.srs = ["FR-GHOST"]' "$D/contract/folio-vision.vision.yaml"
+expect_fail "G16 ★片肺 contract (照会あり照会先なし) を graph 層で FAIL" "$D" "照会先 doc_id が空"
+
+# G17. ★opt-in scope-leak の pin (ceiling round-1 major の敵対固定): vision 用の非発火許容が ADR へ漏れないこと。
+#      ADR を完全非発火化 (justifies 全喪失 + cross_doc 削除) → opt-in 非対象 pack ゆえ graph 層で FAIL。
+D="$(mktmp)"; yq -i '.decision.justifies = [] | del(.cross_doc)' "$D/contract/clinic-double-booking.adr.yaml"
+expect_fail "G17 ★ADR 完全非発火化 (opt-in 非対象) を graph 層で FAIL" "$D" "照会先 doc_id が空"
+
+# G18. ★同 scope-leak の arch 面 (decisions の refs 全喪失 + cross_doc 削除・ADR と同 code path だが
+#      edge 2 本 (srs/adr) を持つ pack でも allowlist gate が効くことを固定)。
+D="$(mktmp)"; yq -i '(.decisions[].refs.srs) = [] | (.decisions[].refs.adr) = [] | del(.cross_doc)' "$D/contract/clinic-architecture.arch.yaml"
+expect_fail "G18 ★arch 完全非発火化 (opt-in 非対象) を graph 層で FAIL" "$D" "照会先 doc_id が空"
 
 # G11. ★edges 武装解除: ADR rolemap の edges を削除 → pin が無検査になる構造的 floor 解除を FAIL
 D="$(mktmp)"; yq -i 'del(.edges)' "$D/rolemap/adr.rolemap.yaml"

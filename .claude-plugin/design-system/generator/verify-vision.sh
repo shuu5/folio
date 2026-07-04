@@ -140,8 +140,8 @@ if [[ "$XDOC" == "true" ]]; then
 else
   # 非発火: contract 側の片肺残存 (assemble と parity) + HTML 側の照会属性注入を封鎖。
   chk "非発火 contract: refs.srs 総数 == 0 (片肺なし)" "0" "$NSRS"
-  chk "非発火 contract: no_restate/srs_code 残存なし" "false false false false" \
-    "$(q '.problem | has("no_restate")') $(q '.stakeholders | has("no_restate")') $(q '.success_criteria | has("no_restate")') $(q '.non_goals | has("srs_code")')"
+  chk "非発火 contract: no_restate/srs_code/srs_label 残存なし" "false false false false false" \
+    "$(q '.problem | has("no_restate")') $(q '.stakeholders | has("no_restate")') $(q '.success_criteria | has("no_restate")') $(q '.non_goals | has("srs_code")') $(q '.non_goals | has("srs_label")')"
   chk "非発火: data-vision-ref == 0 (照会属性注入封鎖)" "0" "$(grep -o 'data-vision-ref=' "$BODY" | wc -l | tr -d ' ')"
   chk "非発火: data-vision-role == 0" "0" "$(grep -o 'data-vision-role=' "$BODY" | wc -l | tr -d ' ')"
 fi
