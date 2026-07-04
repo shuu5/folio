@@ -54,6 +54,9 @@ expect_fail "tc-title 可視捏造"               "$(mut 4 's{(<h3 class="tc-tit
 expect_fail "tc-trace-tgt 照会ラベル title 捏造 (live-mirror 等値・c5r.13)" "$(mut 60 's{(<p class="tc-trace-tgt">[^<]*SRS: )[^<]+}{${1}捏造された参照先タイトル}')"
 expect_fail "tc-kind 可視ラベル捏造"          "$(mut 5 's{(<span class="tc-kind normal">)[^<]+}{${1}でたらめ}')"
 expect_fail "tc-kind class 改竄 (label/class 不整合)" "$(mut 6 's{<span class="tc-kind normal">正常系}{<span class="tc-kind abnormal">正常系}')"
+# ★folio-c5r.5 kind バッジ friendly gloss の敵対検査 (verify 4c' が捏造/脱落を block するか)。
+expect_fail "tc-kind-plain 併記平易語 捏造 (非 glossary 由来)" "$(mut 50 's{(<span class="tc-kind-plain">)[^<]+}{${1}でたらめな平易語}')"
+expect_fail "tc-kind-plain 削除 (占有脱落・件数割れ)"          "$(mut 51 's{<span class="tc-kind-plain">[^<]*</span>}{}')"
 expect_fail "tc-prio class 改竄 (must→should)" "$(mut 7 's{<span class="tc-prio must">必須</span>}{<span class="tc-prio should">必須</span>}')"
 expect_fail "tc-prio ラベル捏造"             "$(mut 8 's{(<span class="tc-prio must">)[^<]+}{${1}最優先}')"
 

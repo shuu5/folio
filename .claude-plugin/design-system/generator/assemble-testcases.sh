@@ -38,6 +38,13 @@ declare -A KIND_CLASS=( [正常系]=normal [異常系]=abnormal [境界値]=boun
 declare -A PRIO_OK=( [must]=1 [should]=1 )
 declare -A PRIO_LABEL=( [must]=必須 [should]=推奨 )
 
+# ★kind バッジ friendly gloss (folio-c5r.5・gate-I polish)。 kind 値 (正常系/異常系/境界値) は可視ジャルゴンゆえ、
+#   本文 (mark_terms・term-inline) と同一規律で glossary の plain_short を併記し非エンジニア可読にする
+#   (fabrication-free = 併記平易語は contract .glossary[].plain_short 由来)。 全使用 kind が glossary に
+#   plain_short 付きで実在することは validate() が fail-closed で保証する (欠落 → 生成前に exit)。
+declare -A KIND_PLAIN
+while IFS=$'\t' read -r _kterm _kplain; do [[ -n "$_kterm" ]] && KIND_PLAIN["$_kterm"]="$_kplain"; done < <(q '.glossary[] | [.term, (.plain_short // "")] | @tsv')
+
 # ---- icon SVG (test-cases-pack 固有。 共用 icon=ICO_FLOW/SHIELD/BOOK/CHECK_BIG/USER + ico() は lib/common.sh) ----
 ICO_CHECKLIST='<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>'
 ICO_LINK='<path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/>'
@@ -52,6 +59,11 @@ validate() {
   d="$(q '.test_cases[].id' | sort | uniq -d)"; [[ -z "$d" ]] || { echo "assemble-testcases: test_cases id 重複: $d" >&2; errs=1; }
   # kind allowlist
   for p in $(q '.test_cases[].kind'); do [[ -v KIND_OK[$p] ]] || { echo "assemble-testcases: 未知の kind: $p (正常系|異常系|境界値)" >&2; errs=1; }; done
+  # ★kind バッジ friendly gloss (folio-c5r.5): 全使用 kind が glossary に plain_short 付きで実在すること
+  #   (badge 併記平易語の fabrication-free 保証。 verify-testcases.sh 4c' が同一導出で fidelity 突合)。
+  local kmiss
+  kmiss="$(comm -23 <(q '.test_cases[].kind' | sort -u) <(q '[.glossary[] | select((.plain_short // "") != "") | .term] | .[]' | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
+  [[ -z "$kmiss" ]] || { echo "assemble-testcases: kind バッジ friendly gloss: glossary に plain_short 付き term が無い kind: $kmiss" >&2; errs=1; }
   # priority allowlist
   for p in $(q '.test_cases[].priority'); do [[ -v PRIO_OK[$p] ]] || { echo "assemble-testcases: 未知の priority: $p (must|should)" >&2; errs=1; }; done
   # 各 test case は verifies(FR)・confirms(AC) を 1 件以上持つ (三段 trace が片側欠けない)
@@ -102,6 +114,8 @@ emit_testcases_css() {
 .tc-kind.normal{color:var(--ok);background:var(--ok-tint);border-color:var(--ok-line)}
 .tc-kind.abnormal{color:var(--bad);background:var(--bad-tint);border-color:var(--bad-line)}
 .tc-kind.boundary{color:var(--warn);background:var(--warn-tint);border-color:var(--warn-line)}
+/* ★kind バッジのやさしい言い換え (folio-c5r.5): ジャルゴン pill の直後に控えめな平易語を併記 (非エンジニア可読) */
+.tc-kind-plain{font-size:11px;color:var(--ink-faint);font-weight:600;margin-left:-4px}
 .tc-prio{font-size:10.5px;font-weight:700;border-radius:5px;padding:1px 7px;border:1px solid var(--line);color:var(--ink-soft);background:var(--paper-2)}
 .tc-prio.must{color:var(--brand);border-color:var(--brand-line);background:var(--brand-tint)}
 .tc-head .tc-title{flex:1 1 100%;font-weight:800;font-size:15px;margin:4px 0 0;line-height:1.5}
@@ -178,11 +192,12 @@ emit_cards() {
   for tid in "${TIDS[@]}"; do
     kind="$(q '.test_cases[] | select(.id=="'"$tid"'") | .kind')"
     kindc="${KIND_CLASS[$kind]:-normal}"
+    kindplain="${KIND_PLAIN[$kind]:-}"   # ★glossary plain_short 併記 (folio-c5r.5・validate() が非空を保証)
     prio="$(q '.test_cases[] | select(.id=="'"$tid"'") | .priority')"
     priolabel="${PRIO_LABEL[$prio]:-$prio}"
     printf '<div data-component="testcase-card" id="tc-%s">\n' "$(esc "$tid")"
-    printf '<div class="tc-head"><span class="tc-id">%s</span><span class="tc-kind %s">%s</span><span class="tc-prio %s">%s</span><h3 class="tc-title">%s</h3></div>\n' \
-      "$(esc "$tid")" "$(esc "$kindc")" "$(esc "$kind")" "$(esc "$prio")" "$(esc "$priolabel")" "$(esc "$(q '.test_cases[] | select(.id=="'"$tid"'") | .title')")"
+    printf '<div class="tc-head"><span class="tc-id">%s</span><span class="tc-kind %s">%s</span><span class="tc-kind-plain">%s</span><span class="tc-prio %s">%s</span><h3 class="tc-title">%s</h3></div>\n' \
+      "$(esc "$tid")" "$(esc "$kindc")" "$(esc "$kind")" "$(esc "$kindplain")" "$(esc "$prio")" "$(esc "$priolabel")" "$(esc "$(q '.test_cases[] | select(.id=="'"$tid"'") | .title')")"
     printf '<p class="tc-plain" data-prose-slot="plain" data-slot-id="plain-%s"></p>\n' "$(esc "$tid")"
     printf '<div class="tc-steps">\n'
     printf '<div class="tc-step tc-pre"><span class="tc-step-k">前提</span><span class="tc-step-v">%s</span></div>\n' "$(mark_terms "$(q '.test_cases[] | select(.id=="'"$tid"'") | .precondition')")"

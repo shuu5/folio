@@ -52,7 +52,7 @@ NTC="$(q '.test_cases | length')"
 NEDGE="$(q '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length')"
 # ★folio-bur round-6 (ceiling-recursion R5 是正・収束根治): srs の class-token 機械的網羅 idiom を移植。 全 class token・全 data-component が
 #   allowlist に属することを quote-robust に強制 = RTM tbody 等への novel-marker (非 canonical class/data-component) 注入を一網打尽に封鎖。
-TC_CLS="abnormal b boundary chapbody confirm cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid gdef grow gword ic ico in k kicker lab lead m must normal num out page reader-chip role rtm-ac rtm-code rtm-edge rtm-fr rtm-kind rtm-label rtm-tc scol self should sign stamp summary-card tags tc-act tc-exp tc-grid tc-head tc-id tc-kind tc-plain tc-pre tc-prio tc-ref tc-ref-label tc-step tc-step-k tc-step-list tc-steps tc-step-v tc-title tc-trace tc-trace-edge tc-trace-h tc-trace-label tc-trace-row tc-trace-tgt term tint-brand tint-info tint-ok tint-violet txt v verify when who"
+TC_CLS="abnormal b boundary chapbody confirm cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid gdef grow gword ic ico in k kicker lab lead m must normal num out page reader-chip role rtm-ac rtm-code rtm-edge rtm-fr rtm-kind rtm-label rtm-tc scol self should sign stamp summary-card tags tc-act tc-exp tc-grid tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-ref tc-ref-label tc-step tc-step-k tc-step-list tc-steps tc-step-v tc-title tc-trace tc-trace-edge tc-trace-h tc-trace-label tc-trace-row tc-trace-tgt term tint-brand tint-info tint-ok tint-violet txt v verify when who"
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $TC_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が allowlist (RTM novel marker 注入封鎖・folio-bur r6)" "$unknown_cls"
 TC_DC="approval-block chapter-deck-band cross-doc-ref-chip doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline requirement-type-color-tokens rtm-row scope-summary-panel testcase-card testcase-rtm"
@@ -302,6 +302,13 @@ set_eq "可視 tc-kind == .test_cases[].kind (順序)" "$(q '.test_cases[].kind'
 exp_kc="$(printf '正常系\tnormal\n異常系\tabnormal\n境界値\tboundary\n' | LC_ALL=C sort)"
 act_kc="$(grep -oE '<span class="tc-kind [a-z]+">[^<]*</span>' "$BODY" | sed -E 's#<span class="tc-kind ([a-z]+)">([^<]*)</span>#\2\t\1#' | LC_ALL=C sort -u)"
 chk_empty "tc-kind バッジの可視ラベルが class と整合" "$(LC_ALL=C comm -13 <(printf '%s\n' "$exp_kc") <(printf '%s\n' "$act_kc") | tr '\t' '=' | tr '\n' ' ' | sed 's/ *$//')"
+# 4c'. ★kind バッジの平易語併記 fidelity (folio-c5r.5・gate-I polish)。 各 card の kind バッジ直後に glossary の
+#   plain_short を併記した (本文 term-inline と同一規律を badge へ拡張)。 可視ラベル (emission 順) == 各 card の kind の
+#   glossary plain_short と *厳密一致* (set_eq=順序完全一致ゆえ card 間 swap も捕捉)。 表示平易語は contract .glossary
+#   由来値のみ許可 = 捏造・取り違え・脱落を fail-closed (assemble-testcases validate() が全 kind の plain_short 実在を保証済)。
+exp_kindplain="$(q '.test_cases[].kind' | while IFS= read -r _k; do [[ -n "$_k" ]] || continue; printf '%s\n' "$(esc "$(K="$_k" yq -r '.glossary[] | select(.term==strenv(K)) | .plain_short' "$CONTRACT")")"; done)"
+act_kindplain="$(perl -CSD -0777 -ne 'while (/<span class="tc-kind-plain">([^<]*)<\/span>/g){ print "$1\n"; }' "$BODY")"
+set_eq "可視 tc-kind-plain == 各 kind の glossary plain_short (順序)" "$exp_kindplain" "$act_kindplain"
 # 4d. tc-prio: class (emission 順 == contract priority) + (class, 可視ラベル) 整合 (must→必須 / should→推奨)
 set_eq "可視 tc-prio class == .test_cases[].priority (順序)" "$(q '.test_cases[].priority')" \
   "$(grep -oE '<span class="tc-prio [a-z]+">' "$BODY" | sed -E 's#<span class="tc-prio ([a-z]+)">#\1#')"
@@ -405,7 +412,7 @@ chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
 EXP=1; for t in cover-meta foot ft-grid ic in lab out page summary-card tags tc-grid tint-brand tint-info tint-ok tint-violet txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=2; for t in scol; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=4; for t in chapbody ico kicker lead m num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.test_cases | length')"; for t in confirm rtm-ac rtm-fr rtm-kind rtm-tc tc-act tc-exp tc-head tc-id tc-kind tc-plain tc-pre tc-prio tc-step-list tc-steps tc-title tc-trace tc-trace-h tc-trace-tgt verify; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP="$(q '.test_cases | length')"; for t in confirm rtm-ac rtm-fr rtm-kind rtm-tc tc-act tc-exp tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-step-list tc-steps tc-title tc-trace tc-trace-h tc-trace-tgt verify; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length')"; for t in rtm-code rtm-edge rtm-label tc-ref tc-ref-label tc-trace-edge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '(.test_cases | length) * 2')"; for t in tc-step-v tc-trace-label tc-trace-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '(.test_cases | length) * 3')"; for t in tc-step; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
