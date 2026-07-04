@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ja" data-doc-id="VISION-FOLIO" data-doc-type="vision">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="folio vision-pack assembler (folio-c5r.4 / instance#2 folio-self) — deterministic structure, prose slots unfilled">
+<title>folio 文書規律エンジン — ビジョン</title>
+<style>
+/* ===========================================================================
+   folio human-layer design system — core.css (S3 / folio-8oc プロトタイプ)
+   要件定義書 (SRS) ビジュアル design system の中核 register。
+   視覚言語 = deck帯 × B2高密度 (ADR-0041)。テーマ = 環境追従 prefers-color-scheme。
+   styling は意味クラス、taxonomy 識別は [data-component] 属性 (floor gate A)。
+   taxonomy = design-intent/research/srs-component-taxonomy.html
+   =========================================================================== */
+
+/* ---- requirement-type-color-tokens (meta / 全 register が共有・両テーマ定義) ---- */
+:root{
+  --ink:#08131a; --ink-soft:#3a4a55; --ink-faint:#5b6671;
+  --paper:#ffffff; --paper-2:#f5f8fa; --paper-3:#eef3f7;
+  --line:#dbe4ea; --line-soft:#eef3f7;
+  --brand:#2a4d6e; --brand-deep:#15324a; --brand-tint:#e8f0f7;
+  --ok:#1e7b65; --ok-tint:#e6f6f2; --ok-line:#9fd9cb;
+  --bad:#b22323; --bad-tint:#fdf3f3; --bad-line:#eab3b3;
+  --warn:#916626; --warn-tint:#fefbea; --warn-line:#e4cf8f;
+  --info:#2a5d9e; --info-tint:#eaf1fb; --info-line:#a8c4e8;
+  --violet:#5b3e8e; --violet-tint:#f0eafa; --violet-line:#cdb8ec;
+  --shadow:0 1px 2px rgba(8,19,26,.06),0 8px 24px rgba(8,19,26,.07);
+  --shadow-lg:0 2px 6px rgba(8,19,26,.08),0 18px 50px rgba(8,19,26,.12);
+  /* 要件型カラートークン (FR/NFR/CON/ASM) */
+  --fr:var(--brand); --nfr:var(--violet); --con:var(--warn); --asm:var(--info);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ink:#e8eef2; --ink-soft:#a9b7c1; --ink-faint:#7d8c97;
+    --paper:#0d171e; --paper-2:#15222b; --paper-3:#1b2c37;
+    --line:#273947; --line-soft:#1b2c37;
+    --brand:#7db8e8; --brand-deep:#1d3a54; --brand-tint:#16293a;
+    --ok:#5ac8b8; --ok-tint:#10302b; --ok-line:#2e6258;
+    --bad:#ef7a7a; --bad-tint:#341c1c; --bad-line:#6e3636;
+    --warn:#d6a94e; --warn-tint:#312a13; --warn-line:#5e4e23;
+    --info:#7da9e8; --info-tint:#16263c; --info-line:#33507c;
+    --violet:#b89be0; --violet-tint:#241a36; --violet-line:#473a64;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.5);
+    --shadow-lg:0 2px 6px rgba(0,0,0,.5),0 18px 50px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0; background:var(--paper-2); color:var(--ink);
+  font-family:"Noto Sans CJK JP","Noto Sans JP",system-ui,-apple-system,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+  font-feature-settings:"palt" 1; line-height:1.7; letter-spacing:.01em;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1280px; margin:0 auto; background:var(--paper); box-shadow:var(--shadow-lg);}
+svg{display:block;} .ico{width:1em; height:1em;}
+
+/* ---- plain-language-term-inline (glossary 派生ビュー / 専門語のやさしい併記) ---- */
+.term{
+  /* font-size 下限 (folio-276 #5)。 .72em は em 連鎖 (例 .actor .role=11px 内) で 7.9px<8px へ縮み
+     判読不能化する。 max() で 10.5px を下限に据え、 広文脈では従来比率を保つ。 */
+  display:inline-block; font-size:max(10.5px,.72em); font-weight:700; line-height:1;
+  padding:.18em .5em; border-radius:999px; margin-left:.3em; vertical-align:.08em;
+  background:var(--paper-3); color:var(--ink-soft); border:1px solid var(--line);
+  letter-spacing:.02em; white-space:nowrap;
+}
+.term.en{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;}
+
+/* ===================== doc-cover-band (deck-band / 表紙) ===================== */
+[data-component="doc-cover-band"]{
+  position:relative; overflow:hidden; color:#fff;
+  /* deeper navy にして白文字 (小サイズ含む) を WCAG AA 維持 (gate F worst-case-stop が最明合成でも
+     ≥4.5 を要求)。 highlight radial は薄め、 linear の最明端 (旧 #33658f) を暗色化。 */
+  background:
+    radial-gradient(1200px 500px at 88% -10%, rgba(255,255,255,.07), transparent 60%),
+    linear-gradient(135deg,#0c1f30 0%,#143049 48%,#173a57 100%);
+  padding:54px 56px 46px;
+}
+.cover-eyebrow{font-size:12.5px; font-weight:700; letter-spacing:.22em; text-transform:uppercase; opacity:.86; margin:0 0 14px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+.cover-eyebrow .doc-type{background:rgba(255,255,255,.16); padding:3px 10px; border-radius:6px; letter-spacing:.16em; border:1px solid rgba(255,255,255,.22);}
+[data-component="doc-cover-band"] h1{font-size:42px; line-height:1.14; margin:0 0 8px; font-weight:800; text-wrap:balance;}
+.cover-sub{font-size:17px; opacity:.9; margin:0 0 22px; font-weight:500;}
+.summary-card{background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); border-radius:14px; padding:18px 22px; display:flex; gap:18px; align-items:flex-start; max-width:880px;}
+.summary-card .lab{font-size:11px; font-weight:700; letter-spacing:.16em; opacity:.8; margin:0 0 4px;}
+.summary-card .txt{font-size:17.5px; line-height:1.6; font-weight:600; margin:0;}
+.summary-card .txt b{color:#ffe8a8;}
+.cover-meta{display:flex; flex-wrap:wrap; gap:10px 26px; margin-top:24px; font-size:13px;}
+.cover-meta .m{display:flex; gap:8px; align-items:center; opacity:.92;}
+.cover-meta .m .k{opacity:.62; font-weight:600;} .cover-meta .m .v{font-weight:700;}
+.reader-chip{display:inline-flex; gap:8px; align-items:center; margin-top:18px; background:#ffce6e; color:#3a2c05; font-weight:700; font-size:13.5px; padding:8px 14px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,.2);}
+
+/* ===================== approval-block (deck-band / 承認証跡) ★critic補填 ===== */
+[data-component="approval-block"]{display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; margin-top:22px;}
+.sign{flex:1 1 200px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22); border-radius:12px; padding:13px 16px; display:flex; flex-direction:column; gap:3px; min-width:0;}
+.sign .role{font-size:10.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.7;}
+.sign .who{font-size:15px; font-weight:800;}
+.sign .when{font-size:11.5px; opacity:.72; font-weight:600;}
+.sign .stamp{align-self:flex-start; margin-top:4px; font-size:10px; font-weight:800; letter-spacing:.08em; padding:2px 8px; border-radius:6px; background:#ffce6e; color:#3a2c05;}
+.sign .stamp.self{background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.3);}
+
+/* ===================== chapter-deck-band (deck-band / 章開き) =============== */
+[data-component="chapter-deck-band"]{position:relative; padding:34px 56px 12px;}
+[data-component="chapter-deck-band"] .num{position:absolute; top:-6px; right:34px; font-size:138px; font-weight:900; line-height:1; opacity:.06; letter-spacing:-.04em; user-select:none; pointer-events:none; font-family:ui-monospace,monospace;}
+.kicker{display:inline-flex; align-items:center; gap:9px; font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; padding:5px 12px; border-radius:8px; margin-bottom:10px;}
+[data-component="chapter-deck-band"] h2{font-size:27px; margin:0 0 6px; font-weight:800; line-height:1.2;}
+.lead{font-size:15px; color:var(--ink-soft); margin:0; max-width:920px; line-height:1.65;}
+.tint-brand{background:var(--brand-tint);} .tint-ok{background:var(--ok-tint);} .tint-bad{background:var(--bad-tint);}
+.tint-warn{background:var(--warn-tint);} .tint-info{background:var(--info-tint);} .tint-violet{background:var(--violet-tint);}
+.tint-brand .kicker{background:var(--brand); color:#fff;} .tint-ok .kicker{background:var(--ok); color:#fff;}
+.tint-bad .kicker{background:var(--bad); color:#fff;} .tint-warn .kicker{background:var(--warn); color:#fff;}
+.tint-info .kicker{background:var(--info); color:#fff;} .tint-violet .kicker{background:var(--violet); color:#fff;}
+.chapbody{padding:22px 56px 40px; background:var(--paper);}
+
+/* ===================== section-lead-callout (callout / 章導入) ============= */
+[data-component="section-lead-callout"]{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.card{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px 18px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden;}
+.card.accent::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--brand);}
+.card .cid{font-size:11.5px; font-weight:800; letter-spacing:.12em; color:var(--brand); margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+.card .ct{font-size:16.5px; font-weight:800; line-height:1.4; margin:0 0 6px;}
+.card .cd{font-size:13px; color:var(--ink-soft); margin:0;}
+
+/* ===================== scope-summary-panel (dense-list / 範囲) ============= */
+[data-component="scope-summary-panel"]{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+.scol{border-radius:14px; padding:18px 20px; box-shadow:var(--shadow);}
+.scol.in{background:var(--ok-tint); border:1px solid var(--ok-line);}
+.scol.out{background:var(--bad-tint); border:1px solid var(--bad-line);}
+.scol h3{margin:0 0 12px; font-size:15px; font-weight:800; display:flex; align-items:center; gap:9px;}
+.scol.in h3{color:var(--ok);} .scol.out h3{color:var(--bad);}
+.scol ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px;}
+.scol li{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; line-height:1.5;}
+.scol li .b{flex:0 0 auto; margin-top:3px;}
+
+/* ===================== actor-stakeholder-table (dense-table / 主体) ======== */
+[data-component="actor-stakeholder-table"]{display:flex; flex-wrap:wrap; gap:12px;}
+.actor{display:flex; align-items:center; gap:11px; background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:11px 15px 11px 12px; box-shadow:var(--shadow); min-width:0;}
+.actor .av{flex:0 0 auto; width:38px; height:38px; border-radius:10px; display:grid; place-items:center; color:#fff;}
+.actor .nm{font-size:14px; font-weight:700; line-height:1.25;}
+.actor .role{font-size:11px; color:var(--ink-faint); font-weight:600;}
+.ext-badge{font-size:9.5px; font-weight:800; letter-spacing:.08em; background:var(--warn-tint); color:var(--warn); border:1px solid var(--warn-line); padding:1px 6px; border-radius:5px; margin-left:6px;}
+
+/* ===================== source-trace-origin (dense-table / 上位ニーズ) ★補填 = */
+[data-component="source-trace-origin"]{width:100%; min-width:440px; border-collapse:separate; border-spacing:0; font-size:13.5px;}
+[data-component="source-trace-origin"] thead th{background:var(--info); color:#fff; text-align:left; font-size:11.5px; font-weight:800; letter-spacing:.06em; padding:11px 14px;}
+[data-component="source-trace-origin"] thead th:first-child{border-top-left-radius:12px;} [data-component="source-trace-origin"] thead th:last-child{border-top-right-radius:12px;}
+[data-component="source-trace-origin"] tbody td{padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.5;}
+[data-component="source-trace-origin"] tbody tr:nth-child(even) td{background:var(--paper-2);}
+[data-component="source-trace-origin"] .nid{font-weight:800; font-family:ui-monospace,monospace; color:var(--info); white-space:nowrap;}
+[data-component="source-trace-origin"] .origin{font-size:11.5px; color:var(--ink-faint); font-weight:700;}
+
+/* ===================== requirement-matrix-table (dense-table / 要件本体) === */
+[data-component="requirement-matrix-table"]{width:100%; min-width:620px; border-collapse:separate; border-spacing:0; font-size:13.5px;}
+[data-component="requirement-matrix-table"] thead th{background:var(--brand-deep); color:#fff; text-align:left; font-size:11.5px; font-weight:800; letter-spacing:.06em; padding:11px 14px;}
+[data-component="requirement-matrix-table"] thead th:first-child{border-top-left-radius:12px;} [data-component="requirement-matrix-table"] thead th:last-child{border-top-right-radius:12px;}
+[data-component="requirement-matrix-table"] tbody td{padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.5;}
+[data-component="requirement-matrix-table"] tbody tr:nth-child(even) td{background:var(--paper-2);}
+[data-component="requirement-matrix-table"] tbody tr:hover td{background:var(--brand-tint);}
+.fid{font-weight:800; font-family:ui-monospace,monospace; font-size:13px; white-space:nowrap; color:var(--brand);}
+td.cond{color:var(--ink-soft); font-size:13px; width:22%;}
+td.resp{font-size:13.5px; width:40%;}
+/* ears-requirement-row: 根拠 Rationale を必須スロットとして明示 (critic #3 格上げ) */
+td.resp .why{display:block; margin-top:5px; font-size:11.5px; color:var(--ink-faint); padding-left:62px; position:relative;}
+td.resp .why::before{content:"↳ なぜ要る"; position:absolute; left:0; font-weight:700; color:var(--ink-faint);}
+td.resp .plain{display:block; margin-top:5px; font-size:12.5px; color:var(--ink-soft);}
+td.resp .plain::before{content:"やさしく言うと "; font-weight:700; font-size:10px; color:var(--brand);}
+/* dense-table を clip せず狭幅で内部横スクロールへ倒す (folio-276 #1)。 旧 overflow:hidden は
+   375-390px で列を 1 文字/行へ潰し判読不能にした上 scroll も封じていた (gate F 盲点=#2 で捕捉)。
+   overflow-x:auto + table 側 min-width = rtm-grid と同じ「狭幅は横スクロール」方針へ統一する。 */
+.tbl-wrap{border:1px solid var(--line); border-radius:12px; overflow-x:auto; box-shadow:var(--shadow);}
+
+/* ---- priority-badge + EARS chip (badge) ---- */
+.ears{display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:800; letter-spacing:.04em; padding:3px 9px; border-radius:7px; white-space:nowrap; border:1px solid;}
+.ears.always{background:var(--info-tint); color:var(--info); border-color:var(--info-line);}
+.ears.trigger{background:var(--brand-tint); color:var(--brand); border-color:var(--brand);}
+.ears.state{background:var(--violet-tint); color:var(--violet); border-color:var(--violet-line);}
+.ears.forbid{background:var(--bad-tint); color:var(--bad); border-color:var(--bad-line);}
+.ears.option{background:var(--warn-tint); color:var(--warn); border-color:var(--warn-line);}
+.ears .en{opacity:.7; font-weight:600; font-family:ui-monospace,monospace; font-size:9px;}
+.prio{display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:800; letter-spacing:.04em; padding:2px 8px; border-radius:6px; white-space:nowrap;}
+.prio.must{background:var(--bad); color:#fff;} .prio.should{background:var(--warn); color:#fff;} .prio.may{background:var(--paper-3); color:var(--ink-soft); border:1px solid var(--line);}
+.vmeth{font-size:10px; font-weight:800; font-family:ui-monospace,monospace; padding:2px 6px; border-radius:5px; background:var(--ok-tint); color:var(--ok); border:1px solid var(--ok-line);}
+.ears-legend{display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; align-items:center;}
+.ears-legend .lt{font-size:12px; font-weight:700; color:var(--ink-soft); margin-right:4px;}
+/* ears-requirement-row = requirement-matrix-table の各 <tr>。行 styling は table を継承し、
+   data-component で floor gate A 識別 + 根拠 (td.resp .why) を空不可スロットに保つ */
+tr[data-component="ears-requirement-row"] td.resp .why:empty::after{content:"⚠ 根拠 未記入"; color:var(--bad); font-weight:700;}
+
+/* ===================== nfr-hero-metrics + nfr-metrics-table =============== */
+[data-component="nfr-hero-metrics"]{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;}
+.nfr-hero{border-radius:16px; padding:20px 18px 18px; box-shadow:var(--shadow); position:relative; overflow:hidden; border:1px solid var(--line); background:var(--paper);}
+.nfr-hero .cat{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; margin-bottom:8px; display:flex; align-items:center; gap:7px;}
+.nfr-hero .big{font-size:38px; font-weight:900; line-height:1; letter-spacing:-.02em; display:flex; align-items:baseline; gap:4px;}
+.nfr-hero .big .u{font-size:16px; font-weight:800; opacity:.7;}
+.nfr-hero .qual{font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:8px; line-height:1.45;}
+.nfr-hero.c1{background:linear-gradient(160deg,var(--info-tint),var(--paper));} .nfr-hero.c1 .cat,.nfr-hero.c1 .big{color:var(--info);}
+.nfr-hero.c2{background:linear-gradient(160deg,var(--ok-tint),var(--paper));} .nfr-hero.c2 .cat,.nfr-hero.c2 .big{color:var(--ok);}
+.nfr-hero.c3{background:linear-gradient(160deg,var(--brand-tint),var(--paper));} .nfr-hero.c3 .cat,.nfr-hero.c3 .big{color:var(--brand);}
+.nfr-hero.c4{background:linear-gradient(160deg,var(--violet-tint),var(--paper));} .nfr-hero.c4 .cat,.nfr-hero.c4 .big{color:var(--violet);}
+[data-component="nfr-metrics-table"]{width:100%; min-width:480px; border-collapse:separate; border-spacing:0; font-size:13px;}
+[data-component="nfr-metrics-table"] th{background:var(--paper-3); text-align:left; font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--ink-soft); padding:10px 14px; text-transform:uppercase;}
+[data-component="nfr-metrics-table"] td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.55;}
+[data-component="nfr-metrics-table"] tbody tr:last-child td{border-bottom:none;}
+.nid{font-weight:800; font-family:ui-monospace,monospace; color:var(--brand); white-space:nowrap;}
+.tgt{font-weight:800; color:var(--ink); white-space:nowrap;}
+.meas{color:var(--ink-soft); font-size:12.5px;}
+
+/* ===================== rtm-grid (rtm-grid / 双方向トレース + 孤立検出) ===== */
+[data-component="rtm-grid"]{overflow-x:auto; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow);}
+.rtm{border-collapse:separate; border-spacing:0; font-size:12.5px; width:100%; min-width:760px;}
+.rtm th,.rtm td{padding:11px 12px; text-align:center; border-bottom:1px solid var(--line); border-right:1px solid var(--line-soft);}
+.rtm th{background:var(--brand-deep); color:#fff; font-size:11px; font-weight:800; letter-spacing:.04em;}
+.rtm thead th:first-child{text-align:left;}
+.rtm .grp{background:var(--paper-3); color:var(--ink-soft); font-weight:800; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;}
+.rtm tbody th{background:var(--paper-2); text-align:left; font-weight:800; color:var(--brand); font-family:ui-monospace,monospace; white-space:nowrap; font-size:12px;}
+.rtm tbody th .lbl{display:block; font-family:inherit; font-weight:600; color:var(--ink-soft); font-size:10.5px; margin-top:2px;}
+.rtm td.hit{background:var(--ok-tint);}
+.rtm td .dot{display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; background:var(--ok); color:#fff;}
+.rtm td .dot.ac{display:inline-flex; align-items:center; width:auto; min-width:0; height:auto; border-radius:6px; padding:2px 7px; font-size:10px; font-weight:700; line-height:1.2; margin:1px;}
+.rtm td.gap{background:var(--bad-tint);} .rtm td.gap .x{color:var(--bad); font-weight:900;}
+.rtm tbody tr:last-child td,.rtm tbody tr:last-child th{border-bottom:none;}
+
+/* ===================== rtm-collapse (折りたたみ RTM の fold affordance / folio-276 #4) ====
+   生成 SRS は核心 RTM を <details data-component="rtm-collapse"> で既定折りたたむ。 素の details は
+   marker が小さく「開けるUI」と気付けず要旨が素通りした (ceiling 第2層)。 summary を panel ヘッダ化し
+   ▶ caret + 「クリックで開閉」ヒントで開閉可能性を明示する。 折りたたみ機構自体は assembler が所有。 */
+[data-component="rtm-collapse"]{border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow); background:var(--paper); overflow:hidden;}
+[data-component="rtm-collapse"]>summary{cursor:pointer; list-style:none; user-select:none; display:flex; align-items:center; gap:11px; padding:15px 20px; font-size:14.5px; font-weight:800; color:var(--brand); background:var(--brand-tint);}
+[data-component="rtm-collapse"]>summary::-webkit-details-marker{display:none;}
+[data-component="rtm-collapse"]>summary::before{content:""; flex:0 0 auto; width:0; height:0; border-left:7px solid currentColor; border-top:5px solid transparent; border-bottom:5px solid transparent; transition:transform .15s ease;}
+[data-component="rtm-collapse"][open]>summary::before{transform:rotate(90deg);}
+[data-component="rtm-collapse"]>summary::after{content:"クリックで開閉"; margin-left:auto; font-size:10.5px; font-weight:700; letter-spacing:.04em; color:var(--ink-faint); background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:2px 9px;}
+[data-component="rtm-collapse"][open]>summary{border-bottom:1px solid var(--line);}
+[data-component="rtm-collapse"]>.rtm-summary-derived,[data-component="rtm-collapse"]>[data-prose-slot="rtm-summary"]{margin:0; padding:13px 20px 0; font-size:13px; color:var(--ink-soft); line-height:1.6;}
+[data-component="rtm-collapse"]>[data-component="rtm-grid"]{margin:16px 20px 18px;}
+
+/* ===================== acceptance-criteria-checklist (dense-list) ========= */
+[data-component="acceptance-criteria-checklist"]{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.ac{background:var(--paper); border:1px solid var(--ok-line); border-radius:14px; padding:17px 18px; box-shadow:var(--shadow); position:relative; display:flex; flex-direction:column; gap:8px;}
+.ac::before{content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background:var(--ok); border-radius:14px 0 0 14px;}
+.ac .aid{font-size:11.5px; font-weight:800; color:var(--ok); letter-spacing:.1em; display:flex; align-items:center; gap:8px;}
+.ac .at{font-size:14.5px; font-weight:700; line-height:1.5; margin:0;}
+.ac .at b{color:var(--ok); font-weight:800;}
+.ac .metric{display:flex; align-items:baseline; gap:6px; margin-top:auto; padding-top:6px;}
+.ac .metric .v{font-size:26px; font-weight:900; color:var(--ok); line-height:1;}
+.ac .metric .l{font-size:11.5px; color:var(--ink-faint); font-weight:600;}
+
+/* ===================== constraint-callout (callout / 制約・規制) =========== */
+[data-component="constraint-callout"]{width:100%; border-collapse:separate; border-spacing:0; font-size:13.5px;}
+[data-component="constraint-callout"] td{padding:13px 16px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.55;}
+[data-component="constraint-callout"] tbody tr:last-child td{border-bottom:none;}
+.cid2{font-weight:800; font-family:ui-monospace,monospace; color:var(--warn); white-space:nowrap; width:60px;}
+.cl{font-weight:700; white-space:nowrap; width:170px; color:var(--ink);}
+.reg-badge{font-size:9.5px; font-weight:800; letter-spacing:.06em; background:var(--bad-tint); color:var(--bad); border:1px solid var(--bad-line); padding:1px 7px; border-radius:5px; margin-left:6px;}
+
+/* ===================== glossary-term-table (glossary / 用語 SSoT) ========= */
+[data-component="glossary-term-table"]{display:grid; grid-template-columns:1fr 1fr; gap:0 28px; border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);}
+.grow{display:flex; gap:16px; padding:15px 20px; border-bottom:1px solid var(--line-soft); align-items:flex-start;}
+.grow:nth-child(odd){background:var(--paper);} .grow:nth-child(even){background:var(--paper-2);}
+.gword{flex:0 0 142px; font-size:14.5px; font-weight:800; color:var(--brand); line-height:1.3;}
+.gword .en{display:block; font-size:11px; font-weight:700; color:var(--ink-faint); font-family:ui-monospace,monospace; margin-top:2px;}
+.gdef{font-size:13px; color:var(--ink-soft); line-height:1.55;}
+
+/* ===================== fidelity-sync-meta + footer (meta) ================= */
+.foot{padding:26px 56px 40px; background:var(--brand-deep); color:rgba(255,255,255,.78); font-size:12px;}
+.foot .ft-grid{display:flex; flex-wrap:wrap; gap:14px 40px; justify-content:space-between; align-items:center;}
+.foot b{color:#fff;}
+.foot .tags{display:flex; flex-wrap:wrap; gap:8px;}
+.foot .tags span{background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); padding:4px 10px; border-radius:7px; font-size:11px; font-weight:600;}
+
+/* ===========================================================================
+   残り register (taxonomy 全 37 部品の被覆) — 多くは中核 register を再利用
+   =========================================================================== */
+
+/* ---- dense-table family: interface / data / revision-history ---- */
+[data-component="interface-spec-table"],
+[data-component="data-requirements-block"],
+[data-component="revision-history-table"]{width:100%; border-collapse:separate; border-spacing:0; font-size:13px;}
+[data-component="interface-spec-table"] th,
+[data-component="data-requirements-block"] th,
+[data-component="revision-history-table"] th{background:var(--paper-3); text-align:left; font-size:11px; font-weight:800; letter-spacing:.05em; color:var(--ink-soft); padding:10px 14px; text-transform:uppercase;}
+[data-component="interface-spec-table"] td,
+[data-component="data-requirements-block"] td,
+[data-component="revision-history-table"] td{padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.55;}
+[data-component="interface-spec-table"] tbody tr:last-child td,
+[data-component="data-requirements-block"] tbody tr:last-child td,
+[data-component="revision-history-table"] tbody tr:last-child td{border-bottom:none;}
+.iid{font-weight:800; font-family:ui-monospace,monospace; color:var(--info); white-space:nowrap;}
+.dir{font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; background:var(--info-tint); color:var(--info); border:1px solid var(--info-line);}
+
+/* ---- dense-list family: ui / functions / use-case / references / toc / appendix ---- */
+[data-component="ui-spec-block"],
+[data-component="product-functions-list"],
+[data-component="use-case-card"],
+[data-component="references-list"],
+[data-component="toc-navigator"],
+[data-component="assumptions-constraints-list"],
+[data-component="supporting-info-appendix"]{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px;}
+[data-component="ui-spec-block"] li,
+[data-component="product-functions-list"] li,
+[data-component="references-list"] li,
+[data-component="toc-navigator"] li,
+[data-component="assumptions-constraints-list"] li,
+[data-component="supporting-info-appendix"] li{display:flex; gap:11px; align-items:flex-start; background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:11px 15px; box-shadow:var(--shadow); font-size:13.5px; line-height:1.5;}
+[data-component="assumptions-constraints-list"] li{border-left:5px solid var(--warn);}
+.li-tag{font-size:10px; font-weight:800; padding:2px 7px; border-radius:5px; background:var(--warn-tint); color:var(--warn); border:1px solid var(--warn-line); flex:0 0 auto;}
+[data-component="toc-navigator"]{display:grid; grid-template-columns:repeat(2,1fr); gap:9px 18px;}
+[data-component="toc-navigator"] li{box-shadow:none; border-color:var(--line-soft);}
+[data-component="toc-navigator"] .tn{font-weight:800; font-family:ui-monospace,monospace; color:var(--brand); flex:0 0 auto;}
+[data-component="references-list"] .ref-n{font-weight:800; font-family:ui-monospace,monospace; color:var(--ink-faint); flex:0 0 auto;}
+.li-key{font-weight:800; color:var(--brand); flex:0 0 auto;}
+
+/* use-case-card: precondition/flow/postcondition の枠 */
+[data-component="use-case-card"] li{flex-direction:column; gap:7px; border-left:5px solid var(--info); padding:14px 17px;}
+.uc-id{font-size:11.5px; font-weight:800; color:var(--info); letter-spacing:.08em;}
+.uc-flow{display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12.5px;}
+.uc-flow .stp{background:var(--paper-2); border:1px solid var(--line); border-radius:7px; padding:3px 9px; font-weight:600;}
+.uc-flow .ar{color:var(--ink-faint); font-weight:800;}
+
+/* ---- rtm-grid family: verification-method-grid / requirement-attributes-rtm ---- */
+[data-component="verification-method-grid"],
+[data-component="requirement-attributes-rtm"]{overflow-x:auto; border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow);}
+[data-component="verification-method-grid"] table,
+[data-component="requirement-attributes-rtm"] table{border-collapse:separate; border-spacing:0; font-size:12.5px; width:100%; min-width:680px;}
+[data-component="verification-method-grid"] th,
+[data-component="requirement-attributes-rtm"] th{background:var(--brand-deep); color:#fff; font-size:11px; font-weight:800; padding:10px 12px; text-align:left;}
+[data-component="verification-method-grid"] td,
+[data-component="requirement-attributes-rtm"] td{padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top; line-height:1.5;}
+[data-component="verification-method-grid"] tbody tr:nth-child(even) td,
+[data-component="requirement-attributes-rtm"] tbody tr:nth-child(even) td{background:var(--paper-2);}
+
+/* ---- callout family: quality-checklist / audience-toggle ---- */
+[data-component="quality-checklist-callout"]{background:var(--paper-2); border:1px solid var(--line); border-left:5px solid var(--ok); border-radius:12px; padding:16px 20px; box-shadow:var(--shadow);}
+[data-component="quality-checklist-callout"] .qt{font-size:13px; font-weight:800; color:var(--ok); margin:0 0 10px; display:flex; align-items:center; gap:8px;}
+[data-component="quality-checklist-callout"] ul{list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(3,1fr); gap:7px 16px;}
+[data-component="quality-checklist-callout"] li{font-size:12.5px; display:flex; gap:7px; color:var(--ink-soft);}
+[data-component="quality-checklist-callout"] li .ck{color:var(--ok); font-weight:900; flex:0 0 auto;}
+[data-component="audience-toggle"]{display:inline-flex; gap:0; border:1px solid var(--line); border-radius:10px; overflow:hidden; box-shadow:var(--shadow);}
+[data-component="audience-toggle"] button{border:none; background:var(--paper); color:var(--ink-soft); font:inherit; font-size:12.5px; font-weight:700; padding:8px 16px; cursor:pointer; border-right:1px solid var(--line);}
+[data-component="audience-toggle"] button:last-child{border-right:none;}
+[data-component="audience-toggle"] button[aria-pressed="true"]{background:var(--brand); color:#fff;}
+
+/* ---- diagram family: context / use-case-flow / state-machine ---- */
+[data-component="context-diagram"],
+[data-component="use-case-flow-diagram"],
+[data-component="state-machine-diagram"]{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:var(--shadow); overflow-x:auto;}
+[data-component="context-diagram"] figcaption,
+[data-component="use-case-flow-diagram"] figcaption,
+[data-component="state-machine-diagram"] figcaption{font-size:11.5px; color:var(--ink-faint); font-weight:600; margin-top:10px; text-align:center;}
+/* use-case flow steps (横並びステップ) */
+.uc-basic{display:flex; align-items:stretch; gap:0; flex-wrap:wrap;}
+.uc-step{flex:1 1 0; min-width:140px; background:var(--paper); border:1px solid var(--brand); border-radius:13px; padding:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:5px;}
+.uc-arrow{flex:0 0 30px; display:grid; place-items:center; color:var(--brand); font-weight:800;}
+.uc-step .sn{font-size:11px; font-weight:800; color:var(--brand); letter-spacing:.06em;}
+.uc-step .st{font-size:14px; font-weight:800; line-height:1.3;}
+.uc-step .sd{font-size:11.5px; color:var(--ink-faint); line-height:1.45;}
+
+/* ---- badge: informative-normative-label ---- */
+.io-label{display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:800; letter-spacing:.06em; padding:2px 9px; border-radius:6px; text-transform:uppercase;}
+.io-label.normative{background:var(--brand); color:#fff;}
+.io-label.informative{background:var(--paper-3); color:var(--ink-soft); border:1px solid var(--line);}
+
+/* ---- responsive ---- */
+@media (max-width:1080px){
+  [data-component="section-lead-callout"],[data-component="nfr-hero-metrics"],[data-component="acceptance-criteria-checklist"]{grid-template-columns:1fr 1fr;}
+  [data-component="scope-summary-panel"],[data-component="glossary-term-table"]{grid-template-columns:1fr;}
+}
+@media (max-width:720px){
+  [data-component="chapter-deck-band"],.chapbody,[data-component="doc-cover-band"],.foot{padding-left:22px; padding-right:22px;}
+  [data-component="section-lead-callout"],[data-component="nfr-hero-metrics"],[data-component="acceptance-criteria-checklist"]{grid-template-columns:1fr;}
+  [data-component="doc-cover-band"] h1{font-size:31px;}
+  [data-component="chapter-deck-band"] .num{font-size:92px;}
+}
+
+/* ============================================================================
+   dark accent コントラスト補正 — ★このブロックはファイル末尾に置くこと (source-order)。
+   dark では accent トークン (--brand/--info/--warn/--ok/--bad/--violet) が明色へ反転するため、
+   それを塗りに使い白文字を載せる小要素 (kicker / priority-badge / actor avatar / dot 等) は
+   WCAG AA が崩れる (gate F low-contrast で実検出)。 文字を暗色へ切替えて contrast を確保する。
+   基底の `color:#fff` ルールと同 specificity ゆえ、 source-order で後勝ちさせるには本ブロックが
+   それら全ての後 (= ファイル末尾) に来る必要がある。 前方へ移すと基底ルールに負け無効化する。
+   構造ヘッダ/フッタ (--brand-deep 塗り) は dark でも暗色維持ゆえ白文字のままで可読。
+   ============================================================================ */
+@media (prefers-color-scheme: dark){
+  .tint-brand .kicker, .tint-ok .kicker, .tint-bad .kicker,
+  .tint-warn .kicker, .tint-info .kicker, .tint-violet .kicker,
+  [data-component="source-trace-origin"] thead th,
+  .prio.must, .prio.should,
+  .rtm td .dot,
+  .actor .av,
+  [data-component="audience-toggle"] button[aria-pressed="true"],
+  .io-label.normative{ color:#08131a; }
+}
+/* ===== vision-pack 固有部品 (folio-c5r.4 / instance#1)。 srs.css の token を流用 ===== */
+/* §1 北極星 */
+[data-component="vision-north-star"]{margin:18px 0;padding:26px 28px;border-radius:16px;background:linear-gradient(135deg,var(--brand-tint),var(--paper));border:1px solid var(--brand);text-align:center}
+.vm-ns-label{font-size:11.5px;font-weight:800;letter-spacing:.12em;color:var(--brand);margin:0 0 10px}
+.vm-ns-text{font-size:22px;font-weight:900;line-height:1.7;margin:0;color:var(--ink)}
+[data-component="vision-pitch-grammar"]{margin:20px 0 6px;border:1px dashed var(--line);border-radius:14px;padding:16px 18px;background:var(--paper-2)}
+.vm-pg-title{font-size:12px;color:var(--ink-soft);margin:0 0 10px}
+.vm-pg-row{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+.vm-pg-k{flex:0 0 92px;font-size:11.5px;font-weight:800;color:var(--brand)}
+.vm-pg-v{flex:1 1 300px;font-size:13.5px;line-height:1.7}
+.vm-pg-ref{font-size:11px;text-decoration:none;color:var(--ink-soft);border:1px solid var(--line);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.vm-pg-ref:hover{background:var(--brand-tint)}
+/* §3/§4/§6 カード (関係者/目標/成功基準/リスク) */
+.vm-card{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;align-items:baseline;border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0;background:var(--paper)}
+.vm-cid{font-family:ui-monospace,monospace;font-weight:800;font-size:12px;border-radius:6px;padding:1px 8px;border:1px solid var(--violet-line);color:var(--violet);background:var(--violet-tint)}
+.vm-card.obj .vm-cid{border-color:var(--ok-line);color:var(--ok);background:var(--ok-tint)}
+.vm-card.sc .vm-cid{border-color:var(--brand);color:var(--brand);background:var(--brand-tint)}
+.vm-card.risk .vm-cid{border-color:var(--bad-line);color:var(--bad);background:var(--bad-tint)}
+.vm-ct{font-weight:800;font-size:14.5px}
+.vm-cd{grid-column:2;margin:0;font-size:13px;line-height:1.75;color:var(--ink-soft)}
+.vm-sc-for{grid-column:2;font-size:11.5px;color:var(--brand);font-weight:700}
+/* §5 機能カード */
+.vm-feat{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0;background:var(--paper)}
+.vm-fh{display:flex;gap:10px;align-items:baseline;margin-bottom:4px}
+.vm-feat .vm-cid{border-color:var(--info-line);color:var(--info);background:var(--info-tint)}
+.vm-feat .vm-cd{margin:0 0 8px;font-size:13px;line-height:1.75;color:var(--ink-soft)}
+/* no-restate aside / 非目標 */
+[data-component="no-restate-note"]{margin:14px 0 4px;padding:10px 14px;border-left:3px solid var(--line);background:var(--paper-2);border-radius:0 10px 10px 0;font-size:12.5px;line-height:1.8;color:var(--ink-soft)}
+[data-component="vision-non-goals"]{margin:16px 0 4px;border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--paper-2)}
+.vm-ng-title{font-size:12px;font-weight:800;color:var(--ink);margin:0 0 6px}
+[data-component="vision-non-goals"] p{margin:0;font-size:13px;line-height:1.8}
+/* 照会チップ (SRS 前方照会・arch と同じ視覚語彙・claim ロール) */
+.ad-ref-row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-top:2px}
+.ad-ref-lab{flex:0 0 auto;font-size:11px;font-weight:800;color:var(--ok)}
+.xref-link{display:inline-flex;align-items:baseline;gap:5px;text-decoration:none;border-radius:6px;padding:1px 4px;margin-right:3px}
+.xref-link:hover{background:var(--brand-tint)}
+.xref-code{font-weight:800;font-size:12px;border-radius:6px;padding:1px 8px;border:1px solid;color:var(--ok);background:var(--ok-tint);border-color:var(--ok-line)}
+.xref-label{font-size:11.5px;color:var(--ink-soft);line-height:1.5}
+/* §7 原則終端 (arch と同じ視覚語彙) */
+[data-component="principle-terminal"]{margin:12px 0 0;border:1px solid var(--violet-line);border-radius:12px;padding:13px 16px;background:var(--violet-tint)}
+.pt-label{font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--violet);background:var(--paper);border:1px solid var(--violet-line);border-radius:5px;padding:1px 7px;margin-right:8px}
+.pt-id{font-weight:800;font-size:12.5px;color:var(--violet);font-family:ui-monospace,monospace}
+.pt-text{font-size:13.5px;color:var(--ink-soft);line-height:1.75;margin:7px 0 0}
+/* 目標ツリー図 (mermaid render target・arch と同じ figure.diagram 視覚語彙) */
+figure.diagram{margin:14px 0;border:1px solid var(--line);border-radius:12px;background:var(--paper);box-shadow:var(--shadow);overflow:hidden}
+figure.diagram .mermaid{margin:0;padding:14px 10px;overflow-x:auto;text-align:center}
+figure.diagram .mermaid:not([data-processed]){font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;line-height:1.55;white-space:pre;text-align:left;color:var(--ink-soft);background:var(--paper-2);border-radius:10px}
+figure.diagram figcaption{padding:11px 15px 13px;font-size:12px;color:var(--ink-faint);border-top:1px dashed var(--line);background:var(--paper);line-height:1.6}
+.diag-tag{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--info);background:var(--info-tint);border:1px solid var(--info-line);border-radius:5px;padding:1px 7px;margin-right:7px}
+
+</style>
+</head>
+<body>
+<div class="page" data-component="requirement-type-color-tokens">
+<header data-component="doc-cover-band">
+<p class="cover-eyebrow"><span class="doc-type">folio design-intent / vision</span> <span>なぜ作るかの宣言</span></p>
+<h1>folio 文書規律エンジン — ビジョン</h1>
+<p class="cover-sub">なぜ folio を作るのか。 北極星 (目指す状態) と、 そこへ向かう目標・成功基準・機能の方向をまとめる</p>
+<div class="summary-card"><span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffe8a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><p class="lab">このビジョンが約束すること (1 文サマリ)</p><p class="txt" data-prose-slot="cover-summary" data-slot-id="cover-summary">folio の文書規律を一般化し、 専門家でない人も機械も読める 「完璧な文書一式」 をどんなプロジェクトにも生成できるようにする — その北極星と、 3 つの目標・3 つの成功基準・4 本の機能の方向をまとめた、 folio 自身の出発点となる文書です。</p></div></div>
+<div class="cover-meta"><span class="m"><span class="k">種別</span><span class="v">vision (ビジョン — なぜ作るか)</span></span><span class="m"><span class="k">構成</span><span class="v">7 章 (目標 3 / 成功基準 3 / 機能方向 4 / 関係者 4 / リスク 3 / 原則 1)</span></span><span class="m"><span class="k">版</span><span class="v">v0.1 / 2026-07-04</span></span></div>
+<div data-component="approval-block">
+<div class="sign"><span class="role">承認 (プロジェクトオーナー)</span><span class="who">shuu5</span><span class="when">2026-07-04 レビュー中</span><span class="stamp self">承認待ち</span></div>
+<div class="sign"><span class="role">作成 (folio admin)</span><span class="who">folio 文書規律エンジン (admin セッション)</span><span class="when">2026-07-04 起票</span><span class="stamp self">作成</span></div>
+</div>
+<div class="reader-chip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 想定読者: folio が何のためにあるのかを知りたい人 — 開発の専門知識は不要 (専門語はやさしい言葉を併記)</div>
+</header>
+<section data-component="chapter-deck-band" class="tint-brand"><span class="num">01</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 2l2.4 6.9H22l-5.8 4.2 2.2 6.9-6.4-4.2-6.4 4.2 2.2-6.9L2 8.9h7.6z"/></svg> 北極星</span><h2>目指す状態を、 一文で言い切る</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-01">ビジョンの中心は次の一文です。 以降の章はすべて、 この一文を 「誰のために・何を・どう確かめて」 実現するかの展開です。</p></section>
+<div class="chapbody">
+<div data-component="vision-north-star" id="northstar"><p class="vm-ns-label">北極星 (このプロジェクトが目指す状態)</p><p class="vm-ns-text">どんなプロジェクトの文書も、 専門家でない人が頑張れば読め、 機械が黙って検証できる 「完璧な文書一式」 として生成できる状態にする。</p></div>
+<p>文書には二つの病気があります。 「書いた人と同じ専門知識がないと読めない」 ことと、 「書かれた瞬間から実体とずれて静かに嘘になっていく」 ことです。 folio は、 人間向けのやさしい層と機械向けの厳密な層を同じ 1 枚のページに同居させ、 構造は機械が毎回検査し、 意味は独立のレビュワーが敵対的に確かめる — という規律で、 自分自身の文書からこの病気を取り除いてきました。 目指す状態は、 この規律を folio 固有のものにしておかず一般化し、 どんなプロジェクトでも 「読める・検証できる・古びない」 文書一式が当たり前に手に入ることです。</p>
+</div>
+<section data-component="chapter-deck-band" class="tint-warn"><span class="num">02</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/></svg> 解くに値する問題</span><h2>なぜ、 いま作るのか</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-02">文書が読まれず、 静かに嘘になっていく — これは書き手の怠慢ではなく、 構造の問題です。 個人の注意力では止まらないから、 仕組みとして解きます。</p></section>
+<div class="chapbody">
+<p id="problem">ソフトウェアの文書は、 多くの場合ふたりの読者のどちらかを諦めています。 専門家向けに書けば発注者や現場の人が読めず、 やさしく書けば厳密さが失われて機械や検証の役に立ちません。 その結果、 「読まれない正式文書」 と 「正しさを誰も保証しないやさしい説明」 が別々に増えていきます。</p>
+<p>もう一つの病気は劣化です。 コードや決定は動き続けるのに、 文書は書かれた瞬間から止まっています。 実体との食い違いを見つける仕組みがなければ文書は静かに嘘になり、 嘘になった文書は読まれなくなり、 読まれない文書は直されません。 この悪循環は、 書き手の注意力や善意では止まりません。</p>
+</div>
+<section data-component="chapter-deck-band" class="tint-violet"><span class="num">03</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg> 誰のためのビジョンか</span><h2>関係者と、 それぞれが得るもの</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-03">同じ規律でも、 立場によって 「うれしさ」 は違います。 このビジョンが誰に何を約束するかを、 4 つの立場ごとに 「得るもの」 の高さで書きます。</p></section>
+<div class="chapbody">
+<div data-component="vision-stakeholder-list">
+<div class="vm-card" id="st-1"><span class="vm-cid">ST-1</span><span class="vm-ct">発注者・事業側の読者 (非エンジニア)</span><p class="vm-cd">専門知識がなくても、 頑張れば文書一式を自分の言葉で理解でき、 「わかったつもり」 のまま承認しなくてよくなる。</p></div>
+<div class="vm-card" id="st-2"><span class="vm-cid">ST-2</span><span class="vm-ct">書き手 (エンジニア・文書作成者)</span><p class="vm-cd">読みやすさと厳密さの両立を個人技で背負わされない。 規律の実行と検査はエンジンが肩代わりする。</p></div>
+<div class="vm-card" id="st-3"><span class="vm-cid">ST-3</span><span class="vm-ct">機械の読み手 (AI エージェント・検証系)</span><p class="vm-cd">文書のどこを読めば正確なデータが得られるかが構造で保証され、 推測に頼らず検証や生成に使える。</p></div>
+<div class="vm-card" id="st-4"><span class="vm-cid">ST-4</span><span class="vm-ct">プロジェクトの将来のメンバー</span><p class="vm-cd">文書と実体のずれが仕組みで検出されるため、 古い文書に騙されずに合流できる。</p></div>
+</div>
+</div>
+<section data-component="chapter-deck-band" class="tint-ok"><span class="num">04</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> 目標と成功基準</span><h2>北極星を、 測れる形に割る</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-04">北極星は方向であって物差しではありません。 3 つの目標に割り、 それぞれに 「達成できたと言える状態」 (成功基準) を付けます。 数字でなく状態で測るのは、 このビジョンが質を約束するものだからです。</p></section>
+<div class="chapbody">
+<div data-component="vision-objective-list">
+<div class="vm-card obj" id="g-1"><span class="vm-cid">G-1</span><span class="vm-ct">ふたりの読者の両立</span><p class="vm-cd">同じ 1 枚の文書が、 非エンジニアの読解と機械の検証の両方に耐える状態にする (人間層と機械層の同居 = dual-audience)。</p></div>
+<div class="vm-card obj" id="g-2"><span class="vm-cid">G-2</span><span class="vm-ct">嘘を仕組みで防ぐ</span><p class="vm-cd">捏造・脱落・実体との食い違いを、 決定的な機械検査と独立レビュワーの二層で見つかる状態にする (二層を床 = floor・天井 = ceiling と呼ぶ)。</p></div>
+<div class="vm-card obj" id="g-3"><span class="vm-cid">G-3</span><span class="vm-ct">どこでも同じ規律</span><p class="vm-cd">folio 固有でなく、 どんなプロジェクトのどんな文書種にも同じ規律を着せられる状態にする。</p></div>
+</div>
+<div data-component="vision-success-criteria">
+<div class="vm-card sc" id="sc-1"><span class="vm-cid">SC-1</span><span class="vm-ct">説明なしで歩ける</span><p class="vm-cd">予備知識のない読者が、 案内なしで文書一式を読み歩き、 「何を・なぜ・どう確かめるか」 を自分の言葉で言い直せる。</p><span class="vm-sc-for">→ G-1 の物差し</span></div>
+<div class="vm-card sc" id="sc-2"><span class="vm-cid">SC-2</span><span class="vm-ct">全文書が二層検査済み</span><p class="vm-cd">出荷される文書は例外なく、 機械検査 (floor) と独立レビュー (ceiling) の両方を通過している。</p><span class="vm-sc-for">→ G-2 の物差し</span></div>
+<div class="vm-card sc" id="sc-3"><span class="vm-cid">SC-3</span><span class="vm-ct">新しい文書種は差し込むだけ</span><p class="vm-cd">新しい文書種やプロジェクトの追加が、 エンジン本体の変更なしに部品 (パック) の追加だけで済む。</p><span class="vm-sc-for">→ G-3 の物差し</span></div>
+</div>
+</div>
+<section data-component="chapter-deck-band" class="tint-info"><span class="num">05</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14.7 6.3a5 5 0 0 0-7.07 7.07l-4.35 4.35a1.5 1.5 0 0 0 2.12 2.12l4.35-4.35a5 5 0 0 0 7.07-7.07l-2.83 2.83-2.12-2.12z"/></svg> 主要機能の方向</span><h2>何を作るか — 方向だけを約束する</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-05">ビジョンは 「作る機能の一覧表」 ではありません。 目標を実現するための機能の方向を 4 本にまとめます。 folio はまだ照会先となる要件文書を持たないため、 ここでは方向だけを約束します (照会先が生まれたら結びます)。</p></section>
+<div class="chapbody">
+<div data-component="vision-feature-list">
+<div class="vm-feat" id="f-1"><div class="vm-fh"><span class="vm-cid">F-1</span><span class="vm-ct">ふたりの読者へ同時に組み上げる</span></div><p class="vm-cd">機械の正本 (契約データ) から、 人間向けの読みやすい層と機械向けの厳密な層を、 同じ 1 枚のページへ決定的に組み上げる。 元データに無いことは書けない。</p>
+</div>
+<div class="vm-feat" id="f-2"><div class="vm-fh"><span class="vm-cid">F-2</span><span class="vm-ct">二層の検証を標準にする</span></div><p class="vm-cd">構造・件数・つながりは決定的な機械検査 (floor) が毎回固め、 意味の忠実さ (捏造・歪み・読み味) は独立した AI レビュワー (ceiling) が敵対的に確かめる。 両方を通らない文書は出荷しない。</p>
+</div>
+<div class="vm-feat" id="f-3"><div class="vm-fh"><span class="vm-cid">F-3</span><span class="vm-ct">文書種パックを電池同梱する</span></div><p class="vm-cd">要件定義・設計判断の記録・調査記録・不変原則・用語集などの定番文書種を 「パック」 として同梱し、 薄い共通エンジンの上で差し替えられるようにする。</p>
+</div>
+<div class="vm-feat" id="f-4"><div class="vm-fh"><span class="vm-cid">F-4</span><span class="vm-ct">文書一式を照会でつなぐ</span></div><p class="vm-cd">文書同士の 「なぜ」 を照会リンクでつなぎ、 どの記述からたどっても最終的に動かせない原則へ行き着くことを機械が確かめられるようにする。</p>
+</div>
+</div>
+</div>
+<section data-component="chapter-deck-band" class="tint-bad"><span class="num">06</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M4.9 4.9l14.2 14.2"/></svg> リスクと非目標</span><h2>うまくいかない道と、 あえて行かない道</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-06">ビジョンには 「やらないこと」 も書きます。 実現を脅かす 3 つのリスクと、 軸を守るための非目標をはっきりさせます。 リスクの一つ (機械化のやりすぎ) は、 folio 自身が一度踏んで方向転換した実証済みの罠です。</p></section>
+<div class="chapbody">
+<div data-component="vision-risk-list">
+<div class="vm-card risk" id="r-1"><span class="vm-cid">R-1</span><span class="vm-ct">規律の重さで書き手が離れる</span><p class="vm-cd">規律の実行コストが書き手の負担として漏れ出すと、 文書を書くこと自体が避けられ、 規律ごと放棄される。 規律はエンジンが背負うのが前提。</p></div>
+<div class="vm-card risk" id="r-2"><span class="vm-cid">R-2</span><span class="vm-ct">機械化のやりすぎ</span><p class="vm-cd">意味の正しさまで決定的プログラムで裁こうとすると、 検査は際限なく複雑化し (悪い形を列挙し続ける罠)、 それ自体が保守の重荷になる。 機械は数えられるものだけを持ち、 意味は独立レビュワーに委ねる。</p></div>
+<div class="vm-card risk" id="r-3"><span class="vm-cid">R-3</span><span class="vm-ct">生成物の専門家退行</span><p class="vm-cd">「専門家ならなんとか読める」 水準で満足すると、 北極星 (非エンジニアが読める) から静かに遠ざかる。 読みやすさの検査を専門家の目だけで行うと起きる。</p></div>
+</div>
+<div data-component="vision-non-goals"><p class="vm-ng-title">非目標 (このビジョンでは作らない、 と決めていること)</p>
+<p>文書の中身を人の代わりに考えるツールは作りません。 何を約束し何を決めるかは人が書き、 folio はそれが 「読める・検証できる・古びない」 形であり続けることだけを引き受けます。 また、 汎用のエディタやプロジェクト管理ツールも作りません。 軸は文書規律の一点です (R-3 と同じく、 軸を守るための線引き)。</p>
+</div>
+</div>
+<section data-component="chapter-deck-band" class="tint-violet"><span class="num">07</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> 指針価値</span><h2>迷ったとき、 どちらへ倒すか</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-07">ビジョンの最後に、 このプロジェクトの判断の突き当たりになる原則を 1 つだけ置きます。 folio が生成するすべての文書は、 最終的にこのような動かない原則へ行き着きます。</p></section>
+<div class="chapbody">
+<div data-component="principle-terminal" id="principle-PRIN-READER-FLOOR"><span class="pt-label">原則終端</span><span class="pt-id">PRIN-READER-FLOOR</span><p class="pt-text">「専門家なら読める」 を合格にしない。 迷ったら、 非エンジニアの読者が読める側・機械が検証できる側に倒し、 その両立のためなら機能の多さと生成の速さを諦める。</p></div>
+<p>これは北極星の言い換えではなく、 判断の規則です。 たとえば 「専門用語のままにすれば早く出せる」 という提案は、 速さより読者を優先するこの原則が退けます。 逆に 「やさしくするために厳密さを削る」 という提案も、 機械が検証できる側を守るこの原則が退けます。 機能・速度・読みやすさ・検証可能性がぶつかったとき、 ここが最後の判定基準です。</p>
+</div>
+</div>
+<footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
+<div>機械SSoT: <b>folio-vision.vision.yaml</b> &middot; 生成: <b>2026-07-04 14:40</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div class="tags"><span>folio design system</span><span>vision-pack</span><span>folio engine 段階3 後 (instance#2 folio-self)</span><span>Pichler 骨 + Wiegers 選抜 + 原則終端</span></div>
+</div></footer>
+</body>
+</html>
