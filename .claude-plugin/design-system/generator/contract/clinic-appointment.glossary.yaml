@@ -82,6 +82,26 @@ glossary:
   - term: "canonical"
     en: "canonical"
     def: "言葉の正しい定義の置き場を「ここ 1 か所だけ」と決めた基準のこと。 clinic の文書一式はこの用語集の定義を参照し、 意味の食い違いを防ぐ。"
+# domain 区分 (人間層の signpost・PW-01 / folio-229)。 order + friendly label の SSoT。 assemble は
+# terms[] が domains 順に連続グループ化されていることを不変条件で強制し、 各 domain を人間層 section 見出し
+# (domain-heading) + TOC (glossary-toc) へ render する。 domain 別語数は terms から導出 (magic number 不可)。
+# instance#2 (clinic) は 3 domain — multi-domain 初回ゆえ本 signpost が顕在化した (PW-01)。
+domains:
+  - id: "clinic-domain"
+    label: "予約業務の言葉"
+  - id: "engineering"
+    label: "実現方式の言葉"
+  - id: "verification"
+    label: "確かめ方の言葉"
+# xref friendly gloss (人間層 term-usage『使われる文書:』行・PW-02 / folio-229)。 各 term の cross_refs の
+# 生 doc-ID (大文字・無 gloss) を非エンジニア (院長・受付スタッフ) 可読な日本語ラベルへ。 key = terms[].cross_refs
+# に現れる全 token を網羅 (assemble が欠落を fail-closed)。 機械層 fold の生 doc-ID と dual-audience に対応。
+xref_gloss:
+  "SRS-CLINIC-APPT": "要件定義書"
+  "ADR-CLINIC-0001": "設計判断記録"
+  "RES-CLINIC-0001": "調査記録"
+  "ARCH-CLINIC-APPT": "構成説明"
+  "TC-CLINIC-APPT": "テストケース仕様"
 # terms[] — canonical / en / slug / domain / formal_def / plain_slot / cross_refs。
 # formal_def は clinic suite contract の def を verbatim 継承 (glossary が canonical の置き場になる)。
 # domain 3 区分: clinic-domain (予約業務の言葉) / engineering (実現方式の言葉) / verification (確かめ方の言葉)。

@@ -58,7 +58,9 @@ emit_nav() {
 # 重複 eyebrow/h1/subtitle/summary-slot は持たず、 bespoke は cover-meta dl (.cover.meta[]) のみ。
 # verify_core_chrome (core cover-head) と verify-glossary §6 (.cover.meta dl) の両方を満たす形。
 emit_cover_band() {
-  core_emit_cover_head "この用語集が約束すること (1 文サマリ)"
+  # ★folio-229 PW-04: ラベル『(1 文サマリ)』は cover-summary prose が複数文ゆえ不整合だった。 sentence-count を
+  #   主張しない『(要旨)』へ緩和 (prose 側は多文の情報量を保持)。 summary-card lab は verify 非突合の静的 chrome。
+  core_emit_cover_head "この用語集が約束すること (要旨)"
   printf '  <dl class="cover-meta">\n'
   local mn; mn="$(yq -r '.cover.meta | length' "$CONTRACT")"
   local j label value
@@ -72,10 +74,57 @@ emit_cover_band() {
   core_emit_cover_tail
 }
 
+# emit_terms — 用語本文を domain 区分 (PW-01) + 人間層 usage 行 (PW-02) 付きで発行する (folio-229)。
+# ★人間層の道標: 全 term をフラット列でなく domain (予約業務/実現方式/確かめ方…) 別 section へ分割し、
+#   friendly ラベルの見出し (domain-heading) + TOC (glossary-toc) で「自分の業務語 vs ソフト内部語」を判別可能にする。
+#   単一 domain (folio) でも 3 domain (clinic) でも同一 code path (単一なら 1 section + 1 TOC entry で成立)。
+# ★件数は magic number 禁止 (folio-bhe): domain 別語数は必ず terms から数え (DOM_COUNTS)、 見出し/TOC/verify とも
+#   同一 SSoT (domains[] + terms[].domain) から導出する。
+# ★USAGE_LABEL: 旧『定義元:』は「glossary が canonical 定義の置き場」という主張と緊張したため『使われる文書:』へ改称。
+#   人間層 term-usage は friendly gloss (xref_gloss)、 機械層 li は生 doc-ID (data-xref-target) の dual-audience 対。
 emit_terms() {
+  local USAGE_LABEL="使われる文書"
+  # ---- domains SSoT 読取り + 不変条件検査 (発行前・fail-closed) ----
+  local ndom; ndom="$(yq -r '.domains | length' "$CONTRACT")"
+  [[ "$ndom" =~ ^[0-9]+$ && "$ndom" -ge 1 ]] || { echo "assemble-glossary: .domains 欠落/空 (>=1 必須)" >&2; exit 1; }
+  local di
+  local -a DOM_IDS DOM_LABELS DOM_COUNTS
+  local -A DOM_IDX
+  for ((di=0;di<ndom;di++)); do
+    DOM_IDS[$di]="$(q ".domains[$di].id")"; DOM_LABELS[$di]="$(q ".domains[$di].label")"
+    core_validate_strings "assemble-glossary domain[$di]" "${DOM_IDS[$di]}" "${DOM_LABELS[$di]}"
+    DOM_COUNTS[$di]="$(d="${DOM_IDS[$di]}" yq -r '[.terms[] | select(.domain == strenv(d))] | length' "$CONTRACT")"
+    [[ "${DOM_COUNTS[$di]}" != "0" ]] || { echo "assemble-glossary: domain '${DOM_IDS[$di]}' に term 無し (空 domain 禁止)" >&2; exit 1; }
+    DOM_IDX[${DOM_IDS[$di]}]=$di
+  done
+  # 不変条件: 全 terms[].domain が domains[] に属し、 domains 順に連続グループ化されている
+  #   (=> outer 発行順 == contract term 順 == term 系 set_eq の期待 (contract 順) が不変で通る)。
+  local -a TDOM; mapfile -t TDOM < <(q '.terms[].domain')
+  local _prev="" _d j; local -A _closed _seen
+  for ((j=0;j<${#TDOM[@]};j++)); do
+    _d="${TDOM[$j]}"
+    [[ -n "${DOM_IDX[$_d]:-}" ]] || { echo "assemble-glossary: term[$j] domain '$_d' が .domains[] に無い" >&2; exit 1; }
+    if [[ "$_d" != "$_prev" ]]; then
+      [[ -z "${_closed[$_d]:-}" ]] || { echo "assemble-glossary: domain '$_d' が非連続 (terms は domains 順に連続グループ化必須)" >&2; exit 1; }
+      [[ -n "$_prev" ]] && _closed[$_prev]=1
+      _prev="$_d"; _seen[$_d]=1
+    fi
+  done
+  for ((di=0;di<ndom;di++)); do
+    [[ -n "${_seen[${DOM_IDS[$di]}]:-}" ]] || { echo "assemble-glossary: domain '${DOM_IDS[$di]}' が terms に出現せず (domains 宣言と不整合)" >&2; exit 1; }
+  done
+
+  # ---- 発行 ----
   printf '<section class="glossary-terms" id="main" data-audience="human">\n'
   printf '  <h2>用語 (%s 語)</h2>\n' "$(esc "$NTERMS")"
-  local i canon en slug domain formal plain_slot
+  # TOC (索引・PW-01): 各 domain 区分へジャンプする signpost。 リンク文言は domain-heading と同一 (label + 語数)。
+  printf '  <nav class="glossary-toc" data-audience="human" aria-label="用語ドメイン索引">\n    <ul>\n'
+  for ((di=0;di<ndom;di++)); do
+    printf '      <li><a href="#domain-%s">%s (%s 語)</a></li>\n' "$(esc "${DOM_IDS[$di]}")" "$(esc "${DOM_LABELS[$di]}")" "$(esc "${DOM_COUNTS[$di]}")"
+  done
+  printf '    </ul>\n  </nav>\n'
+
+  local i canon en slug domain formal plain_slot cn prev_dom=""
   for ((i=0;i<NTERMS;i++)); do
     canon="$(q ".terms[$i].canonical")"
     en="$(q ".terms[$i].en")"
@@ -85,32 +134,55 @@ emit_terms() {
     plain_slot="$(q ".terms[$i].plain_slot")"
     core_validate_strings "assemble-glossary term[$i]" "$canon" "$en" "$slug" "$domain" "$formal" "$plain_slot"
     jsonld_safe "$canon"; jsonld_safe "$slug"
-    printf '  <section class="term-entry" id="term-%s" data-audience="human" data-term="%s">\n' "$(esc "$slug")" "$(esc "$canon")"
-    printf '    <h3 class="term-name">%s</h3>\n' "$(esc "$canon")"
-    printf '    <p class="term-plain" data-slot-id="%s" data-prose-slot="%s"></p>\n' "$(esc "$plain_slot")" "$(esc "$plain_slot")"
-    printf '    <details class="term-machine" data-audience="machine">\n'
-    printf '      <summary>機械層 — 構造化 term レコード</summary>\n'
-    printf '      <dl class="term-record">\n'
-    printf '        <dt>canonical (en)</dt><dd data-term-en="%s">%s</dd>\n' "$(esc "$en")" "$(esc "$en")"
-    printf '        <dt>slug / anchor</dt><dd data-term-slug="%s">#term-%s</dd>\n' "$(esc "$slug")" "$(esc "$slug")"
-    printf '        <dt>domain</dt><dd data-term-domain="%s">%s</dd>\n' "$(esc "$domain")" "$(esc "$domain")"
-    printf '        <dt>正式定義</dt><dd class="term-formal">%s</dd>\n' "$(esc "$formal")"
-    printf '      </dl>\n'
-    printf '      <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"%s:term/%s","name":"%s","inDefinedTermSet":"%s"}</script>\n' \
-      "${SET_ID%%:*}" "$slug" "$canon" "$SET_ID"
-    local cn; cn="$(yq -r ".terms[$i].cross_refs | length" "$CONTRACT")"
+    # domain 境界: 新 domain の section を開き (前 domain を閉じ)、 friendly 見出しを render
+    if [[ "$domain" != "$prev_dom" ]]; then
+      [[ -n "$prev_dom" ]] && printf '  </section>\n'
+      di="${DOM_IDX[$domain]}"
+      printf '  <section class="term-domain" id="domain-%s" data-audience="human">\n' "$(esc "$domain")"
+      printf '    <h3 class="domain-heading">%s (%s 語)</h3>\n' "$(esc "${DOM_LABELS[$di]}")" "$(esc "${DOM_COUNTS[$di]}")"
+      prev_dom="$domain"
+    fi
+    printf '    <section class="term-entry" id="term-%s" data-audience="human" data-term="%s">\n' "$(esc "$slug")" "$(esc "$canon")"
+    printf '      <h4 class="term-name">%s</h4>\n' "$(esc "$canon")"
+    printf '      <p class="term-plain" data-slot-id="%s" data-prose-slot="%s"></p>\n' "$(esc "$plain_slot")" "$(esc "$plain_slot")"
+    cn="$(yq -r ".terms[$i].cross_refs | length" "$CONTRACT")"
+    # 人間層 term-usage (PW-02): この語が使われる文書を friendly gloss で。 非エンジニアが機械層 fold を開かずに
+    #   「どの文書で使われるか」に答えられる。 gloss は xref_gloss (全 token 網羅・欠落は fail-closed)。
     if [[ "$cn" != "0" ]]; then
-      printf '      <ul class="term-xrefs">\n'
-      local k tgt
+      local usage="" k tgt gloss
       for ((k=0;k<cn;k++)); do
         tgt="$(q ".terms[$i].cross_refs[$k]")"
-        printf '        <li data-xref-target="%s" data-xref-rel="glossary-anchor">定義元: %s</li>\n' "$(esc "$tgt")" "$(esc "$tgt")"
+        gloss="$(t="$tgt" yq -r '.xref_gloss[strenv(t)] // ""' "$CONTRACT")"
+        [[ -n "$gloss" && "$gloss" != "null" ]] || { echo "assemble-glossary: xref_gloss に '$tgt' の friendly ラベル無し (term[$i]・fail-closed)" >&2; exit 1; }
+        if [[ -z "$usage" ]]; then usage="$(esc "$gloss")"; else usage="$usage、$(esc "$gloss")"; fi
       done
-      printf '      </ul>\n'
+      # ★folio-229 errata: data-usage-for=親 canonical (= 親 term-entry の data-term)。 usage 行を隣接カードへ
+      #   relocate する改竄 (大域順保存) を verify §2c-usage-binding が親帰属で fail-closed 化する構造 anchor。
+      printf '      <p class="term-usage" data-audience="human" data-usage-for="%s">%s: %s</p>\n' "$(esc "$canon")" "$USAGE_LABEL" "$usage"
     fi
-    printf '    </details>\n'
-    printf '  </section>\n'
+    printf '      <details class="term-machine" data-audience="machine">\n'
+    printf '        <summary>機械層 — 構造化 term レコード</summary>\n'
+    printf '        <dl class="term-record">\n'
+    printf '          <dt>canonical (en)</dt><dd data-term-en="%s">%s</dd>\n' "$(esc "$en")" "$(esc "$en")"
+    printf '          <dt>slug / anchor</dt><dd data-term-slug="%s">#term-%s</dd>\n' "$(esc "$slug")" "$(esc "$slug")"
+    printf '          <dt>domain</dt><dd data-term-domain="%s">%s</dd>\n' "$(esc "$domain")" "$(esc "$domain")"
+    printf '          <dt>正式定義</dt><dd class="term-formal">%s</dd>\n' "$(esc "$formal")"
+    printf '        </dl>\n'
+    printf '        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"%s:term/%s","name":"%s","inDefinedTermSet":"%s"}</script>\n' \
+      "${SET_ID%%:*}" "$slug" "$canon" "$SET_ID"
+    if [[ "$cn" != "0" ]]; then
+      printf '        <ul class="term-xrefs">\n'
+      local k2 tgt2
+      for ((k2=0;k2<cn;k2++)); do
+        tgt2="$(q ".terms[$i].cross_refs[$k2]")"
+        printf '          <li data-xref-target="%s" data-xref-rel="glossary-anchor">%s: %s</li>\n' "$(esc "$tgt2")" "$USAGE_LABEL" "$(esc "$tgt2")"
+      done
+      printf '        </ul>\n'
+    fi
+    printf '      </details>\n'
+    printf '    </section>\n'
   done
+  [[ -n "$prev_dom" ]] && printf '  </section>\n'
   printf '</section>\n'
 }
 

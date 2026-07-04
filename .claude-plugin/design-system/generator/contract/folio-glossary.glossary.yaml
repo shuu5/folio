@@ -85,6 +85,39 @@ glossary:
   - term: "self-host"
     en: "self-host"
     def: "folio が自分自身の言葉を folio のやり方で記述すること。 この用語集は folio 語を folio の generator で生成した自己適用 (dogfood) の一例。"
+# domain 区分 (人間層の signpost・PW-01 / folio-229)。 order + friendly label の SSoT。 assemble は
+# terms[] が domains 順に連続グループ化されていることを不変条件で強制し、 各 domain を人間層 section 見出し
+# (domain-heading) + TOC (glossary-toc) へ render する。 folio-framework は単一 domain (folio-closed) だが
+# 単一でも成立する設計 (1 section + 1 TOC entry)。 domain 別語数は terms から導出 (magic number 不可・folio-bhe)。
+domains:
+  - id: "folio-closed"
+    label: "folio-framework の言葉"
+# xref friendly gloss (人間層 term-usage『使われる文書:』行・PW-02 / folio-229)。 各 term の cross_refs の
+# 生 doc-ID を非エンジニア可読な日本語ラベルへ。 key = terms[].cross_refs に現れる全 token を網羅
+# (assemble が欠落を fail-closed)。 機械層 fold の生 doc-ID (data-xref-target) と dual-audience に対応。
+xref_gloss:
+  "P-3": "原則 P-3"
+  "P-5": "原則 P-5"
+  "P-7": "原則 P-7"
+  "P-10": "原則 P-10"
+  "rules §10.3": "ルール §10.3"
+  "rules §9.2": "ルール §9.2"
+  "rules §10.2": "ルール §10.2"
+  "rules §11.2": "ルール §11.2"
+  "folio-self-spec §2": "自己仕様 §2"
+  "REQ-VER-010": "検証要件 REQ-VER-010"
+  "REQ-VER-012": "検証要件 REQ-VER-012"
+  "REQ-VER-023": "検証要件 REQ-VER-023"
+  "REQ-VER-004": "検証要件 REQ-VER-004"
+  "REQ-VER-011": "検証要件 REQ-VER-011"
+  "ADR-0033": "決定 ADR-0033"
+  "ADR-0028": "決定 ADR-0028"
+  "ADR-0034": "決定 ADR-0034"
+  "ADR-0006": "決定 ADR-0006"
+  "ADR-0013": "決定 ADR-0013"
+  "ADR-0017": "決定 ADR-0017"
+  "ADR-0039 §2.3": "決定 ADR-0039 §2.3"
+  "ADR-0039 §2.2": "決定 ADR-0039 §2.2"
 terms:
   - canonical: "spec"
     en: "spec"
