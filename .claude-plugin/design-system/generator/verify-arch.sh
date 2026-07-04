@@ -120,6 +120,8 @@ chk "band 見出し (全 8) に不可視/format 文字なし (ゼロ幅 injectio
 #   不可視・ASCII・全角・漢数字・複合語・句読点境界の各面は上記 guard 群 + sc= lookahead で閉じたが、可視の exotic 表記
 #   (々/〇 等の非語形成 Han・中点・homoglyph 数字) は自由文の意味 fidelity ゆえ機械 floor で列挙不能 = ceiling/fidelity 領分
 #   (machine/LLM 境界・folio-5se/folio-7vd へ申送り)。floor は「検査できた範囲が緑」を honest に主張する。
+#   ★存置の撤退条件 (folio-bf4f user 裁定 2026-07-04): 正当コンテンツを誤 reject する confirmed FP が 1 件でも出たら
+#     band_numchk + 全角 guard 群を floor から撤去し count-fidelity を ceiling へ全面移管する (ADR-0047 §2.4 と同型)。
 band_numchk "band 数詞: chapters.components「N つの部品」== components 実件数" "$(q '.chapters.components')" 'つの部品' "$NCOMP"
 
 # ============ ② navigable id アンカー (照会されうる全ノードに id= ・集合一致) ============
