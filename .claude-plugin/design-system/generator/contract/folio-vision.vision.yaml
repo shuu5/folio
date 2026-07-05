@@ -27,12 +27,12 @@ meta:
   date: "2026-07-04"
   reader: folio が何のためにあるのかを知りたい人 — 開発の専門知識は不要 (専門語はやさしい言葉を併記)
 
-# 承認記録 (honest: user walk 前は承認待ち。 walk PASS 後に stamp/when を更新して再生成する)
+# 承認記録 (user walk PASS 2026-07-05「よさそうだ」で承認済へ flip)
 approval:
   - role: 承認 (プロジェクトオーナー)
     who: shuu5
-    when: 2026-07-04 レビュー中
-    stamp: 承認待ち
+    when: 2026-07-05 承認
+    stamp: 承認済
   - role: 作成 (folio admin)
     who: folio 文書規律エンジン (admin セッション)
     when: 2026-07-04 起票
