@@ -17,7 +17,7 @@
 #
 # ★★floor / ceiling 境界 (two-gate・S5.1)。 本 floor が担うのは *構造アンカー + 決定的フィールド値* の contract 突合。
 #   plain 定義 (plain-<slug> prose スロット) の *内容真正性* (平易さ・捏造の不在) は floor の対象外 = ceiling。
-#   floor 単独で GREEN にはならず CEILING=PENDING。 glossary 専用 ceiling agent は未整備 (admin 起票候補・notes 参照)。
+#   floor 単独で GREEN にはならず CEILING=PENDING。 glossary 専用 ceiling agent = agents/{persona-walk,fidelity}-glossary.md (folio-3p1)。 orchestrator 配線は folio-mzn S5/S12。
 
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
