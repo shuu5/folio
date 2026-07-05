@@ -424,6 +424,25 @@ expect_vfilled_fail "R7-prin-d ★lab additive を占有==1 で捕捉" "$TMP/r7p
 cp "$TMP/base-filled.html" "$TMP/r7p5.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">隠蔽(捏造)</p></body>}' "$TMP/r7p5.html"
 expect_vfilled_fail "R7-prin-e ★display:none 隠蔽を display-state guard で捕捉" "$TMP/r7p5.html"
 
+# === 数値文字参照 decode 変種 red pin (folio-5u3k・reason-gated) ===
+# lib/verify-common.sh の decode widen (大文字 &#X / semicolon-less hex / semicolon-less decimal) が
+# entity 偽装 class を可視 token へ decode し **占有検査** が捕捉することを pin する。
+# 素の rc!=0 pin は novelty scan (class-token 機械的網羅) が decode 幅と無関係に suite を赤くするため
+# green-before-and-after で masking される — 占有側の FAIL 行 ([FAIL] + label) を対で掴む (c5r.2 基準)。
+# mutation-kill: 該当 helper の widen だけ narrow へ戻すと novelty (L44 decode 済) も占有も静か
+# = verify PASS に転じて本 pin が赤くなる (selftest-folio-5u3k が unit 単位で全 4 site を kill)。
+u3k_entity_pin() { # label decoy_html expected_fail_substring
+  cp "$TMP/base.html" "$TMP/u3k.html"
+  DECOY="$2" perl -0777 -i -pe 's{</h1>}{"</h1>" . $ENV{DECOY}}e' "$TMP/u3k.html"
+  local out rc; out="$(bash "$VER" "$BASE" "$TMP/u3k.html" 2>&1)"; rc=$?
+  if [[ $rc -eq 0 ]]; then ng "$1 (verify PASS = entity 偽装 class が素通り)"; return; fi
+  if grep -F -- "$3" <<<"$out" | grep -q '\[FAIL\]'; then ok "$1"; else ng "$1 (FAIL は別理由 = 占有 decode 不発が novelty に masking されている)"; fi
+}
+u3k_entity_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占有 vcount who が decode 捕捉" '<span class="&#X77;ho">x</span>' 'vcount who'
+u3k_entity_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
+u3k_entity_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
+u3k_entity_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine reader-chip 占有が decode 捕捉" '<span class="&#X72;eader-chip">x</span>' 'genuine reader-chip 占有'
+
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

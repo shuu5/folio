@@ -41,7 +41,7 @@ class_tokens() { # HTML は stdin
     my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
     while ($txt =~ /\b(?i:class)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
       my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
-      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $v =~ s/&#(\d+);/chr($1)/ge;
+      $v =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v =~ s/&#([0-9]+);?/chr($1)/ge;
       my @t = grep { length } map { lc } split(/\s+/, $v);
       print "@t\n" if @t;
     }
@@ -56,8 +56,8 @@ count_attr_token() { # $1=attr $2=token ; HTML は stdin
       my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
       # ★HTML 数値文字参照を decode (round-5 ceiling: <span class="&#102;id"> は .fid 描画されるが
       #   未 decode だと token に一致せず ghost を見逃す)。 assembler は literal ASCII class のみ emit。
-      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge;
-      $v =~ s/&#(\d+);/chr($1)/ge;
+      $v =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge;
+      $v =~ s/&#([0-9]+);?/chr($1)/ge;
       $c++ if grep { lc($_) eq $tl } split(/\s+/, $v);
     }
     print $c;
@@ -72,7 +72,7 @@ attr_values() { # $1=attr ; HTML は stdin
     my $attr=$ENV{ATTR}; my $q=chr(39); my $txt=<STDIN>; $txt="" unless defined $txt;
     while ($txt =~ /\b(?i:\Q$attr\E)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
       my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
-      $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $v =~ s/&#(\d+);/chr($1)/ge;
+      $v =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v =~ s/&#([0-9]+);?/chr($1)/ge;
       $v =~ s/[\t\n]/ /g;
       print "$v\n";
     }
@@ -96,7 +96,7 @@ count_genuine_reader_chip() { # HTML は stdin
     my $toks = sub { my ($attrs,$name)=@_; my %h;
       while ($attrs =~ /\b(?i:\Q$name\E)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g) {
         my $v = defined $1 ? $1 : (defined $2 ? $2 : $3);
-        $v =~ s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $v =~ s/&#(\d+);/chr($1)/ge;
+        $v =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v =~ s/&#([0-9]+);?/chr($1)/ge;
         $h{lc $_}=1 for grep { length } split(/\s+/, $v);
       } return \%h; };
     my $c=0;

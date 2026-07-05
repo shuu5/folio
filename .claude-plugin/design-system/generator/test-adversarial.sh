@@ -169,6 +169,22 @@ SRS="$SCRIPT_DIR/verify-srs.sh"
 # (gate F の回帰は末尾の render-gate-srs --selftest arm が別途担う)。
 expect_srs_pass() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (floor FAIL)"; fi; }
 expect_srs_fail() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ng "$1 (floor PASS した)"; else ok "$1"; fi; }
+
+# === 数値文字参照 decode 変種 red pin (folio-5u3k・reason-gated・srs floor) ===
+# lib/verify-common.sh の decode widen が entity 偽装 class を可視 token へ decode し占有検査が捕捉することを pin。
+# 素の rc!=0 pin は novelty scan が decode 幅と無関係に赤くするため、占有側 FAIL 行を対で掴む (c5r.2 基準)。
+# U3K4 は L99 count_genuine_reader_chip の widen を単独 pin (L99 だけ narrow へ戻すと novelty も占有も静か = PASS 転落で赤)。
+u3k_srs_pin() { # label decoy_html expected_fail_substring
+  cp "$TMP/good.html" "$TMP/u3ksrs.html"
+  DECOY="$2" perl -0777 -i -pe 's{</h1>}{"</h1>" . $ENV{DECOY}}e' "$TMP/u3ksrs.html"
+  local out rc; out="$(SRS_SKIP_RENDER=1 bash "$SRS" "$BASE" "$TMP/u3ksrs.html" 2>&1)"; rc=$?
+  if [[ $rc -eq 0 ]]; then ng "$1 (verify PASS = entity 偽装 class が素通り)"; return; fi
+  if grep -F -- "$3" <<<"$out" | grep -q '\[FAIL\]'; then ok "$1"; else ng "$1 (FAIL は別理由 = 占有 decode 不発が novelty に masking されている)"; fi
+}
+u3k_srs_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占有 vcount who が decode 捕捉" '<span class="&#X77;ho">x</span>' 'vcount who'
+u3k_srs_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
+u3k_srs_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
+u3k_srs_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine reader-chip 占有が decode 捕捉" '<span class="&#X72;eader-chip">x</span>' 'genuine reader-chip 占有'
 # 〔folio-mzn.3〕機械/LLM 境界 (verification §3.9): 静的 hidden-render ban 群 + visual-deception ban は
 # warn 級 backstop (非 blocking)。 seed は「detector が [WARN] で発火する」+「blocking しない (exit 0)」の
 # 両方を assert する。 fake 計数部品を注入する seed は census-count blocking arm も同時に発火するため
