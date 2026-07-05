@@ -435,14 +435,14 @@ chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
 #     class を pinnable に)。 ★<code> wholesale strip しない: <code><span class="rid">DECOY</span></code> は描画されるため。
 SB="$(mktemp)"; perl -0777 -pe 's{(<pre class="mermaid">).*?(</pre>)}{$1$2}gs; s{&lt;.*?&gt;}{}gs' "$BODY" > "$SB"
 # (c) enumeration (novel/foreign marker 拒否・blocker3 closer): chrome-view の全 class/dc が allowlist 内であること。
-R7_CLS="always chapbody cover-eyebrow cover-meta cover-sub delta diagram doc-type el-cap el-item el-when en foot forbid ft-grid gdef grow gword ic ico k kicker lab lbi lead m machine-body machine-fold mermaid mf-count mf-kicker mf-label mli num option page reader-chip ref-grid rf-arrow rf-doc rf-role rf-token rid role rq-essence rq-head rq-list rq-norm rq-stmt sec-se self sign stamp state sub-se summary-card tags tbl-wrap term tint-bad tint-brand tint-info tint-ok tint-violet tint-warn trigger txt v when who xref"
+R7_CLS="always chapbody cover-eyebrow cover-meta cover-sub delta diagram doc-type el-cap el-item el-when en foot forbid ft-grid ft-plain gdef grow gword ic ico k kicker lab lbi lead m machine-body machine-fold mermaid mf-count mf-kicker mf-label mli num option page reader-chip ref-grid rf-arrow rf-doc rf-role rf-token rid role rq-essence rq-head rq-list rq-norm rq-stmt sec-se self sign stamp state sub-se summary-card tags tbl-wrap term tint-bad tint-brand tint-info tint-ok tint-violet tint-warn trigger txt v when who xref"
 R7_DC="approval-block chapter-deck-band cross-doc-ref-chip doc-cover-band ears-badge ears-legend ears-legend-item ears-requirement-row fidelity-sync-meta glossary-term-table requirement-type-color-tokens section-essence-callout spec-code spec-diagram spec-list-block spec-machine-fold spec-machine-list spec-machine-note spec-machine-prose spec-note spec-prose spec-subhead spec-table"
 chk_empty "enumeration(r7): 全 class が allowlist (novel/foreign marker 封鎖)" \
   "$(class_tokens < $SB | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "enumeration(r7): 全 data-component が allowlist (foreign dc 封鎖)" \
   "$(attr_values data-component < $SB | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_DC) | tr '\n' ' ' | sed 's/ *$//')"
 # (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in page summary-card ic lab txt cover-meta ref-grid foot ft-grid tags el-cap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
+EXP=1; for t in page summary-card ic lab txt cover-meta ref-grid foot ft-grid ft-plain tags el-cap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done
 # ★approval-block/glossary-term-table も占有==1 (round-7 自己 ceiling: 空 wrapper + 偽テキストは core_chrome 内部欄 pin を素通る borrowed-canonical-chrome 残余)。
 EXP=1; for t in requirement-type-color-tokens doc-cover-band ears-legend fidelity-sync-meta approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $SB)"; done
 EXP=4; for t in m v; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $SB)"; done

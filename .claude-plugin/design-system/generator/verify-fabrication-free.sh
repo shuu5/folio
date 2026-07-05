@@ -294,7 +294,7 @@ COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid
 #   round-8 は値突合 chk (下) は追加したが EXEMPT に残したため占有数パリティが無く、 single-quote decoy の偽 <p> 追記
 #   (real を無傷に残し別 <p class='rtm-summary-derived'>孤立要件 999件</p> を併置) を網羅検査も値突合 (double-quote 固定) も素通した。
 #   COUNTED 化で count_attr_token 占有数 == 1 を強制し decoy-append を quote 非依存に封鎖する。
-EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-meta summary-card ic lab txt chapbody kicker lead num ico foot ft-grid tags rtm rtm-fold scol ears-legend lt m ext-badge nfr-hero why plain term en"
+EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-meta summary-card ic lab txt chapbody kicker lead num ico foot ft-grid ft-plain tags rtm rtm-fold scol ears-legend lt m ext-badge nfr-hero why plain term en"
 # ★quote-robust: class_tokens 経由 (旧 inline perl は double-quote 固定で single/unquoted novel token を分類漏れ = drift 構造封鎖の overclaim)。
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $COUNTED $EXEMPT | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
@@ -553,7 +553,7 @@ EXP="$(q '[.nfr[] | select(.hero)] | length')"; for t in nfr-hero; do chk "占�
 EXP="$(q '(.requirements | length) + (.nfr | length)')"; for t in plain; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '.requirements | length')"; for t in why; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=9; for t in chapbody kicker lead num ico; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in page cover-meta summary-card ic txt foot ft-grid tags rtm-fold ears-legend; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in page cover-meta summary-card ic txt foot ft-grid ft-plain tags rtm-fold ears-legend; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=4; for t in m; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=3; for t in lt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=3; for t in tbl-wrap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done

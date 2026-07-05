@@ -48,7 +48,7 @@ echo "  contract: $CONTRACT  ($NTERMS 語)"
 #   allowlist に属することを quote-robust に強制 = novel-marker (非 canonical class/data-component) 注入を一網打尽に封鎖 (系統的 fail-open の未然封鎖)。
 # ★folio-229: domain 区分 (PW-01) + 人間層 usage (PW-02) の新 class を allowlist に追加。
 #   domain-heading / glossary-toc / term-domain / term-usage は verify §2c で contract 導出値へ pin する。
-GLOSS_CLS="cover-eyebrow cover-meta cover-sub doc doc-glossary doc-type domain-heading en foot ft-grid gdef gen-meta glossary-terms glossary-toc grow gword ic lab reader-chip role self sign skip-link stamp summary-card tags term-domain term-entry term-formal term-machine term-name term-plain term-record term-usage term-xrefs txt when who xref"
+GLOSS_CLS="cover-eyebrow cover-meta cover-sub doc doc-glossary doc-type domain-heading en foot ft-grid ft-plain gdef gen-meta glossary-terms glossary-toc grow gword ic lab reader-chip role self sign skip-link stamp summary-card tags term-domain term-entry term-formal term-machine term-name term-plain term-record term-usage term-xrefs txt when who xref"
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $GLOSS_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が allowlist (novel marker 注入封鎖・folio-bur r6)" "$unknown_cls"
 GLOSS_DC="approval-block doc-cover-band fidelity-sync-meta glossary-term-table"
@@ -396,7 +396,7 @@ chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻�
 chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
   "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
 # (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in doc doc-glossary foot ft-grid glossary-terms glossary-toc ic lab skip-link summary-card tags txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in doc doc-glossary foot ft-grid ft-plain glossary-terms glossary-toc ic lab skip-link summary-card tags txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=1; for t in doc-cover-band fidelity-sync-meta; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
 EXP=1; for t in approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
 EXP="$(q '.terms | length')"; for t in term-machine term-plain term-record; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done

@@ -52,7 +52,7 @@ echo "  contract: $CONTRACT"
 # ★folio-bur round-6 (ceiling-recursion R5 是正・収束根治): srs の class-token 機械的網羅 idiom を移植。 全 class token・全 data-component が
 #   allowlist に属することを quote-robust に強制 = container/任意位置への novel-marker (非 canonical class/data-component) 注入を一網打尽に封鎖
 #   (research container blocker と同型の系統的 fail-open を未然に塞ぐ・enumeration drift も検出)。
-ADR_CLS="b chapbody chosen cons cover-eyebrow cover-meta cover-sub cxbody cxd cxh cxid dec-kick dec-plain dec-state dec-why doc-type drg drid en foot ft-grid gdef grow gword ic ico in jh justify-box justify-note justify-req justify-role justify-row justify-tgt k kicker lab lead m num opt-grid opt-head opt-id opt-name opt-pc opt-plain opt-sum opt-verdict out page prin-id prin-note prin-text pros reader-chip rejected role scol self sign ss-k ss-row stamp summary-card tags term tint-brand tint-info tint-ok tint-violet tint-warn txt v when who"
+ADR_CLS="b chapbody chosen cons cover-eyebrow cover-meta cover-sub cxbody cxd cxh cxid dec-kick dec-plain dec-state dec-why doc-type drg drid en foot ft-grid ft-plain gdef grow gword ic ico in jh justify-box justify-note justify-req justify-role justify-row justify-tgt k kicker lab lead m num opt-grid opt-head opt-id opt-name opt-pc opt-plain opt-sum opt-verdict out page prin-id prin-note prin-text pros reader-chip rejected role scol self sign ss-k ss-row stamp summary-card tags term tint-brand tint-info tint-ok tint-violet tint-warn txt v when who"
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $ADR_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が allowlist (novel marker 注入封鎖・folio-bur r6)" "$unknown_cls"
 ADR_DC="adr-consequence-neg adr-consequence-pos adr-context-list adr-context-row adr-decision-panel adr-driver-row adr-driver-table adr-option-card adr-principle adr-supersession approval-block chapter-deck-band cross-doc-ref-chip doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline requirement-type-color-tokens scope-summary-panel"
@@ -399,7 +399,7 @@ chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻�
 chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
   "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
 # (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in cover-meta summary-card ic lab txt ft-grid foot tags opt-grid justify-box in out page dec-plain dec-why tint-ok tint-violet tint-warn; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in cover-meta summary-card ic lab txt ft-grid ft-plain foot tags opt-grid justify-box in out page dec-plain dec-why tint-ok tint-violet tint-warn; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=2; for t in scol tint-info tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=4; for t in m; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=7; for t in chapbody ico kicker lead num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done

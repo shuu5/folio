@@ -185,7 +185,7 @@ gH_bad="$(SSOT="$gH_ssot_e" \
   my $ssot=$ENV{SSOT}; utf8::decode($ssot);
   my $pre=$ENV{STPRE}; utf8::decode($pre); my $post=$ENV{STPOST}; utf8::decode($post);
   my @bad; my $n=0;
-  while (/<div>機械SSoT:(.*?)<\/div>/gs) {
+  while (/<div data-audience="machine">機械SSoT:(.*?)<\/div>/gs) {
     my $in=$1; $n++;
     push @bad,"sync-meta:NESTED" if $in=~/<div\b/;
     my $vis="機械SSoT:".$in; $vis=~s/<[^>]+>//g;
@@ -193,6 +193,31 @@ gH_bad="$(SSOT="$gH_ssot_e" \
     my $state=$1; push @bad,"検証状態\x{2260}固定2状態" if ($state ne $pre && $state ne $post);
   }
   push @bad,"sync-meta:count=$n" if $n!=1;
+  # ★i6f9 hardening: canonical div を data-audience 付きに絞った代償で「属性なしの偽 <div>機械SSoT:」が
+  #   count から漏れる (ds8 sibling 封鎖の再開通)。肯定形 token 総数 pin で閉塞: 機械SSoT / 検証状態 は
+  #   body 全体でちょうど 1 回 (= canonical 行の中) しか現れてはならない (タグ形状に依存しない構造閉塞)。
+  # ★token は「可視 projection」(描画テキスト近似) 上で数える。 ★★この pin は既知 source 難読化クラス
+  #   (entity 変種 / tag-split〔割るタグの属性値に > を含まない形に限る — 引用属性値内 > を持つタグは
+  #   regex とブラウザ tokenizer のタグ境界が乖離し捕捉不能 = ceiling 領分。 同根の偽陽性〔属性値内に
+  #   token 断片を書くと非描画なのに count 2〕は敵対入力限定で正当 corpus は esc() 済ゆえ発火せず安全側〕
+  #   / comment-split / ゼロ幅 split / 生 < 非タグ) を捕捉する**決定的な保険網
+  #   (backstop) であり、 可視偽装の完全閉塞は主張しない** — regex projection は HTML tokenizer の近似で
+  #   あり続け (i6f9 で 3 巡実証: entity→tag-split→生 < と変種が再帰)、 偽 provenance 表示の意味権威は
+  #   ceiling gate J (fidelity-srs) + gate F2 render census (warn) にある (machine/LLM 境界・bhe 実証⑥:
+  #   機械は best-effort・可視の完全性判定は ceiling 領分。 user 裁定 2026-07-05 Option A)。
+  #   projection = comment 除去 → tag 除去 (★tag-open は HTML 文法準拠: < の直後が [a-zA-Z!/?] のときのみ
+  #   タグ開始 — 生の《< 検証状態 >》はブラウザが文字として描画するため projection にも残す = re-cert #2
+  #   実弾の是正) → 数値文字参照 decode (x/X・セミコロン任意) → Default_Ignorable (ゼロ幅) 除去。
+  #   順序が本質: tag を先に除去するから entity 化タグ文字列 (&#60;b&#62;) は文字として残る = 描画一致。
+  #   正当 corpus は esc() 済 (& は &amp; 化) ゆえ生の &# は現れず、 広い decode に偽陽性リスクはない。
+  #   回帰 pin = A28f-p (plain sibling / entity 4 変種 / tag-split ×2 / comment-split ×2 / ゼロ幅 / 生 <)。
+  my $dec = $_;
+  $dec =~ s/<!--.*?-->//gs;
+  $dec =~ s/<[!\/?a-zA-Z][^>]*>//g;
+  $dec =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $dec =~ s/&#([0-9]+);?/chr($1)/ge;
+  $dec =~ s/\p{Default_Ignorable_Code_Point}//g;
+  my $t1=()= $dec =~ /機械SSoT/g;  push @bad,"sync-meta:token-ssot=$t1" if $t1!=1;
+  my $t2=()= $dec =~ /検証状態/g;  push @bad,"sync-meta:token-state=$t2" if $t2!=1;
   print join(" ", @bad);
 ' < "$BODY")"
 chk_empty "gate H: sync-meta 可視テキスト == テンプレ (basename/ts/固定2状態・</b>外追記封鎖)" "$gH_bad"

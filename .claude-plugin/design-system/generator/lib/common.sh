@@ -144,10 +144,15 @@ emit_glossary() {
 }
 
 # ---- footer (fidelity-sync-meta)。 $1 = .tags の内側 HTML (pack 別ラベル) ----
+# ★i6f9: 読者向け平易行 (.ft-plain) を常時可視の第 1 行に置き、 dev メタ (機械SSoT/検証状態 + tags) は
+#   data-audience="machine" で機械層へ降格 (控えめ表示 = font-size のみ・色/opacity 据置で contrast 不変)。
+#   非エンジニアの「検証未了」誤読 (folio-276#3 / w9v / c5r.5(1)) の根治。 3 項目 (SSoT/生成/検証状態) は
+#   taxonomy §5.2 gate H の概念どおり不変・inject-prose の状態 flip 文字列 (prose 未充填/充填済) も不変。
 core_emit_footer() {
   printf '<footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">\n'
-  printf '<div>機械SSoT: <b>%s</b> &middot; 生成: <b>%s</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose 未充填 (opus 待ち)</b></div>\n' "$(esc "${CONTRACT##*/}")" "$(date -u '+%Y-%m-%d %H:%M')"
-  printf '<div class="tags">%s</div>\n' "$1"
+  printf '<div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>\n'
+  printf '<div data-audience="machine">機械SSoT: <b>%s</b> &middot; 生成: <b>%s</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose 未充填 (opus 待ち)</b></div>\n' "$(esc "${CONTRACT##*/}")" "$(date -u '+%Y-%m-%d %H:%M')"
+  printf '<div class="tags" data-audience="machine">%s</div>\n' "$1"
   printf '</div></footer>\n'
 }
 

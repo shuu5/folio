@@ -390,7 +390,7 @@ chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻�
 chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
   "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
 # (c) enumeration (novel/foreign marker 拒否・blocker3 closer): chrome-view の全 class/dc が allowlist 内であること。
-R7_CLS="am-kick am-meta am-row amp-plain chapbody cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid gdef grow gword ib-arrow ib-from ib-grid ib-ref ib-role ic ico k kicker lab lead m num p-head p-plain page ph pid pr-list pst reader-chip role self sign stamp summary-card tags term tier-always tier-askfirst tier-never tint-bad tint-brand tint-info tint-ok tint-violet tint-warn txt v vp-basis vp-bump vp-cond vp-note vp-plain when who"
+R7_CLS="am-kick am-meta am-row amp-plain chapbody cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid ft-plain gdef grow gword ib-arrow ib-from ib-grid ib-ref ib-role ic ico k kicker lab lead m num p-head p-plain page ph pid pr-list pst reader-chip role self sign stamp summary-card tags term tier-always tier-askfirst tier-never tint-bad tint-brand tint-info tint-ok tint-violet tint-warn txt v vp-basis vp-bump vp-cond vp-note vp-plain when who"
 R7_DC="amendment-procedure-steps approval-block chapter-deck-band doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline principle-amendment-history principle-inbound-chip principle-row principle-tier-badge requirement-type-color-tokens versioning-policy-table"
 chk_empty "enumeration(r7): 全 class が allowlist (novel/foreign marker 封鎖)" \
   "$(class_tokens < $BODY | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_CLS) | tr '\n' ' ' | sed 's/ *$//')"
@@ -414,7 +414,7 @@ EXP="$(q '.versioning.rules | length')"; for t in vp-bump vp-cond; do chk "占�
 EXP=3; for t in pr-list; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=2; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in vp-plain vp-note vp-basis txt tint-warn tint-violet tint-ok tint-info tint-bad tags summary-card page lab ic ib-grid ft-grid foot cover-meta amp-plain; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in vp-plain vp-note vp-basis txt tint-warn tint-violet tint-ok tint-info tint-bad tags summary-card page lab ic ib-grid ft-grid ft-plain foot cover-meta amp-plain; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=1; for t in versioning-policy-table requirement-type-color-tokens fidelity-sync-meta doc-cover-band amendment-procedure-steps approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
 # (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
 #     構造化 badge は verify_term_inline が glossary 突合済)。

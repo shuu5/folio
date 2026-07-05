@@ -63,7 +63,7 @@ echo "  contract: $CONTRACT"
 #   question-panel 偽 p) は全て *非 canonical な class/data-component* (scol2/bull/zq/research-finding-row-x) を container へ注入し token/tag-keyed の
 #   個別 census を素通った (独立 ceiling 実証・blocker)。 srs の class-token 機械的網羅 idiom を移植: 全 class token・全 data-component が
 #   allowlist に属することを quote-robust に強制 = novel-marker 注入 (container 階層 arbitrary-wrapper fabrication) を一網打尽に封鎖する根治。
-RESEARCH_CLS="ak ap-assess ap-grid ap-head ap-id ap-name ap-plain ap-sum b chapbody cover-eyebrow cover-meta cover-sub doc-type en fnbody fnd fnh fnid foot ft-grid gdef grow gword ic ico in k kicker lab lead m num oc-kick oc-note oc-plain oc-resolved oc-tgt oqid oq-list oqt out page q-kick q-text reader-chip role scol self sign stamp summary-card tags term tint-brand tint-info tint-ok tint-violet tint-warn txt v when who xref-doc"
+RESEARCH_CLS="ak ap-assess ap-grid ap-head ap-id ap-name ap-plain ap-sum b chapbody cover-eyebrow cover-meta cover-sub doc-type en fnbody fnd fnh fnid foot ft-grid ft-plain gdef grow gword ic ico in k kicker lab lead m num oc-kick oc-note oc-plain oc-resolved oc-tgt oqid oq-list oqt out page q-kick q-text reader-chip role scol self sign stamp summary-card tags term tint-brand tint-info tint-ok tint-violet tint-warn txt v when who xref-doc"
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $RESEARCH_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が allowlist (novel marker container 注入封鎖・folio-bur r6)" "$unknown_cls"
 RESEARCH_DC="approval-block chapter-deck-band cross-doc-leads-chip cross-doc-ref-chip doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline requirement-type-color-tokens research-approach-card research-finding-list research-finding-row research-open-question research-outcome-panel research-question-panel scope-summary-panel"
@@ -343,7 +343,7 @@ EXP="$(q '.approaches | length')"; for t in ak ap-assess ap-head ap-id ap-plain 
 EXP="$(q '.findings | length')"; for t in fnbody fnd fnid; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '.open_questions | length')"; for t in oqid; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in ap-grid cover-meta foot ft-grid ic in lab oc-kick oc-note oc-plain oc-resolved oc-tgt oq-list out page q-kick summary-card tags tint-info tint-ok tint-violet tint-warn txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in ap-grid cover-meta foot ft-grid ft-plain ic in lab oc-kick oc-note oc-plain oc-resolved oc-tgt oq-list out page q-kick summary-card tags tint-info tint-ok tint-violet tint-warn txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=6; for t in chapbody ico kicker lead num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=4; for t in m v; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=2; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done

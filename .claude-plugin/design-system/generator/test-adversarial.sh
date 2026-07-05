@@ -225,6 +225,43 @@ expect_srs_fail "A28c ★偽 検証状態 (固定2状態外) を gate H 厳密�
 #       (round-1 の value-only 照合は </b> 後の平文が死角だった。 sync-meta div をブロックごと可視テキスト照合する block-scoped で封鎖)。
 sed 's#検証状態: <b>structure[^<]*</b>#&  全 gate GREEN・出荷承認#' "$TMP/art.html" > "$TMP/appendmeta.html"
 expect_srs_fail "A28d ★sync-meta </b>外への偽 provenance 追記を block-scoped 可視テキストで捕捉" "$BASE" "$TMP/appendmeta.html"
+# A28f. ★i6f9: 属性なしの偽 sibling <div>機械SSoT:...</div> を footer へ注入 — canonical 捕捉は
+#       data-audience 付き div に絞られたため count 検査だけでは漏れる (ds8 sibling 封鎖の再開通 hole)。
+#       token 総数 pin (機械SSoT / 検証状態 が body 全体でちょうど 1 回) がタグ形状非依存で捕捉。
+sed 's#</footer>#<div>機械SSoT: <b>fake-origin.yaml</b> (偽の出所表示)</div></footer>#' "$TMP/art.html" > "$TMP/fakesibling.html"
+expect_srs_fail "A28f ★属性なし偽 sibling 機械SSoT div を token 総数 pin で捕捉" "$BASE" "$TMP/fakesibling.html"
+# A28g. ★i6f9: 偽 sibling の token を数値文字参照で偽装 (&#x6a5f;械SSoT = 描画は 機械SSoT) — literal count を
+#       素通るため decode 面で数える (count_attr_token の entity-decode 規律を token pin へ適用)。
+sed 's#</footer>#<div>\&\#x6a5f;械SSoT: <b>fake-origin.yaml</b> (偽の出所表示)</div></footer>#' "$TMP/art.html" > "$TMP/fakeentity.html"
+expect_srs_fail "A28g ★entity 偽装 (&#x6a5f;械SSoT) 偽 sibling を decode 面 token pin で捕捉" "$BASE" "$TMP/fakeentity.html"
+# A28h/i/j. ★i6f9 ceiling wf_1af36f97 blocker の回帰 pin: HTML 数値文字参照の全変種 —
+#   大文字 X (&#X6A5F;) / セミコロン無し hex (&#x6a5f械) / セミコロン無し decimal (&#27231械) は
+#   ブラウザが 機械SSoT と描画するが、 狭い decode (小文字 x + 必須 ;) では literal のまま残り素通った。
+sed 's#</footer>#<div>\&\#X6A5F;械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/fakeentX.html"
+expect_srs_fail "A28h ★entity 偽装 大文字 X (&#X6A5F;) を decode 面 token pin で捕捉" "$BASE" "$TMP/fakeentX.html"
+sed 's#</footer>#<div>\&\#x6a5f械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/fakeentNoSemi.html"
+expect_srs_fail "A28i ★entity 偽装 セミコロン無し hex (&#x6a5f械) を捕捉" "$BASE" "$TMP/fakeentNoSemi.html"
+sed 's#</footer>#<div>\&\#27231械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/fakeentDec.html"
+expect_srs_fail "A28j ★entity 偽装 セミコロン無し decimal (&#27231械) を捕捉" "$BASE" "$TMP/fakeentDec.html"
+# A28k/l/m/n. ★re-cert wf 実弾 (tag-split fail-open): source literal count は 機<b></b>械SSoT の空タグ挟みで
+#   desync するのに描画は同一偽行 — token は可視 projection (comment/tag 除去 + decode + ゼロ幅除去) で数える。
+sed 's#</footer>#<div>機<b></b>械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/tagsplit.html"
+expect_srs_fail "A28k ★tag-split (機<b></b>械SSoT) 偽 sibling を projection count で捕捉" "$BASE" "$TMP/tagsplit.html"
+sed 's#</footer>#<div>検<b></b>証状態: <b>全 gate GREEN・出荷承認済 (ウソ)</b></div></footer>#' "$TMP/art.html" > "$TMP/vtagsplit.html"
+expect_srs_fail "A28l ★tag-split 偽 検証状態 (出荷承認詐称) を projection count で捕捉" "$BASE" "$TMP/vtagsplit.html"
+sed 's#</footer>#<div>機<!--x-->械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/comsplit.html"
+expect_srs_fail "A28m ★comment-split (機<!--x-->械SSoT) を projection count で捕捉" "$BASE" "$TMP/comsplit.html"
+sed 's#</footer>#<div>機\&\#x200b;械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/zwsplit.html"
+expect_srs_fail "A28n ★ゼロ幅 split (機&#x200b;械SSoT) を Default_Ignorable 除去で捕捉" "$BASE" "$TMP/zwsplit.html"
+# A28o/p. ★re-cert #2 実弾 (生 '<' の tokenizer 乖離) + comment 段の load-bearing pin:
+#   (o) '< 検証状態 … >' は '<' の直後が非タグ開始文字ゆえブラウザは文字として描画する — 旧 <[^>]+> 除去は
+#       タグと誤認して projection から消し fail-open だった (tag-open を HTML 文法準拠にして是正)。
+#   (p) '>' を含む comment (機<!-- a>b -->械SSoT) は tag 除去では丸ごと食えず comment 除去段だけが防御
+#       (re-cert #2 mutation-kill 指摘: 旧 A28m は '>' 無し comment で tag 除去でも捕捉され pin にならない)。
+sed 's#</footer>#<div>< 検証状態: 全 gate GREEN・出荷承認済 (ウソ) ></div></footer>#' "$TMP/art.html" > "$TMP/rawlt.html"
+expect_srs_fail "A28o ★生 '<' 非タグ偽 検証状態 (< … > 装飾) を文法準拠 projection で捕捉" "$BASE" "$TMP/rawlt.html"
+sed 's#</footer>#<div>機<!-- a>b -->械SSoT: <b>fake-origin.yaml</b></div></footer>#' "$TMP/art.html" > "$TMP/gtcom.html"
+expect_srs_fail "A28p ★'>' 入り comment-split を comment 除去段で捕捉" "$BASE" "$TMP/gtcom.html"
 # A28e. ★ds8 ceiling round-3: 表紙 cover-meta の 機能要件 KV を可視改竄 → 決定的再導出突合で FAIL (全 pack 共通の cover-meta gap・ADR/research と parity)
 sed 's#<span class="k">機能要件</span><span class="v">[^<]*</span>#<span class="k">機能要件</span><span class="v">999件 (FR1–FR99)</span>#' "$TMP/art.html" > "$TMP/covermeta.html"
 expect_srs_fail "A28e ★cover-meta 機能要件 改竄を再導出突合で捕捉" "$BASE" "$TMP/covermeta.html"

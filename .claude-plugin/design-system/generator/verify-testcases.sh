@@ -52,7 +52,7 @@ NTC="$(q '.test_cases | length')"
 NEDGE="$(q '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length')"
 # ★folio-bur round-6 (ceiling-recursion R5 是正・収束根治): srs の class-token 機械的網羅 idiom を移植。 全 class token・全 data-component が
 #   allowlist に属することを quote-robust に強制 = RTM tbody 等への novel-marker (非 canonical class/data-component) 注入を一網打尽に封鎖。
-TC_CLS="abnormal b boundary chapbody confirm cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid gdef grow gword ic ico in k kicker lab lead m must normal num out page reader-chip role rtm-ac rtm-code rtm-edge rtm-fr rtm-kind rtm-label rtm-tc scol self should sign stamp summary-card tags tc-act tc-exp tc-grid tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-ref tc-ref-label tc-step tc-step-k tc-step-list tc-steps tc-step-v tc-title tc-trace tc-trace-edge tc-trace-h tc-trace-label tc-trace-row tc-trace-tgt term tint-brand tint-info tint-ok tint-violet txt v verify when who"
+TC_CLS="abnormal b boundary chapbody confirm cover-eyebrow cover-meta cover-sub doc-type en foot ft-grid ft-plain gdef grow gword ic ico in k kicker lab lead m must normal num out page reader-chip role rtm-ac rtm-code rtm-edge rtm-fr rtm-kind rtm-label rtm-tc scol self should sign stamp summary-card tags tc-act tc-exp tc-grid tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-ref tc-ref-label tc-step tc-step-k tc-step-list tc-steps tc-step-v tc-title tc-trace tc-trace-edge tc-trace-h tc-trace-label tc-trace-row tc-trace-tgt term tint-brand tint-info tint-ok tint-violet txt v verify when who"
 unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $TC_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が allowlist (RTM novel marker 注入封鎖・folio-bur r6)" "$unknown_cls"
 TC_DC="approval-block chapter-deck-band cross-doc-ref-chip doc-cover-band fidelity-sync-meta glossary-term-table plain-language-term-inline requirement-type-color-tokens rtm-row scope-summary-panel testcase-card testcase-rtm"
@@ -409,7 +409,7 @@ chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻�
 chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
   "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
 # (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in cover-meta foot ft-grid ic in lab out page summary-card tags tc-grid tint-brand tint-info tint-ok tint-violet txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
+EXP=1; for t in cover-meta foot ft-grid ft-plain ic in lab out page summary-card tags tc-grid tint-brand tint-info tint-ok tint-violet txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=2; for t in scol; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP=4; for t in chapbody ico kicker lead m num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
 EXP="$(q '.test_cases | length')"; for t in confirm rtm-ac rtm-fr rtm-kind rtm-tc tc-act tc-exp tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-step-list tc-steps tc-title tc-trace tc-trace-h tc-trace-tgt verify; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
