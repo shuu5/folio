@@ -47,6 +47,8 @@ LVC="$SCRIPT_DIR/lib/verify-common.sh"
 CHKW=52; source "$LVC" || { echo "verify-testcases: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build testcases "$FILLED_MANIFEST"
 
 NTC="$(q '.test_cases | length')"
 NEDGE="$(q '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length')"

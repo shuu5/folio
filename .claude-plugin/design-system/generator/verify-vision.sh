@@ -44,6 +44,8 @@ CHKW=56; source "$LVC" || { echo "verify-vision: failed to source verify-common.
 fail=0
 declare -i nwarn=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build vision "$FILLED_MANIFEST"
 
 # ★cross-doc 照会は opt-in (folio-qvv 裁定A・assemble と同一単位 = .cross_doc 節の有無)。 発火 = 従来の全検査。
 #   非発火 = 照会痕跡ゼロ (KV/chip/aside/data-vision-ref/xref-link 全て 0) を fail-closed で検査 (注入封鎖)。

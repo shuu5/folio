@@ -14,6 +14,10 @@ BASE="$SCRIPT_DIR/contract/ec-checkout.srs.yaml"
 BASE_PROSE="$SCRIPT_DIR/prose/ec-checkout.prose.yaml"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
+# repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持
+# (arm 未 skip は assemble 再 build で timeout 実測)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
+export SKIP_REPRO="${SKIP_REPRO:-1}"
+source "$SCRIPT_DIR/lib/test-repro-pins.sh"
 ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); }
 ng() { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); }
 
@@ -165,6 +169,10 @@ expect_verify_pass "A21b embedded ascii でも verify 偽FAIL なし (coverage p
 echo
 echo "verify-srs floor (taxonomy §5 gate A-H + visual-first) の fail-closed:"
 SRS="$SCRIPT_DIR/verify-srs.sh"
+# ★repro-build conformance (folio-3d23 B3) は render 非依存ゆえ、 render-gate 依存の A34 早期 exit (renderer 不在で
+#   FAIL→中間 gate exit) より *前* に置き、 renderer 有無に関係なく必ず走らせる (verify-srs 経路で arm を実走)。
+echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
+if repro_pins "$SRS" srs "$BASE" "$BASE_PROSE" "$ASM" "$INJ"; then ok "repro-build conformance (a-d) 全 pass"; else ng "repro-build conformance (a-d) 逸脱"; fi
 # gate A-E,G,H (bash) の fail-closed を検査する arm ゆえ重い gate F (playwright) は SRS_SKIP_RENDER で外す
 # (gate F の回帰は末尾の render-gate-srs --selftest arm が別途担う)。
 expect_srs_pass() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; then ok "$1"; else ng "$1 (floor FAIL)"; fi; }

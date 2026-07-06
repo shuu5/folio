@@ -47,6 +47,8 @@ declare -A EARS_WHEN=( [ubiquitous]=常に守る [event-driven]=きっかけが�
 
 fail=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build spec "$FILLED_MANIFEST"
 
 echo "spec-pack fabrication-free + 非終端 照会 floor: $HTML"
 echo "  contract: $CONTRACT"

@@ -87,6 +87,8 @@ HTML="${2:?usage: verify-principle.sh [...] <contract.yaml> <generated.html>}"
 
 fail=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build principle "$FILLED_MANIFEST"
 
 # ★folio-bur round-3 (ceiling-recursion R3): comment-hidden classless forgery 封鎖。
 #   round-2 の comment-hidden 対策は decoy 自身が marker class を担持する亜種だけを占有数パリティで捕捉したが、

@@ -55,6 +55,8 @@ LVC="$SCRIPT_DIR/lib/verify-common.sh"
 CHKW=48; source "$LVC" || { echo "verify-research: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
 make_body "$HTML"      # body-only ($BODY、 inline CSS の data-component 混入回避)
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build research "$FILLED_MANIFEST"
 
 echo "research-pack fabrication-free + cross-doc 前方照会 proof: $HTML"
 echo "  contract: $CONTRACT"

@@ -21,6 +21,10 @@ BASE="$SCRIPT_DIR/contract/folio-verification.spec.yaml"
 BASE_PROSE="$SCRIPT_DIR/prose/folio-verification.prose.yaml"
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 pass=0; fail=0
+# repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持し
+# (arm 未 skip は assemble 再 build で timeout)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
+export SKIP_REPRO="${SKIP_REPRO:-1}"
+source "$SCRIPT_DIR/lib/test-repro-pins.sh"
 ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); }
 ng() { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); }
 
@@ -392,6 +396,9 @@ expect_vfilled_fail "M16 ★機械層 demoted block 脱落を件数+round-trip �
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
 expect_vfilled_pass  "P2 健全 baseline は --filled verify PASS" "$TMP/base-filled.html"
 
+echo
+echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
+if repro_pins "$VER" verification "$BASE" "$BASE_PROSE" "$ASM" "$INJ" --filled "$BASE_PROSE"; then ok "repro-build conformance (a-d) 全 pass"; else ng "repro-build conformance (a-d) 逸脱"; fi
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

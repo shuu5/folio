@@ -92,9 +92,13 @@ const results = await pipeline(
   expected.fixtures,
 
   // stage 1 (Floor): verify-srs full floor (render 込) + precheck + anchors — SKILL step 1-2 と同一。
+  //   ★REPRO_PROSE: fixture は manifest-backed (欠陥は <fixture>.prose.yaml に注入・build-fixtures.sh) ゆえ
+  //   repro-build arm (REQ-VER-030) は既定 ON のまま fixture 自身の manifest で正直に通す。規約解決は
+  //   原本 manifest を掴むため明示 override が必須 (folio-3d23 ceiling round-3・SKIP 方式は precheck の
+  //   [SKIP] masquerade guard と衝突するため撤回)。
   fx => agent(`${MECH_NOTE}
-以下を順に bash で実行し結果を返せ (folio-verify SKILL step 1-2 と同一手順):
-1. FLOOR="$(${BIN} verify-srs ${FIXDIR}/${fx.name}.html ${CONTRACT})"; floor_rc=$?
+以下を順に bash で実行し結果を返せ (folio-verify SKILL step 1-2 と同一手順。REPRO_PROSE は fixture が manifest-backed ゆえの正規解決 — 変更禁止):
+1. FLOOR="$(REPRO_PROSE=${FIXDIR}/${fx.name}.prose.yaml ${BIN} verify-srs ${FIXDIR}/${fx.name}.html ${CONTRACT})"; floor_rc=$?
 2. printf '%s' "$FLOOR" | ${BIN} ceiling-precheck; pc_rc=$?
 3. ${BIN} ceiling-anchors ${CONTRACT} → stdout を anchors_json として返す (rc!=0 なら空文字)
 floor は playwright render 込みで数分かかる。floor_rc / pc_rc / anchors_json を返せ。`,

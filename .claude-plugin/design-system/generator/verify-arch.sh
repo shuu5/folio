@@ -41,6 +41,8 @@ CHKW=54; source "$LVC" || { echo "verify-arch: failed to source verify-common.sh
 fail=0
 declare -i nwarn=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build arch "$FILLED_MANIFEST"
 
 NDEC="$(q '.decisions | length')"; NCOMP="$(q '.components | length')"; NQA="$(q '.quality | length')"
 NRISK="$(q '.risks | length')"; NSTRAT="$(q '.strategy | length')"; NACTOR="$(q '.context.actors | length')"; NDIAG="$(q '.diagrams | length')"

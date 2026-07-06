@@ -48,6 +48,9 @@ bash build-fixtures.sh out/fixtures
 
 # 3. prose 側: 同じ fixture 群へ /folio-verify を 1 本ずつ回す (main session)
 #    /folio-verify out/fixtures/golden.html ../contract/ec-checkout.srs.yaml   (ほか 3 本も)
+#    ★fixture は manifest-backed (欠陥は out/fixtures/<f>.prose.yaml に注入済み・build-fixtures.sh)。
+#      repro-build arm (REQ-VER-030・既定 ON) の prose 規約解決は原本 manifest を掴むため、SKILL step 1 の
+#      verify 実行には REPRO_PROSE=out/fixtures/<f>.prose.yaml を前置する (fixture ごと・golden 含め統一)。
 #    → .folio/verify-state/*.json に 5-state が残る
 
 # 4. 経路突合 (決定的)
@@ -58,6 +61,9 @@ bash compare-verdicts.sh            # exit 0 = 経路一致
 
 - fixture の欠陥は **prose slot の意味層のみ**に注入する (floor 透過が崩れたら oracle は
   ceiling でなく floor を測ってしまう — build-fixtures.sh が静的 floor PASS を fail-closed 確認)。
+- fixture は **manifest-backed** に保つ (欠陥は `<f>.prose.yaml` 側へ注入し assemble+inject で生成)。
+  repro-build arm (REQ-VER-030) を全 consumer が既定 ON のまま通れることが不変条件 — HTML 直接 mutate の
+  shim を作らない (SKIP_REPRO 方式は precheck の [SKIP] masquerade guard と衝突し oracle を破綻させた実績)。
 - 期待集合は contract (SSoT) から。lens への入力で生成 HTML の DOM を期待集合の源にしない
   (verify-laundering 禁止・`skills/folio-verify/SKILL.md` §2)。
 - JS 骨格でも機械は verdict を裁定しない: enum remap + 正規化 + `folio ceiling-commit-check`

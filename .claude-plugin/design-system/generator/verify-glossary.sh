@@ -40,6 +40,8 @@ CHKW=56; source "$LVC" || { echo "verify-glossary: failed to source verify-commo
 
 fail=0
 make_body "$HTML"
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23・占有 pin 群の構造終端後継)。
+verify_repro_build glossary "$FILLED_MANIFEST"
 
 NTERMS="$(q '.terms | length')"
 echo "glossary-pack fabrication-free floor: $HTML"

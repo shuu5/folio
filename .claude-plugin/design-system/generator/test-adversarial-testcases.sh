@@ -23,6 +23,10 @@ GOOD="$TMP/good.html"
 "$INJECT" "$MANIFEST" "$TMP/raw.html" "$GOOD"
 
 pass=0; total=0
+# repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持し
+# (arm 未 skip は assemble 再 build で timeout)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
+export SKIP_REPRO="${SKIP_REPRO:-1}"
+source "$HERE/lib/test-repro-pins.sh"
 # expect_fail <label> <mutated.html> — verify が exit 1 (FAIL) を返すべき
 expect_fail() {
   local label="$1" html="$2"
@@ -173,6 +177,9 @@ expect_fail "R7-tc-d ★bare term を term==plain-language-term-inline で捕捉
 expect_fail "R7-tc-e ★display:none 隠蔽を display-state guard で捕捉" "$(mut 705 's{</body>}{<p style=\"display:none\">隠蔽(捏造)</p></body>}')"
 
 echo ""
+echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
+total=$((total+1)); if repro_pins "$VERIFY" testcases "$CONTRACT" "$MANIFEST" "$ASSEMBLE" "$INJECT" --filled "$MANIFEST"; then pass=$((pass+1)); echo "  [PASS] repro-build conformance (a-d)"; else echo "  [FAIL] repro-build conformance (a-d)"; fi
+echo
 echo "adversarial: $pass/$total passed"
 [[ "$pass" == "$total" ]] || exit 1
 echo "ALL PASS"

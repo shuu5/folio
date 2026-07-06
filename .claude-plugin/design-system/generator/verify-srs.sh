@@ -65,6 +65,10 @@ wchk() { # label expected actual — warn 級 backstop 版 chk (非 blocking・w
   else printf '  [WARN] %-'"$CHKW"'s expected %s, got %s (warn 級 backstop・非 blocking)\n' "$1" "$2" "$3"; warnN=$((warnN+1)); fi
 }
 make_body "$HTML"        # body-only ($BODY、 CSS セレクタ混入回避)
+# ★repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-3d23): contract(+prose) から
+#   assemble→inject を再 build し footer 生成時刻のみ正規化して byte 恒等を照合 (占有 pin 群の構造終端後継)。
+#   SKIP_REPRO=1 で honest skip (bulk 高速化・既定 ON)。 srs は --filled mode 無しゆえ manifest は空 (規約/env で解決)。
+verify_repro_build srs ""
 has() { local c; c="$(grep -c "data-component=\"$1\"" "$BODY")"; [[ "$c" -ge 1 ]] && echo 1 || echo 0; }
 
 # ---- render census 語彙 SSoT (folio-hef.3)。 起動時に *pack-level yq* で読み (graph-common.sh core reader

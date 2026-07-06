@@ -448,3 +448,109 @@ verify_cross_doc_refs() {
   LC_ALL=C set_eq "${prefix}: (key,role) ペア (contract == HTML)" "$exp_kr" "$act_kr"
   return 0
 }
+
+# ---- repro-build byte-identity gate (verification §3.9 REQ-VER-030 blocking arm・folio-mzn.3 Phase B / folio-3d23) ----
+# 占有 pin 群の *構造終端後継*: contract (+prose) から assemble-<pack>.sh → inject-prose.sh を mktemp へ
+# *再 build* し、 footer 生成時刻 (lib/common.sh core_emit_footer の「生成: <b>YYYY-MM-DD HH:MM</b>」= 唯一の
+# 非決定源・verified: 全 assembler で date-current は core_emit_footer のみ・2× build diff 空) *だけ* を両辺
+# *同一 strict regex* で正規化して cmp する。 不一致 = post-build 改変 (任意の手編集・占有 pin が個別に数え
+# ない領域の改竄) を byte 逸脱として *一括* blocking FAIL する (占有 pin が個々の部品数を数えるのに対し、
+# 本 arm は生成物 *全体* の byte 恒等を 1 本で守る = pin 群の構造終端後継)。
+#
+# ★正規化の健全性論証 (設計 SSoT): 正規化は両辺を *同一関数* で写像する quotient-map。 商クラスは
+#   「生成: <b>\d{4}-\d\d-\d\d \d\d:\d\d</b>」の *厳密 timestamp 形* のみ。 緩い regex は差分 masking の穴
+#   (= blocking 差戻し級)。 攻撃者が本文へ timestamp 形テキストを注入しても、 再 build 側に *その行が無い*
+#   ため byte 差として残る (置換は footer の当該 <b>…</b> context 内でしか起きない)。 健全。
+#
+# prose 解決優先順: REPRO_PROSE (明示 env override) > 呼出元 --filled manifest ($2) > contract 名規約 (2-try)。
+#   対象 HTML が pre-fill 状態 (footer「prose 未充填 (opus 待ち)」) なら prose 不要 (assemble のみ再 build)。
+# 入力欠落 (contract/prose/assemble 不在)・assemble/inject 再実行の非零 exit = 測定系 tool-integrity error
+#   (exit 2 idiom・gate 判定と分離。 verify を即 exit 2 で終える = 「測定不能を clean と詐称しない」)。
+# SKIP_REPRO=1 で honest SKIP (floor 不完全と明示・PASS 詐称せず。 敵対 suite の bulk case 高速化用。 arm 自体は
+#   verify-*.sh 既定 ON = 消費者は SKIP_REPRO 無しで走らせ本 arm が効く。 gate F の SRS_SKIP_RENDER と同型 idiom)。
+#
+# ★prose-sensitivity 注記: 本 arm は post-build 改変に加え「manifest から逸脱した prose」も byte 逸脱として
+#   捕捉する (floor が prose-sensitive 化する)。欠陥 fixture 等を検証する caller は対象を manifest-backed に
+#   保ち REPRO_PROSE=<fixture>.prose.yaml で arm ON のまま正直に通す (oracle/build-fixtures.sh が実例。
+#   SKIP_REPRO 方式は ceiling-precheck の [SKIP] masquerade guard と衝突するため oracle では撤回済)。
+#
+# usage: verify_repro_build <pack> [filled_manifest]
+#   <pack>            assemble-<pack>.sh / の pack 名 (srs/adr/research/arch/vision/testcases/spec/principle/glossary/verification/relations)
+#   [filled_manifest] 呼出元が --filled で受けた manifest path (無ければ空文字。 srs は mode 無しゆえ常に空)
+# 前提: $SCRIPT_DIR / $CONTRACT / $HTML / $fail / $CHKW。 byte 不一致 = $fail=1 (gate FAIL)、 tool error = exit 2。
+verify_repro_build() { # $1 = pack  $2 = filled_manifest (optional)
+  local pack="$1" filled_manifest="${2:-}"
+  if [[ -n "${SKIP_REPRO:-}" ]]; then
+    printf '  [SKIP] %-'"$CHKW"'s %s\n' "repro-build: SKIP_REPRO 指定 (floor 不完全・PASS 詐称せず)" "skip"
+    return 0
+  fi
+  local asm="$SCRIPT_DIR/assemble-$pack.sh" inj="$SCRIPT_DIR/inject-prose.sh"
+  [[ -f "$asm" ]] || { echo "  [TOOLERR] repro-build: assemble-$pack.sh 不在 ($asm) — 測定不能 (exit 2)"; exit 2; }
+  [[ -f "$inj" ]] || { echo "  [TOOLERR] repro-build: inject-prose.sh 不在 ($inj) — 測定不能 (exit 2)"; exit 2; }
+  [[ -f "$CONTRACT" ]] || { echo "  [TOOLERR] repro-build: contract 不在 ($CONTRACT) — 測定不能 (exit 2)"; exit 2; }
+  # 対象 HTML の充填状態を footer トークンで判定 (inject が決定的に flip する 2 状態のいずれか)。
+  local want_filled=0
+  grep -qF 'prose ✓ 充填済' "$HTML" && want_filled=1
+  # 1. assemble 再実行 (原 contract path のまま渡す → cross_doc 兄弟解決を保つ・出力のみ mktemp へ)。
+  #   ★出力は stdout redirect で受ける (OUT 引数非依存): 大半の assembler は [out.html] を取るが assemble-glossary.sh
+  #   は stdout 専用 (OUT 引数を取らない) ため、 全 assembler が OUT 既定 /dev/stdout へ書く形に統一して捕捉する。
+  local tmp_a tmp_f="" built
+  tmp_a="$(mktemp)"
+  if ! bash "$asm" "$CONTRACT" > "$tmp_a" 2>/dev/null; then
+    rm -f "$tmp_a"; echo "  [TOOLERR] repro-build: assemble-$pack 再実行が非零 exit (測定不能・exit 2)"; exit 2
+  fi
+  built="$tmp_a"
+  if [[ "$want_filled" -eq 1 ]]; then
+    # 2. prose 解決 (env override > --filled manifest > 規約 2-try)。
+    local prose="${REPRO_PROSE:-$filled_manifest}"
+    [[ -n "$prose" ]] || prose="$(_repro_prose_convention "$CONTRACT")"
+    if [[ -z "$prose" || ! -f "$prose" ]]; then
+      rm -f "$tmp_a"; echo "  [TOOLERR] repro-build: prose manifest 不在 (充填 HTML の再 build に必須・REPRO_PROSE で明示可): '${prose:-<未解決>}' — 測定不能 (exit 2)"; exit 2
+    fi
+    tmp_f="$(mktemp)"
+    if ! bash "$inj" "$prose" "$tmp_a" "$tmp_f" >/dev/null 2>&1; then
+      rm -f "$tmp_a" "$tmp_f"; echo "  [TOOLERR] repro-build: inject-prose 再実行が非零 exit (測定不能・exit 2)"; exit 2
+    fi
+    built="$tmp_f"
+  fi
+  # 3. footer 生成時刻のみ両辺を同一 strict regex で正規化 (quotient-map) → 4. byte 比較。
+  #   ★正規化 (perl) の失敗・空出力は測定不能 = exit 2 (perl 起動故障で両辺空 → cmp 一致の false-PASS を
+  #   封鎖・「測定不能を clean と詐称しない」契約の残存穴 fix・folio-3d23 ceiling round-1 minor)。
+  local tmp_bn tmp_hn; tmp_bn="$(mktemp)"; tmp_hn="$(mktemp)"
+  if ! _repro_normalize_ts < "$built" > "$tmp_bn" || ! _repro_normalize_ts < "$HTML" > "$tmp_hn" \
+     || [[ ! -s "$tmp_bn" || ! -s "$tmp_hn" ]]; then
+    rm -f "$tmp_a" "$tmp_f" "$tmp_bn" "$tmp_hn"
+    echo "  [TOOLERR] repro-build: 正規化 (perl) 失敗 or 空出力 — 測定不能 (exit 2)"; exit 2
+  fi
+  if cmp -s "$tmp_bn" "$tmp_hn"; then
+    printf '  [OK]   %-'"$CHKW"'s %s\n' "repro-build: 再 build byte-identity (時刻正規化のみ)" "識別"
+  else
+    # ★reason substring 'repro-build:BYTE-DIFF' は [FAIL] 行にしか出ない値 (gate 一意・判別力保持)。
+    printf '  [FAIL] %-'"$CHKW"'s\n' "repro-build:BYTE-DIFF 再 build が byte 不一致 (post-build 改変検出)"
+    cmp "$tmp_bn" "$tmp_hn" 2>&1 | head -1 | sed 's/^/      repro-diff: /'
+    fail=1
+  fi
+  rm -f "$tmp_a" "$tmp_f" "$tmp_bn" "$tmp_hn"
+}
+
+# footer 生成時刻の strict 正規化 (両辺同一適用の quotient-map)。 「生成: <b>YYYY-MM-DD HH:MM</b>」の *厳密
+# timestamp 形* のみを固定 placeholder へ畳む (緩めない = masking 防止)。 byte モード perl (no -C): program 内
+# literal 日本語バイト == 入力 UTF-8 バイトで一致・[0-9] は ASCII digit のみ。 stdin→stdout。
+_repro_normalize_ts() {
+  perl -0777 -pe 's{生成: <b>[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}</b>}{生成: <b>REPRO-TS-NORMALIZED</b>}g'
+}
+
+# prose 規約導出 (2-try): contract が <dir>/contract/<base>.<pack>.yaml のとき prose は <dir>/../prose/ 配下。
+#   try1: <stem>.prose.yaml (stem = basename の .yaml 除去 = <base>.<pack>) = .pack.prose.yaml 系 (adr/research/arch/vision/testcases/principle)。
+#   try2: <base>.prose.yaml (pack infix 除去) = 旧 base.prose.yaml 系 (srs/spec/glossary/verification/relations)。
+#   先に存在する方を返す (無ければ空文字 = 呼出側で tool error 判定)。 不規則命名は REPRO_PROSE env で上書き。
+_repro_prose_convention() { # $1 = contract path
+  local contract="$1" dir stem base p
+  dir="$(cd "$(dirname "$contract")" && pwd)/../prose"
+  stem="$(basename "$contract" .yaml)"       # <base>.<pack>
+  base="${stem%.*}"                          # <base>
+  for p in "$dir/$stem.prose.yaml" "$dir/$base.prose.yaml"; do
+    [[ -f "$p" ]] && { printf '%s' "$p"; return 0; }
+  done
+  printf ''
+}
