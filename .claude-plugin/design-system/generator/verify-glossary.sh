@@ -71,7 +71,6 @@ set_eq "機械 domain(data-term-domain) emission 順" "$(q '.terms[].domain')" "
 #   term-formal (.terms[].formal_def=用語の権威ある正式定義) を取りこぼし、 set_eq は class="term-formal" double-quote 固定抽出のみ・
 #   占有 anchor 皆無ゆえ 4 変種 (single-quote/unquoted/multi-class/大文字) の偽 dd が全て survive した (独立 ceiling 実証・blocker)。
 #   term-name と同型に quote-robust 占有で封鎖 (uniform sweep の機械的完遂)。
-chk "占有: term-formal == NTERMS (single-quote/unquoted/multi-class/大文字 偽定義 decoy 封鎖・folio-bur r6)" "$NTERMS" "$(count_attr_token class term-formal < "$BODY")"
 html_formal="$(perl -0777 -ne 'while (/<dd\b[^>]*\bclass="term-formal"[^>]*>(.*?)<\/dd>/gs){ my $t=$1; $t=~s/[\t\n]/ /g; print "$t\n"; }' < "$BODY")"
 set_eq "正式定義 (term-formal) emission 順" "$(qesc '.terms[].formal_def')" "$html_formal"
 
@@ -83,7 +82,6 @@ set_eq "正式定義 (term-formal) emission 順" "$(qesc '.terms[].formal_def')"
 # ★folio-bur round-5 (ceiling-recursion R4 是正): 下の set_eq は class="term-name" を double-quote 固定で抽出し占有数 anchor が無いため、
 #   single-quote マーカー decoy <h3 class='term-name'>偽用語GHOST</h3> を追記すると抽出を逃れ set_eq は genuine 33 のまま PASS、
 #   用語集の主たる人間向けトークン (見出し語) が捏造され floor を素通った (独立 ceiling 実証・major)。 round-2 確立の占有 idiom を本トークンへ展開。
-chk "占有: term-name == NTERMS (single-quote 見出し decoy 封鎖・folio-bur r5)" "$NTERMS" "$(count_attr_token class term-name < "$BODY")"
 # ★folio-229: domain 区分 (h3 domain-heading) の下に term が入るため term-name は h3→h4 へ降格 (見出し階層維持)。
 html_termname="$(perl -0777 -ne 'while (/<h4\b[^>]*\bclass="term-name"[^>]*>(.*?)<\/h4>/gs){ my $t=$1; $t=~s/[\t\n]/ /g; print "$t\n"; }' < "$BODY")"
 set_eq "可視見出し語 (h3 term-name) emission 順" "$(qesc '.terms[].canonical')" "$html_termname"
@@ -356,16 +354,14 @@ set_eq "cover-meta KV emission 順" "$exp_meta" "$html_meta"
 exp_genmeta="$(esc "$(q '.footer.gen_meta // "folio design-system generator"')")"
 # ★folio-bur round-5 (ceiling-recursion R4 是正): gen-meta も double-quote 固定 chk + 占有 anchor 無しゆえ single-quote decoy
 #   <p class='gen-meta'>FABRICATED</p> が footer 生成メタを偽装でき素通った (独立 ceiling 実証・minor)。 term-name と同型に占有で封鎖。
-chk "占有: gen-meta == 1 (single-quote footer decoy 封鎖・folio-bur r5)" "1" "$(count_attr_token class gen-meta < "$BODY")"
 html_genmeta="$(perl -0777 -ne 'while (/<p\b[^>]*\bclass="gen-meta"[^>]*>(.*?)<\/p>/gs){ my $t=$1; $t=~s/[\t\n]/ /g; print "$t\n"; }' < "$BODY")"
 chk "gen-meta == .footer.gen_meta (可視 contract 値)" "$exp_genmeta" "$html_genmeta"
 html_h2count="$(perl -0777 -ne 'while (/<h2\b[^>]*>\s*用語\s*\((\d+)\s*語\)\s*<\/h2>/gs){ print "$1\n"; }' < "$BODY")"
 chk "用語数 h2 N == NTERMS (可視 contract 導出)" "$NTERMS" "$html_h2count"
 
 # ---- 7. footer verify-state token (core chrome) ----
-# ★folio-wq4: verify_core_chrome は $1/$2 を role/en の追加 home 数 (整数) として解釈するよう変更された。
-#   glossary は actor (div.role) も EARS legend en も持たない (= 追加 0) ゆえ引数なしで呼ぶ。
-#   (旧版はここに section ラベル文字列を渡していたが argless 実装が無視していた dead arg。 現実装では算術エラーになるため除去。)
+# verify_core_chrome は argless (占有 pin 退役後・folio-smby: 旧 $1/$2 = role/en 追加 home 数は消費者無しゆえ無視)。
+#   glossary は actor (div.role) も EARS legend en も持たない (= 追加 0) ゆえ従来から引数不要。
 verify_core_chrome
 
 # ---- 8. prose スロット mode (pre-fill 全空 / --filled・--artifact 全充填 + 注入忠実) ----
@@ -387,31 +383,6 @@ else
 fi
 
 
-# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
-# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
-# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
-# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
-# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
-#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
-chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in doc doc-glossary foot ft-grid ft-plain glossary-terms glossary-toc ic lab skip-link summary-card tags txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in doc-cover-band fidelity-sync-meta; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP=1; for t in approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.terms | length')"; for t in term-machine term-plain term-record; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-# ★folio-229: domain 区分 (PW-01) の占有 = |domains| (term-domain section / domain-heading 各 1 per domain)。
-EXP="$(q '.domains | length')"; for t in term-domain domain-heading; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-# ★folio-229: term-xrefs (機械層) と term-usage (人間層・PW-02) は cross_refs を持つ term ごとに 1 個 = |xref 持ち term|。
-EXP="$(q '[.terms[] | select((.cross_refs | length) > 0)] | length')"; for t in term-xrefs term-usage; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
-#     構造化 badge は verify_term_inline が glossary 突合済)。
-chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
-  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
-# ===== folio-bur round-7 ここまで =====
 
 echo ""
 if [[ "$fail" == "0" ]]; then

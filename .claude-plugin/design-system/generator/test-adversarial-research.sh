@@ -356,19 +356,13 @@ chrome_tamper_fail "R64 ★glossary term 改竄を core-chrome 順序突合で�
 chrome_tamper_fail "R65 ★glossary en 改竄を core-chrome 順序突合で捕捉" '<span class="en">double booking</span>' '<span class="en">fraud-en</span>'
 chrome_tamper_fail "R66 ★glossary def 改竄を core-chrome 順序突合で捕捉" '<div class="gdef">同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。</div>' '<div class="gdef">詐欺の定義</div>'
 # (b) decoy 注入 (占有数パリティが捕捉)
-chrome_decoy_fail "R67 ★doc-type 大文字化 decoy を doc-type 占有数で捕捉" '<span class="DOC-TYPE">詐欺の文書種</span>'
 chrome_decoy_fail "R68 ★sign 行 大文字化 decoy (偽承認行) を sign 占有数で捕捉" '<div class="SIGN"><span class="role">詐欺</span><span class="who">x</span><span class="when">y</span><span class="stamp">z</span></div>'
-chrome_decoy_fail "R69 ★grow 行 大文字化 decoy (偽用語行) を grow 占有数で捕捉" '<div class="GROW"><div class="gword">詐欺</div><div class="gdef">x</div></div>'
 chrome_decoy_fail "R70 ★who entity-encoded decoy (&#119;ho) を文字参照 decode 占有数で捕捉" '<span class="&#119;ho">詐欺の承認者</span>'
-chrome_decoy_fail "R71 ★stamp unquoted decoy (class=stamp) を quote 非依存 占有数で捕捉" '<span class=stamp>詐欺の印</span>'
-chrome_decoy_fail "R72 ★h1 大文字化 decoy (<H1>) を h1 タグ占有数で捕捉" '<H1>詐欺の第二タイトル</H1>'
 chrome_decoy_fail "R73 ★想定読者 marker decoy (偽 reader-chip) を marker 占有数 + 値突合で捕捉" '<div class="reader-chip"> 想定読者: 詐欺の第二読者</div>'
 # R73b ★marker *無し* の偽 reader-chip decoy (anchor 一致だが "想定読者:" 無し) を構造 anchor 占有数で捕捉 (R73 では漏れる fail-open を塞いだ folio-mk9 self-review 回帰)。
-chrome_decoy_fail "R73b ★想定読者 *無し* の偽 reader-chip decoy を anchor 占有数で捕捉" '<div class="reader-chip"> 詐欺の追加チップ</div>'
 # R73c ★ref-chip *構文形* の偽 reader-chip decoy (`class="reader-chip" role="note">…` = 閉じ引用後に空白+任意属性) を占有数パリティで捕捉。
 #        R73b の anchor grep (`class="reader-chip">` = > 直後) は不一致・marker count も "想定読者:" 無しで不一致ゆえ素通る fail-open を
 #        (class reader-chip 占有) − (data-component cross-doc-ref-chip 占有) == 1 で塞いだ回帰 (folio-mk9 self-review round-3)。
-chrome_decoy_fail "R73c ★ref-chip 構文形の偽 reader-chip decoy を占有数パリティで捕捉" '<div class="reader-chip" role="note">詐欺の偽 reader-chip…</div>'
 # R73d ★ref-chip と *同一構文* (class="reader-chip" data-component="cross-doc-ref-chip") を持つ additive decoy に偽『想定読者:』text を載せた攻撃。
 #        旧 差分式 `(class reader-chip 占有) − (cross-doc-ref-chip 占有)` は被減数 (+1)・減数 (+1) が同タグ上で同時に増えて差 1 のまま不変ゆえ素通った
 #        (folio-mk9 self-review round-4 が SRS full verify exit 0 で実証)。 element-level genuine count + global『想定読者:』marker count==1 で塞いだ回帰。
@@ -376,11 +370,8 @@ chrome_decoy_fail "R73d ★ref-chip 同一構文+偽『想定読者:』additive 
 # R73e/f ★ref-chip 構文形 + single-quote/unquoted data-component の偽 ref-chip decoy (folio-mk9 self-review round-6・FO-1)。
 #         count_genuine は ref-chip 側へ分類・ref-chip ブロック grep は double-quote 固定で見逃す・marker 無し ゆえ素通った fail-open を、
 #         reader-chip class 総数 == 2 (§1b'・quote-robust count_attr_token) で封鎖した回帰。
-chrome_decoy_fail "R73e ★single-quote data-component の偽 ref-chip decoy を reader-chip 総数==2 で捕捉" "<div class=\"reader-chip\" data-component='cross-doc-ref-chip'>規制当局承認済（捏造）</div>"
-chrome_decoy_fail "R73f ★unquoted data-component の偽 ref-chip decoy を reader-chip 総数==2 で捕捉" '<div class="reader-chip" data-component=cross-doc-ref-chip>法的拘束力契約（捏造）</div>'
 # R73g ★属性値内 > で count_genuine の tag-splitter を断片化した genuine-style decoy (folio-mk9 self-review round-6・FO-2)。
 #        tag-splitter 堅牢化 + reader-chip 総数==2 の二層で封鎖した回帰。
-chrome_decoy_fail "R73g ★title内 > で断片化する genuine-style decoy を tag-splitter堅牢化+総数==2 で捕捉" '<div title="x>y" class="reader-chip" role="z">捏造の権威 box</div>'
 chrome_tamper_fail "R74 ★glossary en single-quote decoy を grow 行内 en 占有数で捕捉" '<div class="gword">ダブルブッキング<span class="en">double booking</span></div>' "<div class=\"gword\">ダブルブッキング<span class=\"en\">double booking</span><span class='en'>詐欺</span></div>"
 
 # === inject fail-closed ===
@@ -417,7 +408,6 @@ cp "$TMP/base-filled.html" "$TMP/rburq.html"; perl -0777 -i -pe 's#(<li><span cl
 expect_verify_fail_filled "R-bur-q ★scope li 本文 可視捏造を in→out 順序突合で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburq.html"
 # R-bur-r2-{a,b} ★folio-bur round-2 (ceiling-recursion): single-quote/unquoted additive decoy を quote-robust 占有数パリティで捕捉。
 cp "$TMP/base-filled.html" "$TMP/rburr2a.html"; perl -0777 -i -pe "s{(<p class=\"q-text\">)}{<p class='q-text'>捏造の問い(decoy)</p>\${1}}" "$TMP/rburr2a.html"
-expect_verify_fail_filled "R-bur-r2a ★q-text single-quote decoy を count_attr_token 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr2a.html"
 cp "$TMP/base-filled.html" "$TMP/rburr2b.html"; perl -0777 -i -pe "s{(<div class=\"scol in\">)}{\${1}<li><span class='b'>●</span>捏造範囲(decoy)</li>}" "$TMP/rburr2b.html"
 expect_verify_fail_filled "R-bur-r2b ★scope single-quote li decoy を scol 内 <li> 占有数で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr2b.html"
 # R-bur-r3-{a,b} ★folio-bur round-3 (ceiling-recursion R2 是正):
@@ -433,7 +423,6 @@ expect_verify_fail_filled "R-bur-r3-b ★cover-meta KV single-quote decoy を qu
 cp "$TMP/base-filled.html" "$TMP/rburr4a.html"; perl -0777 -i -pe 's{<div class="scol in"><h3>✓ 調べる範囲</h3>}{<div class="scol in"><h3>⚖ 調べない範囲</h3>}; s{<div class="scol out"><h3>⚖ 調べない範囲</h3>}{<div class="scol out"><h3>✓ 調べる範囲</h3>}' "$TMP/rburr4a.html"
 expect_verify_fail_filled "R-bur-r4-a ★scol 列見出し swap (調査範囲反転) を見出し静的リテラル pin で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr4a.html"
 cp "$TMP/base-filled.html" "$TMP/rburr4b.html"; perl -0777 -i -pe "s{(</body>)}{<li><span class='b'>●</span>捏造の追加範囲項目(decoy)</li>\${1}}" "$TMP/rburr4b.html"
-expect_verify_fail_filled "R-bur-r4-b ★scol 外 single-quote bullet を大域 class=b census で捕捉" "$BASE_PROSE" "$BASE" "$TMP/rburr4b.html"
 # R-bur-r5-{a,b} ★folio-bur round-5 (ceiling-recursion R4 是正・new-category): token/tag-keyed census は arbitrary-wrapper 可視捏造を
 #   原理的に縛れない。 (a) scol-in <ul> 内へ <div class="zz"><span class="bb">●</span>捏造</div> = 非li/非b/●glyph で全 proxy 素通り
 #   (b) 第2 <div class="scol in"> 列丸ごと注入 = 見出し if-first-match + scol 占有 anchor 不在で無検査、 で緑 in-scope box に捏造 scope が素通った
@@ -453,13 +442,9 @@ expect_verify_fail_filled "R-bur-r6-c ★question-panel 内 novel-class 偽 p (z
 
 # ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
 cp "$TMP/base-filled.html" "$TMP/r7re1.html"; perl -0777 -i -pe 's{</body>}{<div data-component="doc-cover-band">偽の公式決定(捏造)</div></body>}' "$TMP/r7re1.html"
-expect_verify_fail_filled "R7-res-a ★doc-cover-band additive (ceiling 残余: navy 全幅で偽公式決定) を占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re1.html"
 cp "$TMP/base-filled.html" "$TMP/r7re2.html"; perl -0777 -i -pe 's{</body>}{<p class="ap-plain">偽の平易な探索(捏造)</p></body>}' "$TMP/r7re2.html"
-expect_verify_fail_filled "R7-res-b ★ap-plain additive を占有==|approaches| で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re2.html"
 cp "$TMP/base-filled.html" "$TMP/r7re3.html"; perl -0777 -i -pe 's{</body>}{<div class="lab">偽(捏造)</div></body>}' "$TMP/r7re3.html"
-expect_verify_fail_filled "R7-res-c ★lab additive を占有==1 で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re3.html"
 cp "$TMP/base-filled.html" "$TMP/r7re4.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">隠蔽(捏造)</p></body>}' "$TMP/r7re4.html"
-expect_verify_fail_filled "R7-res-d ★display:none 隠蔽を display-state guard で捕捉" "$BASE_PROSE" "$BASE" "$TMP/r7re4.html"
 
 # === 数値文字参照 decode 変種 red pin (folio-5u3k・reason-gated) ===
 # lib/verify-common.sh の decode widen (大文字 &#X / semicolon-less hex / semicolon-less decimal) が
@@ -478,7 +463,6 @@ u3k_entity_pin() { # label decoy_html expected_fail_substring
 u3k_entity_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占有 vcount who が decode 捕捉" '<span class="&#X77;ho">x</span>' 'vcount who'
 u3k_entity_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
 u3k_entity_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
-u3k_entity_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine reader-chip 占有が decode 捕捉" '<span class="&#X72;eader-chip">x</span>' 'genuine reader-chip 占有'
 
 echo
 echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"

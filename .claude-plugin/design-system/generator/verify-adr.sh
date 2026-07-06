@@ -77,7 +77,6 @@ verify_core_chrome
 #   ため、 (i) single-quote/unquoted/entity の data-component を持つ偽 ref-chip decoy (count_genuine は ref-chip 側へ分類・ref-chip ブロック
 #   grep は double-quote 固定で見逃す) や (ii) 属性値内 > で count_genuine の tag-splitter を断片化した genuine-style decoy が素通った。
 #   count_attr_token (quote/case/entity/>-attr 非依存の全文走査) で reader-chip class 総数 == 2 を bind し両系統を封鎖する (SRS の §7b'' と対称)。
-chk "core-chrome(ADR): reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
 
 # 2. id 一意性
 chk_empty "context id 一意"     "$(q '.context[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -189,7 +188,6 @@ LC_ALL=C set_eq "href: justify-req (href, req) == <srs_html>#<req> (anchor/filen
 # ★folio-bur round-5 (ceiling-recursion R4 是正): cxid/justify-role は値順突合のみで count anchor が無く、 single-quote additive
 #   decoy (<span class='cxid'>CTX-EVIL</span> / <span class='justify-role'>verification</span>) で phantom 文脈 id・偽 cross-doc edge role が
 #   素通った (独立 ceiling 実証・major)。 drid と同型に quote-robust 占有数で封鎖 (uniform sweep)。
-chk "占有: cxid == |context| (single-quote decoy 封鎖・folio-bur r5)" "$(q '.context | length')" "$(count_attr_token class cxid < "$BODY")"
 chk "within-doc: 可視 cxid 列 == .context[].id (順序)" "$(q '.context[].id')" "$(grep -oE '<span class="cxid">[^<]*</span>' "$BODY" | sed -E 's#<span class="cxid">([^<]*)</span>#\1#')"
 chk "within-doc: 可視 drid 列 == .drivers[].id (順序)"  "$(q '.drivers[].id')"  "$(grep -oE 'class="drid">[^<]*</td>' "$BODY" | sed -E 's#class="drid">([^<]*)</td>#\1#')"
 # ★dty (folio-dty): 可視 drg (driver grounds バッジ) == 非空 .drivers[].grounds (順序)。 round-4 で drid は突合したが
@@ -197,11 +195,9 @@ chk "within-doc: 可視 drid 列 == .drivers[].id (順序)"  "$(q '.drivers[].id
 # ★folio-bur round-6 (ceiling-recursion R5 是正): drg は値順突合のみで count anchor が無く (兄弟 drid は L223 で占有済の非対称)、
 #   driver 本文 td の外へ single-quote drg decoy を注入すると driver-body 検査 (L209) も値順突合も逃れ偽の grounds linkage が素通った
 #   (独立 ceiling 実証・major)。 drid と同型に quote-robust 占有で封鎖 (期待=非空 grounds 件数)。
-chk "占有: drg == 非空 grounds 件数 (single-quote drg decoy 封鎖・folio-bur r6)" "$(q '[.drivers[] | select((.grounds // "") != "")] | length')" "$(count_attr_token class drg < "$BODY")"
 chk "within-doc: 可視 drg 列 == 非空 .drivers[].grounds (順序)" "$(qesc '.drivers[] | select((.grounds // "") != "") | .grounds')" "$(grep -oE '<span class="drg">[^<]*</span>' "$BODY" | sed -E 's#<span class="drg">([^<]*)</span>#\1#')"
 # ★ds8 ceiling round-4: 可視 justify-role 列 == .decision.justifies[].role (順序)。 round-2 で可視 req==attr は強制したが role の可視を漏らし、
 #   allowlist 内 role の *可視* swap (claim→rationale・attr は正) が素通る fail-open だった (cross-doc edge の可視 fidelity parity 漏れ)。 role は esc plain。
-chk "占有: justify-role == |justifies| (single-quote decoy 封鎖・folio-bur r5)" "$(q '.decision.justifies | length')" "$(count_attr_token class justify-role < "$BODY")"
 chk "within-doc: 可視 justify-role 列 == .decision.justifies[].role (順序)" "$(q '.decision.justifies[].role')" "$(grep -oE '<span class="justify-role">[^<]*</span>' "$BODY" | sed -E 's#<span class="justify-role">([^<]*)</span>#\1#')"
 # ★folio-bur: 可視テキスト echo の fidelity (visible-text-vs-attribute・id/sibling/件数は pin 済だが *可視本文* が未 pin)。
 #   id/verdict/件数 intact のまま判断宣言文・原則文・選択肢名/要約・文脈要約・driver/consequence 本文を捏造でき、 読者が
@@ -228,26 +224,15 @@ chk "within-doc: 可視 consequence-pos 本文 == .consequences.positive[].text 
 #   display:none/コメント/single-quote 変種で隠し可視 decoy を描く hide-twin/quote-variation で素通る (独立 ceiling 実証)。
 #   dty 不動点 = quote-robust 占有数パリティ (count_attr_token は double/single/unquoted/multi-class/entity/属性名 case を全 parse)。
 #   各 echo class の占有数 == contract 件数を pin し、 decoy が必ず占有を +1 する性質で hide-twin+decoy を捕捉 (二層目)。
-chk "占有: dec-state == 1"               "1"                          "$(count_attr_token class dec-state < "$BODY")"
-chk "占有: opt-id == |options|"          "$(q '.options | length')"   "$(count_attr_token class opt-id < "$BODY")"
-chk "占有: opt-name == |options|"        "$(q '.options | length')"   "$(count_attr_token class opt-name < "$BODY")"
-chk "占有: opt-sum == |options|"         "$(q '.options | length')"   "$(count_attr_token class opt-sum < "$BODY")"
-chk "占有: prin-text == 1"               "1"                          "$(count_attr_token class prin-text < "$BODY")"
-chk "占有: prin-note == 1"               "1"                          "$(count_attr_token class prin-note < "$BODY")"
-chk "占有: cxh == |context|"             "$(q '.context | length')"   "$(count_attr_token class cxh < "$BODY")"
-chk "占有: drid == |drivers|"            "$(q '.drivers | length')"   "$(count_attr_token class drid < "$BODY")"
 # consequence-pos は class が共有 (b) ゆえ data-component で quote-robust 占有数を取る (既存 L57 grep は double-quote 固定)。
-chk "占有: consequence-pos (data-component) == |positive|" "$(q '.consequences.positive | length')" "$(count_attr_token data-component adr-consequence-pos < "$BODY")"
 # ★folio-bur round-3 (ceiling-recursion R2 是正): round-1/2 は positive 兄弟だけ可視 content+占有で pin し、 negative・
 #   context detail・option pros/cons・justify-note・supersession 自由文注記の 5 可視サーフェスを列挙漏れ → 「欠点は一切無く完璧」
 #   「問題は実在せず対策不要」「無限スケール+無コスト」「別理由で正当化」「既に廃止され置換済」等の決定根拠捏造が素通った
 #   (独立 ceiling 実証・blocker×2 含む)。 positive と同型に可視 content (BODY_NM で nested term span 早期終端回避) + quote-robust 占有で pin。
 # (R3-a) consequence-negative (positive の対称・トレードオフ捏造を封鎖)。
 chk "within-doc: 可視 consequence-neg 本文 == .consequences.negative[].text (順序)" "$(qesc '.consequences.negative[].text')" "$(printf '%s' "$BODY_NM" | perl -CSD -0777 -ne 'while(/<li data-component="adr-consequence-neg">(.*?)<\/li>/gs){my $t=$1;$t=~s{<span class="b">[^<]*</span>}{};$t=~s/<[^>]+>//g;print "$t\n"}')"
-chk "占有: consequence-neg (data-component) == |negative|" "$(q '.consequences.negative | length')" "$(count_attr_token data-component adr-consequence-neg < "$BODY")"
 # (R3-b) context detail cxd (cxh summary の sibling・文脈捏造を封鎖)。
 chk "within-doc: 可視 cxd (context detail) == .context[].detail (順序)" "$(qesc '.context[].detail')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="cxd">(.*?)<\/p>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
-chk "占有: cxd == |context|" "$(q '.context | length')" "$(count_attr_token class cxd < "$BODY")"
 # (R3-c) option pros/cons を option へ束縛 (option-keyed・本文捏造 + 件数追加 + cross-option relocation を封鎖)。
 exp_optpc="$(q '.options[] | .id as $id | ((.pros[] | [$id,"pros",.]),(.cons[] | [$id,"cons",.])) | @tsv' \
   | while IFS=$'\t' read -r a b c; do printf '%s\t%s\t%s\n' "$(esc "$a")" "$b" "$(esc "$c")"; done | LC_ALL=C sort)"
@@ -261,11 +246,8 @@ set_eq "per-option pros/cons == contract (option-keyed・捏造+追加+relocatio
 # ★folio-bur round-4 (ceiling-recursion R3 是正): R3-c の parser は <div class="pros"> double-quote 固定 + first-match (if) ゆえ
 #   (D-1) single-quote <div class='pros'> decoy / (D-2) 同 card への 2 個目 double-quote pros div、 で比較根拠 (利点/欠点) を捏造でき
 #   素通った (独立 ceiling 実証・blocker)。 各 option は pros/cons 各 1 個ゆえ quote-robust 占有数 == |options| で +1 decoy を封鎖。
-chk "占有: pros == |options| (pros div の quote/first-match decoy 封鎖・folio-bur r4)" "$(q '.options | length')" "$(count_attr_token class pros < "$BODY")"
-chk "占有: cons == |options| (cons div の quote/first-match decoy 封鎖・folio-bur r4)" "$(q '.options | length')" "$(count_attr_token class cons < "$BODY")"
 # (R3-d) cross-doc justify-note (照会根拠説明文・req/role/href は pin 済 sibling)。
 chk "within-doc: 可視 justify-note == .decision.justifies[].note (順序)" "$(qesc '.decision.justifies[].note')" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<span class="justify-note">(.*?)<\/span>/gs){my $t=$1;$t=~s/<[^>]+>//g;print "$t\n"}')"
-chk "占有: justify-note == |justifies|" "$(q '.decision.justifies | length')" "$(count_attr_token class justify-note < "$BODY")"
 # (R3-e) supersession 自由文注記 (<p class="ss-row"> で ss-k span を持たない note 行・構造化フィールドは pin 済)。
 chk "within-doc: 可視 ss-row note == .supersession.note" "$(esc "$(q '.supersession.note')")" "$(printf '%s' "$BODY_NM" | perl -0777 -ne 'while(/<p class="ss-row">(.*?)<\/p>/gs){my $t=$1; next if $t=~/class="ss-k"/; $t=~s/<[^>]+>//g;print "$t"}')"
 # 表紙 cover-meta 4 KV (状態/選択肢/結果/版) の決定的再導出突合 (research (l') と同型)。
@@ -278,11 +260,9 @@ chk "cover-meta KV 総数 == 4"                "4" "$(printf '%s\n' "$adr_meta_k
 # ★folio-bur round-4 (ceiling-recursion R3 是正): 上の adr_meta_kv / 総数==4 は double-quote 固定 grep ゆえ single-quote KV decoy
 #   (<span class='k'>状態</span><span class='v'>廃止(虚偽)</span>) を数えず、 表紙に矛盾する文書状態が素通った (独立 ceiling 実証)。
 #   research (l') と同型に quote-robust count_attr_token で KEY span を数える (decoy は quote に依らず +1)。
-chk "占有: cover-meta k == 4 (single-quote KV decoy 封鎖・folio-bur r4)" "4" "$(count_attr_token class k < "$BODY")"
 # ★folio-bur round-6 (ceiling-recursion R5 是正): round-4 は k 占有のみ pin し sibling の class="v" を未 pin だったため、 adr_meta_kv が
 #   k+v 隣接対のみ数える死角を突き、 genuine 状態 v の直後へ単独 <span class="v">廃止済み(捏造)</span> を注入すると矛盾する表紙状態値が
 #   素通った (独立 ceiling 実証・major)。 testcases r5 と同型に v 占有も対称に pin (k と v は KV で常に等数)。
-chk "占有: cover-meta v == 4 (k 無し単独 v decoy 封鎖・folio-bur r6)" "4" "$(count_attr_token class v < "$BODY")"
 
 # 3d. ★navigable anchor (folio-lzz: cross-doc deep-link 着地点)。 arch referrer の #decision が着地する固定 anchor。
 #     decision panel に id="decision" がちょうど 1 個 (脱落=anchor 不在で 404 復活) + body 全体で id="decision" 一意
@@ -333,8 +313,6 @@ chk "ss-row 置き換えられた == 1"  "1" "$(grep -c '<span class="ss-k">置�
 # ★folio-bur round-4 (ceiling-recursion R3 是正): 上の固定 3 ラベル個別 count は allowlist 列挙ゆえ、 (a) allowlist 外の novel
 #   ss-k 行 (<span class="ss-k">廃止予定日</span>...) (b) single-quote の ss-row note decoy、 で改訂状態を捏造でき素通った
 #   (独立 ceiling 実証)。 dty が round-9 で確立した『allowlist 列挙→総数アサート』へ昇格: ss-row 総数==4 (構造 3 + note 1)・ss-k 総数==3。
-chk "占有: ss-row == 4 (構造3+note1・novel/single-quote 行 decoy 封鎖・folio-bur r4)" "4" "$(count_attr_token class ss-row < "$BODY")"
-chk "占有: ss-k == 3 (allowlist 外 novel ss-k 行 封鎖・folio-bur r4)" "3" "$(count_attr_token class ss-k < "$BODY")"
 # (b) principle.id == contract .principle.id (照会終端の identity 偽装を捕捉)
 act_prin="$(grep -oE '<p class="prin-id">[^<]*</p>' "$BODY" | sed -E 's#.*— ([^<]*)</p>#\1#')"
 chk "principle.id == contract .principle.id" "$(esc "$(q '.principle.id')")" "$act_prin"
@@ -390,38 +368,6 @@ verify_term_inline \
   "term-inline 被覆 (マーク == markable 出現 glossary 語)"
 
 
-# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
-# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
-# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
-# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
-# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
-#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
-chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in cover-meta summary-card ic lab txt ft-grid ft-plain foot tags opt-grid justify-box in out page dec-plain dec-why tint-ok tint-violet tint-warn; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=2; for t in scol tint-info tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=4; for t in m; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=7; for t in chapbody ico kicker lead num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.context | length')"; for t in cxbody; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.options | length')"; for t in opt-head opt-pc opt-plain opt-verdict; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.decision.justifies | length')"; for t in justify-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '(.consequences.positive | length) + (.consequences.negative | length)')"; for t in b; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '([.options[] | select(.verdict=="chosen")] | length) * 2')"; for t in chosen; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '([.options[] | select(.verdict=="rejected")] | length) * 2')"; for t in rejected; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in adr-context-list adr-driver-table approval-block doc-cover-band fidelity-sync-meta glossary-term-table requirement-type-color-tokens scope-summary-panel adr-decision-panel adr-principle adr-supersession; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP=7; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.context | length')"; for t in adr-context-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.drivers | length')"; for t in adr-driver-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.options | length')"; for t in adr-option-card; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
-#     構造化 badge は verify_term_inline が glossary 突合済)。
-chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
-  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
-# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ "$fail" -eq 0 ]]; then

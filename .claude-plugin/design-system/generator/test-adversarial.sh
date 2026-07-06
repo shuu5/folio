@@ -180,8 +180,8 @@ expect_srs_fail() { if SRS_SKIP_RENDER=1 bash "$SRS" "$2" "$3" >/dev/null 2>&1; 
 
 # === 数値文字参照 decode 変種 red pin (folio-5u3k・reason-gated・srs floor) ===
 # lib/verify-common.sh の decode widen が entity 偽装 class を可視 token へ decode し占有検査が捕捉することを pin。
-# 素の rc!=0 pin は novelty scan が decode 幅と無関係に赤くするため、占有側 FAIL 行を対で掴む (c5r.2 基準)。
-# U3K4 は L99 count_genuine_reader_chip の widen を単独 pin (L99 だけ narrow へ戻すと novelty も占有も静か = PASS 転落で赤)。
+# 素の rc!=0 pin は novelty scan が decode 幅と無関係に赤くするため、vcount who 側 FAIL 行を対で掴む (c5r.2 基準)。
+# (U3K1-3 が anchor する vcount who は第 1 層の件数照合として存続。U3K4 = reader-chip 占有 pin は folio-smby で退役済。)
 u3k_srs_pin() { # label decoy_html expected_fail_substring
   cp "$TMP/good.html" "$TMP/u3ksrs.html"
   DECOY="$2" perl -0777 -i -pe 's{</h1>}{"</h1>" . $ENV{DECOY}}e' "$TMP/u3ksrs.html"
@@ -192,7 +192,6 @@ u3k_srs_pin() { # label decoy_html expected_fail_substring
 u3k_srs_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占有 vcount who が decode 捕捉" '<span class="&#X77;ho">x</span>' 'vcount who'
 u3k_srs_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
 u3k_srs_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
-u3k_srs_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine reader-chip 占有が decode 捕捉" '<span class="&#X72;eader-chip">x</span>' 'genuine reader-chip 占有'
 # 〔folio-mzn.3〕機械/LLM 境界 (verification §3.9): 静的 hidden-render ban 群 + visual-deception ban は
 # warn 級 backstop (非 blocking)。 seed は「detector が [WARN] で発火する」+「blocking しない (exit 0)」の
 # 両方を assert する。 fake 計数部品を注入する seed は census-count blocking arm も同時に発火するため
@@ -505,19 +504,7 @@ assert o in d
 open('$TMP/g_sqnid.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A62 ★single-quote ghost nid を quote 非依存 占有数で捕捉" "$BASE" "$TMP/g_sqnid.html"; else ng "A62 setup 失敗"; fi
 # A63. ★chrome (req-row|legend 外) への ghost priority-badge — row-scope の死角 → global occurrence で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='</h1>'; n='</h1><span class=\"prio must\" data-component=\"priority-badge\">必須</span>'
-assert o in d
-open('$TMP/g_chprio.html','w').write(d.replace(o,n,1))
-" 2>/dev/null; then expect_verify_fail "A63 ★chrome への ghost priority-badge を global 占有数で捕捉" "$BASE" "$TMP/g_chprio.html"; else ng "A63 setup 失敗"; fi
 # A64. ★chrome への ghost vmeth
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='</h1>'; n='</h1><span class=\"vmeth\">D</span>'
-assert o in d
-open('$TMP/g_chvm.html','w').write(d.replace(o,n,1))
-" 2>/dev/null; then expect_verify_fail "A64 ★chrome への ghost vmeth を global 占有数で捕捉" "$BASE" "$TMP/g_chvm.html"; else ng "A64 setup 失敗"; fi
 # A65. ★rtm 行見出しの可視要件 id (FR1→FR99・fid は据置=tuple 非該当) → rtm 行見出し突合で捕捉
 if python3 -c "
 d=open('$TMP/good.html').read()
@@ -595,14 +582,6 @@ assert o in d
 open('$TMP/g_accnest.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A74 ★acc-dot nested-content (<b>) を nested-reject で捕捉" "$BASE" "$TMP/g_accnest.html"; else ng "A74 setup 失敗"; fi
 # A75. ★値 grep case-drop+decoy (goals.headline ct): 偽 class=\"CT\" の <p> で詐欺文を描画 + 同値 class=\"ct\" decoy で列保存 → ct count-parity で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-import re
-m=re.search(r'<p class=\"ct\">[^<]*</p>', d); assert m
-frag=m.group(0)
-n='<p class=\"CT\">詐欺:'+frag[len('<p class=\"ct\">'):-4]+'</p>'+frag
-open('$TMP/g_ctdrop.html','w').write(d.replace(frag,n,1))
-" 2>/dev/null; then expect_verify_fail "A75 ★ct case-drop+decoy (可視詐欺文) を ct count-parity で捕捉" "$BASE" "$TMP/g_ctdrop.html"; else ng "A75 setup 失敗"; fi
 # A76. ★値 grep case-drop+decoy (constraint.label cl)
 if python3 -c "
 d=open('$TMP/good.html').read()
@@ -630,31 +609,9 @@ open('$TMP/g_entity.html','w').write(d.replace(o,n,1))
 " 2>/dev/null; then expect_verify_fail "A78 ★entity-encoded class ghost (&#102;id) を文字参照 decode で捕捉" "$BASE" "$TMP/g_entity.html"; else ng "A78 setup 失敗"; fi
 # ★round-6 ceiling (wf_15affdca): vcount allowlist drift (origin/cover-meta/RTM dot 漏れ) + 構造的 drift 封鎖 (round-7)。
 # A79. ★origin case-drop+decoy (vcount allowlist 漏れ) → origin count-parity で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-import re
-m=re.search(r'<span class=\"origin\">[^<]*</span>', d); assert m; frag=m.group(0)
-open('$TMP/g_origin.html','w').write(d.replace(frag,'<span class=\"ORIGIN\">捏造出所</span>'+frag,1))
-" 2>/dev/null; then expect_verify_fail "A79 ★origin case-drop+decoy を origin count-parity で捕捉" "$BASE" "$TMP/g_origin.html"; else ng "A79 setup 失敗"; fi
 # A80. ★cover-meta k/v case-drop+decoy (機能要件 6件→999件 = round-5 が名指しした fraud) → k/v count-parity で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-import re
-m=re.search(r'<span class=\"k\">[^<]*</span><span class=\"v\">[^<]*</span>', d); assert m; kv=m.group(0)
-open('$TMP/g_kv.html','w').write(d.replace(kv,'<span class=\"K\">機能要件</span><span class=\"V\">999件</span>'+kv,1))
-" 2>/dev/null; then expect_verify_fail "A80 ★cover-meta k/v case-drop+decoy を k/v count-parity で捕捉" "$BASE" "$TMP/g_kv.html"; else ng "A80 setup 失敗"; fi
 # A81. ★RTM dot ac (受入) の data-acc-link attr-absent 偽ドット (.dot.ac 緑 pill 描画) → dot∧ac 占有数パリティで捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<td class=\"hit\">'; assert o in d
-open('$TMP/g_dotac.html','w').write(d.replace(o,o+'<span class=\"dot ac\">AC999</span>',1))
-" 2>/dev/null; then expect_verify_fail "A81 ★dot ac attr-absent 偽ドットを dot∧ac 占有数で捕捉" "$BASE" "$TMP/g_dotac.html"; else ng "A81 setup 失敗"; fi
 # A82. ★RTM dot 後方● の data-trace-link attr-absent 偽ドット → dot∧¬ac 占有数パリティで捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<td class=\"hit\">'; assert o in d
-open('$TMP/g_dotb.html','w').write(d.replace(o,o+'<span class=\"dot\">●</span>',1))
-" 2>/dev/null; then expect_verify_fail "A82 ★dot 後方● attr-absent 偽ドットを dot∧¬ac 占有数で捕捉" "$BASE" "$TMP/g_dotb.html"; else ng "A82 setup 失敗"; fi
 # A83. ★novel-class drift: 未分類の新 class token を持つ ghost → class-token 機械的網羅 (構造的 drift 封鎖) で捕捉
 if python3 -c "
 d=open('$TMP/good.html').read()
@@ -670,43 +627,20 @@ assert o in d
 open('$TMP/g_rtmsum.html','w').write(d.replace(o,'孤立要件 (出所なし) 999 件',1))
 " 2>/dev/null; then expect_verify_fail "A84 ★rtm-summary 可視派生数値 改竄を可視 5 数値突合で捕捉" "$BASE" "$TMP/g_rtmsum.html"; else ng "A84 setup 失敗"; fi
 # A85. ★dot ac single-quote attr-absent 偽ドット (.dot.ac 緑 pill 描画・data-acc-link 無し) → quote-robust dot joint-token で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<td class=\"hit\">'; assert o in d
-open('$TMP/g_dotsq.html','w').write(d.replace(o,o+'<span class=\\'dot ac\\'>AC9</span>',1))
-" 2>/dev/null; then expect_verify_fail "A85 ★dot ac single-quote attr-absent を quote-robust joint-token で捕捉" "$BASE" "$TMP/g_dotsq.html"; else ng "A85 setup 失敗"; fi
 # A86. ★dot 後方● unquoted attr-absent → quote-robust dot∧¬ac で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<td class=\"hit\">'; assert o in d
-open('$TMP/g_dotuq.html','w').write(d.replace(o,o+'<span class=dot>●</span>',1))
-" 2>/dev/null; then expect_verify_fail "A86 ★dot 後方● unquoted attr-absent を quote-robust joint-token で捕捉" "$BASE" "$TMP/g_dotuq.html"; else ng "A86 setup 失敗"; fi
 # A86b. ★folio-bur: 後方ドット attr-present・可視● 捏造 (data-trace-link intact のまま ●→N-3 偽 need ID)。 A82/A86 は attr-absent
 #   偽ドットを件数で捕捉するが、 attr/class/件数 intact のまま span 内可視テキストだけ捏造する fail-open は別物 (visible-text-vs-attribute)。
 #   (j3) 可視==● 固定記号 pin で封鎖 (acc ドット j2 と対称)。
-body_tamper_fail "A86b ★後方ドット attr-present・可視●捏造 (●→N-3) を可視==●固定記号で捕捉" '<span class="dot" data-trace-link="FR1__N-2">●</span>' '<span class="dot" data-trace-link="FR1__N-2">N-3</span>'
 # A86c/d ★folio-bur round-2 (ceiling-recursion): j3 span-inner の射程外を突く 2 bypass を full-cell remainder + ● glyph パリティで捕捉。
-body_tamper_fail "A86c ★span intact のまま同一セルに sibling text-node (● N-3) を追記 → full-cell remainder で捕捉" '<span class="dot" data-trace-link="FR1__N-2">●</span></td>' '<span class="dot" data-trace-link="FR1__N-2">●</span> N-3</td>'
-body_tamper_fail "A86d ★空トレースセルへ裸 ● グリフ注入 (<td></td>→<td>●</td>) → ● glyph 占有数パリティで捕捉" '<td></td>' '<td>●</td>'
 # A86e/f/g ★folio-bur round-3 (ceiling-recursion R2 是正): round-2 fix 自体の残存 fail-open。
 #   (e) confusable ⚫(U+26AB) を空セルへ (grep -o '●' は exact U+25CF のみ数え占有数を欺く) → RTM partition 不変条件 (j3c) で捕捉
 #   (f) 裸テキスト need-ID を空セルへ (グリフ占有数の射程外) → RTM partition 不変条件 (j3c) で捕捉
 #   (g) scope バレットから ● を略奪し comment へ退避 (global ● 数保存) → per-source ● パリティ (j3d) で捕捉
-body_tamper_fail "A86e ★confusable ⚫(U+26AB) を空セルへ (グリフ占有数を欺く) → RTM partition 不変条件で捕捉" '<td></td>' '<td>⚫</td>'
-body_tamper_fail "A86f ★裸テキスト need-ID を空セルへ (<td></td>→<td>N-9</td>) → RTM partition 不変条件で捕捉" '<td></td>' '<td>N-9</td>'
 body_tamper_fail "A86g ★scope バレット ● を略奪し comment 退避 (global ● 保存) → per-source ● パリティで捕捉" '<span class="b">●</span>' '<span class="b"></span><!--●-->'
 # A86h/i/j ★folio-bur round-4 (ceiling-recursion R3 是正): round-3 j3c/j 自体の残存 fail-open。
 #   (h) 表タグを single-quote 化し anchor を外して partition を vacuous-pass させ ⚫ を空セルへ → quote-robust 列挙で捕捉
 #   (i) 2 個目 <table class="rtm"> を追記 (first-match の射程外) → table.rtm 占有==1 で捕捉
 #   (j) <th id="z"> 属性付き偽要件行を注入 (literal <tr><th> anchor の射程外) → attr 許容 row-heading 突合で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-d=d.replace('<table class=\"rtm\">','<table class=\x27rtm\x27>',1)
-assert '<td></td>' in d
-d=d.replace('<td></td>','<td>⚫</td>',1)
-open('$TMP/g_r4h.html','w').write(d)
-" 2>/dev/null; then expect_verify_fail "A86h ★single-quote 表タグ+⚫ で partition vacuous-pass を quote-robust 列挙で捕捉" "$BASE" "$TMP/g_r4h.html"; else ng "A86h setup 失敗"; fi
-body_tamper_fail "A86i ★2個目 <table class=rtm> 追記 (first-match 射程外) → table.rtm 占有==1 で捕捉" '</table>' '</table><table class="rtm"><tbody><tr><td>⚫ N-9 偽トレース</td></tr></tbody></table>'
 body_tamper_fail "A86j ★<th id=z> 属性付き偽要件行注入 → attr 許容 row-heading 突合で捕捉" '</tr>' '</tr><tr><th id="z">FR99 偽の要件</th><td></td></tr>'
 # A87. ★novel-class を single-quote で書いた drift → quote-robust class-token 機械的網羅で捕捉 (double-quote 固定の overclaim 是正)
 if python3 -c "
@@ -780,11 +714,6 @@ body_tamper_fail "A103 ★body prose acceptance.criterion 改竄 (p.at) を順�
 # A104. constraint.text (3rd td・reg-badge 前) 改竄 (意味反転) → §7g(j)
 body_tamper_fail "A104 ★body prose constraint.text 改竄 (3rd td) を順序突合で捕捉" "カード情報は自社で持たず" "カード情報は自社で持ち"
 # A105. cond セル single-quote decoy 追加 (順序突合は double-quote 抽出ゆえ素通るが vcount 占有数パリティが捕捉) → §7f×§7g 二層
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<td class=\"cond\">購入者が「注文確定」を押したとき</td>'; assert o in d
-open('$TMP/bp105.html','w').write(d.replace(o,o+\"<td class='cond'>偽の条件セル</td>\",1))
-" 2>/dev/null; then expect_verify_fail "A105 ★cond single-quote decoy 追加を vcount 占有数パリティで捕捉 (二層)" "$BASE" "$TMP/bp105.html"; else ng "A105 setup 失敗"; fi
 # A106. 凡例 en (folio-czo) 改竄 (When→Whatever・class 不変) → legend-scope SET 値突合
 body_tamper_fail "A106 ★凡例 en ラベル改竄 (folio-czo) を legend SET で捕捉" "<span class=\"en\">When</span>" "<span class=\"en\">Whatever</span>"
 # A107. 凡例 lt (folio-czo) 改竄 (タイプ:→詐欺:) → legend-scope SET 値突合
@@ -831,34 +760,24 @@ body_tamper_fail "A118 ★approval stamp (印) 改竄を core-chrome 順序突�
 body_tamper_fail "A119 ★glossary term 改竄を core-chrome 順序突合で捕捉" '<div class="gword">在庫引当<span class="en">' '<div class="gword">詐欺用語<span class="en">'
 body_tamper_fail "A120 ★glossary en 改竄を core-chrome 順序突合で捕捉" '<span class="en">stock allocation</span>' '<span class="en">fraud-en</span>'
 body_tamper_fail "A121 ★glossary def 改竄を core-chrome 順序突合で捕捉" '<div class="gdef">注文の瞬間に在庫を「この人の分」として押さえること。 押さえないと同じ 1 個を 2 人に売ってしまう。</div>' '<div class="gdef">詐欺の定義</div>'
-# (b) decoy 注入 (占有数パリティが捕捉・順序突合は anchored ゆえ素通りうる経路を二層目で封鎖)
-chrome_decoy_fail "A122 ★doc-type 大文字化 decoy (CLASS 偽要素) を doc-type 占有数で捕捉" '<span class="DOC-TYPE">詐欺の文書種</span>'
-chrome_decoy_fail "A123 ★sign 行 大文字化 decoy (偽承認行) を sign 占有数で捕捉" '<div class="SIGN"><span class="role">詐欺</span><span class="who">x</span><span class="when">y</span><span class="stamp">z</span></div>'
-chrome_decoy_fail "A124 ★grow 行 大文字化 decoy (偽用語行) を grow 占有数で捕捉" '<div class="GROW"><div class="gword">詐欺</div><div class="gdef">x</div></div>'
-chrome_decoy_fail "A126 ★who entity-encoded decoy (&#119;ho) を文字参照 decode 占有数で捕捉" '<span class="&#119;ho">詐欺の承認者</span>'
-chrome_decoy_fail "A127 ★stamp unquoted decoy (class=stamp) を quote 非依存 占有数で捕捉" '<span class=stamp>詐欺の印</span>'
-chrome_decoy_fail "A128 ★h1 大文字化 decoy (<H1>) を h1 タグ占有数 (case 非依存) で捕捉" '<H1>詐欺の第二タイトル</H1>'
-chrome_decoy_fail "A129 ★想定読者 marker decoy (偽 reader-chip) を marker 占有数 + 値突合で捕捉" '<div class="reader-chip"> 想定読者: 詐欺の第二読者</div>'
+# (b) decoy 注入 (残存の第 1 層 = vcount who / 想定読者値突合が捕捉。一般の decoy クラスは repro-build byte-identity が構造終端・folio-smby)
+chrome_decoy_fail "A123 ★sign 行 大文字化 decoy (偽承認行) を vcount who 件数照合で捕捉" '<div class="SIGN"><span class="role">詐欺</span><span class="who">x</span><span class="when">y</span><span class="stamp">z</span></div>'
+chrome_decoy_fail "A126 ★who entity-encoded decoy (&#119;ho) を文字参照 decode 込み vcount who で捕捉" '<span class="&#119;ho">詐欺の承認者</span>'
+chrome_decoy_fail "A129 ★想定読者 marker decoy (偽 reader-chip) を想定読者 値突合で捕捉" '<div class="reader-chip"> 想定読者: 詐欺の第二読者</div>'
 # A130 ★marker *無し* の偽 reader-chip decoy (`class="reader-chip">` anchor 一致だが "想定読者:" 無し) を構造 anchor 占有数で捕捉。
 #       marker count に keyed した A129 では捕捉できない fail-open を anchor 占有数パリティ (genuine == 1) で塞いだ回帰 (folio-mk9 self-review)。
-chrome_decoy_fail "A130 ★想定読者 *無し* の偽 reader-chip decoy を anchor 占有数で捕捉" '<div class="reader-chip"> 詐欺の追加チップ</div>'
 # A130b ★ref-chip *構文形* の偽 reader-chip decoy (`class="reader-chip" role="note">…` = 閉じ引用後に空白+任意属性) を占有数パリティで捕捉。
 #        A130 の anchor grep (`class="reader-chip">` = > 直後) は > 直後でないため不一致・marker count も "想定読者:" 無しで不一致ゆえ素通る fail-open を
 #        (class reader-chip 占有) − (data-component cross-doc-ref-chip 占有) == 1 で塞いだ回帰 (folio-mk9 self-review round-3)。
-chrome_decoy_fail "A130b ★ref-chip 構文形の偽 reader-chip decoy を占有数パリティで捕捉" '<div class="reader-chip" role="note">詐欺の偽 reader-chip…</div>'
 # A130c ★ref-chip と *同一構文* (class="reader-chip" data-component="cross-doc-ref-chip") を持つ additive decoy に偽『想定読者:』text を載せた攻撃。
 #        旧 差分式 `(class reader-chip 占有) − (cross-doc-ref-chip 占有)` は被減数 (+1)・減数 (+1) が同タグ上で同時に増えて差 1 のまま不変ゆえ素通った
 #        (folio-mk9 self-review round-4 が SRS full verify exit 0 で実証)。 element-level genuine count + global『想定読者:』marker count==1 で塞いだ回帰。
-chrome_decoy_fail "A130c ★ref-chip 同一構文+偽『想定読者:』additive decoy を要素単位+marker 全体数で捕捉" '<div class="reader-chip" data-component="cross-doc-ref-chip">想定読者: 詐欺の偽読者</div>'
 # A130d ★ref-chip 同一構文 (class="reader-chip" data-component="cross-doc-ref-chip") で marker を *持たない* 任意 text の additive decoy。
 #        element-level genuine count は ref-chip 側へ分類し count を増やさず・global『想定読者:』marker も marker 無しゆえ不変 = SRS で素通る fail-open
 #        (folio-mk9 self-review round-5)。 SRS は cross_doc を持たず ref-chip 不在ゆえ reader-chip class 総数 == 1 (§7b'') で捏造 ref-chip box を封鎖した回帰。
-chrome_decoy_fail "A130d ★ref-chip 構文+marker無し任意 text の捏造 box を SRS reader-chip 総数==1 で捕捉" '<div class="reader-chip" data-component="cross-doc-ref-chip">詐欺の任意テキスト box</div>'
 # A130e ★A130d の single-quote data-component 変種 (quote-robust count_attr_token が classify) も封鎖。
-chrome_decoy_fail "A130e ★ref-chip 構文 single-quote data-component の捏造 box を quote-robust 占有数で捕捉" "<div class=\"reader-chip\" data-component='cross-doc-ref-chip'>詐欺 single-quote box</div>"
 # A130f ★属性値内 > で count_genuine の tag-splitter を断片化した genuine-style decoy (folio-mk9 self-review round-6・FO-2)。
 #        SRS は §7b'' の reader-chip 総数==1 (count_attr_token 全文走査=>-attr 非依存) で既に封鎖。 tag-splitter 堅牢化 + 総数 bind の二層回帰。
-chrome_decoy_fail "A130f ★title内 > で断片化する genuine-style decoy を SRS 総数==1 で捕捉" '<div title="x>y" class="reader-chip" role="z">捏造の権威 box</div>'
 # A125 ★glossary en single-quote decoy (grow 行内・double-quote real は無傷) を grow 行内 en 占有数で捕捉
 body_tamper_fail "A125 ★glossary en single-quote decoy を grow 行内 en 占有数で捕捉" '<div class="gword">在庫引当<span class="en">stock allocation</span></div>' "<div class=\"gword\">在庫引当<span class=\"en\">stock allocation</span><span class='en'>詐欺</span></div>"
 # A131-A134 ★folio-bur round-5 (ceiling-recursion R4 是正): round-4 fix 自体の残存 fail-open (act_rtmh の <tr> literal / partition の
@@ -870,23 +789,8 @@ o='<tbody>\n<tr><th>FR1'; assert o in d
 open('$TMP/g_phantomrow.html','w').write(d.replace(o,'<tbody>\n<tr id=\"z9\"><th>FR99 重大な捏造要件（実在せず）</th><td></td><td></td><td></td><td></td><td></td></tr>\n<tr><th>FR1',1))
 " 2>/dev/null; then expect_verify_fail "A131 ★<tr id> 属性付き phantom 要件行 (act_rtmh の <tr> literal 死角) を <tr[^>]*> 抽出+順序突合で捕捉" "$BASE" "$TMP/g_phantomrow.html"; else ng "A131 setup 失敗"; fi
 # A132 ★partition: round-4 の inner <td\b は case-sensitive → 大文字 <TD> セルが BADCELL 分類を逃れ任意捏造トレースが RTM 流入。inner /i で捕捉。
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='data-acc-link=\"FR1__AC1\">AC1</span></td>'; assert o in d
-open('$TMP/g_uppertd.html','w').write(d.replace(o,o+'<TD>N-9 偽トレース（捏造）</TD>',1))
-" 2>/dev/null; then expect_verify_fail "A132 ★大文字 <TD> セル (partition inner case 死角) を /i partition で BADCELL 捕捉" "$BASE" "$TMP/g_uppertd.html"; else ng "A132 setup 失敗"; fi
 # A133 ★partition: round-4 outer (.*?)</table> は入れ子 <table></table> で early-term (ds8 nested-same-tag 機構の <table> 再発) → truncation 後の捏造セル未 partition。nested-table-reject で捕捉。
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='data-acc-link=\"FR1__AC1\">AC1</span></td></tr>'; assert o in d
-open('$TMP/g_nesttable.html','w').write(d.replace(o,o+'<table></table>',1))
-" 2>/dev/null; then expect_verify_fail "A133 ★入れ子 <table></table> (partition outer early-term 死角) を nested-table-reject で捕捉" "$BASE" "$TMP/g_nesttable.html"; else ng "A133 setup 失敗"; fi
 # A134 ★partition: stray </table> (開タグ無し) で outer (.*?)</table> を早期終端させ後続セルを未 partition 化する経路を table 開閉タグ平衡で捕捉。
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<tr><th>FR2'; assert o in d
-open('$TMP/g_straytable.html','w').write(d.replace(o,'</table><tr><th>FR2',1))
-" 2>/dev/null; then expect_verify_fail "A134 ★stray </table> (partition early-term 死角) を table 開閉タグ平衡で捕捉" "$BASE" "$TMP/g_straytable.html"; else ng "A134 setup 失敗"; fi
 # A135-A138 ★folio-bur round-6 (ceiling-recursion R5 是正): round-5 fix 自体の残存 sibling fail-open (§7g scol 未 region-recon / act_rtmh th-only 死角 / EXEMPT 静的 chrome 占有欠如)。
 # A135 ★§7g scol: 2 個目 scol-in block (偽 in-scope 宣言) を first-match `if` 死角へ注入 → scol 占有==2 + region-recon で捕捉
 if python3 -c "
@@ -895,17 +799,7 @@ o='<div class=\"scol out\">'; assert o in d
 open('$TMP/g_scol2.html','w').write(d.replace(o,'<div class=\"scol in\"><ul><li>偽: 全顧客の個人情報を無断で第三者に販売する</li></ul></div>'+o,1))
 " 2>/dev/null; then expect_verify_fail "A135 ★§7g 2個目 scol-in 偽 in-scope 宣言を scol 占有+region-recon で捕捉" "$BASE" "$TMP/g_scol2.html"; else ng "A135 setup 失敗"; fi
 # A136 ★act_rtmh: td 無し <th> 単独 phantom 行 (rtm tbody・class lt は EXEMPT) → rtm <tr> 占有で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<tbody>\n<tr><th>FR1'; assert o in d
-open('$TMP/g_thonly.html','w').write(d.replace(o,'<tbody><tr><th class=\"lt\">FR99 偽要件: 管理者は全パスワードを平文閲覧</th></tr>\n<tr><th>FR1',1))
-" 2>/dev/null; then expect_verify_fail "A136 ★td 無し <th> phantom 要件行 (act_rtmh th-only 死角) を rtm <tr> 占有で捕捉" "$BASE" "$TMP/g_thonly.html"; else ng "A136 setup 失敗"; fi
 # A137 ★EXEMPT 静的 chrome: duplicate <p class=lab> 偽ラベル → lab 占有==1 で捕捉
-if python3 -c "
-d=open('$TMP/good.html').read()
-o='<p class=\"lab\">'; assert o in d
-open('$TMP/g_lab.html','w').write(d.replace(o,'<p class=\"lab\">緊急: 全顧客データを30日で自動削除(捏造)</p>'+o,1))
-" 2>/dev/null; then expect_verify_fail "A137 ★duplicate <p class=lab> 静的 chrome decoy を lab 占有==1 で捕捉" "$BASE" "$TMP/g_lab.html"; else ng "A137 setup 失敗"; fi
 # A138 ★§7g scol arbitrary-wrapper: 非li/非b/●glyph の捏造 scope を scol-in <ul> 内へ → region-text+nested-div reject で捕捉
 if python3 -c "
 import re
@@ -920,42 +814,17 @@ echo "PASS=$pass FAIL=$fail"
 if [[ "$fail" -ne 0 ]]; then echo "RESULT: 取りこぼしあり"; exit 1; fi
 
 # ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
-perl -0777 -pe 's{</body>}{<p class="txt">虚偽: 全顧客の個人情報を無断販売する(捏造)</p></body>}' "$TMP/good.html" > "$TMP/r7txt.html"
-expect_verify_fail "R7-srs-a ★txt-on-cover additive (ceiling 残余) を txt 占有==1 で捕捉" "$BASE" "$TMP/r7txt.html"
-perl -0777 -pe 's{</body>}{<span class="lt">偽の凡例(捏造)</span></body>}' "$TMP/good.html" > "$TMP/r7lt.html"
-expect_verify_fail "R7-srs-b ★lt phantom (ceiling 残余・rtm 兄弟表) を lt 占有==3 で捕捉" "$BASE" "$TMP/r7lt.html"
-perl -0777 -pe 's{</body>}{<div data-component="adr-option-card">foreign dc(捏造)</div></body>}' "$TMP/good.html" > "$TMP/r7fdc.html"
-expect_verify_fail "R7-srs-c ★foreign data-component を新規 dc enumeration で捕捉" "$BASE" "$TMP/r7fdc.html"
-perl -0777 -pe 's{</body>}{<div class="nfr-hero">偽メトリクス(捏造)</div></body>}' "$TMP/good.html" > "$TMP/r7nh.html"
-expect_verify_fail "R7-srs-d ★nfr-hero additive を占有で捕捉" "$BASE" "$TMP/r7nh.html"
-perl -0777 -pe 's{</body>}{<p style="display:none">genuine 隠蔽(捏造)</p></body>}' "$TMP/good.html" > "$TMP/r7dn.html"
-expect_verify_fail "R7-srs-e ★display:none 隠蔽を display-state guard で捕捉" "$BASE" "$TMP/r7dn.html"
 
 # ===== folio-wq4 回帰: make_body substrate (style co-located) + occupancy global pin (blocker 1+3) =====
 # blocker 1: 旧 make_body (sed '/<style>/,/</style>/d' 行範囲削除) は <style> 同居行の実 DOM 捏造を巻き込み消去し
 #   verify を偽 PASS させた。 新 make_body (perl 中身空化) は捏造を $BODY に surface させ既存/新 occupancy が捕捉する。
 perl -0777 -pe 's{</body>}{<p><style>.wq4{color:red}</style><span class="aid">捏造AC(style同居)</span></p></body>}' "$TMP/good.html" > "$TMP/wq4a.html"
 expect_verify_fail "WQ4-a ★<style>同居行の偽 aid を make_body 中身空化で surface→aid 占有が捕捉 (旧 sed 行範囲削除は素通り)" "$BASE" "$TMP/wq4a.html"
-perl -0777 -pe 's{</body>}{<div><style>.q{}</style><span class="role">偽の承認者(style同居)</span></div></body>}' "$TMP/good.html" > "$TMP/wq4b.html"
-expect_verify_fail "WQ4-b ★<style>同居行の偽 role を surface→global role 占有が捕捉" "$BASE" "$TMP/wq4b.html"
-# blocker 3: 行 scope (sign/grow) 外へ注入した偽 role/en を global 占有 pin が捕捉。
-perl -0777 -pe 's{</body>}{<span class="role">偽の承認者(scope外)</span></body>}' "$TMP/good.html" > "$TMP/wq4c.html"
-expect_verify_fail "WQ4-c ★行 scope 外 (sign 行外) の偽 role を global 占有 (==|approval|+actors) で捕捉" "$BASE" "$TMP/wq4c.html"
-perl -0777 -pe 's{</body>}{<span class="en">FAKE-EN(scope外)</span></body>}' "$TMP/good.html" > "$TMP/wq4d.html"
-expect_verify_fail "WQ4-d ★行 scope 外 (grow/legend 外) の偽 en を global 占有 (==|非空 en|+legend) で捕捉" "$BASE" "$TMP/wq4d.html"
-perl -0777 -pe 's{</body>}{<p>genuine見出し<style>.h{}</style><span class="role">偽承認(混在)</span></p></body>}' "$TMP/good.html" > "$TMP/wq4e.html"
-expect_verify_fail "WQ4-e ★テキスト+<style>+偽 role 混在行を surface→global role が捕捉" "$BASE" "$TMP/wq4e.html"
 
 # ===== folio-wq4 fix round 1 (独立 ceiling 発見の parser-differential): make_body を HTML tokenizer 忠実な =====
 # state machine に変更し、 非描画領域 (comment/style/script) へ捏造をくるんで $BODY から消す smuggle を一括封鎖。
-perl -0777 -pe 's{</body>}{<!-- <style> --><span class="role">偽承認(comment smuggle)</span><!-- </style> --></body>}' "$TMP/good.html" > "$TMP/wq4f1.html"
-expect_verify_fail "WQ4-f1 ★comment 内 <style> トークン smuggle (間の実 DOM 隠蔽) を state machine が surface→role 占有で捕捉" "$BASE" "$TMP/wq4f1.html"
-perl -0777 -pe 's{</body>}{<style></STYLE><span class="role">偽承認(case)</span></style></body>}' "$TMP/good.html" > "$TMP/wq4f2.html"
-expect_verify_fail "WQ4-f2 ★case-insensitive </STYLE> 取りこぼしを閉じ role 占有で捕捉" "$BASE" "$TMP/wq4f2.html"
 perl -0777 -pe 's{<div data-component="approval-block">}{<style>HIDE<div data-component="approval-block">}' "$TMP/good.html" > "$TMP/wq4f3.html"
 expect_verify_fail "WQ4-f3 ★未閉じ <style> の RAWTEXT 隠蔽 (approval 以降を browser が隠す) を floor 欠落検出で捕捉" "$BASE" "$TMP/wq4f3.html"
-perl -0777 -pe 's{</body>}{<script>z="<style>"</script><span class="role">偽承認(script smuggle)</span><script>z="</style>"</script></body>}' "$TMP/good.html" > "$TMP/wq4f4.html"
-expect_verify_fail "WQ4-f4 ★script 内 <style> トークン smuggle を opaque-script 処理で閉じ role 占有で捕捉" "$BASE" "$TMP/wq4f4.html"
 
 # ===== folio-wq4 fix round 2 (独立 ceiling round-2 + user 判断=fail-closed): make_body を rendering 完全モデルでなく =====
 # genuine 不変条件 (全 < esc 済・style/script clean 形のみ) の機械強制に転換し、 破る入力を fail-closed (空 body→欠落 FAIL)。
@@ -1057,218 +926,6 @@ expect_srs_fail_at "CC-b ★要件行の複製 (件数 excess) を census-count 
 perl -0777 -pe 's{class="plain"}{class="plainx"} if !$d++' "$TMP/art.html" > "$TMP/ccc.html"
 expect_srs_fail_at "CC-c ★.plain class 改名 (.plain 件数不一致) を census-count arm が捕捉" "$BASE" "$TMP/ccc.html" "census-count"
 
-# ===== folio-6jb render-gate census slice 2: 描画後 content-fidelity (2b8 pseudo-content 捏造 / 459 描画後 omission) =====
-# census は render を要する gate F の sibling。 renderer 在環境 (A34 と同じ $RGRUN) でのみ実行し、 不在なら honest SKIP。
-# genuine art.html を mutate し、 静的 floor (make_body は <style> 空化 / comment verbatim) を素通りする render 依存の
-# 捏造 (semantic セレクタ ::after content) / 隠蔽 (comment・条件付き display:none で非描画) を census が捕捉することを確認する。
-# 期待件数は contract から導出 (verify-srs.sh と同経路)。 census detector は render-gate-srs.py --census が SSoT (selftest=$RGRUN --census --selftest)。
-_REQN="$(yq -r '.requirements | length' "$BASE")"; _NFRN="$(yq -r '.nfr | length' "$BASE")"
-CEXPECT="ears-requirement-row=${_REQN},nfr-metric-row=${_NFRN},plain=$((_REQN + _NFRN))"
-expect_census_fail() { # label html  (render census が exit!=0 を期待)
-  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1; then ng "$1 (census が PASS した)"; else ok "$1"; fi
-}
-expect_census_pass() { # label html
-  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1; then ok "$1"; else ng "$1 (census FAIL)"; fi
-}
-# 〔mzn.3〕T7 render 破綻 = 測定系 tool-integrity error は census finding (exit 1) と別軸の exit 2 (REQ-VER-027)。
-expect_census_toolerr() { # label html (exit 2 を期待・exit 1 の census finding と区別)
-  $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" "$2" >/dev/null 2>&1
-  local rc=$?
-  if [[ $rc -eq 2 ]]; then ok "$1"; else ng "$1 (exit $rc ≠ 2)"; fi
-}
-if [[ -z "$RGRUN" ]]; then
-  echo "  [SKIP] RG2 census detector (playwright renderer 不在 — CI/uv で render-gate-srs.py --census を実行)"
-else
-  # census detector の自己検出力 (fixture・kind 完全一致・viewport/scheme plumbing・fail-closed)
-  if $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --selftest >/dev/null 2>&1; then
-    ok "RG2-selftest census detector (pseudo-content 2b8 / 描画後 omission 459 × light/dark × viewport) 全 PASS"
-  else ng "RG2-selftest census detector が FAIL"; fi
-  # 正対照: genuine artifact は census PASS (捏造/隠蔽なし)
-  expect_census_pass "RG2-pass ★genuine artifact は census PASS (描画後 content-fidelity clean)" "$TMP/art.html"
-  # RG2-a 2b8: semantic セレクタ .fid に ::after content で偽サフィックス注入 (<style> 追記)。 make_body は <style> 空化で静的素通り。
-  perl -0777 -pe 's{</style>}{.fid::after{content:"-改竄済";}\n</style>}' "$TMP/art.html" > "$TMP/rg2a.html"
-  expect_census_fail "RG2-a ★pseudo-content 捏造 (.fid::after content=2b8) を census inverse-allowlist が捕捉" "$TMP/rg2a.html"
-  # RG2-b 459-comment: 要件行 1 本を HTML コメントで包む。 静的 grep は数えるが browser 非描画 → 可視 < 期待。
-  perl -0777 -pe 's{(<tr[^>]*data-component="ears-requirement-row"[^>]*>.*?</tr>)}{<!-- $1 -->}s' "$TMP/art.html" > "$TMP/rg2b.html"
-  expect_census_fail "RG2-b ★comment 隠蔽 OMISSION (459-comment) を census 可視 row count が捕捉" "$TMP/rg2b.html"
-  # RG2-c 条件付き omission: 狭幅でのみ NFR 行を display:none。 census の viewport 直積が条件付き隠蔽を捕捉。
-  perl -0777 -pe 's{</style>}{\@media(max-width:400px){[data-component="nfr-metric-row"]{display:none!important;}}\n</style>}' "$TMP/art.html" > "$TMP/rg2c.html"
-  expect_census_fail "RG2-c ★条件付き隠蔽 (@media 狭幅 display:none) を census viewport 直積が捕捉" "$TMP/rg2c.html"
-  # RG2-d 条件付き 2b8: dark scheme でのみ ::after content 注入。 census の scheme 直積が条件付き捏造を捕捉。
-  perl -0777 -pe 's{</style>}{\@media(prefers-color-scheme:dark){.fid::after{content:"承認済";}}\n</style>}' "$TMP/art.html" > "$TMP/rg2d.html"
-  expect_census_fail "RG2-d ★条件付き捏造 (@media dark .fid::after) を census scheme 直積が捕捉" "$TMP/rg2d.html"
-  # RG2-e T7 fail-closed: 全要件/NFR 行を display:none。 可視 0 = render 破綻 = 測定系 tool-integrity error と
-  # 判定し exit 2 に倒す (omission 0=clean と取り違えない・census finding=exit 1 と別軸・REQ-VER-027)。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"],[data-component="nfr-metric-row"]{display:none!important;}\n</style>}' "$TMP/art.html" > "$TMP/rg2e.html"
-  expect_census_toolerr "RG2-e ★T7 fail-closed (全行 display:none → 可視0 = 測定系 tool-integrity error exit 2)" "$TMP/rg2e.html"
-  # RG2-f 〔mzn.3 re-ceiling MZN3-BLK-01〕census 測定経路の runtime crash (unreachable base-url → page.goto 失敗 =
-  # renderer 例外) は genuine finding (exit 1) と別軸の 測定系 tool-integrity error (exit 2) に倒れる。 exit 1 の
-  # warn 写像 (verify-srs.sh) へ crash が洗浄される fail-open の回帰 pin (T7=clean-detected subcase の RG2-e と別経路)。
-  $RGRUN "$SCRIPT_DIR/render-gate-srs.py" --census --expect "$CEXPECT" --base-url "http://127.0.0.1:1" "$TMP/art.html" >/dev/null 2>&1; _rc=$?
-  if [[ $_rc -eq 2 ]]; then ok "RG2-f ★census 測定 crash (unreachable base-url) = 測定系 tool-integrity error (exit 2・warn 洗浄なし)"
-  else ng "RG2-f ★census 測定 crash の exit 2 写像 (exit=$_rc ≠ 2)"; fi
-  # 〔mzn.3〕floor 統合 (verify-srs.sh render 込): census finding は warn 級 backstop (exit 0・非 blocking)、
-  # T7 render 破綻は測定系 tool-integrity error (exit 2) — §3.9 境界の rc 写像を floor レベルで固定する。
-  _fout="$(bash "$SRS" "$BASE" "$TMP/rg2b.html" 2>&1)"; _frc=$?
-  if [[ $_frc -eq 0 ]] && printf '%s\n' "$_fout" | grep -q 'gate F2/census finding'; then
-    ok "RG2-floor-warn ★census finding (comment 隠蔽) は floor で warn 級 backstop (exit 0・非 blocking)"
-  else ng "RG2-floor-warn ★census finding の floor warn 写像 (exit=$_frc)"; fi
-  bash "$SRS" "$BASE" "$TMP/rg2e.html" >/dev/null 2>&1; _frc=$?
-  if [[ $_frc -eq 2 ]]; then
-    ok "RG2-floor-t7 ★T7 render 破綻は floor で測定系 tool-integrity error (exit 2)"
-  else ng "RG2-floor-t7 ★T7 の floor exit 2 写像 (exit=$_frc ≠ 2)"; fi
-  # ===== RG3: slice-2 hardening (独立 ceiling wxnjdmjk9) — inverse-allowlist + rendered() property reverse-assert =====
-  # ceiling が固定 7 集合 reverse-assert / checkVisibility 単独の死角 (16 bypass) を炙り出した。 Theme A=contract-bearing
-  # class への pseudo 注入、 Theme B=clip-path/transform/子崩壊/.plain 単独隠蔽。 これらが封鎖されたことを固定する。
-  # RG3-a Theme A: 旧 7 集合外の .resp (要件本文) へ ::after content 注入 = inverse-allowlist 補集合 → 捏造。
-  perl -0777 -pe 's{</style>}{.resp::after{content:" ※撤回済";}\n</style>}' "$TMP/art.html" > "$TMP/rg3a.html"
-  expect_census_fail "RG3-a ★Theme A 7 集合外 pseudo (.resp::after) を inverse-allowlist が捕捉" "$TMP/rg3a.html"
-  # RG3-b Theme B clipHidden: 要件行を clip-path:inset(100%) で読者非到達 (checkVisibility は true)。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg3b.html"
-  expect_census_fail "RG3-b ★Theme B clip-path:inset(100%) を rendered() clip 祖先走査が捕捉" "$TMP/rg3b.html"
-  # RG3-c Theme B areaOf: 要件行を transform:scale(0) で描画域 0 に潰す (checkVisibility は true)。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{transform:scale(0);}\n</style>}' "$TMP/art.html" > "$TMP/rg3c.html"
-  expect_census_fail "RG3-c ★Theme B transform:scale(0) を rendered() area>16 判定が捕捉" "$TMP/rg3c.html"
-  # RG3-d Theme B 子崩壊: 要件行の td を display:none = 行コンテナが高さ 0 に崩壊 (checkVisibility は true)。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:none;}\n</style>}' "$TMP/art.html" > "$TMP/rg3d.html"
-  expect_census_fail "RG3-d ★Theme B td{display:none} 行崩壊を rendered() area>16 判定が捕捉" "$TMP/rg3d.html"
-  # RG3-e Theme B .plain sub-slot: 行は可視のまま .plain (平易説明) だけ display:none = row count 素通り omission。
-  perl -0777 -pe 's{</style>}{.plain{display:none;}\n</style>}' "$TMP/art.html" > "$TMP/rg3e.html"
-  expect_census_fail "RG3-e ★Theme B .plain 単独隠蔽を .plain present==visible 不変条件が捕捉" "$TMP/rg3e.html"
-  # ===== RG4: ws4o6ywe5 独立 ceiling が発見した 19 fixable leak の封鎖回帰 (Theme A scope 漏れ + Theme B 機構穴) =====
-  # 前回 hardening の *修正自体* に穴があった (ceiling-recursion)。 各機構を genuine art.html mutate で封鎖確認する。
-  # RG4-a Theme A ::marker: display:list-item の ::marker content (旧版は ::before/::after のみ走査)。
-  perl -0777 -pe 's{</style>}{.fid{display:list-item}.fid::marker{content:"【撤回済】";}\n</style>}' "$TMP/art.html" > "$TMP/rg4a.html"
-  expect_census_fail "RG4-a ★Theme A ::marker 捏造を inverse-allowlist (::marker 走査) が捕捉" "$TMP/rg4a.html"
-  # RG4-b Theme A body::before: 'body *' が body 自身を含まない射程漏れ。
-  perl -0777 -pe 's{</style>}{body::before{content:"偽の全画面宣言";display:block;}\n</style>}' "$TMP/art.html" > "$TMP/rg4b.html"
-  expect_census_fail "RG4-b ★Theme A body::before 捏造を走査集合の body/html 包含が捕捉" "$TMP/rg4b.html"
-  # RG4-c Theme B near-zero opacity: opacity:0.004 (checkOpacity は ===0 のみ false)。
-  perl -0777 -pe 's{</style>}{[data-component]{opacity:.004;}\n</style>}' "$TMP/art.html" > "$TMP/rg4c.html"
-  expect_census_fail "RG4-c ★Theme B near-zero opacity を rendered() 実効 opacity 閾値が捕捉" "$TMP/rg4c.html"
-  # RG4-d Theme B overflow 祖先クリップ: max-height:0;overflow:hidden で子を全クリップ (clipHidden 非検査だった)。
-  perl -0777 -pe 's{</style>}{.chapbody{overflow:hidden;max-height:0;}\n</style>}' "$TMP/art.html" > "$TMP/rg4d.html"
-  expect_census_fail "RG4-d ★Theme B overflow:hidden 祖先クリップを visibleArea 交差が捕捉" "$TMP/rg4d.html"
-  # RG4-e Theme B 自己 content クリップ: height:5px;overflow:hidden で本文を縦切り捨て (area>16 弱閾値)。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{display:block;height:5px;overflow:hidden;}\n</style>}' "$TMP/art.html" > "$TMP/rg4e.html"
-  expect_census_fail "RG4-e ★Theme B 微小高さ overflow を selfContentClipped が捕捉" "$TMP/rg4e.html"
-  # RG4-f Theme B .plain へ rendered() 適用: .plain{clip-path:inset(100%)} (旧版は .plain を checkVis 単独判定)。
-  perl -0777 -pe 's{</style>}{.plain{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg4f.html"
-  expect_census_fail "RG4-f ★Theme B .plain clip-path を .plain への rendered() 適用が捕捉" "$TMP/rg4f.html"
-  # RG4-g Theme B .plain contract-anchor: .plain 全削除で DOM 0 件 (旧版は plains.length=0 で検査 skip)。
-  perl -0777 -pe 's{<span class="plain"[^>]*>.*?</span>}{}gs' "$TMP/art.html" > "$TMP/rg4g.html"
-  expect_census_fail "RG4-g ★Theme B .plain 全削除を contract-anchor 期待件数が捕捉" "$TMP/rg4g.html"
-  # RG4-h Theme B .plain 非空 text: .plain 内容を zero-width に置換 (checkVis=true だが prose 無)。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>).*?(</span>)}{${1}\x{200B}${2}}gs' "$TMP/art.html" > "$TMP/rg4h.html"
-  expect_census_fail "RG4-h ★Theme B .plain zero-width 化を 非空 rendered text 要求が捕捉" "$TMP/rg4h.html"
-  # RG4-i Theme B distinct req-id: 全要件行の data-req-id を FR1 に潰す (count=N 維持・distinct=1)。
-  perl -0777 -pe 's{(data-component="ears-requirement-row" data-req-id=")FR\d+(")}{${1}FR1${2}}g' "$TMP/art.html" > "$TMP/rg4i.html"
-  expect_census_fail "RG4-i ★Theme B 重複 ID 水増しを distinct data-req-id 検査が捕捉" "$TMP/rg4i.html"
-  # ===== RG5: folio-hef S1 クラスタ1 述語 (FF1 own-content / FF2 contain) を genuine art.html mutate で封鎖確認 =====
-  # RG5-a FF1 own-element content:url: 要素自身 (glossary) に content:url を当て replaced-element 化し偽画像を描画
-  #   (round2 e1/e2)。 pseudo (::before/::after/::marker) 走査の射程外。 own-content scan (getComputedStyle(el).content
-  #   ∉ {normal,none}) が捕捉する。 base64 1x1 gif data URL を使い perl/shell の quote 衝突を避ける。
-  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{content:url(data:image/gif;base64,R0lGODlhAQABAAAAACw=);}\n</style>}' "$TMP/art.html" > "$TMP/rg5a.html"
-  expect_census_fail "RG5-a ★own-element content:url (replaced-element 捏造=FF1) を own-content scan が捕捉" "$TMP/rg5a.html"
-  # RG5-b FF2 contain:paint clip: 要件表の .tbl-wrap に contain:paint+height:0 で paint を 0px box に潰す (layout は
-  #   自然サイズのまま・round2 e3)。 clip-path でも overflow:hidden でもないため rendered() 既存 5 述語の射程外。
-  #   :has で要件表のみ対象=NFR 行は可視 (totalVisible>0)・ears 行 0<期待 = census-omission。 visibleArea の contain 祖先交差が捕捉。
-  perl -0777 -pe 's{</style>}{.tbl-wrap:has([data-component="requirement-matrix-table"]){contain:paint;height:0;overflow:visible;}\n</style>}' "$TMP/art.html" > "$TMP/rg5b.html"
-  expect_census_fail "RG5-b ★contain:paint clip (FF2 paint 0px 潰し) を visibleArea の contain 祖先交差が捕捉" "$TMP/rg5b.html"
-  # RG5-c ★FF2 ceiling (wf_b544a704): contain:paint を行 *自身* に当て子 td を position で box 外へ押し出す self-clip
-  #   blocker。 visibleArea の祖先走査では box 非0 で素通りした。 selfPaintClipsContent (行 content rect ∩ self-clip box ≤16) が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"]{contain:paint;} [data-component="ears-requirement-row"] td{position:relative;top:-3000px;}\n</style>}' "$TMP/art.html" > "$TMP/rg5c.html"
-  expect_census_fail "RG5-c ★contain:paint を counted 行自身に当て子を box 外へ押出す self-clip (FF2 ceiling) を selfPaintClipsContent が捕捉" "$TMP/rg5c.html"
-  # RG5-d ★FF1 ceiling (wf_b544a704): content を animation-delay>probe 待ちで normal→url にフリップし単一時刻 sampling を回避する
-  #   major hole。 Animation.finish() は content end 値を適用しない (実機検証) ため、 content を触る animation の存在を構造検出する。
-  perl -0777 -pe 's{</style>}{\@keyframes fab{from{content:normal}to{content:url(data:image/gif;base64,R0lGODlhAQABAAAAACw=)}} [data-component="glossary-term-table"]{animation:fab 0.01s step-end 5s forwards;}\n</style>}' "$TMP/art.html" > "$TMP/rg5d.html"
-  expect_census_fail "RG5-d ★content を時刻遅延フリップする @keyframes animation (FF1 time-axis ceiling) を content-animation 構造検出が捕捉" "$TMP/rg5d.html"
-  # RG5-e ★FF2 ceiling round-3b: 子孫 (td) opacity:0 で ink 抹消 (el 祖先しか見ない effOpacity の射程外) を visibleTextArea 降下連鎖 opacity が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{opacity:0;}\n</style>}' "$TMP/art.html" > "$TMP/rg5e.html"
-  expect_census_fail "RG5-e ★子孫 opacity:0 による ink 抹消 (FF2 ceiling round-3b) を visibleTextArea 降下連鎖 opacity が捕捉" "$TMP/rg5e.html"
-  # RG5-f ★FF2 ceiling round-3b: 子孫 (td) clip-path:inset(100%) (el 祖先しか見ない clipPathHidden の射程外) を visibleTextArea 降下連鎖 clip-path が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{clip-path:inset(100%);}\n</style>}' "$TMP/art.html" > "$TMP/rg5f.html"
-  expect_census_fail "RG5-f ★子孫 clip-path:inset(100%) (FF2 ceiling round-3b) を visibleTextArea 降下連鎖 clip-path が捕捉" "$TMP/rg5f.html"
-  # RG5-g ★FF2 ceiling round-3c: 子孫 (td) visibility:hidden で非 paint (rect は有・checkVis(el) の射程外) を visibleTextArea の text 親 computed visibility が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{visibility:hidden;}\n</style>}' "$TMP/art.html" > "$TMP/rg5g.html"
-  expect_census_fail "RG5-g ★子孫 visibility:hidden による非 paint (FF2 ceiling round-3c) を visibleTextArea の text 親 visibility が捕捉" "$TMP/rg5g.html"
-  # RG5-h ★FF5 ceiling round-3c (wf_534bb2c7): 静的 url-ban を回避する CSS-escape (\75 rl( = url() の 'u' escape) で data: SVG を
-  #   背景描画。 chromium が computed-style で url("data:...") へ正規化するため、 image-sink census が spelling-agnostic に捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5h.html"
-  expect_census_fail "RG5-h ★CSS-escape \\75 rl( (FF5 ceiling round-3c) を computed-style image-sink census が捕捉" "$TMP/rg5h.html"
-  # RG5-i ★FF5 ceiling round-3c: image-set("data:..." 1x) は url( token 無しで生 string を画像参照とし静的 url-ban を完全回避するが、
-  #   chromium が computed-style で image-set(url("data:...")) へ正規化するため image-sink census の urlTokens が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]{background-image:image-set("data:image/gif;base64,R0lGODlhAQABAAAAACw=" 1x)}\n</style>}' "$TMP/art.html" > "$TMP/rg5i.html"
-  expect_census_fail "RG5-i ★image-set bare-string (FF5 ceiling round-3c・url( token 無し) を image-set 正規化 url() で捕捉" "$TMP/rg5i.html"
-  # RG5-j ★FF2 ceiling round-3c: transform:scaleY(0.02) で要件行を 0.4px 高に縦潰し (同位置・ink paint・可読不能)。 旧 area-only 閾値
-  #   (>16) は素通った。 visibleTextArea の最小可読高 floor (fontSize×0.4) が 0.4px<floor の fragment を非算入し omission に倒す。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleY(0.02);transform-origin:top}\n</style>}' "$TMP/art.html" > "$TMP/rg5j.html"
-  expect_census_fail "RG5-j ★transform:scaleY(0.02) 縦潰し (FF2 round-3c) を最小可読高 floor が omission に倒す" "$TMP/rg5j.html"
-  # RG5-k ★FF2 ceiling round-3c: 子孫 overflow 微小 band (line-height:1+height:2px) で text を 2px glyph-top band にクリップ
-  #   (同位置・ink は 2px 帯だけ paint・可読不能)。 旧 area-only 閾値は 293px×2px=586 で素通った。 最小可読高 floor が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;line-height:1;height:2px;overflow:hidden}\n</style>}' "$TMP/art.html" > "$TMP/rg5k.html"
-  expect_census_fail "RG5-k ★子孫 overflow 微小 band (line-height:1+height:2px) (FF2 round-3c) を最小可読高 floor が捕捉" "$TMP/rg5k.html"
-  # RG5-l ★FF5 ceiling round-3d (wf_6e852552): ::first-letter は background-image を実描画する (旧 pe 集合 [null,::before,::after] 外)。
-  #   \\75 rl(data:) を ::first-letter 背景に当て偽要件を描画。 FF5 pe 拡張 (::first-line/::first-letter/::backdrop) が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]::first-letter{padding:0 470px 0 0;background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5l.html"
-  expect_census_fail "RG5-l ★::first-letter image-sink (FF5 ceiling round-3d) を pe 拡張 image-sink census が捕捉" "$TMP/rg5l.html"
-  # RG5-m ★FF5 ceiling round-3d: ::first-line の background-image image-sink を pe 拡張で捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="glossary-term-table"]::first-line{background-image:\\75 rl("data:image/gif;base64,R0lGODlhAQABAAAAACw=")}\n</style>}' "$TMP/art.html" > "$TMP/rg5m.html"
-  expect_census_fail "RG5-m ★::first-line image-sink (FF5 ceiling round-3d) を pe 拡張 image-sink census が捕捉" "$TMP/rg5m.html"
-  # RG5-n ★FF2 ceiling round-3d: transform:scaleX(0.02) 横潰し (縦 floor 素通り) を per-char 横密度 floor が omission に倒す。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleX(0.02);transform-origin:left}\n</style>}' "$TMP/art.html" > "$TMP/rg5n.html"
-  expect_census_fail "RG5-n ★transform:scaleX(0.02) 横潰し (FF2 round-3d) を per-char 横密度 floor が捕捉" "$TMP/rg5n.html"
-  # RG5-o ★FF2 ceiling round-3d: letter-spacing 超負値の glyph 重畳 (transform でない別機構) を横密度 floor が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{letter-spacing:-0.95em}\n</style>}' "$TMP/art.html" > "$TMP/rg5o.html"
-  expect_census_fail "RG5-o ★letter-spacing 重畳 (FF2 round-3d・非 transform) を per-char 横密度 floor が捕捉" "$TMP/rg5o.html"
-  # RG5-p ★list-marker ceiling round-3e: list-style-type:var(--x) で文字列を custom property に退避 (静的 ban 回避) しつつ
-  #   ::marker に偽要件描画。 render 側 computed-style list-marker census (getComputedStyle(el).listStyleType) が spelling-agnostic に捕捉。
-  perl -0777 -pe 's{</body>}{<style>:root{--fkx:"FR99 偽要件 不正権限昇格 "}li.atkv{display:list-item;list-style-position:inside;list-style-type:var(--fkx)}</style><ul><li class="atkv"></li></ul></body>}' "$TMP/art.html" > "$TMP/rg5p.html"
-  expect_census_fail "RG5-p ★list-style-type:var() generated marker (静的 ban 回避) を render 側 list-marker census が捕捉 (round-3e)" "$TMP/rg5p.html"
-  # RG5-q ★FF2 ceiling round-3e Attack E: word-spacing で空白幅を膨張させ node-average density を持ち上げつつ letter-spacing で内容 glyph 重畳。
-  #   per-glyph (空白を分母除外) が平均 gaming を封鎖。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{letter-spacing:-0.92em;word-spacing:18em}\n</style>}' "$TMP/art.html" > "$TMP/rg5q.html"
-  expect_census_fail "RG5-q ★word-spacing avg-gaming (FF2 round-3e Attack E) を per-glyph (空白除外) が捕捉" "$TMP/rg5q.html"
-  # RG5-r ★FF2 ceiling round-3e Attack B: CJK letter-spacing -0.80em (advance 0.2fs) を script-aware per-glyph (CJK 0.5fs 閾値) が捕捉。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td, [data-component="ears-requirement-row"] td *{letter-spacing:-0.80em}\n</style>}' "$TMP/art.html" > "$TMP/rg5r.html"
-  expect_census_fail "RG5-r ★CJK letter-spacing -0.80em stroke 融合 (FF2 round-3e Attack B) を script-aware per-glyph が捕捉" "$TMP/rg5r.html"
-  # RG5-s ★FF2 ceiling round-3e Attack D: 強い scaleY 縦潰し (td display:block・transform は table-row には無効ゆえ td を対象)。
-  #   minH 0.5 bump (8px) が捕捉。 ★scaleY ~0.33 超は fragment 高が line-height 依存で minH 直上に残る degraded-partial 残差
-  #   (agent 評価 minor・部分可読) = best-effort tier で許容し、 ここでは明確に severe な 0.30 を pin する。
-  perl -0777 -pe 's{</style>}{[data-component="ears-requirement-row"] td{display:block;transform:scaleY(0.30);transform-origin:top}\n</style>}' "$TMP/art.html" > "$TMP/rg5s.html"
-  expect_census_fail "RG5-s ★scaleY(0.30) 強縦潰し (FF2 round-3e Attack D) を minH 0.5 bump が捕捉" "$TMP/rg5s.html"
-  # RG5-t ★bidi ceiling round-3f: unicode-bidi:\62 idi-override (CSS escape で静的 bidi-override-ban を回避) を render 側
-  #   computed unicode-bidi census が spelling-agnostic に捕捉 (image-sink で学んだ parser-differential を bidi へ適用)。
-  perl -0777 -pe 's{</body>}{<style>.atkbidi{unicode-bidi:\\62 idi-override;direction:rtl}</style><p class="atkbidi">払い戻しを常に拒否する</p></body>}' "$TMP/art.html" > "$TMP/rg5t.html"
-  expect_census_fail "RG5-t ★unicode-bidi escape (静的 ban 回避) を render 側 computed unicode-bidi census が捕捉 (round-3f)" "$TMP/rg5t.html"
-  # RG5-u ★list-marker ceiling round-3f: @counter-\73 tyle (escape) で allowlist builtin (lower-roman) を再定義し computed を
-  #   allowlist 名のまま偽 marker 描画。 CSSOM CSSCounterStyleRule の存在検査 (escape-robust mirror) が捕捉。
-  perl -0777 -pe 's{</style>}{\@counter-\\73 tyle lower-roman{system:cyclic;symbols:"FR99偽 管理者を無断付与";suffix:" "}\n</style>}' "$TMP/art.html" > "$TMP/rg5u.html"
-  expect_census_fail "RG5-u ★@counter-style escape で builtin override (static ban 回避) を CSSOM census が捕捉 (round-3f)" "$TMP/rg5u.html"
-  # ===== RG6: folio-hef.2 (S2) 可読性軸 census — FF3 ink 計測 + FF4 codepoint allowlist =====
-  # .plain (gate I 看板) を render してはじめて効く字種攻撃で判読不能化する。 (FF3) 字幅ありインク0 の blank glyph で
-  # 「在るのに読めない」omission、 (FF4) base にインクが乗る overlay / filler / 非 corpus-script 文字で判読不能化を、
-  # それぞれ render-time の ink 計測 / codepoint allowlist 補集合が捕捉することを固定する。 RG6-e は M-D 厳守の
-  # FP-safety 正対照: 正当な結合文字 (NFD アクセント) は誤検出せず census PASS のまま (β 違反を踏むとここが false-FAIL)。
-  # RG6-a FF3 ink: .plain 内容を字幅ありインク0 の U+2800 (BRAILLE BLANK) に置換。 trim 非空を素通りするが ink=0 = omission。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>).*?(</span>)}{${1}\x{2800}\x{2800}\x{2800}${2}}s if !$d++' "$TMP/art.html" > "$TMP/rg6a.html"
-  expect_census_fail "RG6-a ★.plain blank-glyph (U+2800 字幅ありインク0) を FF3 ink 計測が omission として捕捉" "$TMP/rg6a.html"
-  # RG6-b FF4 overlay: .plain に取り消し線 overlay (U+0336 LONG STROKE) を重畳。 base にインクがあり FF3 は素通り (omission 不発)
-  #   だが codepoint allowlist の補集合が U+0336 を捕捉する (ink 計測では原理的に見えない攻撃を FF4 が担う)。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0336}} if !$d++' "$TMP/art.html" > "$TMP/rg6b.html"
-  expect_census_fail "RG6-b ★.plain 取り消し線 overlay (U+0336) を FF4 codepoint allowlist 補集合が捕捉" "$TMP/rg6b.html"
-  # RG6-c FF4 static-ban gap: U+0334 TILDE OVERLAY は visual-deception unicode ban (bidi/zero-width のみ) に *無い* ゆえ
-  #   静的検査を素通りするが、 FF4 allowlist の補集合が render-time で捕捉する (positive closure が blocklist 漏れを被覆する実証)。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0334}} if !$d++' "$TMP/art.html" > "$TMP/rg6c.html"
-  expect_census_fail "RG6-c ★.plain U+0334 tilde overlay (static-ban に無い gap) を FF4 補集合が捕捉 (positive closure)" "$TMP/rg6c.html"
-  # RG6-d FF4 filler: U+3164 HANGUL FILLER を .plain に注入 (whitespace でも zero-width でもなく static-ban も漏らす filler)。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{3164}} if !$d++' "$TMP/art.html" > "$TMP/rg6d.html"
-  expect_census_fail "RG6-d ★.plain U+3164 Hangul filler を FF4 補集合が捕捉" "$TMP/rg6d.html"
-  # RG6-e FF4 FP-safety (★M-D 正対照): 正当な NFD アクセント (U+0301) は allowlist 内ゆえ census PASS のまま (誤検出ゼロ)。
-  #   \p{M} 一括 reject の β 違反を踏むとここが false-FAIL になる (多言語結合文字の誤検出を render path で固定で防ぐ)。
-  perl -CSD -0777 -pe 's{(<span class="plain"[^>]*>)}{${1}\x{0301}} if !$d++' "$TMP/art.html" > "$TMP/rg6e.html"
-  expect_census_pass "RG6-e ★.plain 正当 NFD アクセント (U+0301) は FF4 で誤検出せず census PASS (FP-safety・M-D)" "$TMP/rg6e.html"
-fi
 
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。

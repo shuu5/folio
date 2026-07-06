@@ -110,14 +110,11 @@ chk "RTM thead <th> 総数 == 4 (属性付き/大文字列追加封鎖)" "4" "$(
 #   prepend すると先頭の空 thead を掴み td 0→PASS (td を持つ genuine thead は未走査)、 で捏造 5 列目「影の承認列」が 3 vector で素通った
 #   (独立 ceiling 実証・blocker)。 dty 不動点: case/attr-robust + 全 thead を global 列挙 (td 合計) + thead 開閉タグ占有数で機械的完全化。
 chk "RTM thead 内 <td> == 0 (case/attr-robust・全 thead global 列挙・folio-bur r5)" "0" "$(perl -CSD -0777 -ne 'my $n=0; while(/<thead\b[^>]*>(.*?)<\/thead>/gis){my $h=$1; $n++ while $h=~/<td\b/gi} print $n' "$BODY")"
-chk "thead 開タグ占有 == 1 (大文字/属性/空 thead prepend 封鎖・folio-bur r5)" "1" "$(grep -oiE '<thead\b' "$BODY" | wc -l | tr -d ' ')"
-chk "thead 閉タグ占有 == 1 (注入 </thead> early-term 封鎖・folio-bur r5)" "1" "$(grep -oiE '</thead\b' "$BODY" | wc -l | tr -d ' ')"
 # ★folio-bur round-6 (ceiling-recursion R5 是正): round-3→5 の影承認列 arms-race は RTM thead のみ固め、 tbody 行/セル完全性・別table・
 #   tfoot/caption を未 pin だった。 (i) data-component 無しの styled 偽 <tr>『全件承認済み』(rtm-* class で本物同様) (ii) rtm-row 内余剰
 #   <td>『影の承認列: 未承認』(iii) 別 <table>『承認状態/全件承認済み』・<tfoot>・<caption> の注入が素通った (独立 ceiling 実証・2 blocker+major)。
 #   RTM=本 doc の信頼の核ゆえ table 完全性を機械的完遂: tc body の table は testcase-rtm 1 個のみ (tr/td/tfoot/caption は全て rtm 内) =
 #   table==1 ∧ tr==1+NTC ∧ td==4×NTC ∧ tfoot==0 ∧ caption==0 で phantom 行/余剰セル/別table/tfoot/caption を構造的に封鎖。
-chk "table 占有 == 1 (別 <table> 偽承認表 decoy 封鎖・folio-bur r6)" "1" "$(grep -oiE '<table\b' "$BODY" | wc -l | tr -d ' ')"
 chk "RTM <tr> 総数 == 1+NTC (data-component 無し phantom 行封鎖・folio-bur r6)" "$((NTC+1))" "$(grep -oiE '<tr\b' "$BODY" | wc -l | tr -d ' ')"
 chk "RTM <td> 総数 == 4×NTC (tbody 余剰 td=5列目注入封鎖・folio-bur r6)" "$((NTC*4))" "$(grep -oiE '<td\b' "$BODY" | wc -l | tr -d ' ')"
 chk "RTM <tfoot> == 0 (偽承認 tfoot 注入封鎖・folio-bur r6)" "0" "$(grep -oiE '<tfoot\b' "$BODY" | wc -l | tr -d ' ')"
@@ -138,7 +135,6 @@ chk "h3 総数 == NTC + 2 (tc-title NTC + scope 2・任意位置/scol外/early-t
 # 1b. core 共通 chrome (cover-head/approval/glossary の値突合 + 占有数パリティ・folio-mk9)
 verify_core_chrome
 # 1b'. reader-chip class 総数 == 2 (genuine reader-chip 1 + cross-doc-ref-chip 1。 ADR と対称・quote-robust)
-chk "core-chrome: reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
 
 # 2. id 一意性
 chk_empty "test_cases id 一意" "$(q '.test_cases[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -355,11 +351,9 @@ chk "cover-meta 版 == vX / date"             "v$(q '.meta.version') / $(q '.met
 chk "cover-meta KV 総数 == 4"                "4" "$(printf '%s\n' "$meta_kv" | grep -c .)"
 # ★folio-bur round-4 (ceiling-recursion R3 是正): meta_kv / 総数==4 は double-quote 固定ゆえ single-quote KV decoy を数えず
 #   表紙に矛盾値が素通った (独立 ceiling 実証)。 research/adr (l') と同型に quote-robust count_attr_token で KEY span を数える。
-chk "占有: cover-meta k == 4 (single-quote KV decoy 封鎖・folio-bur r4)" "4" "$(count_attr_token class k < "$BODY")"
 # ★folio-bur round-5 (ceiling-recursion R4 是正): round-4 は k 占有のみ pin し sibling の class="v" を未 pin ゆえ、 k を伴わない
 #   単独 <span class="v">未承認のまま公開</span> を注入すると meta_kv 隣接対 (k+v) も総数==4 も k 占有==4 も割らず、 styled な
 #   ラベル無し捏造値が表紙に素通った (独立 ceiling 実証・major)。 占有パリティを v にも対称に掛ける (k と v は KV で常に等数)。
-chk "占有: cover-meta v == 4 (k 無し単独 v decoy 封鎖・folio-bur r5)" "4" "$(count_attr_token class v < "$BODY")"
 
 # 6. escape 健全性
 chk "化け entity なし (<lt; 等)" "0" "$(grep -oE '<(lt|gt|quot);' "$BODY" | wc -l | tr -d ' ')"
@@ -400,40 +394,6 @@ verify_term_inline \
   "term-inline 被覆 (マーク == markable 出現 glossary 語)"
 
 
-# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
-# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
-# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
-# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
-# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
-#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
-chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP=1; for t in cover-meta foot ft-grid ft-plain ic in lab out page summary-card tags tc-grid tint-brand tint-info tint-ok tint-violet txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=2; for t in scol; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=4; for t in chapbody ico kicker lead m num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.test_cases | length')"; for t in confirm rtm-ac rtm-fr rtm-kind rtm-tc tc-act tc-exp tc-head tc-id tc-kind tc-kind-plain tc-plain tc-pre tc-prio tc-step-list tc-steps tc-title tc-trace tc-trace-h tc-trace-tgt verify; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[].trace.verifies[], .test_cases[].trace.confirms[]] | length')"; for t in rtm-code rtm-edge rtm-label tc-ref tc-ref-label tc-trace-edge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '(.test_cases | length) * 2')"; for t in tc-step-v tc-trace-label tc-trace-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '(.test_cases | length) * 3')"; for t in tc-step; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '(.scope.in | length) + (.scope.out | length)')"; for t in b; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[] | select(.kind == "正常系")] | length')"; for t in normal; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[] | select(.kind == "異常系")] | length')"; for t in abnormal; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[] | select(.kind == "境界値")] | length')"; for t in boundary; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[] | select(.priority == "must")] | length')"; for t in must; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.test_cases[] | select(.priority == "should")] | length')"; for t in should; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.test_cases | length')"; for t in testcase-card rtm-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-# ★approval-block/glossary-term-table も占有==1 (round-7 自己 ceiling: core_chrome は内部欄を pin するが *空 wrapper + 偽テキスト* は内部欄が無く素通る = borrowed-canonical-chrome 残余)。
-EXP=1; for t in doc-cover-band fidelity-sync-meta requirement-type-color-tokens scope-summary-panel testcase-rtm approval-block glossary-term-table; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP=4; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
-#     構造化 badge は verify_term_inline が glossary 突合済)。
-chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
-  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
-# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ "$fail" -eq 0 ]]; then

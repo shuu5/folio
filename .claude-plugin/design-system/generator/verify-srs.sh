@@ -13,10 +13,6 @@
 #   gate F  render 健全性     : render-gate-srs.py (playwright・light/dark × 3 viewport) で low-contrast /
 #                               horizontal-overflow / component-overlap を検出。 renderer 在環境で実行し、
 #                               不在環境では honest SKIP (PASS と詐称しない・floor 不完全と明示)。
-#   gate F2 描画後 content    : render-gate-srs.py --census (gate F の sibling・folio-6jb 縦軸)。 静的 floor を
-#           (census)            素通りする render 依存の捏造 (pseudo-content 2b8) / 隠蔽 (描画後 omission 459) を、
-#                               contract 由来期待件数 + semantic セレクタ pseudo-content 不変条件で検出。 honest SKIP は gate F と独立。
-#                               ★境界 (verification §3.9): gate F2 の全 class は warn 級 backstop (非 blocking)。
 #   census-count (blocking arm): 計数部品の source DOM 静的件数 == contract 期待件数 (ears-requirement-row ==
 #                               .requirements 数 ∧ nfr-metric-row == .nfr 数 ∧ .plain == .requirements + .nfr・
 #                               render を要さない算術照合、 REQ-VER-024 blocking arm)。
@@ -24,11 +20,11 @@
 #   gate H  fidelity meta     : fidelity-sync-meta の 3 項目が *非空白* で埋まる
 #   visual-first              : 各章 (footer 除く) に非 prose 部品が ≥1 (字だけの章 =0)
 #
-# ★機械/LLM 検証境界 (verification §3.9・REQ-VER-024/027/028 = SSoT): blocking arm = gate A–E,G,H + visual-first +
-#   census-count (+ gate F render 健全性 = REQ-VER-025)。 静的 hidden-render ban 群 (script/template/nested-context/
-#   inline-only/scroll-pseudo/list-marker) と visual-deception ban (unicode/bidi-override)・gate F2 render census の
-#   全 class は fabrication-free-by-construction (rules §12) で構成上排除済の脅威を再検査する warn 級 backstop
-#   (非 blocking・honest-bug の実捕捉は warn 報告で維持)。 捏造の意味権威は ceiling gate J・可読性は gate I。
+# ★機械/LLM 検証境界 (verification §3.9・REQ-VER-024 = SSoT): blocking arm = gate A–E,G,H + visual-first +
+#   census-count (+ gate F render 健全性 = REQ-VER-025 + repro-build 構成同一性 = REQ-VER-030)。 静的 hidden-render
+#   ban 群 (script/template/nested-context/inline-only/scroll-pseudo/list-marker) と visual-deception ban
+#   (unicode/bidi-override) は fabrication-free-by-construction (rules §12) で構成上排除済の脅威を再検査する warn 級
+#   backstop (非 blocking・honest-bug の実捕捉は warn 報告で維持)。 捏造の意味権威は ceiling gate J・可読性は gate I。
 #
 # ★floor 通過しても GREEN を宣言しない: ceiling=PENDING を返す (taxonomy §5.1「floor 単独 GREEN 禁止」)。
 #   GREEN ⟺ (blocking floor 全通過) AND (ceiling 合格)。 ceiling = persona-walk-srs + fidelity-srs + completeness-critic-srs (S5.2 + mzn.1.2)。
@@ -36,7 +32,7 @@
 #
 # usage: verify-srs.sh <contract.yaml> <generated.html>
 # exit:  0 = blocking arm PASS (ceiling PENDING・warn 級 backstop 指摘は exit を上げない) / 1 = floor FAIL /
-#        2 = tool error (入力不正 + 測定系 tool-integrity error 〔gate F2 の T7 render 破綻 等〕 = gate 判定と別軸)
+#        2 = tool error (入力不正 = gate 判定と別軸)
 
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
@@ -55,11 +51,10 @@ LVC="$SCRIPT_DIR/lib/verify-common.sh"
 [[ -f "$LVC" ]] || { echo "verify-srs: lib/verify-common.sh not found" >&2; exit 2; }
 CHKW=50; source "$LVC" || { echo "verify-srs: failed to source verify-common.sh" >&2; exit 2; }
 fail=0
-# ---- warn 級 backstop (verification §3.9 境界・REQ-VER-024/027/028)。 fabrication-free-by-construction
+# ---- warn 級 backstop (verification §3.9 境界・REQ-VER-024)。 fabrication-free-by-construction
 #      (rules §12) で構成上排除済の脅威を再検査する決定的機構は blocking しない — honest-bug の実捕捉は
-#      warn 報告で維持し、 意味権威は ceiling (gate I/J) に置く。 warn は exit を上げない (blocking arm と別軸)。
-#      測定系 tool-integrity error (gate F2 の T7 render 破綻 等) は warn とも blocking とも別軸で exit 2。 ----
-warnN=0; toolerr=0
+#      warn 報告で維持し、 意味権威は ceiling (gate I/J) に置く。 warn は exit を上げない (blocking arm と別軸)。 ----
+warnN=0
 wchk() { # label expected actual — warn 級 backstop 版 chk (非 blocking・warnN 加算のみ)
   if [[ "$2" == "$3" ]]; then printf '  [OK]   %-'"$CHKW"'s %s\n' "$1" "$2"
   else printf '  [WARN] %-'"$CHKW"'s expected %s, got %s (warn 級 backstop・非 blocking)\n' "$1" "$2" "$3"; warnN=$((warnN+1)); fi
@@ -71,16 +66,6 @@ make_body "$HTML"        # body-only ($BODY、 CSS セレクタ混入回避)
 verify_repro_build srs ""
 has() { local c; c="$(grep -c "data-component=\"$1\"" "$BODY")"; [[ "$c" -ge 1 ]] && echo 1 || echo 0; }
 
-# ---- render census 語彙 SSoT (folio-hef.3)。 起動時に *pack-level yq* で読み (graph-common.sh core reader
-#      流用せず = lib/ 無改変)、 件数注入機構の拡張として gate F2 census の probe payload (expect.vocab) へ
-#      carry する。 S4 (folio-hef.4) の closure 判定 (描画要素 ↔ 期待要素の全単射) が消費する基盤。 本 slice は
-#      配線のみ (bijection 本体は S4)。 fail-closed: 不在/data_components 空は tool error (誤 green に倒さない)。 ----
-CENSUS_VOCAB="$SCRIPT_DIR/rolemap/srs.census-vocab.yaml"
-[[ -f "$CENSUS_VOCAB" ]] || { echo "verify-srs: census-vocab not found: $CENSUS_VOCAB" >&2; exit 2; }
-[[ "$(yq -r '.data_components // [] | length' "$CENSUS_VOCAB" 2>/dev/null)" -ge 1 ]] \
-  || { echo "verify-srs: census-vocab の .data_components が空/不正: $CENSUS_VOCAB" >&2; exit 2; }
-CENSUS_VOCAB_JSON="$(yq -o=json -I=0 '{"pack": .pack, "data_components": .data_components, "prose_slots": .prose_slots, "recognized_classes": .recognized_classes}' "$CENSUS_VOCAB")" \
-  || { echo "verify-srs: census-vocab を JSON 化できない: $CENSUS_VOCAB" >&2; exit 2; }
 
 echo "=========================================================================="
 echo "folio verify-srs — 生成 SRS プレゼン floor (taxonomy §5.2 gate A-H + visual-first)"
@@ -151,7 +136,7 @@ chk "anchor: navigable id は body 全体で一意 (collision=0・quote/entity/c
 echo
 echo "--- census-count (REQ-VER-024 blocking arm): 計数部品の source DOM 静的件数 == contract 期待件数 ---"
 # 機械/LLM 境界 (verification §3.9) の blocking 件数照合: render を要さない算術照合のみを floor が裁く
-# (実描画・可視性の照合は gate F2 render census = warn 級 backstop と ceiling の領分)。 count_attr_token
+# (実描画・可視性の照合は ceiling gate I/J = persona-walk-srs/fidelity-srs の領分)。 count_attr_token
 # (quote 構文・属性名 case・数値文字参照 非依存の occurrence 数え = VFAB 占有 pin r7 と同規律) で数える —
 # quoted-literal grep だと unquoted 属性 (browser は描画する) の偽部品 add を見逃すため。 make_body は
 # <script> 中身を verbatim 保持するため、 <script> 内へ退避した偽計数部品も excess としてここで数える
@@ -207,7 +192,7 @@ gH_bad="$(SSOT="$gH_ssot_e" \
   #   / comment-split / ゼロ幅 split / 生 < 非タグ) を捕捉する**決定的な保険網
   #   (backstop) であり、 可視偽装の完全閉塞は主張しない** — regex projection は HTML tokenizer の近似で
   #   あり続け (i6f9 で 3 巡実証: entity→tag-split→生 < と変種が再帰)、 偽 provenance 表示の意味権威は
-  #   ceiling gate J (fidelity-srs) + gate F2 render census (warn) にある (machine/LLM 境界・bhe 実証⑥:
+  #   ceiling gate J (fidelity-srs) にある (machine/LLM 境界・bhe 実証⑥:
   #   機械は best-effort・可視の完全性判定は ceiling 領分。 user 裁定 2026-07-05 Option A)。
   #   projection = comment 除去 → tag 除去 (★tag-open は HTML 文法準拠: < の直後が [a-zA-Z!/?] のときのみ
   #   タグ開始 — 生の《< 検証状態 >》はブラウザが文字として描画するため projection にも残す = re-cert #2
@@ -250,7 +235,7 @@ echo "--- script-ban (warn 級 backstop・非 blocking): SRS HTML は <script> �
 # innerHTML/insertAdjacentHTML で genuine な要件/承認/章を捏造差替えする render-time DOM-swap (folio-4gz)、
 # (b) 必須要素を <script> で包み静的 grep を素通しつつブラウザ非描画にする OMISSION (folio-459 script-container)。
 # render を要さず pack-additive 静的 invariant (この doc-type の HTML は <script>==0) で原理封鎖する
-# (render census でなく静的 floor・render ゼロコスト・script-free 5 pack 共通の fab-free invariant の SRS 適用)。
+# (静的 floor・render ゼロコスト・script-free 5 pack 共通の fab-free invariant の SRS 適用)。
 # raw $HTML を case-insensitive・タグ境界 (\b) で count (head/body 双方を被覆・make_body の body-only view に依存しない)。
 scriptN="$(perl -0777 -ne 'my $n = () = /<script\b/gi; print $n+0;' "$HTML")"
 wchk "script-ban: <script> 出現 == 0 (4gz/459-script 静的検出)" 0 "$scriptN"
@@ -291,7 +276,7 @@ echo "--- inline-only-ban (warn 級 backstop・非 blocking): SRS HTML は inlin
 # strictly stronger)。 exotic な font-substitution 等 reader-facing 字形改竄は floor 射程超ゆえ LLM ceiling backstop。
 # <image\b は svg <image> (HTML <img> は <img\b)・\b 境界ゆえ class/属性値の部分文字列でなく tag 開始のみ照合。
 # round-3e ceiling: <progress>/<meter> の ::-webkit-progress-bar / ::-webkit-progress-value / ::-webkit-meter-* は background-image を
-# 実描画するが getComputedStyle が 'none' を返すため render census が構造的に盲 (pe 拡張 no-op)。 form-associated 要素閉包の欠落補完
+# 実描画するが getComputedStyle が 'none' を返すため純 computed-style 走査では盲 (pe 拡張 no-op)。 form-associated 要素閉包の欠落補完
 # として静的タグ ban へ追加する (genuine SRS は progress/meter=0・verified)。
 hrenN="$(perl -0777 -ne 'my $n = () = /<(?:img|image|canvas|video|audio|input|textarea|select|button|progress|meter)\b/gi; print $n+0;' "$HTML")"
 wchk "inline-only-ban: <img|image|canvas|video|audio|input|textarea|select|button|progress|meter> 出現 == 0 (FF5 hidden-render 検出)" 0 "$hrenN"
@@ -335,15 +320,14 @@ echo "--- visual-deception unicode ban (warn 級 backstop・非 blocking): bidi-
 # ゆえ floor で封鎖する。 z-order occlusion (不透明 overlay) は render 依存ゆえ floor 射程外 (folio-cpf へ carve)。
 deceptN="$(perl -CSD -0777 -ne 'my $n = () = /[\x{202A}-\x{202E}\x{2066}-\x{2069}\x{200B}-\x{200D}\x{2060}\x{FEFF}]/g; print $n+0;' "$HTML")"
 wchk "visual-deception unicode (bidi-override/zero-width) == 0 (次元B 視覚破壊検出)" 0 "$deceptN"
-# ── static-ban と FF4 (render-time positive allowlist) の codepoint 所掌分界 (folio-hef.2 監査補正 M-D point 2) ──
+# ── static-ban の codepoint 所掌分界 (folio-hef.2 監査補正 M-D point 2 / mzn.3 Phase C 退役後) ──
 # 本 static unicode-ban (= epic 語彙の「gate K」) は bidi-override と zero-width/BOM *のみ* を whole-doc・render 不要で
 # 弾く no-render backstop。 字幅ありインク0 の blank glyph (U+2800 Braille / U+3164 Hangul filler 等)・filler
 # (U+115F/FFA0)・取り消し線 overlay (U+0334-0338 = tilde/stroke/solidus overlay) は **本 ban に追加しない**。
-# それらは probe-srs.js FF4 (render-time の .plain codepoint positive allowlist) が *allowlist の補集合* として
-# 網羅捕捉する (gate F2/census 経由)。 ★ここへ blank/filler/overlay を逐次追加すると blocklist drift (= β 違反・
-# partial-enumeration の罠) を再導入する。 .plain の字種完全性は FF4 が render path で担い、 本 static-ban は
-# whole-doc の bidi/zero-width no-render backstop に留めること。 ink 計測 (FF3) は base にインクが無い blank glyph を、
-# FF4 codepoint allowlist は base にインクが乗る overlay を、 それぞれ render-time で捕捉する (両者は probe-srs.js)。
+# ★ここへ blank/filler/overlay を逐次追加すると blocklist drift (= β 違反・partial-enumeration の罠) を再導入する。
+# それら .plain の字種完全性 (render 後に判読不能化されていないか) は自由文の意味判定ゆえ ceiling (persona-walk-srs /
+# fidelity-srs = gate I/J) の領分 — mzn.3 Phase C で render census (probe-srs.js FF3/FF4) を退役し機械の partial-enum
+# proxy を廃した (機械/LLM 境界)。 本 static-ban は whole-doc の bidi/zero-width no-render backstop に留めること。
 
 echo
 echo "--- bidi-override-ban (warn 級 backstop・非 blocking): <bdo> / CSS unicode-bidi override ゼロ (round-3e ceiling・制御 codepoint 無しの視覚反転を検出) ---"
@@ -383,59 +367,20 @@ else
   if $RUNNER "$RENDER_GATE" "$HTML" 2>&1 | sed 's/^/    /'; then gateF="pass"; else gateF="fail"; fail=1; fi
 fi
 
-echo
-echo "--- gate F2 (census): 描画後 content-fidelity (pseudo-content 捏造 2b8 / 描画後 omission 459) — warn 級 backstop (非 blocking・§3.9) ---"
-# gate F の sibling gate (folio-6jb 縦軸)。 gate F が「見えるが崩れている」を見るのに対し、 census は
-# 「契約上あるべき内容が描画後に存在するか・偽の内容が注入されていないか」を見る。 静的 floor (make_body は
-# <style> 空化 / comment verbatim 保持) を素通りする render 依存の捏造 (2b8 = ::after content) と隠蔽
-# (459 = comment/display:none で非描画) を、 実 render で contract 由来期待件数と semantic セレクタの
-# pseudo-content 不変条件に照合する。 期待件数は contract から導出 (論点5: probe は schema 非依存・件数のみ注入)。
-# honest-SKIP は gate F と独立に報告する (gate identity 分離・論点4)。
-# ★境界 (verification §3.9・REQ-VER-027): gate F2 の全 class は warn 級 backstop — census finding (exit 1) は
-#   warn に写像し blocking しない (捏造の意味権威は ceiling gate J・可読性は gate I)。 blocking の部品件数照合は
-#   census-count arm (上記・source DOM 静的件数) が render を要さず担う。 T7 render 破綻 (exit 2) は測定系
-#   tool-integrity error として gate 判定と別軸で verify-srs 自体の exit 2 に伝播する (測定不能 ≠ clean)。
-#   exit は crc (計算済み決定トークン) からのみ導出し、 probe の data 補間出力を grep しない。
-gateCensus="skip"
-# plain は .plain (平易説明) sub-slot の期待件数 = 各 FR/NFR 行に 1 つ = requirements + nfr (contract-anchor)。
-# census の DOM 自己参照 (plains.length) を廃し caller から注入する (ws4o6ywe5 B4: 全削除/改名/template 退避を封鎖)。
-# 期待件数は census-count arm と同じ contract 導出値 (CC_REQN/CC_NFRN) を共有する。
-CENSUS_EXPECT="ears-requirement-row=${CC_REQN},nfr-metric-row=${CC_NFRN},plain=$((CC_REQN + CC_NFRN))"
-if [[ -n "$RENDER_SKIP" ]]; then
-  echo "  [SKIP] gate F2/census ($RENDER_SKIP)"
-else
-  echo "  render-gate-srs.py --census --expect '$CENSUS_EXPECT' --vocab <census-vocab> を実行 ($RUNNER)..."
-  # --vocab = census 語彙 SSoT (folio-hef.3)。 件数注入 (--expect) の拡張として probe へ closure 語彙を carry
-  #   する (S4 bijection の基盤・本 slice では probe は受領のみ)。
-  cout="$($RUNNER "$RENDER_GATE" --census --expect "$CENSUS_EXPECT" --vocab "$CENSUS_VOCAB_JSON" "$HTML" 2>&1)"; crc=$?
-  printf '%s\n' "$cout" | sed 's/^/    /'
-  case "$crc" in
-    0) gateCensus="pass" ;;
-    1) gateCensus="warn"; warnN=$((warnN+1))
-       echo "  [WARN] gate F2/census finding (warn 級 backstop・非 blocking — 意味権威は ceiling gate I/J・verification §3.9)" ;;
-    *) gateCensus="toolerror"; toolerr=1
-       echo "  [ERROR] gate F2/census 測定系 tool-integrity error (T7 render 破綻 等・exit $crc) — gate 判定と別軸で非零 exit (§3.9)" ;;
-  esac
-fi
 
 echo
 echo "=========================================================================="
 # exit 導出 (§3.9 境界): blocking arm (gate A-E,G,H + visual-first + census-count + gate F) の fail が exit 1、
-# warn 級 backstop 指摘 (warnN) は exit を上げない、 測定系 tool-integrity error (toolerr) は blocking FAIL が
-# 無いときのみ exit 2 で伝播する (blocking FAIL の決定的 verdict は測定破綻と独立に信頼できるため優先)。
+# warn 級 backstop 指摘 (warnN) は exit を上げない (blocking arm と別軸)。
 [[ "$warnN" -gt 0 ]] && echo "WARN: warn 級 backstop 指摘 $warnN 件 (非 blocking・§3.9 境界 — 意味権威は ceiling gate I/J。 honest-bug の可能性があるため生成器 bug としては調査対象)"
 if [[ "$fail" -eq 0 ]]; then
-  if [[ "$toolerr" -ne 0 ]]; then
-    echo "RESULT: 測定系 tool-integrity error (gate F2 の T7 render 破綻 等) — blocking arm は FAIL していないが測定不能を clean と詐称しない (exit 2)"
-    exit 2
-  fi
-  if [[ "$gateF" == "pass" && "$gateCensus" == "pass" ]]; then
+  if [[ "$gateF" == "pass" ]]; then
     echo "RESULT: floor PASS (blocking arm: gate A-F + visual-first + census-count / warn 級 backstop 指摘 $warnN 件) — ただし CEILING=PENDING (*GREEN ではない*)"
   else
-    echo "RESULT: floor PASS (blocking arm: gate A-E,G,H + visual-first + census-count / render gate: gateF=$gateF census=$gateCensus) — ただし CEILING=PENDING (*GREEN ではない*)"
-    if [[ "$gateF" == "skip" || "$gateCensus" == "skip" ]]; then
+    echo "RESULT: floor PASS (blocking arm: gate A-E,G,H + visual-first + census-count / render gate: gateF=$gateF) — ただし CEILING=PENDING (*GREEN ではない*)"
+    if [[ "$gateF" == "skip" ]]; then
       # 「render gate 未完」は ceiling-precheck.sh の SKIP-masquerade 検出 marker (3 重冗長の 1 つ) — 削らない。
-      echo "  ※ render gate 未完 (F=見た目崩れ / F2 census=描画後 content-fidelity の warn 級 backstop が未実行: renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
+      echo "  ※ render gate 未完 (F=見た目崩れ が未実行: renderer 不在 or SRS_SKIP_RENDER) — CI/uv 環境で render-gate-srs.py を回すまで floor は不完全。"
     fi
   fi
   echo "  ceiling = persona-walk-srs + fidelity-srs + completeness-critic-srs (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"

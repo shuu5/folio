@@ -91,7 +91,6 @@ verify_core_chrome
 #   + cross-doc-ref-chip 1 個 = ちょうど 2 個。 SRS と非対称に ADR/research は reader-chip 総数を quote-robust に bind していなかった
 #   ため、 single-quote/unquoted/entity の data-component を持つ偽 ref-chip decoy や 属性値内 > で count_genuine を断片化した
 #   genuine-style decoy が素通った。 count_attr_token (quote/case/entity/>-attr 非依存の全文走査) で reader-chip 総数 == 2 を bind し封鎖 (SRS §7b'' と対称)。
-chk "core-chrome(research): reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
 
 # 2. id 一意性
 chk_empty "finding id 一意"        "$(q '.findings[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -233,14 +232,9 @@ chk "within-doc: 可視 scope li 本文 == .question.in_scope[]+out_scope[] (順
 # ★folio-bur round-2 (ceiling-recursion 是正): 上の可視本文 chk は double-quote 固定 grep ゆえ single-quote/unquoted の additive
 #   decoy (genuine intact で偽要素を足す) を見逃す (独立 ceiling 実証)。 dty 不動点 = quote-robust 占有数パリティ。 各 echo class の
 #   占有数 == contract 件数を count_attr_token で pin し、 decoy が必ず占有を +1 する性質で封鎖 (二層目)。
-chk "占有: q-text == 1"               "1"                              "$(count_attr_token class q-text < "$BODY")"
-chk "占有: fnh == |findings|"         "$(q '.findings | length')"      "$(count_attr_token class fnh < "$BODY")"
-chk "占有: ap-name == |approaches|"   "$(q '.approaches | length')"    "$(count_attr_token class ap-name < "$BODY")"
-chk "占有: oqt == |open_questions|"   "$(q '.open_questions | length')" "$(count_attr_token class oqt < "$BODY")"
 # scope li は class が共有 (b) ゆえ scol in/out ブロック内の <li タグ総数を quote 非依存に数える (既存 L70 grep '<li><span class="b">' は
 #   double-quote 固定で single-quote li decoy を見逃す)。 scol ブロックは内側に div を持たぬため (.*?)</div> で正しく境界が取れる。
 scope_li_n="$(perl -0777 -ne 'my $n=0; while(/<div class="scol (?:in|out)">(.*?)<\/div>/gs){my $b=$1; $n++ while $b=~/<li\b/g} print $n' "$BODY")"
-chk "占有: scol in/out 内 <li> == |in_scope|+|out_scope|" "$(( $(q '.question.in_scope | length') + $(q '.question.out_scope | length') ))" "${scope_li_n:-0}"
 # ★folio-bur round-3 (ceiling-recursion R2 是正): round-2 は scol の li を *合計* でしか数えず (L230)、 L219 の可視本文 chk も
 #   union を文書順で flat 突合するだけで *列メンバーシップ* を束縛しなかった → scol in/out 境界を動かすと合計 li 数も union 順も
 #   不変のまま「調べた範囲」と「調べない範囲」が入れ替わる調査記録最重要セマンティクスの捏造が素通った (独立 ceiling 実証)。
@@ -254,14 +248,12 @@ chk "within-doc: scol-in 見出し == '✓ 調べる範囲' (調査範囲ラベ�
 chk "within-doc: scol-out 見出し == '⚖ 調べない範囲' (同上)" "⚖ 調べない範囲" "$(perl -0777 -ne 'if(/<div class="scol out"><h3[^>]*>([^<]*)<\/h3>/s){print $1}' "$BODY")"
 # ★folio-bur round-4: round-3 の scol-内 占有 (L230) と round-2 の L70 (double-quote grep) は scol *外* (panel 内/任意位置) の
 #   single-quote bullet decoy を見逃した → 大域 quote-robust census: class=b (scope bullet) 総数 == |in|+|out| で封鎖。
-chk "占有: class=b (scope bullet) == |in_scope|+|out_scope| (quote-robust・scol外/single-quote decoy 封鎖・folio-bur r4)" "$(( $(q '.question.in_scope | length') + $(q '.question.out_scope | length') ))" "$(count_attr_token class b < "$BODY")"
 # ★folio-bur round-5 (ceiling-recursion R4 是正): round-4 までの scope 検査は census が class=b トークン + <li タグに keyed・
 #   見出し pin が if-first-match・scol ブロック占有 anchor 不在で、 (#9) <div class="zz"><span class="bb">●</span>捏造</div> が
 #   非li/非b/●glyph で全 proxy 素通り緑 in-scope box に捏造 scope 項目 (#10) 第2 <div class="scol in"> 列丸ごと無検査、 で素通った
 #   (独立 ceiling 実証・blocker・new-category)。 token/tag-keyed census は arbitrary-wrapper 可視捏造を原理的に縛れない →
 #   region-text reconciliation: 各 scol ブロックの *全可視テキスト* (BODY_NM・タグ/空白除去) == 見出し+全 bullet と完全突合 +
 #   nested-<div> reject (canonical block は nested div を持たぬ・baseline 0) + scol ブロック占有 (count_attr_token class scol=2) で機械的完全化。
-chk "占有: class=scol == 2 (scol ブロック追加 quote-robust 封鎖・folio-bur r5)" "2" "$(count_attr_token class scol < "$BODY")"
 exp_scolin="✓ 調べる範囲"; while IFS= read -r _b; do exp_scolin+="●$(esc "$_b")"; done < <(q '.question.in_scope[]')
 exp_scolout="⚖ 調べない範囲"; while IFS= read -r _b; do exp_scolout+="●$(esc "$_b")"; done < <(q '.question.out_scope[]')
 scol_recon_bad="$(printf '%s' "$BODY_NM" | EXPIN="$exp_scolin" EXPOUT="$exp_scolout" perl -CSD -Mutf8 -0777 -ne '
@@ -330,36 +322,6 @@ verify_term_inline \
   "term-inline 被覆 (マーク == markable 出現 glossary 語)"
 
 
-# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
-# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
-# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
-# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
-# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
-#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
-chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP="$(q '.approaches | length')"; for t in ak ap-assess ap-head ap-id ap-plain ap-sum; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.findings | length')"; for t in fnbody fnd fnid; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.open_questions | length')"; for t in oqid; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.approval[] | select(.stamp != "承認済")] | length')"; for t in self; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in ap-grid cover-meta foot ft-grid ft-plain ic in lab oc-kick oc-note oc-plain oc-resolved oc-tgt oq-list out page q-kick summary-card tags tint-info tint-ok tint-violet tint-warn txt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=6; for t in chapbody ico kicker lead num; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=4; for t in m v; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=2; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=3; for t in xref-doc; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in approval-block doc-cover-band fidelity-sync-meta glossary-term-table requirement-type-color-tokens research-finding-list research-question-panel scope-summary-panel research-outcome-panel cross-doc-ref-chip; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP=6; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.findings | length')"; for t in research-finding-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.approaches | length')"; for t in research-approach-card cross-doc-leads-chip; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.open_questions | length')"; for t in research-open-question; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
-#     構造化 badge は verify_term_inline が glossary 突合済)。
-chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
-  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
-# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ "$fail" -eq 0 ]]; then

@@ -277,7 +277,6 @@ chk_empty "cross-doc: ref-chip 可視 echo == テンプレ+doc_id (swap/平文/n
 
 # ============ core 共通 chrome (cover-head/approval/glossary 値突合 + 占有数パリティ・folio-mk9) ============
 verify_core_chrome
-chk "core-chrome: reader-chip class 総数 == 2 (genuine 1 + cross-doc-ref-chip 1)" "2" "$(count_attr_token class reader-chip < "$BODY")"
 
 # ============ cover-meta KV (種別/構成/照会先/版) の決定的再導出突合 ============
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"

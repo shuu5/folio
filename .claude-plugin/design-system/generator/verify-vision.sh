@@ -206,7 +206,7 @@ else
   chk "非発火: cross-doc-ref-chip == 0 (偽照会チップ注入封鎖)" "0" "$(grep -c 'data-component="cross-doc-ref-chip"' "$BODY")"
 fi
 
-# ============ core 共通 chrome (cover-head/approval/reader-chip 占有・vision は glossary 表を持たない) ============
+# ============ core 共通 chrome (cover-head/approval 値突合・第1層・vision は glossary 表を持たない) ============
 # ★verify_core_chrome (core) を呼ばず inline する: vision は用語集章を持たない = glossary 表が無い。 core の glossary
 #   chrome 突合は `.glossary[] | [.term,…] | @tsv` を使うが、 mikefarah yq v4.53 の collect+@tsv は *空入力に対し
 #   phantom 1 行 (\t\t)* を吐く (`.glossary[]` 単体は正しく空だが `| [..] | @tsv` が空 collect を 1 個生む quirk・
@@ -215,7 +215,7 @@ fi
 #   検査対象が存在しない = honest な pack 差分。 term-inline/用語被覆も vision は非適用)。
 nap="$(q '.approval | length')"
 readerlines="$(grep 'class="reader-chip">' "$BODY")"
-# (1) cover-head 値突合 (eyebrow 左右対 / h1 / sub / 想定読者)
+# (1) cover-head 値突合 (eyebrow 左右対 / h1 / sub / 想定読者)・第1層
 chk "core-chrome: cover-eyebrow (左,右) == .meta.eyebrow_left/right" \
   "$(printf '%s\t%s' "$(esc "$(q '.meta.eyebrow_left')")" "$(esc "$(q '.meta.eyebrow_right')")")" \
   "$(perl -CSD -0777 -ne 'while (/<p class="cover-eyebrow"><span class="doc-type">([^<]*)<\/span> <span>([^<]*)<\/span><\/p>/g){ print "$1\t$2\n"; }' "$BODY")"
@@ -225,24 +225,12 @@ chk "core-chrome: cover-sub == .meta.subtitle" "$(esc "$(q '.meta.subtitle')")" 
   "$(grep -oE '<p class="cover-sub">[^<]*</p>' "$BODY" | sed -E 's#<p class="cover-sub">([^<]*)</p>#\1#')"
 chk "core-chrome: reader-chip 想定読者 == .meta.reader" "$(esc "$(q '.meta.reader')")" \
   "$(printf '%s\n' "$readerlines" | grep -oE '想定読者: [^<]*</div>' | sed -E 's/^想定読者: //; s#</div>$##')"
-chk "core-chrome: vcount doc-type == 1"      "1" "$(count_attr_token class doc-type < "$BODY")"
-chk "core-chrome: vcount cover-eyebrow == 1" "1" "$(count_attr_token class cover-eyebrow < "$BODY")"
-chk "core-chrome: vcount cover-sub == 1"     "1" "$(count_attr_token class cover-sub < "$BODY")"
-chk "core-chrome: h1 タグ == 1"              "1" "$(grep -oiE '<h1[[:space:]>]' "$BODY" | wc -l | tr -d ' ')"
-chk "core-chrome: genuine reader-chip 占有 (ref-chip 除外・要素単位) == 1" "1" "$(count_genuine_reader_chip < "$BODY")"
-chk "core-chrome: 想定読者 marker 全体 == 1" "1" "$(grep -oF '想定読者:' "$BODY" | wc -l | tr -d ' ')"
-# (2) approval-block 順序突合 + 占有数
+# (2) approval-block 順序突合 (第1層)
 chk "core-chrome: approval (role,who,when,stamp) == .approval (順序)" \
   "$(q '.approval[] | [.role, .who, .when, .stamp] | @tsv' | while IFS=$'\t' read -r _r _w _t _s; do printf '%s\t%s\t%s\t%s\n' "$(esc "$_r")" "$(esc "$_w")" "$(esc "$_t")" "$(esc "$_s")"; done)" \
   "$(perl -CSD -0777 -ne 'while (/<div class="sign"><span class="role">([^<]*)<\/span><span class="who">([^<]*)<\/span><span class="when">([^<]*)<\/span><span class="stamp(?: self)?">([^<]*)<\/span><\/div>/g){ print "$1\t$2\t$3\t$4\n"; }' "$BODY")"
-chk "core-chrome: vcount sign == |approval|"  "$nap" "$(count_attr_token class sign < "$BODY")"
+# ★vcount who — mzn.3 Phase C 占有 pin 退役後も残る第 1 層 pin (U3K1-3 の数値文字参照 decode red pin が anchor・core と同型)。
 chk "core-chrome: vcount who == |approval|"   "$nap" "$(count_attr_token class who < "$BODY")"
-chk "core-chrome: vcount when == |approval|"  "$nap" "$(count_attr_token class when < "$BODY")"
-chk "core-chrome: vcount stamp == |approval|" "$nap" "$(count_attr_token class stamp < "$BODY")"
-# (3) role/en global 占有 (glossary 表なし = |非空 en| 0・追加 home なし)
-chk "core-chrome: vcount role global == |approval|" "$nap" "$(count_attr_token class role < "$BODY")"
-chk "core-chrome: vcount en global == 0 (glossary 表なし)" "0" "$(count_attr_token class en < "$BODY")"
-chk "core-chrome: reader-chip class 総数 == (発火:2/非発火:1)" "$([[ "$XDOC" == "true" ]] && echo 2 || echo 1)" "$(count_attr_token class reader-chip < "$BODY")"
 
 # ============ cover-meta KV (種別/構成/照会先/版) の決定的再導出突合 ============
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"

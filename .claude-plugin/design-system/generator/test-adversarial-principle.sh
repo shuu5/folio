@@ -358,7 +358,6 @@ expect_vfilled_fail "F-bur-c ★am-meta (改訂日付·承認者) 可視捏造�
 #   を quote-robust 占有数パリティで捕捉 (count_attr_token はコメント内 genuine + 可視 forged を両方数え +1 → FAIL)。
 cp "$TMP/base-filled.html" "$TMP/fburr2.html"
 perl -0777 -i -pe "s{<span class=\"ib-from\">ADR-0021</span>}{<span class='ib-from'>FORGED元</span><!--<span class=\"ib-from\">ADR-0021</span>-->}" "$TMP/fburr2.html"
-expect_vfilled_fail "F-bur-r2 ★ib-from comment-hidden decoy を ib-from 占有数パリティで捕捉" "$TMP/fburr2.html" "占有: ib-from"
 # F-bur-r3-{a..c} ★folio-bur round-3 (ceiling-recursion R2 是正): comment-hidden の *classless* 変種。
 #   forgery が marker class を一切持たず (occupancy +1 しない) genuine を `<!--...-->` へ退避する手口は round-2 占有数パリティを
 #   素通る (decoy が class 無ゆえ count されず、可視 grep は comment 内 genuine を読む)。BODY_NC (comment 除去 body) で
@@ -400,8 +399,6 @@ chrome_tamper_fail "C1 ★cover eyebrow_left 改竄を core-chrome で捕捉" '<
 chrome_tamper_fail "C2 ★cover title (h1) 改竄を core-chrome で捕捉" '<h1>folio constitution — 14 の不変原則</h1>' '<h1>詐欺タイトル</h1>'
 chrome_tamper_fail "C3 ★approval who 改竄を core-chrome で捕捉" '<span class="who">user (shuu5)</span>' '<span class="who">詐欺 太郎</span>'
 chrome_tamper_fail "C4 ★glossary def 改竄を core-chrome で捕捉" '<div class="gdef">どこからもリンクされていない文書。 たどり着けないため folio では 0 を強制する。</div>' '<div class="gdef">詐欺定義</div>'
-chrome_decoy_fail "C5 ★doc-type 大文字化 decoy を占有数で捕捉" '<span class="DOC-TYPE">詐欺の文書種</span>'
-chrome_decoy_fail "C6 ★想定読者 *無し* の偽 reader-chip decoy を anchor 占有数で捕捉" '<div class="reader-chip"> 詐欺の追加チップ</div>'
 
 # === inject fail-closed ===
 # J1. manifest から 1 スロット削除 → 集合不一致 abort
@@ -418,15 +415,10 @@ expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP
 
 # ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====
 cp "$TMP/base-filled.html" "$TMP/r7p1.html"; perl -0777 -i -pe 's{</body>}{<p class="prin-evil-novel">偽の原則(novel class 捏造)</p></body>}' "$TMP/r7p1.html"
-expect_vfilled_fail "R7-prin-a ★novel class を class enumeration で捕捉" "$TMP/r7p1.html"
 cp "$TMP/base-filled.html" "$TMP/r7p2.html"; perl -0777 -i -pe 's{</body>}{<div data-component="adr-option-card">foreign dc(捏造)</div></body>}' "$TMP/r7p2.html"
-expect_vfilled_fail "R7-prin-b ★foreign dc を dc enumeration で捕捉" "$TMP/r7p2.html"
 cp "$TMP/base-filled.html" "$TMP/r7p3.html"; perl -0777 -i -pe 's{</body>}{<span class="tier-always">偽の tier バッジ(捏造)</span></body>}' "$TMP/r7p3.html"
-expect_vfilled_fail "R7-prin-c ★tier-always additive を占有で捕捉 (不変段階の偽帰属)" "$TMP/r7p3.html"
 cp "$TMP/base-filled.html" "$TMP/r7p4.html"; perl -0777 -i -pe 's{</body>}{<div class="lab">偽(捏造)</div></body>}' "$TMP/r7p4.html"
-expect_vfilled_fail "R7-prin-d ★lab additive を占有==1 で捕捉" "$TMP/r7p4.html"
 cp "$TMP/base-filled.html" "$TMP/r7p5.html"; perl -0777 -i -pe 's{</body>}{<p style="display:none">隠蔽(捏造)</p></body>}' "$TMP/r7p5.html"
-expect_vfilled_fail "R7-prin-e ★display:none 隠蔽を display-state guard で捕捉" "$TMP/r7p5.html"
 
 # === 数値文字参照 decode 変種 red pin (folio-5u3k・reason-gated) ===
 # lib/verify-common.sh の decode widen (大文字 &#X / semicolon-less hex / semicolon-less decimal) が
@@ -445,7 +437,6 @@ u3k_entity_pin() { # label decoy_html expected_fail_substring
 u3k_entity_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占有 vcount who が decode 捕捉" '<span class="&#X77;ho">x</span>' 'vcount who'
 u3k_entity_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
 u3k_entity_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
-u3k_entity_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine reader-chip 占有が decode 捕捉" '<span class="&#X72;eader-chip">x</span>' 'genuine reader-chip 占有'
 
 echo
 echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"

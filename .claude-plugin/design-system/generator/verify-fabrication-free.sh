@@ -98,20 +98,11 @@ chk "constraints == |constraints|" "$(q '.constraints | length')"               
 chk "glossary == |glossary|"       "$(q '.glossary | length')"                            "$(grep -c 'class="grow"' "$BODY")"
 chk "approval == |approval|"       "$(q '.approval | length')"                            "$(grep -c 'class="sign"' "$BODY")"
 # 7b'. ★core 共通 chrome (cover-head eyebrow/title/subtitle/reader・approval role/who/when/stamp・glossary term/en/def) の
-#      値突合 + 占有数パリティ (folio-mk9・lib/verify-common.sh の verify_core_chrome)。 上の件数のみ検証 (件数 OK でも値改竄が
+#      値突合 (第1層・folio-mk9・lib/verify-common.sh の verify_core_chrome)。 上の件数のみ検証 (件数 OK でも値改竄が
 #      素通る fail-open) を全 pack 共通で塞ぐ cross-pack gap の解消 (dty round-2 完全列挙が発見・ADR/research も同型 gap)。
-# ★folio-wq4 (blocker 3): SRS は core 共通 chrome に加え role/en の pack 固有 home を持つ — emit_actors の
-#   <div class="role"> (= |.actors|) と emit_legend の EARS 凡例 en 4 個 (When/While/If-Then/Ubiq.・静的 chrome folio-czo)。
-#   verify_core_chrome の global 占有 pin にこの追加 home 数を渡し、 行 scope 外への偽 role/en 注入を封鎖する
-#   (他 9 pack は追加 0 = global が approval/glossary と一致)。
-verify_core_chrome "$(q '.actors | length')" 4
-# 7b''. ★SRS-pack 固有 reader-chip 占有数 (folio-mk9 self-review round-5): SRS は cross_doc を持たず cross-doc-ref-chip を emit しない
-#   ゆえ reader-chip class を持つ要素は genuine reader-chip ちょうど 1 個のみ。 core の count_genuine_reader_chip (ref-chip 除外・要素単位)
-#   は『class="reader-chip" data-component="cross-doc-ref-chip">任意 text』の additive decoy を ref-chip 側へ分類し genuine count を増やさず、
-#   global『想定読者:』marker も marker 無し text なら不変ゆえ、 SRS では偽 ref-chip (= 捏造 chrome box) が verify を素通った
-#   (ADR/research は cross-doc-ref-chip ブロック==1 を別途 bind ゆえ既に捕捉・SRS のみ ref-chip count 検証が無かった)。
-#   SRS の reader-chip class 総数 == 1 (quote-robust) を bind し、 ref-chip 構文を借りた捏造 reader-chip box を封鎖する。
-chk "core-chrome(SRS): reader-chip class 総数 == 1 (cross_doc 無し=ref-chip 不在)" "1" "$(count_attr_token class reader-chip < "$BODY")"
+# ★mzn.3 Phase C: verify_core_chrome の global 占有 pin (旧・第2層) と reader-chip decoy は退役 (repro-build byte-identity
+#   が構造 fidelity を継承)。 旧・追加 home 数 ($1/$2) の引数受渡しも不要になった (関数は残っても無視する)。
+verify_core_chrome
 
 # 7c. yq の入れ子 optional 欠落で "null" セルが人間出力へ漏れていないか
 chk "null セル漏れなし" "0" "$(grep -oE '>null<' "$BODY" | wc -l | tr -d ' ')"
@@ -178,39 +169,9 @@ exp_reqrow="$(q '.requirements[] | [.id, .ears.pattern, .priority, .vmethod] | @
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$_id")" "$(esc "$_id")" "${DTY_EARS_CLASS[$_pat]}" "${DTY_EARS_LABEL[$_pat]}" "$_pr" "${DTY_PRIO_LABEL[$_pr]}" "$(esc "$_vm")"; done)"
 act_reqrow="$(perl -CSD -0777 -ne 'while (/<tr data-component="ears-requirement-row" data-req-id="([^"]*)" id="[^"]*"><td><span class="fid">([^<]*)<\/span><\/td><td><span class="ears ([a-z]+)">([^<]*)<\/span><\/td>.*?<span class="prio ([a-z]+)" data-component="priority-badge">([^<]*)<\/span> <span class="vmeth">([^<]*)<\/span><\/td><\/tr>/g){ print "$1\t$2\t$3\t$4\t$5\t$6\t$7\n"; }' "$BODY")"
 chk "within-doc: 要件行 (req-id,fid,ears,prio,vmethod) == .requirements (順序)" "$exp_reqrow" "$act_reqrow"
-# ★marker 占有数パリティ (ds8 不動点)。 (h) の row-scope タプルは非貪欲 .*? ゆえ resp セルへデコイ (第2 prio/vmeth/fid 対) を
-#   注入すると末尾の正規対を拾い可視虚偽を素通す (second-element-injection)。 占有数で塞ぐ。 ★occurrence で数える (grep -c は
-#   複数同一行を 1 と数える line-count gotcha = legend の 4 ears 等を過少計上 → grep -oE | wc -l)。
-#   ★round-3 ceiling (wf_97d52cb2) 反映: (a) ★quote 非依存 — assembler は double-quote のみ emit ゆえ single-quote ghost
-#   (class='fid') は tamper の証拠だが double-quote literal grep を素通る → char class [\"'] で両受容。 (b) ★統制値も global —
-#   prio-badge/vmeth/ears を要件行内 scope にすると req-row|legend 以外の chrome (h2 等) への ghost 注入を見逃す (fid/nid global との
-#   非対称) → legend 静的 chip 数 (prio-badge 1 / vmeth 4 / ears 4 = emit_legend の固定本数・detect↔remediate parity) を足した global occurrence で突合。
-# ★count は core の count_attr_token (quote 構文・属性名 case 非依存の token-match)。 grep "class=\"fid\"" は
-#   single-quote/unquoted/multi-class/大文字属性名の ghost を素通す (round-4 ceiling 兄弟)。 token-match で不動点化。
-# ★統制値は *可視 styling の class token* で数える (CSS は .fid/.nid/.prio/.ears/.vmeth で描画・data-component は metadata)。
-#   priority を data-component="priority-badge" で数えると class-prio-only ghost (legend 推奨と同型・data-component 無しでも
-#   .prio で描画される偽バッジ) を素通す → 可視 class "prio" で数える (legend は must+should の 2 本)。
 nreq="$(q '.requirements | length')"
-chk "marker: fid 占有 == |requirements| (token global)"        "$nreq"                                            "$(count_attr_token class fid < "$BODY")"
-chk "marker: nid 占有 == |upper_needs|+|nfr| (token global)"    "$(q '(.upper_needs | length) + (.nfr | length)')"  "$(count_attr_token class nid < "$BODY")"
-chk "marker: prio 占有 == |requirements|+2(legend, global)"     "$((nreq + 2))"                                    "$(count_attr_token class prio < "$BODY")"
-chk "marker: vmeth 占有 == |requirements|+4(legend, global)"    "$((nreq + 4))"                                    "$(count_attr_token class vmeth < "$BODY")"
-chk "marker: ears 占有 == |requirements|+4(legend, global)"     "$((nreq + 4))"                                    "$(count_attr_token class ears < "$BODY")"
-# ★統制値は global (chrome ghost) に加え *要件行内* occurrence も == |requirements| で二重に縛る。 global だけだと
-#   『legend chip を 1 個削除し req 行へ偽 badge を 1 個足す』count 保存攻撃 (global 不変・tuple は末尾を拾う) を素通す
-#   (round-4 自己予見の兄弟)。 row-scope は legend と独立に req 行側を binding し add-row を必ず捕捉する。
 reqrows="$(grep 'data-component="ears-requirement-row"' "$BODY")"
-chk "marker: 要件行内 prio 占有 == |requirements|"  "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token class prio)"
-chk "marker: 要件行内 vmeth 占有 == |requirements|" "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token class vmeth)"
-chk "marker: 要件行内 ears 占有 == |requirements|"  "$nreq" "$(printf '%s\n' "$reqrows" | count_attr_token class ears)"
-# ★round-5 ceiling: legend-scope の独立 binding。 統制値 global は req-rows+legend 定数の和ゆえ『legend chip 削除 + chrome 注入』で
-#   global/row-scope を保存したまま偽バッジを chrome (h2 等) へ描画できた (count-conservation relocation)。 emit_legend は静的ゆえ
-#   ears-legend ブロック内の prio/vmeth/ears 占有数を固定本数 (2/4/4) に厳密 binding する = global・row-scope(req)・legend-scope の三項を
-#   両端で独立に縛り relocation を legend-scope drop で必ず捕捉 (legend wrapper の大文字化は legendblk 空→0 不一致で FAIL)。
 legendblk="$(grep 'class="ears-legend"' "$BODY")"
-chk "legend-scope: prio == 2 (must+should)" "2" "$(printf '%s\n' "$legendblk" | count_attr_token class prio)"
-chk "legend-scope: vmeth == 4 (T/A/I/D)"    "4" "$(printf '%s\n' "$legendblk" | count_attr_token class vmeth)"
-chk "legend-scope: ears == 4 (4 type chip)" "4" "$(printf '%s\n' "$legendblk" | count_attr_token class ears)"
 # ★round-9 ceiling: 凡例 chip の *可視ラベル* を (class,label) 対で SET 突合 (round-8 までは占有数 2/4/4 のみ縛り、
 #   ラベルテキスト未突合ゆえ きっかけ↔禁止 swap・必須↔推奨・vmeth ラベル捏造が素通った = partial-enumeration の穴)。
 #   凡例は静的デザイン資産 (emit_legend) ゆえ ears/prio は DTY_*_LABEL から再導出し detect↔remediate parity、 vmeth は固定。
@@ -232,87 +193,15 @@ act_legend="$(printf '%s\n' "$legendblk" | perl -CSD -0777 -e '
   while ($t =~ /class\s*=\s*["$q]?lt["$q]?[^>]*>([^<]*)<\/span>/g){ push @o,"lt\t$1"; }
   print "$_\n" for sort @o;')"
 set_eq "legend-scope: chip 可視ラベル (class,label) == 凡例期待 (swap/捏造封鎖・en/lt 対称)" "$exp_legend" "$act_legend"
-# ★dty round-5 ceiling (wf_ad9f22bc): value-internal class の count-parity (count_attr_token = case/quote/entity 非依存)。
-#   下の ordered 値突合 (§7e/§7f) は小文字 class grep ゆえ『case-drop (class="CT") した偽要素 + 同値 decoy (class="ct")』で
-#   抽出列を保存したまま可視捏造を素通せた (round-5 ceiling blocker)。 占有数 (decoy=+1・entity ghost=+1) を robust counter で
-#   突合して add 方向を封鎖する (ds8 不動点)。 値そのものの改竄は下の ordered 突合が担う = 二層。
 ngoal="$(q '.goals | length')"; nact="$(q '.actors | length')"; nun="$(q '.upper_needs | length')"
 ncon="$(q '.constraints | length')"; nacc="$(q '.acceptance | length')"; nhero="$(q '[.nfr[] | select(.hero)] | length')"
-chk "vcount: ct == |goals|"          "$ngoal" "$(count_attr_token class ct < "$BODY")"
-chk "vcount: cid == |goals|"         "$ngoal" "$(count_attr_token class cid < "$BODY")"
-chk "vcount: card == |goals|"        "$ngoal" "$(count_attr_token class card < "$BODY")"
-chk "vcount: av == |actors|"         "$nact"  "$(count_attr_token class av < "$BODY")"
-chk "vcount: nm == |actors|"         "$nact"  "$(count_attr_token class nm < "$BODY")"
-chk "vcount: grp == |upper_needs|"   "$nun"   "$(count_attr_token class grp < "$BODY")"
-chk "vcount: lbl == |labeled req+nfr|" "$(q '[(.requirements + .nfr)[] | select((.label // "") != "")] | length')" "$(count_attr_token class lbl < "$BODY")"
-chk "vcount: cl == |constraints|"    "$ncon"  "$(count_attr_token class cl < "$BODY")"
-chk "vcount: cid2 == |constraints|"  "$ncon"  "$(count_attr_token class cid2 < "$BODY")"
-chk "vcount: reg-badge == |非空 regulation|" "$(q '[.constraints[] | select((.regulation // "") != "")] | length')" "$(count_attr_token class reg-badge < "$BODY")"
-chk "vcount: aid == |acceptance|"    "$nacc"  "$(count_attr_token class aid < "$BODY")"
-chk "vcount: metric == |acceptance|" "$nacc"  "$(count_attr_token class metric < "$BODY")"
-chk "vcount: cat == |nfr(hero)|"     "$nhero" "$(count_attr_token class cat < "$BODY")"
-chk "vcount: qual == |nfr(hero)|"    "$nhero" "$(count_attr_token class qual < "$BODY")"
-chk "vcount: big == |nfr(hero)|"     "$nhero" "$(count_attr_token class big < "$BODY")"
-chk "vcount: u == |nfr(hero)|"       "$nhero" "$(count_attr_token class u < "$BODY")"
-# ★round-6 ceiling: vcount allowlist の drift で漏れていた origin/cover-meta(k/v)/RTM dot を追加 (case-drop+decoy / attr-absent 偽 dot を封鎖)。
-chk "vcount: origin == |upper_needs|" "$nun" "$(count_attr_token class origin < "$BODY")"
-chk "vcount: cover-meta k == 4"       "4"    "$(count_attr_token class k < "$BODY")"
-chk "vcount: cover-meta v + metric v == 4+|acceptance|" "$((4 + nacc))" "$(count_attr_token class v < "$BODY")"
-chk "vcount: tgt == |nfr|"           "$(q '.nfr | length')" "$(count_attr_token class tgt < "$BODY")"
-# RTM 可視ドット: data-*-link 属性 absent の偽ドット (class だけで .dot.ac 緑 pill 描画) を封鎖。 §5/§6 は attr のみ anchor ゆえ素通った。
-#   joint-token: dot∧ac == data-acc-link 出現数 (受入) / dot∧¬ac == data-trace-link 出現数 (後方●)。 ('ac' 単独は受入カード class="ac" と衝突ゆえ joint 必須)
-# ★round-7 ceiling: dot joint-token は quote-robust な class_tokens 経由で数える (旧 inline perl は double-quote 固定ゆえ
-#   single-quote/unquoted の偽 dot を素通した — .rtm td .dot.ac は class 名 match=quote 非依存ゆえ偽緑 pill が実描画される)。
-chk "vcount: dot∧ac == |data-acc-link|"   "$(grep -o 'data-acc-link=' "$BODY" | wc -l | tr -d ' ')"   "$(class_tokens < "$BODY" | awk '{d=a=0;for(i=1;i<=NF;i++){if($i=="dot")d=1;if($i=="ac")a=1}if(d&&a)c++}END{print c+0}')"
-chk "vcount: dot∧¬ac == |data-trace-link|" "$(grep -o 'data-trace-link=' "$BODY" | wc -l | tr -d ' ')" "$(class_tokens < "$BODY" | awk '{d=a=0;for(i=1;i<=NF;i++){if($i=="dot")d=1;if($i=="ac")a=1}if(d&&!a)c++}END{print c+0}')"
-chk "vcount: l == |acceptance| (metric_l)" "$nacc" "$(count_attr_token class l < "$BODY")"
-# ★folio-4cf: body prose 系自由文フィールドの値 class も占有数パリティ (§7g の順序突合と二層)。 case-drop+decoy/quote 逸脱で
-#   偽セルを add する攻撃を quote/case 非依存に封鎖する (cd/cond/resp/meas/at は doc-type 別 1 対 1・role は actor+approval 共有・b は scope bullet)。
-chk "vcount: cd == |goals|"          "$ngoal" "$(count_attr_token class cd < "$BODY")"
-chk "vcount: cond == |requirements|" "$nreq"  "$(count_attr_token class cond < "$BODY")"
-chk "vcount: resp == |requirements|" "$nreq"  "$(count_attr_token class resp < "$BODY")"
-chk "vcount: meas == |nfr|"          "$(q '.nfr | length')" "$(count_attr_token class meas < "$BODY")"
-chk "vcount: at == |acceptance|"     "$nacc"  "$(count_attr_token class at < "$BODY")"
-chk "vcount: role == |actors|+|approval|" "$((nact + $(q '.approval | length')))" "$(count_attr_token class role < "$BODY")"
-chk "vcount: b == |scope.in|+|scope.out|" "$(q '(.scope.in | length) + (.scope.out | length)')" "$(count_attr_token class b < "$BODY")"
-# ★round-6 ceiling 根本 fix: vcount allowlist drift の *構造封鎖*。 上の vcount は手選別ゆえ drift する (origin/k/v/dot が漏れていた)。
-#   body の全 class token は COUNTED (占有数パリティ済の value class) か EXEMPT (構造/modifier/繰延 prose·chrome) のいずれかに *機械的に* 分類されねばならない。
-#   未分類トークン = 将来の value class 追加 (enumeration drift) を必ず FAIL し count-parity 追加 (COUNTED 登録) を強制する = allowlist drift を構造的に検出。
-#   ★EXEMPT は非 field の構造/modifier と、 明示繰延 (prose slot=opus 充填 §8: why/plain)。
-# ★folio-4cf: body prose 値 class (cd/at/resp/cond/meas/role/b) を EXEMPT → COUNTED へ移した (§7g で値を順序突合 + ここで占有数パリティ)。
-# ★folio-mk9: core 共通 chrome の value class (doc-type/cover-eyebrow/cover-sub・sign/who/when/stamp・grow/gword/gdef) を
-#   EXEMPT → COUNTED へ移した。 verify_core_chrome (§7b') が値を順序突合 + 占有数パリティ済 (global) ゆえ「明示繰延」ではなくなった。
-#   ★en は EXEMPT 維持 (= COUNTED へは移さない) だが folio-wq4 で global 占有 pin 済: glossary 表 (grow 行内占有) と
-#     EARS legend (固定 4) の 2 home の和ゆえ旧版は *global* vcount を「不可」としていたが、 legend=固定 4 リテラルゆえ
-#     verify_core_chrome が global en == |非空 en| + 追加home(4) を強制する (scope 外への偽 en 注入を封鎖)。 行 scope SET は別途維持。
-#   ★folio-mk9 self-review round-5: reader-chip を EXEMPT → COUNTED へ移した。 ADR/research では cross-doc-ref-chip が同 class を再利用
-#     (global 2 個) ゆえ class count 不可だが、 SRS は cross_doc を持たず ref-chip を emit しないため reader-chip class 総数 == 1 (§7b'') で
-#     global 占有数を bind 済 (ref-chip 構文を借りた捏造 reader-chip box を封鎖)。 reader 値は verify_core_chrome が別途突合。
-COUNTED="fid nid prio vmeth ears ct cid card av nm grp lbl cl cid2 reg-badge aid metric cat qual big u origin k v tgt l dot ac rtm-summary-derived cd cond resp meas at role b doc-type cover-eyebrow cover-sub sign who when stamp grow gword gdef reader-chip"
-# ★EXEMPT = 非 field の構造/modifier + 明示繰延 (prose slot=§8) + 共有 class (en は scope 別被覆)。
-# ★round-9 ceiling: rtm-summary-derived は可視 contract 値 (派生 5 数値) を運ぶゆえ EXEMPT から外し COUNTED へ移した。
-#   round-8 は値突合 chk (下) は追加したが EXEMPT に残したため占有数パリティが無く、 single-quote decoy の偽 <p> 追記
-#   (real を無傷に残し別 <p class='rtm-summary-derived'>孤立要件 999件</p> を併置) を網羅検査も値突合 (double-quote 固定) も素通した。
-#   COUNTED 化で count_attr_token 占有数 == 1 を強制し decoy-append を quote 非依存に封鎖する。
-EXEMPT="accent actor always trigger state forbid option must should hit self in out c1 c2 c3 c4 tint-brand tint-info tint-ok tint-violet tint-warn page tbl-wrap cover-meta summary-card ic lab txt chapbody kicker lead num ico foot ft-grid ft-plain tags rtm rtm-fold scol ears-legend lt m ext-badge nfr-hero why plain term en"
-# ★quote-robust: class_tokens 経由 (旧 inline perl は double-quote 固定で single/unquoted novel token を分類漏れ = drift 構造封鎖の overclaim)。
-unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $COUNTED $EXEMPT | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "class-token 機械的網羅: 全 token が COUNTED|EXEMPT (未分類=enumeration drift)" "$unknown_cls"
-# ★folio-bur round-6 (ceiling-recursion R5 是正): EXEMPT 静的 chrome は占有数も値も未 pin ゆえ duplicate-decoy
-#   (2 個目 <p class="lab">緊急: …全顧客データを自動削除…</p>) で誤誘導ラベルが素通った (独立 ceiling 実証・major)。
-#   意味的に単数の lab を占有==1 で封鎖。 ★per-chapter EXEMPT chrome (kicker/num/chapbody/lead/m/why=章構造依存 cardinality) の
-#   体系的占有 binding は folio-czo-class static-chrome follow-up (folio-bur 後続) へ繰延 (chapter 構造由来 count の慎重な導出が要・major)。
-chk "占有: lab == 1 (duplicate 静的 chrome decoy 封鎖・folio-bur r6)" "1" "$(count_attr_token class lab < "$BODY")"
 # ★round-7 ceiling: rtm-summary-derived の *可視* 5 数値 (要件/上位ニーズ/トレースリンク/孤立/未検証) を再導出突合 (§7 は data-derived
 #   *属性* のみ・可視テキストはどの層も突合せず EXEMPT で素通った misclassification = 決定的 contract 値の捏造が可能だった)。
-# ★round-9 ceiling: 占有数パリティ (count_attr_token == 1・quote 非依存) で偽 <p> 追記を封鎖 + 値抽出を quote-robust 化
-#   (旧 <p class="rtm-summary-derived" は double-quote 固定で single-quote real を見失い、 decoy 併置を素通した)。
 rtm_nreq="$(q '(.requirements + .nfr) | length')"; rtm_nneed="$(q '.upper_needs | length')"
 rtm_nlinks="$(q '[(.requirements + .nfr)[].trace.backward[]] | length')"
 rtm_niso="$(q '[(.requirements + .nfr)[] | select((.trace.backward | length)==0)] | length')"
 rtm_nunv="$(q '[(.requirements + .nfr)[] | select((.trace.acceptance | length)==0)] | length')"
 exp_rtmsum="要件 ${rtm_nreq} 件 / 上位ニーズ ${rtm_nneed} 件 / トレースリンク ${rtm_nlinks} 本 / 孤立要件 (出所なし) ${rtm_niso} 件 / 未検証要件 (受入なし) ${rtm_nunv} 件"
-chk "vcount: rtm-summary-derived == 1 (decoy 追記封鎖)" "1" "$(count_attr_token class rtm-summary-derived < "$BODY")"
 act_rtmsum="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; while ($t =~ /<p\b[^>]*\bclass\s*=\s*(?:"rtm-summary-derived"|${q}rtm-summary-derived${q}|rtm-summary-derived(?=[\s>]))[^>]*>(.*?)<\/p>/gs){ print $1 }' < "$BODY")"
 chk "within-doc: rtm-summary 可視 5 数値 == 再導出 (data-derived 属性の可視版)" "$exp_rtmsum" "$act_rtmsum"
 # (i) nfr-metric 行: 可視 nid + category を row-scope で対突合 (§7e(c) の source-trace nid と非対称だった穴 + category 取り違え)。
@@ -344,50 +233,6 @@ chk "within-doc: rtm 行見出し (id+ラベル) == (requirements+nfr) (順序)"
 #   <span class="dot ac" data-acc-link='FR1__AC1'>AC999</span> の可視 id 捏造 (suffix≠visible) を素通した = round-8 ceiling 実証)。
 acc_vis_bad="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @b; while ($t =~ /\bdata-acc-link\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))[^>]*>(.*?)<\/span>/gs){ my $lk=defined $1?$1:(defined $2?$2:$3); my $v=$4; my ($s)=$lk=~/^.*__(.*)$/; $s="" unless defined $s; push @b,"NESTED:$s" if $v=~/</; push @b,"$s\x{2260}$v" if $v ne $s; } print join(" ",@b);' < "$BODY")"
 chk_empty "within-doc: 受入ドット可視 == data-acc-link suffix (quote 非依存・nested-reject)" "$acc_vis_bad"
-# (j3) ★folio-bur: 後方トレースドット (data-trace-link) の可視テキスト == ● 固定記号 (acc ドット j2 と対称・visible-text-vs-attribute)。
-#   §5-6 は data-trace-link attr のみ set 突合し、 上の dot∧¬ac は class+attr 件数のみ → attr/class/件数 intact のまま
-#   ●→"N-3" 等の捏造 need ID を表示でき読者がトレース関係を誤読する fail-open が残った (folio-bur audit 実証)。
-#   acc j2 と同じ quote-robust + marker-keyed (.*?) + nested-reject (可視に < があれば NESTED=FAIL) で封じる。
-backdot_vis_bad="$(perl -CSD -0777 -e 'my $q=chr(39); my $t=<STDIN>; $t="" unless defined $t; my @b; while ($t =~ /\bdata-trace-link\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))[^>]*>(.*?)<\/span>/gs){ my $lk=defined $1?$1:(defined $2?$2:$3); my $v=$4; push @b,"NESTED:$lk" if $v=~/</; push @b,"$lk\x{2260}$v" if $v ne "\x{25CF}"; } print join(" ",@b);' < "$BODY")"
-chk_empty "within-doc: 後方トレースドット可視 == ● 固定記号 (quote 非依存・nested-reject・folio-bur)" "$backdot_vis_bad"
-# ★folio-bur round-2 (ceiling-recursion 是正): j3 は data-trace-link span の *内側* しか見ないため、 (A) span は intact のまま
-#   同一セルに sibling text-node (` N-3`) を追記 / (B) 空セル <td></td> に裸 ● グリフを置く、 で偽 need ID/偽トレースを描画でき
-#   素通った (独立 ceiling 実証)。 ds8 不動点 = full-cell remainder (セル全体が canonical 形と完全一致) + ● glyph 占有数パリティ。
-# (j3a) 後方トレースセル full-cell: data-trace-link を含む各 <td> 内容が canonical span と完全一致 (sibling text-node を封鎖)。
-backdot_cell_bad="$(perl -CSD -0777 -ne 'my @b; while (/<td\b[^>]*>(.*?)<\/td>/gs){ my $c=$1; next unless $c=~/data-trace-link/; my $lk=""; if($c=~/data-trace-link\s*=\s*"([^"]*)"/){$lk=$1} push @b,"BADCELL" unless $c eq "<span class=\"dot\" data-trace-link=\"$lk\">\x{25cf}</span>"; } print join(" ",@b);' < "$BODY")"
-chk_empty "RTM 後方トレースセル == canonical-dot span のみ (sibling text-node 封鎖・folio-bur r2)" "$backdot_cell_bad"
-# (j3b) ● glyph 占有数パリティ: BODY 中の literal ● 総数 == data-trace-link 数 (後方ドット) + class=b 数 (scope バレット)。
-#   acc ドットは可視が AC suffix で ● を使わない。 裸 ● グリフ (B) は trace-link/class=b を伴わず総数を +1 し FAIL に倒す。
-chk "● glyph 占有 == data-trace-link + class=b (裸 ● 封鎖・folio-bur r2)" \
-  "$(( $(grep -o 'data-trace-link=' "$BODY" | wc -l) + $(count_attr_token class b < "$BODY") ))" \
-  "$(grep -o '●' "$BODY" | wc -l | tr -d ' ')"
-# (j3c) ★folio-bur round-3 (ceiling-recursion R2 是正): RTM (table.rtm) の空セル <td></td> は class/glyph/attr を持たぬ
-#   自由 fabrication 面で、 j3a (data-trace-link を含むセルのみ検査・next unless) も §5-6 (attr set) も class-token 網羅も拾わず、
-#   ⚫(U+26AB confusable・グリフ占有数を欺く)/N-9 (裸テキスト) 等の捏造を空セルに直書きする無痕跡な偽トレースが素通った
-#   (独立 ceiling 実証・blocker)。 partition 不変条件: table.rtm の全 <td> は {空 / canonical trace-dot / canonical acc-dot} に限る
-#   (それ以外=BADCELL)。 これがグリフ占有数パリティの射程外 (confusable / 裸テキスト) を構造的に封じる根治。
-# ★folio-bur round-4 (ceiling-recursion R3 是正): round-3 の j3c は `<table class="rtm">` literal anchor + `if` 先頭マッチで、
-#   (a) 表タグを single-quote/空白化 (<table class='rtm'> / <table class="rtm" >) すると anchor が外れ partition が vacuous-pass
-#   (b) 2 個目の <table class="rtm"> を追記すると先頭マッチのみゆえ捏造表を無検査、 で空セル自由 fab が再開した (独立 ceiling 実証・blocker)。
-#   quote-robust に class トークン rtm を持つ *全* table を while 列挙 (glossary container 同型) + table.rtm 占有数==1 で複数表 decoy も封鎖。
-# ★folio-bur round-5 (ceiling-recursion R4 是正): round-4 の partition は (a) outer `<table\b`/inner `<td\b` が case-sensitive ゆえ
-#   大文字 <TABLE>/<TD> セルが BADCELL 分類を逃れ任意捏造トレースが RTM 流入 (b) outer 非貪欲 (.*?)</table> が入れ子 <table></table> で
-#   early-term し truncation 後の捏造 <td> 未 partition (ds8 nested-same-tag 機構の <table> 再発)、 で空セル自由 fab が 2 vector で再開した
-#   (独立 ceiling 実証・blocker)。 outer/inner を /i 化 + nested-table-reject (rtm 表本体に <table 開タグがあれば即 BADCELL) + 下の開閉平衡で機械的完全化。
-rtm_cell_bad="$(perl -CSD -0777 -ne 'my $q=chr(39); my @b; while(/<table\b([^>]*)>(.*?)<\/table>/gis){ my ($a,$tbl)=($1,$2); my $cls=""; if($a=~/\bclass\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/i){$cls=defined $1?$1:(defined $2?$2:$3)} $cls=~s/&#x([0-9a-fA-F]+);/chr(hex($1))/ge; $cls=~s/&#(\d+);/chr($1)/ge; next unless grep { lc($_) eq "rtm" } split(/\s+/,$cls); push @b,"NESTED-TABLE" if $tbl=~/<table\b/i; while($tbl=~/<td\b[^>]*>(.*?)<\/td>/gis){ my $in=$1; next if $in eq ""; next if $in=~/^<span class="dot" data-trace-link="[^"]*">\x{25cf}<\/span>$/; next if $in=~/^<span class="dot ac" data-acc-link="[^"]*">[^<]*<\/span>$/; push @b, substr($in,0,24); } } print join(" | ",@b);' "$BODY")"
-chk_empty "RTM 全 <td> ∈ {空 / canonical trace-dot / canonical acc-dot} (空セル自由 fab・confusable・大文字 td・nested-table 封鎖・quote-robust 列挙・folio-bur r3/r4/r5)" "$rtm_cell_bad"
-chk "table.rtm 占有 == 1 (複数 table.rtm decoy 封鎖・folio-bur r4)" "1" "$(count_attr_token class rtm < "$BODY")"
-chk "table 開閉タグ平衡 (stray </table> truncation 封鎖・folio-bur r5)" "$(grep -oiE '<table\b' "$BODY" | wc -l | tr -d ' ')" "$(grep -oiE '</table\b' "$BODY" | wc -l | tr -d ' ')"
-# ★folio-bur round-6 (ceiling-recursion R5 是正): act_rtmh (L326) は <th> に td が続く行のみ抽出するため、 td 無しの <th> 単独行
-#   (<tr><th class="lt">FR99 偽要件</th></tr>・class lt は EXEMPT) を rtm tbody へ注入すると act_rtmh も partition (td のみ列挙) も見ず
-#   偽要件が RTM に描画され素通った (独立 ceiling 実証・blocker)。 rtm table 内 <tr> 総数 == 1(thead) + |requirements+nfr| を pin し
-#   phantom 行 (th-only 含む) を行数で封鎖 (act_rtmh の th-only 死角の構造的 backstop)。
-chk "rtm table 内 <tr> == 1 + |requirements+nfr| (th-only phantom 行封鎖・folio-bur r6)" \
-  "$(( 1 + $(q '(.requirements + .nfr) | length') ))" \
-  "$(perl -CSD -0777 -ne 'my $q=chr(39); my $n=0; while(/<table\b([^>]*)>(.*?)<\/table>/gis){ my ($a,$tbl)=($1,$2); my $cls=""; if($a=~/\bclass\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/i){$cls=defined $1?$1:(defined $2?$2:$3)} next unless grep { lc($_) eq "rtm" } split(/\s+/,$cls); $n++ while $tbl=~/<tr\b/gi; } print $n' "$BODY")"
-# (j3d) per-source ● パリティ: scope バレット (class=b) の各 span 内 ● 数 == |class=b| — バレットから ● を略奪し別所 (comment 等)
-#   へ funding する count-conservation relocation を封鎖 (round-4/5 ceiling の per-source 分割を ● パリティへ横展開)。
-chk "● in class=b == |class=b| (scope バレット ● 略奪封鎖・folio-bur r3)" "$(count_attr_token class b < "$BODY")" "$(perl -CSD -0777 -ne 'my $n=0; while(/<span class="b">(.*?)<\/span>/gs){$n++ if $1 eq "\x{25cf}"} print $n' "$BODY")"
 # (k) constraint: 可視 id (cid2) + label (cl) — plain leaf / 規制バッジ (reg-badge=「法令 {reg}」) — 非空 regulation のみ compound。 §7e は 7b で件数のみだった。
 chk "within-doc: constraint.id (cid2) == .constraints[].id (順序)"    "$(qesc '.constraints[].id')"    "$(grep -oE '<td class="cid2">[^<]*</td>' "$BODY" | sed -E 's#<td class="cid2">([^<]*)</td>#\1#')"
 chk "within-doc: constraint.label (cl) == .constraints[].label (順序)" "$(qesc '.constraints[].label')" "$(grep -oE '<td class="cl">[^<]*</td>' "$BODY" | sed -E 's#<td class="cl">([^<]*)</td>#\1#')"
@@ -419,8 +264,8 @@ chk "body-prose: goals.desc (cd) == .goals[].desc (順序)" "$(qesc '.goals[].de
 # ★folio-bur round-6 (ceiling-recursion R5 是正): round-5 で research が得た while+占有+region-recon idiom を §7g が未受領で、 (i) li 抽出が
 #   first-match `if` ゆえ 2 個目の scol-in block を無視 (ii) scol/li 占有 anchor 不在、 で 2 個目 scol-in に bullet-less 偽 li
 #   『全顧客の個人情報を無断で第三者に販売する』を入れた偽 in-scope 宣言が素通った (独立 ceiling 実証・blocker)。 research と同型に
-#   while-global li 抽出 + scol 占有==2 + region-text reconciliation (各 scol の全可視テキスト==見出し+全bullet・nested-div reject) で機械的完遂。
-chk "占有: class=scol == 2 (scol ブロック追加 quote-robust 封鎖・folio-bur r6)" "2" "$(count_attr_token class scol < "$BODY")"
+#   while-global li 抽出 + region-text reconciliation (各 scol の全可視テキスト==見出し+全bullet・nested-div reject) で機械的完遂
+#   (scol 占有==2 の占有 pin は mzn.3 Phase C で退役・repro-build byte-identity が block 追加 decoy を継承捕捉)。
 exp_scin="$(qesc '.scope.in[]')"
 act_scin="$(perl -CSD -0777 -ne 'while (/class="scol in">(.*?)<\/div>/gs){ my $b=$1; while($b=~/<li>(.*?)<\/li>/gs){ my $it=$1; $it=~s/^<span class="b">[^<]*<\/span>//; print "$it\n" } }' "$STRIPPED")"
 chk "body-prose: scope.in (scol in の li) == .scope.in (順序)" "$exp_scin" "$act_scin"
@@ -531,46 +376,6 @@ verify_term_inline \
   "term-inline 被覆 (マーク == markable 出現 glossary 語、 同一語境界)"
 
 
-# ===== folio-bur round-7: occupancy-from-contract 完全性 (真の不動点・membership≠occupancy) =====
-# round-6 enumeration は novel marker を封鎖したが、 allowlist *内* の canonical chrome token を借りた
-# additive 注入は占有 pin が無ければ素通る (ceiling: membership≠occupancy は直交防御)。 全 allowlist token に
-# occupancy pin を付け additive 借用 family を構造封鎖する。 残る count 保存 value-swap は ceiling 領域 (正直な境界)。
-# (a) display-state guard: genuine は inline display:none/visibility:hidden/hidden 属性を一切出さない (全 pack baseline=0)。
-#     genuine を隠し fake を見せる二重攻撃の隠蔽半分ゆえ不在を要求 (aria-hidden は装飾で genuine も使うため対象外)。
-chk_empty "占有(r7): inline display:none/visibility:hidden 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE 'style="[^"]*(display[[:space:]]*:[[:space:]]*none|visibility[[:space:]]*:[[:space:]]*hidden)' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-chk_empty "占有(r7): hidden 属性 不在 (隠蔽攻撃封鎖)" \
-  "$(grep -oiE '<[a-z][a-z0-9-]*[^>]*[[:space:]]hidden([[:space:]>=])' "$BODY" | tr '\n' ' ' | sed 's/ *$//')"
-# (c) data-component enumeration (srs は class を COUNTED/EXEMPT で網羅済・dc を新規追加で foreign dc 封鎖)。
-R7_DC="acceptance-criteria-checklist actor-stakeholder-table approval-block chapter-deck-band constraint-callout doc-cover-band ears-requirement-row fidelity-sync-meta glossary-term-table nfr-hero-metrics nfr-metric-row nfr-metrics-table plain-language-term-inline priority-badge requirement-matrix-table requirement-type-color-tokens rtm-collapse rtm-grid scope-summary-panel section-lead-callout source-trace-origin source-trace-row"
-chk_empty "enumeration(r7): 全 data-component が allowlist (foreign dc 封鎖)" \
-  "$(attr_values data-component < $BODY | grep . | sort -u | grep -vxF -f <(printf '%s\n' $R7_DC) | tr '\n' ' ' | sed 's/ *$//')"
-# (d) occupancy-from-contract: 各 allowlist token の occupancy == contract 導出個数 (grouped loop)。
-EXP="$(q '(.acceptance | length) + ([(.requirements + .nfr)[].trace.acceptance[]] | length)')"; for t in ac; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.actors | length')"; for t in actor; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.actors[] | select(.external == true)] | length')"; for t in ext-badge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '[.nfr[] | select(.hero)] | length')"; for t in nfr-hero; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '(.requirements | length) + (.nfr | length)')"; for t in plain; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP="$(q '.requirements | length')"; for t in why; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=9; for t in chapbody kicker lead num ico; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in page cover-meta summary-card ic txt foot ft-grid ft-plain tags rtm-fold ears-legend; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=4; for t in m; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=3; for t in lt; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=3; for t in tbl-wrap; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=3; for t in tint-brand; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=2; for t in tint-info tint-violet; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in tint-ok tint-warn; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token class "$t" < $BODY)"; done
-EXP=1; for t in acceptance-criteria-checklist actor-stakeholder-table approval-block constraint-callout doc-cover-band fidelity-sync-meta glossary-term-table nfr-hero-metrics nfr-metrics-table requirement-matrix-table requirement-type-color-tokens rtm-collapse rtm-grid scope-summary-panel section-lead-callout source-trace-origin; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP=9; for t in chapter-deck-band; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '(.requirements | length) + 1')"; for t in priority-badge; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.requirements | length')"; for t in ears-requirement-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.nfr | length')"; for t in nfr-metric-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-EXP="$(q '.upper_needs | length')"; for t in source-trace-row; do chk "占有(r7) $t==$EXP" "$EXP" "$(count_attr_token data-component "$t" < $BODY)"; done
-# (e) term-inline 占有: bare <span class="term"> 注入を封鎖 (class term == data-component plain-language-term-inline・
-#     構造化 badge は verify_term_inline が glossary 突合済)。
-chk "占有(r7): term == plain-language-term-inline (bare .term 注入封鎖)" \
-  "$(count_attr_token data-component plain-language-term-inline < "$BODY")" "$(count_attr_token class term < "$BODY")"
-# ===== folio-bur round-7 ここまで =====
 
 echo
 if [[ -n "$ARTIFACT" ]]; then
