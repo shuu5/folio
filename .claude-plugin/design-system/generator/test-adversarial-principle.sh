@@ -449,6 +449,19 @@ u3k_entity_pin "U3K4 ★entity 偽装 reader-chip (&#X72;eader-chip) を genuine
 
 echo
 echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
+# ===== census-count blocking arm conformance seed (folio-jmmk): 来歴部品件数の source DOM 静的照合 =====
+# 空 data-component タグ注入で件数 +1 (excess) にし census-count arm が [FAIL] census-count: principle-amendment-history で
+# blocking 捕捉することを固定。 am-meta 順序値 chk は Σ|amended_by| 基数を守るが amended principle *数* (= history block 数) を
+# 守る第 1 層が無い = census-count arm が唯一 anchor (sweep 分類表 folio-3d23【B2 占有pin sweep 成果物】)。 帰属 [FAIL] 行は
+# census-count arm を外した mutant で消え = mutation-kill (占有 pin de-scope 後の継承先 aliveness 固定)。
+cc_seed() { # label token
+  perl -0777 -pe 's{</h1>}{"</h1><span data-component=\"'"$2"'\"></span>"}e if !$d++' "$TMP/base-filled.html" > "$TMP/ccseed-$2.html"
+  local out rc; out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/ccseed-$2.html" 2>&1)"; rc=$?
+  if [[ $rc -ne 0 ]] && printf '%s\n' "$out" | grep -F '[FAIL]' | grep -qF "census-count: $2"; then ok "$1"
+  else ng "$1 (exit=$rc / [FAIL] census-count: $2 不発火)"; fi
+}
+cc_seed "CC-amend ★空 principle-amendment-history 追加 (来歴 block 数不一致) を census-count arm が捕捉" principle-amendment-history
+
 if repro_pins "$VER" principle "$BASE" "$BASE_PROSE" "$ASM" "$INJ" --filled "$BASE_PROSE"; then ok "repro-build conformance (a-d) 全 pass"; else ng "repro-build conformance (a-d) 逸脱"; fi
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"

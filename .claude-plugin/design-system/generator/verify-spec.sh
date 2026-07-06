@@ -310,6 +310,21 @@ chk "spec-machine-note == Σ machine note"    "$MB_NOTE"  "$(grep -c 'data-compo
 chk "spec-machine-list == Σ machine list"    "$MB_LIST"  "$(grep -c 'data-component="spec-machine-list"' "$BODY")"
 chk "machine li (mli) == Σ machine list items" "$MB_LI"  "$(grep -c 'class="mli"' "$BODY")"
 chk "spec-machine-fold == sections(mb) + preamble" "$EXP_FOLD" "$(grep -c 'data-component="spec-machine-fold"' "$BODY")"
+
+echo
+echo "--- census-count (blocking arm・folio-jmmk): 容器 block / machine list 部品の source DOM 静的件数 == contract 期待件数 ---"
+# 機械/LLM 境界 (verification §3.9) の render 非依存 blocking 件数照合。 count_attr_token (quote 構文・属性名 case・数値
+# 文字参照 非依存の occurrence 数え = SRS 499ab7b census-count arm と同規律) で data-component トークン件数を数え、 期待値は
+# contract から自己導出 (DOM 非参照・contract-anchor)。 内容の順序値 chk (list=items / code=lines / table=cell / machine
+# round-trip) は容器 block の *境界/個数* を 1:1 で守らない (空 block 追加・block 分割/併合が順序値を素通る) ため占有 pin
+# (folio-bur) が唯一 anchor。 本 arm は占有 pin de-scope (Phase C) 後も同強度で件数照合を継承する static 後継 (sweep 分類表
+# = folio-3d23【B2 占有pin sweep 成果物】の第 1 層無し唯一 anchor)。 spec-machine-fold は下記 mf-label/mf-count 順序値 chk が
+# fold 件数を並存して守る (第 1 層あり=冗長) ため census-count arm 対象外 (sweep 表の唯一 anchor 判定に従う)。
+chk "census-count: spec-list-block == |list blocks|"            "$(q '[.sections[].blocks[]? | select(.type=="list")] | length')"   "$(count_attr_token data-component spec-list-block < "$BODY")"
+chk "census-count: spec-code == |code blocks|"                  "$(q '[.sections[].blocks[]? | select(.type=="code")] | length')"   "$(count_attr_token data-component spec-code < "$BODY")"
+chk "census-count: spec-table == |table blocks|"                "$(q '[.sections[].blocks[]? | select(.type=="table")] | length')"  "$(count_attr_token data-component spec-table < "$BODY")"
+chk "census-count: spec-machine-list == |machine list blocks|"  "$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | length')" "$(count_attr_token data-component spec-machine-list < "$BODY")"
+
 # ★folio-bur: machine fold summary の可視 echo (mf-label heading / mf-count per-fold 件数)。 fold 件数 (EXP_FOLD) は
 #   上で pin 済だが、 各 fold の summary ラベル (heading echo) と per-fold 件数は contract へ未束縛で、 §N heading の捏造・
 #   per-fold 件数の捏造が素通った (folio-bur audit 実証の 2 穴・visible-text-vs-attribute / orphan-or-count)。

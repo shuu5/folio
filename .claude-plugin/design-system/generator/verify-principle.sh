@@ -115,6 +115,16 @@ chk "versioning rules == |rules|"      "$(q '.versioning.rules | length')" "$(gr
 chk "amendment steps == |steps|"       "$(q '.amendment.steps | length')"  "$(grep -oE '<li>' "$BODY" | wc -l | tr -d ' ')"
 chk "glossary == |glossary|"           "$(q '.glossary | length')"    "$(grep -c 'class="grow"' "$BODY")"
 chk "approval == |approval|"           "$(q '.approval | length')"    "$(grep -c 'class="sign"' "$BODY")"
+
+echo
+echo "--- census-count (blocking arm・folio-jmmk): 来歴部品の source DOM 静的件数 == contract 期待件数 ---"
+# 機械/LLM 境界 (verification §3.9) の render 非依存 blocking 件数照合。 count_attr_token (quote 構文・属性名 case・数値
+# 文字参照 非依存の occurrence 数え = SRS 499ab7b census-count arm と同規律) で principle-amendment-history トークン件数を
+# 数え、 期待値は contract から自己導出 (DOM 非参照・contract-anchor)。 am-meta 順序値 chk は Σ|amended_by| 基数 (改訂 ADR 総数)
+# を守るが amended principle *数* (= history block 数) を守る第 1 層が無い (sweep 分類表 = folio-3d23【B2 占有pin sweep
+# 成果物】の唯一 anchor)。 本 arm は占有 pin de-scope (Phase C) 後も同強度で件数照合を継承する static 後継。
+chk "census-count: principle-amendment-history == |amended|" "$(q '[.principles[] | select((.amended_by // []) | length > 0)] | length')" "$(count_attr_token data-component principle-amendment-history < "$BODY")"
+
 # 1b. ★core 共通 chrome (cover-head/approval/glossary の値突合 + 占有数パリティ・folio-mk9)。
 verify_core_chrome
 
