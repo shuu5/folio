@@ -39,9 +39,11 @@ echo "== recapture parity gate 敵対回帰 =="
 #   lineage: 2026-07-05 (folio-og3g 初版) = 3 contract / 66 id (relations 4 + rules 26 + verification 36
 #   〔REQ-VER 29 + REQ-NAV 7・og3g recapture 追随後〕)。 更新時は gate 実出力から転記し、 件数を
 #   原本 anchor grep と contract yq で独立再導出して確認すること。
+#   lineage: 2026-07-06 (folio-mzn.3 Phase A) = 3 contract / 65 id (relations 4 + rules 26 + verification 35
+#   〔REQ-VER 28 + REQ-NAV 7・REQ-VER-027/028 退役 + REQ-VER-030 構成同一性 新設〕。 独立再導出: 原本 anchor 35 == contract yq 35)。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 66 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 3 contract / 66 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 65 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 3 contract / 65 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---
