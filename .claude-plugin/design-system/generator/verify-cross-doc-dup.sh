@@ -144,8 +144,16 @@ features.desc|.features[].desc
 risks.desc|.risks[].desc
 non_goals.text|.non_goals.text
 principle.narrative|.principle.narrative'
+LEAVES[datamodel]='context.problem|.context.problem
+context.scope_note|.context.scope_note
+entities[].description|.entities[].description
+relationships[].plain|.relationships[].plain
+relationships[].invariant|.relationships[].invariant
+data_policy[].rule|.data_policy[].rule
+data_policy[].reason|.data_policy[].reason'
 # glossary = 比較対象なし (用語 def は SSoT コピーで全 pack に複製 = 構造上の全一致ゆえ除外)。
 # vision の no_restate/pitch/principle.text は navigational meta / 短文マーケ句 / 共有終端規約で不掲載 (arch と同方針)。
+# datamodel の glossary def / 共有終端 principle.text / entity field note (粒度過小) は不掲載 (arch と同方針)。
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)

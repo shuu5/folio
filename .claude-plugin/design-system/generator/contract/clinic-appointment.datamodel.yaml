@@ -1,0 +1,225 @@
+# folio engine post-B6 (folio-1q8o / c5r Tier C) — data-model-pack 入力 contract インスタンス (instance#1 / hybrid)
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT / ARCH-CLINIC-APPT / ADR-CLINIC-0001 と同一ドメイン・suite 一貫)。
+# doc-type = data-model (情報の持ち方の WHAT)。 hybrid 型 = indexed (entities カタログ) + descriptive (ER 図 + domain 散文)。
+# agnostic (folio-dxq code-less 射程に整合・特定 DB/ORM 非依存)。
+#
+# ★この pack の核 = cross-doc 前方照会 (案A = 別文書への cross-document link・再掲ゼロ):
+#   entities[].refs.srs[]       (claim) → SRS-CLINIC-APPT の要件 (FR/NFR) を *充足照会*
+#   relationships[].refs.srs[]  (claim) → 同上 (つながり・決まりが担保する要件)
+#   data_policy[].refs.srs[]    (claim) → 同上 (データ方針が守る要件)
+#   principle (terminal)                → 照会 graph の終端 (これ以上遡らない・自前 inline 原則)
+#   verify-datamodel.sh が照会先 SRS contract に当該 ID が実在することを fail-closed で確かめる。
+#   ★deep-link: 各照会バッジの href fragment == 表示 REQ-ID (自 doc 内 pin。 参照先アンカー実在は SRS 側 lzz pin が transitively 保証)。
+#
+# 構造 (6 章 / entity / つながり / データ方針 / 原則終端 / ER 図 / 用語) は contract から決定的組立 (捏造不可)。
+# prose スロット (cover-summary / chapter-lead-01..06 / plain-<entity-id>×6) のみ opus が後充填。
+# core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three: core byte-identity が最重 gate)。
+#
+# 読者 = クリニックの事業責任者 (医療や IT の専門知識は不要・専門語はやさしい言葉を併記)。
+
+doc_type: data-model
+
+meta:
+  doc_id: DM-CLINIC-APPT
+  title: クリニック診療予約システム — データモデル
+  eyebrow_left: folio design-system / data-model
+  eyebrow_right: entity catalog + ER
+  subtitle: 予約にまつわる情報を 6 つのかたまりに分け、 「同じ枠に 2 人」「別人と取り違え」がデータの決まりとして起こらない形を示す
+  version: "1.0"
+  date: "2026-07-07"
+  reader: クリニックの事業責任者 — 医療や IT の専門知識は不要 (専門語はやさしい言葉を併記)
+
+# 承認記録 (SRS / ARCH と同じ approval-block・clinic suite 一貫)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-07-07 承認
+    stamp: 承認済
+  - role: レビュー (データ設計)
+    who: 佐藤 健
+    when: 2026-07-06 レビュー
+    stamp: レビュー済
+  - role: 作成 (データモデル)
+    who: 設計チーム
+    when: 2026-07-05 起票
+    stamp: 作成
+
+# ★cross-doc 照会の解決先 (案A)。 verify-datamodel.sh が参照先 SRS contract を読み、 照会 ID 実在 + doc_id 一致を確かめる。
+#   srs_contract は contract/ dir 起点の相対パス。 rendered link 先 (*.html#anchor) は assembler が deep-link で emit。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_html: clinic-appointment.srs.html
+
+# ★band 見出しのうち instance 固有の 2 章 (folio-bhe・arch chapters と同型)。 entities_band / relationships_band は
+#   件数入り (「N つの情報のかたまり」== |entities| / 「N つのつながり」== |relationships| の ASCII 半角数詞を
+#   assemble/verify 両段で強制・全角/漢数字は照合回避ゆえ拒否)。 他 4 章の band 見出しは pack 不変文言 (assembler 固定・verify が pin)。
+#   件数を code に焼くと 2nd instance が偽件数を表示する (fabrication 面ゆえ fail-closed 必須)。
+chapters:
+  entities_band: "6 つの情報のかたまりに分け、 何をどう持つか"
+  relationships_band: "5 つのつながりで結び、 どんな決まりを埋め込むか"
+
+# §1 課題と範囲 (context)。 problem = なぜ情報の持ち方を先に決めるか / scope_note = この文書が決めること・委ねること。
+context:
+  problem: 予約の事故 (同じ枠に 2 人・別人と取り違え・時間外の予約) は、 画面や手順だけでなく「情報の持ち方」の問題でもある。 どんな情報を、 どんなかたまりで、 どうつないで持つかを先に決めておくことで、 事故が起こらない形を仕組みの土台に埋め込む。
+  scope_note: この文書は「何を持つか・どうつながるか」だけを決める。 画面や処理の流れはアーキテクチャ記述 (ARCH-CLINIC-APPT) が、 してよいこと・いけないことの要件は要件定義書 (SRS-CLINIC-APPT) が受け持つ。
+
+# §3 情報のかたまり (entities = 6 個)。 kind ∈ {master=台帳, event=できごとの記録} / sensitivity ∈ {high=特に慎重に扱う個人情報, normal}。
+#   fields[].type ∈ {識別子, 参照, 文字, 日付, 日時, 区分, 時刻範囲} (assembler が id/ref を色分け)。 refs.srs = 充足照会 edge。
+entities:
+  - id: patient
+    name: 患者
+    kind: master
+    sensitivity: high
+    description: 予約を取り受診する人。 本人確認に使う最小限の情報だけを持つ。
+    fields:
+      - { name: 患者番号, type: 識別子, required: true, note: 院内で重複しない番号。 }
+      - { name: 氏名, type: 文字, required: true, note: 本人確認 (FR7) で使う。 }
+      - { name: 連絡先, type: 文字, required: true, note: 電話またはメール。 リマインドと本人確認のためだけに使う。 }
+      - { name: 生年月日, type: 日付, required: true, note: 同姓同名の取り違え防止 (FR7)。 }
+    refs: { srs: [FR7, NFR4] }
+  - id: practitioner
+    name: 医師
+    kind: master
+    sensitivity: normal
+    description: 診療枠を受け持つ人。
+    fields:
+      - { name: 医師番号, type: 識別子, required: true, note: "—" }
+      - { name: 氏名, type: 文字, required: true, note: "—" }
+      - { name: 診療科, type: 区分, required: true, note: 内科・小児科など。 }
+    refs: { srs: [] }
+  - id: appointment-slot
+    name: 診療枠
+    kind: master
+    sensitivity: normal
+    description: 予約を受け付ける時間の入れ物。 1 つの枠に入れる確定予約は最大 1 件 (本 clinic の運用ルール・AC1 由来)。
+    fields:
+      - { name: 枠番号, type: 識別子, required: true, note: "—" }
+      - { name: 開始日時, type: 日時, required: true, note: "—" }
+      - { name: 終了日時, type: 日時, required: true, note: "—" }
+      - { name: 担当医師, type: 参照, required: true, note: 医師への参照。 }
+      - { name: 状態, type: 区分, required: true, note: 空き / 埋まり。 空き確認 (FR1) はこの値を見る。 }
+    refs: { srs: [FR1, FR4] }
+  - id: appointment
+    name: 予約
+    kind: event
+    sensitivity: normal
+    description: 「どの患者が・どの枠で受診するか」の約束の記録。 この文書の中心。
+    fields:
+      - { name: 予約番号, type: 識別子, required: true, note: "—" }
+      - { name: 患者, type: 参照, required: true, note: "—" }
+      - { name: 診療枠, type: 参照, required: true, note: "—" }
+      - { name: 状態, type: 区分, required: true, note: 確定 / 取消 / 来院済 / 無断キャンセル。 変更・取消 (FR5) は状態の付け替えで表す。 }
+      - { name: 成立日時, type: 日時, required: true, note: いつ成立したかの記録。 }
+    refs: { srs: [FR2, FR5] }
+  - id: reminder-notification
+    name: リマインド通知
+    kind: event
+    sensitivity: normal
+    description: 予約日の前日に患者へ送る知らせの記録。 送ったかどうかが後から分かる。
+    fields:
+      - { name: 通知番号, type: 識別子, required: true, note: "—" }
+      - { name: 予約, type: 参照, required: true, note: "—" }
+      - { name: 送る日, type: 日付, required: true, note: 予約日の前日 (FR6)。 }
+      - { name: 送った結果, type: 区分, required: true, note: 済 / 失敗。 }
+    refs: { srs: [FR6] }
+  - id: clinic-calendar
+    name: 診療カレンダー
+    kind: master
+    sensitivity: normal
+    description: 診療する日・しない日と、 診療時間を定める台帳。 枠はこの台帳の範囲でしか作れない (SRS actor の外部 診療カレンダー / CON4 由来)。
+    fields:
+      - { name: 日付, type: 日付, required: true, note: "—" }
+      - { name: 休診かどうか, type: 区分, required: true, note: "—" }
+      - { name: 診療時間帯, type: 時刻範囲, required: true, note: 例 9:00-12:00 / 14:00-18:00。 }
+    refs: { srs: [FR4] }
+
+# §4 つながり (relationships = REL-1..5)。 cardinality は assembler がやさしい記号/言葉へ写像。
+#   invariant (任意) = どんなときも破れないデータの決まり (強調枠)。 refs.srs = 充足照会 edge。
+relationships:
+  - id: REL-1
+    from: patient
+    to: appointment
+    cardinality: one-to-many
+    label: 取る
+    plain: 一人の患者は予約をいくつも持てる。 取り消しても記録は残る。
+    refs: { srs: [] }
+  - id: REL-2
+    from: appointment-slot
+    to: appointment
+    cardinality: one-to-zero-or-one
+    label: 埋まる
+    plain: 1 つの診療枠に入れる「確定」の予約は最大 1 件。
+    invariant: 二重予約 (ダブルブッキング) は、 この決まりによってデータの形として起こらない。
+    refs: { srs: [FR3] }
+  - id: REL-3
+    from: practitioner
+    to: appointment-slot
+    cardinality: one-to-many
+    label: 受け持つ
+    plain: 医師は自分の診療枠をいくつも受け持つ。
+    refs: { srs: [] }
+  - id: REL-4
+    from: appointment
+    to: reminder-notification
+    cardinality: one-to-zero-or-one
+    label: 知らせる
+    plain: 1 つの予約につきリマインドは前日に 1 回。
+    refs: { srs: [] }
+  - id: REL-5
+    from: clinic-calendar
+    to: appointment-slot
+    cardinality: one-to-many
+    label: 枠を定める
+    plain: 診療枠は、 カレンダーが「診療する」と定めた日の診療時間の中にしか作れない。
+    invariant: 診療時間外・休診日の枠は、 そもそもデータとして存在できない (FR4 の土台)。
+    refs: { srs: [FR4] }
+
+# §5 データの扱い (data_policy = DP-1..3)。 rule = 決まり / reason = なぜ。 refs.srs = 充足照会 edge。
+data_policy:
+  - id: DP-1
+    rule: 診療の中身 (症状・診断・処方) は、 この仕組みでは持たない。
+    reason: 予約の受け付けに要らない情報は、 持たなければ漏れることもない (取扱い注意の個人情報を抱え込まない)。
+    refs: { srs: [NFR4] }
+  - id: DP-2
+    rule: 連絡先は、 本人確認とリマインド送付のためだけに使う。
+    reason: 使いみちを絞ることで、 患者が安心して連絡先を預けられる。
+    refs: { srs: [FR6, FR7] }
+  - id: DP-3
+    rule: 受診が終わった予約と通知の記録は、 決めた保存期間が過ぎたら消す。
+    reason: 必要な期間だけ持つ。 持ち続けるほど守る負担と漏れる危険が増える。
+    refs: { srs: [NFR4] }
+
+# §5 末尾 原則終端 (principle = 照会 graph の終端・自前 inline データ最小化原則。 rolemap terminal.id_expr が graph 終端 edge を張る)。
+principle:
+  id: PRIN-DATA-MINIMUM
+  text: 診療の受け付けに必要な最小限の情報だけを、 必要な期間だけ持つ。 迷ったら「持たない」に倒す。
+
+# §2 全体図 (diagrams = ER 図 1 枚)。 kind ∈ {er}。 mermaid erDiagram DSL を行配列で保持 (core_validate_strings は各行を
+#   1 行 string として検査・改行なし)。 assembler が esc して <pre class="mermaid"> へ join 出力 (raw DSL 露出 = gate blocker・folio-97z)。
+diagrams:
+  - id: D1
+    kind: er
+    caption: 図 1 (ER 図 — 情報のつながり) 6 つのかたまりと 5 本のつながり。 線の端の記号は「いくつ対いくつ」か。 診療枠と予約の線が「最大 1 件」なのが二重予約防止の要 (§4 REL-2)。
+    lines:
+      - erDiagram
+      - '  "患者" ||--o{ "予約" : "取る"'
+      - '  "診療枠" ||--o| "予約" : "埋まる"'
+      - '  "医師" ||--o{ "診療枠" : "受け持つ"'
+      - '  "予約" ||--o| "リマインド通知" : "知らせる"'
+      - '  "診療カレンダー" ||--o{ "診療枠" : "枠を定める"'
+
+# §6 用語集 (glossary = 用語の SSoT。 def = §6 表の定義 / plain_short = 本文の専門語に併記するやさしい言い換え /
+#   en = 対訳 (SRS/ARCH glossary と同形)。 glossary 語どうしは部分文字列禁止 (assemble が拒否)。
+glossary:
+  - { term: 情報のかたまり (エンティティ), en: entity, plain_short: ひとまとまりで扱う情報の単位, def: ひとまとまりで扱う情報の単位。 この文書では 6 つに分けている。 }
+  - { term: ER 図, en: entity-relationship diagram, plain_short: つながりを線で描いた図, def: 情報のかたまり同士のつながりを線で描いた図。 線の端の記号で「いくつ対いくつ」を表す。 }
+  - { term: 不変条件, en: invariant, plain_short: 破ってはいけない決まり, def: どんなときも破ってはいけないデータの決まり。 緑の枠で示す。 }
+  - { term: 識別子, en: identifier, plain_short: 重複しない番号, def: 取り違えないための重複しない番号。 かたまりごとに 1 つ持つ。 }
+  - { term: 区分, en: category, plain_short: 決まった選択肢から選ぶ値, def: あらかじめ決まった選択肢から 1 つ選ぶ値 (例 空き / 埋まり)。 }
+  - { term: 参照, en: reference, plain_short: 別のかたまりを指す, def: 別のかたまりを指し示すつながり。 番号でひもづける。 }
+
+# footer の生成メタ (tag 列は assembler 固定)。
+footer:
+  gen_meta: folio design-system generator — data-model-pack (folio-1q8o / instance#1)

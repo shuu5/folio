@@ -46,10 +46,12 @@ echo "== glossary en parity gate 敵対回帰 =="
 #   registry 行数・語数を contract 実データから独立再導出して確認すること。
 #   lineage: 2026-07-05 (folio-dvsk 初版) = 14 contract (full 9 / intersect 4 / exempt 1)・en 突合 116 語・
 #   anchor 外 local 9 語 (clinic glossary chrome 3 + folio-constitution 4 + folio-glossary chrome 2)。
+#   2026-07-07 (folio-1q8o data-model-pack) = 15 contract (full 9 / intersect 5 / exempt 1)・en 突合 116 語 (不変)・
+#   anchor 外 local 15 語 (+ datamodel の data-modeling メタ語 6: エンティティ/ER 図/不変条件/識別子/区分/参照 = clinic union SSoT 外)。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q 'full=9 intersect=4 exempt=1 未登録空=0' <<<"$out" \
-   && grep -q 'en 突合 116 語・anchor 外 local 9 語' <<<"$out"; then
-  ok "V0 baseline: clean corpus → exit 0 + 分類 14 本 (9/4/1) + 116/9 語 pin"
+if [[ "$rc" -eq 0 ]] && grep -q 'full=9 intersect=5 exempt=1 未登録空=0' <<<"$out" \
+   && grep -q 'en 突合 116 語・anchor 外 local 15 語' <<<"$out"; then
+  ok "V0 baseline: clean corpus → exit 0 + 分類 15 本 (9/5/1) + 116/15 語 pin"
 else bad "V0 baseline: clean corpus が期待 pin と不一致 (rc=$rc・corpus 成長なら pin を lineage 手順で更新)"; fi
 
 # --- V1 en-drift (full mode): source の en を SSoT からずらす → FAIL ---
