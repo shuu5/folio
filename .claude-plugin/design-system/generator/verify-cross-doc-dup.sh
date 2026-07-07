@@ -151,9 +151,19 @@ relationships[].plain|.relationships[].plain
 relationships[].invariant|.relationships[].invariant
 data_policy[].rule|.data_policy[].rule
 data_policy[].reason|.data_policy[].reason'
+LEAVES[interface]='context.problem|.context.problem
+context.scope_note|.context.scope_note
+operations[].request|.operations[].request
+operations[].response|.operations[].response
+errors[].when|.errors[].when
+errors[].promise|.errors[].promise
+external[].promise|.external[].promise
+cross_cutting[].rule|.cross_cutting[].rule'
 # glossary = 比較対象なし (用語 def は SSoT コピーで全 pack に複製 = 構造上の全一致ゆえ除外)。
 # vision の no_restate/pitch/principle.text は navigational meta / 短文マーケ句 / 共有終端規約で不掲載 (arch と同方針)。
 # datamodel の glossary def / 共有終端 principle.text / entity field note (粒度過小) は不掲載 (arch と同方針)。
+# interface の glossary def / 共有終端 principle.text / operations name・actor / errors name / external name・partner /
+#   cross_cutting id (短 label・enum) は不掲載 (散文でない粒度過小・precision のため意図的に不掲載・folio-ehar)。
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)

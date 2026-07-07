@@ -389,7 +389,7 @@ verify_cross_doc_refs() {
 #   SKIP_REPRO 方式は ceiling-precheck の [SKIP] masquerade guard と衝突するため oracle では撤回済)。
 #
 # usage: verify_repro_build <pack> [filled_manifest]
-#   <pack>            assemble-<pack>.sh / の pack 名 (srs/adr/research/arch/vision/testcases/spec/principle/glossary/verification/relations/datamodel)
+#   <pack>            assemble-<pack>.sh / の pack 名 (srs/adr/research/arch/vision/testcases/spec/principle/glossary/verification/relations/datamodel/interface)
 #   [filled_manifest] 呼出元が --filled で受けた manifest path (無ければ空文字。 srs は mode 無しゆえ常に空)
 # 前提: $SCRIPT_DIR / $CONTRACT / $HTML / $fail / $CHKW。 byte 不一致 = $fail=1 (gate FAIL)、 tool error = exit 2。
 verify_repro_build() { # $1 = pack  $2 = filled_manifest (optional)

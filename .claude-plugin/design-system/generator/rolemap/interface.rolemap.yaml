@@ -1,0 +1,70 @@
+# interface.rolemap.yaml — interface-pack (doc_type: interface) の抽象ロール graph 写像 (rolemap)
+#
+# folio engine post-B6 (folio-ehar / c5r Tier C)。 engine doc §3 表 (照会 = 抽象ロール graph) を interface-pack の
+# 具体 node-type へ写像する pack 側 SSoT (詳細は datamodel.rolemap.yaml / arch.rolemap.yaml 冒頭注記)。 core
+# (lib/graph-common.sh) の reader が読み、 verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: principle 終端への到達可能性 / dangling / 孤立 を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★interface の hallmark = 境界の約束 (operation catalog + error contract) の前方照会: operations[] / errors[] /
+#   external[] / cross_cutting[] (いずれも claim) が SRS の要件 (充足照会) を *別文書 cross-document link* で指し、
+#   再掲しない (案A)。 ゆえ edge-bearing pack (GRAPH_EDGELESS_PACKS = srs|principle に含まれない)。 verify-graph.sh は
+#   contract/*.yaml を無条件 glob し graph_pack_of でファイル名 (clinic-appointment.interface.yaml) から pack=interface を
+#   導出して同名 rolemap を発見・必須化する (opt-in registry でない)。 ゆえ本 rolemap は新設と同時に pass-1 floor pin
+#   (edge.role == roles[node]=claim) + forbidden_roles=[exploration] を *常時* 課される = floor を通すこと自体が受入条件。
+# ★pass-2 reachability: interface は自前 inline principle 終端 (PRIN-HONEST-BOUNDARY) を terminal.id_expr で宣言するため
+#   doc→終端 edge が張られ、 IF-CLINIC-APPT は *終端完備* になる (datamodel/arch/vision と完全ミラー・leaf-sink なし・D4 toward-terminal)。
+# ★datamodel entity 参照 (uses.entities[]) は presentational = graph edge にしない (role 語彙に合う意味が無い・ID 実在は
+#   verify-interface.sh が pack 固有検査で fail-closed)。 ゆえ本 rolemap に entities edge は存在しない。
+pack: interface
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# operations / errors / external / cross_cutting = claim (採用した境界判断 = 主張)。 前方照会先 (SRS の FR/NFR/CON/AC=claim) の
+# 照会 relationship role は verify-interface.sh の verify_cross_doc_refs が HTML data-if-role で別途扱う
+# (graph の roles は *source node* の intrinsic role)。
+roles:
+  operations: claim      # 操作カタログ = 境界の主張
+  errors: claim          # エラーカタログ = 断り方の主張
+  external: claim        # 外部連携 = 境界の主張
+  cross_cutting: claim   # 横断の決まり = 境界の主張
+
+# 前方 cross-doc 照会 edge (4 本)。 operations/errors/external/cross_cutting[].refs.srs[] が SRS へ向かう。 datamodel→SRS と
+# 同型ゆえ direction: backward (interface→SRS だが reachability は SRS→interface。 局所の ID 実在検証は verify-interface.sh が担う)。
+# ★edge.role token = *source node-type の intrinsic role* = claim を |edges| 回 emit
+#   (datamodel entities の map("claim") と同型。 照会先 ID 列・照会 relationship role〔SRS=claim〕は
+#    role_expr でなく verify-interface.sh の verify_cross_doc_refs が別経路で扱う)。
+edges:
+  - from_node: operations                                                   # roles[operations] = claim が edge.role の期待値 (二重担保)
+    role_expr: '[.operations[].refs.srs[]] | map("claim") | .[]'            # source 役割 (claim) を |operations srs edges| 回
+    count_expr: '[.operations[].refs.srs[]] | length'                       # |operations srs edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'                              # 照会先 doc の doc_id (graph dangling 用)
+    direction: backward                                                    # interface→SRS は toward-terminal の逆 (reachability は SRS→interface)
+  - from_node: errors                                                       # 同 source 役割 (errors=claim)
+    role_expr: '[.errors[].refs.srs[]] | map("claim") | .[]'               # source 役割 (claim) を |errors srs edges| 回
+    count_expr: '[.errors[].refs.srs[]] | length'                          # |errors srs edges|
+    target_docid_expr: '.cross_doc.srs_doc_id'
+    direction: backward
+  - from_node: external                                                     # 同 source 役割 (external=claim)
+    role_expr: '[.external[].refs.srs[]] | map("claim") | .[]'             # source 役割 (claim) を |external srs edges| 回
+    count_expr: '[.external[].refs.srs[]] | length'                        # |external srs edges|
+    target_docid_expr: '.cross_doc.srs_doc_id'
+    direction: backward
+  - from_node: cross_cutting                                                # 同 source 役割 (cross_cutting=claim)
+    role_expr: '[.cross_cutting[].refs.srs[]] | map("claim") | .[]'        # source 役割 (claim) を |cross_cutting srs edges| 回
+    count_expr: '[.cross_cutting[].refs.srs[]] | length'                   # |cross_cutting srs edges|
+    target_docid_expr: '.cross_doc.srs_doc_id'
+    direction: backward
+
+# この pack が持つ照会終端 node = inline principle id (自前 domain-local 終端・正直な境界の原則)。
+# doc 自身 → 終端 node の edge を graph に張り、 IF-CLINIC-APPT を終端完備にする (leaf-sink なし・D4)。
+terminal:
+  id_expr: '.principle.id'
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 interface (clinic instance) には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 interface は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration role 不在」を scan で実証。
+forbidden_roles:
+  - exploration
