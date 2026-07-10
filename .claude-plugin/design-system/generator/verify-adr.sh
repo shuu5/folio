@@ -274,6 +274,16 @@ chk "anchor: decision panel id=decision == 1" "1" "$(grep -c 'data-component="ad
 #   未適用)。 id 属性を attribute-name 境界 ((?<![\w-])(?i:id) で data-*-id 〔直前ハイフン〕除外・whitespace と HTML5 self-closing slash 区切り両捕捉) + quote/entity/case/unquoted-robust に全列挙し body 全体で重複 0 を要求 (SRS [必須-1] と同一 idiom・ceiling round-2 が slash 封鎖)。
 allids_dup="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n"; }' < "$BODY" | LC_ALL=C sort | LC_ALL=C uniq -d | grep -c .)"
 chk "anchor: navigable id は body 全体で一意 (collision=0・quote/entity/case-robust)" 0 "$allids_dup"
+# ★folio-na3: id-alphabet invariant (folio-lzz ceiling round-5 の R4 robustness 再 grounding)。 上の collision gate は
+#   抽出 id を numeric entity (&#..) のみ decode し named char-ref (&period;=. &lowbar;=_ 等) は decode しない。 R4 は
+#   「named ref は ASCII 英数を綴れないゆえ numeric decode で完全」と論じたが、 named ref は非英数字 (. _ 等) を綴れる —
+#   id alphabet にそれらが入れば id="decisio&period;n" が browser で decisio.n に解決しつつ collision gate は生 &period;
+#   のまま数え衝突を見逃す fail-open が開く。 ★robustness を「grammar 枯渇」から「制約 alphabet」へ再 grounding: 全 navigable
+#   id ∈ [A-Za-z0-9-] は named-ref 不在文字のみ (英数 + ASCII hyphen 0x2D は named ref を持たない) ゆえ named-ref 成りすまし面が
+#   *構造的に* 閉じる。 抽出全 id が alphabet に収まることを hard 強制し、 外れる id が 1 つでもあれば FAIL (fail-closed —
+#   alphabet 外 id は named-ref decode 面が開く)。 legit id が外れたら alphabet を広げず停止・escalate (id-alphabet-inv)。
+allids_badn="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n" if $v !~ /^[A-Za-z0-9-]+\z/; }' < "$BODY" | LC_ALL=C sort -u | grep -c .)"
+chk "anchor: 全 navigable id ∈ [A-Za-z0-9-] (制約 alphabet・named-ref 成りすまし面=0・id-alphabet-inv)" 0 "$allids_badn"
 
 # 4. verdict 整合 (chosen ちょうど 1 + decision.chosen 一致)
 chk "verdict=chosen はちょうど 1 件" "1" "$(q '[.options[] | select(.verdict=="chosen")] | length')"

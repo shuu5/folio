@@ -609,6 +609,23 @@ u3k_entity_pin "U3K1 ★大文字 16進 entity class (&#X77;ho → who) を占�
 u3k_entity_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を占有 vcount who が decode 捕捉" '<span class="&#x77ho">x</span>' 'vcount who'
 u3k_entity_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
 
+# ===== folio-na3 id-alphabet invariant (allids gate): alphabet 外 id を新 assert のみが fail-closed で捕捉 =====
+# collision gate (numeric-decode-only) の R4 robustness を「grammar 枯渇」から「制約 alphabet」へ再 grounding した
+# 新 assert の mutation-kill。 全 navigable id ∈ [A-Za-z0-9-] を破る id を base.html へ注入し、 id-alphabet-inv 帰属の
+# [FAIL] が立つこと (注入 id は unique ゆえ collision は無反応 = 新 assert のみ FAIL 転落) を assert する。 FAIL 帰属
+# substring は chk の [OK] 行にも出る label 語ではなく [FAIL] 行との積で固定する。
+# IA-a リテラル alphabet 外文字: 新規 <a id="zzq.k"> (unique・非重複) の '.' を id-alphabet-inv が捕捉。
+perl -0777 -pe 's{</body>}{<a id="zzq.k"></a></body>}' "$TMP/base.html" > "$TMP/iaa.html"
+iaa_out="$(bash "$VER" "$BASE" "$TMP/iaa.html" 2>&1)"; iaa_rc=$?
+if [[ $iaa_rc -ne 0 ]] && grep -F '[FAIL]' <<<"$iaa_out" | grep -q 'id-alphabet-inv'; then ok "IA-a ★alphabet 外 id (リテラル '.') を id-alphabet-inv が fail-closed 捕捉"; else ng "IA-a (exit=$iaa_rc / [FAIL] id-alphabet-inv 不発火)"; fi
+# IA-b named-ref 符号化 id: id="zzq&period;k" は numeric-only decode で生 &period; (&,; を含む) のまま alphabet 外に
+#   落ちる = named-ref 成りすまし面が閉じている実証 (collision gate は named-ref を decode せず見逃すが本 assert が捕捉)。
+perl -0777 -pe 's{</body>}{<a id="zzq&period;k"></a></body>}' "$TMP/base.html" > "$TMP/iab.html"
+iab_out="$(bash "$VER" "$BASE" "$TMP/iab.html" 2>&1)"; iab_rc=$?
+if [[ $iab_rc -ne 0 ]] && grep -F '[FAIL]' <<<"$iab_out" | grep -q 'id-alphabet-inv'; then ok "IA-b ★named-ref 符号化 id (&period;) を id-alphabet-inv が捕捉 (numeric-only decode の穴を塞ぐ)"; else ng "IA-b (exit=$iab_rc / [FAIL] id-alphabet-inv 不発火)"; fi
+# IA-c 既存 green 維持: 注入なしの base.html は id-alphabet-inv を含む [FAIL] を出さない (偽陽性なし)。
+if bash "$VER" "$BASE" "$TMP/base.html" 2>&1 | grep -F '[FAIL]' | grep -q 'id-alphabet-inv'; then ng "IA-c 健全 base に id-alphabet-inv FAIL 偽陽性"; else ok "IA-c ★健全 base は id-alphabet-inv FAIL を出さない (偽陽性なし)"; fi
+
 echo
 echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
 if repro_pins "$VER" adr "$BASE" "$BASE_PROSE" "$ASM" "$INJ" --filled "$BASE_PROSE"; then ok "repro-build conformance (a-d) 全 pass"; else ng "repro-build conformance (a-d) 逸脱"; fi

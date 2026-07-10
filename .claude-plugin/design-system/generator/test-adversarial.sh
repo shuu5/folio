@@ -926,6 +926,21 @@ expect_srs_fail_at "CC-b ★要件行の複製 (件数 excess) を census-count 
 perl -0777 -pe 's{class="plain"}{class="plainx"} if !$d++' "$TMP/art.html" > "$TMP/ccc.html"
 expect_srs_fail_at "CC-c ★.plain class 改名 (.plain 件数不一致) を census-count arm が捕捉" "$BASE" "$TMP/ccc.html" "census-count"
 
+# ===== folio-na3 id-alphabet invariant (allids gate): alphabet 外 id を新 assert のみが fail-closed で捕捉 =====
+# collision gate (numeric-decode-only) の R4 robustness を「grammar 枯渇」から「制約 alphabet」へ再 grounding した
+# 新 assert の mutation-kill。 全 navigable id ∈ [A-Za-z0-9-] を破る id を注入し、 id-alphabet-inv 帰属の [FAIL] が
+# 立つこと (注入 id は unique ゆえ collision は無反応 = 新 assert のみ FAIL 転落) を assert する。 FAIL 帰属 substring は
+# chk の [OK] 行にも出る label 語ではなく [FAIL] 行との積で固定する (expect_srs_fail_at が [FAIL] 行内 grep)。
+# IA-a リテラル alphabet 外文字: 新規 <a id="zzq.k"> (unique・非重複) の '.' を id-alphabet-inv が捕捉。
+perl -0777 -pe 's{</body>}{<a id="zzq.k"></a></body>}' "$TMP/art.html" > "$TMP/iaa.html"
+expect_srs_fail_at "IA-a ★alphabet 外 id (リテラル '.') を id-alphabet-inv が fail-closed 捕捉" "$BASE" "$TMP/iaa.html" "id-alphabet-inv"
+# IA-b named-ref 符号化 id: id="zzq&period;k" は numeric-only decode で生 &period; (&,; を含む) のまま alphabet 外に
+#   落ちる = named-ref 成りすまし面が閉じている実証 (collision gate は named-ref を decode せず見逃すが本 assert が捕捉)。
+perl -0777 -pe 's{</body>}{<a id="zzq&period;k"></a></body>}' "$TMP/art.html" > "$TMP/iab.html"
+expect_srs_fail_at "IA-b ★named-ref 符号化 id (&period;) を id-alphabet-inv が捕捉 (numeric-only decode の穴を塞ぐ)" "$BASE" "$TMP/iab.html" "id-alphabet-inv"
+# IA-c 既存 green 維持: 上の注入を含まない art.html は id-alphabet-inv を含む [FAIL] を出さない (偽陽性なし)。
+if SRS_SKIP_RENDER=1 bash "$SRS" "$BASE" "$TMP/art.html" 2>&1 | grep -F '[FAIL]' | grep -q 'id-alphabet-inv'; then ng "IA-c 健全 art に id-alphabet-inv FAIL 偽陽性"; else ok "IA-c ★健全 art は id-alphabet-inv FAIL を出さない (偽陽性なし)"; fi
+
 
 # ★folio-wq4: round-7/wq4 ブロックも exit code でゲートする。 旧版は L838 の exit で A1-A138 のみ gate し、
 #   round-7 以降の fail (ng) が最終 exit 0 へ漏れる fail-open があった (「検査できた範囲が緑」を exit に正しく反映)。

@@ -132,6 +132,16 @@ set_eq "anchor: 受入 navigable id == contract acceptance id" "$(q '.acceptance
 #   *quote/entity/case/unquoted-robust* (count_attr_token と同規律・ceiling round-2 が slash separator を追加封鎖) に全列挙し重複 0 を要求。
 allids_dup="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n"; }' < "$BODY" | LC_ALL=C sort | LC_ALL=C uniq -d | grep -c .)"
 chk "anchor: navigable id は body 全体で一意 (collision=0・quote/entity/case-robust)" 0 "$allids_dup"
+# ★folio-na3: id-alphabet invariant (folio-lzz ceiling round-5 の R4 robustness 再 grounding)。 上の collision gate は
+#   抽出 id を numeric entity (&#..) のみ decode し named char-ref (&period;=. &lowbar;=_ 等) は decode しない。 R4 は
+#   「named ref は ASCII 英数を綴れないゆえ numeric decode で完全」と論じたが、 named ref は非英数字 (. _ 等) を綴れる —
+#   id alphabet にそれらが入れば id="FR&period;1" が browser で FR.1 に解決しつつ collision gate は生 &period; のまま数え
+#   衝突を見逃す fail-open が開く。 ★robustness を「grammar 枯渇」から「制約 alphabet」へ再 grounding: 全 navigable id ∈
+#   [A-Za-z0-9-] は named-ref 不在文字のみ (英数 + ASCII hyphen 0x2D は named ref を持たない) ゆえ named-ref 成りすまし面が
+#   *構造的に* 閉じる。 抽出全 id が alphabet に収まることを hard 強制し、 外れる id が 1 つでもあれば FAIL (fail-closed —
+#   alphabet 外 id は named-ref decode 面が開く)。 legit id が外れたら alphabet を広げず停止・escalate (id-alphabet-inv)。
+allids_badn="$(perl -CSD -0777 -ne 'my $q=chr(39); while (/(?<![\w-])(?i:id)\s*=\s*(?:"([^"]*)"|$q([^$q]*)$q|([^\s>]+))/g){ my $v=defined $1?$1:(defined $2?$2:$3); $v=~s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $v=~s/&#(\d+);?/chr($1)/ge; print "$v\n" if $v !~ /^[A-Za-z0-9-]+\z/; }' < "$BODY" | LC_ALL=C sort -u | grep -c .)"
+chk "anchor: 全 navigable id ∈ [A-Za-z0-9-] (制約 alphabet・named-ref 成りすまし面=0・id-alphabet-inv)" 0 "$allids_badn"
 
 echo
 echo "--- census-count (REQ-VER-024 blocking arm): 計数部品の source DOM 静的件数 == contract 期待件数 ---"
