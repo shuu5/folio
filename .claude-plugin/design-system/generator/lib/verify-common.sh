@@ -528,6 +528,16 @@ render_gate_f() { # $1 = 生成 HTML  $2 = skip env 名 (任意)
     printf '  [SKIP] gate F (playwright renderer 不在 — CI/uv 環境で render-gate-srs.py を実行・floor 不完全)\n'
     return 0
   fi
+  # ★外部 stylesheet staging (glossary pack のみ srs.css を <link> 外部参照 = inline しない)。 配信 root
+  #   (html の親 dir) に実体が無いと未スタイル描画になり contrast 面が vacuous-green 化する (folio-jyfh
+  #   wiring cert 実証) — render 直前に staging し、 cp 不能は tool error として FAIL (fail-closed・素通り禁止)。
+  #   inline pack は link を持たず no-op。
+  if grep -q '<link rel="stylesheet" href="srs.css">' "$html" && [[ ! -f "$(dirname "$html")/srs.css" ]]; then
+    if ! cp "$SCRIPT_DIR/../srs.css" "$(dirname "$html")/srs.css" 2>/dev/null; then
+      printf '  [FAIL] gate F (外部 stylesheet srs.css を配信 root へ staging 不能 — 未スタイル描画は contrast vacuous ゆえ fail-closed)\n'
+      fail=1; return 0
+    fi
+  fi
   echo "  render-gate-srs.py を実行 ($runner)..."
   # ★T7 fail-closed: pipe 経由でも PIPESTATUS[0] で render-gate の exit を直接読む (sed の exit で洗浄しない)。
   $runner "$gate" "$html" 2>&1 | sed 's/^/    /'
