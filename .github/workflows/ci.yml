@@ -162,21 +162,29 @@ jobs:
           bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
           python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
 
-      # ---- gate F A 段 sweep (folio-vuf A 段 / folio-jyfh user 裁定 2026-07-08: A 段を即 CI 化・非 mermaid
-      #      全 instance 掃引)。 非 mermaid 9 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
+      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 9 / B 段 = folio-jyfh mermaid 6・user 裁定
+      #      2026-07-08: 全 contract 掃引)。 15 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
       #      build → render-gate-srs.py (doc-type 非依存 detector) で light/dark × 3 viewport の low-contrast /
       #      horizontal-overflow / component-overlap を blocking 捕捉。 srs.css 共有トークンの contrast 退行
       #      (dark 側の実欠陥 4 点を本 gate 初回実走が検出・land 済) を全 pack 面で再発防止する。
-      #      B 段 (mermaid instance: arch / datamodel / spec×3 / clinic-vision) は SVG settle polling 未実装
-      #      ゆえ対象外 = folio-jyfh の残 scope。 実測 3-7s/artifact・sweep 全体 ~40s。
+      #      mermaid instance (arch / datamodel / spec×3 / clinic-vision) は renderer が SVG settle polling
+      #      (期待図数へ到達するまで最大 15s/session・不足 = mermaid-shortfall FAIL・fail-closed) で非同期
+      #      render を待ってから検査する (folio-jyfh B 段)。
       #      撤退条件: 本 step 合計が 300s を超えたら並列化/分割を再検討 (user 裁定の付帯条件)。 ----
-      - name: gate F A 段 sweep (非 mermaid 全 instance を build して render-gate にかける)
+      - name: gate F sweep (全 instance を build して render-gate にかける)
         run: |
           gen=.claude-plugin/design-system/generator
           # glossary pack のみ srs.css を <link> 外部参照 (inline しない) ゆえ、配信 root (RUNNER_TEMP) に
           # 実体を staging しないと未スタイル描画 = contrast 面 vacuous-green になる (wiring cert 実証)。
           # -e 下ゆえ cp 失敗 = step 赤 (fail-closed)。inline pack は link を持たず無影響。
           cp "$gen/../srs.css" "$RUNNER_TEMP/srs.css"
+          # mermaid pack (B 段) は assets/mermaid.min.js を非同期 load して SVG 化する。 配信 root
+          # (RUNNER_TEMP) の assets/ に vendor が無いと render せず svgCount=0 → renderer が
+          # mermaid-shortfall FAIL に倒す (fail-closed 側で守られる) が、 健全経路のため事前 staging する。
+          # 参照形は 2 種 (clinic 系 assets/ ・ folio self-spec 系 ../assets/) とも browser の URL 正規化で
+          # 配信 root の /assets/ に解決する (RFC 3986: root を越える .. は discard)。 -e 下ゆえ cp 失敗 = step 赤。
+          mkdir -p "$RUNNER_TEMP/assets"
+          cp design-intent/assets/mermaid.min.js "$RUNNER_TEMP/assets/mermaid.min.js"
           t0=$(date +%s); fail=0
           gate() { # $1=label $2=out|stdout (assemble の出力形・glossary のみ stdout) $3=pack $4=contract $5=prose
             local label=$1 mode=$2 pack=$3 contract=$4 prose=$5
@@ -202,9 +210,16 @@ jobs:
           gate glossary-clinic stdout glossary  clinic-appointment.glossary.yaml    clinic-glossary.prose.yaml
           gate glossary-folio  stdout glossary  folio-glossary.glossary.yaml        folio-glossary.prose.yaml
           gate vision-folio    out    vision    folio-vision.vision.yaml            folio-vision.prose.yaml
-          echo "gate F A 段 sweep 所要: $(( $(date +%s) - t0 ))s (撤退条件 300s)"
-          if [ "$fail" -ne 0 ]; then echo "::error::gate F A 段 sweep に FAIL あり"; exit 1; fi
-          echo "gate F A 段 sweep GREEN (9 artifact)"
+          # ---- B 段: mermaid 6 instance (SVG settle polling は renderer 側・folio-jyfh) ----
+          gate arch            out    arch         clinic-architecture.arch.yaml     clinic-architecture.arch.prose.yaml
+          gate datamodel       out    datamodel    clinic-appointment.datamodel.yaml clinic-appointment.datamodel.prose.yaml
+          gate rules           out    spec         folio-rules.spec.yaml             folio-rules.prose.yaml
+          gate verification    out    verification folio-verification.spec.yaml      folio-verification.prose.yaml
+          gate relations       out    relations    folio-relations.spec.yaml         folio-relations.prose.yaml
+          gate vision-clinic   out    vision       clinic-appointment.vision.yaml    clinic-appointment.vision.prose.yaml
+          echo "gate F sweep 所要: $(( $(date +%s) - t0 ))s (撤退条件 300s)"
+          if [ "$fail" -ne 0 ]; then echo "::error::gate F sweep に FAIL あり"; exit 1; fi
+          echo "gate F sweep GREEN (15 artifact)"
 
       # 全 page × viewport の full-page screenshot を artifact 保存 (ADR-0039 §2.8: 人間 review の
       # 補助に充てるのみで golden 比較はしない — pixel golden は brittle)。 FAIL 時こそ目視材料が

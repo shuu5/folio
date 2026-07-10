@@ -122,6 +122,15 @@ window.__folioSrsRenderProbe = function (scheme) {
   const effectiveBg = (el) => {
     const semis = []; // el→上 順に積む半透明 bg-color (gradient より手前)
     for (let e = el; e; e = e.parentElement) {
+      /* ★SVG paint 境界 (folio-jyfh B 段): mermaid htmlLabels 等の foreignObject 内 HTML label から CSS 祖先を
+         遡って foreignObject の外 (g/svg = SVG paint 層) へ出たら、 実背景は rect fill 等の SVG 描画であり
+         CSS background の祖先歩きでは解決できない (頁背景へ誤帰属し、 偽陽性と偽陰性の両方を作る — B 段
+         battery 実測: 明 fill 上の暗字ノード label 6 件が dark 頁背景に誤帰属され偽 FAIL)。 honest skip して
+         svgSkipped で disclose する (SVG 内 label の contrast は ceiling = persona-walk の領分・machine/LLM
+         境界)。 foreignObject 内で CSS background-color が解決する label (mermaid edge label の labelBkg 等)
+         は境界到達前に不透明 bg が見つかるため従来通り検査される (このクラスの実欠陥は floor が捕り続ける)。
+         SVG <text> 直下 text は初回 iteration で skip (同じく ceiling 領分)。 */
+      if (e instanceof SVGElement && !(e instanceof SVGForeignObjectElement)) return { svg: true };
       const cs = getComputedStyle(e);
       if (cs.backgroundImage && cs.backgroundImage !== 'none') {
         const layers = splitLayers(cs.backgroundImage).map(layerStops); // [top..bottom]、 各=[停止色]
@@ -241,7 +250,7 @@ window.__folioSrsRenderProbe = function (scheme) {
   }
 
   /* === (3) low-contrast — text ↔ 実効背景の WCAG AA === */
-  let textChecked = 0, gradientSkipped = 0;
+  let textChecked = 0, gradientSkipped = 0, svgSkipped = 0;
   const seen = new Set(); // (fg|bg|large) combo dedupe — 同一 CSS 由来の反復を 1 件に畳む
   const all = document.body ? document.body.querySelectorAll('*') : [];
   for (const el of all) {
@@ -258,6 +267,7 @@ window.__folioSrsRenderProbe = function (scheme) {
     if (!fg0) continue;
     const bgr = effectiveBg(el);
     if (bgr.gradient) { gradientSkipped++; continue; }
+    if (bgr.svg) { svgSkipped++; continue; } // SVG paint 境界 = honest skip (件数 disclose・ceiling 領分)
     const cands = bgr.stops || [bgr.color];   // gradient なら複数停止色、 solid なら 1 色
     textChecked++;
     const fontPx = parseFloat(cs.fontSize) || 16;
@@ -289,7 +299,7 @@ window.__folioSrsRenderProbe = function (scheme) {
     violations.push({ kind: 'low-contrast', text: `(他 ${seen.size - CONTRAST_MAX_REPORT} 種の低コントラスト combo)`, ratio: 0, need: AA_NORMAL, fg: '', bg: '' });
   }
 
-  return { scheme, textChecked, gradientSkipped, violations };
+  return { scheme, textChecked, gradientSkipped, svgSkipped, violations };
 };
 
 // page.evaluate(PROBE_JS) の *完了値* が関数 (= 直前の window 代入式の値) だと playwright がそれを

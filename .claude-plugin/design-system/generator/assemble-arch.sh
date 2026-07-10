@@ -244,6 +244,14 @@ table[data-component="quality-table"]{width:100%;border-collapse:separate;border
 .qa-target{font-weight:800;color:var(--ink);white-space:nowrap}
 .qa-plain{display:block;margin-top:4px;font-size:12px;color:var(--ink-soft)}
 .qa-srs{font-size:11px;font-weight:800;text-decoration:none;color:var(--brand);background:var(--brand-tint);border:1px solid var(--brand);border-radius:6px;padding:1px 7px;white-space:nowrap}
+/* dark: token 背景 (--info/--violet/--brand/--ok) は明色化するため白字が AA 割れ (2.0-2.4)。 interface .opc-num
+   と同型に濃 ink へ倒す (全 4 背景で ≥7.4 = gate F WCAG AA・folio-jyfh B 段 battery 実測 4 combo)。 */
+@media (prefers-color-scheme: dark){
+  [data-component="component-table"] thead th,
+  .rt-step .rt-n,
+  .ad-id,
+  [data-component="quality-table"] thead th{color:#08131a}
+}
 /* §7 risks */
 [data-component="risk-card-grid"]{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:8px 0}
 @media(max-width:640px){[data-component="risk-card-grid"]{grid-template-columns:1fr}}

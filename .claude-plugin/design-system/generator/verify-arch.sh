@@ -462,6 +462,11 @@ verify_term_inline \
 
 echo
 [[ "$nwarn" -eq 0 ]] || echo "  ($nwarn 件の WARN は advisory・floor を割らない)"
+# ---- gate F: render 健全性 (visual) mermaid pack 展開 (folio-jyfh B 段・helper=render_gate_f)。 mermaid 図を
+#      含む生成 HTML を light/dark × 3 viewport で render-gate し、 SVG settle polling (最大 15s) で非同期 render
+#      を待ってから幾何/contrast を検査する。 vendor は render_gate_f が配信 root へ staging。 fail-closed
+#      (violation/crash/settle 不足 = $fail=1・T7 guard 維持)。 SKIP_RENDER=1 で bash floor は honest SKIP。 ----
+render_gate_f "$HTML" "ARCH_SKIP_RENDER"
 if [[ "$fail" -eq 0 ]]; then
   if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + 固定章 + 照会 graph + id anchor + prose 全充填) — CEILING=PENDING"
   elif [[ -n "$FILLED_MANIFEST" ]]; then echo "RESULT: filled PASS (構造 contract 完全導出・捏造 0 + 照会 graph 解決 + prose 注入忠実) — CEILING=PENDING"

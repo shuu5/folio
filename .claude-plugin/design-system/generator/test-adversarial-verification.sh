@@ -24,6 +24,9 @@ pass=0; fail=0
 # repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持し
 # (arm 未 skip は assemble 再 build で timeout)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
 export SKIP_REPRO="${SKIP_REPRO:-1}"
+# gate F (playwright visual) は floor-adversarial では skip (重い render を外す・SKIP_REPRO と同型)。 B 段
+# (folio-jyfh) で mermaid も render 対象になったが、 bash floor では従来通り skip し CI 側で実 render する。
+export SKIP_RENDER="${SKIP_RENDER:-1}"
 source "$SCRIPT_DIR/lib/test-repro-pins.sh"
 ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); }
 ng() { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); }

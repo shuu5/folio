@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: svg paint 境界 skip</title>
+<style>
+  /* SVG paint 境界 skip の pin fixture (folio-jyfh B 段)。 mermaid htmlLabels と同型の
+     foreignObject 内 HTML label を、 CSS background 無しで暗 rect の上に置く。
+     - 実際の見た目: 白 label on 暗 rect = 高コントラストで可読 (実欠陥なし)。
+     - CSS 祖先歩きの旧挙動: rect fill が見えず白頁背景へ誤帰属 → 白 on 白 = 偽 low-contrast。
+     - 新挙動 (svg skip): svgSkipped>0 + violation 0 = clean。 skip を外すと偽陽性で FAIL (回帰ガード)。 */
+  body{ margin:0; padding:24px; background:#ffffff; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  h1{ font-size:24px; }
+</style>
+</head>
+<body>
+<h1 data-component="doc-cover-band">svg paint 境界 skip fixture</h1>
+<p>foreignObject 内 label の実背景 (rect fill) は CSS で解決しないため honest skip されることを検証する。</p>
+<figure class="diagram" data-component="c4-context">
+<svg width="420" height="120" viewBox="0 0 420 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="skip fixture 図">
+  <rect x="0" y="0" width="420" height="120" fill="#15222b"/>
+  <foreignObject x="10" y="10" width="400" height="100">
+    <p xmlns="http://www.w3.org/1999/xhtml" style="margin:0;color:#ffffff;font:15px/1.5 system-ui,sans-serif">暗 rect 上の白 label (mermaid node label と同型・CSS bg 無し)</p>
+  </foreignObject>
+</svg>
+</figure>
+</body>
+</html>

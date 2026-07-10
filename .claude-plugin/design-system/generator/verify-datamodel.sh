@@ -362,6 +362,11 @@ verify_term_inline \
   "term-inline 被覆 (マーク == markable 出現 glossary 語)"
 
 echo
+# ---- gate F: render 健全性 (visual) mermaid pack 展開 (folio-jyfh B 段・helper=render_gate_f)。 mermaid 図 (ER
+#      diagram) を含む生成 HTML を light/dark × 3 viewport で render-gate し、 SVG settle polling (最大 15s) で
+#      非同期 render を待ってから幾何/contrast を検査する。 vendor は render_gate_f が配信 root へ staging。
+#      fail-closed (violation/crash/settle 不足 = $fail=1・T7 guard 維持)。 SKIP_RENDER=1 で bash floor は SKIP。 ----
+render_gate_f "$HTML" "DATAMODEL_SKIP_RENDER"
 if [[ "$fail" -eq 0 ]]; then
   if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + 固定章 + 照会 graph + id anchor + prose 全充填) — CEILING=PENDING"
   elif [[ -n "$FILLED_MANIFEST" ]]; then echo "RESULT: filled PASS (構造 contract 完全導出・捏造 0 + 照会 graph 解決 + prose 注入忠実) — CEILING=PENDING"

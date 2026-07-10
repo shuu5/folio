@@ -40,6 +40,7 @@ import argparse
 import contextlib
 import functools
 import http.server
+import re
 import socketserver
 import sys
 import threading
@@ -55,6 +56,30 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROBE_JS = (SCRIPT_DIR / "probe-srs.js").read_text(encoding="utf-8")
 VIEWPORTS = [(375, 667), (768, 1024), (1280, 900)]
 SCHEMES = ["light", "dark"]
+# ---- mermaid SVG settle polling (B 段・folio-jyfh) ----
+# 生成 HTML は assets/mermaid.min.js を *非同期* に render するため、 固定 150ms settle では SVG が未生成
+# のまま probe してしまう (race・A 段が honest SKIP した理由)。 期待図数 (実 <pre class="mermaid"> 出現数)
+# に SVG 本数が到達するまで polling し (最大 15s/session)、 到達しなければ shortfall = render 不全として
+# fail-closed に倒す (svgCount < expected を FAIL・tests/render-gate/check.py の probe_page と同型 idiom)。
+# ★mermaid の *実描画出力* のみ数える (.mermaid 内の svg)。 実 mermaid.run() は pre.mermaid を残したまま
+#   svg を内側へ注入する (data-processed 付与・assemble-* の :not([data-processed]) CSS がこの存続を前提)。
+#   'figure.diagram svg' (子孫全域) を含めてはならない — datamodel の静的クロウフット凡例 (.er-legend 内
+#   <svg class="ell-ico"> ×3) が figure.diagram 内に共存し、 page load 直後に svgCount>=expected を満たして
+#   settle polling と shortfall guard を恒真 PASS 化する fail-open が実在した (独立 ceiling wf_84494bd2 が
+#   blocking 捕捉・selftest の mermaid-static-legend.html 厳密 0 pin が回帰ガード)。
+MERMAID_SVG_SELECTOR = ".mermaid svg"
+MERMAID_BLOCK = '<pre class="mermaid">'
+MERMAID_SETTLE_TIMEOUT_MS = 15000
+
+
+def count_mermaid_blocks(html_text: str) -> int:
+    """生成 HTML 内の render 対象 mermaid 図数を数える (HTML コメント内は DOM に出ず render しないため除外)。
+
+    over-count すると settle polling が到達不能な期待値で 15s 空費し shortfall 誤 FAIL を招くため、 コメント
+    除去後に literal <pre class="mermaid"> を数える (tests/render-gate/check.py の discover_targets と同基準)。
+    """
+    live = re.sub(r"<!--.*?-->", "", html_text, flags=re.DOTALL)
+    return live.count(MERMAID_BLOCK)
 
 
 @contextlib.contextmanager
@@ -73,11 +98,25 @@ def serve(root: Path):
         httpd.server_close()
 
 
-def probe(page, url: str, scheme: str) -> dict:
+def probe(page, url: str, scheme: str, expected: int = 0) -> dict:
     page.goto(url, wait_until="load")
+    # mermaid settle polling (B 段): 固定待ちでなく『svg 本数 >= expected』を polling する。 期待数に達しなければ
+    # timeout 後そのまま probe し、 svgCount < expected を run() が render 不全 (fail) として検出する (fail-closed)。
+    if expected > 0:
+        try:
+            page.wait_for_function(
+                "([sel, n]) => document.querySelectorAll(sel).length >= n",
+                arg=[MERMAID_SVG_SELECTOR, expected],
+                timeout=MERMAID_SETTLE_TIMEOUT_MS,
+            )
+        except Exception:
+            pass  # 不足のまま probe → caller が shortfall を fail に倒す
     page.wait_for_timeout(150)  # web font / layout settle
+    svg_count = page.evaluate("(sel) => document.querySelectorAll(sel).length", MERMAID_SVG_SELECTOR)
     page.evaluate(PROBE_JS)
-    return page.evaluate("(s) => window.__folioSrsRenderProbe(s)", scheme)
+    result = page.evaluate("(s) => window.__folioSrsRenderProbe(s)", scheme)
+    result["svgCount"] = svg_count
+    return result
 
 
 def fmt(result: dict, where: str) -> list[str]:
@@ -88,26 +127,36 @@ def fmt(result: dict, where: str) -> list[str]:
     return lines
 
 
-def run(base_url: str, target: str, screenshot_dir: Path | None) -> int:
+def run(base_url: str, target: str, screenshot_dir: Path | None, expected: int = 0) -> int:
     failures: list[str] = []
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         for scheme in SCHEMES:
             for width, height in VIEWPORTS:
                 page = browser.new_page(viewport={"width": width, "height": height}, color_scheme=scheme)
-                result = probe(page, f"{base_url}/{target}", scheme)
+                result = probe(page, f"{base_url}/{target}", scheme, expected)
                 where = f"{target}@{width}px/{scheme}"
                 n = len(result["violations"])
                 tc = result["textChecked"]
                 gs = result["gradientSkipped"]
+                sc = result.get("svgCount", 0)
+                ssk = result.get("svgSkipped", 0)
                 # fail-closed: text を 1 つも評価できなければ render 破綻 (clean と取り違えない)
                 broken = tc == 0
-                status = "FAIL" if (n or broken) else "OK"
+                # fail-closed: mermaid 図が期待数に達しなければ settle 不足/render 不全 (clean と取り違えない)
+                shortfall = expected > 0 and sc < expected
+                status = "FAIL" if (n or broken or shortfall) else "OK"
                 note = " — render 破綻 (text 0)" if broken else ""
+                snote = f" — mermaid 図 {sc}/{expected} (settle 不足)" if shortfall else (f" / svg {sc}/{expected}" if expected else "")
                 gnote = f" / gradient skip {gs}" if gs else ""
-                print(f"  [{status}] {where} — {n} 違反 / text {tc} 検査{gnote}{note}")
+                # SVG paint 境界の honest skip 開示 (contrast 未検査 label 数 = ceiling 領分・PASS 詐称しない)
+                if ssk:
+                    gnote += f" / svg-label skip {ssk}"
+                print(f"  [{status}] {where} — {n} 違反 / text {tc} 検査{gnote}{snote}{note}")
                 if broken:
                     failures.append(f"  [render-gate-srs] broken-render: {where} (contrast 評価対象 text が 0 — render 不全)")
+                if shortfall:
+                    failures.append(f"  [render-gate-srs] mermaid-shortfall: {where} (SVG {sc} < 期待図数 {expected} — settle 不足/render 不全・fail-closed)")
                 failures += fmt(result, where)
                 if screenshot_dir is not None:
                     d = screenshot_dir / f"{scheme}-{width}px"
@@ -117,7 +166,7 @@ def run(base_url: str, target: str, screenshot_dir: Path | None) -> int:
         browser.close()
     print()
     if failures:
-        print(f"render-gate-srs: {len(failures)} 件の問題 (overflow / overlap / low-contrast / render 破綻)\n")
+        print(f"render-gate-srs: {len(failures)} 件の問題 (overflow / overlap / low-contrast / mermaid-shortfall / render 破綻)\n")
         print("\n".join(failures))
         return 1
     print("render-gate-srs: clean — 0 overflow / 0 overlap / 0 low-contrast (light+dark × 3 viewport render 確認済)")
@@ -166,6 +215,24 @@ def run_selftest(base_url: str) -> int:
         ("srs-clipped.html", 375, "light", {"clipped-content"}),
         ("srs-clipped.html", 375, "dark", {"clipped-content"}),
         ("srs-clipped.html", 1280, "light", set()),
+        # mermaid settle polling (B 段・folio-jyfh): SVG を 300ms 後に注入する合成 fixture (vendor 3.3MB を
+        # 持たず実 mermaid.run() の pre→svg DOM 遷移を模す)。 固定 150ms では svgCount=0 だが polling で 1 へ
+        # 到達 = clean。 6 要素目 expect_svg=1 が「settle 待ちが実際に効いている」を pin する (polling を外すと
+        # svgCount=0 で svg_ok=False → FAIL に倒れる = 回帰ガード)。
+        ("mermaid-settle.html", 1280, "light", set(), None, 1),
+        # SVG paint 境界 skip (B 段・folio-jyfh): foreignObject 内 HTML label の背景が CSS で解決しない場合は
+        # honest skip する (rect fill は CSS 祖先歩きに不可視 = 頁背景へ誤帰属し偽陽性/偽陰性を作る)。
+        # svg-skip: 白 label on 暗 rect (白頁背景) — 旧挙動なら白 on 白へ誤帰属し偽 low-contrast。 新挙動 =
+        #   clean + svgSkipped>0 (7 要素目 True が pin — skip を外すと偽陽性 violation で FAIL = 回帰ガード)。
+        # svg-fo-bg: foreignObject 内で CSS bg が解決する label (mermaid edge label 類) は検査継続 — 白字 on
+        #   teal を low-contrast で捕り続ける (skip が過剰包含に壊れたら clean 化して FAIL = 過剰 skip ガード)。
+        ("svg-skip.html", 1280, "light", set(), None, 0, True),
+        ("svg-fo-bg.html", 1280, "light", {"low-contrast"}),
+        # 静的凡例 svg 共存 (独立 ceiling wf_84494bd2 blocking の回帰ガード): datamodel 同型に figure.diagram 内へ
+        # 静的 svg ×3 + 不描画 pre.mermaid を共存させ、 .mermaid 外の静的 svg が計数されないことを 8 要素目
+        # expect_svg_exact=0 で厳密 pin する。 selector が 'figure.diagram svg' 等の過剰包含に戻ると svgCount=3 ≠ 0
+        # で FAIL = shortfall guard 恒真 PASS 化 (fail-open) の再導入を検出する。
+        ("mermaid-static-legend.html", 1280, "light", set(), None, 0, None, 0),
         # overlap: 両 data-component (srs-overlap) と 非 data-component 装飾の被さり (noncomp-overlap) の双方を捕捉
         ("srs-overlap.html", 1280, "light", {"component-overlap"}),
         ("srs-noncomp-overlap.html", 1280, "light", {"component-overlap"}),
@@ -177,28 +244,42 @@ def run_selftest(base_url: str) -> int:
         for case in cases:
             name, width, scheme, expect = case[:4]
             expect_skip = case[4] if len(case) > 4 else None  # True なら gradientSkipped>0 を要求
+            expect_svg = case[5] if len(case) > 5 else 0      # >0 なら settle polling が期待図数へ到達を要求
+            expect_svgskip = case[6] if len(case) > 6 else None  # True なら svgSkipped>0 を要求 (SVG 境界 skip の pin)
+            expect_svg_exact = case[7] if len(case) > 7 else None  # 非 None なら svgCount == 厳密一致を要求 (過剰包含 pin)
             key = (width, scheme)
             if key not in pages:
                 height = next((h for w, h in VIEWPORTS if w == width), 900)
                 pages[key] = browser.new_page(viewport={"width": width, "height": height}, color_scheme=scheme)
             page = pages[key]
-            result = probe(page, f"{base_url}/render-fixtures/{name}", scheme)
+            result = probe(page, f"{base_url}/render-fixtures/{name}", scheme, expect_svg)
             kinds = {v["kind"] for v in result["violations"]}
             rendered = result["textChecked"] > 0
             skip_ok = expect_skip is None or (result["gradientSkipped"] > 0) == expect_skip
-            passed = rendered and kinds == expect and skip_ok
+            # settle polling arm: 非同期に現れる SVG を固定 150ms でなく polling で待てているか (未達=polling 不全)
+            svg_ok = expect_svg == 0 or result.get("svgCount", 0) >= expect_svg
+            svgskip_ok = expect_svgskip is None or (result.get("svgSkipped", 0) > 0) == expect_svgskip
+            svg_exact_ok = expect_svg_exact is None or result.get("svgCount", 0) == expect_svg_exact
+            passed = rendered and kinds == expect and skip_ok and svg_ok and svgskip_ok and svg_exact_ok
             ok = ok and passed
             verdict = "PASS" if passed else "FAIL"
-            exp = ("+".join(sorted(expect)) or "clean") + (f"+skip>0" if expect_skip else "")
+            exp = ("+".join(sorted(expect)) or "clean") + (f"+skip>0" if expect_skip else "") + (f"+svg>={expect_svg}" if expect_svg else "") + ("+svgskip>0" if expect_svgskip else "") + (f"+svg=={expect_svg_exact}" if expect_svg_exact is not None else "")
             got = ("+".join(sorted(kinds)) or "clean") if rendered else f"render 破綻 (text {result['textChecked']})"
             if expect_skip is not None:
                 got += f" (gradientSkipped={result['gradientSkipped']})"
+            if expect_svg:
+                got += f" (svgCount={result.get('svgCount', 0)})"
+            if expect_svgskip is not None:
+                got += f" (svgSkipped={result.get('svgSkipped', 0)})"
+            if expect_svg_exact is not None:
+                got += f" (svgCount={result.get('svgCount', 0)})"
             print(f"  [selftest {verdict}] {name}@{width}px/{scheme}: 期待={exp} / 実際={got}")
         browser.close()
     print()
     if ok:
         print("selftest: PASS — 全 detector arm (overflow / overlap / low-contrast) が kind 完全一致で発火し、 "
-              "clean を誤検出せず、 dark emulation・viewport plumbing・fail-closed (textChecked>0) が固定されている")
+              "clean を誤検出せず、 dark emulation・viewport plumbing・mermaid settle polling (svgCount 到達)・"
+              "fail-closed (textChecked>0) が固定されている")
         return 0
     print("selftest: FAIL — detector が期待通り動作しない (playwright/chromium 版 drift?)")
     return 1
@@ -229,10 +310,12 @@ def main() -> int:
         print(f"render-gate-srs: html not found: {html}", file=sys.stderr)
         return 2
 
+    # mermaid 図数 = settle polling の期待到達値 (0 なら polling skip = 従来挙動)。
+    expected = count_mermaid_blocks(html.read_text(encoding="utf-8"))
     if args.base_url:
-        return run(args.base_url, html.name, shots)
+        return run(args.base_url, html.name, shots, expected)
     with serve(html.parent) as base_url:
-        return run(base_url, html.name, shots)
+        return run(base_url, html.name, shots, expected)
 
 
 if __name__ == "__main__":

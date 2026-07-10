@@ -430,6 +430,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       primaryTextColor: '#ffffff',
       lineColor: '#2a4d6e',
       secondaryColor: '#5ac8b8',
+      edgeLabelBackground: '#15324a',
       tertiaryColor: '#f5f8fa'
     }
   });

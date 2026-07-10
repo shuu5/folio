@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: mermaid settle</title>
+<style>
+  /* 非同期 SVG 注入を模す合成 fixture。 light/dark 両方で clean (contrast/overflow/overlap violation を出さない)。
+     mermaid vendor (3.3MB) を fixture に持たず、 実 mermaid.run() と同じ pre.mermaid→svg の DOM 遷移だけを再現する。 */
+  :root{ --bg:#ffffff; --fg:#111418; }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#0d171e; --fg:#e8eef2; } }
+  body{ margin:0; padding:24px; background:var(--bg); color:var(--fg); font:16px/1.6 system-ui, sans-serif; }
+  h1{ font-size:24px; }
+  figure.diagram{ margin:16px 0; }
+  figure.diagram svg{ max-width:100%; }
+  figure.diagram .mermaid:not([data-processed]){ font-family:ui-monospace, monospace; font-size:12px; white-space:pre; }
+</style>
+</head>
+<body>
+<h1 data-component="doc-cover-band">mermaid settle fixture</h1>
+<p>この fixture は 300ms 後に SVG を注入し、 render-gate の settle polling が固定 150ms を越えて期待図数へ到達を待つことを検証する。</p>
+<figure class="diagram" data-component="c4-context">
+<pre class="mermaid">flowchart LR
+  A[利用者] --&gt; B[窓口]</pre>
+</figure>
+<script>
+// mermaid.min.js を積まずに非同期 render を模す: DOMContentLoaded の 300ms 後に pre.mermaid の *内側へ*
+// SVG を注入し data-processed を付す (実 mermaid.run() と同型の DOM 遷移 — pre は残る。 旧版の
+// pre.replaceWith(svg) は実 mermaid と形状が違い MERMAID_SVG_SELECTOR '.mermaid svg' 枝を踏めない =
+// 独立 ceiling が fixture 形状乖離として捕捉)。 固定 150ms probe では svgCount=0 のまま、 settle polling が
+// 待って初めて svgCount>=1 に到達する。
+window.addEventListener('DOMContentLoaded', function () {
+  setTimeout(function () {
+    var pre = document.querySelector('pre.mermaid');
+    if (!pre) return;
+    var NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', '220');
+    svg.setAttribute('height', '80');
+    svg.setAttribute('viewBox', '0 0 220 80');
+    var t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', '12');
+    t.setAttribute('y', '46');
+    t.setAttribute('fill', '#08131a');   // light scheme 上で高コントラスト (本 case は light のみ検査)
+    t.setAttribute('font-size', '15');
+    t.textContent = '利用者 -> 窓口';
+    svg.appendChild(t);
+    pre.textContent = '';
+    pre.appendChild(svg);                       // 実 mermaid 同型: svg は pre.mermaid の内側
+    pre.setAttribute('data-processed', 'true'); // raw-DSL 用 :not([data-processed]) スタイルを解除
+  }, 300);
+});
+</script>
+</body>
+</html>

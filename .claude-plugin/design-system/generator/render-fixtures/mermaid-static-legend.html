@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>render-fixture: 静的凡例 svg は mermaid 計数に入らない</title>
+<style>
+  /* MERMAID_SVG_SELECTOR 過剰包含の回帰ガード (folio-jyfh B 段・独立 ceiling wf_84494bd2 の blocking 処方)。
+     datamodel pack と同型に、 figure.diagram 内へ「描画されない pre.mermaid ×1」と「静的凡例 svg ×3
+     (.er-legend 内・mermaid.run() と無関係に page load 時から存在)」を共存させる。
+     - 正しい計数 (.mermaid svg): 静的 svg は .mermaid の外 → svgCount == 0 (selftest が厳密 0 を pin)。
+     - 過剰包含 (figure.diagram svg 等) に戻ると svgCount==3 ≠ 0 で selftest FAIL = fail-open の再導入を検出。
+     svgCount==0 は expected>0 の実 artifact では shortfall FAIL を意味する (= 静的 svg で guard が
+     恒真 PASS 化しないことの直接証明)。 */
+  body{ margin:0; padding:24px; background:#ffffff; color:#111418; font:16px/1.6 system-ui, sans-serif; }
+  h1{ font-size:24px; }
+  figure.diagram{ margin:16px 0; }
+  figure.diagram .mermaid:not([data-processed]){ font-family:ui-monospace, monospace; font-size:12px; white-space:pre; color:#3a4a55; }
+  .er-legend{ display:flex; gap:12px; align-items:center; font-size:12px; color:#3a4a55; }
+</style>
+</head>
+<body>
+<h1 data-component="doc-cover-band">静的凡例 svg 共存 fixture</h1>
+<p>figure.diagram 内の静的 svg (凡例 icon) が mermaid 計数へ混入しないことを検証する。</p>
+<figure class="diagram" data-component="er-diagram">
+<pre class="mermaid">erDiagram
+  A ||--o{ B : has</pre>
+<div class="er-legend">
+  <span><svg class="ell-ico" width="28" height="12" viewBox="0 0 28 12" aria-hidden="true"><line x1="0" y1="6" x2="28" y2="6" stroke="#3a4a55"/><line x1="20" y1="1" x2="20" y2="11" stroke="#3a4a55"/></svg> ちょうど 1</span>
+  <span><svg class="ell-ico" width="28" height="12" viewBox="0 0 28 12" aria-hidden="true"><line x1="0" y1="6" x2="28" y2="6" stroke="#3a4a55"/><circle cx="20" cy="6" r="3" fill="none" stroke="#3a4a55"/></svg> 0 か 1</span>
+  <span><svg class="ell-ico" width="28" height="12" viewBox="0 0 28 12" aria-hidden="true"><line x1="0" y1="6" x2="28" y2="6" stroke="#3a4a55"/><path d="M20 1 L28 6 L20 11" fill="none" stroke="#3a4a55"/></svg> いくつでも</span>
+</div>
+</figure>
+</body>
+</html>

@@ -477,11 +477,13 @@ _repro_prose_convention() { # $1 = contract path
 # ゆえ SRS 非回帰は構造保証 (verify-srs.sh の inline gate F もそのまま)。 本 helper は非 mermaid pack 用の
 # 独立 wiring。
 #
-# ★mermaid-aware SKIP (A/B 境界の要・folio-vuf A の核): 対象 HTML が <pre class="…mermaid…"> を含むなら
-#   honest SKIP する。 mermaid pack は assets/mermaid.min.js を *非同期* に render するため 150ms settle の
-#   本 gate では race/incomplete になり、 SVG settle polling (B 段・folio-vuf B) の領分。 vision doc-type は
-#   instance 依存 (folio-vision=図なし → 実行 / clinic-appointment.vision=goal_tree flowchart → SKIP) ゆえ、
-#   doc-type でなく *生成 HTML の実体* で分岐する (実測: A/B 16 contract で完全分割・報告表)。
+# ★mermaid-aware render (A/B 境界・B 段 folio-jyfh で defer 解消): 対象 HTML が <pre class="…mermaid…"> を含む
+#   なら、 A 段の honest SKIP を撤廃し *実 render* する。 mermaid pack は assets/mermaid.min.js を非同期 render
+#   するため、 render-gate-srs.py 側が SVG 本数の期待図数到達を polling (最大 15s) してから幾何/contrast を
+#   検査し、 settle 不足 (svgCount<期待) は fail-closed FAIL に倒す。 render 直前に vendor を配信 root へ staging
+#   する (下記・srs.css staging と同型)。 vision doc-type は instance 依存 (folio-vision=図なし / clinic-
+#   appointment.vision=goal_tree flowchart) だが、 doc-type でなく *生成 HTML の実体* で mermaid を検出するため
+#   どちらの instance も正しく分岐する。
 #
 # ★T7 fail-closed guard (mzn.3 教訓・展開先でも維持): render-gate-srs.py の exit を sed パイプで洗浄しない。
 #   PIPESTATUS[0] で render-gate の exit を *直接* 読み、 violation (exit 1) も crash/tool error (exit 2) も
@@ -490,7 +492,8 @@ _repro_prose_convention() { # $1 = contract path
 #
 # SKIP 条件 (いずれも honest SKIP・PASS 詐称せず floor 不完全と明示):
 #   (a) <SKIP_ENV>=1 / SKIP_RENDER=1 明示 (敵対 bash floor 高速化・SRS_SKIP_RENDER と同型 idiom)
-#   (b) mermaid 検出 (B 段 defer)  (c) render-gate-srs.py 不在  (d) playwright renderer 不在 (python3 / uv)
+#   (b) render-gate-srs.py 不在  (c) playwright renderer 不在 (python3 / uv)
+#   ※ mermaid 検出はもはや SKIP でなく render + vendor staging (B 段 folio-jyfh)。
 #
 # usage: render_gate_f <html> [skip_env_name]
 # 前提: $SCRIPT_DIR (generator dir) / $fail。 violation/crash = $fail=1、 SKIP/pass は $fail 不変。 return 0 固定
@@ -512,11 +515,12 @@ render_gate_f() { # $1 = 生成 HTML  $2 = skip env 名 (任意)
     printf '  [SKIP] gate F (render-gate-srs.py 不在: %s — floor 不完全)\n' "$gate"
     return 0
   fi
-  # SKIP (b): mermaid 図検出 = B 段 (folio-vuf B) 領分。 非同期 SVG render を 150ms gate で見ると race/incomplete。
-  if grep -qE '<pre[^>]*class="[^"]*mermaid|class="[^"]*mermaid[^"]*"' "$html"; then
-    printf '  [SKIP] gate F (mermaid 図検出 — B 段 SVG settle polling の領分・folio-vuf B へ defer)\n'
-    return 0
-  fi
+  # mermaid 図検出 (B 段・folio-jyfh): A 段の honest SKIP を撤廃し、 実 render する。 render-gate-srs.py が
+  #   assets/mermaid.min.js を非同期 load し、 SVG 本数が期待図数へ到達するまで polling (最大 15s) してから
+  #   幾何/contrast を検査する (settle 不足は svgCount<期待 で fail-closed FAIL)。 vendor が配信 root から届く
+  #   よう render 直前に staging する (下記・srs.css staging と同型)。 mermaid 無しなら has_mermaid=0 で従来通り。
+  local has_mermaid=0
+  if grep -qE '<pre[^>]*class="[^"]*mermaid|class="[^"]*mermaid[^"]*"' "$html"; then has_mermaid=1; fi
   # RUNNER 検出 (verify-srs.sh gate F と同型: python3 import > uv > ~/.local/bin/uv)。
   local runner=""
   if python3 -c "import playwright" >/dev/null 2>&1; then runner="python3"
@@ -536,6 +540,21 @@ render_gate_f() { # $1 = 生成 HTML  $2 = skip env 名 (任意)
     if ! cp "$SCRIPT_DIR/../srs.css" "$(dirname "$html")/srs.css" 2>/dev/null; then
       printf '  [FAIL] gate F (外部 stylesheet srs.css を配信 root へ staging 不能 — 未スタイル描画は contrast vacuous ゆえ fail-closed)\n'
       fail=1; return 0
+    fi
+  fi
+  # ★mermaid vendor staging (B 段・folio-jyfh)。 生成 HTML は assets/mermaid.min.js を相対参照 (clinic pack=
+  #   assets/・folio self-spec pack=../assets/ だが、 配信 root 直下 serve では browser の URL 正規化で両者とも
+  #   /assets/mermaid.min.js に解決する = RFC3986 の .. は root で discard)。 実体が配信 root に無いと mermaid が
+  #   render せず svgCount=0 → shortfall FAIL (vacuous-green でなく fail-closed) ゆえ、 render 直前に staging し、
+  #   cp 不能は tool error として FAIL (素通り禁止)。 mermaid 無し pack は no-op。
+  if [[ "$has_mermaid" == "1" ]]; then
+    local mvendor="$SCRIPT_DIR/../../../design-intent/assets/mermaid.min.js"
+    local mdest_dir; mdest_dir="$(dirname "$html")/assets"
+    if [[ ! -f "$mdest_dir/mermaid.min.js" ]]; then
+      if ! { mkdir -p "$mdest_dir" && cp "$mvendor" "$mdest_dir/mermaid.min.js"; } 2>/dev/null; then
+        printf '  [FAIL] gate F (mermaid vendor を配信 root へ staging 不能: %s — 未 render は render 不全ゆえ fail-closed)\n' "$mvendor"
+        fail=1; return 0
+      fi
     fi
   fi
   echo "  render-gate-srs.py を実行 ($runner)..."
