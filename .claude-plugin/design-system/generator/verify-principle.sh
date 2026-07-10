@@ -390,6 +390,11 @@ fi
 
 
 echo
+# ---- gate F: render 健全性 (visual) cross-pack 展開 (folio-vuf A・helper=render_gate_f)。
+#      非 mermaid pack の生成 HTML を light/dark × 3 viewport で render-gate。 mermaid 検出時は honest
+#      SKIP (B 段 folio-vuf B へ defer)。 fail-closed (violation/crash = $fail=1・T7 guard 維持)。 ----
+render_gate_f "$HTML" "PRINCIPLE_SKIP_RENDER"
+
 if [[ "$fail" -eq 0 ]]; then
   bd_note=""; [[ "$DOC_TYPE" == "constitution" ]] && bd_note=" + 終端 + baseline-diff + inbound"
   if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + term-inline + prose 全充填${bd_note}) — CEILING=PENDING"

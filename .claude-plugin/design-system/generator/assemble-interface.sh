@@ -179,6 +179,7 @@ emit_interface_css() {
 [data-component="operation-card"]::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--brand)}
 .opc-head{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
 .opc-num{font-size:11px;font-weight:800;font-family:ui-monospace,monospace;color:#fff;background:var(--brand);border-radius:7px;padding:3px 9px;white-space:nowrap}
+@media (prefers-color-scheme: dark){.opc-num{color:#08131a}} /* dark は --brand が明色 (#7db8e8) 化し白字 2.12 → 濃 ink で ≥8.5 (gate F WCAG AA) */
 .opc-name{font-size:17.5px;font-weight:800;color:var(--ink);line-height:1.3}
 .opc-actor{margin-left:auto;font-size:12px;font-weight:700;color:var(--info);background:var(--info-tint);border:1px solid var(--info-line);border-radius:999px;padding:3px 12px;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
 .opc-actor .a-lab{font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ink-faint);text-transform:uppercase}

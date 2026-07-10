@@ -24,7 +24,7 @@
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --ink:#e8eef2; --ink-soft:#a9b7c1; --ink-faint:#7d8c97;
+    --ink:#e8eef2; --ink-soft:#a9b7c1; --ink-faint:#8a99a4; /* ink-faint: 全 dark bg で contrast ≥4.85 = WCAG AA (≥4.5) 充足・最小は ok-tint/warn-tint (gate F・folio-vuf) */
     --paper:#0d171e; --paper-2:#15222b; --paper-3:#1b2c37;
     --line:#273947; --line-soft:#1b2c37;
     --brand:#7db8e8; --brand-deep:#1d3a54; --brand-tint:#16293a;

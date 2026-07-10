@@ -468,3 +468,75 @@ _repro_prose_convention() { # $1 = contract path
   done
   printf ''
 }
+
+# ---- gate F (render 健全性・visual) cross-pack helper (folio-vuf A 段) ----
+# 既存 SRS gate F (render-gate-srs.py + probe-srs.js、 mzn.3 baseline 6df5365) を *非 mermaid pack* へ
+# drop-in 展開する共有 helper。 render-gate-srs.py は doc-type 非依存 (probe-srs.js は data-component /
+# contrast / horizontal-overflow / clipped-content を見るだけで SRS 構造を parse しない・verified) ゆえ、
+# 生成 HTML を単一ファイルとして light/dark × 3 viewport で検査する。 render-gate-srs.py 本体は *無改変*
+# ゆえ SRS 非回帰は構造保証 (verify-srs.sh の inline gate F もそのまま)。 本 helper は非 mermaid pack 用の
+# 独立 wiring。
+#
+# ★mermaid-aware SKIP (A/B 境界の要・folio-vuf A の核): 対象 HTML が <pre class="…mermaid…"> を含むなら
+#   honest SKIP する。 mermaid pack は assets/mermaid.min.js を *非同期* に render するため 150ms settle の
+#   本 gate では race/incomplete になり、 SVG settle polling (B 段・folio-vuf B) の領分。 vision doc-type は
+#   instance 依存 (folio-vision=図なし → 実行 / clinic-appointment.vision=goal_tree flowchart → SKIP) ゆえ、
+#   doc-type でなく *生成 HTML の実体* で分岐する (実測: A/B 16 contract で完全分割・報告表)。
+#
+# ★T7 fail-closed guard (mzn.3 教訓・展開先でも維持): render-gate-srs.py の exit を sed パイプで洗浄しない。
+#   PIPESTATUS[0] で render-gate の exit を *直接* 読み、 violation (exit 1) も crash/tool error (exit 2) も
+#   *等しく* $fail=1 に倒す (warn/pass への洗浄禁止・set -o pipefail 有無に非依存)。 text 0 (render 破綻) は
+#   render-gate-srs.py 内部で既に fail-closed FAIL (exit 1)。
+#
+# SKIP 条件 (いずれも honest SKIP・PASS 詐称せず floor 不完全と明示):
+#   (a) <SKIP_ENV>=1 / SKIP_RENDER=1 明示 (敵対 bash floor 高速化・SRS_SKIP_RENDER と同型 idiom)
+#   (b) mermaid 検出 (B 段 defer)  (c) render-gate-srs.py 不在  (d) playwright renderer 不在 (python3 / uv)
+#
+# usage: render_gate_f <html> [skip_env_name]
+# 前提: $SCRIPT_DIR (generator dir) / $fail。 violation/crash = $fail=1、 SKIP/pass は $fail 不変。 return 0 固定
+#   (gate 結果は $fail 経由でのみ伝える = 呼出側 `render_gate_f ... || ...` の誤用で SKIP を fail 化しない)。
+render_gate_f() { # $1 = 生成 HTML  $2 = skip env 名 (任意)
+  local html="$1" skip_env="${2:-}" gate="$SCRIPT_DIR/render-gate-srs.py"
+  echo
+  echo "--- gate F: render 健全性 (playwright: low-contrast / horizontal-overflow / component-overlap・cross-pack 展開 folio-vuf A) ---"
+  # SKIP (a): 明示 skip env (pack 別 <SKIP_ENV> か共通 SKIP_RENDER)。 実トリガを正しく表示する。
+  local trigger=""
+  if [[ -n "$skip_env" && "${!skip_env:-0}" == "1" ]]; then trigger="$skip_env"
+  elif [[ "${SKIP_RENDER:-0}" == "1" ]]; then trigger="SKIP_RENDER"; fi
+  if [[ -n "$trigger" ]]; then
+    printf '  [SKIP] gate F (%s=1 — bash floor のみ・PASS 詐称せず・floor 不完全)\n' "$trigger"
+    return 0
+  fi
+  # SKIP (c): render-gate-srs.py 不在
+  if [[ ! -f "$gate" ]]; then
+    printf '  [SKIP] gate F (render-gate-srs.py 不在: %s — floor 不完全)\n' "$gate"
+    return 0
+  fi
+  # SKIP (b): mermaid 図検出 = B 段 (folio-vuf B) 領分。 非同期 SVG render を 150ms gate で見ると race/incomplete。
+  if grep -qE '<pre[^>]*class="[^"]*mermaid|class="[^"]*mermaid[^"]*"' "$html"; then
+    printf '  [SKIP] gate F (mermaid 図検出 — B 段 SVG settle polling の領分・folio-vuf B へ defer)\n'
+    return 0
+  fi
+  # RUNNER 検出 (verify-srs.sh gate F と同型: python3 import > uv > ~/.local/bin/uv)。
+  local runner=""
+  if python3 -c "import playwright" >/dev/null 2>&1; then runner="python3"
+  elif command -v uv >/dev/null 2>&1; then runner="uv run --with playwright==1.60.0 python"
+  elif [[ -x "$HOME/.local/bin/uv" ]]; then runner="$HOME/.local/bin/uv run --with playwright==1.60.0 python"
+  fi
+  # SKIP (d): renderer 不在
+  if [[ -z "$runner" ]]; then
+    printf '  [SKIP] gate F (playwright renderer 不在 — CI/uv 環境で render-gate-srs.py を実行・floor 不完全)\n'
+    return 0
+  fi
+  echo "  render-gate-srs.py を実行 ($runner)..."
+  # ★T7 fail-closed: pipe 経由でも PIPESTATUS[0] で render-gate の exit を直接読む (sed の exit で洗浄しない)。
+  $runner "$gate" "$html" 2>&1 | sed 's/^/    /'
+  local rc="${PIPESTATUS[0]}"
+  if [[ "$rc" -eq 0 ]]; then
+    printf '  [OK]   gate F pass (0 overflow / 0 overlap / 0 low-contrast・light+dark × 3 viewport render 確認済)\n'
+  else
+    printf '  [FAIL] gate F (render-gate-srs.py exit %s — violation or render 破綻/tool error・fail-closed)\n' "$rc"
+    fail=1
+  fi
+  return 0
+}

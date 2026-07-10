@@ -29,6 +29,8 @@ GOOD="$TMP/good.html"
 pass=0; total=0
 # repro-build arm (verify_repro_build) は verify-*.sh 既定 ON。 bulk case は honest skip で速度維持し、 conformance pin (末尾) だけ arm ON 実走。
 export SKIP_REPRO="${SKIP_REPRO:-1}"
+# gate F (playwright visual・folio-vuf A) も floor-adversarial では skip (重い render を外す・SKIP_REPRO と同型)。
+export SKIP_RENDER="${SKIP_RENDER:-1}"
 source "$HERE/lib/test-repro-pins.sh"
 expect_fail() {
   local label="$1" html="$2"

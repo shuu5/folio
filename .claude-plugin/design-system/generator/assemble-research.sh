@@ -118,6 +118,8 @@ emit_research_css() {
 [data-component="research-outcome-panel"] .oc-plain{display:block;font-size:13.5px;color:var(--ink-soft);line-height:1.7;margin:0 0 8px}
 [data-component="research-outcome-panel"] .oc-note{display:block;font-size:13px;color:var(--ink);background:var(--paper);border:1px solid var(--ok-line);border-radius:8px;padding:8px 11px;line-height:1.75}
 [data-component="research-outcome-panel"] .oc-tgt{font-size:11.5px;color:var(--ink-faint);margin:8px 0 0}
+.xref-doc{color:var(--brand)} /* リンク色を明示 — UA 既定 #0000ee は dark bg で 1.51 (gate F WCAG AA・両テーマ ≥6.7) */
+.reader-chip .xref-doc{color:#15324a} /* 琥珀チップ (#ffce6e 固定・core chrome) 上は明色 brand が 1.45 → 濃紺 9.0 (両テーマ同値) */
 CSS
 }
 
