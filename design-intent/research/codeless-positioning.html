@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="research">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.0.0">
+<meta name="folio-status" content="active">
+<title>folio — コード無しプロジェクトへの射程 (codeless positioning)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./codeless-positioning.html",
+  "@type": "schema:TechArticle",
+  "folio:version": "1.0.0",
+  "folio:status": "active",
+  "dc:title": "folio codeless positioning",
+  "dc:references": [
+    { "@id": "./doctype-coverage-audit.html" },
+    { "@id": "./document-discipline-engine-design.html" },
+    { "@id": "../decisions/ADR-0046-architecture-description-pack.html" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-essence">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">research</a></li>
+  <li aria-current="page">codeless-positioning</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-essence">§0. 要旨</a></li>
+  <li><a href="#s1-motivation">§1. 動機</a></li>
+  <li><a href="#s2-core-claim">§2. 核心命題 — engine のコード非依存性 (verified)</a></li>
+  <li><a href="#s3-translate">§3. 規律別 translate 度</a></li>
+  <li><a href="#s4-domain-sketch">§4. ドメイン写像スケッチ (exploration・非規範)</a></li>
+  <li><a href="#s5-beachhead">§5. 橋頭堡戦略</a></li>
+  <li><a href="#s6-open">§6. 未解決 (open questions — 本 note は決定しない)</a></li>
+  <li><a href="#s7-references">§7. 参照</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+<nav class="crumb"><a href="../index.html">design-intent</a> / <a href="README.html">research</a> / codeless positioning</nav>
+
+<h1>folio コード無しプロジェクトへの射程 (codeless positioning)</h1>
+<div class="meta">v1.0.0 &middot; status: active &middot; folio 文書規律をコード無しプロジェクト (政策・ガバナンス・標準化 等) へ拡げる位置づけの明文化 (P-7 探索・方向のみで決定しない)</div>
+
+<section id="s0-essence">
+<h2>§0. 要旨</h2>
+<p>folio の文書規律エンジンは設計上すでに<strong>コード非依存</strong>であり、「コードのある SW プロジェクト」への限定は SRS-pack 固有の写像にすぎない。本 note は folio の射程を「あらゆる構造化知識プロジェクト (政策・ガバナンス・標準化・研究プログラム・事業計画・法務枠組 等)」へ拡げる<strong>方向の明文化</strong>を行う。P-7 探索領域の作法に従い、ここでは決定しない — scope を silently 拡大せず、将来の判断材料 (grill / ADR 起票) の grounding とする。</p>
+<p>骨子は <a href="doctype-coverage-audit.html">doctype-coverage-audit</a> §4 (doctype-completeness-audit wf_8e16a043 の codeless_positioning 出力) を展開したもの。起票 = bd <code>folio-dxq</code> (user grill 2026-06-24 発)。</p>
+</section>
+
+<section id="s1-motivation">
+<h2>§1. 動機</h2>
+<p>folio の文書型 (SRS / ADR / research / principle / spec / architecture-description / glossary / vision / testcases / datamodel / interface) は本質的にコード非依存である。さらに folio の中核価値である dual-audience (非エンジニア + 機械の両対応) は、<strong>混在読者が常態のコード無しプロジェクトでこそ価値が増す</strong>: SW プロジェクトでは「非エンジニア読者」は周縁だが、政策文書・ガバナンス憲章・標準文書では専門家 vs 市民/議員/監査人の混在が読者構造の本体であり、平易層と精密層の 1-DOM 共存 (co-author) がそのまま効く。</p>
+</section>
+
+<section id="s2-core-claim">
+<h2>§2. 核心命題 — engine のコード非依存性 (verified)</h2>
+<p>core の照会 graph が使う抽象ロール集合は <code>GRAPH_ROLE_ALLOWLIST = claim|rationale|exploration|principle|verification|implementation</code> (<code>.claude-plugin/design-system/generator/lib/graph-common.sh</code>) であり、「コード」概念を含まない (2026-07-12 実コード再確認済)。「実装 = コード」は SRS-pack 固有の写像にすぎず、ADR-pack は <code>implementation</code> ロールを「実装方式 (非コード)」へ既に写像している (audit wf_8e16a043 確定)。つまり engine の機械層 (floor gate / graph 検査 / round-trip) はドメイン語彙に依存せず、写像の付け替えは pack 層で完結する。</p>
+</section>
+
+<section id="s3-translate">
+<h2>§3. 規律別 translate 度</h2>
+<p>folio 各規律のコード無しドメインへの翻訳可能度。translate 度 (列 2) は audit §4 の確定値、「読み替え」列は audit の記述に本 note の素描 (exploration・非規範) を補ったもの:</p>
+<table>
+<thead><tr><th>規律</th><th>translate 度</th><th>コード無しドメインでの読み替え</th></tr></thead>
+<tbody>
+<tr><td>dual-audience</td><td>high</td><td>混在読者 (専門家 vs 市民/議員/監査人) が常態 — 価値はむしろ増す</td></tr>
+<tr><td>canonical-name (P-5)</td><td>high</td><td>法令・標準の defined term 文化と同型 (定義条項 = glossary)</td></tr>
+<tr><td>declarative (P-4)</td><td>high</td><td>法令/標準/憲章は本来 declarative — 経緯叙述の排除はむしろ本流</td></tr>
+<tr><td>P-7 3-domain (WHAT/WHY/exploration)</td><td>high</td><td>本文/立法趣旨・審議録/調査資料の分離としてそのまま成立</td></tr>
+<tr><td>RTM (traceability)</td><td>high</td><td>政策目標 → 施策 → 根拠 → 評価指標 の追跡表</td></tr>
+<tr><td>EARS</td><td>medium-high</td><td>規範型 doc (規則・手続) で high・記述型 doc で low</td></tr>
+<tr><td>HOW-outside</td><td>high (再定義要)</td><td>「実装」が施行/運用/建造/執行に写る — 「HOW」の境界語彙を再定義して外に置く</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s4-domain-sketch">
+<h2>§4. ドメイン写像スケッチ (exploration・非規範)</h2>
+<p>doc-type がコード無しドメインでどう写るかの素描。確定写像ではなく、将来 pack 設計時の出発点:</p>
+<table>
+<thead><tr><th>folio doc-type</th><th>政策・ガバナンス</th><th>標準化・法務</th><th>事業計画・研究プログラム</th></tr></thead>
+<tbody>
+<tr><td>SRS (要求)</td><td>政策目標・要求仕様</td><td>適合性要求</td><td>事業要求・研究目標</td></tr>
+<tr><td>ADR (決定記録)</td><td>審議会決定録</td><td>技術委員会決議</td><td>投資判断・Go/No-Go 記録</td></tr>
+<tr><td>principle / constitution</td><td>基本方針・ガバナンス憲章</td><td>基本原則条項</td><td>ミッション・投資原則</td></tr>
+<tr><td>architecture-description</td><td>制度・組織構造の記述</td><td>参照モデル</td><td>事業構造・プログラム構成</td></tr>
+<tr><td>verification / testcases</td><td>評価・監査手続</td><td>適合性試験仕様</td><td>KPI 検証手続</td></tr>
+<tr><td>glossary</td><td>定義条項</td><td>defined terms</td><td>用語集</td></tr>
+</tbody>
+</table>
+</section>
+
+<section id="s5-beachhead">
+<h2>§5. 橋頭堡戦略</h2>
+<p>第一橋頭堡 = <strong>principle/constitution pack</strong>: 要件索引型を脱した実証済 pack であり、公共政策の基本方針・ガバナンス憲章は principle 型 (動かせない約束の宣言 + tier + amendment) にそのまま写る。gate I (非エンジニア読了) を既に達成している (audit §4 の確定)。第二 = <strong>architecture-description pack</strong> (<a href="../decisions/ADR-0046-architecture-description-pack.html">ADR-0046</a>): 要件型を脱した初の記述型 doc-type で、制度・組織の「何がどう組み合わさって動くか」に写る。</p>
+</section>
+
+<section id="s6-open">
+<h2>§6. 未解決 (open questions — 本 note は決定しない)</h2>
+<ul>
+<li><strong>純記述型 doc-type の floor の厚み</strong> (最大の不確実点): EARS が乗らない記述型では機械検査可能な構造が薄く、ceiling (LLM reviewer) 依存が増して機械保証強度が落ちる。floor をどこまで厚くできるかは記述型 pack (arch/vision/datamodel) の実績蓄積で判断する。</li>
+<li><strong>HOW-outside の「HOW」再定義</strong>: 施行手順・運用細則を design-intent の外に置く境界語彙をドメイン別にどう言語化するか。</li>
+<li><strong>implementation ロールの表示語彙</strong>: 機械層 (GRAPH_ROLE_ALLOWLIST) は不変のまま、pack 表示層でロール名をドメイン語 (施行/運用) へ訳すだけで足りるか。</li>
+<li><strong>dogfood 経路</strong>: 非 SW ドメインの実 consumer で歩ける website + validate + ceiling を通す検証をどこで行うか (実プロジェクト連携 or デモ contract)。</li>
+</ul>
+</section>
+
+<section id="s7-references">
+<h2>§7. 参照</h2>
+<ul>
+<li><a href="doctype-coverage-audit.html"><code>doctype-coverage-audit.html</code></a> §4 — 本 note の grounding (codeless_positioning)。</li>
+<li><a href="document-discipline-engine-design.html"><code>document-discipline-engine-design.html</code></a> — 文書規律エンジン B0 設計 (照会 = 抽象ロール graph)。</li>
+<li><a href="../decisions/ADR-0046-architecture-description-pack.html">ADR-0046</a> — 記述型 doc-type の先例 (第二橋頭堡)。</li>
+<li>bd <code>folio-dxq</code> — 起票・経緯の SSoT。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

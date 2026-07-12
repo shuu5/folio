@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 55 specs · folio 1.2.0
+# 56 specs · folio 1.2.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -236,6 +236,11 @@
 - title: folio research index
 - doc-type: cluster-readme · status: active
 - summary: user 要望 + 業界調査 + plugin scope の集約
+
+## research/codeless-positioning.html
+- title: folio codeless positioning
+- doc-type: research · status: active
+- summary: folio 文書規律をコード無しプロジェクト (政策・ガバナンス・標準化 等) へ拡げる位置づけの明文化 (P-7 探索・方向のみで決定しない)
 
 ## research/constitution-x4-amendment-proposal.html
 - title: folio constitution X4 amendment proposal

@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-06T01:23:46Z",
+  "generatedAt": "2026-07-12T04:01:14Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -1264,6 +1264,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "research/codeless-positioning.html",
           "research/doctype-coverage-audit.html",
           "decisions/ADR-0049-vision-pack.html"
         ],
@@ -1368,6 +1369,22 @@
       "relations": {}
     },
     {
+      "@id": "research/codeless-positioning.html",
+      "title": "folio codeless positioning",
+      "summary": "folio 文書規律をコード無しプロジェクト (政策・ガバナンス・標準化 等) へ拡げる位置づけの明文化 (P-7 探索・方向のみで決定しない)",
+      "doc-type": "research",
+      "status": "active",
+      "version": "1.0.0",
+      "stakeholders": [],
+      "relations": {
+        "dc:references": [
+          "research/doctype-coverage-audit.html",
+          "research/document-discipline-engine-design.html",
+          "decisions/ADR-0046-architecture-description-pack.html"
+        ]
+      }
+    },
+    {
       "@id": "research/constitution-x4-amendment-proposal.html",
       "title": "folio constitution X4 amendment proposal",
       "summary": "constitution 改訂の review 用ドラフト (即編集前の文面提示、 user 承認 → ADR 起票 → 編集の順)",
@@ -1395,6 +1412,9 @@
       "version": "1.0.0",
       "stakeholders": [],
       "relations": {
+        "dc:isReferencedBy": [
+          "research/codeless-positioning.html"
+        ],
         "dc:references": [
           "research/document-discipline-engine-design.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
@@ -1412,6 +1432,7 @@
       "stakeholders": [],
       "relations": {
         "dc:isReferencedBy": [
+          "research/codeless-positioning.html",
           "decisions/ADR-0046-architecture-description-pack.html",
           "research/doctype-coverage-audit.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
