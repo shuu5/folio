@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="core">
+<meta name="folio-version" content="1.2.0">
+<meta name="folio-glossary-automark" content="enabled">
+<meta name="folio-status" content="active">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-xref-completeness" content="enabled">
+<title>folio — SRS verification (v1.2.0)</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./srs-verification.html",
+  "@type": "schema:TechArticle",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "dc:isReferencedBy": [
+    { "@id": "./verification.html" },
+    { "@id": "./rules.html" }
+  ],
+  "dc:title": "folio SRS verification spec",
+  "folio:version": "1.2.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "folio:extends": [{ "@id": "./constitution.html" }],
+  "dc:references": [
+    { "@id": "./rules.html" },
+    { "@id": "./verification.html" },
+    { "@id": "../research/srs-component-taxonomy.html" },
+    { "@id": "../decisions/ADR-0042-hybrid-generation-dense-table-readability.html" },
+    { "@id": "../decisions/ADR-0041-human-layer-visual-design-system.html" },
+    { "@id": "../decisions/ADR-0040-human-layer-presentation-compression.html" },
+    { "@id": "../decisions/ADR-0037-render-safety-ceiling.html" },
+    { "@id": "../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "../decisions/ADR-0033-dual-audience-hub.html" },
+    { "@id": "../decisions/ADR-0028-prose-gate-mechanization.html" }
+  ],
+  "folio:depends-on": [
+    { "@id": "./rules.html" },
+    { "@id": "./verification.html" }
+  ]
+}
+</script>
+<script src="../assets/mermaid.min.js" defer></script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">srs-verification</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>folio SRS verification</h1>
+  <div class="meta">v1.2.0 &middot; status: active &middot; 生成 SRS プレゼンの done-condition (完成判定) gate の SSoT — floor + ceiling 二層</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
+  <li><a href="#s1-boundary-model">§1. 機械/LLM 検証境界と done-condition モデル</a></li>
+  <li><a href="#s2-done-condition-req">§2. done-condition REQ (REQ-VER-024〜030)</a></li>
+  <li><a href="#s3-coverage-rtm">§3. Coverage RTM (requirement traceability)</a></li>
+  <li><a href="#s4-references">§4. References</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<dl class="doc-meta" data-audience="machine">
+  <div><dt>Status</dt><dd><span class="badge badge--active">active</span></dd></div>
+  <div><dt>Doc-Type</dt><dd><span class="term" data-term="spec" data-tooltip="WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。">spec</span></dd></div>
+  <div><dt>Version</dt><dd>1.2.0</dd></div>
+  <div><dt>Layer</dt><dd>core (Layer 0)</dd></div>
+  <div><dt>Stakeholders</dt><dd>Developer · AI Agent · External Reviewer</dd></div>
+  <div><dt>Depends-on</dt><dd><a href="rules.html">rules</a> · <a href="verification.html">verification</a></dd></div>
+</dl>
+
+<aside class="callout callout--note" data-audience="machine">
+<p>本文書は folio の generator が<strong>機械 <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span> から生成する SRS プレゼン HTML</strong> の <strong>done-condition (完成判定)</strong> を定義する design-intent spec。 folio 自身の spec を <span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> で検証する <a href="verification.html">verification.html</a> (<a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜023 / <a class="xref" href="./verification.html#req-nav-001" data-tooltip="folio validate は folio-generated marker (head-anchored) を持つ生成 index.html を folio build の emit と byte 比較し drift を block する。 marker 無し (hand-authored) index は keystone skip — body の escaped 言及には反応しない。">REQ-NAV-001</a>〜007) とは <strong>別 audience</strong> (consumer が生成する成果物向け) で、 元は verification.html §3.9 にあった内容を <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> readability box 整合のため独立 spec へ分離したもの。 設計 SSoT は <a href="../research/srs-component-taxonomy.html#s5-done-condition">SRS 部品 taxonomy §5</a>、 生成方式は <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> / <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a>。</p>
+</aside>
+
+<aside class="informative" data-audience="machine">
+<p>本文書は IETF <a href="https://datatracker.ietf.org/doc/html/rfc2119"><strong>RFC 2119</strong></a> および <a href="https://datatracker.ietf.org/doc/html/rfc8174"><strong>RFC 8174</strong></a> / <a href="https://datatracker.ietf.org/doc/html/bcp14"><strong>BCP 14</strong></a> に定義される MUST / SHOULD / MAY のキーワード解釈規約に従う。</p>
+</aside>
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>srs-verification</dd>
+    <dt>doc-type</dt><dd>spec</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>version</dt><dd>1.2.0</dd>
+    <dt>status</dt><dd>active</dd>
+    <dt>depends-on</dt><dd>rules.html, verification.html</dd>
+  </dl>
+</aside>
+
+<!-- §0 Reader's Guide -->
+<section id="s0-reader-guide" class="informative">
+<h2>§0. Reader's Guide</h2>
+<p class="section-essence" data-audience="human">この spec は、 folio の generator が機械 SSoT (contract + prose YAML) から生成する <strong>SRS プレゼン HTML</strong> が「完成した (GREEN)」と言える条件を定める。 決定的で blocking な <strong><span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span></strong> と LLM の <strong><span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span></strong> の二層で、 <strong>floor 単独では GREEN を宣言しない</strong>のが要。</p>
+<aside class="informative" data-audience="machine">
+<p>読み方: §1 が<strong>機械/LLM 検証境界</strong> (何を決定的 floor が裁き、 何を LLM ceiling が裁くか) を宣言し、 §2 がその境界に沿って done-condition を REQ-VER-024〜030 で形式化する。 §3 が検証被覆 (RTM)、 §4 が参照。 REQ-VER-001〜023 / REQ-NAV-001〜007 (folio 自身の verification) は姉妹 spec <a href="verification.html">verification.html</a> にある。</p>
+</aside>
+</section>
+
+<!-- §1 機械/LLM 検証境界と done-condition モデル -->
+<section id="s1-boundary-model" class="normative">
+<h2>§1. 機械/LLM 検証境界と done-condition モデル</h2>
+<p class="section-essence" data-audience="human">機械 SSoT から生成した SRS プレゼン HTML の完成判定を、 決定的で blocking な <strong>floor</strong> と LLM の <strong>ceiling</strong> の二層で定義する (REQ-VER-024〜030、 SRS 部品 taxonomy §5)。 <strong>機械/LLM 検証境界</strong>: 件数・構造・render・構成同一性など<strong>算術的に自明なもの</strong>だけを floor が blocking で裁き、 自由文の捏造・可読性・意味カバレッジは LLM の ceiling (<span class="term" data-term="gate" data-tooltip="folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。">gate</span> J / I / K) が裁く。 一次根拠は fabrication-free-by-construction (<a href="rules.html#s12-srs-design-system">rules §12</a>・構造捏造は構成上不可能) ゆえ、 静的 ban 群は非 blocking の warn 級 backstop に留め、 <strong>floor 単独で GREEN を宣言しない</strong>。</p>
+
+<p data-audience="machine">以下は folio 自身の spec 検証 (<a href="verification.html#s3-6-verification-specific">verification.html §3.6</a> / <a href="verification.html#s3-8-nav-req">§3.8</a>) と異なり、 <strong>consumer が機械 SSoT から生成する SRS プレゼン HTML</strong> の done-condition を定義する (design-system generator <code>.claude-plugin/design-system/generator/</code> が実装)。 設計 SSoT は <a href="../research/srs-component-taxonomy.html#s5-done-condition">SRS 部品 taxonomy §5</a> (二層判定式 floor + ceiling)、 生成方式は <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> (ハイブリッド = 構造決定的・prose のみ opus) / <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a>。 conformance は generator-local の <code>test-adversarial.sh</code> + <code>render-gate-srs.py --selftest</code> (sandbox scenarios でなく generator-local + CI <span class="term" data-term="dogfood" data-tooltip="folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。">dogfood</span> — 生成物向けゆえ consumer の <code>folio validate</code> には入れない)。 本 spec は taxonomy §5 で設計済みの二層モデルを REQ-VER 形式で形式化する (新規 <span class="term" data-term="ADR" data-tooltip="Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。">ADR</span> を要さない)。 <strong>機械/LLM 検証境界</strong>: 自由文の意味的忠実性 (契約への忠実さ・捏造・矛盾・可読性) は決定的アルゴリズムで判定不能ゆえ、 機械 floor は algorithmic に自明なもの (件数・id・集合・派生・構造の存在/完全性・幾何 render 健全性) <em>のみ</em>を blocking で裁き (escape 健全性の検査は warn 級 backstop の領分)、 意味検証は独立コンテキストの LLM reviewer を複数束ねる ceiling (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.3</a> gate I/J/K) が担う (確信は reviewer 数と敵対的突合で調整・別建ての決定的安全網を後付けしない)。 その<strong>一次根拠 = fabrication-free-by-construction</strong> (<a href="rules.html#s12-srs-design-system">rules §12</a> が WHAT の SSoT・構造捏造は構成上排除済み) ゆえ、 機械 census (全列挙 backstop) が捏造を再検査するのは重複検査であり、 静的 hidden-render ban 群 (REQ-VER-024) の意味権威は ceiling gate I/J にあり、 これら決定的機構は honest-bug を実捕捉する <strong>warn 級 backstop</strong> (非 blocking) である。 blocking の部品件数照合は <strong>census-count arm</strong> (REQ-VER-024 blocking arm・source DOM の静的件数 ↔ contract 期待件数・render 不要) が、 post-build 改変の検出は<strong>構成同一性 arm</strong> (<a href="#req-ver-030">REQ-VER-030</a>) が担う (機構と検出完全性の論証は同 record が SSoT)。 census closure 語彙の全単射 (REQ-VER-029) は本境界下では<strong>語彙鮮度の floor</strong> である (census 消費の基盤ではない)。 各 REQ-VER の gate 割当・blocking arm と warn 級 backstop の区分は本 spec が SSoT。</p>
+</section>
+
+<!-- §2 done-condition REQ -->
+<section id="s2-done-condition-req" class="normative">
+<h2>§2. done-condition REQ (REQ-VER-024〜030)</h2>
+<p class="section-essence" data-audience="human">生成 SRS の done-condition を 5 REQ で形式化する (REQ-VER-024〜030・027/028 は欠番)。 各 REQ が §1 の境界のどこ (blocking floor / warn 級 backstop / ceiling) に属すかを、 各 REQ の essence と machine 部の双方に明記する。</p>
+
+<div class="spec-list">
+  <details class="spec-row" id="req-ver-024" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-024</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>folio verify-srs &lt;html&gt; &lt;contract&gt;</code> は生成 SRS の<strong>決定的 floor</strong> を検査する: <strong>blocking arm = gate A–E,G,H + visual-first + census-count</strong> (部品件数の静的 DOM 照合)。 静的 hidden-render ban 群と visual-deception ban は fabrication-free-by-construction (<a href="rules.html#s12-srs-design-system">rules §12</a>) の脅威向け<strong>warn 級 backstop</strong> (非 blocking・意味権威は ceiling gate J)。 ★blocking arm 全 PASS でも <code>CEILING=PENDING</code> を返し floor 単独 GREEN を禁じる (手編集後も再検証可・render/構成同一性/ceiling は <a href="#req-ver-025">025</a>/<a href="#req-ver-030">030</a>/<a href="#req-ver-026">026</a>、 ban 群一覧と詳細は machine 部)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-024</span>: <span class="ears-when">WHEN the <code>folio verify-srs &lt;generated.html&gt; &lt;contract.yaml&gt;</code> command runs (CLI 引数順 = <code>&lt;html&gt; &lt;contract&gt;</code>、 html=主対象)</span>, it <span class="ears-shall">SHALL</span> check the deterministic floor of a generated SRS presentation (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.2</a> gate A–E,G,H + visual-first) over the (contract, html) pair alone (manifest 不要 = 成果物入力ゆえ手編集後も再検証可), flagging with non-zero exit: <strong>gate A</strong> — 各 MUST 部品 (S5 凍結 required-existence 集合: <code>doc-cover-band</code> / <code>chapter-deck-band</code> / <code>section-lead-callout</code> / <code>scope-summary-panel</code> / <code>actor-stakeholder-table</code> / <code>source-trace-origin</code> / <code>requirement-matrix-table</code> / <code>ears-requirement-row</code> / <code>priority-badge</code> / <code>nfr-hero-metrics</code> / <code>nfr-metrics-table</code> / <code>acceptance-criteria-checklist</code> / <code>rtm-collapse</code> / <code>constraint-callout</code> / <code>glossary-term-table</code> / <code>fidelity-sync-meta</code> / <code>requirement-type-color-tokens</code>) が <code>data-component</code> 属性で各 ≥1 (条件付き MUST = MUST-when-applicable は凍結集合外); <strong>gate B</strong> — register 整合 (deck-band family ≥1 ∧ dense系 ≥1 ∧ <code>requirement-type-color-tokens</code> 存在 ∧ <code>@media (prefers-color-scheme: dark)</code> 規則の両モード定義 — コメント擬装でなく規則ブロック存在を要求); <strong>gate C</strong> — RTM 完全性 (孤立要件 (出所なし) = 0 ∧ 未検証要件 (受入なし) = 0、 contract の <code>trace.backward</code> / <code>trace.acceptance</code> から導出); <strong>gate D</strong> — 要件 ID 健全性 (一意 <code>data-req-id</code> (重複 0) ∧ 全要件行に <code>priority-badge</code> ∧ 検証手法 (T/A/I/D) span ∧ 可視 fid span == 同行 <code>data-req-id</code> で手編集の可視 ID 捏造を検出); <strong>gate E</strong> — 用語被覆 (<code>plain-language-term-inline</code> の plain 併記が glossary <code>plain_short</code> から正確派生 = <code>verify-fabrication-free --artifact</code> §9 に委譲); <strong>gate G</strong> — 内容完全性 (no-TBD: MUST 部品の必須スロット非空 ∧ placeholder トークン (<code>TBD</code>/<code>TODO</code>/未定 等・case-insensitive・語境界・日本語含む) = 0); <strong>gate H</strong> — fidelity meta (<code>fidelity-sync-meta</code> の 機械SSoT / 生成 / 検証状態 の 3 項目が非空白で充填); <strong>visual-first</strong> — 各章 (footer 除く) に非 prose 部品 ≥1 (字だけの章 = 0); <strong>census-count</strong> — 計数部品の source DOM 静的件数が contract 由来期待件数と一致 (<code>ears-requirement-row</code> == <code>.requirements</code> 数 ∧ <code>nfr-metric-row</code> == <code>.nfr</code> 数 ∧ <code>.plain</code> == <code>.requirements</code> + <code>.nfr</code>・render を要さない算術照合; 実描画・可視性の意味照合は ceiling の領分・post-build 改変は <a href="#req-ver-030">REQ-VER-030</a> が byte 検出)。 <strong>★以下の静的 hidden-render ban 群と visual-deception ban は fabrication-free-by-construction (<a href="rules.html#s12-srs-design-system">rules §12</a>) で構造捏造が構成上排除済ゆえ warn 級 backstop (非 blocking) とし、 意味権威は ceiling gate J にある</strong> (§1 境界参照): <strong>static script-ban</strong> — SRS HTML 全体で <code>&lt;script&gt;</code> == 0 (case-insensitive・タグ境界 <code>\b</code> robust・head/body 双方被覆): SRS は <code>&lt;script&gt;</code> を一切 emit しないゆえ任意の <code>&lt;script&gt;</code> は捏造コンテナ — 検証通過後に <code>innerHTML</code> 等で genuine 要件/承認/章を捏造差替えする render-time DOM-swap (folio-4gz) か、 必須要素を <code>&lt;script&gt;</code> で包み静的 grep を素通しつつ browser 非描画にする OMISSION (folio-459 script-container) — を render を要さず pack-additive 静的 invariant で原理封鎖する (<code>&lt;style&gt;</code> 由来の content 捏造と comment 由来の OMISSION は post-build の byte 改変ゆえ構成同一性 = <a href="#req-ver-030">REQ-VER-030</a> が render を要さず捕捉し、 意味権威は ceiling gate J にある); <strong>static shadowroot-ban</strong> — SRS HTML 全体で <code>&lt;template&gt;</code> == 0 (whole-tag ban・case-insensitive・タグ境界 <code>\b</code> robust): SRS は declarative shadow DOM を一切 emit しないゆえ、 <code>&lt;template shadowrootmode&gt;</code> 内に注入した偽要件が描画されつつ <code>document.querySelectorAll</code> (census) の shadow 境界を貫通しない census-blindness (folio-hef FF5) を pack-additive 静的 invariant で render を要さず原理封鎖する (★shadowrootmode 属性を狙う narrow regex <code>&lt;template[^&gt;]*shadowrootmode&gt;</code> は negated class <code>[^&gt;]*</code> が<em>クォート属性値内の '&gt;'</em> 〔例 <code>&lt;template data-x="a&gt;b" shadowrootmode&gt;</code>〕 で停止し素通る fail-open だった 〔独立 ceiling wf_b544a704〕 ため、 属性に依存しない whole-tag <code>&lt;template&gt;</code> ban に転換した); <strong>static nested-context-ban</strong> — SRS HTML 全体で <code>&lt;iframe&gt;</code> / <code>&lt;object&gt;</code> / <code>&lt;embed&gt;</code> / <code>&lt;frame&gt;</code> / <code>&lt;frameset&gt;</code> / <code>&lt;portal&gt;</code> == 0: nested browsing context は declarative shadow DOM と同型の境界 (census/fidelity の <code>document</code> 走査が <code>srcdoc</code> / 別 document を貫通しない) を作るため、 同型の pack-additive 静的 invariant で封鎖する (folio-hef FF5-sibling・独立 ceiling wf_0900ca71); <strong>static inline-only-ban</strong> — SRS HTML 全体で replaced / interactive / form-associated 要素 <code>&lt;img&gt;</code> / <code>&lt;image&gt;</code> / <code>&lt;canvas&gt;</code> / <code>&lt;video&gt;</code> / <code>&lt;audio&gt;</code> / <code>&lt;input&gt;</code> / <code>&lt;textarea&gt;</code> / <code>&lt;select&gt;</code> / <code>&lt;button&gt;</code> / <code>&lt;progress&gt;</code> / <code>&lt;meter&gt;</code> == 0 (<code>&lt;progress&gt;</code>/<code>&lt;meter&gt;</code> は <code>::-webkit-progress-*</code>/<code>::-webkit-meter-*</code> が background-image を実描画するが getComputedStyle が <code>none</code> を返し computed-style 走査が構造的に盲ゆえ静的タグ ban で封鎖・round-3e) <em>かつ</em> CSS <code>url(</code> が <code>#fragment</code> 内部参照以外 (= scheme 付き外部 / <code>data:</code>) == 0: これらは偽要件テキストを <code>data:</code> 画像サブリソース / form control value で描画しつつ <code>textContent</code> に出さない hidden-render を作る (SRS = inline HTML + geometric SVG のみ という doc-type 不変条件の補集合)。 <code>url(</code> ban は <code>url(</code> token 直後の非 '<code>#</code>' を見るため char-ref (<code>data&amp;#58;</code>) を decode せず捕捉し、 <code>url(#gradient-id)</code> 内部参照のみ将来許容する (folio-hef FF5 ceiling round-3 / 3b・user 案A); <strong>static scroll-pseudo-ban</strong> — SRS HTML 全体で <code>::scroll-button</code> / <code>::scroll-marker</code> / <code>scroll-marker-group</code> == 0: generated-content scroll pseudo は <code>content</code> で偽要件を可視描画しつつ <code>textContent</code> に出さない (旧 census が <code>::before</code> / <code>::after</code> / <code>::marker</code> のみ走査した盲点・folio-hef FF round-3c)。 一次防御は構成同一性 (<a href="#req-ver-030">REQ-VER-030</a>・post-build の CSS 注入を byte 逸脱として spelling 非依存に捕捉) が担い、 本静的 ban は再組立入力を欠く環境向けの literal-spelling backstop である (genuine SRS は scroll container を一切使わない = script-ban 同型の genuine <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。">vocabulary</span> 補集合・FP-free); <strong>static list-marker-ban</strong> — SRS HTML 全体で <code>@counter-style</code> == 0 <em>かつ</em> 文字列リテラル値の <code>list-style(-type)</code> (引用符を含む値) == 0: list-marker テキストは <code>content</code> プロパティを経由せず <code>list-style-type</code> + <code>@counter-style</code> (symbols/prefix/suffix) または文字列リテラル <code>list-style</code> で <code>::marker</code> に生成され、 census (<code>::marker</code> の <code>content</code> 走査) も fidelity (<code>textContent</code>) も両盲点する generated-content の第3サブシステム (round-3d ceiling 実証: census exit 0 で偽要件 li <span class="term" data-term="marker" data-tooltip="HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。">marker</span> が可視・<code>textContent</code> blind)。 genuine SRS は <code>list-style:none</code> のみで <code>@counter-style</code> / 文字列 list-style を一切使わない (verified 0) ゆえ、 script-ban 同型の genuine vocabulary 補集合 静的 invariant で封鎖する (標準キーワード <code>none</code>/<code>disc</code>/<code>decimal</code> 等は引用符を含まず素通る = FP-free・将来 genuine が実リストを使う時は標準 keyword allowlist で対応)。 機構非依存の構造閉包は構成同一性 (<a href="#req-ver-030">REQ-VER-030</a> byte 同一性) が担い、 本静的 ban はその前の安価封鎖 (best-effort predicate); <strong>visual-deception unicode ban</strong> — SRS HTML に bidi-override (<code>U+202A</code>–<code>202E</code> / <code>U+2066</code>–<code>2069</code>) と zero-width・BOM (<code>U+200B</code>–<code>200D</code> / <code>U+2060</code> / <code>U+FEFF</code>) が == 0: 機械生成 SRS はこれらを一切 emit しないゆえ、 contract-bearing text を視覚反転 (bidi RLO) / 可視テキストを zero-width で消去する render 依存の視覚破壊を source/DOM の codepoint として render を要さず静的・決定的に封鎖する (DOM textContent の<em>論理順序</em>を保つため fidelity ceiling すら見逃す軸を floor で塞ぐ; z-order occlusion 〔不透明 overlay〕 は render 依存ゆえ folio-cpf へ carve)。 加えて <strong>static bidi-override-ban</strong> — <code>&lt;bdo&gt;</code> 要素および source CSS <code>unicode-bidi:bidi-override</code> / <code>isolate-override</code> == 0: これらは制御 codepoint (U+202x) を一切使わず視覚反転を実現し上の unicode codepoint ban を回避する同型の機構漏れ (round-3e ceiling 実証・logical textContent 保持で fidelity blind)。 ★computed <code>unicode-bidi:isolate</code> は table/tr/td の UA 既定値ゆえ computed でなく source CSS の override リテラルと <code>&lt;bdo&gt;</code> 要素のみを ban する (genuine SRS は両者 0・FP-free)。 ★source literal grep ゆえ CSS escape (<code>\62 idi-override</code>) で回避されるため、 構成同一性 (<a href="#req-ver-030">REQ-VER-030</a>) が post-build の CSS 注入を byte 逸脱として spelling 非依存に捕捉する一次防御・本静的 ban は再組立入力を欠く環境向け backstop (round-3f)。 It <span class="ears-shall">SHALL</span> return <code>CEILING=PENDING</code> on blocking arm PASS (gate A–E,G,H + visual-first + census-count; 構成同一性 arm は <a href="#req-ver-030">REQ-VER-030</a> が定義し同じく blocking; 上記 warn 級 backstop の指摘は exit を上げない — 測定系 tool-integrity error 〔render 破綻等〕 は gate 判定と別軸で非零 exit) — <strong>exit 0 は floor PASS であって GREEN ではない</strong> (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.1</a> 「floor 単独で GREEN を宣言しない」)。 gate F (render 健全性) は <a href="#req-ver-025">REQ-VER-025</a>、 構成同一性 (repro-build) は <a href="#req-ver-030">REQ-VER-030</a>、 ceiling (gate I/J/K) は <a href="#req-ver-026">REQ-VER-026</a>。 conformance は generator の <code>test-adversarial.sh</code> (A22–A33 が各 gate の fail-closed を seed: 空 prose / 中段 TBD / 孤立要件 / sync-meta 欠落・空白化 / MUST 部品欠落 / <code>data-req-id</code> 重複 / 可視 fid 捏造 / dark-media コメント擬装; RG1-a〜c が静的 script-ban を seed: <code>&lt;script&gt;</code> 注入 / <code>&lt;script&gt;</code> コンテナ OMISSION / case-robust <code>&lt;SCRIPT&gt;</code>; RG1-d〜e が visual-deception unicode ban を範囲の代表点で seed: bidi RLO 〔<code>U+202E</code>〕 / zero-width 〔<code>U+200B</code>〕; RG1-f〜g が static shadowroot-ban を seed: <code>&lt;template shadowrootmode&gt;</code> 注入 / quoted-'&gt;' 属性で narrow regex を回避する declarative shadow DOM 〔whole-tag ban が捕捉〕; RG1-h が static nested-context-ban を seed: <code>&lt;iframe srcdoc&gt;</code>; RG1-i〜k が static inline-only-ban を seed: <code>data:</code> 画像 <code>&lt;img&gt;</code> / form control <code>&lt;input&gt;</code> / char-ref encoded <code>url(data&amp;#58;)</code>; RG1-l が static scroll-pseudo-ban を seed: <code>::scroll-button</code> content; RG1-m〜n が static list-marker-ban を seed: <code>@counter-style</code> generated marker / 文字列 <code>list-style-type</code> marker; RG1-o〜p が inline-only-ban (form-associated) を seed: <code>&lt;progress&gt;</code> / <code>&lt;meter&gt;</code>; RG1-q〜r が static bidi-override-ban を seed: <code>&lt;bdo dir=rtl&gt;</code> / <code>unicode-bidi:bidi-override</code>; <strong>census-count</strong> は件数不一致 fixture の fail-closed seed で固定する)。 scope は <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> + bd folio-6jb (次元B = visual-deception unicode ban の floor 化) + bd folio-hef (FF5 = declarative shadow DOM / nested context / inline-only / scroll-pseudo / list-marker の静的 ban + render 側 image-sink 〔<code>::first-line</code>/<code>::first-letter</code> pseudo 含む〕 / 最小可読高 + per-char 横密度 census) + <a href="#req-ver-030">REQ-VER-030</a> (機構非依存の構造閉包 = 構成同一性 byte 一致) + bd folio-cpf (z-order occlusion 等 render 依存隠蔽の carve) + bd folio-mzn.2 (機械/LLM 検証境界 = warn 級 backstop 再分類・census-count blocking arm; code 整合は bd folio-mzn.3) で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-025" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-025</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence">gate F (render 健全性、 <code>render-gate-srs.py</code>) は生成 SRS を <strong>light/dark × 3 viewport</strong> で実 render し、 WCAG AA <strong>low-contrast</strong> / <strong>horizontal-overflow</strong> / <strong>component-overlap</strong> を検出する (fail-closed)。 重い playwright ゆえ renderer 在環境で実行し、 不在は honest SKIP (PASS と詐称しない)。 描画後 content の意味 fidelity は ceiling gate J・post-build 改変は REQ-VER-030 の領分 (検出器・定数は machine 部)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-025</span>: <span class="ears-when">WHEN gate F (render 健全性、 <code>render-gate-srs.py</code>、 <a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.2</a>) runs against a generated SRS presentation</span>, it <span class="ears-shall">SHALL</span> render the artifact in headless chromium at <strong>light / dark の両 <code>prefers-color-scheme</code> × 3 viewport (375 / 768 / 1280)</strong> and probe the post-render DOM, flagging with non-zero exit three classes: (1) <strong>low-contrast</strong> — 各 text 要素の文字色と実効背景の WCAG 2.1 コントラスト比が AA 未満 (通常 4.5:1 / 大 text 18pt=24px or 14pt-bold=18.66px は 3.0:1)。 実効背景は祖先を遡って不透明 background-color を底に半透明 layer を alpha 合成し、 gradient 背景は各レイヤーの停止色を抽出して下から alpha 合成した候補集合の <strong>worst-case (最小コントラスト) 停止</strong>で判定する (薄い勾配上の白文字を素通りさせない)。 色は 1×1 canvas で任意 CSS 色 (oklch / lab / hsl / hex / rgb 各構文) を sRGB へ解決する; 停止色を抽出できない真の image (url()) のみ skip し件数を disclose する; (2) <strong>horizontal-overflow</strong> — <code>document.scrollWidth &gt; clientWidth + 2px</code> の意図しない横スクロール (<code>overflow-x:auto</code> の内部 scroll container は document に寄与しないため発火しない); (3) <strong>component-overlap</strong> — <code>[data-component]</code> が別の可視 block 要素 (素の <code>div</code>/<code>li</code> 等を含む広い集合・包含/inline は除外) と面積比 &gt; 0.15 で矩形交差 (絶対配置・負 margin の崩れ + 非コンポーネント装飾の被さりを捕捉)。 It <span class="ears-shall">SHALL</span> fail-closed: 検査対象 text が 1 つも無い (textChecked == 0) = render 破綻として「clean」でなく FAIL に倒す。 重い playwright 検査ゆえ <code>folio verify-srs</code> は renderer 在環境でのみ gate F を実行し、 不在環境では <strong>honest SKIP</strong> (RESULT を「gate F 未実行・floor 不完全」と明示し PASS と詐称しない); <code>SRS_SKIP_RENDER=1</code> で bash-only floor に外せる。 幾何定数 (横溢れ許容 2px / overlap 面積比 0.15) は <a href="verification.html#req-ver-022">REQ-VER-022</a> の <code>probe.js</code> (<a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a>) の値を複製する (drift は <code>test-adversarial.sh</code> A35 が検知)。 conformance は <code>render-gate-srs.py --selftest</code> (fixture 10 本 / case 17: low-contrast/overflow/component-overlap の kind 完全一致発火 + dark-only 崩れ + gradient×dark + url-image skip + viewport plumbing + fail-closed) + CI <code>render-gate</code> job (dogfood SRS を build→gate F、 sandbox 被覆外の CI-only)。 gate F は描画の<em>見た目崩れ</em>に限り、 描画後 content の意味 fidelity は ceiling gate J の領分・post-build 改変は <a href="#req-ver-030">REQ-VER-030</a> (構成同一性) が byte 検出する。 scope は <a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> (検出器・二層) + <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> (dark-contrast 崩壊型の検出を含む) で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-026" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-026</span>
+      <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+      <span class="essence">生成 SRS が <strong>GREEN ⟺ blocking floor 全通過 (REQ-VER-024 の blocking arm + 025 render 健全性 + 030 構成同一性) AND ceiling 合格 (gate I 可読性 + gate J 捏造 + gate K 意味カバレッジ)</strong>。 <code>verify-srs</code> は floor 通過時に <code>CEILING=PENDING</code> を返して <strong>floor 単独 GREEN を機械的に禁止</strong>し、 静的 ban 群は warn 級 backstop ゆえ GREEN 判定に含めない。 ceiling は LLM で非決定的、 floor は決定的・blocking の二層 (北極星 = gate I の非エンジニア可読性)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-026</span>: A generated SRS presentation <span class="ears-shall">SHALL</span> be considered GREEN if and only if both layers pass: <strong>(floor)</strong> 全 blocking floor gate が PASS (<a href="#req-ver-024">REQ-VER-024</a> の <code>folio verify-srs</code> 決定的 floor の <strong>blocking arm</strong> 〔gate A–E,G,H + visual-first + <strong>census-count</strong> = 部品件数の静的 DOM count 照合〕 ∧ <a href="#req-ver-025">REQ-VER-025</a> の gate F (render 見た目崩れ) ∧ <a href="#req-ver-030">REQ-VER-030</a> の構成同一性 (機械 SSoT からの決定的再組立との byte 同一性)。 静的 hidden-render ban 群 (REQ-VER-024) は warn 級 backstop ゆえ GREEN 判定の blocking floor に含めない — その意味権威は下記 ceiling gate I/J; 測定系 tool-integrity error 〔render 破綻・再組立入力欠落等〕 は gate 判定と別軸で非零 exit する 〔測定不能を clean と詐称しない〕) AND <strong>(ceiling)</strong> 意味判定の 3 lens が合格 (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.3</a> gate I = <code>persona-walk-srs</code> agent 〔可読性の意味権威〕、 gate J = <code>fidelity-srs</code> agent 〔捏造の意味権威〕、 gate K = <code>completeness-critic-srs</code> agent 〔意味カバレッジ完全性〕)。 It <span class="ears-shall">SHALL NOT</span> declare GREEN on floor pass alone — <code>folio verify-srs</code> が floor 通過時に <code>CEILING=PENDING</code> (exit 0 ≠ GREEN) を返すことで「floor 単独 GREEN 禁止」を機械担保する (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.1</a> 判定式、 <a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> の長さ Goodhart 再発防止)。 <strong>gate I (persona walk)</strong> = 非エンジニア persona が生成 SRS を index から歩き「何が要件か・なぜ要るか・どう検証されるか」を<em>頑張れば読める</em>か (専門エンジニアがなんとか読める水準では不合格 = <a class="xref" href="../decisions/ADR-0041-human-layer-visual-design-system.html" data-tooltip="人間層を「要件定義書のための汎用ビジュアル design system」と再定義する決定。 ADR-0040 の圧縮 (informative prose を audience 降格して人間既定表示から隠す) を改訂し、 情報を隠すのではなく密度高く視覚的に「再提示」する方向へ転換する。 視覚言語 = deck 寄りハイブリッド (色帯で章を開く掴み + 高密度の表/RTM グリッド/密リストで情報保持)、 テーマは環境追従 (prefers-color-scheme)。 人間プレゼンは機械 SSoT から別ファイルとして生成し (ADR-0033 §2.3 が残した derive 原理を別ファイル形態で起動)、 更新は差分 + 現行 HTML を渡して再生成・更新日時で同期する。 ADR-0033 が「co-author を enforcement で担保」したのに対し、 本 ADR は「生成物を検証で担保」する: 2-gate = 非エンジニア persona walk (わかりやすい言語か) + fidelity check (機械 SSoT と突合し情報が落ちていないか)。 floor も「人間可視 prose の長さ」から「visual-first / 用語被覆 / renders-unbroken」へ刷新する。 適用範囲 = γ (SRS 核を ISO/IEC/IEEE 29148 で完全性錨留め + folio 自身の ADR/research/原則は拡張パックで後追い)。 EC 注文確定・決済の難要件で実証済 (persona = 合格 / fidelity = AI が捏造した RTM 行を検出 = 生成 + 検証アーキの正しさを実証)。 grill 2026-06-15 で全論点確定。 実装は MINOR (1.1.0)、 epic folio-c5g。">ADR-0041</a> 北極星); <strong>gate J (fidelity)</strong> = 生成 HTML が機械 SSoT contract の正確な要約か — 情報落ち / 歪み / <strong>捏造</strong> (AI 捏造 RTM 行・SSoT 外の rationale 作文等) が無く、 派生ビュー (<code>plain-language-term-inline</code>) が SSoT 一致、 要件間 consistency (矛盾) も surface。 3 gate は <code>agents/persona-walk-srs.md</code> / <code>agents/fidelity-srs.md</code> / <code>agents/completeness-critic-srs.md</code> として常設し、 spec 用 Phase F の <a href="folio-self-spec.html#s7-2-specialists">spec-review-*</a> agent と同型の LLM review (read-only・構造化 findings)。 ceiling は LLM ゆえ非決定的 = CI で blocking しない (<a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement と同型: floor=機械/blocking + ceiling=LLM/advisory)。 conformance: 二層 <span class="term" data-term="invariant" data-tooltip="spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。">invariant</span> (floor PASS ≠ GREEN) は決定的ゆえ <code>test-adversarial.sh</code> A22 (健全 artifact に <code>verify-srs</code> が <code>CEILING=PENDING</code> を返す = GREEN を宣言しない) が固定し、 ceiling agent は fidelity が SSoT 外の捏造 RTM 行を検出する型 (<a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.3</a> / <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.5) を実装する。 scope は <a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.1 / §5.3</a> + <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.5 (persona walk + fidelity = 原 2-gate co-equal; completeness = 第 3 翼 gate K の定義元は taxonomy §5.3) で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-029" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-029</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><code>verify-census-vocab.sh</code> (決定的 CI floor) は closure 語彙 SSoT (<code>srs.census-vocab.yaml</code>) と assembler の emit 集合の <strong>bijection (emit == vocab)</strong> を assert し、 部品の追加・改名・削除での語彙未更新を非ゼロ exit で強制する。 捏造検出の意味権威は ceiling gate J にあるため、 本 gate は<strong>語彙鮮度の floor のみ</strong>を担い census closure 基盤を消費しない (SSoT 配線・graph 非破壊は machine 部)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-029</span>: <span class="ears-when">WHEN the <code>verify-census-vocab.sh</code> deterministic CI floor runs</span>, it <span class="ears-shall">SHALL</span> extract the set of <code>data-component</code> and <code>data-prose-slot</code> tokens emitted by <code>assemble-srs.sh</code> (SRS-pack 固有 emitter) と <code>lib/common.sh</code> (core <span class="term" data-term="chrome" data-tooltip="folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。">chrome</span> emitter) — 両 file を走査し、 <code>lib/common.sh</code> が perl 文字列内で backslash-escape する <code>data-component=\"…\"</code> 形も拾う robust 抽出 (SRS grep だけだと <code>doc-cover-band</code> / <code>chapter-deck-band</code> / <code>glossary-term-table</code> / <code>fidelity-sync-meta</code> / <code>approval-block</code> / <code>plain-language-term-inline</code> の core chrome が 6 件漏れる) — and assert it forms a <strong>bijection</strong> with the closure 語彙 SSoT <code>rolemap/srs.census-vocab.yaml</code> の <code>data_components</code> / <code>prose_slots</code> list, flagging with non-zero exit either direction of the symmetric difference: <strong>emit ∖ vocab</strong> (新部品追加・改名で語彙未更新 = 語彙更新を機械強制) と <strong>vocab ∖ emit</strong> (部品削除・改名で stale 語彙残存)。 It <span class="ears-shall">SHALL</span> fail-closed: emit 抽出が 0 件 (assemble/common 走査破綻) または vocab list が 0 件 (SSoT 欠落/空) を整合と取り違えず FAIL に倒す。 The closure 語彙 SSoT <code>srs.census-vocab.yaml</code> <span class="ears-shall">SHALL</span> be a generator-local pack 資産 (新規 file) が集約する『<code>assemble-srs.sh</code> + <code>lib/common.sh</code> が描画する <code>data-component</code> token』∪『<code>data-prose-slot</code> token』の閉集合。 ★<strong>M-A 監査補正</strong>: 本 SSoT は照会 graph の <code>srs.rolemap.yaml</code> <code>.roles</code> には足さない — <code>verify-graph.sh</code> が <code>roles ⊆ GRAPH_ROLE_ALLOWLIST</code> を hard-FAIL assert するため census 語彙 (<code>data-component</code> token) を <code>.roles</code> へ混ぜると即 FAIL する — ゆえ別 file へ分離し、 <code>verify-graph.sh</code> は <code>&lt;pack&gt;.rolemap.yaml</code> を明示名で開く (<code>rolemap/</code> を glob しない) ため本 file の追加は <code>verify-graph.sh</code> に副作用ゼロ (非破壊)。 The <code>folio verify-srs</code> command <span class="ears-shall">SHALL</span> read this SSoT at startup via pack-level <code>yq</code> (core graph reader <code>lib/graph-common.sh</code> を流用せず = <code>lib/</code> 無改変), fail-closed (SSoT 不在 / <code>data_components</code> 空 = tool error)。 本 gate は <strong>SSoT 配線 + CI 整合 (語彙鮮度)</strong> に限る。 <strong>★境界 (§1)</strong>: 捏造検出の意味権威は ceiling gate J (<code>fidelity-srs</code>) にあるため、 本 gate は<strong>語彙鮮度の floor のみ</strong>を担い、 「全描画要素 ↔ 期待要素の全単射が消費する closure 基盤」(S4/S5) を消費しない。 conformance は <code>verify-census-vocab.sh</code> の <strong>lock test</strong> (vocab から token を 1 個わざと抜く → assert が赤になる = 非空虚 gate の証明) + genuine (ec / clinic の <code>folio verify-srs</code> floor PASS = SSoT が emit と整合) + graph 非破壊 (<code>verify-graph.sh</code> が census-vocab 追加後も PASS) で固定する。 scope は bd folio-hef.3 (rolemap SSoT 派生 + CI 整合 gate) + <a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5</a> + bd folio-mzn.2 (語彙鮮度 floor への純化) + bd folio-mzn.3 (census probe carry 配線の除去) で trace。</p>
+    </div>
+  </details>
+  <details class="spec-row" id="req-ver-030" data-audience="human">
+    <summary>
+      <span class="badge badge--req">REQ-VER-030</span>
+      <span class="req__ears req__ears--event">Event</span>
+      <span class="essence"><strong>構成同一性 (construction-integrity・repro-build)</strong>: <code>folio verify-srs</code> の決定的 floor は生成 SRS を機械 SSoT (contract + prose YAML) から<strong>決定的に再組立</strong>し、 成果物との <strong>byte 同一性</strong>を blocking で検査する (非決定 field は footer 生成時刻のみを両辺同一に正規化)。 fabrication-free-by-construction (<a href="rules.html#s12-srs-design-system">rules §12</a>) の直接検証形で、 post-build 改変 (転置/複製/削除・decoy・隠蔽/捏造 CSS 注入) を attack 語彙の列挙なしに byte 逸脱として一括検出する (再組立入力の欠落は測定系 error・opt-out (<code>FOLIO_SKIP_REPRO=1</code>) は honest SKIP)。 assembler 自身のバグには盲ゆえ、 contract ↔ 成果物を独立照合する blocking arm と併存する (機構詳細は machine 部)。</span>
+    </summary>
+    <div class="spec-normative" data-audience="machine">
+      <p class="ears" data-ears-pattern="event-driven"><span class="ears-id">REQ-VER-030</span>: <span class="ears-when">WHEN the <code>folio verify-srs</code> deterministic floor runs against a generated SRS presentation</span>, it <span class="ears-shall">SHALL</span> re-run the deterministic assembler pipeline (assemble → prose 注入) from the 機械 SSoT inputs (contract YAML + prose YAML) into a scratch path and assert <strong>byte-identity</strong> between the artifact under verification and the reassembled output, flagging any deviation with non-zero exit as a blocking floor failure (<strong>構成同一性 arm</strong> = construction-integrity)。 正規化は<strong>唯一の非決定 field = footer 生成時刻</strong> (<code>生成: &lt;b&gt;YYYY-MM-DD HH:MM&lt;/b&gt;</code> の厳密 pattern) のみを両辺同一の quotient 写像で商する — 両辺を同一関数で写像するため本文へ timestamp 形を注入する攻撃も再組立側との byte 差が残り健全であり、 緩い正規化は差分 masking の穴となるため厳密 pattern に限る。 It <span class="ears-shall">SHALL</span> treat 再組立入力の欠落 (contract / prose / assembler 不在) と assembler 自身の非零 exit を gate 判定でなく<strong>測定系 tool-integrity error</strong> として別軸の非零 exit に倒す (<a href="#req-ver-024">REQ-VER-024</a> の測定系 error idiom と同型・「入力が無い = PASS」の fail-open を封鎖); 明示 opt-out (<code>FOLIO_SKIP_REPRO=1</code>) 時は <strong>honest SKIP</strong> (floor 不完全と明示し PASS と詐称しない・gate F の <code>SRS_SKIP_RENDER</code> と同 idiom)。 本 gate は fabrication-free-by-construction (<a href="rules.html#s12-srs-design-system">rules §12</a> の不変条件「構造は SSoT から毎回決定的に再組立し差分編集を介在させない」) の<strong>直接検証形</strong>であり別建ての決定的安全網ではない; post-build 改変 (contract 由来 token の転置/複製/削除・decoy 要素注入・render 依存の隠蔽/捏造を狙う CSS/HTML 注入) は byte 逸脱として render を要さず一括検出される (partial-enumeration からの構造終端)。 honest scope: 再組立の両辺が同一 assembler を共有するため <strong>assembler 自身のバグには盲</strong> — contract ↔ 成果物を独立照合する blocking arm の contract 照合部 (<a href="#req-ver-024">REQ-VER-024</a> gate A–E,G,H + census-count) を代替せず併存する。 byte 一致 regen の先例は <a href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> (glossary ↔ vocabulary regen byte 一致)。 conformance は generator の敵対 suite の repro-build seed (1-byte tamper → FAIL / 生成時刻のみ差 → PASS / 再組立入力欠落 → 測定系 error / 正規化 regex mutant の mutation-kill) で固定する。 scope は <a href="rules.html#s12-srs-design-system">rules §12</a> (fabrication-free-by-construction) + bd folio-mzn.3 (構成同一性 arm の建設・決定的 census (全列挙機構) の構造終端置換) で trace。</p>
+    </div>
+  </details>
+</div>
+</section>
+
+<!-- §3 Coverage RTM -->
+<section id="s3-coverage-rtm" class="informative">
+<h2>§3. Coverage RTM (requirement traceability)</h2>
+<p class="section-essence" data-audience="human">done-condition REQ (024〜030) の検証被覆を一覧する。 <strong>scenario 列が空 = 未検証 gap</strong> を可視化する (VER-030 は scenario spawn 待ち)。</p>
+
+<p data-audience="machine">各 REQ-VER-* を <strong>derives-from (派生元 taxonomy / ADR) × scenario (検証 file) × verified</strong> で一覧する (<a href="constitution.html#p-13">P-13</a> trace matrix)。 ceiling gate (I/J/K) は LLM ゆえ scenario 列は決定的 floor / selftest を指す。</p>
+
+<table>
+  <caption>SRS done-condition requirement coverage matrix (REQ-VER-024〜030)</caption>
+  <thead><tr><th>REQ</th><th><span class="term" data-term="EARS" data-tooltip="Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。">EARS</span></th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead>
+  <tbody>
+    <tr><td><a class="cov-req" href="#req-ver-024"><span class="badge badge--req">VER-024</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.2</a> / <a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a></td><td><code>generator/test-adversarial.sh</code> (A22–A33 + RG1-a〜e)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-025"><span class="badge badge--req">VER-025</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.2</a> gate F / <a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> + <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a></td><td><code>render-gate-srs.py --selftest</code> + CI <code>render-gate</code> job (CI-only)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-026"><span class="badge badge--req">VER-026</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5.1 / §5.3</a> / <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> §2.5</td><td><code>test-adversarial.sh</code> A22 (floor≠GREEN) + ceiling agents (LLM)</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-029"><span class="badge badge--req">VER-029</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td>bd folio-hef.3 / <a href="../research/srs-component-taxonomy.html#s5-done-condition">taxonomy §5</a> + bd folio-mzn.2 (語彙鮮度 floor)</td><td><code>verify-census-vocab.sh</code> lock test + genuine (ec / clinic) + <code>verify-graph.sh</code> 非破壊</td><td>✓</td></tr>
+    <tr><td><a class="cov-req" href="#req-ver-030"><span class="badge badge--req">VER-030</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="rules.html#s12-srs-design-system">rules §12</a> (fabrication-free-by-construction) / bd folio-mzn.3</td><td><code>generator/test-adversarial.sh</code> repro-build seed (tamper→FAIL / 生成時刻のみ→PASS / 入力欠落→測定系 error / 正規化 mutation-kill・spawn: bd folio-3d23)</td><td class="cov-gap">✗</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- §4 References -->
+<section id="s4-references" class="informative">
+<h2>§4. References</h2>
+<p class="section-essence" data-audience="human">本 spec が依拠する内部・外部参照の一覧。</p>
+
+<ul data-audience="machine">
+  <li><a href="verification.html">verification.html</a> — folio 自身の sandbox verification (姉妹 spec、 REQ-VER-001〜023 / REQ-NAV-001〜007。 本 spec は §3.9 からの分離)</li>
+  <li><a href="rules.html">rules.html</a> — Layer 1 universal rules (<a href="rules.html#s12-srs-design-system">§12 SRS design system</a> = fabrication-free-by-construction の WHAT SSoT、 §6 EARS Notation)</li>
+  <li><a href="constitution.html">constitution.html</a> — 不変原則 (<a href="constitution.html#p-13">P-13</a> Verification &amp; Traceability の floor 実装)</li>
+  <li><a href="../research/srs-component-taxonomy.html">srs-component-taxonomy.html</a> — SRS 部品 taxonomy (<a href="../research/srs-component-taxonomy.html#s5-done-condition">§5 done-condition</a> = 二層判定式の設計 SSoT)</li>
+  <li><a href="../decisions/ADR-0042-hybrid-generation-dense-table-readability.html">ADR-0042</a> / <a href="../decisions/ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> — ハイブリッド生成 + human-layer visual design system</li>
+  <li><a href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> — render-safety ceiling (gate F の検出器・二層)</li>
+  <li><a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a> — 長さ Goodhart 再発防止 (floor 単独 GREEN 禁止の根拠)</li>
+  <li><a href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> — byte 一致 regen の先例 / <a href="../decisions/ADR-0033-dual-audience-hub.html">ADR-0033</a> / <a href="../decisions/ADR-0028-prose-gate-mechanization.html">ADR-0028</a> — 二層 enforcement</li>
+</ul>
+</section>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="verification.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio — verification (v1.2.0)</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

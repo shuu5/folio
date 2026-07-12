@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: design-intent
-files checked: 56 · relations checked: 518
+files checked: 57 · relations checked: 548
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -17,10 +17,7 @@ files checked: 56 · relations checked: 518
   [OK] cluster-reachability
   [OK] ears-coverage
   [OK] render-safety
-  [WARN] readability-floor
+  [OK] readability-floor
   [OK] how-outside
-
-warnings (1):
-  spec/verification.html [readability-floor] 人間層可視 prose 16332 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
 
 clean: 0 violations

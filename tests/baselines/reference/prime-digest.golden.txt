@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 56 specs · folio 1.2.0
+# 57 specs · folio 1.2.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -21,6 +21,11 @@
 - title: folio rules
 - doc-type: rules · status: active
 - summary: Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)
+
+## spec/srs-verification.html
+- title: folio SRS verification spec
+- doc-type: spec · status: active
+- summary: 生成 SRS プレゼンの done-condition (完成判定) gate の SSoT — floor + ceiling 二層
 
 ## spec/verification.html
 - title: folio verification spec
@@ -395,18 +400,18 @@ REQ-VER-020 [requirement] spec/verification.html#req-ver-020
 REQ-VER-021 [requirement] spec/verification.html#req-ver-021
 REQ-VER-022 [requirement] spec/verification.html#req-ver-022
 REQ-VER-023 [requirement] spec/verification.html#req-ver-023
-REQ-VER-024 [requirement] spec/verification.html#req-ver-024
-REQ-VER-025 [requirement] spec/verification.html#req-ver-025
-REQ-VER-026 [requirement] spec/verification.html#req-ver-026
-REQ-VER-029 [requirement] spec/verification.html#req-ver-029
-REQ-VER-030 [requirement] spec/verification.html#req-ver-030
+REQ-VER-024 [requirement] spec/srs-verification.html#req-ver-024
+REQ-VER-025 [requirement] spec/srs-verification.html#req-ver-025
+REQ-VER-026 [requirement] spec/srs-verification.html#req-ver-026
+REQ-VER-029 [requirement] spec/srs-verification.html#req-ver-029
+REQ-VER-030 [requirement] spec/srs-verification.html#req-ver-030
 REQ-XREF-001 [requirement] spec/rules.html#req-xref-001
 REQ-XREF-002 [requirement] spec/rules.html#req-xref-002
 REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
 
 # 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
-# 120 nodes · 101 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 120 nodes · 103 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
 # 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs

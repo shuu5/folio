@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-12T04:01:14Z",
+  "generatedAt": "2026-07-12T15:54:54Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -19,7 +19,8 @@
           "spec/rules.html",
           "spec/folio-self-spec.html",
           "spec/relations.html",
-          "spec/verification.html"
+          "spec/verification.html",
+          "spec/srs-verification.html"
         ]
       }
     },
@@ -130,6 +131,7 @@
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
@@ -162,6 +164,7 @@
           "spec/verification.html"
         ],
         "folio:depended-by": [
+          "spec/srs-verification.html",
           "spec/relations.html",
           "spec/verification.html"
         ],
@@ -170,6 +173,47 @@
         ],
         "dc:references": [
           "spec/relations.html"
+        ]
+      }
+    },
+    {
+      "@id": "spec/srs-verification.html",
+      "title": "folio SRS verification spec",
+      "summary": "生成 SRS プレゼンの done-condition (完成判定) gate の SSoT — floor + ceiling 二層",
+      "doc-type": "spec",
+      "status": "active",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isPartOf": [
+          "spec/README.html"
+        ],
+        "dc:isReferencedBy": [
+          "spec/verification.html",
+          "spec/rules.html"
+        ],
+        "folio:extends": [
+          "spec/constitution.html"
+        ],
+        "dc:references": [
+          "spec/rules.html",
+          "spec/verification.html",
+          "research/srs-component-taxonomy.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0040-human-layer-presentation-compression.html",
+          "decisions/ADR-0037-render-safety-ceiling.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html"
+        ],
+        "folio:depends-on": [
+          "spec/rules.html",
+          "spec/verification.html"
         ]
       }
     },
@@ -186,10 +230,14 @@
         "External Reviewer"
       ],
       "relations": {
+        "folio:depended-by": [
+          "spec/srs-verification.html"
+        ],
         "dc:isPartOf": [
           "spec/README.html"
         ],
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
@@ -222,6 +270,7 @@
         ],
         "dc:references": [
           "spec/rules.html",
+          "spec/srs-verification.html",
           "spec/folio-self-spec.html",
           "spec/relations.html",
           "research/plugin-sandbox-verification-research.html",
@@ -740,6 +789,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
@@ -884,6 +934,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
@@ -985,6 +1036,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0039-presentation-template-layer.html",
           "research/presentation-design-patterns.html",
           "decisions/ADR-0035-walkable-architecture-nav-derive.html"
@@ -1014,6 +1066,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0039-presentation-template-layer.html",
           "research/presentation-design-patterns.html"
         ],
@@ -1098,6 +1151,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html"
         ],
@@ -1125,6 +1179,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0049-vision-pack.html"
@@ -1154,6 +1209,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "spec/srs-verification.html",
           "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0044-spec-pack-folio-self-host.html",
@@ -1525,7 +1581,11 @@
       "status": "active",
       "version": "1.0.0",
       "stakeholders": [],
-      "relations": {}
+      "relations": {
+        "dc:isReferencedBy": [
+          "spec/srs-verification.html"
+        ]
+      }
     },
     {
       "@id": "research/x4-plan.html",
@@ -2159,7 +2219,7 @@
         "id": "REQ-VER-014",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-014",
-        "essence": "folio init は canonical Layer 1 consumer layout (構造のみ) を scaffold する — design-intent/{spec,decisions,research}/ + 各 README.html + folio.config.yaml。 既存 file は preserve (idempotent)、 constitution/overview 本文は seed せず lazy-materialize、 生成 skeleton は folio validate clean。"
+        "essence": "folio init は canonical Layer 1 consumer layout (構造のみ) を scaffold する — design-intent/{spec,decisions,research}/ + 各 README.html + folio.config.yaml。 既存 file は preserve (idempotent)、 本文は seed せず lazy-materialize、 生成 skeleton は folio validate clean。"
       },
       {
         "id": "REQ-VER-015",
@@ -2177,7 +2237,7 @@
         "id": "REQ-VER-017",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-017",
-        "essence": "folio validate は object xref の 4 gate を追加検査する: resolve-integrity / uniqueness / tooltip-consistency (universal) + completeness (opt-in、 orphan-mention)。 正しい xref を持つ opt-in fixture は exit 0、 broken-xref / stale-tooltip / orphan-mention は exit 1 + report (rules §9 / ADR-0034 §2.6)。"
+        "essence": "folio validate は object xref の 4 gate を追加検査する: resolve-integrity / uniqueness / tooltip-consistency (universal) + completeness (opt-in、 orphan-mention)。 broken-xref / stale-tooltip / orphan-mention は exit 1 + report (rules §9 / ADR-0034 §2.6)。"
       },
       {
         "id": "REQ-VER-018",
@@ -2189,13 +2249,13 @@
         "id": "REQ-VER-019",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-019",
-        "essence": "folio validate は glossary gate を追加検査する: marked term (explicit + auto-mark とも &lt;span class=\"term\" data-term&gt; に統一) の data-term が vocabulary.yaml に解決し (resolve)、 data-tooltip が definition と一致する (consistency)。 marked term は span 統一ゆえ &lt;a class=\"term\"&gt; は anchor-residue として block する (hover-only 不可逆、 rules §9.5)。 生成 glossary.html の term 集合の vocab 一致 (vocabulary-parity) は nav-regen-drift の byte 検査が構造的に含意するため独立 gate を立てず、 対称差を regen-drift の violation message に surface する。 folio fix は marked term の tooltip を definition から materialize する (best-effort、 gap-lint なし、 rules §9.5 / ADR-0034 §2.8)。"
+        "essence": "folio validate は glossary gate を追加検査する: marked term (&lt;span class=\"term\" data-term&gt; に統一) の data-term が vocabulary.yaml に解決し、 data-tooltip が definition と一致すること。 &lt;a class=\"term\"&gt; は anchor-residue として block し (span 統一、 rules §9.5)、 生成 glossary.html の term 集合の vocab 一致は nav-regen-drift の byte 検査が含意する。 folio fix は marked term の tooltip を definition から materialize する (glossary は Class B best-effort・機構詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-020",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-020",
-        "essence": "folio validate は dual-audience-structural gate を検査する: data-audience=\"human\" requirement container (verbose section.req + compact details.spec-row の両 form) の machine 対応部存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を強制し、 違反は exit 1。 意味的 fidelity は floor 対象外 = ceiling (spec-review-fidelity agent)。"
+        "essence": "folio validate は dual-audience-structural gate を検査する: data-audience=\"human\" requirement container (verbose section.req + compact details.spec-row の両 form) に machine 対応部存在 (-1) / requirement-id 整合 (-2) / data-audience 値域 (-3) / machine 部 aria-hidden 不在 (-4) / EARS-pattern 整合 (-5) を強制し違反は exit 1。 意味的 fidelity は floor 対象外 = ceiling (spec-review-fidelity agent) の領分。"
       },
       {
         "id": "REQ-VER-021",
@@ -2207,7 +2267,7 @@
         "id": "REQ-VER-022",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-022",
-        "essence": "CI の render-gate job は、 corpus 全 page (repo-root index.html + design-intent 配下) を headless chromium で 3 viewport (375/768/1280) 実 render し、 render 後の DOM 幾何から mermaid 4 class (多行 cluster-label / label-over-node / node-over-node / content-clipped) + chrome 幾何 2 class (意図しない横スクロール horizontal-overflow / nav-over-content) を検出して merge を block する (render-safety の ceiling 層、 floor = REQ-VER-021 / REQ-VER-023)。 render 不足は見逃しでなく fail (fail-closed)、 constitution は advisory、 非 flowchart 図型は vacuous / uncalibrated warning で可視化し、 全 page × viewport の full-page screenshot を CI artifact 保存する (人間 review の補助 — golden 化しない)。 検出力は selftest fixture (kind 完全一致 + scale&lt;1 正規化 + viewport plumbing 対 + 意図された scroll container / closed-details phantom rect の clean ガードを含む 13 case) が回帰固定し、 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保 (deterministic ゆえ blocking 適格)。"
+        "essence": "CI の render-gate job は corpus 全 page を headless chromium で 3 viewport (375/768/1280) 実 render し、 render 後の DOM 幾何から mermaid 4 class + chrome 幾何 2 class を検出して merge を block する (render-safety の ceiling 層・floor = REQ-VER-021 / REQ-VER-023)。 render 不足は fail-closed、 全 page × viewport の screenshot を CI artifact 保存する (golden 化しない)。 決定性は vendored mermaid + pinned playwright + pinned font の三重 pin で担保する (6 検出 class・selftest 13 case・分類詳細は machine 部)。"
       },
       {
         "id": "REQ-VER-023",
@@ -2218,32 +2278,32 @@
       {
         "id": "REQ-VER-024",
         "class": "requirement",
-        "ssot": "spec/verification.html#req-ver-024",
-        "essence": "folio verify-srs &lt;html&gt; &lt;contract&gt; は生成 SRS の決定的 floor (taxonomy §5.2 gate A–E,G,H + visual-first) + 静的 hidden-render ban 群 〔&lt;script&gt; / whole-tag &lt;template&gt; / nested browsing context / inline-only (replaced・interactive・form-associated 要素 〔img…button + progress/meter〕 + url(data:)) / scroll-pseudo / list-marker (@counter-style / 文字列 list-style) == 0〕 + visual-deception ban 〔bidi-override codepoint / zero-width・BOM / &lt;bdo&gt;・unicode-bidi override == 0・次元B〕 を検査する (★024 の blocking arm = gate A–E,G,H + visual-first + census-count 〔部品件数の静的 DOM count 照合〕; 静的 hidden-render ban 群と visual-deception ban は fabrication-free-by-construction 〔rules §12〕 で構成上排除済の脅威の warn 級 backstop = 非 blocking・意味権威は ceiling gate J・§3.9 intro 参照)。 ★blocking arm 全 PASS は GREEN でなく CEILING=PENDING を返す (exit 0 ≠ GREEN・floor 単独 GREEN 禁止)。 生成と検証を分離した独立検証ゆえ手編集後も再検証可 (manifest 不要)。 render gate は REQ-VER-025 (gate F 見た目)、 構成同一性 (repro-build) は REQ-VER-030、 ceiling は REQ-VER-026 (gate 詳細は machine 部)。"
+        "ssot": "spec/srs-verification.html#req-ver-024",
+        "essence": ""
       },
       {
         "id": "REQ-VER-025",
         "class": "requirement",
-        "ssot": "spec/verification.html#req-ver-025",
-        "essence": "gate F (render 健全性、 render-gate-srs.py) は生成 SRS を light/dark × 3 viewport で実 render し、 WCAG AA low-contrast / horizontal-overflow / component-overlap を検出する (gradient は停止色 worst-case 評価、 fail-closed)。 重い playwright ゆえ renderer 在環境で実行・不在は honest SKIP (PASS と詐称せず floor 不完全と明示)。 描画後 content の意味 fidelity は ceiling gate J・post-build 改変は REQ-VER-030 の領分。 検出器・定数は machine 部。"
+        "ssot": "spec/srs-verification.html#req-ver-025",
+        "essence": ""
       },
       {
         "id": "REQ-VER-026",
         "class": "requirement",
-        "ssot": "spec/verification.html#req-ver-026",
-        "essence": "生成 SRS が GREEN ⟺ (blocking floor 全通過: REQ-VER-024 の blocking arm 〔gate A–E,G,H + visual-first + census-count = 部品件数の静的 DOM count 照合〕 + 025 render 健全性 + 030 構成同一性) AND (ceiling 合格: gate I persona-walk-srs〔可読性の意味権威〕 + gate J fidelity-srs〔捏造の意味権威〕 + gate K completeness-critic-srs〔意味カバレッジ〕)。 floor 単独で GREEN 禁止 (verify-srs が CEILING=PENDING を返し機械担保・静的 hidden-render ban 群は warn 級 backstop で blocking しない)。 ceiling は LLM ゆえ非決定的・floor (決定的・blocking) と二層 (北極星 = gate I の非エンジニア可読性)。"
+        "ssot": "spec/srs-verification.html#req-ver-026",
+        "essence": ""
       },
       {
         "id": "REQ-VER-029",
         "class": "requirement",
-        "ssot": "spec/verification.html#req-ver-029",
-        "essence": "verify-census-vocab.sh (決定的 CI floor) は closure 語彙 SSoT (srs.census-vocab.yaml) と assemble-srs.sh + lib/common.sh の emit 集合の bijection (emit == vocab) を assert し、 新部品の追加・改名・削除での語彙未更新を非ゼロ exit で強制する。 境界 (§3.9 intro) 下では捏造検出の意味権威が ceiling gate J にあるため、 本 gate は語彙鮮度の floor のみを担い、 census closure の全単射基盤 (S4/S5) を消費しない。 SSoT 配線 (folio verify-srs 起動時 yq 読込)・graph 非破壊 (M-A) は machine 部。"
+        "ssot": "spec/srs-verification.html#req-ver-029",
+        "essence": ""
       },
       {
         "id": "REQ-VER-030",
         "class": "requirement",
-        "ssot": "spec/verification.html#req-ver-030",
-        "essence": "構成同一性 (construction-integrity・短縮呼称 repro-build): folio verify-srs の決定的 floor は、 生成 SRS を機械 SSoT (contract + prose YAML) から assembler pipeline で決定的に再組立し、 成果物との byte 同一性を blocking で検査する (唯一の非決定 field = footer 生成時刻のみ両辺同一の正規化で商する)。 fabrication-free-by-construction (rules §12) の不変条件の直接検証形 — post-build 改変 (要素の転置/複製/削除・decoy 注入・render 依存の隠蔽/捏造 CSS 注入) は attack 語彙の列挙なしに byte 逸脱として一括検出される。 再組立入力の欠落・assembler 非零 exit は測定系 tool-integrity error (gate 判定と別軸) とし、 assembler 自身のバグには盲 (両辺同一 assembler) ゆえ contract ↔ 成果物を独立照合する blocking arm の contract 照合部 (gate A–E,G,H + census-count) を代替せず併存する。 機構詳細は machine 部。"
+        "ssot": "spec/srs-verification.html#req-ver-030",
+        "essence": ""
       },
       {
         "id": "REQ-XREF-001",
@@ -2552,6 +2612,18 @@
         "to": "REQ-VER-023"
       },
       {
+        "from": "spec/srs-verification.html",
+        "to": "ADR-0041"
+      },
+      {
+        "from": "spec/srs-verification.html",
+        "to": "REQ-NAV-001"
+      },
+      {
+        "from": "spec/srs-verification.html",
+        "to": "REQ-VER-001"
+      },
+      {
         "from": "spec/verification.html",
         "to": "ADR-0003"
       },
@@ -2618,10 +2690,6 @@
       {
         "from": "spec/verification.html",
         "to": "ADR-0040"
-      },
-      {
-        "from": "spec/verification.html",
-        "to": "ADR-0041"
       },
       {
         "from": "spec/verification.html",

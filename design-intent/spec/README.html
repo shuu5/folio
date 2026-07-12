@@ -30,7 +30,8 @@
     { "@id": "./rules.html" },
     { "@id": "./folio-self-spec.html" },
     { "@id": "./relations.html" },
-    { "@id": "./verification.html" }
+    { "@id": "./verification.html" },
+    { "@id": "./srs-verification.html" }
   ]
 }
 </script>
@@ -88,10 +89,10 @@
      ==================================================================== -->
 <section id="s2-inventory" class="informative">
 <h2>§2. File Inventory</h2>
-<p class="section-essence" data-audience="human">spec/ cluster の現在 4 file (rules / folio-self-spec / relations / verification) と本 README の role・status・依存を一覧する。</p>
+<p class="section-essence" data-audience="human">spec/ cluster の現在 5 file (rules / folio-self-spec / relations / verification / srs-verification) と本 README の role・status・依存を一覧する。</p>
 
 <table>
-  <caption>spec/ cluster の file 一覧 (現在 4 file)</caption>
+  <caption>spec/ cluster の file 一覧 (現在 5 file)</caption>
   <thead>
     <tr><th>file</th><th>role</th><th>status</th><th>depends-on</th><th>extends</th></tr>
   </thead>
@@ -125,6 +126,13 @@
       <td>—</td>
     </tr>
     <tr>
+      <td><a href="srs-verification.html"><code>srs-verification.html</code></a></td>
+      <td>生成 SRS プレゼンの done-condition (完成判定) <span class="term" data-term="gate" data-tooltip="folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。">gate</span> の SSoT (<span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span> + <span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span> 二層、 VER-024〜030。 <a href="verification.html">verification.html</a> §3.9 から分離)</td>
+      <td>active (v1.2.0)</td>
+      <td><a href="rules.html"><code>rules.html</code></a> + <a href="verification.html"><code>verification.html</code></a></td>
+      <td>—</td>
+    </tr>
+    <tr>
       <td><code>README.html</code> (本 file)</td>
       <td>spec/ cluster index (本 cluster の navigation)</td>
       <td>active (v1.2.0)</td>
@@ -140,14 +148,14 @@
      ==================================================================== -->
 <section id="s3-graph" class="informative">
 <h2>§3. Dependency Graph</h2>
-<p class="section-essence" data-audience="human">spec/ 配下 4 file と constitution の依存関係を図示する (実線 = strong dependency、 点線 = soft reference)。</p>
+<p class="section-essence" data-audience="human">spec/ 配下 5 file と constitution の依存関係を図示する (実線 = strong dependency、 点線 = soft reference)。</p>
 
 <figure class="diagram">
 <pre class="mermaid">
 %%{init: {'theme': 'base'}}%%
 graph TD
   accTitle: spec/ cluster dependency graph
-  accDescr: spec/ 配下 4 file (rules / folio-self-spec / relations / verification) と constitution.html の依存関係を示す graph TD。 実線 = strong dependency (depends-on / hasPart)、 点線 = soft reference (extends / references)。
+  accDescr: spec/ 配下 5 file (rules / folio-self-spec / relations / verification / srs-verification) と constitution.html の依存関係を示す graph TD。 実線 = strong dependency (depends-on / hasPart)、 点線 = soft reference (extends / references)。
   CONST["constitution.html<br/>frozen"]:::frozen
   RULES["rules.html<br/>Layer 1 rules"]:::active
   FSS["folio-self-spec.html<br/>Layer 0 self-spec"]:::active
@@ -157,13 +165,17 @@ graph TD
   RULES -.->|extends| CONST
   FSS -.->|extends| CONST
   VER["verification.html<br/>sandbox"]:::active
+  SRSVER["srs-verification.html<br/>SRS done-condition"]:::active
   FSS -->|"references §10"| RULES
   REL -->|depends-on| RULES
   REL -.->|"references §2"| CONST
   VER -->|depends-on| RULES
   VER -->|depends-on| REL
   VER -.->|"references §7.6"| FSS
+  SRSVER -->|depends-on| RULES
+  SRSVER -->|depends-on| VER
   README -->|hasPart| VER
+  README -->|hasPart| SRSVER
   README -->|hasPart| RULES
   README -->|hasPart| FSS
   README -->|hasPart| REL
@@ -172,7 +184,7 @@ graph TD
   classDef active fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#333333
   classDef index fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,color:#333333
 </pre>
-<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (<span class="term" data-term="frozen" data-tooltip="accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。">frozen</span>・scan 対象外)、 spec/ 配下 4 file (rules / folio-self-spec / relations / verification) は living spec (継続編集、 現 status は §1 の表)。</figcaption>
+<figcaption>図 1: spec/ cluster + constitution.html の依存関係。 実線 = strong dependency (depends-on, hasPart)、 点線 = soft reference (extends, references)。 constitution.html は spec/ 内 (<span class="term" data-term="frozen" data-tooltip="accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。">frozen</span>・scan 対象外)、 spec/ 配下 5 file (rules / folio-self-spec / relations / verification / srs-verification) は living spec (継続編集、 現 status は §1 の表)。</figcaption>
 </figure>
 </section>
 
