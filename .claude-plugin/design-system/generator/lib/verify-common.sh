@@ -271,6 +271,72 @@ verify_core_chrome() { # 引数不要 (mzn.3 Phase C 占有 pin 退役後・旧 
   chk "core-chrome: glossary (term,en,def) == .glossary (順序)" \
     "$(q '.glossary[] | [.term, (.en // ""), .def] | @tsv' | while IFS=$'\t' read -r _te _en _de; do printf '%s\t%s\t%s\n' "$(esc "$_te")" "$(esc "$_en")" "$(esc "$_de")"; done)" \
     "$(perl -CSD -0777 -ne 'while (/<div class="grow"><div class="gword">([^<]*)(?:<span class="en">([^<]*)<\/span>)?<\/div><div class="gdef">([^<]*)<\/div><\/div>/g){ my $e=defined $2 ? $2 : ""; print "$1\t$e\t$3\n"; }' "$BODY")"
+
+  # (4) footer provenance (機械SSoT basename / 検証状態 固定2状態) を全 pack で pin (folio-r8k で SRS gate H 相当を core 昇格)。
+  #     昇格前は footer 値の厳密一致検査は verify-srs.sh gate H のみ (SRS 専用) で本 helper は footer を一切見ず、 非 SRS 全 pack は
+  #     footer の value-swap (別ファイル名・偽『検証済』token) を検出できなかった。 verify_footer_provenance が第 1 層値突合と同じ規律で塞ぐ。
+  verify_footer_provenance
+}
+
+# ---- footer provenance pin (機械SSoT basename / 検証状態 固定2状態) を doc-type 非依存で core 昇格 (folio-r8k) ----
+# verify-srs.sh gate H (ds8/i6f9 で 3 巡 hardening 済) の footer 値 pin を全 pack へ配る core helper。 verify_core_chrome から
+# 無条件に呼ばれ、 非 SRS 全 pack (adr/arch/datamodel/glossary/interface/principle/relations/research/spec/testcases/
+# verification/vision + fabrication-free cross-cut) の footer value-swap を捕捉する。
+#   part1 = fidelity-sync-meta 部品 存在 (==1) — 欠落/rename を捕捉 (has() は SRS 専用ゆえ core は直接 grep で self-contained)。
+#   part2 = canonical machine div を *block-scoped 可視テキスト厳密一致* — basename value-swap / 検証状態 詐称 / </b>外可視追記 /
+#           非難読化 sibling (n>1) / NESTED を決定的・FP-free に封鎖 (値改竄 = この issue の主題そのもの)。
+#   part3 = footer 要素内に scope した projection の token 総数 (機械SSoT/検証状態 が各ちょうど 1 回) — 難読化偽 sibling
+#           (属性なし div / 数値文字参照 / tag-split / comment-split / ゼロ幅) を tag 形状非依存に捕捉する backstop。
+# ★SRS gate H との *意図的差異* (machine/LLM 境界・folio-mzn): SRS は part3 の token 総数を *body 全体* で数える (SRS の業務ドメイン
+#   corpus は 機械SSoT/検証状態 を本文に一切含まないゆえ安全)。 だが folio 自身の meta pack (verification spec = REQ-VER-024
+#   statement) は本文に「機械SSoT / 検証状態」を literal で含む (実測: body 全体で各 2)。 ゆえに core は part3 を *footer 要素内へ scope* し
+#   本文の legit 言及を FP にしない。 footer 外へ注入した偽 provenance div は repro-build byte 同一性 (REQ-VER-030・blocking) と
+#   ceiling gate J が担う (「機械は best-effort・可視の完全性判定は ceiling 領分」= gate H コメントと同じ分界)。 part2 は body 全体でも
+#   canonical div anchor (`<div data-audience="machine">機械SSoT:`) 依存ゆえ本文言及に false-match せず FP-free。
+# 前提: $BODY (make_body 済) / $CONTRACT / esc / chk / chk_empty / $fail / $CHKW (verify_core_chrome と同一)。
+verify_footer_provenance() {
+  # part1: 部品 存在 (==1)。 fidelity-sync-meta の欠落 (footer 全欠) と data-component rename を捕捉。
+  chk "core-chrome: footer-meta 部品 == 1" 1 "$(grep -c 'data-component="fidelity-sync-meta"' "$BODY")"
+  # part2+part3: block-scoped 可視テキスト厳密一致 + footer-scoped token 総数 backstop を 1 perl で。
+  local fp_ssot_e; fp_ssot_e="$(esc "${CONTRACT##*/}")"
+  local fp_bad
+  fp_bad="$(SSOT="$fp_ssot_e" \
+    STPRE='structure ✓ fabrication-free / prose 未充填 (opus 待ち)' \
+    STPOST='structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)' \
+    perl -CSD -Mutf8 -0777 -ne '
+    my $ssot=$ENV{SSOT}; utf8::decode($ssot);
+    my $pre=$ENV{STPRE}; utf8::decode($pre); my $post=$ENV{STPOST}; utf8::decode($post);
+    my @bad; my $n=0;
+    # part2: canonical machine div を block-scoped で捕捉し、 全タグ除去後の可視テキストが固定テンプレ (機械SSoT=basename /
+    #   生成=timestamp placeholder / 検証状態=固定2状態) と厳密一致か照合。 生成のみ非決定的ゆえ \d 桁 placeholder で許容、
+    #   basename/区切り/検証状態 は厳密一致。 </b> 外・</div> 前への偽 provenance 可視追記も block-scoped ゆえ死角にならない。
+    while (/<div data-audience="machine">機械SSoT:(.*?)<\/div>/gs) {
+      my $in=$1; $n++;
+      push @bad,"sync-meta:NESTED" if $in=~/<div\b/;
+      my $vis="機械SSoT:".$in; $vis=~s/<[^>]+>//g;
+      unless ($vis=~/^機械SSoT: \Q$ssot\E &middot; 生成: \d{4}-\d\d-\d\d \d\d:\d\d &middot; 検証状態: (.*)$/) { push @bad,"sync-meta:VIS"; next; }
+      my $state=$1; push @bad,"検証状態\x{2260}固定2状態" if ($state ne $pre && $state ne $post);
+    }
+    push @bad,"sync-meta:count=$n" if $n!=1;
+    # part3 (backstop): footer 要素内へ scope した projection 上で 機械SSoT/検証状態 が各ちょうど 1 回。 難読化偽 sibling
+    #   (属性なし div / 数値文字参照〔x/X・; 任意〕/ tag-split / comment-split / ゼロ幅) を tag 形状非依存に捕捉する。
+    #   ★footer-scope が SRS gate H (body 全体) との意図的差異 (上記関数コメント・folio meta pack の本文 literal を FP にしない)。
+    #   projection: comment 除去 → tag 除去 (tag-open は < 直後が [a-zA-Z!/?] のときのみ = 生の《< 検証状態 >》は文字として残す) →
+    #   数値文字参照 decode → Default_Ignorable (ゼロ幅) 除去。 順序が本質: tag を先に除去し entity 化タグ文字列は文字として残す。
+    #   ★tag 除去は quote-aware (引用符内の > を tag 終端と誤認しない): naive [^>]* は <b t="a>z"> 型の
+    #   引用符内 > 分割で実 parser と乖離し偽 provenance を素通りさせる (folio-r8k 独立 ceiling が実弾突破・
+    #   parser differential)。未終端引用符の擬似タグは除去されず literal 残置 = token を再構成しない fail-safe 方向。
+    my $foot = (/<footer\b.*?<\/footer>/s) ? $& : "";
+    my $dec = $foot;
+    $dec =~ s/<!--.*?-->//gs;
+    $dec =~ s/<[!\/?a-zA-Z](?:[^>"\x27]|"[^"]*"|\x27[^\x27]*\x27)*>//g;
+    $dec =~ s/&#[xX]([0-9a-fA-F]+);?/chr(hex($1))/ge; $dec =~ s/&#([0-9]+);?/chr($1)/ge;
+    $dec =~ s/\p{Default_Ignorable_Code_Point}//g;
+    my $t1=()= $dec =~ /機械SSoT/g;  push @bad,"footer-token-ssot=$t1" if $t1!=1;
+    my $t2=()= $dec =~ /検証状態/g;  push @bad,"footer-token-state=$t2" if $t2!=1;
+    print join(" ", @bad);
+  ' < "$BODY")"
+  chk_empty "core-chrome: footer 可視テキスト == テンプレ (basename/ts/固定2状態・偽 sibling 封鎖)" "$fp_bad"
 }
 
 # ---- cross-doc 照会解決の共通スケルトン (rule-of-three: verify-adr §3 ∩ verify-research §3、 ds8 で core 昇格) ----

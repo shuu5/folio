@@ -9,7 +9,7 @@
 #   - 機械層 term レコード集合一致: data-term-en / data-term-slug / data-term-domain / JSON-LD DefinedTerm (name/@id)。
 #   - human anchor: id="term-<slug>" 集合一致。
 #   - cross-doc anchor: data-xref-target 集合一致 (contract cross_refs flatten)。
-#   - cover-meta KV / footer verify-state token (verify_core_chrome)。
+#   - cover-meta KV / footer provenance (機械SSoT basename + 検証状態 token = verify_core_chrome → verify_footer_provenance・folio-r8k で core 昇格)。
 #   - prose スロット (3 mode = pre-fill 全空 / --filled・--artifact 全充填 + 注入忠実)。
 #
 # usage: verify-glossary.sh [--filled <manifest.yaml> | --artifact] <contract.yaml> <html>

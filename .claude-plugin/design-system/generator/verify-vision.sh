@@ -231,6 +231,9 @@ chk "core-chrome: approval (role,who,when,stamp) == .approval (順序)" \
   "$(perl -CSD -0777 -ne 'while (/<div class="sign"><span class="role">([^<]*)<\/span><span class="who">([^<]*)<\/span><span class="when">([^<]*)<\/span><span class="stamp(?: self)?">([^<]*)<\/span><\/div>/g){ print "$1\t$2\t$3\t$4\n"; }' "$BODY")"
 # ★vcount who — mzn.3 Phase C 占有 pin 退役後も残る第 1 層 pin (U3K1-3 の数値文字参照 decode red pin が anchor・core と同型)。
 chk "core-chrome: vcount who == |approval|"   "$nap" "$(count_attr_token class who < "$BODY")"
+# ★footer provenance pin (folio-r8k)。 vision は verify_core_chrome を呼ばず inline するため、 core が全 pack へ配る footer 値 pin も
+#   ここで明示的に呼ぶ (helper 本体は core = lib/verify-common.sh・glossary 表 quirk と無関係ゆえ faithful subset に含める)。
+verify_footer_provenance
 
 # ============ cover-meta KV (種別/構成/照会先/版) の決定的再導出突合 ============
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"

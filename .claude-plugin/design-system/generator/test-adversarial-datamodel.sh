@@ -97,6 +97,12 @@ expect_fail "data-policy-card マーカー削除 (census)"  "$(mut 4 's{<div dat
 expect_fail "er-diagram mermaid pre 削除 (census)"    "$(mut 5 's{<pre class="mermaid">erDiagram}{<pre class="XXX">erDiagram}')"
 # ★census red pin: 空 entity-card block を追加注入 (件数 6→7・id anchor も崩す)
 expect_fail "census red pin: 偽 entity-card block 追加注入" "$(mut 6 's{</div>\n</div>\n<footer}{<article data-component="entity-card" id="entity-fake"></article></div>\n</div>\n<footer}')"
+# ★footer provenance red pin (folio-r8k core caller 経路): 引用符内 > を含む split タグ (<b t="a>z">) で
+#   機械SSoT/検証状態 token を分割した偽 provenance div を footer へ注入。 naive [^>]* strip は quote 内 > で
+#   誤終端し token を再構成できず素通り (part2 anchor も split で不一致・part1 は fidelity-sync-meta 属性なしで 1)。
+#   quote-aware projection のみが token=2 を検出し FAIL。 独立 ceiling が実 parser で偽 basename/偽『公式承認済』の
+#   可視描画を実証した parser-differential クラスの構造終端。
+expect_fail "footer 偽 provenance (quote-embedded > tag-split・core 経路)" "$(mut 200 's{</footer>}{<div data-audience="machine">\xe6\xa9\x9f\xe6\xa2\xb0<b t="a>z">SSoT: <b>evil.datamodel.yaml</b> &middot; \xe7\x94\x9f\xe6\x88\x90: <b>2026-01-01 00:00</b> &middot; \xe6\xa4\x9c\xe8\xa8\xbc<b t="c>z">\xe7\x8a\xb6\xe6\x85\x8b: <b>\xe5\x85\xac\xe5\xbc\x8f\xe6\x89\xbf\xe8\xaa\x8d</b></div></footer>}')"
 
 # --- ③b band 見出し (folio-bhe: instance hardcode 封鎖 + 数詞 fabrication) ---
 dm_base "$TMP/bh1.yaml"; yq -i 'del(.chapters.entities_band)' "$TMP/bh1.yaml"

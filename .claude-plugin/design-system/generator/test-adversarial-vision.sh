@@ -187,6 +187,12 @@ expect_fail "V59 ★data-doc-id 捏造 (自文書 doc_id)" "$(mut 59 's{data-doc
 # V60 ★cross-aside chip 並べ替え (集合保存・本文↔chip 帰属 desync・再cert 発見の自 fix 回帰 pin): problem chip(§3上位ニーズ)
 #   ↔ stakeholders chip(§2アクター定義) を入替。 chip 集合は不変ゆえ sorted set なら素通るが positional で帰属崩れを捕捉。
 expect_fail "V60 ★cross-aside chip 並べ替え (集合保存・§2問題章がアクター定義を誤引用)" "$(mut 60 's{<span class="xref-code">SRS §3</span><span class="xref-label">上位ニーズ N-1〜N-4 \(SRS-CLINIC-APPT\)</span>}{ZZAZZ}; s{<span class="xref-code">SRS §2</span><span class="xref-label">アクター定義 \(SRS-CLINIC-APPT\)</span>}{<span class="xref-code">SRS §3</span><span class="xref-label">上位ニーズ N-1〜N-4 (SRS-CLINIC-APPT)</span>}; s{ZZAZZ}{<span class="xref-code">SRS §2</span><span class="xref-label">アクター定義 (SRS-CLINIC-APPT)</span>}')"
+# V61 ★footer provenance red pin (folio-r8k inline 経路): vision は verify_core_chrome を呼ばず inline で
+#   verify_footer_provenance を呼ぶ第 2 構造クラス。 引用符内 > を含む split タグ (<b t="a>z">) で機械SSoT/検証状態
+#   token を分割した偽 provenance div を footer へ注入。 naive [^>]* strip は quote 内 > で誤終端し素通り、
+#   quote-aware projection のみが token=2 で FAIL。 per-shape MK: core caller (datamodel) が通っても inline 経路の
+#   穴は別クラスゆえ本 pin が必要 (jyfh per-shape 教訓)。
+expect_fail "V61 ★footer 偽 provenance (quote-embedded > tag-split・inline 経路)" "$(mut 61 's{</footer>}{<div data-audience="machine">\xe6\xa9\x9f\xe6\xa2\xb0<b t="a>z">SSoT: <b>evil.vision.yaml</b> &middot; \xe7\x94\x9f\xe6\x88\x90: <b>2026-01-01 00:00</b> &middot; \xe6\xa4\x9c\xe8\xa8\xbc<b t="c>z">\xe7\x8a\xb6\xe6\x85\x8b: <b>\xe5\x85\xac\xe5\xbc\x8f\xe6\x89\xbf\xe8\xaa\x8d</b></div></footer>}')"
 
 # --- ★cross_doc opt-in 非発火 (folio-qvv 裁定A): 非発火 baseline + 痕跡ゼロ不変条件 + 片肺 contract abort ---
 # 非発火 contract = clinic から cross_doc/no_restate/srs_* を全て畳み refs.srs を空配列化した派生 (folio-self と同形)。
