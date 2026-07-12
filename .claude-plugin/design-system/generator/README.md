@@ -29,6 +29,7 @@ prose.yaml ───────────────────────
   - **注入は機械的** — `inject-prose.sh` が manifest 値を **HTML escape** して `data-slot-id` 一致スロットへ埋める。 任意 markup は escape され構造を壊せない (fabrication-free を prose 層でも保つ)。
   - **fail-closed**: HTML スロット id 集合と manifest key 集合が完全一致 (未充填=脱落 / 余剰=orphan を両方拒否)。 値の tab/改行・空・注入後の空スロット残存も拒否。
   - rationale は **rationale_source(id 接地)のみが SSoT で散文は opus 生成**ゆえ、 fidelity ceiling(S5)の主対象になる。
+  - **★self-host pack (dual-audience) の cover-summary framing** (folio-sm8 errata) — 機械層 (`data-audience="machine"`) を持つ pack (rules / verification / relations 等の folio 自己 self-host 系) の生成物は、 原本の機械層を **機械層 fold に逐語保持** する (原本↔生成物 双方向 round-trip を floor が enforce)。 したがって cover-summary / chapter-lead に **「機械向けの詳細は元の *.html を参照」型の文言を書いてはならない** (生成物は人間向け抜粋ではなく dual-audience の完全再生成であり、 読者を原本へ誤誘導する = gate J fidelity finding)。 正しい framing = 「本ページは元の *.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます」 (★fold は 2 種で所在が違う・章ごと fold は machine_blocks 0 件の章では emit されないため「各章」型の全称は書かない = folio-sm8 ceiling round-1 の minor)。 inline 照会も機械層 fold 内に生存するため「元を参照」でなく「fold を開く」と案内する。 ★機械層を持たない pack (clinic-* / ec-* 等の contract 先行 pack) には原本自体が無いので、 そもそも原本参照の文言を書かない。
 
 ## ADR-pack = instance#2 (folio engine B1 / folio-bwc / rule-of-three)
 

@@ -6,11 +6,13 @@
 # 各値は機械 SSoT (contract/folio-verification.spec.yaml = verification.html から機械抽出) 接地。捏造/歪曲/脱落は
 # fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
 #   - cover-summary は doc 全体 (section/要件/照会) に接地する。
+#     ★self-host pack (機械層 dual-audience) では機械層を fold に逐語保持する (原本↔生成物 round-trip を floor が enforce) ため、
+#     「機械向けの詳細は元の *.html を参照」型の文言は禁止 (読者誤誘導 = gate J finding・folio-sm8)。 fold を開けば読めると案内する (README ③)。
 #   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
 #   - band 順: 01=§0 読み方 / 02=§1 検証契約 / 03=§2 検証範囲 / 04=§3 EARS 要件 / 05=§4 実装段階 / 06=§5 未解決 / 07=§6 参照 / 08=照会 / 09=用語集。
 
 slots:
-  cover-summary: "folio plugin を sandbox (隔離環境) で実機検証する枠組みの仕様です。 検証の 3 つの状態・何を検証し何を範囲外とするか・規範要件 (EARS 記法の REQ-VER / REQ-NAV)・段階的な実装の進め方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の verification.html を機械 SSoT から dual-audience で再生成したもので、 各章の『機械層』fold を開くと精密な規範記述 (EARS 文・地の文) を確認できます。"
+  cover-summary: "folio plugin を sandbox (隔離環境) で実機検証する枠組みの仕様です。 検証の 3 つの状態・何を検証し何を範囲外とするか・規範要件 (EARS 記法の REQ-VER / REQ-NAV)・段階的な実装の進め方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の verification.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます。"
 
   chapter-lead-01: "まず読み方から。 着手前は §1 (検証契約の定義) と §3 (EARS 規範要件) を必読とし、 そのあと §2 (検証範囲) → §4 (実装段階) と読み進めます。 §5 の未解決事項と §6 の参照は補足です。"
   chapter-lead-02: "「verification (検証)」という言葉の正式な定義をここに置きます。 検証には 3 つの状態があり、 本枠組みが対象とするのはそのうち sandbox で実機検証された状態だけです。 他の文書はこの章を参照します。"

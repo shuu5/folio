@@ -6,11 +6,13 @@
 # 各値は機械 SSoT (contract/folio-rules.spec.yaml = rules.html から機械抽出) 接地。捏造/歪曲/脱落は
 # fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
 #   - cover-summary は doc 全体 (section/要件/照会) に接地する。
+#     ★self-host pack (機械層 dual-audience) では機械層を fold に逐語保持する (原本↔生成物 round-trip を floor が enforce) ため、
+#     「機械向けの詳細は元の *.html を参照」型の文言は禁止 (読者誤誘導 = gate J finding・folio-sm8)。 fold を開けば読めると案内する (README ③)。
 #   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
 #   - band 順: 01=§0 / 02=§2 / 03=§3 / 04=§4 / 05=§5 / 06=§6 / 07=§7 / 08=§8 / 09=§9 / 10=§10 / 11=§11 / 12=§12 / 13=照会 / 14=用語集。
 
 slots:
-  cover-summary: "folio を使う各プロジェクトが守る普遍ルール集です。 ファイルの書き方・命名・要件の記法 (EARS)・必ず守る義務・人にも読める提示の仕方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の rules.html の人間向け view を機械データから生成したもので、 機械向けの詳細記述は元の rules.html を参照してください。"
+  cover-summary: "folio を使う各プロジェクトが守る普遍ルール集です。 ファイルの書き方・命名・要件の記法 (EARS)・必ず守る義務・人にも読める提示の仕方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の rules.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます。"
 
   chapter-lead-01: "まず読み方から。 このルールは folio を導入した各プロジェクトに適用され、 設定ファイルの形は §2、 必ず守る義務は §10 にまとまっています。"
   chapter-lead-02: "プロジェクトのフォルダ構成と設定ファイルの形を定めます。 folio が管理するのは設計意図を置く 3 つの領域だけで、 テストの置き場所までは縛りません。"
@@ -24,5 +26,5 @@ slots:
   chapter-lead-10: "プロジェクトが無条件に守るべき必須義務をここに集めます。 設計編集時の合図・マージ前の自動チェック (gate)・いつ決定記録を書くか、 の 3 本立てです。"
   chapter-lead-11: "人間にも読みやすく見せるための規律です。 読者層の定義・直し方の分担・既定の見せ方・検査手順・長くなりすぎない圧縮を定めます。"
   chapter-lead-12: "要件定義書 (SRS) の人間向けプレゼンを機械の元データから生成し、 2 段階 (機械検査 + 人の確認) で品質を担保する仕組みです。"
-  chapter-lead-13: "このルール集が前方照会する主要な文書を挙げます。 上位の原則 (P-x)・決定記録 (ADR)・検証仕様 (REQ-VER) への前方照会で、 folio-self-spec や relations など本文中の inline 照会は元の rules.html を参照してください — ルールは照会の終わりではありません。"
+  chapter-lead-13: "このルール集が前方照会する主要な文書を挙げます。 上位の原則 (P-x)・決定記録 (ADR)・検証仕様 (REQ-VER) への前方照会で、 folio-self-spec や relations など本文中の inline 照会は機械層の fold (文書前文・章ごと) を開くと確認できます — ルールは照会の終わりではありません。"
   chapter-lead-14: "本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。"
