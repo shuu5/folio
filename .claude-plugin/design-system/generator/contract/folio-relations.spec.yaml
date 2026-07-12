@@ -327,3 +327,15 @@ glossary:
   - { term: "gate", en: "gate", def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。" }
   - { term: "golden", en: "golden", def: "期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。" }
   - { term: "EARS", en: "EARS", def: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。" }
+  # ▼ 文書の主題語 (relations pack 固有・SSoT 外のページ固有語。 folio-49x gate I major の解消)。
+  #   本文で頻出する外部標準語彙 (W3C 系) と関係性の方向概念を非エンジニアが引けるようにする。
+  #   実出現から導出 (SKOS / RDF / dependsOn 等は本文非出現ゆえ非収録)。parity は intersect (registry) で許容。
+  - { term: "JSON-LD", en: "JSON-LD", def: "文書どうしの「つながり」を機械が読める形で書くためのデータ形式 (JSON をもとに W3C が定めた記法)。 folio では各 spec の <head> に埋め込み、 関係性を機械可読にする。" }
+  - { term: "W3C", en: "W3C", def: "World Wide Web Consortium。 Web の技術標準を定める国際団体。 folio は関係性を表す語彙を、 まず W3C の標準 (dcterms / schema.org / PROV-O) から採用する。" }
+  - { term: "dcterms", en: "dcterms", def: "Dublin Core Terms (DCMI)。 文書間の関係 (置換・参照・部分・要求・来歴) を表す世界共通の標準語彙。 folio は関係を表す言葉をまずここから採る。" }
+  - { term: "schema.org", en: "schema.org", def: "Web ページの種類やメタ情報を表す世界共通の標準語彙。 dcterms で表せない型を補い、 folio spec の基底の型として使う。" }
+  - { term: "PROV-O", en: "PROV-O", def: "情報の来歴 (どこから派生し・何が生成したか) を表す W3C の標準語彙。 folio は派生元や生成の過程を記録するときに使う。" }
+  - { term: "@id", en: "@id", def: "JSON-LD で各文書に付ける、 世界で一つだけの安定した名札 (URI = Web 上の住所)。 その文書を一意に指し示す識別子。" }
+  - { term: "@context", en: "@context", def: "JSON-LD の冒頭で「使う言葉 (語彙) の辞書」を宣言する枠。 dc / schema / folio などの名前空間 (prefix) をここで定義する。" }
+  - { term: "forward relation", en: "forward relation", def: "ある spec から他の spec へ向かう「こちらから向こう」方向の関係 (例: A が B を参照する)。 spec 本体で明示的に宣言する。" }
+  - { term: "reverse relation", en: "reverse relation", def: "他の spec からこちらへ向かう「向こうからこちら」方向の関係 (例: B が A から参照される)。 forward relation から機械的に導出する。" }

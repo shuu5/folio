@@ -68,10 +68,14 @@ clinic-appointment.datamodel.yaml|intersect|clinic-appointment.glossary.yaml
 # 対象外ゆえ intersect (SSoT 収録語のみ en 逐語一致・ページ固有語は検査対象外・en 突合想定 0・folio-ehar)。
 clinic-appointment.interface.yaml|intersect|clinic-appointment.glossary.yaml
 clinic-appointment.glossary.yaml|intersect|clinic-appointment.glossary.yaml
-# --- folio suite (SSoT = folio-glossary.glossary.yaml。 spec 3 本は全語収録の実測成立ゆえ full) ---
+# --- folio suite (SSoT = folio-glossary.glossary.yaml。 rules/verification 2 本は全語収録の実測成立ゆえ full) ---
 folio-rules.spec.yaml|full|folio-glossary.glossary.yaml
 folio-verification.spec.yaml|full|folio-glossary.glossary.yaml
-folio-relations.spec.yaml|full|folio-glossary.glossary.yaml
+# relations は文書主題が外部標準語彙 (JSON-LD / dcterms / schema.org / PROV-O 等) ゆえ、 それら主題語は
+# folio canonical vocabulary (SSoT) ではなくページ固有語。 folio-49x (gate I major) で主題語を glossary へ収録し
+# 非エンジニアが引けるようにした結果、 SSoT 外語を含むため intersect へ (SSoT 収録の folio 語 11 は en 逐語一致を継続、
+# 外部主題語のみ anchor 外として exempt = 緩和は非 SSoT 語に scope 限定)。full の根拠「全語収録の実測成立」は主題語収録で失効。
+folio-relations.spec.yaml|intersect|folio-glossary.glossary.yaml
 folio-constitution.principle.yaml|intersect|folio-glossary.glossary.yaml
 folio-vision.vision.yaml|intersect|folio-glossary.glossary.yaml
 folio-glossary.glossary.yaml|intersect|folio-glossary.glossary.yaml
