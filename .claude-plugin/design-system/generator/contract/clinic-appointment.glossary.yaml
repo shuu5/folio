@@ -22,8 +22,9 @@ term_set_name: "clinic 予約管理 canonical vocabulary"
 # (role=implementation) を pin するため、 instance #2 も P-5 (canonical naming) へ前方照会する。
 # ★この edge は「glossary という doc-type が canonical-name SSoT を担う」という *doc-type レベルの実装根拠*
 # (folio framework の原則) であって、 clinic システム自体の統治構造の主張ではない — clinic に constitution が
-# 無い事実 (yzv 決定④・ゼロ生成デモ = folio-c5r.2) とは独立。 glossary の照会 graph 完全参加
-# (canonical-vocabulary role) は folio-0ds / folio-1sn の core 同期後。
+# 無い事実 (yzv 決定④・ゼロ生成デモ = folio-c5r.2) とは独立。 glossary は role=implementation の
+# principle_edge (P-5) で照会 graph に完全参加済 (verify-graph FLOOR-OK)。 B5 で予約した glossary 固有 role
+# (canonical-vocabulary 等) は既存 role で充足でき GRAPH_ROLE_ALLOWLIST は 6 role のまま = 追加同期不要 (folio-0ds 前提消滅)。
 meta:
   doc_id: "GLOSSARY-CLINIC-APPT"
   doc_type: "glossary"
