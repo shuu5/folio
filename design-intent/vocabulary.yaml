@@ -119,8 +119,12 @@ terms:
     definition: "design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。"
   # --- architecture polysemy 解消 (folio-c5r.7、 folio-5uu arch-pack grill 由来): 裸の "architecture"
   #   は 3 entity を指す多義語 (P-5 緊張)。 P-5 forbidden は「1 entity = 複数名」用ゆえ多義 (1 名 = 3 entity)
-  #   には不適 — 各 entity に別 canonical 完全形を宣言して曖昧さを解く (forbidden: "architecture" は
-  #   vocabulary gate REQ-CI-013 の grep -F 部分一致が全 design-intent/ path 参照を誤検出するため不可、 #110 D2)。
+  #   には不適 — 各 entity に別 canonical 完全形を宣言して曖昧さを解く (#110 D2)。
+  #   forbidden: "architecture" の機械化は ADR-0048 rename 後も不可 (folio-7c4 再評価 2026-07-12 で census 確定):
+  #   REQ-CI-013 は grep -F 部分一致ゆえ (a) 複合語 canonical (architecture-description / architecture-nav-derive
+  #   等) を誤検出し、 (b) frozen ADR 約 30 本 + superseded research の歴史 prose に裸出現が数百残る (P-10 で
+  #   書換不能 = 恒久 RED・gate (d) に per-file waiver 機構なし)。 概念用法 (arc42 / constitution §1 引用 /
+  #   Architecture Decision Records) は ADR-0048 §5 どおり正当に存続する。
   #   constitution 改訂は不要 = 語レベル整理 (frozen 資産の既存用語に整合: §3 "Layer Architecture" / self-spec
   #   "design-intent 空間")。
   - canonical: "architecture-description"
