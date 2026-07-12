@@ -10,8 +10,9 @@
 # 機構 (3 段):
 #   (1) 抽出: 各 contract から pack 別 CONTENT_LEAVES map の field を (doc_id, pack, label, text) レコード化。
 #       glossary def / cross_doc chrome / 共有終端 principle.text / NFR 数値密 field は map 不掲載 = 除外 (precision)。
-#   (2) 類似: 同一 suite (instance 名 prefix) 内で doc_id が異なる全レコードペアを 文字 k-gram shingle の
-#       Jaccard(J) で採点 (perl -CSD で UTF-8 char 単位・LC_ALL=C 集合演算との衝突を回避)。 J は長さ正規化済で
+#   (2) 類似: 同一 suite (meta.suite タグ or 無指定時は instance 名 prefix へ fallback) 内で doc_id が異なる
+#       全レコードペアを 文字 k-gram shingle の Jaccard(J) で採点 (perl -CSD で UTF-8 char 単位・LC_ALL=C 集合演算
+#       との衝突を回避。 正規化は全角→半角 latin+digit 畳み込みを含み全角 ASCII near-verbatim の J 割れを防ぐ)。 J は長さ正規化済で
 #       「2 文書がどれだけ同一か」を測り内容重複の信号になる。 ★containment(C) は併記のみで判定に使わない —
 #       実測上、 長文 spec 同士は共通語彙だけで C が高く出て「内容重複」と「語彙重複」を分離できないため (§calibration)。
 #       別プロジェクト (別 suite prefix: clinic / ec / folio) は比較しない (boilerplate 共有は重複でない)。
@@ -44,6 +45,12 @@ SHOW_DECLARED=0
 #   巧妙な restate は人間 ceiling が backstop。 「誤検出 0」は各 suite が SRS 1 本ずつの現 corpus 由来の限定実測。
 WARN_J=0.40
 HIGH_J=0.65
+# field-aware 閾値 (folio-nsa): EARS condition は定型 trigger 句 (「〜したとき」「〜する場合」) ゆえ別 doc 間で
+#   字句が衝突しやすく mid-J (WARN_J〜HIGH_J 帯) の FP を生む。 condition label を含むペアは WARN 閾値をこの値へ
+#   引き上げ S/N を改善する。 ★near-verbatim な真の restate (J>=EARS_COND_J) は引上げ後もなお検出されるが、
+#   [WARN_J,EARS_COND_J) 帯に落ちる genuine な ears 重複は precision と引き換えに抑制されうる (tradeoff・
+#   heuristic ゆえ人間 ceiling が backstop)。 recall は当該帯で低下しうる = 「非劣化」ではなく明示的な trade。
+EARS_COND_J=0.65
 KGRAM=4          # 文字 n-gram 長 (k=3 は短 term 過敏・k=5 は restatement 取りこぼし・k=4 が均衡点)
 MINLEN=8         # 正規化長 < MINLEN 文字の field は比較対象外 (短 enum/ID のノイズ排除)
 PREFILTER=0.15   # perl が emit する下限 (max(J,C) >= PREFILTER のペアのみ・出力量制御)
@@ -176,6 +183,11 @@ trap cleanup EXIT
 UNKNOWN_PACKS=()
 SKIPPED_DOCS=()    # doc_id 欠落/不正 YAML でスキップした contract (fail-loud coverage = 「検査できた範囲が緑」担保)
 declare -A DOCPACK DOCSEEN
+# ★partial-tag footgun 検出 (SHOULD-1・folio-nsa errata-1): 同一 filename prefix なのに meta.suite の
+#   有無が食い違う (一部 tagged・一部 fallback) doc 群を track し fail-loud WARN する (F10/SKIPPED_DOCS と同じ
+#   coverage-honesty)。 「一部だけ tag し忘れて意図せず suite が割れる」事故を可視化。 全 explicit で値が異なる
+#   のは意図的分離 (FP fix の正用途) ゆえ WARN しない — 検出対象は「有無の食い違い」に限定 (§WARN 実装)。
+declare -A FPFX_TAGGED FPFX_UNTAGGED   # filename prefix → その prefix に tagged/untagged doc が居たか
 ndocs=0
 
 for CONTRACT in "${CONTRACTS[@]}"; do
@@ -187,10 +199,18 @@ for CONTRACT in "${CONTRACTS[@]}"; do
   [[ -z "${DOCSEEN[$did]:-}" ]] || continue   # doc_id 重複は verify-graph が別途 FAIL・ここでは初回のみ
   DOCSEEN[$did]=1; DOCPACK[$did]="$pack"; ndocs=$((ndocs+1))
 
-  # suite prefix = instance 名 (<instance>.<pack>.yaml) の最初の '-' 区切り segment。
-  # 別プロジェクトの doc (clinic vs ec vs folio) を比較しない = lint の射程は単一 suite 内 cross-doc。
+  # suite key = 明示タグ meta.suite があればそれ、 無ければ instance 名 (<instance>.<pack>.yaml) の
+  # 最初の '-' 区切り segment へ fallback (後方互換)。 別 suite の doc は比較しない = 射程は単一 suite 内 cross-doc。
+  # ★meta.suite タグ化 (folio-nsa): filename prefix heuristic 単独は (FN) 命名差 (clinicgov vs clinic-*) で
+  #   同一 project を未比較化し、 (FP) org prefix 共有の別 project を誤比較しうる。 明示タグで両者を解消する。
   base="${CONTRACT##*/}"; instance="${base%.yaml}"; instance="${instance%.*}"
-  prefix="${instance%%-*}"
+  fpfx="${instance%%-*}"   # filename prefix (partial-tag 検出の key = suite-key とは独立)
+  suite="$(yq -r '.meta.suite // ""' "$CONTRACT" 2>/dev/null)"
+  if [[ -n "$suite" && "$suite" != "null" ]]; then
+    prefix="$suite"; FPFX_TAGGED[$fpfx]=1
+  else
+    prefix="${instance%%-*}"; FPFX_UNTAGGED[$fpfx]=1
+  fi
 
   # unknown-pack ガード (F10): CONTENT_LEAVES に未登録 (空でも未宣言) の pack は silent false-negative 源。
   if [[ -z "${LEAVES[$pack]+set}" ]]; then
@@ -245,6 +265,9 @@ sub norm {
   my ($s) = @_;
   $s =~ s/[「」『』]//g;
   $s =~ tr/（）/()/;
+  # 全角→半角 (latin+digit) 畳み込み (NFKC 部分適用・folio-nsa): 全角 ASCII 多用の near-verbatim が
+  #   shingle 不一致で J 割れ→FN する事故を解消。 空白除去 (下の数字非隣接 rule) より前に畳み digit 判定を統一。
+  $s =~ tr/\x{FF10}-\x{FF19}\x{FF21}-\x{FF3A}\x{FF41}-\x{FF5A}/0-9A-Za-z/;
   $s =~ s/\s+/ /g;
   $s =~ s/(?<![0-9０-９]) (?![0-9０-９])//g;
   $s =~ s/^\s+|\s+$//g;
@@ -323,20 +346,44 @@ LC_ALL=C sort -t$'\t' -k6,6 -k7,7 -k8,8 -k9,9 "$perlout_file" -o "$perlout_file"
 [[ -n "${DUP_DUMP_RAW:-}" ]] && cp "$perlout_file" "$DUP_DUMP_RAW"
 
 declare -i n_warn=0 n_high=0 n_declared=0 n_pairs=0
-WARN_LINES=(); DECL_LINES=()
+declare -i n_decl_exact=0 n_decl_high=0 n_decl_warn=0 n_decl_low=0
+WARN_LINES=(); DECL_SORT=()
 while IFS=$'\t' read -r J C inter nshort bucket docA labelA docB labelB headA headB; do
   [[ -n "$J" ]] || continue
   n_pairs=$((n_pairs+1))
   if [[ "$bucket" == "declared" ]]; then
     n_declared=$((n_declared+1))
-    DECL_LINES+=("  [echo] $docA:$labelA ⇔ $docB:$labelB   J=$J C=$C   (cross_doc graph で説明済)")
+    # declared echo を J band で内訳集計 (folio-nsa): J=1.0 逐語コピーと J=0.08 弱一致を 1 カウントに畳まない UX。
+    if ge "$J" "1.0"; then n_decl_exact=$((n_decl_exact+1))
+    elif ge "$J" "$HIGH_J"; then n_decl_high=$((n_decl_high+1))
+    elif ge "$J" "$WARN_J"; then n_decl_warn=$((n_decl_warn+1))
+    else n_decl_low=$((n_decl_low+1)); fi
+    # J 降順ソート用に J を tab-prefix (--show-declared 時に高一致=要 review を上へ)。
+    DECL_SORT+=("$J"$'\t'"  [echo] $docA:$labelA ⇔ $docB:$labelB   J=$J C=$C   (cross_doc graph で説明済)")
     continue
   fi
-  # undeclared WARN 判定 = J>=WARN_J のみ (C は文脈併記・判定外。 §header の理由)。
-  if ge "$J" "$WARN_J"; then
+  # ★HIGH 判定 (strict gate 用) は field-aware 緩和から独立 (MUST-1・folio-nsa errata-1): J>=HIGH_J なら
+  #   field-aware の WARN 抑制に関係なく常に HIGH として計上し --strict exit へ寄与させる。 これを怠ると
+  #   --high-j < EARS_COND_J の運用で ears pair の HIGH 帯 ([high-j, EARS_COND_J)) が eff_warn に gate されて
+  #   exit から消える fail-open が起きる (実弾: undeclared ears J=0.59 を --strict --high-j 0.50 で exit=0 転落)。
+  #   field-aware は advisory な WARN 表示の抑制のみに作用し、 HIGH 検出 (gate) を弱めない。
+  is_high=0
+  ge "$J" "$HIGH_J" && is_high=1
+  # undeclared WARN 表示閾値 = J>=有効閾値 (C は文脈併記・判定外。 §header の理由)。
+  # field-aware (folio-nsa): どちらかの label が EARS condition (定型 trigger 句) なら WARN 表示閾値を EARS_COND_J へ
+  #   *引き上げる*。 ★max セマンティクス: EARS_COND_J >= WARN_J のときのみ置換 (--warn-j を EARS_COND_J 超で override
+  #   した際に ears だけ低閾値=敏感化して「抑制」intent が反転するのを防ぐ・常に WARN_J 以上を保証)。
+  #   ★片側発火 (SHOULD-2): どちらか一方でも ears.condition なら適用ゆえ、 ears と対になる非 ears field も
+  #   [WARN_J,EARS_COND_J) 帯で WARN 表示が抑制される (ears 重複だけでなく ears-vs-非ears ペアも対象)。
+  eff_warn="$WARN_J"
+  if [[ "$labelA" == *ears.condition* || "$labelB" == *ears.condition* ]] && ge "$EARS_COND_J" "$WARN_J"; then
+    eff_warn="$EARS_COND_J"
+  fi
+  # HIGH は無条件計上 (gate)、 WARN-only 帯 [eff_warn, HIGH_J) は field-aware で抑制されうる (advisory)。
+  if [[ "$is_high" -eq 1 ]] || ge "$J" "$eff_warn"; then
     n_warn=$((n_warn+1))
     sev="DUP"
-    if ge "$J" "$HIGH_J"; then sev="HIGH"; n_high=$((n_high+1)); fi
+    if [[ "$is_high" -eq 1 ]]; then sev="HIGH"; n_high=$((n_high+1)); fi
     WARN_LINES+=("  [$sev]  $docA:$labelA ⇔ $docB:$labelB   J=$J C=$C   (undeclared)")
     WARN_LINES+=("         A: $headA")
     WARN_LINES+=("         B: $headB")
@@ -353,21 +400,33 @@ if [[ "${#UNKNOWN_PACKS[@]}" -gt 0 ]]; then
   echo "  [WARN] CONTENT_LEAVES 未登録 pack (silent false-negative 源・map 更新要):"
   printf '         - %s\n' "${UNKNOWN_PACKS[@]}"
 fi
+# ★partial-tag footgun (SHOULD-1・folio-nsa errata-1): 同一 filename prefix なのに一部が meta.suite tagged で
+#   一部が untagged (fallback) の doc 群を fail-loud WARN。 「一部だけ tag し忘れて意図せず suite が割れる」事故を
+#   可視化 (全 explicit で値のみ異なるのは意図的分離 = FP fix の正用途ゆえ検出対象外)。
+PARTIAL_TAG=()
+for fpfx in "${!FPFX_TAGGED[@]}"; do
+  [[ -n "${FPFX_UNTAGGED[$fpfx]:-}" ]] && PARTIAL_TAG+=("$fpfx")
+done
+if [[ "${#PARTIAL_TAG[@]}" -gt 0 ]]; then
+  echo "  [WARN] partial meta.suite tagging (同一 filename prefix で tagged/untagged 混在・意図せぬ suite 分割の疑い):"
+  printf '         - prefix=%s (一部 meta.suite 有・一部 fallback — 全 doc に付けるか全て外す)\n' "${PARTIAL_TAG[@]}"
+fi
 if [[ "${#WARN_LINES[@]}" -gt 0 ]]; then
   printf '%s\n' "${WARN_LINES[@]}"
 else
   echo "  (undeclared 字句重複なし)"
 fi
-if [[ "$SHOW_DECLARED" -eq 1 && "${#DECL_LINES[@]}" -gt 0 ]]; then
-  echo "  --- declared echoes (cross_doc graph で説明済・非フラグ) ---"
-  printf '%s\n' "${DECL_LINES[@]}"
+if [[ "$SHOW_DECLARED" -eq 1 && "${#DECL_SORT[@]}" -gt 0 ]]; then
+  echo "  --- declared echoes (J 降順・cross_doc graph で説明済・非フラグ) ---"
+  printf '%s\n' "${DECL_SORT[@]}" | LC_ALL=C sort -t$'\t' -k1,1 -rn | cut -f2-
 fi
 echo "  ----"
-printf '  undeclared 重複=%d (うち HIGH=%d) / declared echo=%d / 比較ペア候補=%d\n' \
-  "$n_warn" "$n_high" "$n_declared" "$n_pairs"
+printf '  undeclared 重複=%d (うち HIGH=%d) / declared echo=%d [J=1.0:%d / HIGH:%d / WARN帯:%d / 弱:%d] / 比較ペア候補=%d\n' \
+  "$n_warn" "$n_high" "$n_declared" "$n_decl_exact" "$n_decl_high" "$n_decl_warn" "$n_decl_low" "$n_pairs"
 echo "  RESULT: ADVISORY — undeclared 字句重複 ${n_warn} 件 (0 件 = 字句重複なし)"
 echo "  NOTE: 重複検出は判断材料。 clean ≠ doc-type が適切の証明 (engine「floor 緑 ≠ 完成」)。"
-echo "        doc-type 要否の最終判断は人間 (ceiling・事後)。 検出条件は J(4-gram Jaccard)>=${WARN_J} の一点ゆえ、"
+echo "        doc-type 要否の最終判断は人間 (ceiling・事後)。 検出条件は J(4-gram Jaccard)>=${WARN_J} を基準とし"
+echo "        (EARS condition 定型句を含むペアは field-aware に J>=${EARS_COND_J} へ引上げ)、"
 echo "        意味を保った中程度 restatement (J 低) や語入替 paraphrase は構造上見逃す (header の limitation 参照)。"
 echo "        declared echo は doc-pair 粒度で抑制ゆえ edge が説明しない逐語重複も非表示 (--show-declared で確認)。"
 echo "  CEILING=HUMAN-JUDGMENT (この lint は必要性を判断しない)"
