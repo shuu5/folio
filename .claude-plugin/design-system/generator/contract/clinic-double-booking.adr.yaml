@@ -72,7 +72,7 @@ drivers:
 # 03 検討した選択肢 (options = exploration role)。 verdict ∈ {chosen, rejected, deferred}。
 options:
   - id: OPT1
-    name: 楽観的な確定 (確定時に残数を条件付きで 1 だけ減らす)
+    name: 楽観的な確定 = 楽観ロック (確定時に残数を条件付きで 1 だけ減らす)
     summary: 申込の確定処理で「残数が 1 以上のときだけ残数を 1 減らす」という条件付きの更新を一回で行う。 成功すれば確定、 残数 0 で失敗すれば満枠。
     pros:
       - 確認と確定が一つの操作になり、 割り込みの隙が無い (二重予約が構造的に 0)
@@ -97,7 +97,7 @@ options:
       - 同じ枠への申込が原理的に同時実行されず、 二重予約は起きない
     cons:
       - 人気の枠に待ち行列が集中し (ホットスポット)、 応答が遅れる
-      - キュー基盤の運用が増え、 最小構成 (rule-of-three の経済性) から外れる
+      - キュー基盤の運用が増え、 最小構成 (部品をむやみに増やさない) から外れる
     verdict: rejected
 
 # 04 採用した判断 (decision = claim role)。 ★justifies = cross-doc 照会 edge。
@@ -110,10 +110,10 @@ decision:
   justifies:
     - req: FR2
       role: claim
-      note: 「その枠を 1 件だけ確保して予約を確定する」= 条件付き残数更新の成功side。 本判断が FR2 の実現方式を与える。
+      note: 「その枠を 1 件だけ確保して予約を確定する」= 条件付き残数更新が成功した側。 本判断が FR2 の実現方式を与える。
     - req: FR3
       role: claim
-      note: 「満枠として断る」= 条件付き更新が残数 0 で失敗した side。 本判断が FR3 の発火条件を構造的に保証する。
+      note: 「満枠として断る」= 条件付き更新が残数 0 で失敗した側。 本判断が FR3 の発火条件を構造的に保証する。
 
 # 05 結果 (consequences = 判断の帰結。 positive / negative 両軸)
 consequences:
