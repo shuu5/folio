@@ -1,0 +1,29 @@
+schema_version: "0.1"
+req_id: "REQ-VER-013"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の gate (s) spec-contract-pairing (folio-yjap SSoT-first authoring bridge gate) の
+  clean 側 (violation-detection の対)。 folio-self-host root で、 新規 spec が対応 generator contract を
+  持つ (SSoT-first 適合) か既存 file が grandfather manifest に載る場合、 gate が [OK] で exit 0 を返す
+  ことを実証する。 fixture は mini-repo:
+    - design-intent/spec/generated-spec.html : manifest 外だが folio-generated-spec.spec.yaml 実在 → OK
+    - design-intent/spec/grandfathered.html  : fixture manifest 登録済 → 免除
+    - .claude-plugin/design-system/generator/spec-grandfather.manifest : grandfathered のみ列挙
+    - .claude-plugin/design-system/generator/contract/folio-generated-spec.spec.yaml : 対応 contract
+  fixture spec は JSON-LD 無しゆえ他 gate は skip。 conformance は golden byte-exact diff
+  (capture:stdout, compare:text)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/spec-contract-pairing-clean/design-intent"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/spec-contract-pairing-clean.golden.txt"
+
+expect:
+  exit_code: 0                                           # clean (contract 実在 or grandfathered)
+
+# === 実装メモ (folio-yjap) ===
+# spec-contract-pairing-violation.yaml (exit 1) と対を成す。 gate は folio-self-host root
+# (sibling generator に manifest+contract 実在) で発火し、 SSoT-first 適合 (対応 contract 実在) と
+# grandfathered の双方を免除する。 golden は ./runner.sh --accept で generate → review → commit。

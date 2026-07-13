@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-VER-013"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio validate の gate (s) spec-contract-pairing (folio-yjap SSoT-first authoring bridge gate) が、
+  folio-self-host root (root の sibling generator に spec-grandfather.manifest + contract/ が実在) に対し
+  「grandfather manifest 外 + 対応 contract 無し」の新規 spec を violation として検出し exit 1 を返すことを
+  実証する (ADR-0050/0051 の暫定橋渡し gate)。 fixture は mini-repo:
+    - design-intent/spec/orphan-spec.html   : manifest 外 + folio-orphan-spec.*.yaml 無し → violation
+    - design-intent/spec/grandfathered.html : fixture manifest 登録済 → 免除 (共存を実証)
+    - .claude-plugin/design-system/generator/spec-grandfather.manifest : grandfathered のみ列挙
+    - .claude-plugin/design-system/generator/contract/                 : 空 (orphan の contract 不在)
+  fixture spec は JSON-LD 無しゆえ他 gate は skip、 本 gate のみが発火する = 単一 gate の isolation。
+  検査 root override (--root) で fixtures を汚染なく検査 (ADR-0020 §2.3)。 conformance は golden
+  byte-exact diff (capture:stdout, compare:text)。
+
+# --- cli-golden scenario (stdout capture 版、 verification.html §3.2) ---
+command: ["validate", "--root", "tests/fixtures/spec-contract-pairing-violation/design-intent"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/spec-contract-pairing-violation.golden.txt"
+
+expect:
+  exit_code: 1                                           # violation 検出 (0=clean / 2=tool error)
+
+# === 実装メモ (folio-yjap) ===
+# spec-contract-pairing-clean.yaml (exit 0) と対を成す violation-detection scenario。 gate は root の
+# sibling generator (<root>/../.claude-plugin/design-system/generator/) を root-relative 解決し、
+# manifest+contract が実在する root (= folio-self-host、 本 fixture が模す) でのみ発火する。 実 corpus
+# (validate-clean) は全 grandfather ゆえ非発火。 golden は ./runner.sh --accept で generate → review → commit。

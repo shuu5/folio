@@ -1813,6 +1813,7 @@ folio_cmd_validate() {
   local vocab_fail=0 delta_fail=0 ears_warn=0 da_fail=0 render_safety_fail=0
   local floor_fail=0 floor_warn=0   # gate (q) readability-floor (REQ-VER-023、 ADR-0039 §2.7 / P-14)
   local how_warn=0 how_fail=0 how_seen=0   # gate (r) HOW-outside content gate (floor-2=block ADR-0047 / floor-1=warn、 engine 設計 §10 論点⑤⑦ / P-3/P-11/P-13、 scope=spec_path)
+  local contract_seen=0 contract_fail=0   # gate (s) spec-contract-pairing (folio-yjap SSoT-first authoring bridge gate、 folio-self-host root のみ発火 = <root>/../.claude-plugin/design-system/generator/ の manifest+contract 実在で seen)
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
@@ -2179,6 +2180,43 @@ folio_cmd_validate() {
     fi
   done
 
+  # --- gate (s) spec-contract-pairing (folio-yjap: SSoT-first authoring bridge gate) ---
+  #   新規 spec (design-intent/spec/*.html で grandfather manifest に無い file) は SSoT-first =
+  #   generator contract (contract/folio-<basename>.*.yaml) の実在を必須とする (無ければ violation = exit 1)。
+  #   ★scope = folio-self-host root のみ: manifest + contract dir を root の sibling generator
+  #   (<root>/../.claude-plugin/design-system/generator/) へ root-relative 解決し、 それが無い root
+  #   (consumer の design-intent / 一般 fixture) では contract_seen=0 = 発火せず報告行も出さない
+  #   (folio 内部 authoring policy ゆえ非該当 root では構造的 N/A。 24 fixture golden の churn も回避)。
+  #   決定は純計算トークンから導出 (manifest 完全行一致 membership + contract glob 存在、 CC-01 injection 則)。
+  #   manifest = 正の allowlist (現行 spec/ 全 file の明示列挙・SKIP 例外配布でない = 3d23 則)。
+  local sc_gen_dir sc_manifest sc_contract_dir
+  sc_gen_dir=$(realpath -m "${root_abs}/../.claude-plugin/design-system/generator")
+  sc_manifest="${sc_gen_dir}/spec-grandfather.manifest"
+  sc_contract_dir="${sc_gen_dir}/contract"
+  if [[ -f "$sc_manifest" && -d "$sc_contract_dir" ]]; then
+    contract_seen=1
+    # grandfather allowlist (# コメント + 空行除去・行前後 trim)。 完全行一致 (grep -qxF) で membership 判定。
+    local sc_allow
+    sc_allow=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//' "$sc_manifest" | grep -v '^$' || true)
+    local sc_f sc_rel sc_base sc_hit sc_c
+    while IFS= read -r sc_f; do
+      [[ -z "$sc_f" ]] && continue
+      sc_rel=$(realpath -m --relative-to="$root_abs" "$sc_f")     # 例 spec/rules.html (決定的・root 相対)
+      # grandfathered (manifest に完全行一致) なら contract 不要
+      printf '%s\n' "$sc_allow" | grep -qxF "$sc_rel" && continue
+      # 新規 file → 対応 contract folio-<basename>.*.yaml の実在を要求 (nullglob 非依存の for-glob 存在判定)
+      sc_base=$(basename "$sc_f" .html)
+      sc_hit=0
+      for sc_c in "${sc_contract_dir}/folio-${sc_base}."*.yaml; do
+        [[ -e "$sc_c" ]] && { sc_hit=1; break; }
+      done
+      if [[ "$sc_hit" -eq 0 ]]; then
+        violations+=("${sc_rel}"$'\t'"[spec-contract-pairing] 新規 spec は SSoT-first: 対応 contract (design-system/generator/contract/folio-${sc_base}.*.yaml) が無い (手書き新設は contract 同時更新 + grandfather manifest 登録が必要、 folio-yjap)")
+        contract_fail=1
+      fi
+    done < <(find "${root_abs}/spec" -maxdepth 1 -type f -name '*.html' 2>/dev/null | LC_ALL=C sort)
+  fi
+
   # --- report (stdout、 決定的: counts + per-gate status + sort 済 violation 列) ---
   printf 'folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)\n'
   printf 'root: %s\n' "$root"
@@ -2215,6 +2253,12 @@ folio_cmd_validate() {
   if [[ "$how_seen" -eq 0 ]]; then printf '  [SKIP] how-outside (spec/ doc 無し = scope=spec_path)\n'
   elif [[ "$how_fail" -eq 1 ]]; then printf '  [FAIL] how-outside\n'
   elif [[ "$how_warn" -eq 1 ]]; then printf '  [WARN] how-outside\n'; else printf '  [OK] how-outside\n'; fi
+  # gate (s) spec-contract-pairing (folio-yjap): folio-self-host root のみ報告する (contract_seen=0 =
+  # 非該当 root は行を出さない = 既存 24 fixture golden の churn 回避 + 構造的 N/A の明示)。 header (上の
+  # printf 'folio validate — …') は無条件出力ゆえ触らない (gate 名の header 追記は全 golden churn を招く)。
+  if [[ "$contract_seen" -eq 1 ]]; then
+    if [[ "$contract_fail" -eq 1 ]]; then printf '  [FAIL] spec-contract-pairing\n'; else printf '  [OK] spec-contract-pairing\n'; fi
+  fi
 
   # warn channel (REQ-CI-014 EARS-coverage は warn = exit code 非影響、 §10.2 warn 設計)
   if [[ ${#warnings[@]} -gt 0 ]]; then

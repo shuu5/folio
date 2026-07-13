@@ -19,6 +19,7 @@
 ## 3. 編集可 (ブラッシュアップ対象)
 
 - **`design-intent/spec/` 配下** — `rules.html` / `folio-self-spec.html` / `relations.html` / `verification.html` / `README.html` は試作の進行に応じて自由に改訂する (constitution は除く、 §2)。
+  - **新規 spec は SSoT-first** (folio-yjap / ADR-0050/0051): contract (`.claude-plugin/design-system/generator/contract/folio-<name>.*.yaml`) を書いて生成する。 手書きで新設する場合は contract 同時更新 **+** `spec-grandfather.manifest` 登録が `folio validate` の gate (s) spec-contract-pairing で強制される (欠けば exit 1)。 命名 mapping と再生成手順は generator README 参照。
 - **`design-intent/research/` 配下** — user 要望 + 業界調査の集約 (exploration domain)、 自由形式 HTML。
 - **`tests/` 配下 (repo-root sibling)** — Phase X3 sandbox verification framework (scenarios / fixtures / baselines / e2e / runner.sh)、 ADR-0013 + verification.html (X4-F/ADR-0026 で `verification/` から rename、 spec 名 verification.html は不変)。 executable HOW のため `design-intent/` の外 (P-3 / P-11 / P-13)。
 - **`hooks/` 配下 (plugin root 直下)** — Claude Code 公式仕様で hooks/ は plugin root 直下 MUST、 `hooks/hooks.json` で hook 宣言 (Phase 2.5 移動済)。

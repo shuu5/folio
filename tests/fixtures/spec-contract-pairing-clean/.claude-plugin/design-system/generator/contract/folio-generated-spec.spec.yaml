@@ -1,0 +1,4 @@
+# fixture contract (spec-contract-pairing clean 検証用・存在確認のみが gate の対象)
+meta:
+  doc_type: rules
+  title: generated spec (fixture)

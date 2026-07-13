@@ -1,0 +1,2 @@
+# 空 contract dir を git に保持するための placeholder (spec-contract-pairing violation fixture)。
+# gate は contract dir の実在 + folio-orphan-spec.*.yaml の不在を確認する = 本 dir は意図的に対応 contract を欠く。

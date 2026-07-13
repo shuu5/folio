@@ -19,5 +19,6 @@ files checked: 59 · relations checked: 568
   [OK] render-safety
   [OK] readability-floor
   [OK] how-outside
+  [OK] spec-contract-pairing
 
 clean: 0 violations

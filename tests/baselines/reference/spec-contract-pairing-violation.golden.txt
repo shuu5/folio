@@ -1,0 +1,28 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/spec-contract-pairing-violation/design-intent
+files checked: 0 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [WARN] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [OK] readability-floor
+  [SKIP] how-outside (spec/ doc 無し = scope=spec_path)
+  [FAIL] spec-contract-pairing
+
+warnings (1):
+  spec/ [cluster-reachability] cluster dir exists but has 0 nav-reachable docs (empty cluster = regen-drift blind spot、 ADR-0035 §2.5)
+
+violations (1):
+  spec/orphan-spec.html [spec-contract-pairing] 新規 spec は SSoT-first: 対応 contract (design-system/generator/contract/folio-orphan-spec.*.yaml) が無い (手書き新設は contract 同時更新 + grandfather manifest 登録が必要、 folio-yjap)

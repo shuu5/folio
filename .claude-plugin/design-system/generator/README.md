@@ -31,6 +31,30 @@ prose.yaml ───────────────────────
   - rationale は **rationale_source(id 接地)のみが SSoT で散文は opus 生成**ゆえ、 fidelity ceiling(S5)の主対象になる。
   - **★self-host pack (dual-audience) の cover-summary framing** (folio-sm8 errata) — 機械層 (`data-audience="machine"`) を持つ pack (rules / verification / relations 等の folio 自己 self-host 系) の生成物は、 原本の機械層を **機械層 fold に逐語保持** する (原本↔生成物 双方向 round-trip を floor が enforce)。 したがって cover-summary / chapter-lead に **「機械向けの詳細は元の *.html を参照」型の文言を書いてはならない** (生成物は人間向け抜粋ではなく dual-audience の完全再生成であり、 読者を原本へ誤誘導する = gate J fidelity finding)。 正しい framing = 「本ページは元の *.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます」 (★fold は 2 種で所在が違う・章ごと fold は machine_blocks 0 件の章では emit されないため「各章」型の全称は書かない = folio-sm8 ceiling round-1 の minor)。 inline 照会も機械層 fold 内に生存するため「元を参照」でなく「fold を開く」と案内する。 ★機械層を持たない pack (clinic-* / ec-* 等の contract 先行 pack) には原本自体が無いので、 そもそも原本参照の文言を書かない。
 
+## folio self-spec の SSoT-first authoring + contract 命名 mapping (folio-yjap / ADR-0050/0051)
+
+folio 自身の `design-intent/spec/*.html` は **SSoT-first** で著作する — 正本 (edit-SSoT) は generator contract
+(`contract/folio-<name>.*.yaml`)、 `*.html` はその生成物 (canonical WHAT・提示層)。 正式発効は graph emit
+keystone (bd folio-u7y2) 完成後。 それまでの **暫定橋渡し gate** (即時発効) = 手書きで spec を新設する場合は
+contract 同時更新を必須化する。
+
+- **命名 mapping 規約**: `design-intent/spec/<name>.html` ↔ `contract/folio-<name>.*.yaml` (doctype 接尾は
+  pack 種別で決まる: rules→`.spec.yaml` / constitution→`.principle.yaml` / vision→`.vision.yaml` 等)。 gate は
+  basename `<name>` で `folio-<name>.*.yaml` の実在を照合する (doctype 接尾は問わない = pack 種別非依存)。 例:
+  `spec/rules.html` ↔ `contract/folio-rules.spec.yaml` / `spec/constitution.html` ↔ `contract/folio-constitution.principle.yaml`。
+- **暫定橋渡し gate = `bin/folio validate` の gate (s) spec-contract-pairing**: root の sibling generator
+  (`<root>/../.claude-plugin/design-system/generator/`) に `spec-grandfather.manifest` + `contract/` が実在する
+  **folio-self-host root** でのみ発火する (consumer の design-intent / 一般 fixture は sibling を欠くため非発火 =
+  構造的 N/A)。 `spec/*.html` のうち **grandfather manifest に無い新規 file** は対応 contract の実在を必須とし、 無ければ
+  violation (exit 1)。 決定は純計算トークン (manifest 完全行一致 membership + contract glob 存在) から導出する
+  (data 補間出力の grep でない = CC-01 injection 則)。
+- **`spec-grandfather.manifest` = 唯一の allowlist**: 暫定 gate 発効前からの手書き spec を「正の列挙」で載せる
+  (SKIP 例外配布でない = 3d23 則)。 内容は git 実体から機械列挙して生成する (手書き転記しない):
+  `git ls-files 'design-intent/spec/*.html' | sed 's#^design-intent/##'` (header comment は保持)。 新規 spec を
+  正当に手書き新設するときは contract 同時更新 **+** 本 manifest への登録 (どちらも欠けば gate が exit 1)。
+- **sandbox 検証**: `tests/scenarios/spec-contract-pairing-{violation,clean}.yaml` (mini-repo fixture で両面)。 実
+  corpus は全 grandfather ゆえ `validate-clean` で `[OK] spec-contract-pairing` (非発火)。
+
 ## ADR-pack = instance#2 (folio engine B1 / folio-bwc / rule-of-three)
 
 SRS generator の機構を **別 doc-type (ADR / 設計判断記録)** へ適用した二例目。 狙い = SRS-pack ∩ ADR-pack の

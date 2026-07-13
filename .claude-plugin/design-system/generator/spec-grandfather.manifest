@@ -1,0 +1,18 @@
+# spec-grandfather.manifest — folio-yjap SSoT-first authoring bridge gate の唯一の allowlist
+#
+# 目的: bin/folio validate の gate (s) spec-contract-pairing が参照する grandfather 台帳。
+#   ここに列挙された design-intent/spec 配下の既存 file は「暫定橋渡し gate 発効前からの手書き資産」
+#   として contract 不要 (grandfathered)。 ここに無い *.html を spec/ に新設した場合、 SSoT-first =
+#   対応する generator contract (contract/folio-<basename>.*.yaml) の実在を validate が必須化する
+#   (無ければ exit 1)。 新規 file を正当に手書き新設する場合は contract 同時更新 + 本 manifest への登録。
+#
+# 正の列挙 (SKIP 例外配布でない・3d23 則): 各行は root(design-intent) 相対 path の完全一致で照合される。
+#   `#` 以降はコメント・空行は無視。 内容は git 実体から機械列挙して生成する (手書き転記しない)。
+#   再生成: git ls-files 'design-intent/spec/*.html' | sed 's#^design-intent/##' (この header は保持)。
+spec/README.html
+spec/constitution.html
+spec/folio-self-spec.html
+spec/relations.html
+spec/rules.html
+spec/srs-verification.html
+spec/verification.html
