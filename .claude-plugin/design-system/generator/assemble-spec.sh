@@ -222,6 +222,7 @@ emit_head() {
   printf '\n</style>\n'
   # 図 (mermaid) がある doc にだけ vendor を head に1回 load (defer・図ゼロなら何も出さない)。 ../assets/mermaid.min.js を参照。
   [[ "${HAS_MERMAID:-0}" -gt 0 ]] && printf '<script src="../assets/mermaid.min.js" defer></script>\n'
+  core_emit_graph_head
   printf '</head>\n<body>\n'
 }
 

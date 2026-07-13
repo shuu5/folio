@@ -73,7 +73,9 @@ emit_head() {
   printf '<meta name="generator" content="folio S4 assembler (ADR-0042) — deterministic structure, prose slots unfilled">\n'
   printf '<title>%s</title>\n<style>\n' "$(esc "$1")"
   cat "$CSS"
-  printf '\n</style>\n</head>\n<body>\n'
+  printf '\n</style>\n'
+  core_emit_graph_head
+  printf '</head>\n<body>\n'
 }
 
 emit_cover() {

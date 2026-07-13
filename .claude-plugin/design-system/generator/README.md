@@ -330,6 +330,33 @@ per-pack verify が建物の各部屋の配線を見るのに対し、 こちら
 ./verify-graph.sh --contract-dir /tmp/x/contract --rolemap-dir /tmp/x/rolemap   # 別 corpus を指定 (tamper test 等)
 ```
 
+## spec-graph JSON-LD emit (head 前方関係 + folio:chrome) — keystone (folio-u7y2 / 8dkl 前提)
+
+verify-graph の照会 graph が **抽象ロール graph** (rolemap・contract の `graph:` block・reachability) を扱うのに対し、 これは生成 page を **inventory/validate/fix が走る spec-graph** (design-intent 正典 head と同じ `<head>` JSON-LD 系) に参加させる層。 動機 = `folio validate` は **JSON-LD 無しファイルを silent skip する** (vacuous-green 罠) ため、 emit 無き生成物を canonical spec に in-place 差替すると gate が消灯する。 生成 page が head JSON-LD を持って初めて inventory/validate/fix の走査対象になる。
+
+### contract schema: `head_graph:` block (前方関係 + @id、 opt-in)
+
+contract に `head_graph:` を宣言した pack だけが head JSON-LD を emit する (無宣言の contract は 1 バイトも変わらない = 既存 pack 非回帰・後方互換)。 前方関係の SSoT は contract 側 (doc 固有の事実は SSoT に属す)。
+
+```yaml
+head_graph:
+  id: ./clinic-appointment.srs.html      # この doc の @id (scan corpus 内の root 相対 path・必須)
+  type: schema:TechArticle               # 省略時 schema:TechArticle
+  part_of:    [./README.html]            # dc:isPartOf   (親 cluster 等)
+  references: [./clinic-appointment.srs.html#FR2]   # dc:references (前方照会・#anchor 可)
+  depends_on: [./clinic-appointment.datamodel.html] # folio:depends-on
+  extends:    [./folio-self-spec.html]   # folio:extends
+```
+
+- 生成物の `<head>` へ `core_emit_graph_head` (`lib/common.sh`) が **(a) folio-* meta** (`folio-doc-type`/`folio-status`/`folio-version` = `.meta.doc_type`/`.meta.status`/`.meta.version` 由来・inventory entry の source) と **(b) `@context` 付き JSON-LD `<script>`** (上記前方関係 + `dc:title`/`folio:version`/`folio:stakeholders`) を emit する。 JSON-LD は `jq --indent 2` で整形し、 `folio_materialize_reverse` の awk anchor (行頭 `"@type":` / 行末 `"key": [`) と byte 同形にする (= `folio fix` が reverse を native に挿せる)。
+- **逆グラフ (`dc:isReferencedBy` / `folio:depended-by`) は emit しない**。 導出物を per-doc SSoT に置くと他 doc 増減で drift するため、 `bin/folio fix` が corpus 走査で毎回導出・注入する (ADR-0025 §2 / 分担裁定)。 forward だけ持つ生成物は `folio fix` 後に双方向化される。
+- **glossary assembler は非配線 (意図的除外)**: `assemble-glossary.sh` は emit_head で独自の `schema:DefinedTermSet` JSON-LD (`@type=DefinedTermSet`・用語集 index) を既に emit しており、 `folio_extract_head_jsonld` は head 内の *最初の* `application/ld+json` block を採るため、 `core_emit_graph_head` を重ねると 2 block が競合する。 glossary は生成 index/glossary と同じく chrome を inline 所有する索引 doc で `folio_chrome_targets` の対象外でもある。 将来 glossary を graph 参加させる場合は DefinedTermSet block に前方関係を統合する別経路が要る (単純配線では silent no-op になる latent 罠ゆえ本節に明記)。
+- **chrome (folio:chrome) 共存**: head JSON-LD を持つ生成 page は `folio_chrome_targets` の一員になり、 `folio build` の chrome 機構 (`folio_chrome_render_doc`・ADR-0039 §2.3) が breadcrumb/skip-link/TOC を `<body>` 直後・最初の `</header>` 直後・`</body>` 直前へ注入・維持する。 deck 帯 (`doc-cover-band`) は body 提示層としてそのまま **共存** し、 chrome (移動する機構の層) に置換されない (grill F7 裁定)。 marker は build 注入で carry される (assembler は head JSON-LD で参加資格を与え、 chrome 実体は corpus 依存ゆえ build が所有)。
+
+### 検証 (per-shape mutation-kill・4 class)
+
+肯定実証 = 生成 page を scan 配下に置き `folio inventory`/`validate` が **実際に拾う** (emit 存在でなく scan 到達)。 敵対 pin = **emit 欠落** (head_graph 無し → inventory silent-skip = vacuous-green) / **JSON-LD 改竄** (→ `validate [FAIL] jsonld structural` + inventory WARN-skip) / **chrome marker 欠落** (→ `build --check` drift) / **逆グラフ drift** (→ `validate [FAIL] broken-reverse`) の 4 class。 これらは既存 gate (jsonld-structural / chrome-drift / broken-reverse) を生成 page 上で発火させて参加を実証する。
+
 ## cross-doc content 重複検出 lint (folio-c5r.1 / yzv 決定④)
 
 verify-graph が「照会 graph が終端まで繋がるか (構造)」を見るのに対し、 これは「別 doc-type が **同じ内容を字句重複**していないか (内容)」を suite 内で機械検出し、 **doc-type 要否の判断材料を可視化する** advisory lint。 canonical デモ (folio-c5r.2) = clinic に constitution を *あえて* ゼロ生成すると、 その principle が SRS goals を restate した字句重複が検出され、 人間が「この project に constitution は不要」と判断する流れを実証する。

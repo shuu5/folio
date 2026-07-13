@@ -197,7 +197,9 @@ emit_head() {
   printf '<title>%s</title>\n<style>\n' "$(esc "$1")"
   cat "$CSS"
   emit_principle_css
-  printf '\n</style>\n</head>\n<body>\n'
+  printf '\n</style>\n'
+  core_emit_graph_head
+  printf '</head>\n<body>\n'
 }
 
 # 各 tier の件数を決定的に算出 (cover-meta 内訳・verify と二重保守)。

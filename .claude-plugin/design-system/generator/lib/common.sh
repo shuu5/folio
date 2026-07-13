@@ -96,6 +96,66 @@ core_validate_glossary_substring() {
   return $rc
 }
 
+# ---- spec-graph head emit (folio-u7y2 keystone・ADR-0004 JSON-LD + ADR-0025 逆グラフ) ----
+# 生成 page を spec graph の参加者にする head 層。 contract の head_graph block (@id + 前方関係) と
+# meta (doc_type/status/version/stakeholders) から <head> へ:
+#   (a) folio-* meta tag (inventory entry の doc-type/status/version source)
+#   (b) @context 付き JSON-LD <script> (前方関係 dc:isPartOf / dc:references / folio:depends-on /
+#       folio:extends + dc:title / folio:version / folio:stakeholders)
+# を emit する。 head_graph block が無い contract では 1 バイトも出さない (conditional emit =
+# 既存 pack 非回帰・後方互換。 head 変更は head_graph を宣言した contract にのみ及ぶ)。
+# 逆グラフ (dc:isReferencedBy / folio:depended-by) は per-doc SSoT に持たず folio fix が corpus
+# 走査で毎回導出・注入する (導出物を SSoT に置かない = drift 源を作らない、 ADR-0025 §2 / 分担裁定)。
+# JSON-LD は jq で組み立てる: 値 escape を保証しつつ、 folio_materialize_reverse の awk anchor
+# (行頭 "@type": / 行末 "key": [) と byte 同形の 2-space 整形を得る (= fix が reverse を native に
+# 挿せる・design-intent 正典 head と同形)。 前提: $CONTRACT 設定済 + common.sh source 済 (q/esc)。
+core_emit_graph_head() {
+  [[ "$(yq -r 'has("head_graph")' "$CONTRACT" 2>/dev/null)" == "true" ]] || return 0
+  local gid; gid="$(q '.head_graph.id // ""')"
+  [[ -n "$gid" && "$gid" != "null" ]] || { echo "core_emit_graph_head: head_graph.id が空 (fail-closed、 @id 無き graph 参加は不可)" >&2; return 1; }
+
+  # (a) folio-* meta (SHOULD、 値が無ければ tag ごと省略)
+  local dtype status ver
+  dtype="$(q '.meta.doc_type // .doc_type // ""')"
+  status="$(q '.meta.status // .status // .head_graph.status // ""')"
+  ver="$(q '.meta.version // ""')"
+  [[ -n "$dtype"  && "$dtype"  != "null" ]] && printf '<meta name="folio-doc-type" content="%s">\n' "$(esc "$dtype")"
+  [[ -n "$status" && "$status" != "null" ]] && printf '<meta name="folio-status" content="%s">\n' "$(esc "$status")"
+  [[ -n "$ver"    && "$ver"    != "null" ]] && printf '<meta name="folio-version" content="%s">\n' "$(esc "$ver")"
+
+  # (b) @context 付き JSON-LD (yq で raw 抽出 → jq で組立・escape・2-space 整形)。
+  #     forward 関係は null (未宣言) も空 list [] も key ごと省略 (length>0 判定 = 空関係を空配列で
+  #     emit しない・inventory 側 length>0 filter と対称)。 reverse は emit しない (fix 導出)。
+  #     jq 出力の文字列値中 '<' を JSON エスケープ '<' に置換してから script ブロックへ挿入する
+  #     (dc:title / folio:stakeholders 等の自由記述値が '</script>' を含むと HTML パーサがそこで
+  #     script 要素を閉じ後続を live markup 化する = script breakout / HTML injection。 assemble-*.sh
+  #     の不変条件『全自由記述値は escape してから注入』を JSON-LD path でも満たす fail-closed)。
+  #     '<' は valid JSON で parse 時 '<' に戻り JSON-LD 意味は不変。 structural 行 (@type / key:[ )
+  #     は '<' を含まないため folio_materialize_reverse の awk anchor byte 形も不変。
+  printf '<script type="application/ld+json">\n'
+  yq -o=json '{
+    "id": .head_graph.id,
+    "type": (.head_graph.type // "schema:TechArticle"),
+    "title": .meta.title,
+    "version": .meta.version,
+    "stakeholders": .meta.stakeholders,
+    "part_of": .head_graph.part_of,
+    "references": .head_graph.references,
+    "depends_on": .head_graph.depends_on,
+    "extends": .head_graph.extends
+  }' "$CONTRACT" | jq --indent 2 '
+    {"@context":{"dc":"http://purl.org/dc/terms/","schema":"https://schema.org/","folio":"https://folio.dev/spec/v1/"},"@id":.id,"@type":.type}
+    + (if (.part_of // [] | length) > 0 then {"dc:isPartOf":[.part_of[]|{"@id":.}]} else {} end)
+    + {"dc:title":.title}
+    + (if .version then {"folio:version":.version} else {} end)
+    + (if (.stakeholders // [] | length) > 0 then {"folio:stakeholders":.stakeholders} else {} end)
+    + (if (.references // [] | length) > 0 then {"dc:references":[.references[]|{"@id":.}]} else {} end)
+    + (if (.depends_on // [] | length) > 0 then {"folio:depends-on":[.depends_on[]|{"@id":.}]} else {} end)
+    + (if (.extends // [] | length) > 0 then {"folio:extends":[.extends[]|{"@id":.}]} else {} end)
+  ' | sed 's/</\\u003c/g'
+  printf '</script>\n'
+}
+
 # ---- chapter band (deck) ----
 CHAPN=0
 band() { # tint kicker heading icon_inner

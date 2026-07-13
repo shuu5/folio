@@ -157,7 +157,9 @@ emit_head() {
   printf '<title>%s</title>\n<style>\n' "$(esc "$1")"
   cat "$CSS"
   emit_testcases_css
-  printf '\n</style>\n</head>\n<body>\n'
+  printf '\n</style>\n'
+  core_emit_graph_head
+  printf '</head>\n<body>\n'
 }
 
 emit_cover() {
