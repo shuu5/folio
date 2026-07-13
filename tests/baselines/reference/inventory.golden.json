@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-12T15:54:54Z",
+  "generatedAt": "2026-07-13T14:47:49Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -733,6 +733,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html",
           "decisions/ADR-0048-design-intent-dir-rename.html",
           "decisions/ADR-0031-mattpocock-authoring-absorption.html"
         ],
@@ -789,6 +790,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "spec/srs-verification.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
@@ -934,6 +936,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "spec/srs-verification.html",
           "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
@@ -1179,6 +1182,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "spec/srs-verification.html",
           "decisions/ADR-0046-architecture-description-pack.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
@@ -1294,6 +1298,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "research/doctype-coverage-audit.html"
         ],
         "dc:references": [
@@ -1346,6 +1351,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html"
+        ],
         "dc:references": [
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0028-prose-gate-mechanization.html",
@@ -1397,6 +1405,56 @@
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0050-dual-audience-enforcement-derive.html",
+      "title": "ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ",
+      "summary": "dual-audience 文書の consistency enforcement を「人間層と機械層を同一 DOM に co-author し二層 enforcement で守る」規律から「人間層は正本 (contract YAML) から derive し、 gate J (fidelity-*) ほか独立 ceiling で照合する」へ再定義する — 1-DOM の形 (data-audience 二層 DOM) は生成物で保存され、 転換されるのは enforcement 実体のみである。 これは",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html"
+        ],
+        "dc:references": [
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "spec/constitution.html#p-10",
+          "spec/constitution.html#p-13"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0051-what-ssot-layer-interpretation.html",
+      "title": "ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈",
+      "summary": "SSoT-first 転換で contract YAML が「正本」になることと、 P-7 (WHAT は design-intent 空間の spec が持つ)・P-2 (spec は HTML)・P-11 (HOW は隔離) の間に見える緊張を、 層解釈で調停する — 生成 HTML = canonical WHAT (提示層・graph の住人) / contract YAML = 正本 (edit-SSoT・生成 input・HOW 層居住) であり、 P-13 の spec適合性/実装適合性二分法と同型の層分離である。 contract の design-intent/ への物理移動は P-2 衝突ゆえ不採用。 語彙を pin する: 「正本 (edit-SSoT)」= contract YAML / 「canonical WHAT (提示層)」= 生成 HTML — folio-rgtc 論点6 の「正本」は P-7 の HTML-WHAT を否定しない。 user 承認 = folio-rgtc grill (2026-07-13) 論点11b(2) で方向確定 + 本 ADR 本文承認。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
+          "decisions/ADR-0026-test-placement-model.html",
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+          "spec/constitution.html#p-2",
+          "spec/constitution.html#p-7",
+          "spec/constitution.html#p-11",
+          "spec/constitution.html#p-13"
         ]
       }
     },
@@ -1854,6 +1912,18 @@
         "class": "decision",
         "ssot": "decisions/ADR-0049-vision-pack.html",
         "essence": "engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3 後。 文書規律エンジンに"
+      },
+      {
+        "id": "ADR-0050",
+        "class": "decision",
+        "ssot": "decisions/ADR-0050-dual-audience-enforcement-derive.html",
+        "essence": "dual-audience 文書の consistency enforcement を「人間層と機械層を同一 DOM に co-author し二層 enforcement で守る」規律から「人間層は正本 (contract YAML) から derive し、 gate J (fidelity-*) ほか独立 ceiling で照合する」へ再定義する — 1-DOM の形 (data-audience 二層 DOM) は生成物で保存され、 転換されるのは enforcement 実体のみである。 これは"
+      },
+      {
+        "id": "ADR-0051",
+        "class": "decision",
+        "ssot": "decisions/ADR-0051-what-ssot-layer-interpretation.html",
+        "essence": "SSoT-first 転換で contract YAML が「正本」になることと、 P-7 (WHAT は design-intent 空間の spec が持つ)・P-2 (spec は HTML)・P-11 (HOW は隔離) の間に見える緊張を、 層解釈で調停する — 生成 HTML = canonical WHAT (提示層・graph の住人) / contract YAML = 正本 (edit-SSoT・生成 input・HOW 層居住) であり、 P-13 の spec適合性/実装適合性二分法と同型の層分離である。 contract の design-intent/ への物理移動は P-2 衝突ゆえ不採用。 語彙を pin する: 「正本 (edit-SSoT)」= contract YAML / 「canonical WHAT (提示層)」= 生成 HTML — folio-rgtc 論点6 の「正本」は P-7 の HTML-WHAT を否定しない。 user 承認 = folio-rgtc grill (2026-07-13) 論点11b(2) で方向確定 + 本 ADR 本文承認。"
       },
       {
         "id": "P-1",

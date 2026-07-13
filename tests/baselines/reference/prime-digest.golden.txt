@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 57 specs · folio 1.2.0
+# 59 specs · folio 1.2.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -232,6 +232,16 @@
 - doc-type: adr · status: accepted
 - summary: engine epic folio-0dv / sub-epic folio-c5r (完全 doc-suite 被覆) の段階3 後。 文書規律エンジンに
 
+## decisions/ADR-0050-dual-audience-enforcement-derive.html
+- title: ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ
+- doc-type: adr · status: accepted
+- summary: dual-audience 文書の consistency enforcement を「人間層と機械層を同一 DOM に co-author し二層 enforcement で守る」規律から「人間層は正本 (contract YAML) から derive し、 gate J (fidelity-*) ほか独立 ceiling で照合する」へ再定義する — 1-DOM の形 (data-audience 二層 DOM) は生成物で保存され、 転換されるのは enforcement 実体のみである。 これは
+
+## decisions/ADR-0051-what-ssot-layer-interpretation.html
+- title: ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈
+- doc-type: adr · status: accepted
+- summary: SSoT-first 転換で contract YAML が「正本」になることと、 P-7 (WHAT は design-intent 空間の spec が持つ)・P-2 (spec は HTML)・P-11 (HOW は隔離) の間に見える緊張を、 層解釈で調停する — 生成 HTML = canonical WHAT (提示層・graph の住人) / contract YAML = 正本 (edit-SSoT・生成 input・HOW 層居住) であり、 P-13 の spec適合性/実装適合性二分法と同型の層分離である。 contract の design-intent/ への物理移動は P-2 衝突ゆえ不採用。 語彙を pin する: 「正本 (edit-SSoT)」= contract YAML / 「canonical WHAT (提示層)」= 生成 HTML — folio-rgtc 論点6 の「正本」は P-7 の HTML-WHAT を否定しない。 user 承認 = folio-rgtc grill (2026-07-13) 論点11b(2) で方向確定 + 本 ADR 本文承認。
+
 ## decisions/README.html
 - title: folio decisions index
 - doc-type: cluster-readme · status: active
@@ -287,7 +297,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 120 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 122 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -330,6 +340,8 @@ ADR-0046 [decision] decisions/ADR-0046-architecture-description-pack.html
 ADR-0047 [decision] decisions/ADR-0047-how-outside-floor2-hard-gate.html
 ADR-0048 [decision] decisions/ADR-0048-design-intent-dir-rename.html
 ADR-0049 [decision] decisions/ADR-0049-vision-pack.html
+ADR-0050 [decision] decisions/ADR-0050-dual-audience-enforcement-derive.html
+ADR-0051 [decision] decisions/ADR-0051-what-ssot-layer-interpretation.html
 P-1 [principle] spec/constitution.html#p-1
 P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11
@@ -411,7 +423,7 @@ REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
 
 # 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
-# 120 nodes · 103 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 122 nodes · 103 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
 # 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs

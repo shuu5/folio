@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.2.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0051">
+<meta name="folio-adr-date" content="2026-07-13">
+<title>ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0051-what-ssot-layer-interpretation.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈",
+  "folio:version": "1.2.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0050-dual-audience-enforcement-derive.html" },
+    { "@id": "./ADR-0026-test-placement-model.html" },
+    { "@id": "./ADR-0047-how-outside-floor2-hard-gate.html" },
+    { "@id": "../spec/constitution.html#p-2" },
+    { "@id": "../spec/constitution.html#p-7" },
+    { "@id": "../spec/constitution.html#p-11" },
+    { "@id": "../spec/constitution.html#p-13" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0051</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-13 &middot; folio v1.2.0 &middot; SSoT-first 転換で contract YAML が「正本」になることと、 P-7 (WHAT は design-intent 空間の spec が持つ)・P-2 (spec は HTML)・P-11 (HOW は隔離) の間に見える緊張を、 層解釈で調停する — 生成 HTML = canonical WHAT (提示層・graph の住人) / contract YAML = 正本 (edit-SSoT・生成 input・HOW 層居住) であり、 P-13 の spec適合性/実装適合性二分法と同型の層分離である。 contract の design-intent/ への物理移動は P-2 衝突ゆえ不採用。 語彙を pin する: 「正本 (edit-SSoT)」= contract YAML / 「canonical WHAT (提示層)」= 生成 HTML — folio-rgtc 論点6 の「正本」は P-7 の HTML-WHAT を否定しない。 user 承認 = folio-rgtc grill (2026-07-13) 論点11b(2) で方向確定 + 本 ADR 本文承認。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-layers">§2.1 層解釈 (canonical WHAT = 提示層 / 正本 = edit-SSoT)</a></li>
+  <li class="toc--sub"><a href="#s2-2-p13">§2.2 P-13 二分法との同型性</a></li>
+  <li class="toc--sub"><a href="#s2-3-vocabulary">§2.3 語彙 pin (監査向けの決定的区別)</a></li>
+  <li class="toc--sub"><a href="#s2-4-no-move">§2.4 物理移動の不採用</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0051</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-07-13</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0050 (dual-audience enforcement 転換 — 本 ADR が調停する「contract YAML = 正本」regime を確立する姉妹 ADR)、 ADR-0026 (P-13 の spec適合性/実装適合性二分法 — 本 ADR の層解釈が同型を主張する原理元)、 ADR-0047 (HOW-outside floor-2 hard gate — contract YAML の HOW 層居住を既に守っている現行秩序)。 規範 = constitution P-2 (HTML format)・P-7 (3-domain content exclusivity)・P-11 (HOW 部分隔離)・P-13 (二分法)。 接地 = bd folio-rgtc (grill 2026-07-13 論点6/11b(2)・監査 F1 pin)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio-rgtc grill (2026-07-13) の論点6 は SSoT の向き = A-where-possible を裁定した: 反転可能な doc-type では <strong>contract YAML を「正本」とし、 HTML は生成物</strong>とする (<a href="./ADR-0050-dual-audience-enforcement-derive.html">ADR-0050</a>)。 この「正本 = YAML」という言い方は、 constitution の三原則と<strong>見かけの緊張</strong>を生む: <strong>P-7</strong> は「WHAT (設計意図) は design-intent 空間の design intent 領域 (spec cluster) が持つ」と定め、 <strong>P-2</strong> は「design-intent 文書は HTML で記述する」と定め、 <strong>P-11</strong> は「HOW (platform 固有 primitives) を本文に直接記述せず implementation harness へ隔離する」と定める (folio ではその harness = <a href="./ADR-0003-plugin-architecture.html">ADR-0003</a> の <code>.claude-plugin/</code>)。 素朴に読むと「正本が YAML になった = WHAT が YAML に移った = P-7 と P-2 に違反し、 しかもその YAML は P-11 の隔離先 harness (<code>.claude-plugin/design-system/generator/contract/</code>) に住んでいる」という誤読が成立してしまう。</p>
+
+<p>この誤読は仮定の話ではなく、 <strong>放置すると監査が恒常的に誤検出する</strong>実害を持つ。 folio の検証体制は独立コンテキストの reviewer (ceiling / spec-review-ssot 等) を多数束ねる方式であり、 各 reviewer は constitution と spec を一次資料として判定する。 「正本」の語が層を区別せずに流通すると、 P-7 違反 (WHAT の越境) という false positive が review のたびに再生産され、 その都度の反駁コストが恒常化する (grill 監査 F1 が pin した放置コスト)。 必要なのは constitution の改訂ではなく、 <strong>「正本」と「canonical WHAT」の層を分離する解釈の明文化</strong>である。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-layers">§2.1 層解釈 (canonical WHAT = 提示層 / 正本 = edit-SSoT)</h3>
+<p>次の層解釈を canonical とする: <strong>生成 HTML = canonical WHAT (提示層)</strong> — 何が真かの canonical な表明であり、 spec graph の住人 (JSON-LD relation の端点) であり、 P-7 が「WHAT の家」と定める場所に住み続け、 P-2 の HTML 要件を満たし続ける。 <strong>contract YAML = 正本 (edit-SSoT)</strong> — その表明を produce するための編集起点 (生成 input) であり、 生成工程 (HOW) の一部として P-11 の隔離先 harness (<code>.claude-plugin/design-system/generator/contract/</code>) に居住する。 両者は同じ内容の二つの顔ではなく、 <strong>役割の異なる二つの層</strong>である: 読む者・照会する者・graph が見るのは提示層 (HTML) であり、 書く者が触るのは edit-SSoT (YAML) である。 P-7 / P-2 は提示層に、 P-11 は edit-SSoT に、 それぞれ矛盾なく適用される。</p>
+
+<h3 id="s2-2-p13">§2.2 P-13 二分法との同型性</h3>
+<p>この層分離は folio が既に持つ原理の再適用である。 <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> (P-13) は検証を「spec 適合性 (framework 提供・普遍) / 実装適合性 (各 stack 慣習・folio 非 mandate)」に二分し、 <strong>「何が真か」の層と「どう作る・確かめるか」の層を分離</strong>した。 本 ADR は同じ二分を WHAT の SSoT に適用する: canonical WHAT (何が真かの表明 = 提示層 HTML) と、 それを produce する工程資材 (edit-SSoT = contract YAML) は別の層であり、 後者が前者の家 (P-7) を侵さない。 <a href="./ADR-0047-how-outside-floor2-hard-gate.html">ADR-0047</a> の HOW-outside gate が contract YAML の <code>.claude-plugin/</code> 居住を現に守っていることは、 この解釈が現行秩序と一致している傍証である。</p>
+
+<h3 id="s2-3-vocabulary">§2.3 語彙 pin (監査向けの決定的区別)</h3>
+<p>以後の文書・監査・review は次の語彙で層を区別する (grill 監査 F1 の pin): <strong>「正本 (edit-SSoT)」= contract YAML</strong> / <strong>「canonical WHAT (提示層)」= 生成 HTML</strong>。 folio-rgtc 論点6 の裁定文にある「contract YAML = 正本」は edit-SSoT の意味であり、 <strong>P-7 の「WHAT は design intent 領域の HTML が持つ」を否定しない</strong>。 既存 canonical 語「<strong>canonical SSoT</strong>」(= dual-audience 文書の機械層・精密 normative の確立名) はこの pin と両立する — 機械層は canonical WHAT (提示層) の内部にあり続け、 その編集の源が正本 (edit-SSoT) = contract YAML である。 「SSoT」の語は以後、 修飾付き full 形 (canonical SSoT = 提示層の精密 normative / edit-SSoT = 編集の源) で層を明示して用いる (glossary SSoT = vocabulary.yaml の dual-audience 定義への反映は follow-up)。 監査が SSoT-first 転換後の corpus で P-7 違反を判定する際は、 「WHAT の越境」(内容が domain を跨いで重複・矛盾する) と「edit-SSoT の harness 居住」(本 ADR が正当と定める配置) を混同してはならない。</p>
+
+<h3 id="s2-4-no-move">§2.4 物理移動の不採用</h3>
+<p>「正本なのだから design-intent/ に置くべき」という物理移動案は<strong>不採用</strong>とする。 contract YAML を design-intent 空間に移すと (1) P-2 (design-intent 文書は HTML) と衝突する — P-2 の YAML 例外は「外部 platform 規約に従う file (VCS host README / AI-agent instruction / YAML config)」に限られ、 folio 内部 generator の生成 input を WHAT 空間の文書として置く行為は例外に該当しない。 そもそも contract YAML は spec 文書ではなく生成 input であり、 HTML 化する意味がない。 (2) P-11 の HOW 隔離を破る — 生成工程の資材が WHAT 空間に混入する。 (3) 得られるものは「正本という語の素朴な読みとの一致」だけで、 §2.1 の層解釈がその必要自体を消す。 配置は現状 (<code>.claude-plugin/design-system/generator/contract/</code>) を維持する。</p>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>監査の P-7 誤検出の根絶</strong>: 「edit-SSoT が HOW 層に住む」ことが明文で正当化され、 SSoT-first 転換後の review で同じ false positive を反駁し続けるコストが消える</li>
+  <li><strong>constitution 無改訂で調停が成立</strong>: P-2 / P-7 / P-11 / P-13 はいずれも本来の射程のまま — 必要だったのは解釈の明文化であり Amendment (P-10) ではない</li>
+  <li><strong>語彙の決定性</strong>: 「正本」「canonical」の二語が層を指す precision を獲得し、 以後の ADR・spec・review が同じ区別を継承できる</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>説明コストの二層化</strong>: 「spec の正本はどこか」への答えが「編集は YAML、 canonical な表明は HTML」の二段になる — 単一の素朴な答えは失われる (層の精密さと引き換え)</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>frozen ADR・constitution など flip しない doc では従来どおり HTML が唯一の層 (edit-SSoT = 提示層) であり、 本 ADR の区別は縮退して自明に成立する</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>層解釈の明文化 (採用)</td><td>constitution 無改訂で P-7 / P-2 / P-11 の緊張を解消。 P-13 と同型の既存原理の再適用で、 新規概念の発明ではない</td></tr>
+    <tr><td>contract YAML を design-intent/ へ物理移動</td><td>不採用 — P-2 と衝突し (YAML 例外は外部 platform 規約準拠 file 限定で該当せず)、 P-11 の HOW 隔離を破る。 層解釈が「移す必要」自体を消す (§2.4)</td></tr>
+    <tr><td>P-7 を改訂して YAML-WHAT を許す</td><td>不採用 — constitution Amendment (P-10) は不変資産への重量級介入であり、 解釈で足りる問題に対して過大。 P-7 の本来の射程 (domain 間の内容排他) は毀損せず保てる</td></tr>
+    <tr><td>何もしない (裁定文の文脈で読めば分かる)</td><td>不採用 — 独立コンテキストの reviewer は grill の文脈を持たない。 監査の P-7 誤検出が review のたびに再生産される (F1 pin の放置コスト)</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="./ADR-0050-dual-audience-enforcement-derive.html">ADR-0050</a> (SSoT-first 転換 = 本 ADR が調停する regime の確立)。 <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> (P-13 二分法 = 層解釈の原理元)。 <a href="./ADR-0047-how-outside-floor2-hard-gate.html">ADR-0047</a> (HOW-outside hard gate = contract の HOW 層居住を守る現行秩序)。</li>
+  <li>決定経緯: bd folio-rgtc grill (2026-07-13) — 論点6 (contract YAML = 正本の裁定)、 論点11b(2) (本 ADR 起票の user 承認)、 監査 F1 (語彙分離 pin と放置コストの確定)。 決定記録の SSoT = bd folio-rgtc notes (closed)。</li>
+  <li>関連原則: P-7 (WHAT の家 = 提示層 HTML に不変)、 P-2 (HTML format = 提示層に適用)、 P-11 (HOW 隔離 = edit-SSoT の居住規律)、 P-13 (二分法の同型元)、 P-10 (Amendment 不要 — 解釈明文化で足りる)。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0050-dual-audience-enforcement-derive.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

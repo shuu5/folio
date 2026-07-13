@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.2.0">
+<meta name="folio-status" content="accepted">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0050">
+<meta name="folio-adr-date" content="2026-07-13">
+<title>ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0050-dual-audience-enforcement-derive.html",
+  "@type": "schema:TechArticle",
+  "dc:isReferencedBy": [
+    { "@id": "./ADR-0051-what-ssot-layer-interpretation.html" }
+  ],
+  "dc:title": "ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ",
+  "folio:version": "1.2.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0028-prose-gate-mechanization.html" },
+    { "@id": "./ADR-0033-dual-audience-hub.html" },
+    { "@id": "./ADR-0045-spec-pack-machine-layer-round-trip.html" },
+    { "@id": "./ADR-0041-human-layer-visual-design-system.html" },
+    { "@id": "../spec/constitution.html#p-10" },
+    { "@id": "../spec/constitution.html#p-13" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0050</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0050 — dual-audience enforcement 転換 (Option A' 発動): co-author + enforce から「正本 (contract YAML) から derive + gate J 照合」へ</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-13 &middot; folio v1.2.0 &middot; dual-audience 文書の consistency enforcement を「人間層と機械層を同一 DOM に co-author し二層 enforcement で守る」規律から「人間層は正本 (contract YAML) から derive し、 gate J (fidelity-*) ほか独立 ceiling で照合する」へ再定義する — 1-DOM の形 (data-audience 二層 DOM) は生成物で保存され、 転換されるのは enforcement 実体のみである。 これは <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 が中長期 roadmap として明示予約した Option A' (derive-into-DOM) の発動を評価・採用する後続 ADR であり、 実装 vehicle は folio engine (design-system generator の pack assembler)。 frozen ADR-0028/0033 の本文は不触で、 supersede 関係 (部分) は本 ADR 側にのみ記す。 constitution は一般規定の適用外とし §2.4 の分離条項に従う。 user 承認 = folio-rgtc grill (2026-07-13) 論点6/11b(1) で方向確定 + 本 ADR 本文承認。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-redefine">§2.1 enforcement の再定義 (derive + gate J 照合)</a></li>
+  <li class="toc--sub"><a href="#s2-2-one-dom">§2.2 1-DOM の形は保存 (P-13 との整合)</a></li>
+  <li class="toc--sub"><a href="#s2-3-scope">§2.3 適用範囲と経過措置 (hybrid 経路)</a></li>
+  <li class="toc--sub"><a href="#s2-4-constitution">§2.4 分離条項 — constitution 固有 (P-10 二段構え・flip 最後尾)</a></li>
+  <li class="toc--sub"><a href="#s2-5-supersede">§2.5 supersede の性格 (部分・frozen 本文不触)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0050</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>accepted</dd>
+    <dt>date</dt><dd>2026-07-13</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0033 (dual-audience hub — §2.3 が Option B〔co-author + enforce〕を採用し Option A'〔derive-into-DOM〕を中長期 roadmap として予約。 本 ADR がその後続評価 = A' 系の発動。 §2.1〜§2.2 の SSoT モデル・data-audience taxonomy は生成物の形として存続)、 ADR-0028 (二層 enforcement モデル — floor + ceiling の器は不変。 転換されるのは ADR-0033 §2.4 が器に付与した「機械的導出の代役」という役割: derive 生成物の「照合」へ)、 ADR-0045 (rules.html の機械層逐語 extract を確定 + flip を明示 defer — hybrid 経路の型。 relations / verification への展開は後続実装で現物化)、 ADR-0041 (derive 原理の別ファイル形態での先行起動 — 本 ADR は into-DOM 版の発動)。 規範 = constitution P-10 (§2.4 分離条項)・P-13 (§2.2 no-mandate-build 整合)。 接地 = bd folio-rgtc (grill 2026-07-13 論点6/10/11b)・keystone bd folio-u7y2・authoring policy bd folio-yjap・実切替 bd folio-8dkl (park)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p>folio の dual-audience 文書 (人間層 = 平易プレゼン + 機械層 = 精密 normative を 1 つの HTML に同居させる形式) の consistency は、 <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> §2.3 の <strong>Option B = co-author + enforce</strong> で守られてきた: human essence を <code>data-audience="human"</code> に手書きし、 machine normative を <code>data-audience="machine"</code> に併記し、 両層の一致を <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> の二層 enforcement (deterministic floor + LLM ceiling) で強制する。 ADR-0033 はこの選択の代償を当時から自覚していた — 「consistency が構造的でなく強制依存 (LLM ceiling が load-bearing)、 prior art 無し」。 そして <strong>Option A' = derive-into-DOM</strong> (machine SSoT から human view を生成し同一 DOM に埋め込む、 Bikeshed / ReSpec snapshot モデル) を中長期 roadmap として残し、 「移行は後続 ADR で評価する」と明示予約した。 <strong>本 ADR がその後続 ADR である。</strong></p>
+
+<p>予約当時に存在しなかった前提が、 その後の実装で成立した。 folio design-system generator (engine、 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a>〜<a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> ほか) が 13 doc-type の pack (contract YAML &rarr; assembler &rarr; data-audience 二層 DOM の生成) を実戦化し、 生成物を照合する検証体制 — deterministic floor (fabrication-free / round-trip / graph 等) + 独立 ceiling (<strong>gate J = fidelity-*</strong> 11 doc-type / gate I = persona-walk / finding-refuter 2-pass) — が確立した。 vision と glossary は既に SSoT-first (contract が正本・HTML は生成物) で運用実績を持ち、 <a href="./ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> は rules.html 1 文書の機械層逐語 extract (round-trip 実証) を確定して flip (後半) を明示 defer し、 その後の後続実装が relations / verification へ extract を展開して spec 系 3 本の contract は現物として存在する。 なお derive 原理そのものは <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> が別ファイル形態 (機械 SSoT からの生成プレゼン artifact) で先行起動し、 into-DOM 版を roadmap 据置としていた — 本 ADR はその into-DOM 版の発動である。 つまり Option A' の評価に必要な「導出の実装と、 導出物を照合する gate」の両方が、 roadmap 予約時と違い現物で存在する。</p>
+
+<p>一方、 co-author + enforce の代償は実害として顕在化した。 rules 1.2.0 vs contract 1.0.0 の 2 版 drift (bd folio-aog が消耗戦を実証) が示すとおり、 手書き二層の drift は enforcement では源から消えない。 prior art (DITA / literate programming) が double-SSoT を「導出」で構造保証するのに対し、 co-author + enforcement は folio 固有の novelty であり、 enforcement は「機械的導出の代役」(ADR-0033 §2.4) に留まる。 folio-rgtc grill (2026-07-13) は論点6 で SSoT の向き = A-where-possible (反転可能な doc-type は contract YAML を正本へ反転) を master crux として裁定し、 その帰結として enforcement の再定義 (論点11b(1)) を承認した。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-redefine">§2.1 enforcement の再定義 (derive + gate J 照合)</h3>
+<p>dual-audience 文書の consistency enforcement を次のとおり再定義する: <strong>人間層 (平易プレゼン) は正本 (contract YAML) から derive し、 gate J (fidelity-*) ほか独立 ceiling で照合する</strong>。 これは ADR-0033 §2.3 が roadmap 予約した Option A' 系の発動であり、 実装 vehicle は Bikeshed 型の外部 build ではなく <strong>folio engine (design-system generator の pack assembler)</strong> である — 正本 (contract YAML) から assembler が人間層・機械層 (data-audience 二層) の両方を含む 1 DOM を生成し、 deterministic floor が構造・集合・逐語一致を、 独立 ceiling (fidelity-* = 捏造/情報落ち/歪み、 persona-walk = 読書体験) が意味面を照合する。 consistency は「強制で守る」ものから「導出で構造的に成立し、 照合で確認する」ものへ変わる。</p>
+
+<h3 id="s2-2-one-dom">§2.2 1-DOM の形は保存 (P-13 との整合)</h3>
+<p>転換されるのは enforcement 実体のみで、 <strong>1-DOM の形 (data-audience 二層 DOM、 ADR-0033 §2.2 の taxonomy) は生成物で保存される</strong> — assembler は human 層と machine 層を従来どおり 1 つの HTML に emit し、 no-JS graceful degrade・AI 直読・1 artifact の利点 (ADR-0033 が Option B を選んだ理由の大半) は生成物側で維持される。 ADR-0033 が Option A' の懸念とした build step と P-13 の緊張は、 生成が <strong>Layer 0 の authoring 内部工程</strong>であり consumer に build を mandate しない (P-13(b): 実装適合性の配置は各 stack 慣習・folio 非 mandate) ことで解消する — consumer が受け取る配布物は従来どおり静的 HTML である。</p>
+
+<h3 id="s2-3-scope">§2.3 適用範囲と経過措置 (hybrid 経路)</h3>
+<p>本再定義の適用範囲は <strong>SSoT-first で運用される doc (現に flip 済みの vision / glossary、 以後 flip する rules / relations / verification 等の hybrid-flip 群)</strong> である。 未 flip の手書き doc には、 flip までの間 ADR-0028/0033 の co-author 規律が経過措置として存続する (hybrid 経路: 逐語逆抽出で bootstrap &rarr; flip 直前に再抽出で鮮度合わせ &rarr; 以後 contract 編集の SSoT-first 定常)。 frozen ADR は flip しない (extract-only)。 新規 spec の authoring は SSoT-first を正式 policy とし (発効 = graph emit keystone 完成後)、 それまでの暫定橋渡し gate として「手書き新設時は contract 同時更新必須」が即時発効する (実装 = bd folio-yjap)。 gate の規範反映先は folio-yjap 実装時に rules 側 (§10 系) へ確定する — 本 ADR は WHY + cross-ref に留まる (<a href="./ADR-0047-how-outside-floor2-hard-gate.html">ADR-0047</a> が「規範反映 = rules §10.2」を明示した先例に従う)。</p>
+
+<h3 id="s2-4-constitution">§2.4 分離条項 — constitution 固有 (P-10 二段構え・flip 最後尾)</h3>
+<p>constitution は本 ADR の一般規定 (§2.1〜§2.3) の<strong>適用外</strong>とし、 folio-rgtc 論点10 の固有裁定に従う: (1) 恒久 exempt は却下され、 constitution も最終的に folio 生成形式へ揃える — ただし位置は <strong>dead-last</strong> (全 doc-type の flip 型が実戦で枯れた最後)。 (2) <strong>P-10 の二段構え</strong> — 切替後は contract YAML が不変資産となり P-10 gate は YAML 編集へ掛け直す。 切替の実行自体に P-10 Amendment (user 正式承認) を要する (grill 裁定は方針決定であり Amendment ではない)。 (3) 前提実装 — <code>@type=FolioConstitution</code> emit + spec graph scan 除外挙動の厳密再現 + staging&rarr;flip + 独立 ceiling 審査 + 手書き版 archive 保全。 これらが満たされるまで constitution.html は手書きの不変資産のままである。</p>
+
+<h3 id="s2-5-supersede">§2.5 supersede の性格 (部分・frozen 本文不触)</h3>
+<p>本 ADR は以下を supersede する (<strong>部分</strong>。 <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> 先例に従い、 各 ADR の他の決定は不変ゆえ <code>dc:replaces</code> でなく <code>dc:references</code> + 本 § / §5 で trace する。 frozen 本文は P-6 のもと不触で、 supersede 関係は本 ADR 側にのみ記す):</p>
+<ul>
+  <li><strong>ADR-0033 §2.3 (Option B 採用条項) + §2.4 (co-author consistency の担保条項)</strong> — 「co-author + enforce を採用する」という選択 (§2.3) と、 その consistency 担保を「機械的導出の代役」と位置づけた §2.4 の role-framing を置換する (§2.4 が指す器 = ADR-0028 の二層 enforcement と floor 検査そのものは存続)。 §2.1 (SSoT モデル = 単一ソース + progressive disclosure)・§2.2 (data-audience taxonomy)・§2.5〜§2.8 (human view 構成 / tiered / minimal normative / JS governance) は生成物の形・規範として存続し、 §2.9 (当時の実装 scope) は歴史記録として据置。 Option A' を roadmap とした §2.3 後段は、 本 ADR により消化された。</li>
+  <li><strong>ADR-0028 §2.1 の器が dual-audience 文脈で担った役割</strong> — 二層 enforcement モデル (deterministic floor + LLM ceiling) という器そのもの (ADR-0028 §2.1) は不変で、 本 ADR 後も生成物の検証に使われ続ける。 転換されるのは器の役割 — ただし「機械的導出の代役」という役割づけは ADR-0028 自身の文言ではなく <strong>ADR-0033 §2.4 が dual-audience 文脈で付与した</strong>ものであり、 その locus ごと「手書き二層の consistency を守る」から「derive された生成物を照合する」へ転換する。 REQ-CI-013/014/015 等の floor 検査は生成物にも有効なまま存続する。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>consistency が構造保証になる</strong>: 人間層と機械層の一致が derive で構造的に成立し、 drift が源から消える (rules 1.2.0 vs contract 1.0.0 型の 2 版 drift クラスの根絶)。 prior art (DITA / literate の導出モデル) と整合し、 novelty ゆえの強制依存 (LLM ceiling が load-bearing) が解消する</li>
+  <li><strong>LLM ceiling の負荷が適正化する</strong>: ceiling は「導出の代役」(一致の全責任) から「照合」(捏造・歪み・意味面の確認) へ役割が絞られ、 機械/LLM 境界 (機械 = algorithmic のみ / 意味 = 独立 reviewer) と一致する</li>
+  <li><strong>authoring の単線化</strong>: 編集は contract YAML の 1 箇所になり、 二層を同時に手で保つ認知負荷が消える</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>generator が enforcement の実体になる</strong>: assembler / floor / ceiling の品質が spec 品質に直結する — 生成系の欠陥は全生成 doc へ波及する (集中リスク。 独立 ceiling と敵対 suite が対抗装置)</li>
+  <li><strong>経過措置期間の二重 regime</strong>: 未 flip doc には co-author 規律が残るため、 flip 完了まで「この doc はどちらの regime か」の判別が必要 (4 bucket 分類が判別の SSoT)</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>REQ-DA-STRUCT 系 / REQ-CI-013/014/015 の floor 検査は生成物にも適用され続ける (器は不変)</li>
+  <li>frozen ADR (extract-only) と constitution (§2.4) は本転換の外にあり、 従来規律のまま</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>derive + gate J 照合へ転換 (採用)</td><td>ADR-0033 予約の Option A' 系。 consistency を構造保証化し drift を源から消す。 生成・照合の実装が現物で存在し評価前提が成立</td></tr>
+    <tr><td>Option B (co-author + enforce) の恒久維持</td><td>不採用 — drift が enforcement では源から消えない (folio-aog の消耗戦が実証)。 「完璧な文書」の北極星に届かない</td></tr>
+    <tr><td>純 derive で 1-DOM を捨て別 artifact の human view</td><td>不採用 — 1 artifact・AI 直読・no-JS degrade という ADR-0033 の確立利益を失う。 二層 DOM は生成物で保存可能であり捨てる理由がない</td></tr>
+    <tr><td>全 doc 一律の即時転換</td><td>不採用 — constitution は P-10 (不変資産・Amendment 必須) が掛かり原理的に即時参加不能。 frozen ADR は歴史記録で flip 対象外。 4 bucket の個別裁定 (論点6続き/10) が実態に整合</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>前提: <a href="./ADR-0033-dual-audience-hub.html">ADR-0033</a> (Option B 採用 + Option A' roadmap 予約 — 本 ADR は §2.3 の予約した後続評価)。 <a href="./ADR-0028-prose-gate-mechanization.html">ADR-0028</a> (二層 enforcement モデル — 器は存続・ADR-0033 §2.4 が付与した役割のみ転換)。 <a href="./ADR-0041-human-layer-visual-design-system.html">ADR-0041</a> (derive 原理の別ファイル形態での先行起動 — into-DOM 版は roadmap 据置、 本 ADR が発動)。 <a href="./ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (rules.html の機械層 extract 確定 + flip 明示 defer = hybrid 経路の型・relations / verification は後続実装で展開)。 engine 系 <a href="./ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a>〜<a href="./ADR-0046-architecture-description-pack.html">ADR-0046</a> (生成 pack + 検証体制の実戦化)。</li>
+  <li>決定経緯: bd folio-rgtc grill (2026-07-13) — 論点6 (SSoT の向き = A-where-possible・master crux)、 論点6続き (hybrid 経路 + 4 bucket)、 論点10 (constitution flip 最後尾 = §2.4 分離条項)、 論点11b(1) (本 ADR 起票の user 承認)。 決定記録の SSoT = bd folio-rgtc notes (closed)。</li>
+  <li>実装への接続: graph emit keystone = bd folio-u7y2 (SSoT-first policy 正式発効の hard prerequisite)。 authoring policy + 暫定橋渡し gate = bd folio-yjap。 実切替 (staging&rarr;flip + golden diff) = bd folio-8dkl (park 中・北極星後)。 姉妹 ADR: <a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> (WHAT-SSoT 居場所調停 — 本転換で contract YAML が「正本」になることと P-7 の層整合)。</li>
+  <li>関連原則: P-10 (§2.4 constitution 分離条項・二段構え)、 P-13 (§2.2 no-mandate-build 整合)、 P-6 (frozen 本文不触・supersede は新 ADR 側に記す)、 P-4 (本 ADR は目標状態を declarative に記し、 実装進捗は bd notes へ)。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0049-vision-pack.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0049 — vision pack (engine 段階3 後) — 記述型 doc-type 2 例目「なぜ作るか」の lean hybrid schema + 自前 inline principle 自己終端 + opt-in 要素 + core 無改変</span></a>
+  <a class="prevnext__next" href="ADR-0051-what-ssot-layer-interpretation.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
