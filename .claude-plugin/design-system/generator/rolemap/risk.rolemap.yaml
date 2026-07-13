@@ -1,0 +1,56 @@
+# risk.rolemap.yaml — risk-register-pack (doc_type: risk-register) の抽象ロール graph 写像 (rolemap)
+#
+# engine doc §3 表 (照会 = 抽象ロール graph) を risk-register-pack の具体 node-type へ写像する pack 側 SSoT
+# (詳細は srs.rolemap.yaml / testcases.rolemap.yaml 冒頭注記)。 core (lib/graph-common.sh) の reader が読み、
+# verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: reachability の edge / 終端 node / external-ref を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★risk-register の hallmark = リスクが脅かす要件への前方照会: risk (verification) が SRS の要件 (claim) と
+#   非機能要件 (claim) を *前方照会* する (片方向 cross-doc)。 ゆえ edge-bearing pack。
+#   ★この rolemap は verify-graph.sh に *自動配線* される (contract/*.yaml を無条件 glob し graph_pack_of で
+#   ファイル名 clinic-risk.risk.yaml から pack=risk を導出して同名 rolemap を必須化する = opt-in registry ではない)。
+#   ゆえ本 rolemap は floor を通すこと自体が受入条件 = role_expr は照会先 ID 列でなく source node (risks) の
+#   intrinsic role token (verification) を |edges| 回 emit する (下 edges[] 注記・testcases と同型)。
+#   ★pass-2 reachability では risk→SRS edge は direction: forward (toward-terminal 順) =
+#   RISK→SRS→ADR→principle で終端完備 (folio-c5r.11 裁定・testcases が clinic-appointment.srs へ張る
+#   のと同一終端経路を継承)。 risk の justification 鎖は「このリスクはなぜ管理するか→この要件を守るため
+#   →この決定のため→この原則のため」。 ゆえ照会先 SRS が終端到達なら risk も終端完備する。
+#
+# ★roles[risks] = verification の根拠: リスク登録簿は「要件が守られるか」を敵対的状況で見積もる assurance /
+#   V&V 活動 (testcases と同族の検証系文書)。 抽象 allowlist {claim/rationale/exploration/principle/
+#   verification/implementation} のうち verification が最も近く、 最近接 shape の testcases も verification を採る。
+pack: risk
+
+# node-type (contract の構造要素) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# risks = verification (要件が守られるかを見積もる assurance 手段)。 前方照会先 (SRS の FR/NFR) の役割は照会先 pack (srs) が持つ。
+roles:
+  risks: verification   # リスク登録簿 = 要件が守られるかを敵対的に見積もる検証/保証手段
+
+# 前方 cross-doc 照会 edge。 risks[].trace.refs[] が SRS (SRS-CLINIC-APPT) の
+# 要件 (claim) / 非機能要件 (claim) へ向かう。 direction: forward (testcases→SRS と同型・toward-terminal 順) =
+# risk の justification は脅かす対象の要件ゆえ reachability は RISK→SRS (SRS の経路で ADR→principle 終端へ)。
+# 局所の FR/NFR 実在検証は verify-risk.sh が担う (本 edge 宣言の影響なし)。
+edges:
+  - from_node: risks                    # roles[risks] = verification が edge.role の期待値 (二重担保)
+    # ★edge.role token = *source node-type (risks) の intrinsic role* = verification を |edges| 回 emit
+    #   (testcases の '[.test_cases[].trace...] | map("verification")' と同型。 edge role token は source 役割を
+    #    表し floor pin = roles[from_node] が照合する)。 ★照会先 ID 列 (FR/NFR) は role_expr ではなく
+    #    verify-risk.sh の verify_cross_doc_refs (cross-doc set 検証) が別経路で扱う。
+    role_expr: '[.risks[].trace.refs[]] | map("verification") | .[]'  # source 役割 (verification) を |edges| 回
+    count_expr: '[.risks[].trace.refs[]] | length'  # |edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'   # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                   # risk→SRS は toward-terminal の順 (reachability は RISK→SRS→ADR→principle)
+
+# この pack が持つ照会終端 node。 risk-register は終端を持たない (graph 充足のための自前 principle 宣言は捏造ハザード)。
+# reachability は edge で SRS へ到達し、 SRS の経路 (ADR inline principle 等) で終端完備する (testcases 同型)。
+terminal: {}
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 risk-register には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 risk-register は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration node / 探索 edge 不在」を scan で実証。
+forbidden_roles:
+  - exploration

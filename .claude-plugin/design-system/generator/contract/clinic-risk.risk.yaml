@@ -1,0 +1,170 @@
+# folio engine post-B6 (folio-wdv0 / c5r capability-census) — risk-register-pack 入力 contract インスタンス
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT と同一ドメイン)。
+# doc-type = risk-register (リスク登録簿・indexed 型)。testcases-pack と同型の機構
+# (決定的 assembler + opus prose + floor/ceiling 2-gate) を risk-register-pack schema
+# (risks[] / likelihood・impact / trace / glossary) へ適用する。
+#
+# ★この pack の核 = 深刻度 (severity) の *決定的導出* + 三段 trace の cross-doc 前方照会:
+#   - severity は contract に *持たせない*。 assembler が likelihood(L/M/H)×impact(L/M/H) から
+#     決定的に導出する (L=1・M=2・H=3 の積 p: p<=2→低 / p<=4→中 / p>=6→高)。 ゆえ「深刻度の捏造」は
+#     原理的に不可能 (元データに severity フィールドが無いため作れない)。 verify-risk.sh が同一導出で
+#     card バッジ・matrix セル・tally を再突合する (fabrication-free の核)。
+#   - 各 risk が「どの要件 (FR) / 非機能要件 (NFR) を脅かすか」を SRS-CLINIC-APPT へ *前方照会* し、
+#     verify-risk.sh が参照先 SRS contract に当該 FR/NFR ID が実在することを fail-closed で確かめる
+#     (照会先 requirements/nfr = claim・risk = verification〔assurance 活動〕。testcases 同型・c5r.11 則)。
+#   - reachability: risk→SRS は direction: forward (toward-terminal 順) = RISK→SRS→ADR→principle で終端完備
+#     (testcases が clinic-appointment.srs へ張るのと同一終端経路を継承)。
+#
+# 読者 = クリニックの事業責任者 (医療コーディング・IT・リスク管理の専門知識なし。専門語は必ずやさしい言葉を併記)。
+# 人間層 = 「何が起こりうるか / どれくらい深刻か / どう備えるか」を平易に。
+# 機械層 = likelihood/impact/status/trace + JSON-LD。
+#
+# fabrication-free: 全 visible token は本 contract 由来 (severity は contract 値でなく決定的導出値)。
+# plain 要約のみ prose スロットで後注入。core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three)。
+
+doc_type: risk-register
+
+meta:
+  doc_id: RISK-CLINIC-APPT
+  doc_type: risk-register
+  title: 診療予約の仕組みで「起こると困ること」を洗い出し、 起こりやすさと影響から深刻度を見積もって備える
+  eyebrow_left: リスク登録簿 (Risk Register)
+  eyebrow_right: クリニック — 診療予約
+  subtitle: 何が・どれくらいの確からしさで・どれだけの痛手になりうるかを一覧にし、 対策と担当を結びつける
+  version: "1.0"
+  date: "2026-06-26"
+  reader: クリニックの事業責任者 — 医療コーディングや IT・リスク管理の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+
+# 承認記録 (SRS / testcases と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-26 承認
+    stamp: 承認済
+  - role: レビュー (事務長)
+    who: 鈴木 大輔
+    when: 2026-06-25 レビュー
+    stamp: レビュー済
+  - role: 作成 (安全管理担当)
+    who: 安全管理チーム
+    when: 2026-06-24 起票
+    stamp: 作成
+
+# ★cross-doc 前方照会の解決先 (verify-risk.sh が参照先 SRS contract を読み込み、 risks の trace.refs に
+#   現れる FR/NFR ID 実在を確かめる)。srs_contract は contract/ dir 起点の相対パス。
+cross_doc:
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_html: clinic-appointment.srs.html   # ★cross-doc deep-link 先 (root 平置き = path prefix なし)。anchor = SRS の裸 id (#FR2/#NFR1)
+
+# 01 リスク一覧 (risk-card)。各 risk は決定的に組立てられ、 trace が SRS へ前方照会する。
+#   likelihood ∈ {L, M, H} (起こりやすさ)。impact ∈ {L, M, H} (影響の大きさ)。
+#   ★severity (深刻度) は *contract に持たせない* = assembler が likelihood×impact から決定的導出する。
+#   status ∈ {open, mitigating, accepted, closed}。
+#   trace.refs = 脅かす要件 (FR) / 非機能要件 (NFR)。各 ID は cross_doc.srs_contract の
+#   .requirements[].id / .nfr[].id に実在すること (集合外参照は fail-closed)。
+risks:
+  - id: RSK-001
+    title: 同じ診療枠に 2 人が入るダブルブッキングが起きる
+    likelihood: M
+    impact: H
+    statement: 残り 1 枠に複数の患者がほぼ同時に申し込むと、 排他制御が甘い場合に同じ診療枠へ 2 件が確定し、 来院した患者を待たせる・断ることになる。
+    mitigation: 予約確定を 1 枠 1 件の排他処理にし、 競合時は一方だけ確定して他方へ満枠を明示する。 同時処理の負荷試験で取りこぼしが無いことを確認する。
+    owner: 開発リード
+    status: mitigating
+    trace:
+      refs: [FR2, FR3, NFR3]
+  - id: RSK-002
+    title: システム停止で予約受付が丸ごと止まる
+    likelihood: L
+    impact: H
+    statement: サーバ障害や計画外の停止が起きると、 予約の受付・変更・当日受付がまとめて止まり、 診療の入り口が塞がれる。
+    mitigation: 稼働監視と自動復旧を用意し、 停止時は電話受付へ切り替える運用手順を定める。 月次の稼働率を目標と突き合わせる。
+    owner: インフラ担当
+    status: accepted
+    trace:
+      refs: [NFR2]
+  - id: RSK-003
+    title: 予約した本人と別人を取り違える
+    likelihood: L
+    impact: H
+    statement: 予約や当日受付で本人確認が甘いと、 別人の予約として処理され、 診療の取り違えや個人情報の取り違えにつながる。
+    mitigation: 予約時と受付時に本人確認を必須にし、 確認が取れないものは確定させず差し戻す。 権限のある担当のみが患者情報を閲覧できるようにする。
+    owner: 受付リーダー
+    status: mitigating
+    trace:
+      refs: [FR7, NFR4]
+  - id: RSK-004
+    title: リマインド通知が届かず無断キャンセルが増える
+    likelihood: M
+    impact: M
+    statement: 連絡先の誤りや通知サービスの不達でリマインド通知が届かないと、 来院忘れによる無断キャンセルが増え、 空いた診療枠が無駄になる。
+    mitigation: 同意済みの連絡先にのみ前日リマインドを送り、 送付率を計測して不達を検知する。 不達が続く連絡先は受付時に更新を促す。
+    owner: 受付リーダー
+    status: mitigating
+    trace:
+      refs: [FR6, NFR2]
+  - id: RSK-005
+    title: 予約開始直後のピーク負荷で応答が遅くなる
+    likelihood: H
+    impact: L
+    statement: 予約受付の開始直後に申し込みが集中すると、 空き照会や確定の応答が遅くなり、 患者が二重に押して重複申込を招きやすくなる。
+    mitigation: ピーク時の同時処理量を目標に据えて負荷試験を行い、 応答時間の目標を満たすよう処理を調整する。 二重押しは 1 件だけ確定させる。
+    owner: 開発リード
+    status: open
+    trace:
+      refs: [NFR1, NFR3]
+  - id: RSK-006
+    title: 診療時間外や休診日の枠に予約が通ってしまう
+    likelihood: L
+    impact: M
+    statement: 診療カレンダーとの突き合わせが漏れると、 診療時間外や休診日の枠へ予約が通り、 来院しても診てもらえない事態になる。
+    mitigation: 受診可能な日時かを診療カレンダーで必ず判定し、 枠外の申込は受け付けず別の日時を案内する。
+    owner: 開発リード
+    status: closed
+    trace:
+      refs: [FR4]
+  - id: RSK-007
+    title: キャンセルした枠が開放されず空きが埋もれる
+    likelihood: L
+    impact: L
+    statement: 予約のキャンセルや変更のあとに枠開放の処理が漏れると、 実際は空いている診療枠が予約可能として表に出ず、 受診機会を逃す。
+    mitigation: キャンセル・変更のたびに残り人数を戻し、 開放された枠がすぐ再予約できることを確認する。
+    owner: 開発リード
+    status: accepted
+    trace:
+      refs: [FR5]
+  - id: RSK-008
+    title: 患者の要配慮個人情報が漏えいする
+    likelihood: M
+    impact: H
+    statement: 通信の暗号化や閲覧権限の管理が不十分だと、 受診歴などの要配慮個人情報が外部に漏れ、 患者に大きな不利益を与える。
+    mitigation: 通信を暗号化し、 患者情報の閲覧を権限のある担当だけに限る。 第三者の脆弱性診断と権限監査を定期的に行う。
+    owner: セキュリティ担当
+    status: mitigating
+    trace:
+      refs: [NFR4]
+
+# 02 用語集 (glossary = 用語の SSoT。 plain_short = 本文の専門語に併記するやさしい言い換え)。
+#   glossary 語どうしは部分文字列禁止 (core_validate_glossary_substring が拒否)。
+#   ★「リスク登録簿」「残存リスク」は互いに部分文字列でない (どちらも単独「リスク」を term に持たないため衝突しない)。
+#   ★「要配慮個人情報」のみを term にし「個人情報」は term にしない (部分文字列衝突回避)。
+glossary:
+  - { term: リスク登録簿,   en: risk register,     plain_short: 困りごとの一覧,       def: 起こると困ることを洗い出し、 起こりやすさ・影響・対策・担当をまとめて管理する一覧。 }
+  - { term: 深刻度,         en: severity,          plain_short: どれだけ困るか,       def: そのリスクが起きたときの困り具合。 起こりやすさと影響の大きさを掛け合わせて見積もる。 }
+  - { term: 起こりやすさ,   en: likelihood,        plain_short: 起きやすさ,           def: そのリスクがどれくらいの確からしさで起こりうるか。 低・中・高で見積もる。 }
+  - { term: 影響度,         en: impact,            plain_short: 起きたときの痛手,     def: そのリスクが起きたときに受ける痛手の大きさ。 低・中・高で見積もる。 }
+  - { term: 緩和策,         en: mitigation,        plain_short: 備えの手立て,         def: リスクが起きる確からしさや痛手を小さくするための手立て。 }
+  - { term: 残存リスク,     en: residual risk,     plain_short: 残る危なさ,           def: 対策を打ってもなお残る危なさ。 受け入れるか、 さらに手を打つかを決める。 }
+  - { term: ダブルブッキング, en: double booking,  plain_short: 二重予約,             def: 同じ枠に 2 人以上を入れてしまう事故。 来院した患者を待たせたり断ることになる。 }
+  - { term: 満枠,           en: fully booked,      plain_short: 空きなし,             def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: 診療枠,         en: appointment slot,  plain_short: 予約できる時間帯,     def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
+  - { term: 無断キャンセル,  en: no-show,          plain_short: 連絡なく来ないこと,   def: 予約したのに連絡なく来院しないこと。 その枠が空いたまま無駄になる。 }
+  - { term: リマインド通知,  en: reminder notification, plain_short: 思い出し通知,     def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+  - { term: 本人確認,       en: identity verification, plain_short: 本人かの確かめ,    def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: 診療カレンダー,  en: clinic calendar,  plain_short: 診療予定表,           def: 診療枠と休診日を管理する既存の予定表。 空き状況の正しい出どころ。 }
+  - { term: 要配慮個人情報,  en: sensitive personal information, plain_short: 特に守る情報,  def: 受診歴や病歴など、 漏れると不利益が大きいため特に慎重に扱う個人情報。 }
+
+footer:
+  gen_meta: folio design-system generator — risk-register-pack (severity 決定的導出 + 三段 trace + cross-doc 前方照会)

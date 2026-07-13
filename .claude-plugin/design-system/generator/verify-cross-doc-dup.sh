@@ -171,6 +171,9 @@ cross_cutting[].rule|.cross_cutting[].rule'
 # datamodel の glossary def / 共有終端 principle.text / entity field note (粒度過小) は不掲載 (arch と同方針)。
 # interface の glossary def / 共有終端 principle.text / operations name・actor / errors name / external name・partner /
 #   cross_cutting id (短 label・enum) は不掲載 (散文でない粒度過小・precision のため意図的に不掲載・folio-ehar)。
+LEAVES[risk]='risks[].title|.risks[].title
+risks[].statement|.risks[].statement
+risks[].mitigation|.risks[].mitigation'
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)

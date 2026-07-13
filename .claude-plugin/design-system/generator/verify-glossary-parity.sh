@@ -67,6 +67,7 @@ clinic-appointment.datamodel.yaml|intersect|clinic-appointment.glossary.yaml
 # interface は interface メタ語彙 (操作/境界/エラーカタログ/外部連携/横断の決まり) を持つ = clinic ドメイン union SSoT の
 # 対象外ゆえ intersect (SSoT 収録語のみ en 逐語一致・ページ固有語は検査対象外・en 突合想定 0・folio-ehar)。
 clinic-appointment.interface.yaml|intersect|clinic-appointment.glossary.yaml
+clinic-risk.risk.yaml|intersect|clinic-appointment.glossary.yaml
 clinic-appointment.glossary.yaml|intersect|clinic-appointment.glossary.yaml
 # --- folio suite (SSoT = folio-glossary.glossary.yaml。 rules/verification 2 本は全語収録の実測成立ゆえ full) ---
 folio-rules.spec.yaml|full|folio-glossary.glossary.yaml

@@ -50,10 +50,12 @@ echo "== glossary en parity gate 敵対回帰 =="
 #   anchor 外 local 15 語 (+ datamodel の data-modeling メタ語 6: エンティティ/ER 図/不変条件/識別子/区分/参照 = clinic union SSoT 外)。
 #   2026-07-07 (folio-ehar interface-pack) = 16 contract (full 9 / intersect 6 / exempt 1)・en 突合 116 語 (不変)・
 #   anchor 外 local 20 語 (+ interface のメタ語 5: 操作/境界 (インターフェース)/エラーカタログ/外部連携/横断の決まり = clinic union SSoT 外・en 突合 0)。
+#   2026-07-12 (folio-49x) relations を full→intersect 再分類 = 16 contract (full 8 / intersect 7 / exempt 1)・en 突合 116 語・anchor 外 local 29 語 (+ relations 主題語 9)。※本 V0 pin の同期は 2026-07-14 (wdv0 land) まで漏れており latent 赤だった (pin drift)。
+#   2026-07-14 (folio-wdv0 risk-register-pack) = 17 contract (full 8 / intersect 8 / exempt 1)・en 突合 124 語・anchor 外 local 35 語 (clinic-risk は union 外の新 source ゆえ intersect = datamodel/interface と同型)。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q 'full=9 intersect=6 exempt=1 未登録空=0' <<<"$out" \
-   && grep -q 'en 突合 116 語・anchor 外 local 20 語' <<<"$out"; then
-  ok "V0 baseline: clean corpus → exit 0 + 分類 16 本 (9/6/1) + 116/20 語 pin"
+if [[ "$rc" -eq 0 ]] && grep -q 'full=8 intersect=8 exempt=1 未登録空=0' <<<"$out" \
+   && grep -q 'en 突合 124 語・anchor 外 local 35 語' <<<"$out"; then
+  ok "V0 baseline: clean corpus → exit 0 + 分類 17 本 (8/8/1) + 124/35 語 pin"
 else bad "V0 baseline: clean corpus が期待 pin と不一致 (rc=$rc・corpus 成長なら pin を lineage 手順で更新)"; fi
 
 # --- V1 en-drift (full mode): source の en を SSoT からずらす → FAIL ---
