@@ -1,0 +1,139 @@
+# folio engine post-B6 (folio-8cha / c5r capability-census) — roadmap-pack 入力 contract インスタンス
+#
+# ドメイン: クリニックの診療予約システム (SRS-CLINIC-APPT / VISION-CLINIC-APPT と同一ドメイン・suite 一貫)。
+# doc-type = roadmap (ロードマップ)。 「何を・どの順で・いつ頃目指すか」を宣言する *記述型* (決めない/探索しない)。
+# 記述型ゆえ最近接は vision (なぜ作るか) / 時系列・indexed 面は changelog (version-keyed) を踏襲する:
+#   - vision と同じく「宣言する」文書 (採否比較 = ADR / 探索 = research には踏み込まない)。
+#   - changelog と同じ indexed 機構 (stage-keyed = version-keyed の類型) + 固定 canonical 区分 (priority = MoSCoW) +
+#     決定的順序 (assembler が seq 昇順に sort・contract 記載順に依存しない = 順序の乱れ/捏造は原理不可)。
+#
+# ★この pack の核 = stage-keyed の未来宣言 + cross-doc 前方照会 (inter-doc cross-ref):
+#   各目標項目 (item) が「どの機能の方向へ向かうか (VISION feature = claim 照会)」/「どの要件を満たすか (SRS FR = claim 照会)」を
+#   *別文書へ照会* し、 verify-roadmap.sh が参照先 contract に当該 F / FR ID が実在することを fail-closed で確かめる。
+#   各 item は vision / srs の少なくとも一方を 1 件以上持つ (照会なしの宙に浮いた目標を禁止)。 片方欠如 = 「〜なし」の
+#   負の主張として per-item 束縛で pin する (ehar 則・正の主張チップと負の主張ラベルを両方束縛)。
+#   ★toward-terminal 経路宣言 (c5r.11 則): roadmap → VISION → principle 終端 / roadmap → SRS → (VISION 経由で) principle。
+#   roadmap は自前 principle 終端を持たない (graph 充足のための捏造終端は B3 不採択・changelog / testcases と同型)。
+#
+# ★順序 = seq 昇順を assembler が決定的に sort (未来へ向かう順 = 近い段階が先頭)。 changelog の semver 降順 sort と
+#   同型の「記載順に依存しない決定的導出」だが方向は逆 (roadmap は近い将来が先頭)。
+# ★区分 = priority (MoSCoW: must/should/could) の固定 canonical 順。 空 priority は省略 (「この段階に該当なし」の負の主張を
+#   空配列で偽装させない)。 各段階のハイライトで priority 別件数 (0 含む = 負の主張「この優先度の項目なし」) を決定的 emit。
+#
+# 読者 = クリニックの事業責任者 (医療や IT・工程管理の専門知識なし。 専門語は必ずやさしい言葉を併記)。
+# 人間層 = 「何を・どの順で・いつ頃目指すか / なぜ (機能方向・要件)」を平易に。 機械層 = stage-keyed の詳細 + cross-doc 照会 + JSON-LD。
+#
+# fabrication-free: 全 visible token は本 contract 由来。 plain 要約のみ prose スロットで後注入。
+# core (lib/ + inject-prose.sh) は無改変流用 (rule-of-three・純粋 pack 挿入)。
+
+doc_type: roadmap
+
+meta:
+  doc_id: ROADMAP-CLINIC-APPT
+  doc_type: roadmap
+  title: 診療予約システムのロードマップ — 何を・どの順で・いつ頃目指すかを、 機能の方向や要件と結びつけて段階ごとに宣言する
+  eyebrow_left: ロードマップ (Roadmap)
+  eyebrow_right: クリニック — 診療予約
+  subtitle: どの段階で何を目指すかを、 その方向 (なぜ = 機能方向) や 満たす要件 (要件定義) までたどれるようにする
+  version: "0.1"
+  date: "2026-06-18"
+  reader: クリニックの事業責任者 — 工程管理や IT の専門知識は不要 (専門語は必ずやさしい言葉を併記)
+
+# 承認記録 (SRS / vision / changelog と同じ approval-block)
+approval:
+  - role: 承認 (院長)
+    who: 山田 理恵
+    when: 2026-06-18 承認
+    stamp: 承認済
+  - role: レビュー (事務長)
+    who: 鈴木 大輔
+    when: 2026-06-17 レビュー
+    stamp: レビュー済
+  - role: 作成 (企画)
+    who: 企画チーム
+    when: 2026-06-16 起票
+    stamp: 作成
+
+# ★cross-doc 前方照会の解決先 (verify-roadmap.sh が参照先 VISION / SRS contract を読み込み、 各 item の refs に
+#   現れる F / FR ID 実在を確かめる)。 *_contract は contract/ dir 起点の相対パス。 rendered link 先 (*.html / #anchor)
+#   は assembler が emit。 VISION = 機能の方向 (claim・#<F>) / SRS = 要件 (claim・#<FR>)。 ADR は照会しない
+#   (roadmap は「どの順で目指すか」の宣言ゆえ設計判断の根拠照会を持たない = 高度が違う・vision と同型)。
+cross_doc:
+  vision_contract: clinic-appointment.vision.yaml
+  vision_doc_id: VISION-CLINIC-APPT
+  vision_html: clinic-appointment.vision.html   # ★VISION deep-link 先 (root 平置き = path prefix なし)。anchor = feature の裸 id (#f-1)
+  srs_contract: clinic-appointment.srs.yaml
+  srs_doc_id: SRS-CLINIC-APPT
+  srs_html: clinic-appointment.srs.html          # ★SRS deep-link 先 (anchor = SRS の裸 id・#FR2)
+
+# 段階 (stages = seq 昇順に決定的 sort する未来宣言の本体)。 seq は整数・一意 (sort key + anchor key)。
+#   id は段階識別子 (M1..・全 doc 横断一意の item id とは別系統)。 target = いつ頃目指すか (時期の目安)。
+#   outcome = その段階で目指す状態 (叙述・決定的値)。 items = priority (MoSCoW) 別の目標項目群 (空 priority は省略)。
+#   各 item (id 一意・全 doc 横断) は refs で VISION feature (方向・claim) か SRS FR (要件・claim) の少なくとも一方を持つ。
+stages:
+  - id: M1
+    seq: 1
+    name: 予約の芯を固める
+    target: 2026 Q3
+    outcome: まず、 同じ診療枠の取り合いが起きても予約の確定は必ず 1 件になる「予約の芯」を作る。 満枠の枠への申し込みは確定させず正しく断る。
+    items:
+      must:
+        - id: RM1
+          text: 空き枠の確認から予約の確定までを一つの流れにし、 同じ診療枠に申し込みが重なっても確定は 1 件だけになるようにする。
+          refs: { vision: [F-1], srs: [FR1, FR2, FR3] }
+      should:
+        - id: RM2
+          text: すでに満枠の枠へ申し込まれたとき、 予約を確定させず「空きなし」と正しく断る導線を整える。
+          refs: { srs: [FR3] }
+  - id: M2
+    seq: 2
+    name: 診療時間の枠を守る
+    target: 2026 Q4
+    outcome: 次に、 休診日や診療の受付時間の外を申し込みの対象から除き、 定めた受付時間の内側にある枠だけで受け付ける。
+    items:
+      must:
+        - id: RM3
+          text: 休診日や受付時間の外にあたる時間帯には申し込みを通さず、 患者にはその替わりとして来院できる別の候補を差し出す。
+          refs: { vision: [F-2], srs: [FR4] }
+      could:
+        - id: RM4
+          text: 診療枠と休診日を唯一の出どころとする診療カレンダー連携の下ごしらえを進める。
+          refs: { vision: [F-2] }
+  - id: M3
+    seq: 3
+    name: 枠を生かし、 本人を守る
+    target: 2027 Q1
+    outcome: 最後に、 空いた枠を無駄にしない運用と、 別人の予約として進めない本人確認をそろえ、 予約が「守られる約束」になる状態へ仕上げる。
+    items:
+      must:
+        - id: RM5
+          text: 予約のときも当日の受付のときも本人確認を通し、 別人の予約として処理してしまう道をふさぐ。
+          refs: { vision: [F-4], srs: [FR7] }
+      should:
+        - id: RM6
+          text: 予約の変更・キャンセルを受け付け、 空いた枠がすぐ再予約できるように開放する。
+          refs: { vision: [F-3], srs: [FR5] }
+        - id: RM7
+          text: 来院を忘れての無断キャンセルを抑えるため、 受診の前日にあたる日へ向けてリマインド通知を届ける。
+          refs: { vision: [F-3], srs: [FR6] }
+      could:
+        - id: RM8
+          text: 多くの予約の変更や取り消しを 1 件ずつでなく一度でさばける、 まとめ操作向けの管理画面をそろえる。
+          refs: { srs: [FR5] }
+
+# 用語集 (glossary = 用語の SSoT。 plain_short = 本文の専門語に併記するやさしい言い換え)。
+#   roadmap メタ語彙 (ロードマップ/マイルストーン/優先度) 主体ゆえ、 glossary-parity は intersect 登録
+#   (clinic SSoT 収録語〔診療枠/満枠/本人確認/リマインド通知〕のみ en 逐語一致・ページ固有メタ語は検査対象外)。
+#   glossary 語どうしは部分文字列禁止 (core_validate_glossary_substring が拒否)。
+glossary:
+  - { term: ロードマップ,     en: roadmap,               plain_short: 道のりの計画,        def: 何を・どの順で・いつ頃目指すかを、 近い段階から順に宣言した計画。 決める文書ではなく方向を示す。 }
+  - { term: マイルストーン,   en: milestone,             plain_short: 節目の段階,          def: 「ここまで到達したい」という区切りの段階。 ロードマップは近い節目から順に並べる。 }
+  - { term: 優先度,           en: priority,              plain_short: 優先の度合い,        def: どれを先に目指すかの度合い。 必須 (must)・推奨 (should)・任意 (could) の 3 段階で分ける。 }
+  - { term: 診療枠,           en: appointment slot,      plain_short: 予約できる時間帯,    def: 「何時に何人診られるか」を区切った予約の単位。 1 枠に入れる人数を超えると満枠になる。 }
+  - { term: 満枠,             en: fully booked,          plain_short: 空きなし,            def: その枠の受け入れ人数が埋まり、 もう予約を受けられない状態。 }
+  - { term: 本人確認,         en: identity verification, plain_short: 本人かの確かめ,      def: 予約や受付の相手が予約した本人かを確かめること。 取り違えや情報漏えいを防ぐ。 }
+  - { term: リマインド通知,   en: reminder notification, plain_short: 思い出し通知,        def: 予約日の前に「予約があります」と知らせる通知。 来院忘れを減らす。 }
+
+footer:
+  gen_meta: folio design-system generator — roadmap-pack (stage-keyed indexed + cross-doc 前方照会)
+  instance_tag: instance#1 clinic-roadmap

@@ -1,0 +1,60 @@
+# roadmap.rolemap.yaml — roadmap-pack (doc_type: roadmap) の抽象ロール graph 写像 (rolemap)
+#
+# folio engine post-B6 (folio-8cha)。 engine doc §3 表 (照会 = 抽象ロール graph) を roadmap-pack の具体 node-type へ
+# 写像する pack 側 SSoT (詳細は srs.rolemap.yaml / vision.rolemap.yaml / changelog.rolemap.yaml 冒頭注記)。 core
+# (lib/graph-common.sh) の reader が読み、 verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: principle 終端への到達可能性 / dangling / 孤立 を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★roadmap の hallmark = stage-keyed の未来宣言 + cross-doc 前方照会: 各目標項目 (item = claim = 実現の主張) が
+#   「どの機能の方向へ向かうか (VISION feature = claim 照会)」/「どの要件を満たすか (SRS FR = claim 照会)」を
+#   *別文書へ照会* する。 ゆえ edge-bearing pack (GRAPH_EDGELESS_PACKS = srs|principle に含まれない)。
+#   ★verify-graph.sh は contract/*.yaml を無条件 glob し graph_pack_of でファイル名 (clinic-roadmap.roadmap.yaml) から
+#   pack=roadmap を導出して同名 rolemap を発見・必須化する (opt-in registry ではない)。 ゆえ本 rolemap は新設と同時に
+#   pass-1 floor pin (edge.role == roles[items]=claim) + forbidden_roles=[exploration] を *常時* 課される
+#   = floor を通すこと自体が受入条件。 role_expr は照会先 ID 列でなく source node (items) の intrinsic role token
+#   (claim) を |edges| 回 emit する (vision の features→SRS / changelog の changes→{SRS,ADR} と同型)。
+#   ★pass-2 reachability: roadmap→VISION / roadmap→SRS edge は direction: forward (toward-terminal 順)。
+#   roadmap の justification 鎖は「この目標は何を実現するか→この機能方向/要件のため→(VISION 経由で) この原則のため」=
+#   ROADMAP→VISION→principle 終端 / ROADMAP→SRS→(SRS の到達路 = VISION の backward edge 経由で) principle で終端完備
+#   (folio-c5r.11 則・changelog / testcases と同型)。 VISION-CLINIC-APPT は自前 inline principle 終端 (PRIN-PATIENT-TRUST)
+#   を持つため roadmap の終端到達路を供給する。
+#   roadmap は自前 principle 終端を持たない (graph 充足のための捏造終端は B3 不採択・changelog / testcases と同型)。
+pack: roadmap
+
+# node-type (contract の目標項目) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# items = claim (これから実現する目標の方向 = 主張)。 前方照会先 (VISION の F=claim / SRS の FR=claim) の
+# 役割は verify-roadmap.sh の verify_cross_doc_refs が HTML data-rm-*-role で別途扱う (graph の roles は source node の intrinsic role)。
+# stages / target / outcome は graph edge を持たない純内容 node ゆえ roles に載せない (edge-bearing のみ pin 対象)。
+roles:
+  items: claim   # 目標項目 = 実現の主張
+
+# 前方 cross-doc 照会 edge (2 本)。 各目標項目の refs.vision[] (F) / refs.srs[] (FR) が VISION / SRS へ向かう。
+# direction: forward (toward-terminal 順・changelog→{SRS,ADR} と同型) = reachability は ROADMAP→VISION→principle /
+# ROADMAP→SRS→(SRS の到達路経由で)principle。 局所の ID 実在検証は verify-roadmap.sh が担う (本 edge の影響なし)。
+# ★edge.role token = *source node-type (items) の intrinsic role* = claim を |edges| 回 emit
+#   (照会先 ID 列・照会 relationship role〔VISION=claim / SRS=claim〕は role_expr でなく verify-roadmap.sh が別経路で扱う)。
+edges:
+  - from_node: items                                                                                  # roles[items] = claim が edge.role の期待値 (二重担保)
+    role_expr: '[.stages[].items | .[][] | .refs.vision // [] | .[]] | map("claim") | .[]'            # source 役割 (claim) を |vision edges| 回
+    count_expr: '[.stages[].items | .[][] | .refs.vision // [] | .[]] | length'                       # |vision edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.vision_doc_id'                                                      # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                                                                                # roadmap→VISION は toward-terminal の順 (reachability は ROADMAP→VISION→principle)
+  - from_node: items                                                                                  # 同 source node (items=claim)
+    role_expr: '[.stages[].items | .[][] | .refs.srs // [] | .[]] | map("claim") | .[]'               # source 役割 (claim) を |srs edges| 回
+    count_expr: '[.stages[].items | .[][] | .refs.srs // [] | .[]] | length'                          # |srs edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'                                                         # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                                                                                # roadmap→SRS は toward-terminal の順 (reachability は ROADMAP→SRS→(VISION 経由)principle)
+
+# この pack が持つ照会終端 node。 roadmap は終端を持たない (graph 充足のための自前 principle 宣言は捏造ハザード = c5r.11 で B3 不採択)。
+# reachability は edge で VISION / SRS へ到達し、 VISION の経路 (inline principle) で終端完備する。
+terminal: {}
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 roadmap (clinic instance) には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 roadmap は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration node / 探索 edge 不在」を scan で実証。
+forbidden_roles:
+  - exploration

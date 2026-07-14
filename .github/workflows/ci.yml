@@ -168,8 +168,8 @@ jobs:
           bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
           python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
 
-      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 11 (risk+changelog 追加後) / B 段 = folio-jyfh mermaid 6・user 裁定
-      #      2026-07-08: 全 contract 掃引)。 17 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
+      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 12 (risk+changelog+roadmap 追加後) / B 段 = folio-jyfh mermaid 6・user 裁定
+      #      2026-07-08: 全 contract 掃引)。 18 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
       #      build → render-gate-srs.py (doc-type 非依存 detector) で light/dark × 3 viewport の low-contrast /
       #      horizontal-overflow / component-overlap を blocking 捕捉。 srs.css 共有トークンの contrast 退行
       #      (dark 側の実欠陥 4 点を本 gate 初回実走が検出・land 済) を全 pack 面で再発防止する。
@@ -218,6 +218,7 @@ jobs:
           gate vision-folio    out    vision    folio-vision.vision.yaml            folio-vision.prose.yaml
           gate risk            out    risk      clinic-risk.risk.yaml              clinic-risk.risk.prose.yaml
           gate changelog       out    changelog clinic-changelog.changelog.yaml     clinic-changelog.changelog.prose.yaml
+          gate roadmap         out    roadmap   clinic-roadmap.roadmap.yaml         clinic-roadmap.roadmap.prose.yaml
           # ---- B 段: mermaid 6 instance (SVG settle polling は renderer 側・folio-jyfh) ----
           gate arch            out    arch         clinic-architecture.arch.yaml     clinic-architecture.arch.prose.yaml
           gate datamodel       out    datamodel    clinic-appointment.datamodel.yaml clinic-appointment.datamodel.prose.yaml
@@ -227,7 +228,7 @@ jobs:
           gate vision-clinic   out    vision       clinic-appointment.vision.yaml    clinic-appointment.vision.prose.yaml
           echo "gate F sweep 所要: $(( $(date +%s) - t0 ))s (撤退条件 300s)"
           if [ "$fail" -ne 0 ]; then echo "::error::gate F sweep に FAIL あり"; exit 1; fi
-          echo "gate F sweep GREEN (17 artifact)"
+          echo "gate F sweep GREEN (18 artifact)"
 
       # 全 page × viewport の full-page screenshot を artifact 保存 (ADR-0039 §2.8: 人間 review の
       # 補助に充てるのみで golden 比較はしない — pixel golden は brittle)。 FAIL 時こそ目視材料が

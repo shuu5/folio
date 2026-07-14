@@ -62,7 +62,7 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 ├── hooks/                                  Claude Code 公式仕様 = plugin root 直下 MUST
 │   └── hooks.json                          hook 宣言 (PreToolUse × 3 [caller-marker / path-boundary / content-boundary] + PostToolUse × 2 + SessionStart、 MVP core + B5-III tier2 content-boundary)
 ├── skills/                                 SKILL (公式仕様 = plugin root 直下): folio-architect (spec 編集の正規路) + folio-compress (ADR-0040 圧縮 migration)
-├── agents/                                 review subagent (公式仕様 = plugin root 直下): Phase F spec-review-* 5 本 + readability-walk (rules §11.4 readability lens) + doc-type 別 ceiling 対 13 doc-type (persona-walk-{srs,adr,research,principle,spec,vision,glossary,architecture,testcases,datamodel,interface,risk,changelog} = gate I / fidelity-同 13 種 = gate J、 taxonomy §5.3) + completeness-critic-srs (§5.2.6 第 3 lens 候補) + finding-refuter (ceiling 2-pass 汎用・中立 bias)
+├── agents/                                 review subagent (公式仕様 = plugin root 直下): Phase F spec-review-* 5 本 + readability-walk (rules §11.4 readability lens) + doc-type 別 ceiling 対 14 doc-type (persona-walk-{srs,adr,research,principle,spec,vision,glossary,architecture,testcases,datamodel,interface,risk,changelog,roadmap} = gate I / fidelity-同 14 種 = gate J、 taxonomy §5.3) + completeness-critic-srs (§5.2.6 第 3 lens 候補) + finding-refuter (ceiling 2-pass 汎用・中立 bias)
 ├── .claude-plugin/                         Claude Code manifest + 内部 HOW (P-11 部分隔離)
 │   ├── plugin.json                         Claude Code 必須 manifest (spec_path = design-intent/spec/)
 │   ├── scripts/                            hook script (hooks.json から path 指定で参照)

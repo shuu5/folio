@@ -177,6 +177,9 @@ risks[].mitigation|.risks[].mitigation'
 # changelog は version-keyed の変更記録 (自由文 = 各変更項目の text)。 版/日付/id/区分ラベル/glossary def は
 #   短 label・enum・SSoT コピーゆえ不掲載。 categories は map ゆえ path に yq pipe を含む (read の expr は残り全体を保持)。
 LEAVES[changelog]='changes.text|[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].text'
+# roadmap は段階ごとの未来宣言 (自由文 = 各段階の outcome〔目指す状態〕+ 各目標項目の text)。 段階 id/seq/target/優先度
+#   ラベル/refs id/glossary def は短 label・enum・SSoT コピーゆえ不掲載。 items は priority-map ゆえ path に yq pipe を含む。
+LEAVES[roadmap]='stages.outcome+items.text|[.stages[].outcome, (.stages[].items | .[][] | .text)] | .[]'
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)
