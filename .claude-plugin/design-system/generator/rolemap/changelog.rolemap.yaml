@@ -1,0 +1,56 @@
+# changelog.rolemap.yaml — changelog-pack (doc_type: changelog) の抽象ロール graph 写像 (rolemap)
+#
+# folio engine post-B6 (folio-8ptq)。 engine doc §3 表 (照会 = 抽象ロール graph) を changelog-pack の具体 node-type へ
+# 写像する pack 側 SSoT (詳細は srs.rolemap.yaml / adr.rolemap.yaml / testcases.rolemap.yaml 冒頭注記)。 core
+# (lib/graph-common.sh) の reader が読み、 verify-graph.sh が
+#   (1) floor: scope 内 edge.role == roles[node-type] を pin (co-author + enforce・二重担保)
+#   (2) graph: principle 終端への到達可能性 / dangling / 孤立 を組み立てる
+# のに使う。 rolemap = pack / リーダー = core (additive・無改変)。
+#
+# ★changelog の hallmark = version-keyed の変更記録 + cross-doc 後方照会: 各変更項目 (implementation = 実装された変更) が
+#   「なぜ変えたか (ADR = rationale 照会)」/「どの要件のためか (SRS FR = claim 照会)」を *別文書へ照会* する。 ゆえ edge-bearing pack。
+#   ★verify-graph.sh は contract/*.yaml を無条件 glob し graph_pack_of でファイル名 (clinic-changelog.changelog.yaml) から
+#   pack=changelog を導出して同名 rolemap を発見・必須化する (opt-in registry ではない)。 ゆえ本 rolemap は新設と同時に
+#   pass-1 floor pin (edge.role == roles[changes]=implementation) + forbidden_roles=[exploration] を *常時* 課される
+#   = floor を通すこと自体が受入条件。 role_expr は照会先 ID 列でなく source node (changes) の intrinsic role token
+#   (implementation) を |edges| 回 emit する (adr の justifies→claim / testcases の verifies→verification と同型)。
+#   ★pass-2 reachability: changelog→ADR / changelog→SRS edge は direction: forward (toward-terminal 順)。
+#   changelog の justification 鎖は「この変更はなぜあるか→この判断/要件のため→(ADR 経由で) この原則のため」=
+#   CHANGELOG→ADR→principle 終端 / CHANGELOG→SRS→(SRS の経路で ADR→) principle で終端完備 (folio-c5r.11 則・testcases と同型)。
+#   changelog は自前 principle 終端を持たない (graph 充足のための捏造終端は B3 不採択)。
+pack: changelog
+
+# node-type (contract の変更項目) → 抽象ロール (§3 表・GRAPH_ROLE_ALLOWLIST 内)。
+# changes = implementation (実装され出荷された変更の記録)。 前方照会先 (SRS の FR=claim / ADR の判断=rationale) の
+# 役割は verify-changelog.sh の verify_cross_doc_refs が HTML data-cl-*-role で別途扱う (graph の roles は source node の intrinsic role)。
+roles:
+  changes: implementation   # 変更項目 = 実装され出荷された変更の記録
+
+# 前方 cross-doc 照会 edge (2 本)。 各変更項目の refs.srs[] (FR) / refs.adr[] (ADR) が SRS / ADR へ向かう。
+# direction: forward (toward-terminal 順・testcases→SRS と同型) = reachability は CHANGELOG→ADR→principle /
+# CHANGELOG→SRS→(SRS 経路で ADR→)principle。 局所の ID 実在検証は verify-changelog.sh が担う (本 edge の影響なし)。
+# ★edge.role token = *source node-type (changes) の intrinsic role* = implementation を |edges| 回 emit
+#   (照会先 ID 列・照会 relationship role〔SRS=claim / ADR=rationale〕は role_expr でなく verify-changelog.sh が別経路で扱う)。
+edges:
+  - from_node: changes                                                                                                              # roles[changes] = implementation が edge.role の期待値 (二重担保)
+    role_expr: '[[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].refs.srs // [] | .[]] | map("implementation") | .[]'   # source 役割 (implementation) を |srs edges| 回
+    count_expr: '[[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].refs.srs // [] | .[]] | length'                       # |srs edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.srs_doc_id'                                                                                       # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                                                                                                              # changelog→SRS は toward-terminal の順 (reachability は CHANGELOG→SRS→ADR→principle)
+  - from_node: changes                                                                                                              # 同 source node (changes=implementation)
+    role_expr: '[[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].refs.adr // [] | .[]] | map("implementation") | .[]'   # source 役割 (implementation) を |adr edges| 回
+    count_expr: '[[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].refs.adr // [] | .[]] | length'                       # |adr edges| (空 ref 検出)
+    target_docid_expr: '.cross_doc.adr_doc_id'                                                                                       # 照会先 doc の doc_id (graph dangling 用)
+    direction: forward                                                                                                              # changelog→ADR は toward-terminal の順 (reachability は CHANGELOG→ADR→principle)
+
+# この pack が持つ照会終端 node。 changelog は終端を持たない (graph 充足のための自前 principle 宣言は捏造ハザード = c5r.11 で B3 不採択)。
+# reachability は edge で ADR / SRS へ到達し、 ADR の経路 (inline principle) で終端完備する。
+terminal: {}
+
+# contract外 (folio-self) を指す照会 = external-ref warn。 changelog には無い。
+external: []
+
+# この pack に存在してはならない抽象ロール。 changelog は探索文書でない (探索は research-pack)。
+# floor が「rolemap に exploration 不在」かつ「corpus に exploration node / 探索 edge 不在」を scan で実証。
+forbidden_roles:
+  - exploration

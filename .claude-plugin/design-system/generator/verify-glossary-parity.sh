@@ -61,6 +61,9 @@ clinic-architecture.arch.yaml|full|clinic-appointment.glossary.yaml
 clinic-double-booking.adr.yaml|full|clinic-appointment.glossary.yaml
 clinic-double-booking.research.yaml|full|clinic-appointment.glossary.yaml
 clinic-appointment.vision.yaml|full|clinic-appointment.glossary.yaml
+# changelog は changelog メタ語彙 (変更履歴/リリース/版/セマンティックバージョニング/非推奨/競合) を持つ = clinic ドメイン union SSoT の
+# 対象外ゆえ intersect (SSoT 収録語〔診療枠/満枠/リマインド通知/本人確認〕のみ en 逐語一致・ページ固有語は検査対象外・folio-8ptq)。
+clinic-changelog.changelog.yaml|intersect|clinic-appointment.glossary.yaml
 # data-model は data-modeling メタ語彙 (エンティティ/ER 図/不変条件/識別子/区分/参照) を持つ = clinic ドメイン union SSoT の
 # 対象外ゆえ intersect (SSoT 収録語のみ en 逐語一致・ページ固有語は検査対象外・folio-1q8o)。
 clinic-appointment.datamodel.yaml|intersect|clinic-appointment.glossary.yaml

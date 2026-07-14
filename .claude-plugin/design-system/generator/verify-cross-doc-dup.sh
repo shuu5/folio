@@ -174,6 +174,9 @@ cross_cutting[].rule|.cross_cutting[].rule'
 LEAVES[risk]='risks[].title|.risks[].title
 risks[].statement|.risks[].statement
 risks[].mitigation|.risks[].mitigation'
+# changelog は version-keyed の変更記録 (自由文 = 各変更項目の text)。 版/日付/id/区分ラベル/glossary def は
+#   短 label・enum・SSoT コピーゆえ不掲載。 categories は map ゆえ path に yq pipe を含む (read の expr は残り全体を保持)。
+LEAVES[changelog]='changes.text|[(.unreleased.categories // {} | .[][]), (.entries[].categories | .[][])] | .[].text'
 LEAVES[glossary]=''
 
 mapfile -t CONTRACTS < <(find "$CONTRACT_DIR" -maxdepth 1 -name '*.yaml' | sort)
