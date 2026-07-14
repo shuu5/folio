@@ -1,6 +1,6 @@
 # folio-glossary.prose.yaml — opus-authored prose manifest for the glossary-pack (instance #1)
 # inject-prose.sh (core, 無改変) が data-slot-id 付きの空スロットへ各値を HTML escape して注入する。
-# キー集合は assemble-glossary.sh が emit する data-slot-id 集合と *完全一致* (cover-summary + plain-<slug> × 33)。
+# キー集合は assemble-glossary.sh が emit する data-slot-id 集合と *完全一致* (cover-summary + plain-<slug> × 36)。
 #
 # 人間層 (dual-audience の human side): 各 plain-<slug> は machine 層の formal_def (vocabulary.yaml の
 # 技術定義) を *非エンジニアに届く平易な言い換え* にしたもの。専門語を避け、何のための言葉かを日常語で説明する。
@@ -42,3 +42,6 @@ slots:
   plain-sandbox: "決まった手順で動作を試す検証の仕組みです。 部品を本番と切り離した安全な場所で、 想定の入力を使って単体で確かめます。"
   plain-harness: "検証の手順を実際に走らせて、 結果が正しいかを判定する実行役のプログラムです。 検査の種類ごとに走らせ方を使い分けます。"
   plain-landing: "folio の入口となるトップページの型です。 ひとことの見出しから、 進む先のボタン、 読者別の案内カード、 一覧へと並ぶ構成になっています。"
+  plain-architecture-description: "システムが『どんな部品でできていて、 それらがどうつながり、 どんな原則で成り立っているか』という構造の姿を、 1 つの文書にまとめて記述する文書の種類のことです。 folio 自身の作りを説明した folio-self-spec が、 その一例にあたります。"
+  plain-design-intent-space: "folio の設計の意図をまとめて置いてある場所 (design-intent/ フォルダ全体) のことです。 設計の狙いを書いた文書・決定の記録・調査・素材が、 ここにひとまとまりで収められています。"
+  plain-layer-architecture: "folio の仕組みを 2 つの階層に分けた全体構造のことです。 folio そのもの (土台の層) と、 folio を使って文書を作る側のプロジェクト (使う層) の 2 段に分かれています。"

@@ -232,13 +232,13 @@ m="$TMP/f229l.html"; perl -0777 -pe '
 if cmp -s "$GOOD" "$m"; then total=$((total+1)); echo "  [SLIP] ★F229-l plainswap 改竄が no-op (perl 構造不一致・vacuous)"; else
   expect_fail "★F229-l plainswap (data-prose-slot+本文 対称 swap・data-slot-id 据置) を双子等値検査で捕捉" "$m"; fi
 # F229-b. domain-heading の friendly ラベル/語数を捏造 → domain-heading set_eq で捕捉
-m="$TMP/f229b.html"; perl -0777 -pe 's{(<h3 class="domain-heading">)folio-framework の言葉 \(33 語\)(</h3>)}{${1}偽ドメイン (99 語)${2}}' "$GOOD" > "$m"
+m="$TMP/f229b.html"; perl -0777 -pe 's{(<h3 class="domain-heading">)folio-framework の言葉 \(36 語\)(</h3>)}{${1}偽ドメイン (99 語)${2}}' "$GOOD" > "$m"
 expect_fail "★F229-b domain-heading label/語数 捏造 → domain-heading set_eq で捕捉" "$m"
 # F229-c. 偽 term-domain section を additive 注入 → term-domain 占有 (==|domains|) + id set_eq で捕捉
 m="$TMP/f229c.html"; perl -0777 -pe 's{</main>}{<section class="term-domain" id="domain-fake">偽区分(捏造)</section>\n</main>}' "$GOOD" > "$m"
 expect_fail "★F229-c 偽 term-domain section additive を占有+id set_eq で捕捉" "$m"
 # F229-d. TOC リンク文言を捏造 (domain-heading と desync) → TOC link 文言 set_eq で捕捉
-m="$TMP/f229d.html"; perl -0777 -pe 's{(<a href="#domain-folio-closed">)folio-framework の言葉 \(33 語\)(</a>)}{${1}偽TOC文言(捏造)${2}}' "$GOOD" > "$m"
+m="$TMP/f229d.html"; perl -0777 -pe 's{(<a href="#domain-folio-closed">)folio-framework の言葉 \(36 語\)(</a>)}{${1}偽TOC文言(捏造)${2}}' "$GOOD" > "$m"
 expect_fail "★F229-d TOC link 文言 捏造 (heading desync) → TOC set_eq で捕捉" "$m"
 # F229-e. 偽 term-usage を additive 注入 → term-usage 占有 + 大域『使われる文書:』parity で捕捉
 m="$TMP/f229e.html"; perl -0777 -pe 's{</body>}{<p class="term-usage">使われる文書: 偽(捏造)</p></body>}' "$GOOD" > "$m"
@@ -246,7 +246,7 @@ expect_fail "★F229-e 偽 term-usage additive を占有+大域 parity で捕捉
 # F229-f. 偽 glossary-toc nav を additive 注入 → glossary-toc 占有 (==1) で捕捉
 m="$TMP/f229f.html"; perl -0777 -pe 's{</main>}{<nav class="glossary-toc"><ul><li><a href="#domain-ghost">偽索引</a></li></ul></nav>\n</main>}' "$GOOD" > "$m"
 # F229-g. genuine nav 内へ偽 TOC entry を注入 → TOC href set_eq (件数/集合) で捕捉
-m="$TMP/f229g.html"; perl -0777 -pe 's{(<a href="#domain-folio-closed">folio-framework の言葉 \(33 語\)</a></li>)}{${1}<li><a href="#domain-ghost">偽索引entry</a></li>}' "$GOOD" > "$m"
+m="$TMP/f229g.html"; perl -0777 -pe 's{(<a href="#domain-folio-closed">folio-framework の言葉 \(36 語\)</a></li>)}{${1}<li><a href="#domain-ghost">偽索引entry</a></li>}' "$GOOD" > "$m"
 expect_fail "★F229-g genuine nav 内 偽 TOC entry を TOC href set_eq で捕捉" "$m"
 
 # --- folio-229 self-review: multi-domain nesting (境界 shift) を §2c-nesting が捕捉 (clinic 3 domain instance) ---

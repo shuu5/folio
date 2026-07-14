@@ -54,7 +54,7 @@ cover:
     - label: "version"
       value: "1.1.0"
     - label: "用語数"
-      value: "33"
+      value: "36"
     - label: "読了目安"
       value: "約 12 分"
 footer:
@@ -377,3 +377,27 @@ terms:
     plain_slot: "plain-landing"
     cross_refs:
       - "ADR-0039 §2.2"
+  # --- architecture polysemy 解消 3 語 (c5r.7 で vocabulary.yaml へ追加・gttv 裁定で contract 収録)。
+  #   裸の "architecture" が指す 3 entity を各々別 canonical 完全形で弁別する (vocab §120-138 と同 SSoT)。
+  - canonical: "architecture-description"
+    en: "architecture-description"
+    slug: "architecture-description"
+    domain: "folio-closed"
+    formal_def: "構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。"
+    plain_slot: "plain-architecture-description"
+    cross_refs: []
+  - canonical: "design-intent space"
+    en: "design-intent space"
+    slug: "design-intent-space"
+    domain: "folio-closed"
+    formal_def: "folio repo の design-intent/ ディレクトリ全体 = spec / decisions / research / assets を含む設計意図の空間 (P-7 3-domain、 constitution §1 の architecture specification framework が書く対象)。 architecture-description (空間内の 1 doc-type) でも Layer Architecture でもない。"
+    plain_slot: "plain-design-intent-space"
+    cross_refs:
+      - "P-7"
+  - canonical: "Layer Architecture"
+    en: "Layer Architecture"
+    slug: "layer-architecture"
+    domain: "folio-closed"
+    formal_def: "constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (design-intent/ 空間) でも architecture-description (doc-type) でもない。"
+    plain_slot: "plain-layer-architecture"
+    cross_refs: []
