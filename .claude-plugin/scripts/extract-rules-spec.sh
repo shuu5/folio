@@ -185,8 +185,9 @@ my (%rseen, @refs);
 sub addref { my ($tok,$doc,$role)=@_; my $k="$tok|$doc"; return if $rseen{$k}++; push @refs, { token=>$tok, doc=>$doc, role=>$role }; }
 # constitution P-N
 while ($H =~ /href="[^"]*constitution\.html#p-(\d+)"/g) { addref("P-$1", "constitution.html", "implementation"); }
-# verification REQ-VER-NNN
-while ($H =~ /href="[^"]*verification\.html#req-ver-(\d+)"/g) { addref("REQ-VER-".sprintf("%03d",$1), "verification.html", "verification"); }
+# verification REQ-VER-NNN (doc は basename を capture で判別 — greedy [^"]* が srs- prefix を吸収して
+# srs-verification.html を verification.html へ誤帰属する fail-open を封鎖 = pyus ceiling 実証)
+while ($H =~ /href="[^"]*?((?:srs-)?verification)\.html#req-ver-(\d+)"/g) { addref("REQ-VER-".sprintf("%03d",$2), "$1.html", "verification"); }
 # ADR-NNNN (decisions/ADR-NNNN-*.html)
 while ($H =~ /href="[^"]*decisions\/ADR-(\d{4})-[^"]*"/g) { addref("ADR-$1", "decisions/", "rationale"); }
 
