@@ -32,7 +32,7 @@
 }
 @media (prefers-color-scheme: dark){
   :root{
-    --ink:#e8eef2; --ink-soft:#a9b7c1; --ink-faint:#7d8c97;
+    --ink:#e8eef2; --ink-soft:#a9b7c1; --ink-faint:#8a99a4; /* ink-faint: 全 dark bg で contrast ≥4.85 = WCAG AA (≥4.5) 充足・最小は ok-tint/warn-tint (gate F・folio-vuf) */
     --paper:#0d171e; --paper-2:#15222b; --paper-3:#1b2c37;
     --line:#273947; --line-soft:#1b2c37;
     --brand:#7db8e8; --brand-deep:#1d3a54; --brand-tint:#16293a;
@@ -89,6 +89,7 @@ svg{display:block;} .ico{width:1em; height:1em;}
 .cover-meta .m{display:flex; gap:8px; align-items:center; opacity:.92;}
 .cover-meta .m .k{opacity:.62; font-weight:600;} .cover-meta .m .v{font-weight:700;}
 .reader-chip{display:inline-flex; gap:8px; align-items:center; margin-top:18px; background:#ffce6e; color:#3a2c05; font-weight:700; font-size:13.5px; padding:8px 14px; border-radius:10px; box-shadow:0 3px 10px rgba(0,0,0,.2);}
+a{color:var(--brand);} /* anchor 既定色 — UA 既定 #0000ee は dark bg で 1.72 (skip-link/domain 目次等の素 anchor で 3 例目の同型欠陥・型 selector ゆえ class 付きリンクは specificity で不変・gate F WCAG AA 両テーマ ≥7.6) */
 
 /* ===================== approval-block (deck-band / 承認証跡) ★critic補填 ===== */
 [data-component="approval-block"]{display:flex; flex-wrap:wrap; gap:14px; align-items:stretch; margin-top:22px;}
@@ -524,7 +525,7 @@ figure.diagram figcaption{padding:11px 15px 13px;font-size:12px;color:var(--ink-
 </div>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-vision.vision.yaml</b> &middot; 生成: <b>2026-07-05 04:55</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-vision.vision.yaml</b> &middot; 生成: <b>2026-07-15 14:14</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>vision-pack</span><span>folio engine 段階3 後 (instance#2 folio-self)</span><span>Pichler 骨 + Wiegers 選抜 + 原則終端</span></div>
 </div></footer>
 </body>
