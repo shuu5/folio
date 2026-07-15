@@ -84,6 +84,15 @@ jobs:
       - name: spec-graph JSON-LD emit 敵対回帰 (deterministic — head_graph emit + scan 到達 + fix 逆グラフ + chrome 共存)
         run: .claude-plugin/design-system/generator/test-graph-emit.sh
 
+      # canonical-drift gate (folio-u7oc)。 out-of-scan generated-canonical (design-intent/vision.html) は
+      # validate 走査外・inventory node 外で、 SSoT (contract/prose) 側の変更や srs.css 改訂が canonical へ
+      # 伝播しないまま 10 日 silent drift した前科がある (WCAG fix 未伝播・folio-u7oc 起票事由)。 本 gate は
+      # canonical == fresh 再生成 (assemble-vision + inject-prose full pipeline) を生成 timestamp 正規化後の
+      # byte 一致で検査する fail-closed gate。 決定的 (bash/yq/perl・render 非依存) ゆえ deterministic floor に
+      # 配線して merge block させる — CI 配線しない限り gate は inert で再発防止にならない (Leg B 要件)。
+      - name: canonical-drift gate (deterministic floor — out-of-scan canonical == fresh 再生成)
+        run: .claude-plugin/design-system/generator/verify-canonical-drift.sh
+
       # glossary 同鏡 gate (folio-9inj)。 定義文字列は 5 site に複製される: (1) vocabulary.yaml の definition /
       # (2) glossary contract の formal_def / (3) spec contract 3 本の glossary[].def / (4) spec HTML の inline
       # data-tooltip / (5) spec contract の prose html 内 data-tooltip。 (4) は folio validate
