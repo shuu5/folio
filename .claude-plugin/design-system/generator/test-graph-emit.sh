@@ -16,6 +16,10 @@
 #   MK2 JSON-LD 改竄  → validate [FAIL] jsonld structural + inventory WARN-skip
 #   MK3 chrome drift  → build --check 非 0
 #   MK4 逆グラフ drift → validate [FAIL] broken-reverse
+#   MK6 flip hard-fail  switchover-harness の head_graph hard-fail 述語を per-shape (srs/relations) で撃つ:
+#                       in-scan flip target が head_graph 欠落 → FAIL / head_graph 付与 → PASS 陽性対照 /
+#                       out-of-scan 着地 → exempt PASS 陰性対照 / grandfathered 存在下でも target 1 本 scope
+#                       (corpus 走査 mutant 捕捉)。 FAIL 検出は FAIL 行専有 substring で exit 非依存 (folio-nnqh)
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -203,6 +207,61 @@ jqok "MK5 title が完全復元 (</script> 込み・< は < に戻り意味不�
 jqok "MK5 stakeholders も完全復元 (意味不変)"                                    '.["folio:stakeholders"]=="</script><svg onload=alert(2)>"' "$HBLK"
 has  "MK5 < が \\u003c にエスケープ (breakout 封鎖)"                             '\\u003c/script>' "$HBLK"
 nhas "MK5 head に live </script><img injection 無し (script 早期クローズ無し)"    '</script><img'   "$HHEAD"
+
+echo "--- MK6: flip 時 head_graph hard-fail (switchover-harness per-shape・in-scan 限定) ---"
+# switchover-harness (folio-nnqh Leg A) の head_graph hard-fail 述語を per-shape で撃つ。 harness は
+# contract を独立に yq 評価し (core_emit_graph_head:113 の || return 0 silent no-emit に defer しない)、
+# in-scan flip target が head_graph を欠けば FAIL。 FAIL 検出は FAIL 行専有 substring
+# (SWH-HARDFAIL head_graph-missing) で行い exit code に依存しない (jyfh/MK1 規律)。 harness 実走の存在
+# assert も置く。 fixture は既存 contract の copy に head_graph を append する既存パターンに限定し、 実
+# contract への head_graph 投入 (folio-tco6 職掌) は一切行わない。
+HARNESS="$HERE/../../scripts/switchover-harness.sh"
+if [[ -f "$HARNESS" ]]; then ok "MK6 switchover-harness 実在"; else bad "MK6 switchover-harness 実在"; fi
+MK6SPEC="$WORK/mk6/design-intent/spec"; mkdir -p "$MK6SPEC"
+MK6SPEC_ABS="$(realpath -m "$MK6SPEC")"
+# fixture 対: head_graph 欠落 と head_graph 付与 (append) を srs (非mermaid) / relations (mermaid) 両
+# shape で用意する (per-shape DOM 構造クラス被覆)。 absent 側 fixture は live contract を copy し
+# head_graph を明示除去 (del) して decouple する: 実 contract に head_graph が land されても
+# (folio-tco6 の職掌 = folio-relations.spec.yaml は一級の flip target) MK6 の『欠落→hard-fail』実弾が
+# 実 contract の head_graph 有無に依存せず安定する (forward-coupling regression 封鎖)。 生成直後に
+# head_graph 不在を yq has で existence-assert (fail-closed・decouple 破れを PASS させない)。
+SRS_SRC="$HERE/contract/clinic-appointment.srs.yaml"
+REL_SRC="$HERE/contract/folio-relations.spec.yaml"
+SRS_NOHG="$WORK/mk6-srs-nohg.yaml"; cp "$SRS_SRC" "$SRS_NOHG"; yq -i 'del(.head_graph)' "$SRS_NOHG"
+if [[ "$(yq -r 'has("head_graph")' "$SRS_NOHG" 2>/dev/null)" == "false" ]]; then ok "MK6 srs-nohg fixture が head_graph 不在 (decouple 済)"; else bad "MK6 srs-nohg fixture が head_graph 不在 (decouple 済)"; fi
+REL_NOHG="$WORK/mk6-rel-nohg.yaml"; cp "$REL_SRC" "$REL_NOHG"; yq -i 'del(.head_graph)' "$REL_NOHG"
+if [[ "$(yq -r 'has("head_graph")' "$REL_NOHG" 2>/dev/null)" == "false" ]]; then ok "MK6 rel-nohg fixture が head_graph 不在 (decouple 済)"; else bad "MK6 rel-nohg fixture が head_graph 不在 (decouple 済)"; fi
+# present 側 fixture: decouple 済 absent fixture (head_graph 無しを保証済) に head_graph を append
+# (live copy への二重 append で duplicate key を生む risk を回避)。
+SRS_HG="$WORK/mk6-srs-hg.yaml"; cp "$SRS_NOHG" "$SRS_HG"; printf '\nhead_graph:\n  id: ./clinic.srs.html\n  part_of: [./README.html]\n' >> "$SRS_HG"
+REL_HG="$WORK/mk6-rel-hg.yaml"; cp "$REL_NOHG" "$REL_HG"; printf '\nhead_graph:\n  id: ./relations.html\n  part_of: [./README.html]\n' >> "$REL_HG"
+run_hf() { bash "$HARNESS" gate-head-graph "$1" "$2" "$3" 2>&1; }   # 出力を stdout 集約 (exit 非依存判定)
+# (1) srs head_graph 欠落 × in-scan 着地 → hard-fail (非mermaid shape・実弾) + harness 実走 存在 assert
+O6="$(run_hf "$SRS_NOHG" "$MK6SPEC/clinic.srs.html" "$MK6SPEC_ABS")"
+if [[ -n "$O6" ]]; then ok "MK6 harness 実走 (出力あり)"; else bad "MK6 harness 実走 (出力あり)"; fi
+if grep -q 'SWH-HARDFAIL head_graph-missing' <<<"$O6"; then ok "MK6 srs head_graph 欠落 in-scan → hard-fail (非mermaid)"; else bad "MK6 srs head_graph 欠落 in-scan → hard-fail (非mermaid)"; fi
+# (2) srs head_graph 付与 × in-scan → PASS (陽性対照)
+O6="$(run_hf "$SRS_HG" "$MK6SPEC/clinic.srs.html" "$MK6SPEC_ABS")"
+if grep -q 'SWH-HARDFAIL-OK present' <<<"$O6"; then ok "MK6 srs head_graph 付与 in-scan → PASS (陽性対照)"; else bad "MK6 srs head_graph 付与 in-scan → PASS (陽性対照)"; fi
+# (3) relations head_graph 欠落 × in-scan → hard-fail (mermaid shape・per-shape 実弾)
+O6="$(run_hf "$REL_NOHG" "$MK6SPEC/relations.html" "$MK6SPEC_ABS")"
+if grep -q 'SWH-HARDFAIL head_graph-missing' <<<"$O6"; then ok "MK6 relations head_graph 欠落 in-scan → hard-fail (mermaid・per-shape)"; else bad "MK6 relations head_graph 欠落 in-scan → hard-fail (mermaid・per-shape)"; fi
+# (4) relations head_graph 付与 × in-scan → PASS (per-shape 陽性対照)
+O6="$(run_hf "$REL_HG" "$MK6SPEC/relations.html" "$MK6SPEC_ABS")"
+if grep -q 'SWH-HARDFAIL-OK present' <<<"$O6"; then ok "MK6 relations head_graph 付与 in-scan → PASS (per-shape 陽性対照)"; else bad "MK6 relations head_graph 付与 in-scan → PASS (per-shape 陽性対照)"; fi
+# (5) 陰性対照: head_graph 欠落でも out-of-scan (design-intent 直下) 着地は exempt PASS
+O6="$(run_hf "$SRS_NOHG" "$WORK/mk6/design-intent/vision.html" "$MK6SPEC_ABS")"
+if grep -q 'SWH-HARDFAIL-OK exempt' <<<"$O6"; then ok "MK6 head_graph 欠落でも out-of-scan 着地は exempt (陰性対照)"; else bad "MK6 head_graph 欠落でも out-of-scan 着地は exempt (陰性対照)"; fi
+# (6) 陰性対照 (corpus 走査 mutant 捕捉): head_graph 欠落 page を spec dir に物理配置しても、 述語は flip
+#     target 1 本のみ評価し corpus 走査しない。 head_graph 保持 target は grandfathered page の head_graph
+#     不在に関わらず PASS。 述語を spec/ 全走査へ広げる mutant はここで false-RED し捕捉される。
+"$HERE/assemble-srs.sh" "$SRS_NOHG" "$MK6SPEC/grandfathered-nohg.html" 2>/dev/null
+# fixture 存在 assert (fail-closed): assemble-srs.sh が silent 失敗すると offending page が corpus に
+# 置かれず、 corpus-走査 mutant の実弾が不在のまま item(6) が vacuous PASS する (jyfh 系恒真罠)。 生成
+# ファイル非空を必須化し、 実弾不在を PASS させない。
+if [[ -s "$MK6SPEC/grandfathered-nohg.html" ]]; then ok "MK6 grandfathered fixture 生成 (corpus 走査 mutant 実弾存在)"; else bad "MK6 grandfathered fixture 生成 (corpus 走査 mutant 実弾存在)"; fi
+O6="$(run_hf "$SRS_HG" "$MK6SPEC/clinic.srs.html" "$MK6SPEC_ABS")"
+if grep -q 'SWH-HARDFAIL head_graph-missing' <<<"$O6"; then bad "MK6 target-scope: grandfathered page 存在下でも head_graph 保持 target 非発火 (corpus 走査 mutant 捕捉)"; else ok "MK6 target-scope: grandfathered page 存在下でも head_graph 保持 target 非発火 (corpus 走査 mutant 捕捉)"; fi
 
 echo ""
 echo "test-graph-emit: ${PASS} passed, ${FAIL} failed"
