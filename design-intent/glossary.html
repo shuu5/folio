@@ -1,116 +1,672 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-doc-id="folio-glossary" data-doc-type="glossary">
 <head>
-<!-- folio:generated source=folio-build do-not-edit -->
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="folio-doc-type" content="glossary">
 <meta name="folio-generated" content="folio-build">
 <meta name="folio-status" content="active">
-<title>folio-vocabulary — glossary</title>
-<link rel="stylesheet" href="../common.css">
+<title>folio glossary — canonical vocabulary</title>
+<link rel="stylesheet" href="srs.css">
 <script type="application/ld+json">
-{
-  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
-  "@id": "./glossary.html",
-  "@type": "schema:DefinedTermSet",
-  "dc:title": "folio-vocabulary glossary"
-}
+{"@context":"https://schema.org/","@type":"DefinedTermSet","@id":"./glossary.html","name":"folio canonical vocabulary"}
 </script>
 </head>
 <body>
-
-<!-- folio:chrome-top -->
-<a class="skip-link" href="#term-adr">本文へスキップ</a>
-<nav class="breadcrumb" aria-label="パンくず"><ol>
-  <li><a href="index.html">design-intent</a></li>
-  <li aria-current="page">glossary</li>
-</ol></nav>
-<!-- /folio:chrome-top -->
-<header class="doc-header">
-  <h1>folio-vocabulary — glossary</h1>
-  <div class="meta">folio-framework 語の canonical 定義 (folio build が vocabulary.yaml から生成、 ADR-0036)</div>
+<main class="doc" data-doc-id="folio-glossary">
+<!-- folio:chrome-skiplink -->
+<a class="skip-link" href="#main">本文へスキップ</a>
+<!-- /folio:chrome-skiplink -->
+<header data-component="doc-cover-band">
+<p class="cover-eyebrow"><span class="doc-type">用語集 (Glossary)</span> <span>folio — canonical vocabulary</span></p>
+<h1>folio glossary</h1>
+<p class="cover-sub">folio-framework 語の canonical 定義集 — 非エンジニアにも届く平易定義 + 機械可読 term レコードの dual-audience 用語集</p>
+<div class="summary-card"><span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffe8a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><p class="lab">この用語集が約束すること (要旨)</p><p class="txt" data-prose-slot="cover-summary" data-slot-id="cover-summary">この用語集は、 folio という仕組みを動かすために使う言葉を 1 か所に集めて、 だれが読んでも意味がぶれないようにするための辞書です。 各語には、 専門知識がなくても読める平易な説明と、 機械が参照するための正式な記録 (正式名・場所・関連する決め事) の両方が載っています。 folio 自身の言葉を folio のやり方で記述した、 自己適用 (dogfood) の一例でもあります。</p></div></div>
+  <dl class="cover-meta">
+    <dt>doc-type</dt><dd>glossary (用語集)</dd>
+    <dt>status</dt><dd>active</dd>
+    <dt>version</dt><dd>1.1.0</dd>
+    <dt>用語数</dt><dd>36</dd>
+    <dt>読了目安</dt><dd>約 12 分</dd>
+  </dl>
+<div data-component="approval-block">
+<div class="sign"><span class="role">文書種別</span><span class="who">glossary (canonical vocabulary)</span><span class="when">v1.1.0</span><span class="stamp self">active</span></div>
+<div class="sign"><span class="role">生成 (engine glossary-pack)</span><span class="who">folio design system</span><span class="when">2026-06-24 生成</span><span class="stamp self">生成</span></div>
+</div>
+<div class="reader-chip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 想定読者: folio を読む全ての人 — 非エンジニアの読者と、 用語を参照する機械 (CLI / 他 spec の .term) の双方</div>
 </header>
-
-<aside class="informative">
-  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (定義本文を保持する runtime SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 SSoT-first に flip した project (folio 自身を含む) では正本 edit-SSoT は generator contract 側にあり <code>vocabulary.yaml</code> はその逐語同鏡ゆえ、 定義改訂は両者を同一 commit で更新します (片側編集は同鏡 gate が FAIL にします)。 spec 本文の用語 hover tooltip も同じ <code>vocabulary.yaml</code> から供給されます。</p>
-</aside>
-
-<dl class="glossary">
-  <dt id="term-adr"><span class="term-name">ADR</span></dt>
-  <dd>Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。</dd>
-  <dt id="term-ears"><span class="term-name">EARS</span></dt>
-  <dd>Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。</dd>
-  <dt id="term-layer-architecture"><span class="term-name">Layer Architecture</span></dt>
-  <dd>constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (design-intent/ 空間) でも architecture-description (doc-type) でもない。</dd>
-  <dt id="term-ssot"><span class="term-name">SSoT</span></dt>
-  <dd>Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。</dd>
-  <dt id="term-architecture-description"><span class="term-name">architecture-description</span></dt>
-  <dd>構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。</dd>
-  <dt id="term-caller-marker"><span class="term-name">caller-marker</span></dt>
-  <dd>spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。</dd>
-  <dt id="term-canonical-name"><span class="term-name">canonical name</span></dt>
-  <dd>1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。</dd>
-  <dt id="term-ceiling"><span class="term-name">ceiling</span></dt>
-  <dd>LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。</dd>
-  <dt id="term-chrome"><span class="term-name">chrome</span></dt>
-  <dd>folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。</dd>
-  <dt id="term-cluster"><span class="term-name">cluster</span></dt>
-  <dd>design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。</dd>
-  <dt id="term-constitution"><span class="term-name">constitution</span></dt>
-  <dd>folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。</dd>
-  <dt id="term-curated-region"><span class="term-name">curated region</span></dt>
-  <dd>marker の内側を人間が author し、 folio build が verbatim に往復保全する領域 (nav-curated / landing-hero)。 chrome と所有の向きが逆。</dd>
-  <dt id="term-data-audience"><span class="term-name">data-audience</span></dt>
-  <dd>要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。</dd>
-  <dt id="term-defined-object"><span class="term-name">defined-object</span></dt>
-  <dd>一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。</dd>
-  <dt id="term-design-intent-space"><span class="term-name">design-intent space</span></dt>
-  <dd>folio repo の design-intent/ ディレクトリ全体 = spec / decisions / research / assets を含む設計意図の空間 (P-7 3-domain、 constitution §1 の architecture specification framework が書く対象)。 architecture-description (空間内の 1 doc-type) でも Layer Architecture でもない。</dd>
-  <dt id="term-dogfood"><span class="term-name">dogfood</span></dt>
-  <dd>folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。</dd>
-  <dt id="term-dual-audience"><span class="term-name">dual-audience</span></dt>
-  <dd>1 HTML artifact が machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方を同一 DOM に併せ持つ pattern (ADR-0033)。 artifact 自身が canonical WHAT (提示層) で機械層はその内部にある。 SSoT-first に flip した doc は編集の源が正本 (edit-SSoT) = contract YAML に分かれ、 flip しない doc は提示層が edit-SSoT を兼ねる (ADR-0050 / ADR-0051 §2.3)。</dd>
-  <dt id="term-essence"><span class="term-name">essence</span></dt>
-  <dd>defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。</dd>
-  <dt id="term-floor"><span class="term-name">floor</span></dt>
-  <dd>deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。</dd>
-  <dt id="term-fold"><span class="term-name">fold</span></dt>
-  <dd>details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。</dd>
-  <dt id="term-frozen"><span class="term-name">frozen</span></dt>
-  <dd>accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。</dd>
-  <dt id="term-gate"><span class="term-name">gate</span></dt>
-  <dd>folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。</dd>
-  <dt id="term-golden"><span class="term-name">golden</span></dt>
-  <dd>期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。</dd>
-  <dt id="term-harness"><span class="term-name">harness</span></dt>
-  <dd>scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。</dd>
-  <dt id="term-invariant"><span class="term-name">invariant</span></dt>
-  <dd>spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。</dd>
-  <dt id="term-inventory"><span class="term-name">inventory</span></dt>
-  <dd>design-intent 空間の全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。</dd>
-  <dt id="term-keystone"><span class="term-name">keystone</span></dt>
-  <dd>機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。</dd>
-  <dt id="term-landing"><span class="term-name">landing</span></dt>
-  <dd>design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。</dd>
-  <dt id="term-marker"><span class="term-name">marker</span></dt>
-  <dd>HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。</dd>
-  <dt id="term-prime"><span class="term-name">prime</span></dt>
-  <dd>inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。</dd>
-  <dt id="term-progressive-disclosure"><span class="term-name">progressive disclosure</span></dt>
-  <dd>情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。</dd>
-  <dt id="term-remediate"><span class="term-name">remediate</span></dt>
-  <dd>validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。</dd>
-  <dt id="term-sandbox"><span class="term-name">sandbox</span></dt>
-  <dd>tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。</dd>
-  <dt id="term-spec"><span class="term-name">spec</span></dt>
-  <dd>WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。</dd>
-  <dt id="term-vocabulary"><span class="term-name">vocabulary</span></dt>
-  <dd>folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。</dd>
-  <dt id="term-xref"><span class="term-name">xref</span></dt>
-  <dd>defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。</dd>
-</dl>
-
-<p class="nav-back"><a href="./index.html">&larr; design-intent index</a></p>
+<section class="glossary-terms" id="main" data-audience="human">
+  <h2>用語 (36 語)</h2>
+  <nav class="glossary-toc" data-audience="human" aria-label="用語ドメイン索引">
+    <ul>
+      <li><a href="#domain-folio-closed">folio-framework の言葉 (36 語)</a></li>
+    </ul>
+  </nav>
+  <section class="term-domain" id="domain-folio-closed" data-audience="human">
+    <h3 class="domain-heading">folio-framework の言葉 (36 語)</h3>
+    <section class="term-entry" id="term-spec" data-audience="human" data-term="spec">
+      <h4 class="term-name">spec</h4>
+      <p class="term-plain" data-slot-id="plain-spec" data-prose-slot="plain-spec">「何を作りたいか・どうあるべきか」という設計の意図そのものを書き残した文書です。 どう実装するか (手順) や、 なぜそう決めたか (理由) とは紙を分けて、 目的だけをはっきり書きます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="spec">使われる文書: 原則 P-3、原則 P-7</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="spec">spec</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="spec">#term-spec</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/spec","name":"spec","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-3" data-xref-rel="glossary-anchor">使われる文書: P-3</li>
+          <li data-xref-target="P-7" data-xref-rel="glossary-anchor">使われる文書: P-7</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-ADR" data-audience="human" data-term="ADR">
+      <h4 class="term-name">ADR</h4>
+      <p class="term-plain" data-slot-id="plain-ADR" data-prose-slot="plain-ADR">ある設計上の判断について「何を決めたか・なぜそう決めたか・他の案と比べてどうか」を 1 件ずつ記録した文書です。 一度書いたら後から書き換えず、 当時の判断の記録として残します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="ADR">使われる文書: ルール §10.3</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="ADR">ADR</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="ADR">#term-ADR</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/ADR","name":"ADR","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="rules §10.3" data-xref-rel="glossary-anchor">使われる文書: rules §10.3</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-constitution" data-audience="human" data-term="constitution">
+      <h4 class="term-name">constitution</h4>
+      <p class="term-plain" data-slot-id="plain-constitution" data-prose-slot="plain-constitution">folio が絶対に守ると約束した、 いちばん上位の決めごと集です。 ここを変えるには必ず人の承認が要り、 ほかの決めごととは別格に扱われます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="constitution">使われる文書: 原則 P-10</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="constitution">constitution</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="constitution">#term-constitution</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/constitution","name":"constitution","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-10" data-xref-rel="glossary-anchor">使われる文書: P-10</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-invariant" data-audience="human" data-term="invariant">
+      <h4 class="term-name">invariant</h4>
+      <p class="term-plain" data-slot-id="plain-invariant" data-prose-slot="plain-invariant">文書がいつでも必ず満たしていなければならない条件のことです。 この条件は機械による自動チェックで守られ続けます。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="invariant">invariant</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="invariant">#term-invariant</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/invariant","name":"invariant","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-inventory" data-audience="human" data-term="inventory">
+      <h4 class="term-name">inventory</h4>
+      <p class="term-plain" data-slot-id="plain-inventory" data-prose-slot="plain-inventory">folio が持つすべての設計文書を機械が自動で読み取って作る一覧表です。 どこに何があるかを機械が把握するための目録になります。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="inventory">使われる文書: 検証要件 REQ-VER-010</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="inventory">inventory</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="inventory">#term-inventory</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">design-intent 空間の全 spec を &lt;head&gt; JSON-LD から走査して生成する機械可読 index (inventory.json)。 prime digest と object-graph の projection 元 (REQ-VER-010)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/inventory","name":"inventory","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="REQ-VER-010" data-xref-rel="glossary-anchor">使われる文書: REQ-VER-010</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-prime" data-audience="human" data-term="prime">
+      <h4 class="term-name">prime</h4>
+      <p class="term-plain" data-slot-id="plain-prime" data-prose-slot="plain-prime">目録から要点だけを抜き出した短い要約を作る機能です。 AI に「今これだけ知っておいて」と最小限の情報を渡すために使います。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="prime">使われる文書: 検証要件 REQ-VER-012</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="prime">prime</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="prime">#term-prime</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/prime","name":"prime","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="REQ-VER-012" data-xref-rel="glossary-anchor">使われる文書: REQ-VER-012</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-cluster" data-audience="human" data-term="cluster">
+      <h4 class="term-name">cluster</h4>
+      <p class="term-plain" data-slot-id="plain-cluster" data-prose-slot="plain-cluster">設計文書を中身の種類ごと (設計意図・決定の記録・調査) に分けて入れておく、 引き出しのようなフォルダのことです。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="cluster">使われる文書: 原則 P-7、自己仕様 §2</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="cluster">cluster</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="cluster">#term-cluster</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/cluster","name":"cluster","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-7" data-xref-rel="glossary-anchor">使われる文書: P-7</li>
+          <li data-xref-target="folio-self-spec §2" data-xref-rel="glossary-anchor">使われる文書: folio-self-spec §2</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-vocabulary" data-audience="human" data-term="vocabulary">
+      <h4 class="term-name">vocabulary</h4>
+      <p class="term-plain" data-slot-id="plain-vocabulary" data-prose-slot="plain-vocabulary">folio で使う言葉の正式な意味を保持しているファイルです。 この用語集ページや、 文書中の用語にかぶせる説明ふきだしは、 すべてここから作られます。 folio 自身では、 書き換えるときに人が触る大もとは別の設計データ側にあり、 このファイルはその写しとして常に同じ内容に保たれます (片側だけ直すと検査で止まります)。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="vocabulary">使われる文書: 原則 P-5</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="vocabulary">vocabulary</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="vocabulary">#term-vocabulary</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/vocabulary","name":"vocabulary","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-5" data-xref-rel="glossary-anchor">使われる文書: P-5</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-SSoT" data-audience="human" data-term="SSoT">
+      <h4 class="term-name">SSoT</h4>
+      <p class="term-plain" data-slot-id="plain-SSoT" data-prose-slot="plain-SSoT">ある事柄について「正しい定義はここ 1 か所だけ」と決めた基準点のことです。 他の場所はそこを参照するだけにして、 食い違いを防ぎます。 folio ではこの基準点が 2 つの役割に分かれるので、 どちらを指すのかを必ず言い分けます。 1 つは、 書き換えるときに人が触る大もとのファイル (編集の源)。 もう 1 つは、 できあがった文書の中にある機械向けの正確な記録 (公式の表明) です。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="SSoT">使われる文書: 決定 ADR-0051 §2.3</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="SSoT">SSoT</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="SSoT">#term-SSoT</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/SSoT","name":"SSoT","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0051 §2.3" data-xref-rel="glossary-anchor">使われる文書: ADR-0051 §2.3</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-dual-audience" data-audience="human" data-term="dual-audience">
+      <h4 class="term-name">dual-audience</h4>
+      <p class="term-plain" data-slot-id="plain-dual-audience" data-prose-slot="plain-dual-audience">1 つの文書を、 人が読んで分かる説明と、 機械が正確に読み取れる記録の両方を兼ねるように作るやり方です。 同じ 1 枚の中に両方が入っていて、 その文書そのものが公式の表明になります。 書き換えの大もとは、 文書とは別の設計データ (生成のもとになるファイル) に置かれることがあり、 そのときは文書の方が生成物になります。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="dual-audience">使われる文書: 決定 ADR-0033、決定 ADR-0050、決定 ADR-0051 §2.3</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="dual-audience">dual-audience</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="dual-audience">#term-dual-audience</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">1 HTML artifact が machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方を同一 DOM に併せ持つ pattern (ADR-0033)。 artifact 自身が canonical WHAT (提示層) で機械層はその内部にある。 SSoT-first に flip した doc は編集の源が正本 (edit-SSoT) = contract YAML に分かれ、 flip しない doc は提示層が edit-SSoT を兼ねる (ADR-0050 / ADR-0051 §2.3)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/dual-audience","name":"dual-audience","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0033" data-xref-rel="glossary-anchor">使われる文書: ADR-0033</li>
+          <li data-xref-target="ADR-0050" data-xref-rel="glossary-anchor">使われる文書: ADR-0050</li>
+          <li data-xref-target="ADR-0051 §2.3" data-xref-rel="glossary-anchor">使われる文書: ADR-0051 §2.3</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-data-audience" data-audience="human" data-term="data-audience">
+      <h4 class="term-name">data-audience</h4>
+      <p class="term-plain" data-slot-id="plain-data-audience" data-prose-slot="plain-data-audience">文書の各部分が「人向け」か「機械向け」かを示す目印です。 この目印で、 人が読む説明と機械が読む記録をきれいに分けます。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="data-audience">data-audience</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="data-audience">#term-data-audience</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/data-audience","name":"data-audience","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-EARS" data-audience="human" data-term="EARS">
+      <h4 class="term-name">EARS</h4>
+      <p class="term-plain" data-slot-id="plain-EARS" data-prose-slot="plain-EARS">要件 (守るべきこと) を書くときの、 決まった 5 つの型のことです。 「いつ守るのか」を型でそろえることで、 あいまいさをなくします。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="EARS">EARS</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="EARS">#term-EARS</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/EARS","name":"EARS","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-essence" data-audience="human" data-term="essence">
+      <h4 class="term-name">essence</h4>
+      <p class="term-plain" data-slot-id="plain-essence" data-prose-slot="plain-essence">ある項目の定義場所にすでに書いてある内容を使い回して作る、 短い要約のことです。 説明を新しく書き起こさず、 元の言葉を再利用します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="essence">使われる文書: ルール §9.2、原則 P-7</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="essence">essence</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="essence">#term-essence</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/essence","name":"essence","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="rules §9.2" data-xref-rel="glossary-anchor">使われる文書: rules §9.2</li>
+          <li data-xref-target="P-7" data-xref-rel="glossary-anchor">使われる文書: P-7</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-dogfood" data-audience="human" data-term="dogfood">
+      <h4 class="term-name">dogfood</h4>
+      <p class="term-plain" data-slot-id="plain-dogfood" data-prose-slot="plain-dogfood">folio 自身を、 folio が定めたやり方や道具で作って確かめることです。 自分のルールが実際に役立つかを、 自分で使って検証します。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="dogfood">dogfood</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="dogfood">#term-dogfood</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/dogfood","name":"dogfood","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-floor" data-audience="human" data-term="floor">
+      <h4 class="term-name">floor</h4>
+      <p class="term-plain" data-slot-id="plain-floor" data-prose-slot="plain-floor">機械が自動でできる品質チェックの層です。 ここは「最低限ここは必ず守る」という下限を、 機械的に強制します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="floor">使われる文書: 決定 ADR-0028</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="floor">floor</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="floor">#term-floor</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/floor","name":"floor","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0028" data-xref-rel="glossary-anchor">使われる文書: ADR-0028</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-ceiling" data-audience="human" data-term="ceiling">
+      <h4 class="term-name">ceiling</h4>
+      <p class="term-plain" data-slot-id="plain-ceiling" data-prose-slot="plain-ceiling">機械では判断しきれない、 意味や読みやすさといった品質を、 AI のレビューで補う層です。 機械チェックの上限を超えた部分を見ます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="ceiling">使われる文書: 決定 ADR-0028</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="ceiling">ceiling</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="ceiling">#term-ceiling</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/ceiling","name":"ceiling","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0028" data-xref-rel="glossary-anchor">使われる文書: ADR-0028</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-xref" data-audience="human" data-term="xref">
+      <h4 class="term-name">xref</h4>
+      <p class="term-plain" data-slot-id="plain-xref" data-prose-slot="plain-xref">文書の中から、 別の決めごとや項目へ張るリンクのことです。 リンクの抜けがないかを機械が自動でチェックして保証します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="xref">使われる文書: 決定 ADR-0034</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="xref">xref</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="xref">#term-xref</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/xref","name":"xref","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0034" data-xref-rel="glossary-anchor">使われる文書: ADR-0034</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-defined-object" data-audience="human" data-term="defined-object">
+      <h4 class="term-name">defined-object</h4>
+      <p class="term-plain" data-slot-id="plain-defined-object" data-prose-slot="plain-defined-object">固有の名前 (ID) を持っていて、 他から参照できる項目のことです。 原則・要件・決定・ルールの各番号などが当てはまります。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="defined-object">defined-object</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="defined-object">#term-defined-object</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/defined-object","name":"defined-object","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-canonical-name" data-audience="human" data-term="canonical name">
+      <h4 class="term-name">canonical name</h4>
+      <p class="term-plain" data-slot-id="plain-canonical-name" data-prose-slot="plain-canonical-name">1 つの物事に対して「正式にはこう呼ぶ」と決めた、 ただ 1 つの呼び名です。 表記のゆれや言い換えを禁じて、 言葉を一貫させます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="canonical name">使われる文書: 原則 P-5</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="canonical name">canonical name</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="canonical-name">#term-canonical-name</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/canonical-name","name":"canonical name","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-5" data-xref-rel="glossary-anchor">使われる文書: P-5</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-progressive-disclosure" data-audience="human" data-term="progressive disclosure">
+      <h4 class="term-name">progressive disclosure</h4>
+      <p class="term-plain" data-slot-id="plain-progressive-disclosure" data-prose-slot="plain-progressive-disclosure">情報を一度に全部見せず、 要約からだんだん詳しくたどれるように段階的に開く見せ方です。 まず要点、 次に概要、 最後に全文の順です。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="progressive disclosure">progressive disclosure</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="progressive-disclosure">#term-progressive-disclosure</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">情報を Tier 1 (digest) から Tier 2 (lead) Tier 3 (full body) へ段階開示する pattern。 folio prime の inventory digest が体現する。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/progressive-disclosure","name":"progressive disclosure","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-caller-marker" data-audience="human" data-term="caller-marker">
+      <h4 class="term-name">caller-marker</h4>
+      <p class="term-plain" data-slot-id="plain-caller-marker" data-prose-slot="plain-caller-marker">設計文書を勝手に編集できないよう見張る仕組みです。 決められた正しい入口を通ったときだけ編集を許可します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="caller-marker">使われる文書: 決定 ADR-0006</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="caller-marker">caller-marker</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="caller-marker">#term-caller-marker</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/caller-marker","name":"caller-marker","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0006" data-xref-rel="glossary-anchor">使われる文書: ADR-0006</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-gate" data-audience="human" data-term="gate">
+      <h4 class="term-name">gate</h4>
+      <p class="term-plain" data-slot-id="plain-gate" data-prose-slot="plain-gate">folio の自動チェックが文書一式にかける、 検査の 1 単位です。 違反でストップさせるものと、 注意だけ出すものの 2 種類があります。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="gate">使われる文書: ルール §10.2、検証要件 REQ-VER-023</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="gate">gate</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="gate">#term-gate</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/gate","name":"gate","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="rules §10.2" data-xref-rel="glossary-anchor">使われる文書: rules §10.2</li>
+          <li data-xref-target="REQ-VER-023" data-xref-rel="glossary-anchor">使われる文書: REQ-VER-023</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-marker" data-audience="human" data-term="marker">
+      <h4 class="term-name">marker</h4>
+      <p class="term-plain" data-slot-id="plain-marker" data-prose-slot="plain-marker">「ここからここまではこういう扱い」という境界を、 文書の中に書いておく目印です。 中身を機械が管理するのか人が書くのかを区別します。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="marker">marker</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="marker">#term-marker</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/marker","name":"marker","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-golden" data-audience="human" data-term="golden">
+      <h4 class="term-name">golden</h4>
+      <p class="term-plain" data-slot-id="plain-golden" data-prose-slot="plain-golden">正解とする出力をファイルとして保存しておき、 後の出力と 1 文字ずつ比べて、 変わっていないかを確かめる基準のことです。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="golden">使われる文書: 検証要件 REQ-VER-004</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="golden">golden</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="golden">#term-golden</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">期待出力を file として commit し byte 比較で回帰を検出する基準 (tests/baselines)。 更新は --accept + diff review の明示手続きを経る (REQ-VER-004)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/golden","name":"golden","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="REQ-VER-004" data-xref-rel="glossary-anchor">使われる文書: REQ-VER-004</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-keystone" data-audience="human" data-term="keystone">
+      <h4 class="term-name">keystone</h4>
+      <p class="term-plain" data-slot-id="plain-keystone" data-prose-slot="plain-keystone">目印などの前提がない対象は、 あえて検査せず素通りさせて全体をきれいに保つ、 という考え方です。 誤った警告を出すより、 検査しない方を選びます。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="keystone">keystone</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="keystone">#term-keystone</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/keystone","name":"keystone","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-frozen" data-audience="human" data-term="frozen">
+      <h4 class="term-name">frozen</h4>
+      <p class="term-plain" data-slot-id="plain-frozen" data-prose-slot="plain-frozen">正式に決まった後はもう本文を書き換えない、 歴史の記録としての文書のことです。 実際とのずれは別の文書に記録します。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="frozen">使われる文書: 原則 P-10</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="frozen">frozen</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="frozen">#term-frozen</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/frozen","name":"frozen","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-10" data-xref-rel="glossary-anchor">使われる文書: P-10</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-chrome" data-audience="human" data-term="chrome">
+      <h4 class="term-name">chrome</h4>
+      <p class="term-plain" data-slot-id="plain-chrome" data-prose-slot="plain-chrome">すべてのページに自動で付く、 ナビゲーションの枠 (リンクや目次など) のことです。 手で書き換えても、 作り直すと上書きされます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="chrome">使われる文書: 決定 ADR-0039 §2.3</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="chrome">chrome</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="chrome">#term-chrome</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio build が全 page の marker 領域へ注入・維持するナビ枠 (skip-link / breadcrumb / ページ内目次 / prev-next、 ADR-0039 §2.3)。 手編集は再 build が上書きする。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/chrome","name":"chrome","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0039 §2.3" data-xref-rel="glossary-anchor">使われる文書: ADR-0039 §2.3</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-curated-region" data-audience="human" data-term="curated region">
+      <h4 class="term-name">curated region</h4>
+      <p class="term-plain" data-slot-id="plain-curated-region" data-prose-slot="plain-curated-region">目印の内側を人が自由に書き、 その内容を folio が壊さずそのまま保つ領域のことです。 自動で付く枠とは、 中身を持つ向きが逆です。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="curated region">curated region</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="curated-region">#term-curated-region</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">marker の内側を人間が author し、 folio build が verbatim に往復保全する領域 (nav-curated / landing-hero)。 chrome と所有の向きが逆。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/curated-region","name":"curated region","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-remediate" data-audience="human" data-term="remediate">
+      <h4 class="term-name">remediate</h4>
+      <p class="term-plain" data-slot-id="plain-remediate" data-prose-slot="plain-remediate">チェックで見つかった問題を直す操作や道具のことをまとめてこう呼びます。 見た目の作り直しとリンクの埋め込みで、 担当する道具が分かれます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="remediate">使われる文書: ルール §11.2</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="remediate">remediate</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="remediate">#term-remediate</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">validate が検出した違反を解消する操作・tool の総称。 表示層 regen は folio build、 graph materialize は folio fix が分担する (rules §11.2)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/remediate","name":"remediate","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="rules §11.2" data-xref-rel="glossary-anchor">使われる文書: rules §11.2</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-fold" data-audience="human" data-term="fold">
+      <h4 class="term-name">fold</h4>
+      <p class="term-plain" data-slot-id="plain-fold" data-prose-slot="plain-fold">クリックで開閉して折りたためる表示のことです。 機械向けの細かい記録や長い一覧をふだんは畳んでおき、 人向けの要点をいつも見えるようにします。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="fold">fold</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="fold">#term-fold</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/fold","name":"fold","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-sandbox" data-audience="human" data-term="sandbox">
+      <h4 class="term-name">sandbox</h4>
+      <p class="term-plain" data-slot-id="plain-sandbox" data-prose-slot="plain-sandbox">決まった手順で動作を試す検証の仕組みです。 部品を本番と切り離した安全な場所で、 想定の入力を使って単体で確かめます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="sandbox">使われる文書: 決定 ADR-0013、決定 ADR-0017</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="sandbox">sandbox</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="sandbox">#term-sandbox</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/sandbox","name":"sandbox","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0013" data-xref-rel="glossary-anchor">使われる文書: ADR-0013</li>
+          <li data-xref-target="ADR-0017" data-xref-rel="glossary-anchor">使われる文書: ADR-0017</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-harness" data-audience="human" data-term="harness">
+      <h4 class="term-name">harness</h4>
+      <p class="term-plain" data-slot-id="plain-harness" data-prose-slot="plain-harness">検証の手順を実際に走らせて、 結果が正しいかを判定する実行役のプログラムです。 検査の種類ごとに走らせ方を使い分けます。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="harness">使われる文書: 検証要件 REQ-VER-011</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="harness">harness</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="harness">#term-harness</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/harness","name":"harness","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="REQ-VER-011" data-xref-rel="glossary-anchor">使われる文書: REQ-VER-011</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-landing" data-audience="human" data-term="landing">
+      <h4 class="term-name">landing</h4>
+      <p class="term-plain" data-slot-id="plain-landing" data-prose-slot="plain-landing">folio の入口となるトップページの型です。 ひとことの見出しから、 進む先のボタン、 読者別の案内カード、 一覧へと並ぶ構成になっています。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="landing">使われる文書: 決定 ADR-0039 §2.2</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="landing">landing</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="landing">#term-landing</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/landing","name":"landing","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="ADR-0039 §2.2" data-xref-rel="glossary-anchor">使われる文書: ADR-0039 §2.2</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-architecture-description" data-audience="human" data-term="architecture-description">
+      <h4 class="term-name">architecture-description</h4>
+      <p class="term-plain" data-slot-id="plain-architecture-description" data-prose-slot="plain-architecture-description">システムが『どんな部品でできていて、 それらがどうつながり、 どんな原則で成り立っているか』という構造の姿を、 1 つの文書にまとめて記述する文書の種類のことです。 folio 自身の作りを説明した folio-self-spec が、 その一例にあたります。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="architecture-description">architecture-description</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="architecture-description">#term-architecture-description</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/architecture-description","name":"architecture-description","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+    <section class="term-entry" id="term-design-intent-space" data-audience="human" data-term="design-intent space">
+      <h4 class="term-name">design-intent space</h4>
+      <p class="term-plain" data-slot-id="plain-design-intent-space" data-prose-slot="plain-design-intent-space">folio の設計の意図をまとめて置いてある場所 (design-intent/ フォルダ全体) のことです。 設計の狙いを書いた文書・決定の記録・調査・素材が、 ここにひとまとまりで収められています。</p>
+      <p class="term-usage" data-audience="human" data-usage-for="design-intent space">使われる文書: 原則 P-7</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="design-intent space">design-intent space</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="design-intent-space">#term-design-intent-space</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio repo の design-intent/ ディレクトリ全体 = spec / decisions / research / assets を含む設計意図の空間 (P-7 3-domain、 constitution §1 の architecture specification framework が書く対象)。 architecture-description (空間内の 1 doc-type) でも Layer Architecture でもない。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/design-intent-space","name":"design-intent space","inDefinedTermSet":"./glossary.html"}</script>
+        <ul class="term-xrefs">
+          <li data-xref-target="P-7" data-xref-rel="glossary-anchor">使われる文書: P-7</li>
+        </ul>
+      </details>
+    </section>
+    <section class="term-entry" id="term-layer-architecture" data-audience="human" data-term="Layer Architecture">
+      <h4 class="term-name">Layer Architecture</h4>
+      <p class="term-plain" data-slot-id="plain-layer-architecture" data-prose-slot="plain-layer-architecture">folio の仕組みを 2 つの階層に分けた全体構造のことです。 folio そのもの (土台の層) と、 folio を使って文書を作る側のプロジェクト (使う層) の 2 段に分かれています。</p>
+      <details class="term-machine" data-audience="machine">
+        <summary>機械層 — 構造化 term レコード</summary>
+        <dl class="term-record">
+          <dt>canonical (en)</dt><dd data-term-en="Layer Architecture">Layer Architecture</dd>
+          <dt>slug / anchor</dt><dd data-term-slug="layer-architecture">#term-layer-architecture</dd>
+          <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
+          <dt>正式定義</dt><dd class="term-formal">constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (design-intent/ 空間) でも architecture-description (doc-type) でもない。</dd>
+        </dl>
+        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/layer-architecture","name":"Layer Architecture","inDefinedTermSet":"./glossary.html"}</script>
+      </details>
+    </section>
+  </section>
+</section>
+<section class="doc-glossary" data-audience="human">
+  <h2>この用語集ページを読むための語</h2>
+<div data-component="glossary-term-table">
+<div class="grow"><div class="gword">dual-audience<span class="en">dual-audience</span></div><div class="gdef">1 つのページを、 人が読む平易な説明と機械が読む正確な記録の両方に使う作り。 この用語集では各語が平易定義 (人) と term レコード (機械) を併せ持つ。</div></div>
+<div class="grow"><div class="gword">machine layer<span class="en">machine layer</span></div><div class="gdef">各語の折り畳み (details) の中にある、 機械が参照するための構造化記録 (正式名・anchor・domain・JSON-LD)。</div></div>
+<div class="grow"><div class="gword">self-host<span class="en">self-host</span></div><div class="gdef">folio が自分自身の言葉を folio のやり方で記述すること。 この用語集は folio 語を folio の generator で生成した自己適用 (dogfood) の一例。</div></div>
+</div>
+</section>
+<footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
+<div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
+<div data-audience="machine">機械SSoT: <b>folio-glossary.glossary.yaml</b> &middot; 生成: <b>2026-07-15 16:37</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div class="tags" data-audience="machine"><span>folio design system</span><span>glossary-pack</span><span>folio self-host (instance#1)</span><span>canonical-name SSoT + dual-audience term</span></div>
+</div></footer>
+<p class="gen-meta">folio design-system generator — glossary-pack (instance #1 / folio self-host)</p>
+</main>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-13T14:47:49Z",
+  "generatedAt": "2026-07-15T17:15:50Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -1039,6 +1039,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0052-glossary-ssot-reassignment.html",
           "spec/srs-verification.html",
           "decisions/ADR-0039-presentation-template-layer.html",
           "research/presentation-design-patterns.html",
@@ -1422,6 +1423,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0052-glossary-ssot-reassignment.html",
           "decisions/ADR-0051-what-ssot-layer-interpretation.html"
         ],
         "dc:references": [
@@ -1447,6 +1449,9 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "decisions/ADR-0052-glossary-ssot-reassignment.html"
+        ],
         "dc:references": [
           "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "decisions/ADR-0026-test-placement-model.html",
@@ -1455,6 +1460,29 @@
           "spec/constitution.html#p-7",
           "spec/constitution.html#p-11",
           "spec/constitution.html#p-13"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0052-glossary-ssot-reassignment.html",
+      "title": "ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層",
+      "summary": "glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (folio-7ts2) ため、 機械導出 + byte-stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。",
+      "doc-type": "adr",
+      "status": "proposed",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html",
+          "spec/constitution.html#p-5",
+          "spec/constitution.html#p-7",
+          "spec/constitution.html#p-11"
         ]
       }
     },
@@ -1924,6 +1952,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0051-what-ssot-layer-interpretation.html",
         "essence": "SSoT-first 転換で contract YAML が「正本」になることと、 P-7 (WHAT は design-intent 空間の spec が持つ)・P-2 (spec は HTML)・P-11 (HOW は隔離) の間に見える緊張を、 層解釈で調停する — 生成 HTML = canonical WHAT (提示層・graph の住人) / contract YAML = 正本 (edit-SSoT・生成 input・HOW 層居住) であり、 P-13 の spec適合性/実装適合性二分法と同型の層分離である。 contract の design-intent/ への物理移動は P-2 衝突ゆえ不採用。 語彙を pin する: 「正本 (edit-SSoT)」= contract YAML / 「canonical WHAT (提示層)」= 生成 HTML — folio-rgtc 論点6 の「正本」は P-7 の HTML-WHAT を否定しない。 user 承認 = folio-rgtc grill (2026-07-13) 論点11b(2) で方向確定 + 本 ADR 本文承認。"
+      },
+      {
+        "id": "ADR-0052",
+        "class": "decision",
+        "ssot": "decisions/ADR-0052-glossary-ssot-reassignment.html",
+        "essence": "glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (folio-7ts2) ため、 機械導出 + byte-stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。"
       },
       {
         "id": "P-1",

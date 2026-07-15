@@ -21,4 +21,4 @@ files checked: 0 · relations checked: 0
   [SKIP] how-outside (spec/ doc 無し = scope=spec_path)
 
 violations (1):
-  glossary.html [nav-regen-drift] 生成 glossary.html が vocabulary.yaml から drift (folio build で再生成、 ADR-0036 §2.5) [vocab のみ: prime]
+  glossary.html [nav-regen-drift] 生成 glossary.html が SSoT から drift (folio build で再生成、 ADR-0036 §2.5 / ADR-0052) [SSoT のみ: prime]

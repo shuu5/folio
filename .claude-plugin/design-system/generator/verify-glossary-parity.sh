@@ -23,15 +23,16 @@
 #               報告のみ)。 glossary contract 自身の chrome 用語帯 (ページの仕組みを説く語) も self 突合でここ。
 #   exempt    = suite 内に glossary SSoT が存在しない (理由必須)。
 #
-# ★vocab-mirror 節 (folio-9inj): ADR-0051 §2.3 の層語彙で「contract YAML = 正本 edit-SSoT」に転換した結果、
-#   glossary SSoT contract の terms[].formal_def と design-intent/vocabulary.yaml の terms[].definition は
-#   **同一テキストの二重保持 (手動同鏡)** になった (vocabulary.yaml は folio fix の tooltip populate / folio
-#   build の glossary.html derive が読む runtime SSoT ゆえ撤去できない)。 片側編集は静かな drift を生む
-#   (folio-7ts2 で vocab⊃contract drift が実発生)。 よって本節が「canonical 集合の完全一致 + 定義本文の逐語
-#   一致」を機械強制する (default-block: VOCAB_REGISTRY 未登録の glossary SSoT は FAIL = 新 suite が黙って
-#   同鏡なしで増えない)。 検査は集合演算 + 文字列一致のみ (意味判定なし = 機械側)。
-#   ★registry rot (逆向き検査): VOCAB_REGISTRY に登録した同鏡 SSoT が PARITY_REGISTRY から参照されなくなると
-#     SSOT_SEEN から消え、 同鏡検査が「0 本」で静かに蒸発する (計数恒真 PASS)。 よって (a) 登録済 SSoT が
+# ★vocab-projection 節 (folio-9inj → ADR-0052 で転換): design-intent/vocabulary.yaml は glossary SSoT
+#   contract の terms[] からの **生成 projection** (project-vocabulary.sh の全域関数: canonical/domain/
+#   definition←formal_def)。 vocabulary.yaml は folio fix の tooltip populate 等が読む runtime SSoT ゆえ
+#   撤去できないが、 folio-9inj 当時の「手動同鏡 (人間規律で二重保持)」は機械導出へ置換された。
+#   本節は「committed == fresh projection」を whole-file byte 比較で機械強制する (default-block:
+#   VOCAB_REGISTRY 未登録の glossary SSoT は FAIL = 新 suite が黙って projection なしで増えない)。
+#   byte 一致は旧検査 (canonical 集合一致 + 定義逐語一致) を構造的に含意する上位集合で、 加えて header・
+#   語順・domain・整形の drift も捕捉する。 検査は byte 比較のみ (意味判定なし = 機械側)。
+#   ★registry rot (逆向き検査): VOCAB_REGISTRY に登録した SSoT が PARITY_REGISTRY から参照されなくなると
+#     SSOT_SEEN から消え、 projection 検査が「0 本」で静かに蒸発する (計数恒真 PASS)。 よって (a) 登録済 SSoT が
 #     未検査なら FAIL、 (b) 非 exempt 登録があるのに検査 0 本なら FAIL とする (緩和が別軸を巻き込む fail-open の封鎖)。
 #
 # ★def-parity 節 (folio-9inj ceiling): 定義文字列は glossary SSoT contract の formal_def / vocabulary.yaml の
@@ -43,14 +44,14 @@
 #   逐語一致を機械強制する (default-block: 未登録 = FAIL)。
 #
 # 実行: admin gate funnel (contract 変更の land 前) + test-adversarial-glossary-parity.sh。 ci.yml deterministic
-# floor に blocking 配線済 (folio-9inj・suite も同梱配線)。 HTML は読まない (contract↔contract、
-# および contract↔vocabulary.yaml = どちらも機械可読 YAML)。
+# floor に blocking 配線済 (folio-9inj・suite も同梱配線) ゆえ ADR-0052 の projection stale gate も同配線を継承する。
+# HTML は読まない (contract↔contract、 および contract↔vocabulary.yaml = どちらも機械可読 YAML)。
 #
 # 用法: verify-glossary-parity.sh [--contract-dir <dir>] [--repo-root <dir>]
-#   --repo-root は vocab-mirror の突合先 (design-intent/vocabulary.yaml 等) の解決 base。 既定 = generator の
-#   3 つ上 (repo root)。 敵対テストが mirror 検査自体を mutation-kill するための注入点。
-# exit: 0 = 全緑 / 1 = parity 違反・分類漏れ・anchor 崩壊・vocab 同鏡 drift / 2 = 構成エラー
-#       (SSoT 不在・vocab mirror 不在/parse 不能・依存欠落・未知引数)
+#   --repo-root は vocab-projection の突合先 (design-intent/vocabulary.yaml 等) の解決 base。 既定 = generator の
+#   3 つ上 (repo root)。 敵対テストが projection 検査自体を mutation-kill するための注入点。
+# exit: 0 = 全緑 / 1 = parity 違反・分類漏れ・anchor 崩壊・vocab projection stale / 2 = 構成エラー
+#       (SSoT 不在・projection 先 不在/parse 不能・projection script 不在・依存欠落・未知引数)
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
 
@@ -121,13 +122,13 @@ while IFS='|' read -r rf rm rs; do
   R_MODE[$rf]="$rm"; R_SSOT[$rf]="$rs"
 done <<< "$PARITY_REGISTRY"
 
-# ===== VOCAB_REGISTRY (glossary SSoT contract → 手動同鏡先 vocabulary.yaml・default-block) =====
+# ===== VOCAB_REGISTRY (glossary SSoT contract → 生成 projection 先 vocabulary.yaml・default-block) =====
 # 書式: <glossary SSoT contract>|<repo-root 相対の vocabulary path | exempt>|<理由/注記 (exempt は MUST)>
-# PARITY_REGISTRY が参照する全 glossary SSoT はここに分類必須 (未登録 = FAIL)。 新 suite が同鏡なしで
+# PARITY_REGISTRY が参照する全 glossary SSoT はここに分類必須 (未登録 = FAIL)。 新 suite が projection なしで
 # 黙って増えるのを防ぐ完結性 sweep (mode の明示批准と同型)。
 VOCAB_REGISTRY='
-folio-glossary.glossary.yaml|design-intent/vocabulary.yaml|folio 本体: contract = 正本 edit-SSoT (ADR-0051 §2.3)・vocabulary.yaml = folio fix の tooltip populate / folio build の glossary.html derive が読む runtime SSoT。 二重保持ゆえ逐語同鏡必須
-clinic-appointment.glossary.yaml|exempt|clinic は generator demo suite (vocabulary.yaml consumer を持たない = tooltip populate 対象外ゆえ同鏡先なし)
+folio-glossary.glossary.yaml|design-intent/vocabulary.yaml|folio 本体: contract = 唯一の edit-SSoT (ADR-0052)・vocabulary.yaml = project-vocabulary.sh の生成 projection (folio fix の tooltip populate 等が読む runtime SSoT)。 生成物ゆえ byte-stale 検査必須
+clinic-appointment.glossary.yaml|exempt|clinic は generator demo suite (vocabulary.yaml consumer を持たない = tooltip populate 対象外ゆえ projection 先なし)
 '
 declare -A V_PATH V_NOTE
 n_vocab_active=0
@@ -205,70 +206,101 @@ for s in "${!SSOT_SEEN[@]}"; do
   [[ "$file_fail" == "0" ]] && printf '  [OK]   anchor: %s (%s 語)\n' "$s" "$(jq 'length' "$TMP/map-$s.json")"
 done
 
-# ===== 1b. vocab-mirror (glossary SSoT の formal_def ↔ vocabulary.yaml の definition 逐語同鏡・folio-9inj) =====
-# 不変条件: 同鏡ペアは (a) canonical 集合が完全一致 (片側追加/削除 = FAIL) かつ (b) 定義本文が逐語一致。
-# 片側編集を禁ずる批准 rule (folio-9inj 着地ルール (a)) の機械強制。 意味判定なし = 集合演算 + 文字列一致のみ。
+# ===== 1b. vocab-projection (glossary SSoT contract → vocabulary.yaml の生成 projection stale 検査・ADR-0052) =====
+# 不変条件: committed vocabulary.yaml == fresh projection (project-vocabulary.sh の出力) が **whole-file byte 一致**。
+#
+# ★folio-9inj の「手動同鏡 (集合完全一致 + 定義逐語一致)」を *包摂して置換* する: vocabulary.yaml は
+#   contract.terms[] からの全域 projection になった (ADR-0052) ため、 byte 一致は canonical 集合一致 +
+#   definition 逐語一致を **構造的に含意する** (旧検査の上位集合)。 加えて旧検査が見なかった面 —
+#   header 文言・語順・domain・YAML 整形の drift — も同時に捕捉する。 意味判定なし = byte 比較のみ (機械側)。
+#
+# ★非循環 (folio-wg2l Leg 0 ②・「gate が自分の種で自分を検査する」恒真化の封鎖):
+#   (a) header は project-vocabulary.sh 内のリテラル定数。 committed から読み戻さない (読むと header 改竄が
+#       fresh 側へも伝播して byte 比較が恒真 PASS 化する)。
+#   (b) 比較は committed ($REPO_ROOT 由来) vs fresh projection (実 contract 由来・毎回新規生成・pre-seed 禁止)。
+#       projection vs contract にしない (それは projection の自己無矛盾を見るだけで committed を検査しない)。
+#   (c) normalize しない (整形の正解は script の出力そのもの。 quote 剥ぎ・空白畳みは drift masking)。
+# ★byte 比較の前に precondition を assert する (「再生成できなかった」を差分なし = PASS に化けさせない)。
 n_mirror=0
+PROJECT_SCRIPT="$SCRIPT_DIR/project-vocabulary.sh"
 for s in "${!SSOT_SEEN[@]}"; do
   vp="${V_PATH[$s]:-}"
   if [[ -z "$vp" ]]; then
     file_fail=0
-    pfail "unregistered-vocab-mirror: glossary SSoT '$s' が VOCAB_REGISTRY 未登録 (同鏡先 vocabulary.yaml か exempt 理由を明示批准して登録)"
+    pfail "unregistered-vocab-projection: glossary SSoT '$s' が VOCAB_REGISTRY 未登録 (projection 先 vocabulary.yaml か exempt 理由を明示批准して登録)"
     continue
   fi
   if [[ "$vp" == "exempt" ]]; then
     file_fail=0
-    if [[ -z "${V_NOTE[$s]:-}" ]]; then pfail "vocab-mirror-exempt-noreason: '$s' の exempt に理由が無い"; continue; fi
-    printf '  [OK]   vocab-mirror exempt: %s — %s\n' "$s" "${V_NOTE[$s]}"
+    if [[ -z "${V_NOTE[$s]:-}" ]]; then pfail "vocab-projection-exempt-noreason: '$s' の exempt に理由が無い"; continue; fi
+    printf '  [OK]   vocab-projection exempt: %s — %s\n' "$s" "${V_NOTE[$s]}"
     continue
   fi
   vfile="$REPO_ROOT/$vp"
-  [[ -f "$vfile" ]] || { echo "verify-glossary-parity: vocab mirror 不在: $vfile" >&2; exit 2; }
-  yq -o=json '.' "$vfile" > "$TMP/vocab-$s.json" 2>/dev/null \
-    || { echo "verify-glossary-parity: vocab mirror parse 失敗: $vfile" >&2; exit 2; }
+  [[ -f "$vfile" ]] || { echo "verify-glossary-parity: vocab projection 先が不在: $vfile" >&2; exit 2; }
+  [[ -x "$PROJECT_SCRIPT" ]] || { echo "verify-glossary-parity: projection script 不在/非実行可: $PROJECT_SCRIPT" >&2; exit 2; }
   file_fail=0
-  # vocab 側 anchor 完全性 (canonical/definition 空・非 object・canonical 重複 = 突合の土台崩壊)
-  nbadv="$(jq -r '[.terms // [] | .[] | select((type != "object") or (((.canonical // "") | tostring) == "") or (((.definition // "") | tostring) == ""))] | length' "$TMP/vocab-$s.json")"
-  [[ "$nbadv" == "0" ]] || pfail "vocab-malformed: canonical/definition 空 or 非 object entry $nbadv 件 in $vp"
-  while IFS= read -r d; do
-    [[ -z "$d" ]] && continue
-    pfail "vocab-dup canonical='$d' in $vp (同語の definition が一意でない)"
-  done < <(jq -r '.terms // [] | .[] | (.canonical // "") | tostring' "$TMP/vocab-$s.json" | sort | uniq -d)
-  # 集合完全一致 + 定義逐語一致 (message は NUL 区切り: 定義本文に改行が混じっても record framing が割れない)
-  while IFS= read -r -d '' msg; do
-    [[ -z "$msg" ]] && continue
-    pfail "$msg"
-  done < <(jq -j --slurpfile v "$TMP/vocab-$s.json" --arg vp "$vp" --arg s "$s" '
-    (.terms // [] | map(select(type == "object"))
-      | map({key: ((.canonical // "") | tostring), value: ((.formal_def // "") | tostring)}) | from_entries) as $C
-    | ($v[0].terms // [] | map(select(type == "object"))
-      | map({key: ((.canonical // "") | tostring), value: ((.definition // "") | tostring)}) | from_entries) as $V
-    | (($C | keys) | map(select(. as $k | $V | has($k)))) as $both
-    | [ ( (($C | keys) - ($V | keys)) | map("vocab-mirror-missing term=" + . + " (contract " + $s + " にあり " + $vp + " に無い — 同鏡は集合完全一致)") )
-      , ( (($V | keys) - ($C | keys)) | map("vocab-mirror-extra term=" + . + " (" + $vp + " にあり contract " + $s + " に無い — 同鏡は集合完全一致)") )
-      , ( $both | map(select($C[.] == "")
-            | "vocab-def-empty term=" + . + " (contract formal_def 空 = 逐語一致が vacuous に成立する)") )
-      , ( $both | map(select($C[.] != "" and $C[.] != $V[.])
-            | "vocab-def-drift term=" + . + ": contract=" + ($C[.] | @json) + " / vocab=" + ($V[.] | @json)) )
-      ] | flatten | map(. + "\u0000") | join("")' "$TMP/ssot-$s.json" \
-      || printf 'jq-extract-error (vocab-mirror: %s)\x00' "$s")
+
+  # ---- fresh projection を毎回新規 file へ生成 (stale/前回残骸/cp committed の pre-seed 禁止) ----
+  fresh="$TMP/fresh-$s.yaml"
+  rm -f "$fresh"
+  if ! "$PROJECT_SCRIPT" --contract "$CONTRACT_DIR/$s" --out "$fresh" >/dev/null 2>"$TMP/perr-$s"; then
+    pfail "vocab-projection-unrunnable: '$s' からの projection 生成に失敗 (再生成不能 = FAIL・skip 化しない): $(tr '\n' ' ' < "$TMP/perr-$s")"
+    continue
+  fi
+
+  # ---- precondition (byte 比較前・fail-closed): 非空 / 構造マーカー / 下限サイズ / yq parse / 語数一致 ----
+  #      語数の期待値は contract 由来で導出する (magic number を置かない = corpus 成長で latent 赤にならない)。
+  pperr=""
+  [[ -s "$fresh" ]] || pperr="projection 出力が空"
+  [[ -z "$pperr" ]] && { grep -qx 'terms:' "$fresh" || pperr="projection 出力に構造マーカー 'terms:' が無い"; }
+  if [[ -z "$pperr" ]]; then
+    fsz="$(wc -c < "$fresh")"
+    [[ "$fsz" -ge 2000 ]] || pperr="projection 出力 ${fsz} byte < 下限 2000 (空/半端な出力の恒真化封鎖)"
+  fi
+  if [[ -z "$pperr" ]]; then
+    nfresh="$(yq -r '.terms | length' "$fresh" 2>/dev/null)" || pperr="projection 出力が yq で parse 不能"
+  fi
+  if [[ -z "$pperr" ]]; then
+    ncon="$(jq -r '.terms // [] | length' "$TMP/ssot-$s.json")"
+    if [[ "$nfresh" != "$ncon" ]]; then pperr="projection 語数 $nfresh != contract 語数 $ncon (導出の全域性が崩れた)"
+    elif ! [[ "$nfresh" =~ ^[0-9]+$ ]] || [[ "$nfresh" -lt 1 ]]; then pperr="projection 語数が 0/不正 ('$nfresh') = vacuous な byte 一致を許さない"; fi
+  fi
+  if [[ -z "$pperr" ]]; then
+    # committed 側も同じ土台 assert (committed が空/壊れなら byte 比較の意味が無い = 恒真化の入口)
+    yq -r '.terms | length' "$vfile" >/dev/null 2>&1 || pperr="committed $vp が yq で parse 不能"
+  fi
+  if [[ -n "$pperr" ]]; then
+    pfail "vocab-projection-precondition: '$s' → $vp: $pperr"
+    continue
+  fi
+
+  # ---- whole-file byte 比較 (header 1 字・definition 1 字の改竄も FAIL) ----
+  if ! cmp -s "$fresh" "$vfile"; then
+    pfail "vocab-projection-stale: $vp が contract '$s' からの fresh projection と byte 不一致 (vocabulary.yaml は生成物: 手編集したか再生成漏れ。 contract 側を編集して project-vocabulary.sh --out $vp で再生成し同一 commit で land する)"
+    # 差分の所在を surface (判定は上の byte 比較が担い、 ここは診断のみ・先頭 20 行)
+    while IFS= read -r dl; do
+      [[ -z "$dl" ]] && continue
+      printf '         %s\n' "$dl"
+    done < <(diff "$vfile" "$fresh" | head -20)
+  fi
   if [[ "$file_fail" == "0" ]]; then
     n_mirror=$((n_mirror+1))
-    printf '  [OK]   vocab-mirror: %s ↔ %s (%s 語・集合一致 + 定義逐語一致)\n' \
-      "$s" "$vp" "$(jq '[.terms // [] | .[] | select(type == "object")] | length' "$TMP/ssot-$s.json")"
+    printf '  [OK]   vocab-projection: %s → %s (%s 語・committed == fresh projection の whole-file byte 一致)\n' \
+      "$s" "$vp" "$nfresh"
   fi
 done
 
-# ===== 1c. vocab-registry rot (逆向き検査: 登録した同鏡ペアが実際に検査されたか・恒真 PASS の封鎖) =====
+# ===== 1c. vocab-registry rot (逆向き検査: 登録した projection ペアが実際に検査されたか・恒真 PASS の封鎖) =====
 # PARITY_REGISTRY 側の 1 行編集 (SSoT 列の差し替え / 全行 exempt 化) だけで SSOT_SEEN から glossary SSoT が
-# 消え、 vocab 同鏡検査が「0 本」で黙って蒸発しうる (計数恒真 PASS)。 登録済 SSoT の未検査を FAIL にする。
+# 消え、 vocab projection 検査が「0 本」で黙って蒸発しうる (計数恒真 PASS)。 登録済 SSoT の未検査を FAIL にする。
 file_fail=0
 for vf in "${!V_PATH[@]}"; do
   [[ -n "${SSOT_SEEN[$vf]:-}" ]] || \
-    pfail "vocab-registry-rot: 登録済 同鏡 SSoT '$vf' が未検査 (PARITY_REGISTRY から参照が消えた = 同鏡検査の蒸発)"
+    pfail "vocab-registry-rot: 登録済 projection SSoT '$vf' が未検査 (PARITY_REGISTRY から参照が消えた = projection 検査の蒸発)"
 done
 if [[ "$n_vocab_active" -gt 0 && "$n_mirror" == "0" ]]; then
-  pfail "vocab-mirror-vacuous: 非 exempt の同鏡登録が $n_vocab_active 件あるのに vocab 同鏡検査 0 本 (恒真 PASS)"
+  pfail "vocab-projection-vacuous: 非 exempt の projection 登録が $n_vocab_active 件あるのに vocab projection 検査 0 本 (恒真 PASS)"
 fi
 
 # ===== 2. registry rot (登録済 file の実在 = fail-loud) =====
@@ -377,8 +409,8 @@ for path in "$CONTRACT_DIR"/*.yaml; do
 done
 
 echo ""
-echo "  分類: full=$n_full intersect=$n_intersect exempt=$n_exempt 未登録空=$n_unreg_empty / vocab 同鏡 $n_mirror 本 / en 突合 $terms_checked 語・anchor 外 local $n_local 語・def 逐語 $defs_checked 語"
+echo "  分類: full=$n_full intersect=$n_intersect exempt=$n_exempt 未登録空=$n_unreg_empty / vocab projection $n_mirror 本 / en 突合 $terms_checked 語・anchor 外 local $n_local 語・def 逐語 $defs_checked 語"
 if [[ "$fail" == "0" ]]; then
-  echo "RESULT: glossary-parity PASS (source (term,en) = glossary SSoT (canonical,en) 逐語一致・strict file の def 逐語一致・分類完結・vocab 同鏡逐語一致)"
+  echo "RESULT: glossary-parity PASS (source (term,en) = glossary SSoT (canonical,en) 逐語一致・strict file の def 逐語一致・分類完結・vocab projection byte 一致)"
   exit 0
 else echo "RESULT: FAIL"; exit 1; fi

@@ -156,9 +156,12 @@ MUT=$'fully bookedXQZ\ntail' yq -i '(.terms[] | select(.canonical == "満枠") |
 expect_fail "V15 ctl-reject(ssot): SSoT en の埋め込み改行 → FAIL" "$D" "ssot-malformed"
 rm -rf "$D"
 
-# --- V16〜V20 vocab-mirror 節 (folio-9inj): glossary SSoT contract の formal_def ↔ design-intent/vocabulary.yaml
-#     の definition が「集合完全一致 + 定義逐語一致」であることの機械強制。 gate 自身を mutation-kill する
-#     ため --repo-root で偽 root を注入し vocabulary.yaml のコピーを改竄する (real vocab は不可触)。
+# --- V16〜V20 vocab-projection 節 (folio-9inj → ADR-0052 で転換): design-intent/vocabulary.yaml は glossary
+#     contract からの生成 projection ゆえ「committed == fresh projection の whole-file byte 一致」を機械強制する。
+#     旧「手動同鏡 (集合一致 + 定義逐語一致)」の検出力は byte 一致が構造的に包摂するため、 V17/V18/V19 は
+#     撤去せず新 gate の FAIL substring (vocab-projection-stale) へ re-point する (改竄クラス — definition 片側編集 /
+#     term 削除 / term 追加 — は個別に pin し続ける)。 gate 自身を mutation-kill するため --repo-root で偽 root を
+#     注入し vocabulary.yaml のコピーを改竄する (real vocab は不可触)。
 REAL_VOCAB="$(cd "$SCRIPT_DIR/../../.." && pwd)/design-intent/vocabulary.yaml"
 [[ -f "$REAL_VOCAB" ]] || { echo "FATAL: vocabulary.yaml not found: $REAL_VOCAB" >&2; exit 2; }
 fresh_root() { local d; d="$(mktemp -d)"; mkdir -p "$d/design-intent"; cp "$REAL_VOCAB" "$d/design-intent/vocabulary.yaml"; printf '%s' "$d"; }
@@ -173,43 +176,44 @@ expect_fail_root() {
 # V16 precision: 未改竄の vocab コピー → exit 0 (誤検出しない)
 R="$(fresh_root)"
 out="$("$GATE" --repo-root "$R" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 && "$out" == *"vocab 同鏡 1 本"* ]]; then ok "V16 precision: clean vocab mirror → exit 0 (同鏡 1 本)"
-else bad "V16 precision: clean vocab mirror が exit 0 でない (rc=$rc)"; fi
+if [[ "$rc" -eq 0 && "$out" == *"vocab projection 1 本"* ]]; then ok "V16 precision: clean vocab projection → exit 0 (projection 1 本)"
+else bad "V16 precision: clean vocab projection が exit 0 でない (rc=$rc)"; fi
 rm -rf "$R"
 
 # V17 vocab-def-drift: vocabulary.yaml 側の definition を 1 字ずらす → FAIL (片側編集の封鎖 = 本節の主目的)
 R="$(fresh_root)"
 yq -i '(.terms[] | select(.canonical == "SSoT") | .definition) = "改竄された定義XQZ"' "$R/design-intent/vocabulary.yaml"
-expect_fail_root "V17 vocab-def-drift: vocab 側 definition の片側編集 → FAIL" "$R" "vocab-def-drift term=SSoT"
+expect_fail_root "V17 vocab-def-drift: vocab 側 definition の片側編集 (terms subtree の 1 字改竄) → FAIL" "$R" "vocab-projection-stale"
 rm -rf "$R"
 
-# V18 vocab-mirror-missing: vocab から term を削除 (contract にはある) → FAIL (集合完全一致)
+# V18 vocab-projection-stale (term 削除クラス): vocab から term を削除 → FAIL (projection は contract の全語を出すため byte 不一致)
 R="$(fresh_root)"
 yq -i 'del(.terms[] | select(.canonical == "dual-audience"))' "$R/design-intent/vocabulary.yaml"
-expect_fail_root "V18 vocab-mirror-missing: vocab から term 削除 → FAIL" "$R" "vocab-mirror-missing term=dual-audience"
+expect_fail_root "V18 vocab-projection-missing: vocab から term 削除 → FAIL" "$R" "vocab-projection-stale"
 rm -rf "$R"
 
-# V19 vocab-mirror-extra: vocab に contract 未収録語を追加 → FAIL (folio-7ts2 の vocab⊃contract drift の回帰 pin)
+# V19 vocab-projection-stale (term 追加クラス): vocab に contract 未収録語を追加 → FAIL (folio-7ts2 の vocab⊃contract drift の回帰 pin)
 R="$(fresh_root)"
 yq -i '.terms += [{"canonical": "野良語XQZ", "domain": "folio-closed", "definition": "contract に無い語"}]' "$R/design-intent/vocabulary.yaml"
-expect_fail_root "V19 vocab-mirror-extra: vocab のみに存在する語 → FAIL (vocab⊃contract drift)" "$R" "vocab-mirror-extra term=野良語XQZ"
+expect_fail_root "V19 vocab-projection-extra: vocab のみに存在する語 → FAIL (vocab⊃contract drift)" "$R" "vocab-projection-stale"
 rm -rf "$R"
 
 # V20 vocab mirror 不在 → exit 2 (緑に化けない・構成エラー)
 R="$(mktemp -d)"
 "$GATE" --repo-root "$R" >/dev/null 2>&1; rc=$?
-if [[ "$rc" -eq 2 ]]; then ok "V20 vocab-mirror-absent: 同鏡先 vocabulary.yaml 不在 → exit 2"
-else bad "V20 vocab-mirror-absent: exit 2 でない (rc=$rc)"; fi
+if [[ "$rc" -eq 2 ]]; then ok "V20 vocab-projection-absent: projection 先 vocabulary.yaml 不在 → exit 2"
+else bad "V20 vocab-projection-absent: exit 2 でない (rc=$rc)"; fi
 rm -rf "$R"
 
-# V21 unregistered-vocab-mirror: VOCAB_REGISTRY 未登録の glossary SSoT は素通りしない (完結性 sweep)。
+# V21 unregistered-vocab-projection: VOCAB_REGISTRY 未登録の glossary SSoT は素通りしない (完結性 sweep)。
 #     gate の registry は script 内 SSoT ゆえ、 script を複製して registry 行を落とし挙動を pin する。
 D="$(mktemp -d)"
 G2="$D/gate.sh"
 grep -v '^folio-glossary\.glossary\.yaml|design-intent/vocabulary\.yaml|' "$GATE" > "$G2"
 chmod +x "$G2"
+cp "$SCRIPT_DIR/project-vocabulary.sh" "$D/project-vocabulary.sh"
 out="$("$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" 2>&1)"; rc=$?
-if [[ "$rc" -eq 1 ]] && grep -F -- "unregistered-vocab-mirror: glossary SSoT 'folio-glossary.glossary.yaml'" <<<"$out" | grep -q '\[FAIL\]'; then
+if [[ "$rc" -eq 1 ]] && grep -F -- "unregistered-vocab-projection: glossary SSoT 'folio-glossary.glossary.yaml'" <<<"$out" | grep -q '\[FAIL\]'; then
   ok "V21 sweep: VOCAB_REGISTRY 未登録の glossary SSoT → FAIL (default-block)"
 else bad "V21 sweep: 未登録 glossary SSoT が FAIL にならない (rc=$rc)"; fi
 rm -rf "$D"
@@ -217,15 +221,48 @@ rm -rf "$D"
 # --- V22〜V25 def-parity 節 + vocab-registry rot (folio-9inj ceiling): 定義文字列の 5 番目の複製
 #     (source contract の glossary[].def) の逐語 pin と、 同鏡検査の「0 本で恒真 PASS」経路の封鎖。
 
-# V22 vocab-registry-rot: PARITY_REGISTRY 側から glossary SSoT の参照が消えると同鏡検査が SSOT_SEEN から
-#     蒸発し「vocab 同鏡 0 本」で緑になりうる。 逆向き検査 (登録済 SSoT の未検査 = FAIL) を pin する。
+# V22 vocab-registry-rot: PARITY_REGISTRY 側から glossary SSoT の参照が消えると projection 検査が SSOT_SEEN から
+#     蒸発し「vocab projection 0 本」で緑になりうる。 逆向き検査 (登録済 SSoT の未検査 = FAIL) を pin する。
 D="$(mktemp -d)"; G2="$D/gate.sh"
 grep -v '^folio-[a-z]*\.\(spec\|principle\|vision\|glossary\)\.yaml|[a-z]*|folio-glossary\.glossary\.yaml$' "$GATE" > "$G2"
 chmod +x "$G2"
+cp "$SCRIPT_DIR/project-vocabulary.sh" "$D/project-vocabulary.sh"
 out="$("$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" 2>&1)"; rc=$?
-if [[ "$rc" -eq 1 ]] && grep -F -- "vocab-registry-rot: 登録済 同鏡 SSoT 'folio-glossary.glossary.yaml' が未検査" <<<"$out" | grep -q '\[FAIL\]'; then
-  ok "V22 rot: PARITY_REGISTRY から同鏡 SSoT の参照が消える → FAIL (同鏡検査の蒸発 = 恒真 PASS の封鎖)"
-else bad "V22 rot: 同鏡検査が黙って蒸発した (rc=$rc)"; fi
+if [[ "$rc" -eq 1 ]] && grep -F -- "vocab-registry-rot: 登録済 projection SSoT 'folio-glossary.glossary.yaml' が未検査" <<<"$out" | grep -q '\[FAIL\]'; then
+  ok "V22 rot: PARITY_REGISTRY から projection SSoT の参照が消える → FAIL (projection 検査の蒸発 = 恒真 PASS の封鎖)"
+else bad "V22 rot: projection 検査が黙って蒸発した (rc=$rc)"; fi
+rm -rf "$D"
+
+# --- V26〜V28 (ADR-0052 / folio-wg2l 新設): projection stale gate 固有の恒真化経路を封鎖する MK。
+#     ★per-shape: V17 は terms subtree (definition 1 字) を撃つ。 header は *非 terms 領域* = 別の DOM/構造
+#       クラスゆえ V26 で別弾を撃つ (1 instance の実弾は構造差 instance の穴を証明しない)。
+#       V26 は同時に「header を committed から読む循環実装」の MK でもある: もし gate が header を committed
+#       から読んで fresh 側へ写していれば、 header 改竄は両側に伝播して byte 一致 = 恒真 PASS になり V26 が落ちる。
+
+# V26 header 改竄: 生成物 warning header を 1 字ずらす → FAIL (循環 header なら緑に化ける = 本 MK が割る)
+R="$(fresh_root)"
+perl -i -pe 's/このファイルは生成物です/このファイルは生成物ですXQZ/ if $. < 5' "$R/design-intent/vocabulary.yaml"
+grep -q 'このファイルは生成物ですXQZ' "$R/design-intent/vocabulary.yaml" \
+  || bad "V26 setup: header 改竄が適用されていない (MK が空撃ちになる)"
+expect_fail_root "V26 header-drift: 生成 header の 1 字改竄 → FAIL (循環 header 実装なら恒真 PASS になる経路の封鎖)" "$R" "vocab-projection-stale"
+rm -rf "$R"
+
+# V27 projection script 不在 → exit 2 (「projection を実行できない」を緑に化けさせない)
+D="$(mktemp -d)"; G2="$D/gate.sh"
+cp "$GATE" "$G2"; chmod +x "$G2"        # project-vocabulary.sh を伴わない dir へ複製 = SCRIPT_DIR 相対で不在
+"$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" >/dev/null 2>&1; rc=$?
+if [[ "$rc" -eq 2 ]]; then ok "V27 projection-script-absent: projection script 不在 → exit 2 (構成エラー・緑に化けない)"
+else bad "V27 projection-script-absent: exit 2 でない (rc=$rc)"; fi
+rm -rf "$D"
+
+# V28 projection が空出力 → FAIL (precondition。 空 fresh と committed を比べて「差分なし」で緑にしない)
+D="$(mktemp -d)"; G2="$D/gate.sh"
+cp "$GATE" "$G2"; chmod +x "$G2"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$D/project-vocabulary.sh"; chmod +x "$D/project-vocabulary.sh"
+out="$("$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" 2>&1)"; rc=$?
+if [[ "$rc" -eq 1 ]] && grep -F -- "vocab-projection-precondition" <<<"$out" | grep -q '\[FAIL\]'; then
+  ok "V28 projection-empty: projection が空出力 → FAIL (precondition・恒真 PASS の封鎖)"
+else bad "V28 projection-empty: 空出力が FAIL にならない (rc=$rc)"; fi
 rm -rf "$D"
 
 # V23 glossary-def-drift: source contract (folio-rules) の SSoT 収録語 def を 1 字ずらす → FAIL
@@ -236,9 +273,13 @@ expect_fail "V23 def-drift(source): spec contract の SSoT 収録語 def の片�
 rm -rf "$D"
 
 # V24 def-unregistered: DEF_REGISTRY 未登録の source contract は素通りしない (default-block sweep)
+#     ★gate 複製 MK は projection script (SCRIPT_DIR 相対の hard 依存) を伴わせる: 伴わないと本 MK が
+#       「def 未登録の FAIL」でなく「projection script 不在の exit 2」を測ってしまい、 検査軸がすり替わる
+#       (script 不在 → exit 2 自体は V27 が専用に pin する)。
 D="$(mktemp -d)"; G2="$D/gate.sh"
 grep -v '^folio-rules\.spec\.yaml|strict|$' "$GATE" > "$G2"
 chmod +x "$G2"
+cp "$SCRIPT_DIR/project-vocabulary.sh" "$D/project-vocabulary.sh"
 out="$("$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" 2>&1)"; rc=$?
 if [[ "$rc" -eq 1 ]] && grep -F -- "def-unregistered: 'folio-rules.spec.yaml'" <<<"$out" | grep -q '\[FAIL\]'; then
   ok "V24 sweep: DEF_REGISTRY 未登録の source contract → FAIL (default-block)"

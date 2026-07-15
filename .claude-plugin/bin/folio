@@ -1501,6 +1501,93 @@ folio_xref_tooltip_resync_doc() {
 # 入れる: 未設定の bare CLI / CI / sandbox では加えないため、 vocab を持たない consumer-like fixture の
 # [SKIP] glossary を汚さず test isolation を保つ (real consumer は Claude Code が $CLAUDE_PLUGIN_ROOT を set
 # するゆえ plugin SSoT から derive する)。
+# --- folio self-host root 検出 (folio-wg2l Leg 0 ③・gate (s) spec-contract-pairing と *同一述語* を共有) ---
+# 述語 = root の sibling generator (<root>/../.claude-plugin/design-system/generator/) に
+#   spec-grandfather.manifest (file) と contract/ (dir) が *両方* 実在する。
+# ★消費点は 4 つ (validate nav-regen-drift / validate gate (s) / build 書込 path / build --check)。 全て
+#   本 helper を呼ぶことで述語を単一化する — marker 有無・glossary_map 非空・env を self-host 信号に
+#   代用するのは drift の源ゆえ禁止 (folio-wg2l fence「self-host 検出 = gate(s) 同一機構」)。
+# ★nav-regen-drift は gate (s) より前段で走るため、 本 helper を両者より前方に定義する (前方参照回避)。
+#
+# ★tri-state (folio-wg2l self-review round3 finding#1): 旧実装は 2 翼の AND を単一 boolean へ潰し、
+#   *片翼欠落* を「非 self-host」= consumer と同一視して return 1 していた。 これが fail-open の入口:
+#   consumer 分岐 = 内部 emitter ゆえ、 folio build 1 回で committed のリッチ版が素朴版へ silent revert し
+#   (実弾: manifest 削除 / contract/ dir 削除 の双方で rc=0 のまま 61838B/h4×36 → 12036B/span×36 を書込)、
+#   以後 committed(素朴)==emit(素朴) で [OK] glossary / [OK] nav-regen-drift / build --check rc=0 = 恒真 PASS。
+#   同時に gate (s) spec-contract-pairing の報告行も沈黙消滅する (contract_seen=0)。 pack_emit 側の
+#   「委譲元の消失 = return 4」ガードは述語 true でなければ一度も実行されず無効化される。
+#   よって「両翼 = self-host」と「generator dir ごと非実在 = consumer」の *間* を潰さず 3 値で返す:
+#     0 = self-host (両翼実在)         → stdout = generator dir 絶対 path
+#     1 = consumer (generator dir 非実在) → 無出力。 真の consumer は <root>/../.claude-plugin/ 自体を
+#         持たないため、 本 state と 2 は構造的に弁別でき誤検出しない。
+#     2 = 前提崩れ (generator dir は実在するが片翼欠落) → stdout = generator dir 絶対 path (診断用)。
+#         消費点は 2 を *loud* に倒す (dispatcher は hard-fail・gate (s) は violation) = 沈黙 fallback 禁止。
+folio_selfhost_generator_dir() {
+  local root_abs="$1" gen_dir
+  gen_dir=$(realpath -m "${root_abs}/../.claude-plugin/design-system/generator") || return 1
+  if [[ -f "${gen_dir}/spec-grandfather.manifest" && -d "${gen_dir}/contract" ]]; then
+    printf '%s' "$gen_dir"; return 0
+  fi
+  # generator dir 自体が無い = consumer / 一般 fixture (構造的に非該当・報告しない)
+  [[ -d "$gen_dir" ]] || return 1
+  # generator dir は在るのに片翼が欠けている = folio self-host の前提崩れ (consumer ではない)
+  printf '%s' "$gen_dir"; return 2
+}
+
+# ★folio_glossary_pack_dir は撤去した (folio-wg2l self-review finding#4)。 委譲の適用判定に「glossary
+#   contract の実在」を含めると、 self-host root で contract を欠いた瞬間 dispatcher が *内部 emitter へ
+#   fallback* し、 folio build 1 回で committed のリッチ版が素朴版へ silent revert する (実弾で再現:
+#   61838B/h4×36 → 12036B/span×36 を build rc=0 が書き込み、 以後 validate は committed(素朴)==emit(素朴) で
+#   [OK] = 恒真 PASS 化)。 「contract を消しても nav-regen-drift が FAIL するから loud」という旧 justification は
+#   *build を走らせない場合にしか成立しない*: violation message 自身が「folio build で再生成」を指示するため、
+#   指示どおり remediate した瞬間に証拠が破壊され gate が緑になる。 よって self-host = 委譲一択とし、
+#   contract 不在は folio_glossary_pack_emit の入力ガードが return 4 (hard-fail) で落とす
+#   (fence「委譲の前提崩れは hard-fail・内部 emitter へ fallback しない」)。 self-host 述語は
+#   folio_selfhost_generator_dir に単一化 (述語の二重化は drift の源ゆえ helper を分けない)。
+
+# --- 生成 timestamp の正規化 (folio-wg2l B・verify-canonical-drift.sh と同一 scope) ---
+# pack pipeline の footer は core_emit_footer が `date -u` で打つ「生成: <b>YYYY-MM-DD HH:MM</b>」を含む =
+# 毎分変化するため、 正規化なしに committed と byte 比較すると nav-regen-drift / build --check が恒久 RED になる。
+# ★scope は接頭辞「生成: <b>」+ TS + 「</b>」の *部分文字列置換のみ*。 裸日付の全域置換や行単位削除は
+#   drift masking (版日付/承認/検証状態/tags を潰す) ゆえ禁止 (fence「timestamp normalize」)。
+# ★内部 emitter (素朴) 出力・consumer fixture はこの接頭辞を持たないため本 filter は no-op = 既存 fixture 不変。
+# ★実装は sed = 宣言 toolchain (bash + yq + jq、 CLAUDE.md §6) 内に閉じる (folio-wg2l self-review finding#2)。
+#   perl を使わない理由: 本関数は 3 消費点 (validate nav-regen-drift / build --check / build 書込 path) が
+#   共有する *単一 helper* ゆえ、 ここが「実行不能で無出力」に倒れると比較の両辺が空 file になり
+#   「空 == 空 = 差分なし」が成立して 3 site が同時に fail-open する (perl 不在の実測で nav-regen-drift が
+#   改竄を [OK]・build が偽「同期済 (no-write)」を報告した)。 逆に perl を preflight で必須化すると、
+#   normalize が純 no-op でしかない consumer (内部 emitter 出力に「生成: <b>」接頭辞は無い) まで巻き添えで
+#   落ちる。 置換 scope は verify-canonical-drift.sh の perl 版と同一 (real glossary.html で byte 一致を実測)。
+folio_glossary_normalize() {
+  sed -E 's|生成: <b>[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}</b>|生成: <b>@@FOLIO-GLOSSARY-TS@@</b>|g'
+}
+
+# --- normalize の fail-closed wrapper (folio-wg2l self-review finding#2・byte 比較 *前* の precondition) ---
+# ★「正規化できなかった」を「差分なし」に化けさせない。 消費点は diff の両辺を本 wrapper で作り、 失敗時は
+#   *比較せずに* fail-closed へ倒す (fence「precondition assert を byte 比較前に置く」・
+#   verify-glossary-parity.sh の vocab-projection 節と同規律)。 sed 化で「依存不在」原因は消えたが、
+#   将来の他要因 (locale/巨大入力/書込失敗) でも同じ fail-open が再発するため構造で塞ぐ。
+# usage: folio_glossary_normalize_file <src> <dst> ; return 0=ok / 1=正規化不能 (呼出側が fail-closed)
+folio_glossary_normalize_file() {
+  local src="$1" dst="$2"
+  folio_glossary_normalize < "$src" > "$dst" 2>/dev/null || return 1
+  # 非空入力 → 非空出力 (空出力は「両辺が空で恒真一致」の入口)
+  [[ -s "$src" && ! -s "$dst" ]] && return 1
+  return 0
+}
+
+# --- glossary.html の term-name (canonical) 抽出 (symdiff 診断用・folio-wg2l B) ---
+# pack pipeline 出力は <h4 class="term-name">、 内部 emitter (素朴) 出力は <span class="term-name"> ゆえ
+# 両 shape を受ける (DOM 構造クラスが 2 つ = 片方だけ対応させると他方で診断が黙って空になる)。
+# 抽出は診断専用 (gate 判定は byte 比較が担う)。 grep の exit を検査し、 抽出不能を「差分なし」に化けさせない。
+folio_glossary_term_names() {
+  local out rc
+  out=$(grep -oP '<(?:h4|span) class="term-name">\K[^<]*' "$1" 2>/dev/null); rc=$?
+  if [[ "$rc" -gt 1 ]]; then printf '\x01extract-error\n'; return 0; fi   # grep 実行エラー = 診断不能を明示
+  printf '%s' "$out" | grep -v '^$' | LC_ALL=C sort
+  return 0
+}
+
 folio_glossary_vocab_path() {
   local root_abs="$1" cand
   local cands=("${root_abs}/vocabulary.yaml" "$(dirname "$root_abs")/vocabulary.yaml")
@@ -2087,30 +2174,64 @@ folio_cmd_validate() {
   # exit 2 と detect↔remediate parity、 glossary.html 未生成の fresh consumer/build-fail 後も block)。
   # vocabulary-parity (term 集合) は独立 gate にしない: byte 検査が term 集合一致を構造的に含意する真部分集合 (純冗長、
   # S4c design wf 確定)。 parity diagnostic「drift の所在を surface」は regen-drift message に term 対称差を埋めて回収。
-  local nav_gloss="${root_abs}/glossary.html" gloss_marked=0
+  # ★folio-wg2l: self-host root では emit が pack pipeline 委譲になり、 SSoT は contract・出力はリッチ
+  #   dual-audience 版になる (ADR-0052)。 diff 相手は folio_glossary_emit (dispatcher) 固定ゆえ本 gate は
+  #   経路によらず「committed == 現行 emit」を検査する。 生成 timestamp のみ正規化して比較する
+  #   (未正規化だと pack 出力は毎分変わり恒久 RED)。 term 抽出は h4 (pack) / span (内部 emitter) 両 shape。
+  local nav_gloss="${root_abs}/glossary.html" gloss_marked=0 gloss_selfhost=0 gloss_sh_rc=0
   if [[ -f "$nav_gloss" ]] && [[ "$(folio_extract_meta "$nav_gloss" folio-generated)" == "folio-build" ]]; then gloss_marked=1; fi
+  # ★tri-state (round3 finding#1): rc=0 (self-host) だけでなく rc=2 (片翼欠落 = 前提崩れ) も self-host 側に
+  #   数える。 2 を consumer 扱いすると marker keystone の self-host 例外まで外れ、 「marker 除去 + 片翼削除」で
+  #   drift 検査ごと沈黙する。 再生成そのものの不能は下段 emit の gec_v=4 が violation に載せる。
+  folio_selfhost_generator_dir "$root_abs" >/dev/null 2>&1; gloss_sh_rc=$?
+  [[ "$gloss_sh_rc" -ne 1 ]] && gloss_selfhost=1
+  # ★marker keystone の self-host 例外 (folio-wg2l fence「marker vacuous-green 封鎖」・実弾実証):
+  #   consumer では marker 無し glossary.html = hand-authored = 検査対象外 (keystone・ADR-0036 §2.5)。
+  #   だが self-host の canonical glossary は folio build の生成物と決まっている (ADR-0052) ため、
+  #   marker 欠落は「hand-authored」ではなく *marker の除去* である。 これを skip にすると
+  #   「marker を消しつつ本文を改竄する」で drift 検査ごと沈黙し clean: 0 violations = 恒真 PASS になる。
+  #   よって self-host では marker 欠落そのものを block する (欠落は FAIL・skip 化しない)。
+  if [[ "$gloss_selfhost" -eq 1 && -f "$nav_gloss" && "$gloss_marked" -eq 0 ]]; then
+    nav_seen=1
+    violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html に folio-generated marker が無い (self-host の canonical glossary は folio build の生成物: marker 除去は drift 検査を沈黙 skip させ本文改竄を隠す。 folio build で再生成、 ADR-0052)")
+    nav_drift_fail=1
+  fi
   if [[ -n "$glossary_map" ]]; then
     local gtmp_v gec_v; gtmp_v=$(mktemp)
     folio_glossary_emit "$root_abs" > "$gtmp_v" 2>/dev/null; gec_v=$?
     if [[ "$gec_v" -eq 3 ]]; then
-      violations+=("(vocabulary.yaml)"$'\t'"[glossary-slug] vocabulary.yaml の canonical が一意な glossary slug を生まない (<dt id=\"term-…\"> 重複、 REQ-GLOSS-003、 vocabulary.yaml の canonical を修正)")
+      violations+=("(vocabulary.yaml)"$'\t'"[glossary-slug] glossary の canonical/slug が一意な in-page anchor を生まない (<dt id=\"term-…\"> / <section id=\"term-…\"> 重複、 REQ-GLOSS-003、 SSoT (self-host = glossary contract の slug / consumer = vocabulary.yaml の canonical) を修正)")
       glossary_fail=1
+    elif [[ "$gec_v" -eq 4 ]]; then
+      # 委譲の前提崩れ = 再生成不能。 skip (恒真 PASS) にせず block する: 「emit できない」を clean 扱いすると
+      # committed の劣化が検査不能のまま land する (fence「marker vacuous-green 封鎖」と同クラス)。
+      violations+=("glossary.html"$'\t'"[nav-regen-drift] glossary の pack pipeline 委譲が前提を満たさず再生成不能 (詳細は folio build の stderr、 ADR-0052。 委譲入力 (assemble-glossary.sh / inject-prose.sh / contract / prose) と contract の canonical_page・graph.principle_edge・meta.doc_id を確認)")
+      nav_drift_fail=1
     elif [[ "$gec_v" -eq 0 ]] && [[ "$gloss_marked" -eq 1 ]]; then
       nav_seen=1
-      if ! diff "$gtmp_v" "$nav_gloss" >/dev/null 2>&1; then
-        # parity diagnostic: emit と committed の <dt> term の canonical 集合の対称差を message に埋め込む
-        # (term-name = htesc(canonical) を抽出、 slug でなく可読 canonical で surface、 LC_ALL=C 決定的)。
+      local gnorm_e gnorm_c gnorm_ok=1; gnorm_e=$(mktemp); gnorm_c=$(mktemp)
+      # ★byte 比較 *前* の precondition (folio-wg2l self-review finding#2): 正規化不能を「差分なし」に
+      #   化けさせない (両辺が空 file になると空==空で改竄を [OK] にする fail-open)。
+      folio_glossary_normalize_file "$gtmp_v"   "$gnorm_e" || gnorm_ok=0
+      folio_glossary_normalize_file "$nav_gloss" "$gnorm_c" || gnorm_ok=0
+      if [[ "$gnorm_ok" -eq 0 ]]; then
+        violations+=("glossary.html"$'\t'"[nav-regen-drift] glossary の生成 timestamp 正規化に失敗 (drift 判定不能・fail-closed: 正規化できないことを「差分なし」として clean 扱いしない)")
+        nav_drift_fail=1
+      elif ! diff "$gnorm_e" "$gnorm_c" >/dev/null 2>&1; then
+        # parity diagnostic: emit と committed の term-name の canonical 集合の対称差を message に埋め込む
+        # (slug でなく可読 canonical で surface、 LC_ALL=C 決定的)。 判定は上の byte 比較が担い、 本節は診断のみ。
         local em_t com_t only_v only_g symd
-        em_t=$(grep -oP '<span class="term-name">\K[^<]*' "$gtmp_v" | LC_ALL=C sort)
-        com_t=$(grep -oP '<span class="term-name">\K[^<]*' "$nav_gloss" | LC_ALL=C sort)
+        em_t=$(folio_glossary_term_names "$gtmp_v")
+        com_t=$(folio_glossary_term_names "$nav_gloss")
         only_v=$(LC_ALL=C comm -23 <(printf '%s\n' "$em_t") <(printf '%s\n' "$com_t") | grep -v '^$' | paste -sd' ' -)
         only_g=$(LC_ALL=C comm -13 <(printf '%s\n' "$em_t") <(printf '%s\n' "$com_t") | grep -v '^$' | paste -sd' ' -)
         symd=""
-        [[ -n "$only_v" ]] && symd="${symd} [vocab のみ: ${only_v}]"
+        [[ -n "$only_v" ]] && symd="${symd} [SSoT のみ: ${only_v}]"
         [[ -n "$only_g" ]] && symd="${symd} [glossary のみ: ${only_g}]"
-        violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が vocabulary.yaml から drift (folio build で再生成、 ADR-0036 §2.5)${symd}")
+        violations+=("glossary.html"$'\t'"[nav-regen-drift] 生成 glossary.html が SSoT から drift (folio build で再生成、 ADR-0036 §2.5 / ADR-0052)${symd}")
         nav_drift_fail=1
       fi
+      rm -f "$gnorm_e" "$gnorm_c"
     fi
     rm -f "$gtmp_v"
   elif [[ "$gloss_marked" -eq 1 ]]; then
@@ -2189,11 +2310,22 @@ folio_cmd_validate() {
   #   (folio 内部 authoring policy ゆえ非該当 root では構造的 N/A。 24 fixture golden の churn も回避)。
   #   決定は純計算トークンから導出 (manifest 完全行一致 membership + contract glob 存在、 CC-01 injection 則)。
   #   manifest = 正の allowlist (現行 spec/ 全 file の明示列挙・SKIP 例外配布でない = 3d23 則)。
-  local sc_gen_dir sc_manifest sc_contract_dir
-  sc_gen_dir=$(realpath -m "${root_abs}/../.claude-plugin/design-system/generator")
-  sc_manifest="${sc_gen_dir}/spec-grandfather.manifest"
-  sc_contract_dir="${sc_gen_dir}/contract"
-  if [[ -f "$sc_manifest" && -d "$sc_contract_dir" ]]; then
+  # ★self-host 検出は folio_selfhost_generator_dir に単一化 (folio-wg2l Leg 0 ③): 同一述語を
+  #   nav-regen-drift の glossary pack 委譲判定と共有し、 両 gate の self-host 認識が drift しないようにする。
+  local sc_gen_dir sc_manifest sc_contract_dir sc_gen_rc
+  sc_gen_dir=$(folio_selfhost_generator_dir "$root_abs"); sc_gen_rc=$?
+  # ★述語の *部分成立* を沈黙消滅させない (round3 finding#1): 旧実装は片翼欠落を rc=1 = 非該当 root と
+  #   同一視し、 contract_seen=0 のまま報告行ごと消えていた (manifest 削除の実弾で grep -c = 0 を観測)。
+  #   gate の allowlist/contract 実在という *前提* が壊れているのだから、 非該当 (構造的 N/A) ではなく violation。
+  if [[ "$sc_gen_rc" -eq 2 ]]; then
+    contract_seen=1
+    # ★path は literal 相対で書く (絶対 path を埋めると root ごとに message が変わり golden 非決定になる)
+    violations+=("(design-system/generator)"$'\t'"[spec-contract-pairing] folio self-host の sibling generator (../.claude-plugin/design-system/generator/) に spec-grandfather.manifest / contract/ の片方が無い — gate の前提崩れ (欠落を「非該当 root」として沈黙 skip すると spec-contract-pairing と glossary 委譲が同時に恒真 PASS 化する、 folio-yjap / ADR-0052)")
+    contract_fail=1
+  fi
+  if [[ "$sc_gen_rc" -eq 0 ]]; then
+    sc_manifest="${sc_gen_dir}/spec-grandfather.manifest"
+    sc_contract_dir="${sc_gen_dir}/contract"
     contract_seen=1
     # grandfather allowlist (# コメント + 空行除去・行前後 trim)。 完全行一致 (grep -qxF) で membership 判定。
     local sc_allow
@@ -2726,10 +2858,20 @@ folio_glossary_slug() {
   printf '%s' "$s"
 }
 
+# ============================================================================
+# glossary emit — 2 経路の dispatcher (ADR-0052 build-orchestrates-pack / folio-wg2l)
+#   self-host root (glossary contract 実在) → pack pipeline 委譲 (リッチ dual-audience 提示層)
+#   Layer 1 consumer root                   → 内部 emitter (素朴・vocabulary.yaml 由来・ADR-0036)
+# ★return code 契約は 2 経路で共通 (全 3 消費点が同一に分岐できる):
+#   0 = 成功 (stdout = glossary.html 内容) / 1 = 生成しない (source 解決不能 = keystone SKIP)
+#   3 = anchor 一意性違反 (slug 衝突) / 4 = 委譲の前提崩れ・pipeline 失敗 (self-host hard-fail)
+# ============================================================================
+
 # <root_abs> ($1) の vocabulary.yaml (folio-closed 語) から glossary.html 内容を stdout に emit (純関数・決定的、 ADR-0036)。
 # vocab 解決不能 or term 無しなら何も出さず return 1 (= consumer で vocab 無し時は build が glossary を生成しない、 additive/keystone)。
 # 定義は raw を htesc で本文 escape (data-tooltip の attribute-escape とは別 = body 表示用)。 canonical を LC_ALL=C sort で決定化。
-folio_glossary_emit() {
+# ★Layer 1 consumer 専用 path (folio 自身は pack 委譲)。 term-name は <span class="term-name"> shape。
+folio_glossary_internal_emit() {
   local root_abs="$1" vf
   vf=$(folio_glossary_vocab_path "$root_abs") || return 1
   command -v yq >/dev/null 2>&1 || return 1
@@ -2813,6 +2955,145 @@ HEAD2
   printf '</dl>\n\n<p class="nav-back"><a href="./index.html">&larr; design-intent index</a></p>\n</body>\n</html>\n'
 }
 
+# self-host root の glossary.html を pack pipeline (assemble-glossary.sh + inject-prose.sh) で生成し stdout へ。
+# ★委譲は fail-closed = 前提崩れ・pipeline 失敗は return 4 で、 内部 emitter へ fallback しない:
+#   fallback するとリッチ committed が folio build 1 回で素朴版へ silent revert し、 以後 nav-regen-drift は
+#   「committed(素朴) == emit(素朴)」で恒真 PASS 化して劣化を隠す (folio-wg2l fence「build write-path silent revert」)。
+folio_glossary_pack_emit() {
+  local root_abs="$1" gen_dir sh_rc
+  # ★呼出は dispatcher が rc=0 に限るが、 述語 tri-state を here でも忠実に写す (round3 finding#1):
+  #   旧実装は `|| return 1` で rc=2 (前提崩れ) を rc=1 (source 解決不能) へ潰しており、 消費点が
+  #   「生成しない = 沈黙 skip」へ倒れる入口を残していた。 2 は 4 (hard-fail) へ写像する。
+  gen_dir=$(folio_selfhost_generator_dir "$root_abs"); sh_rc=$?
+  if [[ "$sh_rc" -eq 2 ]]; then
+    echo "folio: sibling generator の spec-grandfather.manifest / contract/ が片翼欠落 — 委譲の前提崩れ (fail-closed、 ADR-0052)" >&2
+    return 4
+  fi
+  [[ "$sh_rc" -eq 0 ]] || return 1
+
+  local asm="${gen_dir}/assemble-glossary.sh" inj="${gen_dir}/inject-prose.sh"
+  local con="${gen_dir}/contract/folio-glossary.glossary.yaml" pro="${gen_dir}/prose/folio-glossary.prose.yaml"
+
+  # ---- 「生成対象そのものが無い root」の弁別 (folio-wg2l self-review finding#4・fixture 安全弁) ----
+  # contract 不在 *かつ* committed glossary.html も無い = glossary を持たない mini-repo (gate (s) fixture 等)
+  # ゆえ return 1 = 内部 emitter と同じ「source 解決不能」扱い (消費点は生成しない)。
+  # 一方 committed glossary.html が在るのに contract が無い = *委譲元の消失* であり、 下の入力ガードが
+  # return 4 (hard-fail) で落とす — ここを fallback にすると rich→素朴の silent revert が成立する。
+  #
+  # ★述語は root 内の実 file のみで決める (folio-wg2l self-review round2 finding#2)。 旧実装は
+  #   folio_glossary_vocab_path を第 3 項に持っていたが、 同 helper の候補は $CLAUDE_PLUGIN_ROOT/
+  #   design-intent/vocabulary.yaml を含む = *別 repo* の vocab が解決して弁が発火せず、 in-tree fixture が
+  #   env の有無で clean ⇄ nav-regen-drift RED に反転した (CI は bare ゆえ緑・Claude Code 下では赤 = gate が
+  #   ambient env で verdict を変える)。 env は self-host 信号でない (fence「marker 有無・glossary_map 非空・
+  #   env を self-host 信号に代用するのは裁定違反」) ゆえ env 由来項を落とし、
+  #   「守るべき生成物が root に実在するか」だけを見る。
+  if [[ ! -f "$con" ]] && [[ ! -f "${root_abs}/glossary.html" ]]; then
+    return 1
+  fi
+
+  local f
+  for f in "$asm" "$inj" "$con" "$pro"; do
+    [[ -f "$f" ]] || { echo "folio: glossary pack 委譲の入力が不在 (fail-closed): ${f}" >&2; return 4; }
+  done
+  command -v yq >/dev/null 2>&1 || { echo "folio: glossary pack 委譲に yq が必要 (fail-closed)" >&2; return 4; }
+
+  # ---- 委譲 precondition (folio-wg2l Leg 0 ④): contract の graph.principle_edge + meta.doc_id 実在 ----
+  # ★in-scan spec の head_graph block 検査 (core_emit_graph_head 系) を流用しない: 別 field であり、
+  #   in-scan 型 hard-fail を out-of-scan の glossary へ移植しない (fence)。 ここは contract 側 field のみ見る。
+  local pe_target pe_role meta_doc_id
+  pe_target=$(yq -r '.graph.principle_edge.target_doc_id // ""' "$con" 2>/dev/null)
+  pe_role=$(yq -r '.graph.principle_edge.role // ""' "$con" 2>/dev/null)
+  meta_doc_id=$(yq -r '.meta.doc_id // ""' "$con" 2>/dev/null)
+  if [[ -z "$pe_target" || -z "$pe_role" ]]; then
+    echo "folio: glossary contract に graph.principle_edge (target_doc_id + role) が無い — 委譲の前提崩れ (fail-closed、 ADR-0052)" >&2; return 4
+  fi
+  if [[ -z "$meta_doc_id" ]]; then
+    echo "folio: glossary contract に meta.doc_id が無い — 委譲の前提崩れ (fail-closed、 ADR-0052)" >&2; return 4
+  fi
+
+  # ---- anchor 一意性 (return 3 契約の維持): pack は contract の明示 slug を <section id="term-<slug>"> へ
+  #      使う。 slug 重複は in-page anchor を壊すが、 committed も同じ壊れ id で byte 一致しうる死角ゆえ
+  #      emit を single SoT に fail-closed で検出する (内部 emitter の derive-slug 衝突検査と同契約、 REQ-GLOSS-003)。
+  # ★番人と排出器で *抽出述語を単一化* する (folio-wg2l self-review finding#1・r8k の parser-differential と同クラス)。
+  #   旧実装は `// ""` + `grep -v '^$'` で欠落 slug を捨ててから uniq -d に掛けていたが、 排出器
+  #   (assemble-glossary.sh) の q() は既定値を持たず欠落キーで *リテラル "null"* を返すため、 全欠落 term が
+  #   同一定数 term-null へ潰れて衝突する。 つまり番人が捨てる値集合と、 排出器が衝突定数へ写す値集合が
+  #   正確に一致し、 「slug 欠落」shape だけが素通りしていた (実弾: contract の slug を消すと build が
+  #   id="term-null" を 2 本重複させた glossary.html を書き、 validate/build --check は共に clean)。
+  #   よって「欠落/空/リテラル null」も「重複」と同じ return 3 契約で弾き、 dup 検査は捨てずに全 slug を通す。
+  local bad_slug
+  bad_slug=$(yq -r '[.terms[] | select((.slug // "") == "" or (.slug // "") == "null")] | length' "$con" 2>/dev/null)
+  if [[ -z "$bad_slug" || "$bad_slug" != "0" ]]; then
+    printf 'folio: glossary slug 欠落 — contract の terms[].slug に空/未指定/リテラル null が %s 件 (排出器はこれらを同一 anchor id="term-null" へ潰すため衝突する。 glossary contract の slug を全 term に一意指定、 REQ-GLOSS-003)\n' \
+      "${bad_slug:-?}" >&2
+    return 3
+  fi
+  local dup
+  dup=$(yq -r '.terms[].slug' "$con" 2>/dev/null | LC_ALL=C sort | LC_ALL=C uniq -d)
+  if [[ -n "$dup" ]]; then
+    printf 'folio: glossary slug 衝突 — contract の terms[].slug が一意でない: %s (glossary contract の slug を一意に、 REQ-GLOSS-003)\n' \
+      "$(printf '%s' "$dup" | tr '\n' ' ')" >&2
+    return 3
+  fi
+
+  # ---- pipeline 実行 (毎回新規 mktemp・pre-seed 禁止) ----
+  local wd; wd=$(mktemp -d) || { echo "folio: glossary pack 委譲の mktemp 失敗 (fail-closed)" >&2; return 4; }
+  if ! "$asm" "$con" > "${wd}/assembled.html" 2>"${wd}/aerr"; then
+    echo "folio: assemble-glossary.sh 失敗 (委譲不能、 fail-closed): $(tr '\n' ' ' < "${wd}/aerr")" >&2
+    rm -rf "$wd"; return 4
+  fi
+  if ! "$inj" "$pro" "${wd}/assembled.html" "${wd}/fresh.html" >/dev/null 2>"${wd}/ierr"; then
+    echo "folio: inject-prose.sh 失敗 (委譲不能、 fail-closed): $(tr '\n' ' ' < "${wd}/ierr")" >&2
+    rm -rf "$wd"; return 4
+  fi
+
+  # ---- 再生成 precondition (fail-closed・「再生成できなかった」を空/半端出力で素通りさせない) ----
+  local perr=""
+  [[ -s "${wd}/fresh.html" ]] || perr="出力が空"
+  [[ -z "$perr" ]] && { head -1 "${wd}/fresh.html" | grep -qi '<!DOCTYPE html>' || perr="DOCTYPE 無し (構造マーカー欠如)"; }
+  # ★marker 前提 assert (fence「marker vacuous-green 封鎖」): folio-generated marker は nav-regen-drift /
+  #   build --check の keystone。 欠落した出力を通すと committed も未 marker になり両 gate が沈黙 skip =
+  #   恒真 PASS 化する。 欠落は skip でなく FAIL (contract の canonical_page 欠落を here で loud に落とす)。
+  [[ -z "$perr" ]] && { grep -q '<meta name="folio-generated" content="folio-build">' "${wd}/fresh.html" \
+    || perr="folio-generated marker (content=\"folio-build\") 無し — contract の canonical_page 欠落/改竄 (gate keystone が消える)"; }
+  [[ -z "$perr" ]] && { grep -q 'class="term-name"' "${wd}/fresh.html" || perr="term-name 無し (本体崩れ)"; }
+  local fsz
+  if [[ -z "$perr" ]]; then
+    fsz=$(wc -c < "${wd}/fresh.html")
+    [[ "$fsz" -ge 20000 ]] || perr="サイズ ${fsz} < 下限 20000 (再生成崩れ・space-only の恒真化封鎖)"
+  fi
+  if [[ -n "$perr" ]]; then
+    echo "folio: glossary pack 委譲の出力が前提を満たさない (fail-closed): ${perr}" >&2
+    rm -rf "$wd"; return 4
+  fi
+
+  cat "${wd}/fresh.html"
+  rm -rf "$wd"
+  return 0
+}
+
+# glossary emit dispatcher — 全 3 消費点 (validate nav-regen-drift / build 書込 path / build --check) が
+# 本関数だけを呼ぶ = 委譲の切替が 3 site で構造的に lockstep する (片側だけ旧経路に残る drift が起きない)。
+folio_glossary_emit() {
+  local root_abs="$1"
+  # ★分岐は self-host 述語 *のみ* (folio-wg2l self-review finding#4)。 self-host = 委譲一択で、 委譲入力の
+  #   欠落は pack_emit が return 4 (hard-fail) にする。 ここで contract 実在まで条件にすると、 contract を
+  #   欠いた self-host root が consumer 分岐へ流れ、 folio build 1 回で rich→素朴の silent revert が起きる
+  #   (契約 (A) の写像「self-host → 委譲 / consumer root は内部 emitter」にも反する)。
+  # ★述語の *部分成立* (rc=2) は consumer でなく前提崩れ = hard-fail へ写像する (round3 finding#1)。
+  #   ここを internal_emit へ流すと、 pack_emit の return 4 ガードが一度も実行されないまま
+  #   rich→素朴の silent revert + 恒真 PASS 化が成立する (述語の片翼を欠くだけで fail-open した)。
+  local sh_rc
+  folio_selfhost_generator_dir "$root_abs" >/dev/null 2>&1; sh_rc=$?
+  if [[ "$sh_rc" -eq 0 ]]; then
+    folio_glossary_pack_emit "$root_abs"; return $?
+  elif [[ "$sh_rc" -eq 2 ]]; then
+    echo "folio: folio self-host root だが sibling generator の spec-grandfather.manifest / contract/ が片翼欠落 — 委譲の前提崩れ (fail-closed、 ADR-0052。 素朴 emitter へ fallback すると committed のリッチ glossary が build 1 回で silent revert し以後の gate が恒真 PASS 化する)" >&2
+    return 4
+  fi
+  folio_glossary_internal_emit "$root_abs"; return $?
+}
+
 # folio build [--root <dir>] [--check]: top-level index.html を graph から生成 (ADR-0035)。
 #   companion で glossary.html も vocabulary.yaml から生成し (ADR-0036、 vocab 解決時のみ)、
 #   全 page (graph scan 対象 + constitution) に chrome を注入・維持する (ADR-0039 §2.3)。
@@ -2844,14 +3125,33 @@ folio_cmd_build() {
         echo "folio build --check: ${root}/index.html が graph から drift (folio build で再生成せよ)" >&2; drift=1
       fi
     fi
-    local gout_c="${root_abs}/glossary.html" gtmp_c gec_c gout_marked=0
+    # ★folio-wg2l: emit は dispatcher (self-host = pack pipeline 委譲 / consumer = 内部 emitter) 固定で、
+    #   validate nav-regen-drift と同一 diff 対象・同一 normalize (生成 timestamp のみ) に lockstep させる。
+    local gout_c="${root_abs}/glossary.html" gtmp_c gec_c gout_marked=0 gout_selfhost=0 gout_sh_rc=0
     if [[ -f "$gout_c" ]] && [[ "$(folio_extract_meta "$gout_c" folio-generated)" == "folio-build" ]]; then gout_marked=1; fi
+    # ★tri-state (round3 finding#1・validate nav-regen-drift と対称): rc=2 (片翼欠落) も self-host 側に数える
+    folio_selfhost_generator_dir "$root_abs" >/dev/null 2>&1; gout_sh_rc=$?
+    [[ "$gout_sh_rc" -ne 1 ]] && gout_selfhost=1
+    # ★marker keystone の self-host 例外 (validate nav-regen-drift と対称・fence「marker vacuous-green 封鎖」)
+    if [[ "$gout_selfhost" -eq 1 && -f "$gout_c" && "$gout_marked" -eq 0 ]]; then
+      echo "folio build --check: ${root}/glossary.html に folio-generated marker が無い (self-host の canonical は folio build の生成物: marker 除去は drift 検査を沈黙 skip させる。 folio build で再生成せよ、 ADR-0052)" >&2; drift=1
+    fi
     gtmp_c=$(mktemp); folio_glossary_emit "$root_abs" > "$gtmp_c" 2>/dev/null; gec_c=$?
-    if [[ "$gec_c" -eq 3 ]]; then   # slug 衝突 = vocab の不変条件違反 (glossary.html の有無と独立、 validate と同 fail-closed contract、 REQ-GLOSS-003)
-      echo "folio build --check: glossary slug 衝突 (vocabulary.yaml の canonical を一意な slug に修正、 REQ-GLOSS-003)" >&2; drift=1
-    elif [[ "$gec_c" -eq 0 ]] && [[ "$gout_marked" -eq 1 ]] && ! diff "$gtmp_c" "$gout_c" >/dev/null 2>&1; then
-      echo "folio build --check: ${root}/glossary.html が vocabulary.yaml から drift (folio build で再生成せよ)" >&2; drift=1
-    elif [[ "$gec_c" -ne 0 ]] && [[ "$gec_c" -ne 3 ]] && [[ "$gout_marked" -eq 1 ]]; then   # orphan: 生成 glossary.html が在るが vocab 解決不能 (validate と対称)
+    if [[ "$gec_c" -eq 3 ]]; then   # slug 衝突 = anchor 一意性違反 (glossary.html の有無と独立、 validate と同 fail-closed contract、 REQ-GLOSS-003)
+      echo "folio build --check: glossary の canonical/slug 衝突 (SSoT (self-host = glossary contract の slug / consumer = vocabulary.yaml の canonical) を一意に修正、 REQ-GLOSS-003)" >&2; drift=1
+    elif [[ "$gec_c" -eq 4 ]]; then   # 委譲の前提崩れ = 再生成不能 (skip=恒真 PASS 化させない・validate と対称)
+      echo "folio build --check: glossary の pack pipeline 委譲が前提を満たさず再生成不能 (上記 stderr、 ADR-0052)" >&2; drift=1
+    elif [[ "$gec_c" -eq 0 ]] && [[ "$gout_marked" -eq 1 ]]; then
+      # ★byte 比較 *前* の precondition (folio-wg2l self-review finding#2・validate nav-regen-drift と対称):
+      #   process substitution は normalize の rc を捨てるため、 file 経由の fail-closed wrapper で受ける。
+      local gnc_e gnc_c; gnc_e=$(mktemp); gnc_c=$(mktemp)
+      if ! folio_glossary_normalize_file "$gtmp_c" "$gnc_e" || ! folio_glossary_normalize_file "$gout_c" "$gnc_c"; then
+        echo "folio build --check: glossary の生成 timestamp 正規化に失敗 (drift 判定不能・fail-closed: 正規化できないことを「差分なし」として clean 扱いしない)" >&2; drift=1
+      elif ! diff "$gnc_e" "$gnc_c" >/dev/null 2>&1; then
+        echo "folio build --check: ${root}/glossary.html が SSoT から drift (folio build で再生成せよ)" >&2; drift=1
+      fi
+      rm -f "$gnc_e" "$gnc_c"
+    elif [[ "$gec_c" -eq 1 ]] && [[ "$gout_marked" -eq 1 ]]; then   # orphan: 生成 glossary.html が在るが source 解決不能 (validate と対称)
       echo "folio build --check: ${root}/glossary.html が在るが vocabulary.yaml が解決しない (orphan: vocab を復元するか glossary.html を削除)" >&2; drift=1
     fi
     rm -f "$gtmp_c"
@@ -2870,7 +3170,7 @@ folio_cmd_build() {
       rm -f "$cc_tmp"
     done < <(folio_chrome_targets "$root_abs")
     [[ "$drift" -eq 1 ]] && return 1
-    echo "folio build --check: index は graph・glossary は vocabulary.yaml・chrome は render と同期 (clean、 marker 無し file は対象外)" >&2
+    echo "folio build --check: index は graph・glossary は SSoT (self-host = glossary contract / consumer = vocabulary.yaml)・chrome は render と同期 (clean、 marker 無し file は対象外)" >&2
     return 0
   fi
 
@@ -2899,24 +3199,75 @@ folio_cmd_build() {
 
   # glossary.html を vocabulary.yaml (folio-closed) から生成 (ADR-0036、 companion)。 vocab 解決不能 (consumer で
   # $CLAUDE_PLUGIN_ROOT 未設定・vocab 無し) なら生成しない (additive/keystone)。 safe write = temp→mv (index と同型)。
+  # ★folio-wg2l: emit は validate/--check と同一 dispatcher (self-host = pack pipeline 委譲・ADR-0052)。
+  #   委譲の前提崩れ (return 4) は *書かずに* exit 2 = fail-closed。 内部 emitter へ fallback すると
+  #   リッチ committed が build 1 回で素朴版へ silent revert し、 以後 gate が恒真 PASS 化する。
   local gout="${root_abs}/glossary.html" gtmp gec
   gtmp=$(mktemp "${root_abs}/.folio-gloss.XXXXXX") || { echo "folio build: mktemp failed (fail-closed)" >&2; exit 2; }
   trap 'rm -f "${gtmp:-}"' EXIT INT TERM
-  folio_glossary_emit "$root_abs" > "$gtmp"; gec=$?   # 衝突(3) の slug 診断は stderr に流す (REQ-GLOSS-003)
+  folio_glossary_emit "$root_abs" > "$gtmp"; gec=$?   # 衝突(3)/委譲前提崩れ(4) の診断は stderr に流す
   if [[ "$gec" -eq 0 ]] && [[ -s "$gtmp" ]]; then
-    if [[ -f "$gout" ]] && [[ "$(folio_extract_meta "$gout" folio-generated)" != "folio-build" ]]; then
-      echo "folio build: 既存の hand-authored glossary (${gout}) を generated-view に置換します (再 build で vocabulary.yaml から再生成)" >&2
+    # ---- anti-downgrade 書込安全弁 (folio-wg2l self-review round3 finding#1・shape「generator dir ごと消滅」) ----
+    # ★述語では塞げない唯一の shape: sibling generator dir が丸ごと消えた root は、 真の consumer と
+    #   *構造的に区別不能* (両者とも <root>/../.claude-plugin/design-system/generator/ を持たない = rc=1)。
+    #   tri-state は片翼欠落 (rc=2) を hard-fail にするが、 この shape は consumer 分岐へ正当に落ちる。
+    #   放置すると build が内部 emitter 出力 (span shape) で committed のリッチ版 (h4 shape) を上書きし、
+    #   rich→素朴の silent revert + 以後 committed(素朴)==emit(素朴) の恒真 PASS 化が成立する。
+    #   validate/--check は *build を走らせなければ* RED だが、 その violation message 自身が
+    #   「folio build で再生成」を指示するため、 指示どおり remediate した瞬間に証拠が破壊される modality。
+    # ★よって分岐判定ではなく *書込の安全弁* として artifact の shape を見る: 「pack 生成物 (h4 term-name) を
+    #   内部 emitter 出力 (span term-name) で上書きする」= 一方向の劣化ゆえ hard-fail で書かない。
+    #   これは marker/shape を self-host 信号に代用するものではない (fence 非抵触): 分岐は述語が決めた後で、
+    #   ここは決定済みの書込が committed を劣化させる場合に限り拒否する。 真の consumer の committed は
+    #   内部 emitter 由来 = span shape ゆえ発火せず、 self-host (rc=0) は両辺 h4 ゆえ発火しない。
+    if [[ -f "$gout" ]] && grep -q '<h4 class="term-name"' "$gout" && ! grep -q '<h4 class="term-name"' "$gtmp"; then
+      rm -f "$gtmp"
+      trap - EXIT INT TERM
+      echo "folio build: 既存の ${root}/glossary.html は pack pipeline 生成物 (h4 term-name) だが、 これから書く emit は内部 emitter 出力 (span term-name) — 劣化書込のため中止 (fail-closed)。 sibling generator (../.claude-plugin/design-system/generator/) が消失していないか確認せよ: 上書きすると committed が素朴版へ silent revert し、 以後 nav-regen-drift が committed==emit で恒真 PASS 化して劣化を隠す (ADR-0052)" >&2
+      exit 2
     fi
-    mv "$gtmp" "$gout"
-    trap - EXIT INT TERM
-    echo "folio build: wrote ${root}/glossary.html" >&2
+    if [[ -f "$gout" ]] && [[ "$(folio_extract_meta "$gout" folio-generated)" != "folio-build" ]]; then
+      echo "folio build: 既存の hand-authored glossary (${gout}) を generated-view に置換します (再 build で SSoT から再生成)" >&2
+    fi
+    # ★idempotent write (chrome 注入と同型): 生成 timestamp だけが違う出力で committed を上書きしない。
+    #   pack pipeline の footer は `date -u` 由来ゆえ毎回変わり、 無条件 write だと folio build のたびに
+    #   working tree が dirty 化する (実体は無変化)。 normalize 後一致 = no-write で committed を温存する。
+    # ★no-write 分岐は「差分なし」に依存するため、 正規化不能は no-write でなく exit 2 = fail-closed へ倒す
+    #   (folio-wg2l self-review finding#2: 両辺が空 file になると空==空で「同期済 (no-write)」を *虚偽報告* し、
+    #   committed の改竄・劣化を放置したまま build が成功する)。
+    local gsync=0
+    if [[ -f "$gout" ]]; then
+      local gnw_e gnw_c; gnw_e=$(mktemp); gnw_c=$(mktemp)
+      if ! folio_glossary_normalize_file "$gtmp" "$gnw_e" || ! folio_glossary_normalize_file "$gout" "$gnw_c"; then
+        rm -f "$gnw_e" "$gnw_c" "$gtmp"
+        trap - EXIT INT TERM
+        echo "folio build: glossary の生成 timestamp 正規化に失敗 — 同期判定が不能のため書きません (fail-closed: 正規化不能を「同期済」と誤報告して committed の劣化を放置しない)" >&2
+        exit 2
+      fi
+      diff "$gnw_e" "$gnw_c" >/dev/null 2>&1 && gsync=1
+      rm -f "$gnw_e" "$gnw_c"
+    fi
+    if [[ "$gsync" -eq 1 ]]; then
+      rm -f "$gtmp"
+      trap - EXIT INT TERM
+      echo "folio build: ${root}/glossary.html は SSoT と同期済 (no-write)" >&2
+    else
+      mv "$gtmp" "$gout"
+      trap - EXIT INT TERM
+      echo "folio build: wrote ${root}/glossary.html" >&2
+    fi
   elif [[ "$gec" -eq 3 ]]; then
     rm -f "$gtmp"
     trap - EXIT INT TERM
-    echo "folio build: glossary slug 衝突のため glossary.html を生成しません (上記 vocabulary.yaml を修正、 REQ-GLOSS-003)" >&2
+    echo "folio build: glossary の canonical/slug 衝突のため glossary.html を生成しません (上記 SSoT を修正、 REQ-GLOSS-003)" >&2
+    exit 2
+  elif [[ "$gec" -eq 4 ]]; then
+    rm -f "$gtmp"
+    trap - EXIT INT TERM
+    echo "folio build: glossary の pack pipeline 委譲が前提を満たさないため glossary.html を生成しません (上記 stderr、 ADR-0052。 素朴 emitter への fallback は silent revert ゆえ行わない)" >&2
     exit 2
   else
-    rm -f "$gtmp"   # vocab 解決不能 (return 1) = glossary を生成しない (additive/keystone、 consumer の vocab 無し)
+    rm -f "$gtmp"   # source 解決不能 (return 1) = glossary を生成しない (additive/keystone、 consumer の vocab 無し)
     trap - EXIT INT TERM
   fi
 
@@ -2934,7 +3285,15 @@ folio_cmd_build() {
     fi
     [[ "$ch_st" == "changed" ]] && ch_changed=$((ch_changed + 1))
   done < <(folio_chrome_targets "$root_abs")
-  [[ "$ch_total" -gt 0 ]] && echo "folio build: chrome maintained in ${ch_total} pages (${ch_changed} updated)" >&2
+  # ★if 文で書く (`[[ ... ]] && echo` にしない): 後置 && は関数の最終文ゆえ、 chrome 対象 0 件
+  #   (spec/decisions/research cluster を持たない root = glossary/index だけの staging や minimal consumer) で
+  #   compound の exit 1 がそのまま folio build の戻り値になり、 全 write が成功していても「drift」を
+  #   詐称していた (exit 契約は 0=ok / 1=drift / 2=tool error)。 folio-wg2l で検出・修正 (pre-existing・
+  #   HEAD 8c589fc でも再現。 rc に依存する scenario/CI は無く、 挙動変化は偽 exit 1 の解消のみ)。
+  if [[ "$ch_total" -gt 0 ]]; then
+    echo "folio build: chrome maintained in ${ch_total} pages (${ch_changed} updated)" >&2
+  fi
+  return 0
 }
 
 # ============================================================================

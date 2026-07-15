@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="adr">
+<meta name="folio-layer" content="scratch">
+<meta name="folio-version" content="1.2.0">
+<meta name="folio-status" content="proposed">
+<meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+<meta name="folio-adr-id" content="0052">
+<meta name="folio-adr-date" content="2026-07-16">
+<title>ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0052-glossary-ssot-reassignment.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層",
+  "folio:version": "1.2.0",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "./ADR-0050-dual-audience-enforcement-derive.html" },
+    { "@id": "./ADR-0051-what-ssot-layer-interpretation.html" },
+    { "@id": "../spec/constitution.html#p-5" },
+    { "@id": "../spec/constitution.html#p-7" },
+    { "@id": "../spec/constitution.html#p-11" }
+  ]
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0052</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層</h1>
+  <div class="meta">Status: proposed &middot; Date: 2026-07-16 &middot; folio v1.2.0 &middot; glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (folio-7ts2) ため、 機械導出 + byte-stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-ssot">§2.1 SSoT の 3 層再指定</a></li>
+  <li class="toc--sub"><a href="#s2-2-orchestrates">§2.2 build-orchestrates-pack (委譲の型)</a></li>
+  <li class="toc--sub"><a href="#s2-3-gates">§2.3 gate の転換</a></li>
+  <li class="toc--sub"><a href="#s2-4-prose-attribution">§2.4 prose manifest の帰属 (全 pack への一般宣言)</a></li>
+  <li class="toc--sub"><a href="#s2-5-supersede">§2.5 supersede の性格 (部分・frozen 本文不触)</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<aside class="machine-readable" aria-hidden="true">
+  <dl>
+    <dt>id</dt><dd>ADR-0052</dd>
+    <dt>doc-type</dt><dd>adr</dd>
+    <dt>status</dt><dd>proposed</dd>
+    <dt>date</dt><dd>2026-07-16</dd>
+    <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
+    <dt>related</dt><dd>ADR-0036 (folio-vocabulary + glossary derive — 本 ADR が §2.1/§2.4/§2.5 を部分 supersede する対象)、 ADR-0050 (dual-audience enforcement の derive 転換 — SSoT-first regime の確立)、 ADR-0051 (WHAT-SSoT 層解釈 — 「正本 (edit-SSoT)」/「canonical WHAT (提示層)」の語彙 pin。 本 ADR はその語彙を glossary へ適用する)。 規範 = constitution P-5 (1 entity = 1 canonical name)・P-7 (3-domain content exclusivity)・P-11 (HOW 部分隔離)。 接地 = bd folio-wg2l (Leg A 実装) / bd folio-gttv (論点5 = 1 switchover) / bd folio-9inj (手動同鏡の設置) / bd folio-7ts2 (同鏡 drift の実発生)</dd>
+  </dl>
+</aside>
+
+<section id="s1-context" class="informative">
+<h2>§1. Context</h2>
+
+<p><a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> は glossary の SSoT モデルを「folio が <code>vocabulary.yaml</code> に canonical 定義を<strong>上流で author</strong> し、 そこから hover tooltip と <code>glossary.html</code> の 2 面を derive する」と定めた。 当時 <code>vocabulary.yaml</code> は唯一の編集起点であり、 単一 SSoT からの derive という構造は自己整合していた。</p>
+
+<p>その後 <a href="./ADR-0050-dual-audience-enforcement-derive.html">ADR-0050</a> の SSoT-first 転換で、 glossary は generator contract (<code>folio-glossary.glossary.yaml</code>) を持つ pack になった。 contract は各語に <code>formal_def</code> (正式定義) を持ち、 <a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> の語彙では<strong>正本 (edit-SSoT)</strong> である。 ここで定義本文は <code>vocabulary.yaml</code> の <code>definition</code> と contract の <code>formal_def</code> に<strong>二重保持</strong>されることになった — <code>vocabulary.yaml</code> は folio fix の tooltip populate 等が読む runtime SSoT ゆえ撤去できないからである。</p>
+
+<p>folio-9inj はこの二重保持を「<strong>手動同鏡 (片側編集禁止 MUST)</strong>」という規律で塞ぎ、 集合完全一致 + 定義逐語一致を機械強制した。 しかしこれは<strong>導出ではなく規律</strong>であり、 2 つの構造的な綻びを残した。 第一に、 folio-7ts2 で <code>vocabulary.yaml</code> ⊃ contract の drift が<strong>実際に発生</strong>した (gate 設置前)。 第二に、 同鏡 gate は集合と定義本文しか見ないため、 語順・domain・header・整形といった面は<strong>誰も検査していなかった</strong>。 二重保持を人間規律で守る限り、 「片側だけ編集する」という操作が物理的に可能なまま残る。</p>
+
+<p>同時に、 提示層にも取り残しがあった。 folio 自身の <code>design-intent/glossary.html</code> は <code>bin/folio</code> 内蔵の素朴な emitter が出力する定義リスト (<code>&lt;dt&gt;</code>/<code>&lt;dd&gt;</code> の平坦な列) のままで、 glossary-pack が生成するリッチな dual-audience 提示層 (domain 区分・平易定義・機械層 term レコード) は成果物として存在しながら<strong>canonical には成っていなかった</strong>。 folio の北極星 (非エンジニアが読める文書) に対して、 folio 自身の用語集だけが旧型で取り残されている状態である。 これは <a href="./ADR-0049-vision-pack.html">ADR-0049</a> / vision で確立した「out-of-scan canonical を pack pipeline の生成物にする」型を glossary へ適用すれば解消する。</p>
+</section>
+
+<section id="s2-decision" class="informative">
+<h2>§2. Decision</h2>
+
+<h3 id="s2-1-ssot">§2.1 SSoT の 3 層再指定</h3>
+<p>glossary の SSoT を次の 3 層に再指定する。 <strong>(1) glossary contract YAML = 唯一の edit-SSoT</strong> — 語の追加・削除・定義改訂はここだけを編集する (<a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> の「正本 (edit-SSoT)」であり、 P-11 の隔離先 harness に居住し続ける)。 <strong>(2) <code>design-intent/vocabulary.yaml</code> = contract からの生成 projection</strong> — 全域関数 (<code>canonical</code> ← <code>canonical</code> / <code>domain</code> ← <code>domain</code> / <code>definition</code> ← <code>formal_def</code>) で機械導出する runtime SSoT。 folio fix の tooltip populate・folio validate の glossary gate・Layer 1 consumer 向けの内部 derive がこれを読む役割は不変で、 変わるのは<strong>誰が書くか</strong>だけである (人間 → projection script)。 <strong>(3) <code>design-intent/glossary.html</code> = 提示層 canonical</strong> — folio build が pack pipeline へ委譲して生成する (§2.2)。</p>
+
+<p>これにより folio-9inj の「手動同鏡」は<strong>導出に置換</strong>される。 同鏡は「2 つの正本が一致していることを人間が保つ」規律だったが、 projection では<strong>正本は 1 つだけ</strong>で、 他方は毎回そこから作り直される派生物である。 片側編集は禁止事項ではなく<strong>意味を持たない操作</strong>になる (次の再生成で消える)。 これは double-SSoT を「導出」で構造保証する DITA / literate programming の prior art と同型で、 folio が既に index.html・chrome・glossary の tooltip で採っている型の水平展開である。</p>
+
+<h3 id="s2-2-orchestrates">§2.2 build-orchestrates-pack (委譲の型)</h3>
+<p><code>folio build</code> は folio self-host root において、 glossary.html の生成を <strong>generator の pack pipeline</strong> (<code>assemble-glossary.sh</code> + <code>inject-prose.sh</code>) へ委譲する。 CLI は「何を生成するか」を所有し続け、 「どう組み立てるか」は pack が持つ — この関係を <strong>build-orchestrates-pack</strong> と呼ぶ。 Layer 1 consumer root では従来どおり内蔵の内部 emitter が <code>vocabulary.yaml</code> から derive する (consumer は generator を持たないため。 ADR-0036 §2.1 の ship→derive はこの経路で不変)。</p>
+
+<p>委譲の設計には 3 つの不変条件を課す。 <strong>(a) 単一述語による self-host 検出</strong>: 「sibling generator に grandfather manifest と contract dir が両実在する」という gate (s) spec-contract-pairing と<strong>同一の述語</strong>を共通 helper へ抽出し、 全消費点がそれを呼ぶ。 marker の有無・vocab の非空・環境変数を self-host 信号に代用しない (代用は 2 つの「self-host とは何か」を作り、 必ず drift する)。 <strong>(b) 3 消費点の lockstep</strong>: build の書込 path・<code>build --check</code> の対称 gate・validate の nav-regen-drift gate は、 いずれも単一の emit dispatcher だけを呼ぶ。 これは可読性のためではなく<strong>構造的な要請</strong>である — 書込 path だけが旧経路に残ると、 folio build 1 回でリッチな提示層が素朴版へ silent revert し、 以後 gate は「committed (素朴) == emit (素朴)」で<strong>恒真 PASS</strong> になって劣化を隠す。 <strong>(c) 前提崩れは hard-fail</strong>: 委譲入力の不在、 contract の graph 前方照会 edge や doc_id の欠落、 pipeline 失敗、 出力の前提崩れ (空・構造マーカー欠如・marker 欠如・下限サイズ割れ) は全て hard-fail であり、 <strong>内部 emitter へ fallback しない</strong>。 fallback は (b) と同じ silent revert を招く。</p>
+
+<p>提示層に必要な folio scanner 互換 head (生成 marker・doc-type・status・相対 <code>@id</code>) は、 contract の <code>canonical_page</code> block 由来の<strong>条件 emit</strong> とする。 同 block を持たない contract (generator の demo suite 等) の出力には marker を付けない — 無条件に付けると demo 成果物が「folio build の生成物」という<strong>虚偽の出自</strong>を表示し、 「marker 持ち page だけを drift 検査する」という marker keystone の設計自体を汚染するからである。 scanner 側は無改修とする。</p>
+
+<h3 id="s2-3-gates">§2.3 gate の転換</h3>
+<p><strong>projection stale gate</strong>: <code>verify-glossary-parity.sh</code> の同鏡節を、 「committed <code>vocabulary.yaml</code> == fresh projection」の <strong>whole-file byte 比較</strong>へ置換する。 byte 一致は旧検査 (集合一致 + 定義逐語一致) を<strong>構造的に含意する上位集合</strong>であり、 加えて旧検査が見なかった header・語順・domain・整形の drift も捕捉する。 gate は既に CI の deterministic floor へ blocking 配線済ゆえ、 配線を継承する。 非循環性を守るため、 生成物 warning header は projection script 内の<strong>リテラル定数</strong>とする — committed から header を読み戻すと、 header 改竄が fresh 側へも伝播して byte 比較が恒真 PASS 化する。</p>
+
+<p><strong>nav-regen-drift の再配線</strong>: diff 対象を emit dispatcher の出力へ切替える (self-host では pack pipeline 出力)。 pack の footer は生成時刻を含み毎分変化するため、 比較前に<strong>生成時刻だけ</strong>を正規化する。 正規化の scope は接頭辞付き部分文字列に厳密に限る — 裸の日付を全域置換したり行ごと削除したりすると、 版日付・承認・検証状態を潰す drift masking になる。 <code>build --check</code> も同一 normalize で対称化する。 term 集合の対称差診断は、 pack (見出し形) と内部 emitter (span 形) の<strong>両 shape</strong> を抽出対象にする (片方だけ対応させると他方の経路で診断が黙って空になる)。</p>
+
+<p><strong>配信 asset の同期 gate</strong>: glossary-pack は他 pack と違い style を inline せず <code>&lt;link rel="stylesheet" href="srs.css"&gt;</code> で外部参照するため、 配信 root (<code>design-intent/</code>) に <code>srs.css</code> の実体が要る。 Leg 0 は源泉 (<code>design-system/srs.css</code>) を残したまま配信 root へ copy を置く option 1 を採った (pack の <code>href</code> 無改変)。 ただし<strong>放置された copy は源泉から drift する</strong>のが本 repo の前科であり (folio-u7oc: srs.css の WCAG fix が canonical へ未伝播のまま 10 日 silent drift)、 かつ実害の質が悪い — render-gate は配信 root の copy を読んで contrast/幾何を検査するため、 copy が stale だと「古い token で緑」という vacuous-green を作り、 WCAG token drift クラスを<strong>再生産</strong>する。 したがって copy を許す前提条件として <code>verify-asset-sync.sh</code> (登録対の whole-file byte 比較・REGISTRY が default-block の SSoT) を併設し、 CI の deterministic floor へ blocking 配線する。 inline する canonical (vision.html) の drift は canonical-drift gate が byte に含めて捕捉するが、 <strong>外部参照される asset の中身は byte 比較の外側にある</strong>ため本 gate が唯一の番人であり、 未配線の gate は前提条件を discharge しない (gate は tree に在るだけでは gate でなく、 走って初めて gate)。</p>
+
+<h3 id="s2-4-prose-attribution">§2.4 prose manifest の帰属 (全 pack への一般宣言)</h3>
+<p>本 § は glossary に限らず<strong>全 pack に適用される一般宣言</strong>である。 生成 pack の入力は 2 つある: <strong>contract YAML = 機械層の edit-SSoT</strong> (構造・識別子・正式定義など機械が消費する値) と、 <strong>prose manifest = 人間層の edit-SSoT</strong> (平易な散文。 opus が著作する)。 prose manifest は contract からの<strong>導出物ではない</strong> — 平易化は意味の営みであり、 機械的に導出できない (自由文の fidelity は独立 reviewer の領分であって決定的プログラムの領分ではない)。 したがって pack は<strong>双 edit-SSoT</strong> 構造を持つ。</p>
+
+<p>双 edit-SSoT は SSoT 唯一性 (P-5) と衝突しない。 両者は<strong>異なる対象</strong>の正本だからである (機械層の値 / 人間層の散文)。 両者の整合は 3 層で束縛する: <strong>(1) inject の集合一致</strong> — HTML のスロット id 集合と manifest の key 集合が完全一致でなければ注入は fail-closed (未充填も orphan も拒否)。 <strong>(2) repro-build byte</strong> — 同一入力からの再生成が byte 一致する決定性。 <strong>(3) fidelity ceiling</strong> — 散文が contract を歪めず捏造していないかを独立 reviewer が検査する。 (1)(2) は機械が、 (3) は LLM が担う — これが folio の機械/LLM 境界の適用である。 <strong>本 § は帰属の明文化のみで、 prose の物理配置・経路・実装は一切変更しない。</strong></p>
+
+<h3 id="s2-5-supersede">§2.5 supersede の性格 (部分・frozen 本文不触)</h3>
+<p>本 ADR は以下を supersede する (<strong>部分</strong>。 <a href="./ADR-0050-dual-audience-enforcement-derive.html">ADR-0050</a> §2.5 / <a href="./ADR-0026-test-placement-model.html">ADR-0026</a> 先例に従い、 当該 ADR の他の決定は不変ゆえ <code>dc:replaces</code> でなく <code>dc:references</code> + 本 § / §5 で trace する。 frozen 本文は P-6 のもと不触で、 supersede 関係は本 ADR 側にのみ記す):</p>
+<ul>
+  <li><strong><a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> §2.1 のうち「folio が <code>vocabulary.yaml</code> に canonical 定義を上流で author する」条項</strong> — folio 自身では <code>vocabulary.yaml</code> はもはや author されず、 glossary contract からの生成 projection である (§2.1)。 同 § の他の決定は<strong>存続する</strong>: consumer が folio-closed 語を derive で受け取り自身では folio 語の定義を書かないこと、 plugin-resident SSoT として同梱し consumer に <code>vocabulary.yaml</code> を置かないこと (copy 配布の却下)、 探索 candidate の設計はいずれも不変。</li>
+  <li><strong>ADR-0036 §2.4 のうち「<code>glossary.html</code> は build が <code>vocabulary.yaml</code> から derive する生成 projection」条項</strong> — folio self-host では提示層 canonical は glossary contract から pack pipeline 委譲で生成される (§2.2)。 <strong>Layer 1 consumer ではこの条項はそのまま有効</strong> (内部 emitter が <code>vocabulary.yaml</code> から derive する)。 同 § の他の決定は存続する: 描画が hover tooltip のみで用語 mark から glossary へ deep-link しないこと (folio-ovi の routing 衝突 amend)、 tooltip の供給元が <code>vocabulary.yaml</code> であること、 定義を 2 箇所に author しない double-SoT 排除の原理はいずれも不変 — 本 ADR はその原理を<strong>より強く</strong>適用する (規律から導出へ)。</li>
+  <li><strong>ADR-0036 §2.5 のうち「生成 <code>glossary.html</code> 全体が <code>vocabulary.yaml</code> からの regen と byte 一致」条項</strong> — 比較の右辺が emit dispatcher の出力になり (self-host では pack pipeline)、 生成時刻の正規化が加わる (§2.3)。 <strong>gate の位置と性格は不変</strong>: nav-regen-drift へ畳む設計、 byte 一致で定義 drift と構造 drift の双方を捕捉すること、 term 集合の対称差を報告して drift の所在を surface すること、 slug 一意性を単一 SoT で fail-closed 検出することはいずれも存続する (slug の供給元が self-host では contract の明示 slug になる)。 term-marked の best-effort tier・keystone 設計も不変。</li>
+</ul>
+</section>
+
+<section id="s3-consequences" class="informative">
+<h2>§3. Consequences</h2>
+<h3>Positive</h3>
+<ul>
+  <li><strong>同鏡 drift クラスの構造的消滅</strong>: 二重保持が導出に置換され、 片側編集が「禁止事項」から「意味を持たない操作」になる。 folio-7ts2 で実発生した drift は再発しえない</li>
+  <li><strong>検査面の拡大</strong>: whole-file byte 比較は旧検査を含意しつつ、 誰も見ていなかった header・語順・domain・整形の drift も捕捉する</li>
+  <li><strong>北極星への前進</strong>: folio 自身の用語集が非エンジニア向けのリッチな dual-audience 提示層になり、 folio が自分の文書規律を自分に適用する self-dogfood が glossary でも成立する</li>
+  <li><strong>型の確立</strong>: build-orchestrates-pack が out-of-scan canonical の一般型として確立し、 後続の doc-type へ横展開できる</li>
+</ul>
+<h3>Negative</h3>
+<ul>
+  <li><strong>編集起点の間接化</strong>: 語を 1 つ足すのに contract 編集 + projection 再生成 + 同一 commit という手順になる (<code>vocabulary.yaml</code> を直接開けば済んだ素朴さは失われる)。 stale gate が忘却を検出するため事故にはならないが、 手順は増える</li>
+  <li><strong>inline コメントの喪失</strong>: <code>vocabulary.yaml</code> は生成物になったため、 そこに書かれていた rationale は保持できない。 語ごとの編集判断に効くものは edit-SSoT である contract へ、 語彙運用に効くものは projection の header template へ移設した</li>
+  <li><strong>委譲の依存増</strong>: self-host の glossary 生成が generator の pack pipeline に依存する (CLI 単独では生成できない)。 前提崩れは hard-fail で loud に落ちるため silent な劣化にはならないが、 依存は実在する</li>
+</ul>
+<h3>Neutral</h3>
+<ul>
+  <li>Layer 1 consumer の経路 (内部 emitter + <code>vocabulary.yaml</code>) は完全に不変 — 本 ADR の転換は self-host root にのみ効く</li>
+  <li>定義本文の値は 1 語も変わらない (projection は現行の 36 語を値・順序ごと再現する)。 転換されるのは<strong>誰が書くか</strong>だけである</li>
+</ul>
+</section>
+
+<section id="s4-alternatives" class="informative">
+<h2>§4. Alternatives Considered</h2>
+<table>
+  <thead><tr><th>案</th><th>採用可否</th></tr></thead>
+  <tbody>
+    <tr><td>contract = edit-SSoT / vocabulary.yaml = 生成 projection (採用)</td><td>二重保持を導出へ置換し drift クラスを構造的に消す。 runtime SSoT としての <code>vocabulary.yaml</code> の役割は保つため consumer 経路・tooltip 機構は無改修</td></tr>
+    <tr><td>手動同鏡を維持し gate を強化する</td><td>不採用 — gate をいくら強めても「片側だけ編集できる」構造は残り、 検出は常に事後。 folio-7ts2 は gate 不在下の実害だが、 二重保持を残す限り同型の穴 (gate が見ていない面) が再生産される (実際 header・語順・整形は無防備だった)</td></tr>
+    <tr><td><code>vocabulary.yaml</code> を撤去し contract を直接読ませる</td><td>不採用 — folio fix / validate / consumer derive が読む runtime SSoT を消すと、 consumer は generator を持たないため folio-closed 語を受け取れなくなる (ADR-0036 §2.1 の ship→derive が壊れる)。 projection なら両立する</td></tr>
+    <tr><td>提示層を素朴 emitter のまま据置く</td><td>不採用 — folio 自身の用語集だけが非エンジニアに届かない旧型で残り、 self-dogfood が glossary で成立しない。 pack の成果物は既に存在しており、 canonical に成っていないだけだった</td></tr>
+    <tr><td>委譲時に前提が崩れたら内部 emitter へ fallback する</td><td>不採用 — folio build 1 回で提示層が素朴版へ silent revert し、 以後 gate は「committed (素朴) == emit (素朴)」で恒真 PASS になって劣化を隠す。 hard-fail の方が loud で安全 (§2.2 (c))</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="s5-trace" class="informative">
+<h2>§5. Trace</h2>
+<ul>
+  <li>部分 supersede: <a href="./ADR-0036-folio-vocabulary-glossary-derive.html">ADR-0036</a> §2.1 (author 条項) / §2.4 (glossary.html の derive 元) / §2.5 (regen-drift の比較右辺) — 詳細と存続範囲は §2.5。 frozen 本文は不触 (P-6)。</li>
+  <li>前提: <a href="./ADR-0050-dual-audience-enforcement-derive.html">ADR-0050</a> (SSoT-first 転換 = contract が正本になった regime)。 <a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> (「正本 (edit-SSoT)」/「canonical WHAT (提示層)」の語彙 pin = 本 ADR の 3 層再指定が用いる語彙)。</li>
+  <li>決定経緯: bd folio-gttv (論点5 = 構造 rewire を 1 switchover で land する裁定)、 bd folio-wg2l (Leg A 実装 + Leg 0 admin 裁定: srs.css 配置 / header の literal 定数化 / self-host 検出 helper / 委譲 precondition / golden 再生成の担当)。 folio-9inj (手動同鏡の設置 = 本 ADR が置換する対象)、 folio-7ts2 (同鏡 drift の実発生 = 動機の接地)。 決定記録の SSoT = 各 bd notes。</li>
+  <li>関連原則: P-5 (1 entity = 1 canonical name — 双 edit-SSoT が対象を異にするゆえ非衝突、 §2.4)、 P-7 (3-domain content exclusivity — 提示層は design-intent 空間に residing、 edit-SSoT は生成 input)、 P-11 (HOW 隔離 — contract / pack pipeline の harness 居住)。 constitution 無改訂 = P-10 Amendment 不要 (ADR-0051 の層解釈をそのまま適用するのみで、 原則の射程を動かさない)。</li>
+  <li>検証: <code>folio validate</code> 3 gate clean (nav-regen-drift / glossary / spec-contract-pairing)、 <code>folio build --check</code> clean、 glossary-parity 敵対回帰、 glossary pack の floor battery、 per-shape MK self-test (self-host = 見出し形 / consumer = span 形 / header / 定義 の各構造クラスに実弾)。 gate I/J ceiling と本 ADR 本文の Phase F ceiling は Leg B (admin) が担う。</li>
+</ul>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0051-what-ssot-layer-interpretation.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0051 — WHAT-SSoT 居場所調停: 生成 HTML = canonical WHAT (提示層) / contract YAML = 正本 (edit-SSoT) の層解釈</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

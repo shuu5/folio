@@ -31,6 +31,23 @@ SET_NAME="$(q '.term_set_name')"
 NTERMS="$(yq -r '.terms | length' "$CONTRACT")"
 core_validate_strings "assemble-glossary head" "$DOC_ID" "$TITLE" "$DOC_TYPE" "$SET_ID" "$SET_NAME"
 
+# ---- canonical_page (条件 emit・ADR-0052 build-orchestrates-pack / folio-wg2l) ----
+# 本 block を持つ contract の出力のみ folio scanner 互換 head を emit する (folio canonical page 宣言)。
+# 無条件 hardcode は demo suite (clinic) の成果物に虚偽の「folio build 生成物」marker を付け、 folio
+# build/validate の marker keystone を汚染するため禁止 (fence「clinic 汚染防止」)。
+# 部分指定 (一部 field だけ) は head が半端になるため fail-closed (全 field 必須 or block 全欠)。
+CANON_ID="$(yq -r '.canonical_page.id // ""' "$CONTRACT")"
+CANON_GEN="$(yq -r '.canonical_page.generated_by // ""' "$CONTRACT")"
+CANON_DTYPE="$(yq -r '.canonical_page.doc_type // ""' "$CONTRACT")"
+CANON_STATUS="$(yq -r '.canonical_page.status // ""' "$CONTRACT")"
+CANON_PAGE=0
+if [[ -n "$CANON_ID$CANON_GEN$CANON_DTYPE$CANON_STATUS" ]]; then
+  [[ -n "$CANON_ID" && -n "$CANON_GEN" && -n "$CANON_DTYPE" && -n "$CANON_STATUS" ]] \
+    || { echo "assemble-glossary: canonical_page は id/generated_by/doc_type/status の全指定が必須 (部分指定は head が半端になる・fail-closed)" >&2; exit 1; }
+  core_validate_strings "assemble-glossary canonical_page" "$CANON_ID" "$CANON_GEN" "$CANON_DTYPE" "$CANON_STATUS"
+  CANON_PAGE=1
+fi
+
 jsonld_safe() { # $1 = value : JSON/script を壊す文字が無いことを fail-closed で確認
   case "$1" in
     *'"'*|*'\'*|*'<'*|*'>'*|*'&'*) echo "assemble-glossary: JSON-LD 不適合文字: $1" >&2; exit 1 ;;
@@ -40,12 +57,29 @@ jsonld_safe() { # $1 = value : JSON/script を壊す文字が無いことを fai
 emit_head() {
   printf '<!DOCTYPE html>\n<html lang="ja" data-doc-id="%s" data-doc-type="%s">\n' "$(esc "$DOC_ID")" "$(esc "$DOC_TYPE")"
   printf '<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+  # ★canonical page の folio scanner 互換 meta (条件 emit)。 folio-generated marker は folio build --check /
+  #   folio validate nav-regen-drift の keystone = 欠落すると両 gate が沈黙 skip して恒真 PASS になる
+  #   (fence「marker vacuous-green 封鎖」)。 folio_extract_meta は grep -oP の厳密書式ゆえ属性順・空白を変えない。
+  if [[ "$CANON_PAGE" -eq 1 ]]; then
+    printf '<meta name="folio-doc-type" content="%s">\n' "$(esc "$CANON_DTYPE")"
+    printf '<meta name="folio-generated" content="%s">\n' "$(esc "$CANON_GEN")"
+    printf '<meta name="folio-status" content="%s">\n' "$(esc "$CANON_STATUS")"
+  fi
   printf '<title>%s</title>\n<link rel="stylesheet" href="srs.css">\n' "$(esc "$TITLE")"
   jsonld_safe "$SET_ID"; jsonld_safe "$SET_NAME"
+  # DefinedTermSet の @id: canonical page では design-intent 相対 path (素朴 emit 版の head と同じ page 識別)、
+  # それ以外は term_set_id (IRI)。 各 term の inDefinedTermSet も同値を指す (set 識別の内部整合を保つ)。
+  local set_iri="$SET_ID"
+  if [[ "$CANON_PAGE" -eq 1 ]]; then jsonld_safe "$CANON_ID"; set_iri="$CANON_ID"; fi
   printf '<script type="application/ld+json">\n'
-  printf '{"@context":"https://schema.org/","@type":"DefinedTermSet","@id":"%s","name":"%s"}\n' "$SET_ID" "$SET_NAME"
+  printf '{"@context":"https://schema.org/","@type":"DefinedTermSet","@id":"%s","name":"%s"}\n' "$set_iri" "$SET_NAME"
   printf '</script>\n</head>\n'
   printf '<body>\n<main class="doc" data-doc-id="%s">\n' "$(esc "$DOC_ID")"
+}
+
+# DefinedTermSet の IRI (各 term の inDefinedTermSet 用)。 emit_head の set_iri と同一導出。
+set_iri_value() {
+  if [[ "$CANON_PAGE" -eq 1 ]]; then printf '%s' "$CANON_ID"; else printf '%s' "$SET_ID"; fi
 }
 
 emit_nav() {
@@ -133,6 +167,20 @@ emit_terms() {
     formal="$(q ".terms[$i].formal_def")"
     plain_slot="$(q ".terms[$i].plain_slot")"
     core_validate_strings "assemble-glossary term[$i]" "$canon" "$en" "$slug" "$domain" "$formal" "$plain_slot"
+    # ---- 必須 field の欠落 assert (folio-wg2l self-review finding#1・fail-closed) ----
+    # ★q() は `yq -r` 素通しで既定値を持たないため、 *欠落キーはリテラル "null"* を返す (空文字ではない)。
+    #   core_validate_strings は tab/改行しか見ず非空ゆえ通過するので、 欠落した term は全て同一定数へ潰れる:
+    #   slug ならば全欠落 term が id="term-null" へ衝突して in-page anchor が壊れる (実弾で 2 本重複を再現)。
+    #   canonical/en/domain/formal_def も同様に「null」という虚偽の可視 token として出荷されるため、 同 idiom で弾く
+    #   (canonical_page の「部分指定は fail-closed」と同型: 半端な入力を黙って埋めない)。
+    local _f _v
+    for _f in canonical:"$canon" en:"$en" slug:"$slug" domain:"$domain" formal_def:"$formal"; do
+      _v="${_f#*:}"
+      if [[ -z "$_v" || "$_v" == "null" ]]; then
+        echo "assemble-glossary: terms[$i].${_f%%:*} が空/未指定 (yq は欠落キーをリテラル \"null\" として返すため、 そのまま emit すると term-null 衝突・虚偽 token になる。 contract に明示せよ・fail-closed)" >&2
+        exit 1
+      fi
+    done
     jsonld_safe "$canon"; jsonld_safe "$slug"
     # domain 境界: 新 domain の section を開き (前 domain を閉じ)、 friendly 見出しを render
     if [[ "$domain" != "$prev_dom" ]]; then
@@ -169,7 +217,7 @@ emit_terms() {
     printf '          <dt>正式定義</dt><dd class="term-formal">%s</dd>\n' "$(esc "$formal")"
     printf '        </dl>\n'
     printf '        <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"%s:term/%s","name":"%s","inDefinedTermSet":"%s"}</script>\n' \
-      "${SET_ID%%:*}" "$slug" "$canon" "$SET_ID"
+      "${SET_ID%%:*}" "$slug" "$canon" "$(set_iri_value)"
     if [[ "$cn" != "0" ]]; then
       printf '        <ul class="term-xrefs">\n'
       local k2 tgt2

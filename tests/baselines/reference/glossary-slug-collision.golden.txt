@@ -21,4 +21,4 @@ files checked: 0 · relations checked: 0
   [SKIP] how-outside (spec/ doc 無し = scope=spec_path)
 
 violations (1):
-  (vocabulary.yaml) [glossary-slug] vocabulary.yaml の canonical が一意な glossary slug を生まない (<dt id="term-…"> 重複、 REQ-GLOSS-003、 vocabulary.yaml の canonical を修正)
+  (vocabulary.yaml) [glossary-slug] glossary の canonical/slug が一意な in-page anchor を生まない (<dt id="term-…"> / <section id="term-…"> 重複、 REQ-GLOSS-003、 SSoT (self-host = glossary contract の slug / consumer = vocabulary.yaml の canonical) を修正)

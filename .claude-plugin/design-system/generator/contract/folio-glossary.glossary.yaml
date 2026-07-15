@@ -1,19 +1,23 @@
 # folio-glossary.glossary.yaml — machine SSoT for the glossary-pack instance #1 (folio self-host)
 # doc_type: glossary (canonical vocabulary). The most "terminal/lookup" doc-type for the generator:
-# no chapters/EARS — a flat set of dual-audience term entries. Source SSoT (read-only):
-#   - design-intent/vocabulary.yaml  (terms[].canonical / domain / definition)
-#   - design-intent/glossary.html    (dt id="term-<slug>" + dd)
+# no chapters/EARS — a flat set of dual-audience term entries.
 # Each term is dual-audience: human layer = plain definition (prose slot, opus-authored);
 # machine layer = structured record (canonical en・slug/anchor term-<slug>・JSON-LD schema:DefinedTerm・
 # cross-doc anchors data-xref-target) in a native <details> fold.
-# ★同鏡不変条件 (folio-9inj・片側編集禁止 MUST): terms[].canonical 集合と terms[].formal_def は
-#   design-intent/vocabulary.yaml の terms[].canonical / terms[].definition と **集合完全一致 + 逐語一致**。
-#   ADR-0051 §2.3: 本 contract = 正本 edit-SSoT / vocabulary.yaml = runtime SSoT (folio fix の tooltip populate・
-#   folio build の glossary.html derive が読む) = 同一テキストの二重保持。 語の追加・削除・定義改訂は両 file を
-#   同一 commit で更新する。 機械強制 = verify-glossary-parity.sh の vocab-mirror 節 (敵対回帰 V16-V22)。
-#   同 script は ci.yml の deterministic floor job に blocking step として配線済ゆえ片側編集は merge block される
-#   (CI 非配線だと「vocabulary.yaml だけ編集 → folio fix + folio build → validate green」で本 contract が stale の
-#   まま land する fail-open になる = folio-7ts2 の drift と同一クラス)。
+# ★本 contract = glossary の唯一の edit-SSoT (ADR-0052 で SSoT 再指定・folio-9inj の「手動同鏡」から転換):
+#   - design-intent/vocabulary.yaml = 本 contract の terms[] からの **生成 projection** (runtime SSoT)。
+#     導出は project-vocabulary.sh の全域関数 (canonical ← canonical / domain ← domain /
+#     definition ← formal_def)。 語の追加・削除・定義改訂は **本 contract だけ** を編集し、
+#     `project-vocabulary.sh --out design-intent/vocabulary.yaml` で再生成して同一 commit で land する。
+#     機械強制 = verify-glossary-parity.sh の vocab-projection 節 (committed == fresh projection の
+#     whole-file byte 比較・敵対回帰 V16-V22)。 旧「両 file を人手で同鏡」は導出に置換され、 片側編集は
+#     projection 再生成で消える (drift が構造的に起こらない)。
+#   - design-intent/glossary.html = 本 contract から folio build が pack pipeline
+#     (assemble-glossary.sh + inject-prose.sh) 委譲で生成する提示層 canonical (build-orchestrates-pack)。
+#     旧 source SSoT だった素朴 emit 版は ADR-0052 で置換済 (Layer 1 consumer 向け内部 emitter は存続)。
+#   同 gate は ci.yml の deterministic floor job に blocking step として配線済ゆえ、 手編集・再生成漏れは
+#   merge block される (CI 非配線だと「vocabulary.yaml だけ編集 → folio fix → validate green」で本 contract が
+#   stale のまま land する fail-open になる = folio-7ts2 の drift と同一クラス)。
 #   定義文字列は spec contract 3 本 (folio-rules / folio-verification / folio-relations) の glossary[].def にも
 #   複製され、 同 gate の def-parity 節 (DEF_REGISTRY strict・V23-V25) が逐語 pin する。 spec HTML の inline
 #   data-tooltip は folio validate (vocabulary.yaml と照合・CI blocking) + verify-spec §11 round-trip (local gate・CI 非配線・配線は folio-vt1t) が連鎖 pin する。
@@ -24,6 +28,10 @@ doc_type: glossary
 doc_id: folio-glossary
 title: "folio glossary — canonical vocabulary"
 version: "1.1.0"
+# source_spec / source_vocab — instance の由来を記録する documentary field (assemble/verify は読まない)。
+# ★ADR-0052 で向きが反転した: 両者は本 contract の *派生先* (glossary.html = pack pipeline 委譲の生成物 /
+#   vocabulary.yaml = project-vocabulary.sh の生成 projection)。 flip 前は本 contract がこの 2 file から
+#   起こされた (folio-9inj 当時の read-only source) ため、 値は起源の記録として据置く。
 source_spec: "design-intent/glossary.html"
 source_vocab: "design-intent/vocabulary.yaml"
 term_set_id: "folio:glossary"
@@ -54,6 +62,21 @@ graph:
   principle_edge:
     target_doc_id: "FOLIO-CONSTITUTION"
     role: "implementation"
+# canonical_page — 「本 contract の生成物は folio canonical page (design-intent/glossary.html) であり
+# folio build が pack pipeline へ委譲して生成・維持する」宣言 (ADR-0052 build-orchestrates-pack)。
+# ★条件 emit の弁別 field: 本 block を持つ contract の出力にだけ assemble-glossary.sh が folio scanner
+#   互換 head (folio-generated marker / folio-doc-type / folio-status / design-intent 相対 @id) を emit する。
+#   clinic-appointment.glossary.yaml は generator demo suite = canonical page でないゆえ本 block を持たず、
+#   marker 非付与で出力 byte 不変。 marker を無条件 hardcode すると demo 成果物に虚偽の「folio build 生成物」
+#   marker が付き、 folio build/validate の marker keystone (marker 持ち page だけを drift 検査する) を
+#   汚染する (folio-wg2l fence「clinic 汚染防止」)。
+# ★folio-generated の値は folio build/validate 側の keystone 判定 (== "folio-build") と一致必須。
+#   委譲の precondition (graph.principle_edge + meta.doc_id の実在) は bin/folio 側が hard-fail で検査する。
+canonical_page:
+  id: "./glossary.html"          # <head> JSON-LD の DefinedTermSet @id (design-intent 相対) + 各 term の inDefinedTermSet
+  generated_by: "folio-build"    # <meta name="folio-generated" content="…"> = nav-regen-drift / build --check の keystone
+  doc_type: "glossary"           # <meta name="folio-doc-type" content="…">
+  status: "active"               # <meta name="folio-status" content="…">
 cover:
   # eyebrow / title / subtitle / reader / cover-summary は .meta.* (core cover-head/_tail) が SSoT。
   # ここは bespoke の cover-meta dl (verify-glossary §6 が .cover.meta[] を突合) のみを持つ。
@@ -132,6 +155,7 @@ xref_gloss:
   "ADR-0050": "決定 ADR-0050"
   "ADR-0051 §2.3": "決定 ADR-0051 §2.3"
 terms:
+  # --- 1.0.0 starter set: 中核 8 語 (folio-作法の最頻出語、 ADR-0036 §3 / #130 grill 確定) ---
   - canonical: "spec"
     en: "spec"
     slug: "spec"
@@ -197,6 +221,7 @@ terms:
     plain_slot: "plain-vocabulary"
     cross_refs:
       - "P-5"
+  # --- 既収録 folio-framework 語 (xref/dual-audience 系譜で author 済) ---
   - canonical: "SSoT"
     en: "SSoT"
     slug: "SSoT"
@@ -299,6 +324,7 @@ terms:
     plain_slot: "plain-caller-marker"
     cross_refs:
       - "ADR-0006"
+  # --- 1.x 漸進 (ef4 jargon sweep 2026-06-11): 入口/検証/提示層の高頻度 folio-作法語 12 語 (ADR-0039 §2.4 + folio-a8y 吸収) ---
   - canonical: "gate"
     en: "gate"
     slug: "gate"
@@ -395,6 +421,19 @@ terms:
       - "ADR-0039 §2.2"
   # --- architecture polysemy 解消 3 語 (c5r.7 で vocabulary.yaml へ追加・gttv 裁定で contract 収録)。
   #   裸の "architecture" が指す 3 entity を各々別 canonical 完全形で弁別する (vocab §120-138 と同 SSoT)。
+  # --- architecture polysemy 解消 (folio-c5r.7、 folio-5uu arch-pack grill 由来): 裸の "architecture"
+  #   は 3 entity を指す多義語 (P-5 緊張)。 P-5 forbidden は「1 entity = 複数名」用ゆえ多義 (1 名 = 3 entity)
+  #   には不適 — 各 entity に別 canonical 完全形を宣言して曖昧さを解く (#110 D2)。 下の 3 語がその宣言。
+  #   forbidden: "architecture" の機械化は ADR-0048 rename 後も不可 (folio-7c4 再評価 2026-07-12 で census 確定):
+  #   REQ-CI-013 は grep -F 部分一致ゆえ (a) 複合語 canonical (architecture-description / architecture-nav-derive
+  #   等) を誤検出し、 (b) frozen ADR 約 30 本 + superseded research の歴史 prose に裸出現が数百残る (P-10 で
+  #   書換不能 = 恒久 RED・gate (d) に per-file waiver 機構なし)。 概念用法 (arc42 / constitution §1 引用 /
+  #   Architecture Decision Records) は ADR-0048 §5 どおり正当に存続する。
+  #   constitution 改訂は不要 = 語レベル整理 (frozen 資産の既存用語に整合: §3 "Layer Architecture" / self-spec
+  #   "design-intent 空間")。
+  #   ★本 rationale は design-intent/vocabulary.yaml の inline コメントから移設した (ADR-0052 で vocab が
+  #   生成 projection 化し inline コメントを保持できなくなったため。 語ごとの編集判断に効く知識は edit-SSoT =
+  #   本 contract 側に置く。 語彙運用に効く要約は projection header template にも残す)。
   - canonical: "architecture-description"
     en: "architecture-description"
     slug: "architecture-description"
