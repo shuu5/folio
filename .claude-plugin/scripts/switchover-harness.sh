@@ -172,10 +172,12 @@ sh_assert_head_graph_hardfail() {
 
 # sh_assert_golden_diff <dirA> <dirB> [<allowlist_ere>]
 #   2 つの build 出力 dir を再帰 diff し、 allowlist_ere (timestamp 等の許容 diff・決定トークン) に
-#   マッチする行を除外した残余に有意な変更が在れば FAIL。 収集に留めず fail-closed gate 化。
-#   有意変更 = content 行差 (^[<>] ) + file-set 差 (^Only in ) + binary 差 (^Binary files )。 file の
-#   増減はまさに flip (手書き→生成) で起きる主要 drift class ゆえ Only in を fail-open にしない。
+#   マッチする行を除外した残余を有限クラスへ分類し default-block 判定する (収集に留めず fail-closed gate 化)。
+#   中立 = diff の構造行 (diff -r header / hunk 位置 / --- / 空行) のみ。content 行差 (^[<>] )・file-set 差
+#   (^Only in )・binary 差 (^Binary files )・未知クラス (\ No newline 等) は全て FAIL — 有意形の
+#   positive-enumeration は列挙外 shape を素通しする partial-enum trap ゆえ採らない。
 #   allowlist は content 行 (^[<>] ) にのみ効かせ、 Only in / Binary 行は消さない (誤許容封鎖)。
+#   allowlist ERE は使用前検証 + フィルタ grep の exit>=2 検査 (TOOLERR→PASS 封鎖)。
 #   existence 前提: 両 dir 実在必須 (build 失敗で出力 dir 不在 = graph 脱落を素通しさせない)。 diff の
 #   exit code も参照し 2(trouble・I/O エラー) は無条件 FAIL とし、 stderr テキストを success 誤読しない。
 #   return 0 = 許容内 / return 1 = 残余 diff・file 増減・binary 差・dir 不在・diff エラー。
@@ -201,13 +203,37 @@ sh_assert_golden_diff() {
     return 0
   fi
   # rc==1: 残余判定。 allowlist は content 行 (^[<>] ) にのみ効かせ、 file-set 差 / binary 差は消さない。
+  # allowlist ERE は使用前に検証する (malformed ERE で grep が exit>=2 + 空 stdout になると残余が空に
+  # 化けて PASS する TOOLERR→PASS を封鎖 = SWH-01)。空入力 grep は valid なら exit 1・malformed なら >=2。
   if [[ -n "$allow" ]]; then
+    grep -E "($allow)" </dev/null >/dev/null 2>&1
+    rc=$?
+    if (( rc >= 2 )); then
+      printf 'SWH-GOLDEN-FAIL allowlist-regex-error: allowlist ERE が不正 (検証 grep exit=%d・fail-closed): %s\n' "$rc" "$allow"
+      return 1
+    fi
     residual="$(printf '%s\n' "$d" | grep -vE "^[<>] .*($allow)")"
+    rc=$?
+    if (( rc >= 2 )); then
+      printf 'SWH-GOLDEN-FAIL allowlist-filter-error: allowlist フィルタ grep が exit=%d で異常終了 (fail-closed)\n' "$rc"
+      return 1
+    fi
   else
     residual="$d"
   fi
-  if printf '%s\n' "$residual" | grep -qE '^([<>] |Only in |Binary files )'; then
-    printf 'SWH-GOLDEN-FAIL residual-diff (allowlist 除外後):\n%s\n' "$residual"
+  # 残余行を有限クラスへ分類する default-block (SWH-02 封鎖): 中立 = diff の構造行 (diff -r header /
+  # hunk 位置 NcN 等 / separator --- / 空行) のみ。content(allowlist 非該当)・Only in・Binary files・
+  # および未知クラス (\ No newline 等) は全て FAIL — 「有意な形」の positive-enumeration (旧 3 prefix)
+  # は列挙外 shape を素通しする partial-enum trap ゆえ廃止 (mzn.1 default-block と同型)。
+  local bad
+  bad="$(printf '%s\n' "$residual" | grep -vE '^(diff -r |[0-9]+(,[0-9]+)?[acd][0-9]+(,[0-9]+)?$|---$|$)')"
+  rc=$?
+  if (( rc >= 2 )); then
+    printf 'SWH-GOLDEN-FAIL classify-error: 分類 grep が exit=%d で異常終了 (fail-closed)\n' "$rc"
+    return 1
+  fi
+  if [[ -n "$bad" ]]; then
+    printf 'SWH-GOLDEN-FAIL residual-diff (allowlist 除外後・default-block):\n%s\n' "$bad"
     return 1
   fi
   printf 'SWH-GOLDEN-OK allowlist 内 diff のみ (timestamp 等)\n'
