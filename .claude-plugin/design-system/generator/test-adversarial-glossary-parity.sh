@@ -55,10 +55,11 @@ echo "== glossary en parity gate 敵対回帰 =="
 #   2026-07-14 (folio-8ptq changelog-pack) = 18 contract (full 8 / intersect 9 / exempt 1)・en 突合 128 語 (+ changelog の clinic union 語 4)・anchor 外 local 41 語 (+ changelog メタ語 6 = clinic union SSoT 外・intersect = risk/datamodel/interface と同型)。
 #   2026-07-14 (folio-pyus rules 再抽出・folio-7ts2 3 語収録の帰結) = 18 contract (分類不変 8/9/1)・en 突合 129 語 (folio-rules に 'design-intent space' 追加 25→26 語・anchor は 7ts2 で収録済ゆえ突合 +1)・anchor 外 local 41 語 (不変)。
 #   2026-07-14 (folio-8cha roadmap-pack・pyus 129/41 基準へ merged tree 実測で再同期) = 19 contract (full 8 / intersect 10 / exempt 1)・en 突合 133 語 (129 + roadmap の clinic union 語 4: 診療枠/満枠/本人確認/リマインド通知)・anchor 外 local 44 語 (+ roadmap メタ語 3: ロードマップ/マイルストーン/優先度 = clinic union SSoT 外・intersect = changelog/risk/datamodel/interface と同型)。
+#   2026-07-15 (folio-6lsu verification 再抽出・07m 分割追随の帰結) = 19 contract (分類不変 8/10/1)・en 突合 132 語 (folio-verification が 28→27 語: 'invariant' は 07m 分割で srs-verification.html へ移動し原本 verification.html に data-term 不在 = 再抽出で正当に drop・pyus の rules 再抽出と同型の corpus *縮小*)・anchor 外 local 44 語 (不変)。
 out="$("$GATE" 2>&1)"; rc=$?
 if [[ "$rc" -eq 0 ]] && grep -q 'full=8 intersect=10 exempt=1 未登録空=0' <<<"$out" \
-   && grep -q 'en 突合 133 語・anchor 外 local 44 語' <<<"$out"; then
-  ok "V0 baseline: clean corpus → exit 0 + 分類 19 本 (8/10/1) + 133/44 語 pin"
+   && grep -q 'en 突合 132 語・anchor 外 local 44 語' <<<"$out"; then
+  ok "V0 baseline: clean corpus → exit 0 + 分類 19 本 (8/10/1) + 132/44 語 pin"
 else bad "V0 baseline: clean corpus が期待 pin と不一致 (rc=$rc・corpus 成長なら pin を lineage 手順で更新)"; fi
 
 # --- V1 en-drift (full mode): source の en を SSoT からずらす → FAIL ---

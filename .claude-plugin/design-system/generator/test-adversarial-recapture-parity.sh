@@ -41,15 +41,22 @@ echo "== recapture parity gate 敵対回帰 =="
 #   原本 anchor grep と contract yq で独立再導出して確認すること。
 #   lineage: 2026-07-06 (folio-mzn.3 Phase A) = 3 contract / 65 id (relations 4 + rules 26 + verification 35
 #   〔REQ-VER 28 + REQ-NAV 7・REQ-VER-027/028 退役 + REQ-VER-030 構成同一性 新設〕。 独立再導出: 原本 anchor 35 == contract yq 35)。
+#   lineage: 2026-07-15 (folio-6lsu verification 再抽出・07m 分割追随) = 3 contract / 60 id (relations 4 + rules 26 + verification 30
+#   〔REQ-VER 23 + REQ-NAV 7〕)。 folio-07m (7b47574) の spec 分割で REQ-VER-024/025/026/029/030 が原本 verification.html →
+#   srs-verification.html へ移動したことへの contract 追随ゆえの *縮小* (35→30)。 独立再導出: 原本 anchor grep
+#   (verification.html の details.spec-row) 30 == contract yq (.requirements[].id) 30。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 65 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 3 contract / 65 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 60 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 3 contract / 60 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---
+# ★mut 対象は原本 verification.html に anchor が *実在* する id でなければ del が no-op になり mut が効かない
+#   (folio-6lsu: 旧 mut 対象 REQ-VER-029 は 07m 分割で srs-verification.html へ移動済ゆえ no-op 化 = 張り替え。
+#    no-op は gate を PASS させ expect_fail が FAIL するため本 suite は fail-closed で検知した = SLIP 教訓の実証)。
 fresh
-yq -i 'del(.requirements[] | select(.id == "REQ-VER-029"))' "$CD/folio-verification.spec.yaml"
-expect_fail "R1 追随漏れ: contract から REQ-VER-029 削除 → FAIL" "missing-in-contract: 原本 record 'REQ-VER-029'"
+yq -i 'del(.requirements[] | select(.id == "REQ-VER-023"))' "$CD/folio-verification.spec.yaml"
+expect_fail "R1 追随漏れ: contract から REQ-VER-023 削除 → FAIL" "missing-in-contract: 原本 record 'REQ-VER-023'"
 rm -rf "$CD" "$SD"
 
 # --- R2 contract 捏造: 原本に無い record を contract へ注入 → missing-in-genbun ---
