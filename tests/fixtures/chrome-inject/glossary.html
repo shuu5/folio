@@ -33,7 +33,7 @@
 </header>
 
 <aside class="informative">
-  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (folio 所有の canonical SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 spec 本文の用語 hover tooltip も同じ SSoT から供給されます (single-SoT)。</p>
+  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (定義本文を保持する runtime SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 SSoT-first に flip した project (folio 自身を含む) では正本 edit-SSoT は generator contract 側にあり <code>vocabulary.yaml</code> はその逐語同鏡ゆえ、 定義改訂は両者を同一 commit で更新します (片側編集は同鏡 gate が FAIL にします)。 spec 本文の用語 hover tooltip も同じ <code>vocabulary.yaml</code> から供給されます。</p>
 </aside>
 
 <dl class="glossary">

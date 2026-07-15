@@ -33,7 +33,7 @@
 </header>
 
 <aside class="informative">
-  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (folio 所有の canonical SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 spec 本文の用語 hover tooltip も同じ SSoT から供給されます (single-SoT)。</p>
+  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (定義本文を保持する runtime SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 SSoT-first に flip した project (folio 自身を含む) では正本 edit-SSoT は generator contract 側にあり <code>vocabulary.yaml</code> はその逐語同鏡ゆえ、 定義改訂は両者を同一 commit で更新します (片側編集は同鏡 gate が FAIL にします)。 spec 本文の用語 hover tooltip も同じ <code>vocabulary.yaml</code> から供給されます。</p>
 </aside>
 
 <dl class="glossary">
@@ -44,7 +44,7 @@
   <dt id="term-layer-architecture"><span class="term-name">Layer Architecture</span></dt>
   <dd>constitution §3 が定める folio の 2 層構造 = Layer 0 META FRAMEWORK (folio 自身) と Layer 1 consumer (folio を使う project)。 design-intent space (design-intent/ 空間) でも architecture-description (doc-type) でもない。</dd>
   <dt id="term-ssot"><span class="term-name">SSoT</span></dt>
-  <dd>Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。</dd>
+  <dd>Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。</dd>
   <dt id="term-architecture-description"><span class="term-name">architecture-description</span></dt>
   <dd>構造の WHAT を 1 文書で捉える doc-type (ISO/IEC/IEEE 42010)。 system の構成要素・関係・原則を記述する。 folio-self-spec はその instance。 design-intent space (空間全体) でも Layer Architecture (2 層構造) でもない。</dd>
   <dt id="term-caller-marker"><span class="term-name">caller-marker</span></dt>
@@ -70,7 +70,7 @@
   <dt id="term-dogfood"><span class="term-name">dogfood</span></dt>
   <dd>folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。</dd>
   <dt id="term-dual-audience"><span class="term-name">dual-audience</span></dt>
-  <dd>1 HTML artifact を machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方へ co-author する pattern (ADR-0033)。</dd>
+  <dd>1 HTML artifact が machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方を同一 DOM に併せ持つ pattern (ADR-0033)。 artifact 自身が canonical WHAT (提示層) で機械層はその内部にある。 SSoT-first に flip した doc は編集の源が正本 (edit-SSoT) = contract YAML に分かれ、 flip しない doc は提示層が edit-SSoT を兼ねる (ADR-0050 / ADR-0051 §2.3)。</dd>
   <dt id="term-essence"><span class="term-name">essence</span></dt>
   <dd>defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。</dd>
   <dt id="term-floor"><span class="term-name">floor</span></dt>
@@ -106,7 +106,7 @@
   <dt id="term-spec"><span class="term-name">spec</span></dt>
   <dd>WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。</dd>
   <dt id="term-vocabulary"><span class="term-name">vocabulary</span></dt>
-  <dd>folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。</dd>
+  <dd>folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。</dd>
   <dt id="term-xref"><span class="term-name">xref</span></dt>
   <dd>defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。</dd>
 </dl>

@@ -23,20 +23,45 @@
 #               報告のみ)。 glossary contract 自身の chrome 用語帯 (ページの仕組みを説く語) も self 突合でここ。
 #   exempt    = suite 内に glossary SSoT が存在しない (理由必須)。
 #
-# 実行: admin gate funnel (contract 変更の land 前) + test-adversarial-glossary-parity.sh。 CI 非配線
-# (ローカル gate・verify-cross-doc-dup と同格の cross-contract lint)。 HTML は読まない (contract↔contract)。
+# ★vocab-mirror 節 (folio-9inj): ADR-0051 §2.3 の層語彙で「contract YAML = 正本 edit-SSoT」に転換した結果、
+#   glossary SSoT contract の terms[].formal_def と design-intent/vocabulary.yaml の terms[].definition は
+#   **同一テキストの二重保持 (手動同鏡)** になった (vocabulary.yaml は folio fix の tooltip populate / folio
+#   build の glossary.html derive が読む runtime SSoT ゆえ撤去できない)。 片側編集は静かな drift を生む
+#   (folio-7ts2 で vocab⊃contract drift が実発生)。 よって本節が「canonical 集合の完全一致 + 定義本文の逐語
+#   一致」を機械強制する (default-block: VOCAB_REGISTRY 未登録の glossary SSoT は FAIL = 新 suite が黙って
+#   同鏡なしで増えない)。 検査は集合演算 + 文字列一致のみ (意味判定なし = 機械側)。
+#   ★registry rot (逆向き検査): VOCAB_REGISTRY に登録した同鏡 SSoT が PARITY_REGISTRY から参照されなくなると
+#     SSOT_SEEN から消え、 同鏡検査が「0 本」で静かに蒸発する (計数恒真 PASS)。 よって (a) 登録済 SSoT が
+#     未検査なら FAIL、 (b) 非 exempt 登録があるのに検査 0 本なら FAIL とする (緩和が別軸を巻き込む fail-open の封鎖)。
 #
-# 用法: verify-glossary-parity.sh [--contract-dir <dir>]
-# exit: 0 = 全緑 / 1 = parity 違反・分類漏れ・anchor 崩壊 / 2 = 構成エラー (SSoT 不在・依存欠落・未知引数)
+# ★def-parity 節 (folio-9inj ceiling): 定義文字列は glossary SSoT contract の formal_def / vocabulary.yaml の
+#   definition だけでなく、 source contract の glossary[].def にも byte 複製される (spec HTML の inline
+#   data-tooltip は 原本 HTML ↔ vocabulary.yaml を folio validate が、 原本 HTML ↔ contract prose を
+#   verify-spec §11 round-trip が連鎖 pin する)。 source の glossary[].def はどの gate にも束縛されておらず
+#   片側 drift が素通りしていた (実弾実証) ため、 DEF_REGISTRY で per-file に strict (SSoT 収録語の def は
+#   SSoT formal_def と逐語一致) / local (ページ固有の平易 def を採る批准・理由 MUST) を明示分類し、 strict の
+#   逐語一致を機械強制する (default-block: 未登録 = FAIL)。
+#
+# 実行: admin gate funnel (contract 変更の land 前) + test-adversarial-glossary-parity.sh。 ci.yml deterministic
+# floor に blocking 配線済 (folio-9inj・suite も同梱配線)。 HTML は読まない (contract↔contract、
+# および contract↔vocabulary.yaml = どちらも機械可読 YAML)。
+#
+# 用法: verify-glossary-parity.sh [--contract-dir <dir>] [--repo-root <dir>]
+#   --repo-root は vocab-mirror の突合先 (design-intent/vocabulary.yaml 等) の解決 base。 既定 = generator の
+#   3 つ上 (repo root)。 敵対テストが mirror 検査自体を mutation-kill するための注入点。
+# exit: 0 = 全緑 / 1 = parity 違反・分類漏れ・anchor 崩壊・vocab 同鏡 drift / 2 = 構成エラー
+#       (SSoT 不在・vocab mirror 不在/parse 不能・依存欠落・未知引数)
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTRACT_DIR="$SCRIPT_DIR/contract"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --contract-dir) CONTRACT_DIR="$2"; shift 2 ;;
+    --repo-root) REPO_ROOT="$2"; shift 2 ;;
     *) echo "verify-glossary-parity: 未知の引数 '$1'" >&2; exit 2 ;;
   esac
 done
@@ -96,6 +121,57 @@ while IFS='|' read -r rf rm rs; do
   R_MODE[$rf]="$rm"; R_SSOT[$rf]="$rs"
 done <<< "$PARITY_REGISTRY"
 
+# ===== VOCAB_REGISTRY (glossary SSoT contract → 手動同鏡先 vocabulary.yaml・default-block) =====
+# 書式: <glossary SSoT contract>|<repo-root 相対の vocabulary path | exempt>|<理由/注記 (exempt は MUST)>
+# PARITY_REGISTRY が参照する全 glossary SSoT はここに分類必須 (未登録 = FAIL)。 新 suite が同鏡なしで
+# 黙って増えるのを防ぐ完結性 sweep (mode の明示批准と同型)。
+VOCAB_REGISTRY='
+folio-glossary.glossary.yaml|design-intent/vocabulary.yaml|folio 本体: contract = 正本 edit-SSoT (ADR-0051 §2.3)・vocabulary.yaml = folio fix の tooltip populate / folio build の glossary.html derive が読む runtime SSoT。 二重保持ゆえ逐語同鏡必須
+clinic-appointment.glossary.yaml|exempt|clinic は generator demo suite (vocabulary.yaml consumer を持たない = tooltip populate 対象外ゆえ同鏡先なし)
+'
+declare -A V_PATH V_NOTE
+n_vocab_active=0
+while IFS='|' read -r vf vp vn; do
+  [[ -z "$vf" || "$vf" == \#* ]] && continue
+  V_PATH[$vf]="$vp"; V_NOTE[$vf]="$vn"
+  [[ "$vp" != "exempt" ]] && n_vocab_active=$((n_vocab_active+1))
+done <<< "$VOCAB_REGISTRY"
+
+# ===== DEF_REGISTRY (source contract の glossary[].def の扱い・default-block・folio-9inj ceiling) =====
+# 書式: <contract file>|<strict | local>|<注記 (local は理由 MUST)>
+#   strict = SSoT 収録語 (present==1) の def は SSoT の formal_def と逐語一致 MUST (定義の複製先を pin)。
+#   local  = 同語でもページ固有の平易 def を採る批准 (理由 MUST)。 SSoT 逐語一致は課さない。
+# PARITY_REGISTRY の非 exempt 全 file はここに分類必須 (未登録 = FAIL = 新 contract が無 gate で増えない)。
+DEF_REGISTRY='
+clinic-appointment.srs.yaml|strict|
+clinic-appointment.testcases.yaml|strict|
+clinic-architecture.arch.yaml|strict|
+clinic-double-booking.adr.yaml|strict|
+clinic-double-booking.research.yaml|strict|
+clinic-appointment.vision.yaml|strict|
+clinic-changelog.changelog.yaml|strict|
+clinic-appointment.datamodel.yaml|strict|
+clinic-appointment.interface.yaml|strict|
+clinic-risk.risk.yaml|strict|
+clinic-roadmap.roadmap.yaml|strict|
+clinic-appointment.glossary.yaml|strict|
+folio-rules.spec.yaml|strict|
+folio-verification.spec.yaml|strict|
+folio-relations.spec.yaml|strict|
+folio-vision.vision.yaml|strict|
+# constitution は非エンジニア読者向けに同語をページ文脈の平易語で定義する doc (例: canonical name =
+# 「一つの概念に対して使う、 ただ一つの正式な呼び名」)。 en は SSoT 逐語一致を継続し def のみ local。
+folio-constitution.principle.yaml|local|平易定義を採る principle doc (SSoT 逐語 def は読者層に不適・en 突合は継続)
+# glossary contract 自身の chrome 用語帯 (ページの仕組みを説く語) は同語でもページ固有の平易 def を採る
+# (self 突合ゆえ formal_def との逐語一致を課すと人間層の説明が機械層 def に潰される)。
+folio-glossary.glossary.yaml|local|glossary 自身の chrome 用語帯 = ページの仕組みを説く平易 def (機械層 formal_def とは別役割)
+'
+declare -A D_MODE D_NOTE
+while IFS='|' read -r df dm dn; do
+  [[ -z "$df" || "$df" == \#* ]] && continue
+  D_MODE[$df]="$dm"; D_NOTE[$df]="$dn"
+done <<< "$DEF_REGISTRY"
+
 echo "== glossary en parity gate (folio-dvsk・51bb 裁定 B 保全) =="
 
 # ===== 1. SSoT anchor 完全性 (突合の土台。 崩壊 = FAIL / 不在 = exit 2) =====
@@ -123,16 +199,97 @@ for s in "${!SSOT_SEEN[@]}"; do
   # canonical → en の突合 map
   jq '[.terms // [] | .[] | select(type == "object") | {key: ((.canonical // "") | tostring), value: ((.en // "") | tostring)}] | from_entries' \
     "$TMP/ssot-$s.json" > "$TMP/map-$s.json"
+  # canonical → formal_def の突合 map (def-parity 節が strict file の glossary[].def を逐語 pin する)
+  jq '[.terms // [] | .[] | select(type == "object") | {key: ((.canonical // "") | tostring), value: ((.formal_def // "") | tostring)}] | from_entries' \
+    "$TMP/ssot-$s.json" > "$TMP/defmap-$s.json"
   [[ "$file_fail" == "0" ]] && printf '  [OK]   anchor: %s (%s 語)\n' "$s" "$(jq 'length' "$TMP/map-$s.json")"
 done
+
+# ===== 1b. vocab-mirror (glossary SSoT の formal_def ↔ vocabulary.yaml の definition 逐語同鏡・folio-9inj) =====
+# 不変条件: 同鏡ペアは (a) canonical 集合が完全一致 (片側追加/削除 = FAIL) かつ (b) 定義本文が逐語一致。
+# 片側編集を禁ずる批准 rule (folio-9inj 着地ルール (a)) の機械強制。 意味判定なし = 集合演算 + 文字列一致のみ。
+n_mirror=0
+for s in "${!SSOT_SEEN[@]}"; do
+  vp="${V_PATH[$s]:-}"
+  if [[ -z "$vp" ]]; then
+    file_fail=0
+    pfail "unregistered-vocab-mirror: glossary SSoT '$s' が VOCAB_REGISTRY 未登録 (同鏡先 vocabulary.yaml か exempt 理由を明示批准して登録)"
+    continue
+  fi
+  if [[ "$vp" == "exempt" ]]; then
+    file_fail=0
+    if [[ -z "${V_NOTE[$s]:-}" ]]; then pfail "vocab-mirror-exempt-noreason: '$s' の exempt に理由が無い"; continue; fi
+    printf '  [OK]   vocab-mirror exempt: %s — %s\n' "$s" "${V_NOTE[$s]}"
+    continue
+  fi
+  vfile="$REPO_ROOT/$vp"
+  [[ -f "$vfile" ]] || { echo "verify-glossary-parity: vocab mirror 不在: $vfile" >&2; exit 2; }
+  yq -o=json '.' "$vfile" > "$TMP/vocab-$s.json" 2>/dev/null \
+    || { echo "verify-glossary-parity: vocab mirror parse 失敗: $vfile" >&2; exit 2; }
+  file_fail=0
+  # vocab 側 anchor 完全性 (canonical/definition 空・非 object・canonical 重複 = 突合の土台崩壊)
+  nbadv="$(jq -r '[.terms // [] | .[] | select((type != "object") or (((.canonical // "") | tostring) == "") or (((.definition // "") | tostring) == ""))] | length' "$TMP/vocab-$s.json")"
+  [[ "$nbadv" == "0" ]] || pfail "vocab-malformed: canonical/definition 空 or 非 object entry $nbadv 件 in $vp"
+  while IFS= read -r d; do
+    [[ -z "$d" ]] && continue
+    pfail "vocab-dup canonical='$d' in $vp (同語の definition が一意でない)"
+  done < <(jq -r '.terms // [] | .[] | (.canonical // "") | tostring' "$TMP/vocab-$s.json" | sort | uniq -d)
+  # 集合完全一致 + 定義逐語一致 (message は NUL 区切り: 定義本文に改行が混じっても record framing が割れない)
+  while IFS= read -r -d '' msg; do
+    [[ -z "$msg" ]] && continue
+    pfail "$msg"
+  done < <(jq -j --slurpfile v "$TMP/vocab-$s.json" --arg vp "$vp" --arg s "$s" '
+    (.terms // [] | map(select(type == "object"))
+      | map({key: ((.canonical // "") | tostring), value: ((.formal_def // "") | tostring)}) | from_entries) as $C
+    | ($v[0].terms // [] | map(select(type == "object"))
+      | map({key: ((.canonical // "") | tostring), value: ((.definition // "") | tostring)}) | from_entries) as $V
+    | (($C | keys) | map(select(. as $k | $V | has($k)))) as $both
+    | [ ( (($C | keys) - ($V | keys)) | map("vocab-mirror-missing term=" + . + " (contract " + $s + " にあり " + $vp + " に無い — 同鏡は集合完全一致)") )
+      , ( (($V | keys) - ($C | keys)) | map("vocab-mirror-extra term=" + . + " (" + $vp + " にあり contract " + $s + " に無い — 同鏡は集合完全一致)") )
+      , ( $both | map(select($C[.] == "")
+            | "vocab-def-empty term=" + . + " (contract formal_def 空 = 逐語一致が vacuous に成立する)") )
+      , ( $both | map(select($C[.] != "" and $C[.] != $V[.])
+            | "vocab-def-drift term=" + . + ": contract=" + ($C[.] | @json) + " / vocab=" + ($V[.] | @json)) )
+      ] | flatten | map(. + "\u0000") | join("")' "$TMP/ssot-$s.json" \
+      || printf 'jq-extract-error (vocab-mirror: %s)\x00' "$s")
+  if [[ "$file_fail" == "0" ]]; then
+    n_mirror=$((n_mirror+1))
+    printf '  [OK]   vocab-mirror: %s ↔ %s (%s 語・集合一致 + 定義逐語一致)\n' \
+      "$s" "$vp" "$(jq '[.terms // [] | .[] | select(type == "object")] | length' "$TMP/ssot-$s.json")"
+  fi
+done
+
+# ===== 1c. vocab-registry rot (逆向き検査: 登録した同鏡ペアが実際に検査されたか・恒真 PASS の封鎖) =====
+# PARITY_REGISTRY 側の 1 行編集 (SSoT 列の差し替え / 全行 exempt 化) だけで SSOT_SEEN から glossary SSoT が
+# 消え、 vocab 同鏡検査が「0 本」で黙って蒸発しうる (計数恒真 PASS)。 登録済 SSoT の未検査を FAIL にする。
+file_fail=0
+for vf in "${!V_PATH[@]}"; do
+  [[ -n "${SSOT_SEEN[$vf]:-}" ]] || \
+    pfail "vocab-registry-rot: 登録済 同鏡 SSoT '$vf' が未検査 (PARITY_REGISTRY から参照が消えた = 同鏡検査の蒸発)"
+done
+if [[ "$n_vocab_active" -gt 0 && "$n_mirror" == "0" ]]; then
+  pfail "vocab-mirror-vacuous: 非 exempt の同鏡登録が $n_vocab_active 件あるのに vocab 同鏡検査 0 本 (恒真 PASS)"
+fi
 
 # ===== 2. registry rot (登録済 file の実在 = fail-loud) =====
 for rf in "${!R_MODE[@]}"; do
   [[ -f "$CONTRACT_DIR/$rf" ]] || pfail "registry-missing-file: 登録済 contract 不在: $rf"
 done
+# DEF_REGISTRY rot: 登録済 file が PARITY_REGISTRY の非 exempt に居ない = 死んだ登録 (検査されない)
+for df in "${!D_MODE[@]}"; do
+  if [[ -z "${R_MODE[$df]:-}" || "${R_MODE[$df]}" == "exempt" ]]; then
+    pfail "def-registry-rot: DEF_REGISTRY 登録の '$df' が PARITY_REGISTRY の非 exempt に不在 (def 検査が走らない死に登録)"
+  fi
+  if [[ "${D_MODE[$df]}" != "strict" && "${D_MODE[$df]}" != "local" ]]; then
+    pfail "def-registry-badmode: '$df' の def mode が strict/local でない ('${D_MODE[$df]}')"
+  fi
+  if [[ "${D_MODE[$df]}" == "local" && -z "${D_NOTE[$df]:-}" ]]; then
+    pfail "def-local-noreason: '$df' の local 批准に理由が無い"
+  fi
+done
 
 # ===== 3. sweep + per-file parity (contract/*.yaml 全数分類 = 完結性 sweep) =====
-n_full=0; n_intersect=0; n_exempt=0; n_unreg_empty=0; terms_checked=0; n_local=0
+n_full=0; n_intersect=0; n_exempt=0; n_unreg_empty=0; terms_checked=0; n_local=0; defs_checked=0
 for path in "$CONTRACT_DIR"/*.yaml; do
   [[ -e "$path" ]] || continue
   base="$(basename "$path")"
@@ -145,6 +302,10 @@ for path in "$CONTRACT_DIR"/*.yaml; do
       continue
     fi
     ssot="${R_SSOT[$base]}"
+    def_mode="${D_MODE[$base]:-}"
+    if [[ -z "$def_mode" ]]; then
+      pfail "def-unregistered: '$base' が DEF_REGISTRY 未登録 (glossary[].def の扱いを strict/local で明示批准して登録)"
+    fi
     yq -o=json '.' "$path" > "$TMP/src.json" 2>/dev/null \
       || { pfail "yaml-parse-error: $base"; continue; }
     gtype="$(jq -r '.glossary | if . == null then "null" else type end' "$TMP/src.json")"
@@ -165,8 +326,8 @@ for path in "$CONTRACT_DIR"/*.yaml; do
     # 空フィールド (en="" 等) が read で潰れて誤分類する (V11 回帰 pin)。 ★record 区切り = NUL (-d ''):
     # 改行区切りだと値中の埋め込み改行が record を分割し、intersect で drift が local へ silent 再分類
     # される fail-open になる (ceiling wf_40306116 実弾・V14 回帰 pin)。 US/NUL とも YAML 値に出現不能。
-    checked=0; local_cnt=0
-    while IFS=$'\x1f' read -r -d '' term en present ssot_en; do
+    checked=0; local_cnt=0; def_checked=0
+    while IFS=$'\x1f' read -r -d '' term en present ssot_en def ssot_def; do
       if [[ -z "$term" ]]; then pfail "malformed-entry: term 空 or 非 object entry in $base"; continue; fi
       # ★present の domain 検査: jq が emit する正値は "0"/"1" のみ。それ以外 = 抽出異常 (jq 死の
       #   sentinel record / 万一の frame 破れ) を clean 扱いしない (machinery 失敗 ≠ 緑・mzn.1 教訓)。
@@ -179,18 +340,30 @@ for path in "$CONTRACT_DIR"/*.yaml; do
         elif [[ "$en" != "$ssot_en" ]]; then
           pfail "en-drift term='$term' in $base: source='$en' / ssot='$ssot_en' ($ssot)"
         fi
+        # ★def-parity (strict のみ): SSoT 収録語の def は SSoT formal_def と逐語一致 (定義の 5 番目の複製を pin)。
+        #   空 def / 空 formal_def は「一致」が vacuous に成立するため個別に FAIL (恒真 PASS の封鎖)。
+        if [[ "$def_mode" == "strict" ]]; then
+          def_checked=$((def_checked+1))
+          if [[ -z "$def" ]]; then pfail "glossary-def-empty term='$term' in $base (strict は def 必須)"
+          elif [[ -z "$ssot_def" ]]; then
+            pfail "ssot-def-empty term='$term' in $ssot (SSoT formal_def 空 = def 逐語一致が vacuous)"
+          elif [[ "$def" != "$ssot_def" ]]; then
+            pfail "glossary-def-drift term='$term' in $base: source=$(printf '%q' "$def") / ssot=$(printf '%q' "$ssot_def") ($ssot)"
+          fi
+        fi
       else
         if [[ "$mode" == "full" ]]; then
           pfail "ssot-missing term='$term' in $base ($ssot 未収録・full mode は全語収録が不変条件)"
         else local_cnt=$((local_cnt+1)); fi
       fi
-    done < <(jq -j --slurpfile ssot "$TMP/map-$ssot.json" '
+    done < <(jq -j --slurpfile ssot "$TMP/map-$ssot.json" --slurpfile sdef "$TMP/defmap-$ssot.json" '
       .glossary // [] | .[] as $g | ($g | if type == "object" then . else {} end) as $o
       | (($o.term // "") | tostring) as $t | (($o.en // "") | tostring) as $e
-      | ([$t, $e, (if ($ssot[0] | has($t)) then "1" else "0" end), ($ssot[0][$t] // "")] | join("\u001f")) + "\u0000"' "$TMP/src.json" || printf 'jq-extract-error\x1f\x1f!\x1f\x00')
-    terms_checked=$((terms_checked+checked)); n_local=$((n_local+local_cnt))
+      | (($o.def // "") | tostring) as $d
+      | ([$t, $e, (if ($ssot[0] | has($t)) then "1" else "0" end), ($ssot[0][$t] // ""), $d, ($sdef[0][$t] // "")] | join("\u001f")) + "\u0000"' "$TMP/src.json" || printf 'jq-extract-error\x1f\x1f!\x1f\x1f\x1f\x00')
+    terms_checked=$((terms_checked+checked)); n_local=$((n_local+local_cnt)); defs_checked=$((defs_checked+def_checked))
     if [[ "$mode" == "full" ]]; then n_full=$((n_full+1)); else n_intersect=$((n_intersect+1)); fi
-    [[ "$file_fail" == "0" ]] && printf '  [OK]   parity(%s): %s (en 突合 %d 語 / anchor 外 local %d 語)\n' "$mode" "$base" "$checked" "$local_cnt"
+    [[ "$file_fail" == "0" ]] && printf '  [OK]   parity(%s/def:%s): %s (en 突合 %d 語 / def 逐語 %d 語 / anchor 外 local %d 語)\n' "$mode" "${def_mode:-未登録}" "$base" "$checked" "$def_checked" "$local_cnt"
   else
     # 未登録 contract: 非空 (or 非配列) glossary 節 = default-block (分類漏れを素通りさせない)
     glen="$(yq -o=json '.' "$path" 2>/dev/null | jq -r '.glossary | if . == null then 0 elif type == "array" then length else -1 end' 2>/dev/null || echo -1)"
@@ -204,8 +377,8 @@ for path in "$CONTRACT_DIR"/*.yaml; do
 done
 
 echo ""
-echo "  分類: full=$n_full intersect=$n_intersect exempt=$n_exempt 未登録空=$n_unreg_empty / en 突合 $terms_checked 語・anchor 外 local $n_local 語"
+echo "  分類: full=$n_full intersect=$n_intersect exempt=$n_exempt 未登録空=$n_unreg_empty / vocab 同鏡 $n_mirror 本 / en 突合 $terms_checked 語・anchor 外 local $n_local 語・def 逐語 $defs_checked 語"
 if [[ "$fail" == "0" ]]; then
-  echo "RESULT: glossary-parity PASS (source (term,en) = glossary SSoT (canonical,en) 逐語一致・分類完結)"
+  echo "RESULT: glossary-parity PASS (source (term,en) = glossary SSoT (canonical,en) 逐語一致・strict file の def 逐語一致・分類完結・vocab 同鏡逐語一致)"
   exit 0
 else echo "RESULT: FAIL"; exit 1; fi

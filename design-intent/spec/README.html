@@ -120,7 +120,7 @@
     </tr>
     <tr>
       <td><a href="verification.html"><code>verification.html</code></a></td>
-      <td><span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> verification framework spec (機能単位 use case verification <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。">SSoT</span>、 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜008)</td>
+      <td><span class="term" data-term="sandbox" data-tooltip="tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。">sandbox</span> verification framework spec (機能単位 use case verification <span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。">SSoT</span>、 <a class="xref" href="./verification.html#req-ver-001" data-tooltip="検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。">REQ-VER-001</a>〜008)</td>
       <td>active (v1.2.0)</td>
       <td><a href="rules.html"><code>rules.html</code></a> + <a href="relations.html"><code>relations.html</code></a></td>
       <td>—</td>
@@ -201,7 +201,7 @@ graph TD
   <li><strong><a href="./constitution.html">constitution.html</a></strong> — folio の 14 不変原則 (前提知識、 全 spec の基底)</li>
   <li><strong><a href="rules.html">rules.html</a></strong> — Layer 1 consumer project に適用する規範 MUST (markup / naming / Mandatory Actions、 spec edit 開始前必読)</li>
   <li><strong><a href="folio-self-spec.html">folio-self-spec.html</a></strong> — folio Layer 0 framework 自身の動作仕様 (<span class="term" data-term="harness" data-tooltip="scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。">harness</span> / plugin / bindings、 §7.6 試作 minimal scope)</li>
-  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義 SSoT (vocabulary.yaml)。 glossary tooltip と glossary.html を derive する単一ソース (P-5)。">vocabulary</span>、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
+  <li><strong><a href="relations.html">relations.html</a></strong> — spec 間関係性表現規約 (JSON-LD <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。">vocabulary</span>、 spec 編集時に <code>&lt;head&gt;</code> JSON-LD を書く際必読)</li>
   <li><strong><a href="verification.html">verification.html</a></strong> — sandbox verification framework (Phase X3 Step 1〜4 完遂済 / 試作 plugin 実機検証の規範)</li>
 </ol>
 
