@@ -1,0 +1,37 @@
+schema_version: "0.1"
+req_id: "REQ-VER-017"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  degrade link (anchor 無し href = §2.6 shape (c) id 無 定義 site への file 単位 link) の
+  data-tooltip drift を gate (i) xref-tooltip-consistency が実際に [FAIL] で名指すことを golden で
+  固定する (gate (i) の *検出側* を pin する唯一の committed scenario)。
+
+  ★塞いだ fail-open (detect↔remediate 非対称): gate (i) の seg 抽出だけが
+  `<a [^>]*class="xref"[^>]*>` = tag のみ で anchor text を取っておらず (書込側の
+  folio_xref_present_tokens / folio_xref_tooltip_resync_doc は `[^<]*` 付きの同一 idiom)、
+  folio_xref_token_from_seg に渡る seg が `<a ...>` で終わるため token 復元が必ず失敗し、
+  degrade link は 1 本残らず判定対象から落ちていた。 結果 「fix は resync できるが validate は
+  drift を報告できない」 = shape (c) 向け degrade link の stale tooltip が永久に緑で land する。
+  1 文字 (`[^<]*`) の欠落で fail-open へ戻る箇所ゆえ、 [FAIL] 側を golden に焼いて固定する
+  (健全 fixture の [OK] は seg 抽出の広狭を区別しない = shape-violation.yaml と同じ論法)。
+
+  fixture (tests/fixtures/xref-degrade-violations/root) が固定する 2 事実:
+    (1) REQ-CI-001 / REQ-CI-002 — shape (c) id 無 を指す degrade link に意図的 stale tooltip。
+        同一 file (rules.html) を指す 2 本を別 essence で置くため、 token を復元できない実装は
+        両方を取りこぼし violation 件数が 3 → 1 へ落ちて golden が RED になる。
+    (2) REQ-CI-003 — shape (b) id 有 を指す anchored link に同種の stale tooltip (★陽性対照)。
+        href から canon が解けるため tag のみの seg でも検出される。 これを対で置くことで
+        「gate 自体が死んだ」 のか 「degrade link だけが盲」 なのかを golden が弁別する
+        (陽性対照が無いと gate 全体の停止と本 fail-open が同じ症状に見える)。
+
+  対の clean 検査 = xref-degrade-validate.yaml (健全 degrade link で全 gate [OK])。
+  flip 元 SSoT = folio-85xr。
+
+command: ["validate", "--root", "tests/fixtures/xref-degrade-violations/root"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/xref-degrade-violations.golden.txt"
+
+expect:
+  exit_code: 1

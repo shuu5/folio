@@ -1,0 +1,24 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/srs-dense-table/root
+files checked: 1 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] shape-blindness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [OK] readability-floor
+  [OK] how-outside
+
+clean: 0 violations

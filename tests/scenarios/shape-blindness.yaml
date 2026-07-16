@@ -1,0 +1,54 @@
+schema_version: "0.1"
+req_id: "REQ-VER-010"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  folio validate の shape-blindness gate (fail-loud) が 「宣言 (data-req-id) されているのに
+  in-scan の requirement container として発見できない」 状態を捕捉することを実証する。
+
+  ★なぜ独立 gate が要るか: 他 gate は 「走査できた container の中身」 を検査するため、 container を
+  1 つも認識できない盲は 全 gate [OK] + exit 0 のまま素通る (vacuous-PASS)。 shape 非認識は
+  「壊れる」 のでなく 「静かに 0 になる」 ため、 exit code / gate 出力を oracle にすると
+  生成 spec の全要件を失ったまま緑で land しうる。 宣言側を *shape 非依存* に数えて
+  発見側と突き合わせる本 gate だけがそれを機械検出する。
+
+  fixture (tests/fixtures/shape-blindness/root) が固定する 5 事実:
+    (1) per-node arm — spec/verification.html REQ-VER-003 が未知 shape (<article>) ゆえ発見されず FAIL。
+        同 file 内に認識可能な shape (b) row (REQ-VER-002) が同居していても隠れない。
+    (2) ★keystone: id 有 未知 shape — spec/verification.html REQ-VER-004 は id 属性を持つ
+        未知 shape (<article id="req-ver-004" data-req-id="REQ-VER-004">)。 「発見」 を裸の id 属性
+        grep (folio_scan_req_def_ids_raw) に相乗りさせた実装は、 container を 1 つも認識していない
+        のに 「発見できた」 と誤認して per-node arm が沈黙する (essence "" が inventory ec=0 で
+        silent に land = 本 gate が塞ぐはずの fail-open そのもの)。 発見側を container 認識の実結果
+        (folio_scan_req_container_ids) に anchor して初めて FAIL する。 id 無 変種 (1) だけを置いた
+        fixture は 「実装と fixture が同じ盲点を共有する self-consistent 盲点」 になるため、
+        id 有/無 の 2 変種を同時に pin する。
+    (3) arm 独立性 — 同 file の per-file arm (非空 essence ゼロ) は発火しない (REQ-VER-002 から
+        essence が 1 本取れるため)。 2 arm が別軸であることを pin し、 片方の緩和が
+        もう片方を巻き込んで消すことを封じる。
+    (4) per-file arm + MK-2 陰性対照 — spec/rules.html は全 row が未知 shape ゆえ per-node と
+        per-file の両 arm が発火する。 ★同 dir に (部分的に) 認識可能な verification.html が
+        同居していても本 file の盲は隠れない (per-dir 恒真の否定 — gate が per-dir だと
+        「同 dir に 1 つでも認識できる file があれば PASS」 という恒真 PASS に化ける)。
+
+    (5) ★keystone: 未知 <tr> shape — spec/verification.html REQ-VER-005 は <tr> を使う未知 shape
+        (data-component="unknown-matrix-row")。 宣言側は registry が container 候補でないと
+        *明示的に決めた* 同名別部品 (FOLIO_NONCONTAINER_PARTS = <tr data-component="ears-requirement-row">
+        = SRS dense-table 行) だけを母集合から除くが、 この除外を 「<tr 全般」 のような *tag 単位* へ
+        広げた実装は registry の根拠なく未知 tr shape を宣言から落として沈黙する (除外が gate を
+        緩める方向の fail-open — 除外 list は本質的に gate の緩和ゆえ、 広げすぎが検出されねば
+        ならない)。 本 row は 除外が *部品単位* (data-component) に keying されていることを pin する。
+        実測: 除外を '<tr' へ広げる変異は本 row 導入前は全 scenario を survive していた。
+        ★(5) と srs-dense-table.yaml は対: 前者が 「除外を広げすぎると盲が沈黙する」 を、
+        後者が 「除外が無いと同名別部品が false-FAIL を作る」 を各々 pin し、 除外 list の
+        上下 2 方向を挟み込む (片側だけでは 「gate ごと殺す」 / 「gate が詰む」 のどちらかへ漂流する)。
+
+  対の正検査 = shape-registry.yaml (3 shape の essence 集合 golden)。 flip 元 SSoT = folio-85xr。
+
+command: ["validate", "--root", "tests/fixtures/shape-blindness/root"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/shape-blindness.golden.txt"
+
+expect:
+  exit_code: 1

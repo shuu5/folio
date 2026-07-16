@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-xref-completeness" content="enabled">
+<title>xref-degrade fix fixture — sample (wrap 対象の裸 言及)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./sample.html", "@type": "schema:TechArticle", "dc:title": "xref-degrade fix sample" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. 裸の言及 (fix が wrap する)</h2>
+<p>本 doc は REQ-CI-001 に従い degrade link の token を復元する。</p>
+<p>また REQ-CI-002 に従い 同一 file を指す 2 link を複合 key で弁別する。</p>
+<p>さらに REQ-CI-003 に従い id 有 定義 site へは deep-link を焼く。</p>
+</section>
+</body>
+</html>

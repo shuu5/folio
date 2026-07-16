@@ -1,0 +1,30 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/xref-degrade-violations/root
+files checked: 2 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [OK] shape-blindness
+  [FAIL] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [WARN] readability-floor
+  [OK] how-outside
+
+warnings (1):
+  spec/stale.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 2 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
+
+violations (3):
+  spec/stale.html [xref-stale-tooltip] REQ-CI-001 data-tooltip drifted from current essence (fix で再生成)
+  spec/stale.html [xref-stale-tooltip] REQ-CI-002 data-tooltip drifted from current essence (fix で再生成)
+  spec/stale.html [xref-stale-tooltip] REQ-CI-003 data-tooltip drifted from current essence (fix で再生成)

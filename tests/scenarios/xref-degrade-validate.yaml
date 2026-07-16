@@ -1,0 +1,43 @@
+schema_version: "0.1"
+req_id: "REQ-VER-017"
+ears_pattern: "state-driven"
+kind: "cli-golden"
+description: |
+  degrade link (anchor 無し href = §2.6 shape (c) id 無 定義 site への file 単位 link) を
+  *健全な状態で* 持つ corpus に対し xref 4 gate が全て [OK] を返すことを golden で固定する。
+  本 cell が新設した folio_xref_token_from_seg の 「anchor 無し href の token を anchor text から
+  復元する」 枝の *load-bearing 性* を pin する唯一の committed scenario。
+
+  ★なぜ [OK] 側の golden が枝を pin できるか (健全 fixture でも撃てる構造):
+    通常 「健全 fixture の [OK]」 は枝の有無を区別しない (shape-violation.yaml の冒頭が述べる
+    構造的理由) が、 gate (j) xref-completeness だけは *復元できないと [OK] が壊れる* 向きに
+    非対称である: fixture は 同一 doc に (1) degrade link と (2) 同 token の裸 言及 を同居させて
+    いるため、 復元枝が無いと present_tokens が当該 token を取りこぼし、 裸の言及が
+    [xref-orphan-mention] へ落ちて RED 化する。 ゆえに本 golden は fail-open 方向 (復元枝ごと
+    消滅) を kill する。
+    実測: 復元枝を `if false; then` へ潰す変異は 本 scenario が導入されるまで全 47 scenario を
+    survive していた (= 観測可能な実挙動を持つ機構が 1 本も pin されていなかった)。
+
+  fixture (tests/fixtures/xref-degrade/root) が固定する 3 事実 (id 無/有 を必ず対で置く —
+  片側だけだと href key 経路の退行を素通す):
+    (1) REQ-CI-001 / REQ-CI-002 — shape (c) id 無 を *同一 file に 2 本*。 双方 degrade link
+        (href="./rules.html" = anchor 無し) + 同 token の裸 言及 が同居 → [OK] xref-completeness
+        (復元枝が死ぬと orphan-mention で [FAIL])。 2 essence は別値ゆえ tooltip の取り違えも
+        [OK] xref-tooltip-consistency が弁別する。
+    (2) REQ-CI-003 — shape (b) id 有 の anchored 対照 (href="./rules.html#req-ci-003")。
+        canon_from_href 経路が復元枝と独立に生きていることを pin する (degrade 側の修正が
+        anchored 側を壊さない = 双方向の回帰網)。
+    (3) 定義 site (rules.html) 側は 3 row とも dual-audience + 非空 essence で健全 → 本 scenario の
+        RED は xref 経路の退行のみに帰属する (他 gate の混入なし)。
+
+  対の violation 検査 = xref-degrade-violations.yaml (degrade link の stale tooltip → [FAIL])。
+  対の behavioral 検査 = xref-degrade-fix.yaml (degrade href 生成 + 複合 key resync)。
+  flip 元 SSoT = folio-85xr。
+
+command: ["validate", "--root", "tests/fixtures/xref-degrade/root"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/xref-degrade-validate.golden.txt"
+
+expect:
+  exit_code: 0

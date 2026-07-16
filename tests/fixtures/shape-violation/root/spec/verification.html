@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shape-violation fixture — 生成 row (shape (b)(c)) の負検査 (block-walk の div 第 3 枝を [FAIL] で pin)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./verification.html", "@type": "schema:TechArticle", "dc:title": "shape-violation verification fixture" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. 要件</h2>
+<p class="section-essence">本 file の row は全て §2.6 registry が認識できる生成 shape ((b) id 有 / (c) id 無) でありながら、 gate g dual-audience-structural と gate readability-floor の各違反を 1 本ずつ持つ。 健全 row を並べた shape-registry fixture は [OK] しか出さず、 [OK] は block-walk の div 第 3 枝が在っても無くても同一ゆえ、 枝が回帰で外れたことを検出できない (枝ごと消えると gate は生成 row 全件に対し vacuous [OK] へ静かに戻る)。 本 fixture は [FAIL] 側を golden に固定して その fail-open 方向を塞ぐ。 id 有/無 の 2 変種を必ず対で置く — 片側だけだと id 依存の退行を素通す。</p>
+
+<div data-component="ears-requirement-row" id="req-ver-001" data-req-id="REQ-VER-001" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-001</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">shape (b) 生成 id 有 の 孤立 human row (machine 対応部を持たない) — gate g が REQ-DA-STRUCT-1 で名指す。</p>
+</div>
+<div data-component="ears-requirement-row" data-req-id="REQ-VER-002" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-002</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">shape (c) 生成 id 無 の 孤立 human row — 発見 key が id 属性に退行した実装では block 起点にすら入らず素通る。</p>
+</div>
+
+<div data-component="ears-requirement-row" id="req-ver-003" data-req-id="REQ-VER-003" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-003</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence"></p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-003</span>: The id-bearing generated row with an empty essence <span class="ears-shall">SHALL</span> be reported by readability-floor.</p></details>
+</div>
+<div data-component="ears-requirement-row" data-req-id="REQ-VER-004" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-004</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence"></p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-004</span>: The id-less generated row with an empty essence <span class="ears-shall">SHALL</span> be reported by readability-floor.</p></details>
+</div>
+
+<div data-component="ears-requirement-row" data-req-id="REQ-VER-005" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-005</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">shape (c) の requirement-id 不一致 row — machine 側 ears-id が container の data-req-id と食い違う。 chk() の data-req-id 優先枝 (secid を id 属性でなく data-req-id から採る) が外れると、 id 無 row は secid="" となり本検査が silent に消える。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-009</span>: The id mismatch <span class="ears-shall">SHALL</span> be reported as REQ-DA-STRUCT-2.</p></details>
+</div>
+</section>
+</body>
+</html>

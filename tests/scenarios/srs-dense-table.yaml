@@ -1,0 +1,51 @@
+schema_version: "0.1"
+req_id: "REQ-VER-023"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  SRS pack の dense-table 行 (<tr data-component="ears-requirement-row"> = ADR-0042 /
+  srs-component-taxonomy §5) を含む corpus が clean のままであることを golden で固定する
+  (gate (s) shape-blindness の *宣言側* が同名別部品を数えない ことを pin する唯一の
+  committed scenario)。
+
+  ★塞いだ false-FAIL (「従っても正しくならない RED」): gate (s) の宣言側は 「shape 非依存に
+  数える」 のが原則 (発見側と同じ key で数えると未知 shape が 宣言 0 = 発見 0 で恒真 PASS へ
+  化ける) だが、 *素の* data-req-id 出現を数える実装は 上の dense-table 行まで宣言に入れる。
+  発見側は registry どおり <details|section> と <div data-component="ears-requirement-row"> に
+  限定する (tr 行を container と見なさないのは registry の *設計上の意図* — 生成 div row との
+  名前衝突を弁別するため) ので、 生成 SRS では 宣言>0 / 発見=0 が構造的に恒久成立していた:
+    - validate: exit 0 → 1 (全要件行が violation 化)
+    - fix     : 何度回しても exit 1 (「★fixpoint を宣言できない」) = folio-architect SKILL Step 3 /
+                folio-compress SKILL の consumer 正規復旧手順が stuck-RED で詰む (fix は自分では直せない)
+  しかも violation の処方 (「§2.6 registry に shape を追加する」) に従うと dense-table 行が
+  requirement container 化し、 registry が明示的に拒否している名前衝突をむしろ実現してしまう。
+  ゆえに registry へ 「container 候補でないと明示的に決めた部品」 の list
+  (FOLIO_NONCONTAINER_PARTS) を置き、 散文が述べていた弁別を実行される述語へ昇格させた。
+
+  ★なぜ現状の緑が偶然だったか (この scenario が無いと測れないもの): 実 corpus の data-req-id
+  出現 3 件は全て <code>/<pre> 内の文字列で folio_prose_only が mask し、 CI 配線済
+  test-graph-emit.sh が staging する dogfood SRS の id は `FR1`… で `REQ(-[A-Z]+)+-[0-9]+` に
+  当たらない。 つまり 「設計で避けている」 のでなく 「たまたま当たっていない」 状態であり、
+  acceptance(d) (実 corpus byte 同値) はこの穴を測れない。 design-intent/spec/srs-verification.html が
+  SRS pack へ flip した瞬間 (folio-c5r) に CI の deterministic floor が赤になる。
+
+  fixture (tests/fixtures/srs-dense-table/root/spec/srs.html) が固定する 2 事実:
+    (1) REQ-BOOK-001 / REQ-BOOK-002 — assemble-srs.sh の実 emit と同形の dense-table 行
+        (tr data-component="ears-requirement-row" data-req-id + id、 REQ-style id ゆえ宣言側の
+        regex に当たる)。 これらは requirement container でないため violation を生まない。
+    (2) REQ-CI-001 — 同 file に registry 認識可能な生成 div row を 1 本同居 (★陽性対照)。
+        gate (s) は本 file に 「適用対象あり」 を出したまま clean = 「tr 行を除外したら gate ごと
+        沈黙して恒真 PASS になった」 のでなく 「gate は作動していて tr 行だけが宣言母集合から
+        外れた」 ことを弁別する (除外 list が gate 全体を殺していないことの証明)。
+        ★除外 list を広げる = gate を緩めるため、 追加には registry 上の根拠を要する。
+
+  対の fail-loud 検査 = shape-blindness.yaml (未知 shape の宣言が発見されなければ FAIL) /
+  fix-shape-blindness.yaml (fix の post-assert が fixpoint 宣言を撤回)。 flip 元 SSoT = folio-85xr。
+
+command: ["validate", "--root", "tests/fixtures/srs-dense-table/root"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/srs-dense-table.golden.txt"
+
+expect:
+  exit_code: 0

@@ -1,0 +1,56 @@
+schema_version: "0.1"
+req_id: "REQ-VER-018"
+ears_pattern: "event-driven"
+kind: "cli-fix"
+description: |
+  folio fix が degrade link (§2.6 shape (c) id 無 定義 site への anchor 無し href) を
+  *書ける* ことを behavioral に検証する。 本 cell が新設した degrade-link cluster のうち
+  書込側 2 機構 — (1) folio_xref_href の fail-safe degrade (anchor 実在時のみ #anchor を付ける)、
+  (2) folio_xref_tooltip_resync_doc の複合 key (href \001 anchor text) — を pin する唯一の
+  committed scenario (読取側 = 復元枝は xref-degrade-validate.yaml が pin する)。
+
+  ★塞いだ 2 つの fail-open (いずれも committed 被覆ゼロで全 47 scenario を survive していた):
+    (a) href を無条件 #anchor へ = 定義 site に id が無い相手へ dangling deep-link を焼く退行。
+        fix が exit 0 + 成功文言で dead link を materialize し、 gate (h) xref-resolve が block →
+        再 fix でも除去されず fix→validate deadlock (folio-architect SKILL Step 3 の boot path が
+        stuck-RED)。 本 scenario は post-fix validate clean + post_fix_forbid で kill する。
+    (b) resync の key を href 固定へ = 同一 file を指す 2 本の degrade link が href 同値ゆえ
+        同一 tooltip へ潰れ、 別 token の essence を取り違えて書き込む (誤 resync)。 fixture が
+        同 file の id 無 row を 2 本 (別 essence) 用意するため、 潰れると gate (i) が post-fix で
+        RED を返して kill される。
+
+  cli-fix harness の RED→GREEN+idempotent で検証する:
+    (a) pre-fix  validate が RED — sample.html の orphan-mention (裸 token 3 本) +
+        stale.html の [xref-stale-tooltip] (degrade 2 + anchored 1)
+    (b) fix      が exit 0 で wrap (degrade href / anchored href を shape 別に焼き分け) + resync
+    (c) post-fix validate clean (exit 0) = 焼いた href が全て解決し tooltip が essence と一致
+    (d) idempotency: 再 fix で exit 0 かつ tree の sha256 不変 (★復元枝が死ぬと wrap 済 token を
+        present と認識できず 非 fixpoint 化しうる = 第 3 の kill 面)
+    (e) post_fix_require/forbid = 下記 literal (焼き分けと複合 key の behavioral 証拠)
+
+  fixture (tests/fixtures/xref-degrade-fix) = rules.html (id 無 REQ-CI-001/002 + id 有 REQ-CI-003) +
+  sample.html (opt-in・裸 言及 = wrap 経路) + stale.html (既存 degrade/anchored link の drift =
+  resync 経路)。 scope は spec/research のみ (frozen decisions/ は resync 不可 = stuck-RED 回避)。
+  flip 元 SSoT = folio-85xr。
+
+fixture: "fixtures/xref-degrade-fix"
+command: ["fix"]
+
+expect:
+  exit_code: 0
+
+# degrade href (anchor 無し) + 各 token 固有の tooltip が焼かれた behavioral 証拠。
+# ★2 literal の tooltip 本文が *別値* であることが複合 key の kill 面 — href 固定 key の実装は
+#   2 link を同一 tooltip へ潰すため、 いずれか一方が tree から消えて RED になる。
+post_fix_require:
+  - '<a class="xref" href="./rules.html" data-tooltip="degrade link の token は anchor text から復元する'
+  - '<a class="xref" href="./rules.html" data-tooltip="同一 file を指す 2 本の degrade link は href と anchor text の複合 key で弁別する'
+  - '<a class="xref" href="./rules.html#req-ci-003" data-tooltip="定義 site に id がある token の xref は anchor 付き href (deep-link) を焼く'
+
+# id 無 定義 site への deep-link は 1 本も焼かれてはならない (無条件 #anchor 退行 = dangling link)。
+# 併せて 改訂前 stale tooltip が resync で消えたことを固定する。
+post_fix_forbid:
+  - './rules.html#req-ci-001'
+  - './rules.html#req-ci-002'
+  - 'COMPLETELY-STALE'
+  - 'OLD STALE'

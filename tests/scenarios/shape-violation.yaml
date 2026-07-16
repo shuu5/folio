@@ -1,0 +1,46 @@
+schema_version: "0.1"
+req_id: "REQ-VER-023"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  生成 row (§2.6 registry の shape (b) id 有 / (c) id 無) に対して gate g dual-audience-structural と
+  gate readability-floor が実際に [FAIL] を返すことを golden で固定する (block-walk の div 第 3 枝の
+  *検出力* を pin する唯一の committed scenario)。
+
+  ★なぜ健全 fixture では撃てないか (構造的理由・fixture を足すだけでは不足だった):
+    shape-registry.yaml は inventory しか実行せず validate 系 gate に一切触れない。
+    shape-blindness.yaml は validate を回すが、 その shape (b) row は *健全* ゆえ 枝が在っても
+    無くても golden 上は [OK] dual-audience-structural / [OK] readability-floor で同一 —
+    [OK] は枝の有無を区別しない。 結果 pin されているのは fail-noisy 方向 (div-DEPTH を単一行
+    index() へ退行させると false 孤立 human が出て killed) だけで、 fail-open 方向 (枝ごと消滅)
+    は無防備だった: 両 site の div 枝を never-match へ潰す変異を当てても全 scenario が緑のまま
+    survive し、 gate g / readability-floor は生成 row 全件に対し vacuous [OK] へ静かに戻る。
+    これは本 cell が閉じにいった silent-loss と同じクラス (baseline が既に 「検出できない」 状態
+    でも scenario が自動成立する) ゆえ、 [FAIL] 側を golden に固定して塞ぐ。
+
+  fixture (tests/fixtures/shape-violation/root) が固定する 5 事実 (id 有/無 を必ず対で置く —
+  片側だけだと id 依存の退行を素通す):
+    (1) REQ-VER-001 — shape (b) id 有 の 孤立 human row (machine 対応部なし) → [FAIL]
+        dual-audience-structural (REQ-DA-STRUCT-1)。
+    (2) REQ-VER-002 — shape (c) id 無 の 同型 → 同上 (発見 key が id 属性へ退行した実装は
+        block 起点にすら入らず素通る)。
+    (3) REQ-VER-003 — shape (b) id 有 で <p class="rq-essence"> が空 → [FAIL] readability-floor
+        (REQ-VER-023)。
+    (4) REQ-VER-004 — shape (c) id 無 の 同型 → 同上。
+    (5) REQ-VER-005 — shape (c) の requirement-id 不一致 (container data-req-id <-> machine
+        ears-id) → [FAIL] dual-audience-structural (REQ-DA-STRUCT-2)。 chk() が secid を
+        data-req-id から採る枝 (id 属性優先へ戻すと id 無 row の secid が "" になり本検査が
+        silent に消える) を同時に pin する。
+  ★(3)(4) は gate (s) shape-blindness の per-node essence arm でも報告される (独立 2 gate による
+    冗長被覆であって恒真ではない — 片方の枝が外れても もう片方が残る)。 golden は両方を固定する。
+
+  対の正検査 = shape-registry.yaml (3 shape の essence 集合 golden) / shape-blindness.yaml
+  (未知 shape の fail-loud)。 flip 元 SSoT = folio-85xr。
+
+command: ["validate", "--root", "tests/fixtures/shape-violation/root"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/shape-violation.golden.txt"
+
+expect:
+  exit_code: 1

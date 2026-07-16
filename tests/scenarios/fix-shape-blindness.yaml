@@ -1,0 +1,35 @@
+schema_version: "0.1"
+req_id: "REQ-VER-015"
+ears_pattern: "unwanted"
+kind: "cli-fix"
+description: |
+  folio fix が 「0 changes」 を 「already complete」 (= 真の fixpoint) と宣言する前に post-assert を行い、
+  requirement container の shape 非認識 (発見 0 件の帰結としての 0 changes) を fail-closed で拒否する
+  ことを実証する (REQ-VER-015 の unwanted-behaviour 補完、 flip 元 SSoT = folio-85xr):
+    (a) pre-fix  folio validate --root <tmp> が shape-blindness で FAIL (RED = 未認識 container あり)、
+    (b) folio fix --root <tmp> が exit 1 (fail-closed、 post-assert が fixpoint 宣言を撤回して return 1)、
+    (c) fix は tree を 1 byte も変えない (no false-success)、
+    (d) post-fix validate も依然 RED (shape 非認識は fix で解消しない = registry 側の実装課題)。
+
+  ★なぜ committed 被覆が要るか: 「0 changes」 には (i) 真の fixpoint と (ii) shape 非認識 skip の
+  2 原因があり、 差分カウントだけでは弁別できない。 (ii) を 「already complete」 という *成功文言* +
+  exit 0 で返す実装は、 生成 spec の全要件を失ったまま 「もう直すものはない」 と報告する
+  (silent-loss の最悪形)。 本 scenario が無いと、 この post-assert が回帰で外れても誰も気付かない
+  (folio fix は skills/folio-architect SKILL.md Step 3 と skills/folio-compress SKILL.md の
+  consumer 正規復旧手順に組み込まれた CLI ゆえ、 未被覆の hard-fail path は実害に直結する)。
+
+  ★fix の exit 語彙は本 scenario で 3 値になる: 0 = materialize 成功/真の fixpoint
+  (fix-bidirectional.yaml) / 1 = fixpoint を宣言できない (本 scenario) / 2 = tool error
+  (fix-singleline.yaml の 行ベース挿入 anchor 欠落 fail-closed)。 3 値とも committed scenario で pin する。
+  ※ REQ-VER-015 の normative 文言は現時点で 「exit 0」 のみを固定しており、 exit 1 語彙の
+    spec 側 REQ 起票は 本 cell の scope 外 (prose 不触) ゆえ rider へ carve 済 (commit message 参照)。
+
+  fixture = fixtures/shape-blindness/root (cli-golden の shape-blindness.yaml と共有、 cli-fix handler が
+  fresh temp copy を作るため実 fixture は不変)。 対の正検査 = fix-bidirectional.yaml (exit 0 = 真の fixpoint)。
+
+# --- cli-fix scenario (fail-closed mode、 REQ-VER-015 unwanted 補完) ---
+command: ["fix"]                                        # target root は harness が fresh temp copy で供給
+fixture: "fixtures/shape-blindness/root"                # copy 元 fixture tree (SCRIPT_DIR 相対、 未知 shape row を seed)
+
+expect:
+  exit_code: 1                                          # fail-closed (fixpoint 宣言の撤回、 2 = tool error と別軸)

@@ -1,0 +1,31 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/shape-violation/root
+files checked: 3 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [FAIL] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [FAIL] shape-blindness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [FAIL] readability-floor
+  [OK] how-outside
+
+violations (7):
+  spec/verification.html [dual-audience] REQ-VER-001 に machine 対応部 (data-audience="machine") が無い (孤立 human、 REQ-DA-STRUCT-1)
+  spec/verification.html [dual-audience] REQ-VER-002 に machine 対応部 (data-audience="machine") が無い (孤立 human、 REQ-DA-STRUCT-1)
+  spec/verification.html [dual-audience] requirement-id 不一致: container id "REQ-VER-005" <-> machine ears-id "REQ-VER-009" (REQ-DA-STRUCT-2)
+  spec/verification.html [readability-floor] REQ-VER-003 の essence (人間向け要旨) が無い/空 (孤立 EARS、 REQ-VER-023 / ADR-0039 §2.7。 essence を author する)
+  spec/verification.html [readability-floor] REQ-VER-004 の essence (人間向け要旨) が無い/空 (孤立 EARS、 REQ-VER-023 / ADR-0039 §2.7。 essence を author する)
+  spec/verification.html [shape-blindness] REQ-VER-003 は requirement container として発見できるが 非空 essence を抽出できない (essence selector の shape 非認識 / essence 要素が空 = tooltip/objectGraph が silent に空へ落ちる、 §2.6 registry に essence class を追加する)
+  spec/verification.html [shape-blindness] REQ-VER-004 は requirement container として発見できるが 非空 essence を抽出できない (essence selector の shape 非認識 / essence 要素が空 = tooltip/objectGraph が silent に空へ落ちる、 §2.6 registry に essence class を追加する)

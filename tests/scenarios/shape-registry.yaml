@@ -1,0 +1,39 @@
+schema_version: "0.1"
+req_id: "REQ-VER-010"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  requirement container の 3 shape (bin/folio §2.6 registry) を consumer 層が *shape ごとに独立して*
+  認識することを objectGraph node の essence 集合で固定する (per-shape mutation-kill)。
+  essence class の grep 数ではなく node の essence 値そのものを golden で pin するため、
+  「container は拾えたが essence が空」「essence は拾えたが node が消えた」 のどちらも RED になる。
+
+  fixture (tests/fixtures/shape-registry/root) が同居させる 4 container:
+    shape (a) canonical compact row — spec/verification.html req-ver-001
+        <details class="spec-row" id=...> + <span class="essence">。 essence 内に nested
+        <span class="term"> を置き、 span depth 追跡 (最初の </span> で切らない) も同時に固定する。
+    shape (a) verbose card — spec/rules.html req-ci-002
+        <section class="req" id=...> + <p class="req__essence">。 p 分岐 + section container handler。
+    shape (b) 生成 id 有 — spec/verification.html REQ-VER-002
+        <div data-component="ears-requirement-row" id=... data-req-id=...>。 assemble-verification.sh の実 emit 形。
+    shape (c) 生成 id 無 — spec/rules.html REQ-CI-001
+        <div data-component="ears-requirement-row" data-req-id=...> (id 属性 *無*)。 assemble-spec.sh の実 emit 形。
+
+  ★shape (c) が本 scenario の keystone: 発見 key を id 属性に置いた実装では、 id を持つ (a)(b) が
+  緑のまま (c) だけが node ごと消える (inventory は exit 0・各 gate は [OK] のまま = silent-loss)。
+  id 有/無の 2 変種を同時に pin するため、 片側だけを直す実装では kill できない。
+  ★shape (b)(c) の row は内側に <div class="rq-head">…</div> を持つ。 block 終端を単一行の
+  index(</div>) で判定する実装は rq-head で早期終端し essence を落とすため、 本 golden が RED 化する
+  (div-DEPTH 追跡の回帰ガード)。
+
+  対の負検査 = shape-blindness.yaml (未知 shape の fail-loud)。 flip 元 SSoT = folio-85xr。
+
+command: ["inventory", "--root", "tests/fixtures/shape-registry/root"]
+output_file: "tests/fixtures/shape-registry/inventory.json"
+golden: "baselines/reference/shape-registry.golden.json"
+
+normalize:
+  exclude_paths: [".generatedAt"]
+
+expect:
+  exit_code: 0

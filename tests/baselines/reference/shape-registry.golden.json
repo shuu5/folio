@@ -1,0 +1,88 @@
+{
+  "$schema": "https://folio.dev/inventory/v1.json",
+  "generatedAt": "2026-07-16T18:28:43Z",
+  "folioVersion": "1.2.0",
+  "specs": [
+    {
+      "@id": "spec/rules.html",
+      "title": "shape-registry rules fixture",
+      "summary": "",
+      "doc-type": "",
+      "status": "",
+      "version": "",
+      "stakeholders": [],
+      "relations": {}
+    },
+    {
+      "@id": "spec/verification.html",
+      "title": "shape-registry verification fixture",
+      "summary": "",
+      "doc-type": "",
+      "status": "",
+      "version": "",
+      "stakeholders": [],
+      "relations": {}
+    },
+    {
+      "@id": "decisions/ADR-0099-fixture.html",
+      "title": "ADR-0099 fixture",
+      "summary": "shape-registry fixture summary",
+      "doc-type": "adr",
+      "status": "",
+      "version": "",
+      "stakeholders": [],
+      "relations": {}
+    },
+    {
+      "@id": "research/note.html",
+      "title": "shape-registry research placeholder",
+      "summary": "",
+      "doc-type": "research",
+      "status": "",
+      "version": "",
+      "stakeholders": [],
+      "relations": {}
+    }
+  ],
+  "objectGraph": {
+    "nodes": [
+      {
+        "id": "ADR-0099",
+        "class": "decision",
+        "ssot": "decisions/ADR-0099-fixture.html",
+        "essence": "shape-registry fixture summary"
+      },
+      {
+        "id": "REQ-CI-001",
+        "class": "requirement",
+        "ssot": "spec/rules.html",
+        "essence": "shape (c) 生成 id 無 は data-req-id だけが発見 key であり、 id 属性に依存する発見からは不可視になる。"
+      },
+      {
+        "id": "REQ-CI-002",
+        "class": "requirement",
+        "ssot": "spec/rules.html#req-ci-002",
+        "essence": "shape (a) verbose card は section.req + p.req__essence 形で id 属性から発見する。"
+      },
+      {
+        "id": "REQ-VER-001",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-001",
+        "essence": "shape (a) canonical は compact row 形で id 属性から発見する。"
+      },
+      {
+        "id": "REQ-VER-002",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-002",
+        "essence": "shape (b) 生成 id 有 は data-component + data-req-id から発見し、 内包する rq-head の div で早期終端しない。"
+      },
+      {
+        "id": "REQ-VER-009",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-009",
+        "essence": "★essence 要素に属性が 1 つ付いた row (意味不変の generator drift)。 essence class の直後に閉じ山括弧が来ることを要求する literal selector で書いた実装はここで match を失い、 属性を許容する readability-floor が OK を出す裏で objectGraph の essence だけが silent に空へ落ちる (parser-differential)。 本 golden は essence 値を pin するため、 2 site が単一 selector を共有していないと RED になる。 ★本文に selector の literal 文字列を書かないこと — 書くと essence text 自身が literal 実装の match 対象になり、 mutant が prose から値を拾って生存する (fixture が自分の mutant を無効化する)。"
+      }
+    ],
+    "edges": []
+  }
+}

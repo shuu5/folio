@@ -1,0 +1,29 @@
+folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
+root: tests/fixtures/shape-blindness/root
+files checked: 4 · relations checked: 0
+  [OK] internal link-integrity
+  [OK] jsonld structural
+  [OK] broken-reverse
+  [SKIP] vocabulary (forbidden synonym 無し = opt-in)
+  [OK] delta-marker
+  [OK] dual-audience-structural
+  [OK] xref-resolve
+  [OK] xref-uniqueness
+  [FAIL] shape-blindness
+  [OK] xref-tooltip-consistency
+  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)
+  [SKIP] glossary (vocabulary.yaml definition 無し = opt-in)
+  [SKIP] nav-regen-drift (folio-generated index.html / chrome 注入 page 無し = keystone)
+  [SKIP] nav-dead-link (生成 index 無し)
+  [OK] cluster-reachability
+  [OK] ears-coverage
+  [OK] render-safety
+  [OK] readability-floor
+  [OK] how-outside
+
+violations (5):
+  spec/rules.html [shape-blindness] REQ-CI-001 は data-req-id で宣言されているが in-scan の requirement container として発見できない (container shape 非認識 = node/essence が silent に 0 へ落ちる、 §2.6 registry に shape を追加する)
+  spec/rules.html [shape-blindness] requirement row を 1 件宣言しているが 非空 essence が 1 本も抽出できない (essence selector の shape 非認識 = tooltip/objectGraph が silent に空へ落ちる、 §2.6 registry に essence class を追加する)
+  spec/verification.html [shape-blindness] REQ-VER-003 は data-req-id で宣言されているが in-scan の requirement container として発見できない (container shape 非認識 = node/essence が silent に 0 へ落ちる、 §2.6 registry に shape を追加する)
+  spec/verification.html [shape-blindness] REQ-VER-004 は data-req-id で宣言されているが in-scan の requirement container として発見できない (container shape 非認識 = node/essence が silent に 0 へ落ちる、 §2.6 registry に shape を追加する)
+  spec/verification.html [shape-blindness] REQ-VER-005 は data-req-id で宣言されているが in-scan の requirement container として発見できない (container shape 非認識 = node/essence が silent に 0 へ落ちる、 §2.6 registry に shape を追加する)

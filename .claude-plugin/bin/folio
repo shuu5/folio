@@ -663,6 +663,19 @@ folio_cmd_fix() {
 
   # --- report (reverse + xref wrap + xref-tip resync + glossary mark/tooltip のいずれも 0 なら already-complete) ---
   if [[ "$materialized" -eq 0 && "$xref_wrapped" -eq 0 && "$xtip_resync" -eq 0 && "$gloss_pop" -eq 0 && "$gloss_mark" -eq 0 ]]; then
+    # ★post-assert (fail-closed): 「0 changes」 には 2 つの原因がある —
+    #   (i) 真の fixpoint (書くべきものが既に全部ある) と (ii) shape 非認識 skip (container を
+    #   1 つも認識できず 「書くべきもの」 を 0 件しか導出しなかった / container は拾えたが essence が
+    #   取れず tooltip 空で wrap を諦めた ＝ folio_xref_wrap_doc の `[[ -z "$tip" ]] && continue`)。
+    #   差分カウントだけでは両者が区別できず、 (ii) が 「already complete」 という *成功文言* で
+    #   silent に land する。 宣言 (data-req-id) と 発見/essence 抽出 (§2.6 registry) を
+    #   突き合わせてから fixpoint を宣言する。
+    local sb_out; sb_out=$(folio_check_shape_blindness "$root_abs" | sed -n 's/^V\t//p')
+    if [[ -n "$sb_out" ]]; then
+      printf 'fix: ★fixpoint を宣言できない — requirement container の shape 非認識 / essence 抽出不能を検出 (0 changes は真の fixpoint でなく 発見・抽出 0 件の帰結):\n' >&2
+      printf '%s\n' "$sb_out" | sed 's/^/  /' >&2
+      return 1
+    fi
     printf 'already complete: graph is bidirectional + opt-in xref/glossary materialized + xref/glossary tooltips synced (0 changes)\n'
   else
     [[ "$materialized" -gt 0 ]] && printf 'materialized %d reverse @id(s) across %d file(s)\n' "$materialized" "$touched"
@@ -763,6 +776,113 @@ folio_prose_only() {
     /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{chrome=0}
     /<\/(pre|script|style|aside)>/{if(skip>0)skip--}
   '
+}
+
+# ============================================================================
+# requirement container shape registry — consumer 層が認識する dual-audience
+# requirement container は 3 shape ある (essence 抽出 / block-walk / node 発見の全 site が
+# この registry に従う。 1 entity = 1 機構、 §6 横断機構):
+#   (a) canonical  <details class="spec-row" id="req-x-001" data-audience="human">
+#                    ... <span class="essence">
+#       verbose card <section class="req" id="..." data-audience="human"> ... <p class="req__essence">
+#   (b) 生成 id 有  <div data-component="ears-requirement-row" id="req-ver-001"
+#                    data-req-id="REQ-VER-001" ... data-audience="human"> ... <p class="rq-essence">
+#       (assemble-verification.sh emit)
+#   (c) 生成 id 無  <div data-component="ears-requirement-row" data-req-id="REQ-CI-001"
+#                    ... data-audience="human"> ... <p class="rq-essence">
+#       (assemble-spec.sh emit = rules/relations)
+# ★(b)(c) の発見 key は data-component + data-req-id であり id 属性ではない。 id を発見 key に
+#   すると (c) が node ごと消失し、 objectGraph/essence/tooltip が silent に空へ落ちる
+#   (id 付き (b) だけの緑は (c) の破壊を素通しする)。 id は ssot#anchor 用途に限定する。
+# ★<div> anchor は SRS pack の同名別部品 (<tr data-component="ears-requirement-row"> = dense-table 行、
+#   ADR-0042 / srs-component-taxonomy §5) との弁別に load-bearing (名前衝突・削るな)。
+#   この弁別は *発見側* (folio_scan_req_container_ids) だけでなく gate (s) の *宣言側* にも要る:
+#   宣言側が同名別部品まで数えると 宣言>0/発見=0 が恒久成立して false-FAIL になるため、
+#   同名別部品を実行される述語へ昇格させた list = FOLIO_NONCONTAINER_PARTS を宣言側が引く。
+# ============================================================================
+
+# registry の essence 要素 selector (3 shape 共通の *単一* SSoT、 awk へ -v で注入する)。
+#   essence      … shape (a) canonical compact row の <span class="essence">
+#   req__essence … shape (a) verbose card の <p class="req__essence">
+#   rq-essence   … shape (b)(c) 生成 row の <p class="rq-essence">
+# mode (span 追跡 / p 追跡) は class 名でなく *tag 名* (^<p) で決める — class と tag の対応は
+# 生成側の drift で入れ替わりうるため、 実際に開いた tag を閉じるのが唯一 self-consistent。
+#
+# ★なぜ定数 1 本に集約するか (load-bearing・parser-differential 封鎖): 本 selector を消費する
+#   site は 2 つある — (1) folio_essence_in_file (objectGraph node / xref tooltip の値抽出)、
+#   (2) folio_check_readability_floor_file の esstext (essence 非空の gate)。 両者が同じ概念を
+#   *別の厳しさ* で実装すると、 緩い方が [OK] を出して厳しい方の silent-loss を隠す:
+#   実際に本 cell の初版は (1) を literal `class="rq-essence">` (属性が 1 つでも続くと不一致)、
+#   (2) を `[^>]*>` 許容で実装しており、 <p class="rq-essence" data-variant="compact"> という
+#   意味不変の generator drift だけで 「readability-floor は [OK]・objectGraph の essence は空」
+#   という食い違いが成立していた (2 実装が残る限り差分は再発するため定数で束ねる)。
+FOLIO_ESSENCE_SEL='<(span|p)[^>]*class="(essence|req__essence|rq-essence)"[^>]*>'
+
+# prose ($1、 folio_prose_only 済) から 生成 div row (shape (b)(c)) の requirement id を
+# 小文字 navigable form で stdout に返す (id 属性の有無に非依存)。 shape (a) は id 属性を持つため
+# 各 site の既存 id-grep が担い、 本 helper と union する。
+folio_scan_divrow_req_ids() {
+  printf '%s\n' "$1" | grep -P '<div[^>]*data-component="ears-requirement-row"' 2>/dev/null \
+    | grep -oP 'data-req-id="\K(REQ(-[A-Z]+)+-[0-9]+)(?=")' 2>/dev/null \
+    | tr '[:upper:]' '[:lower:]'
+}
+
+# prose ($1、 folio_prose_only 済) から defined-object の定義 id (principle p-N + requirement) を
+# 3 shape union で stdout (小文字 navigable form)。 ★重複を潰さず 「1 定義 site = 1 行」 を保つ:
+# uniqueness gate (§2.6) は行数で重複を数えるため、 sort -u すると同一 file 内の重複 id を
+# 検出できなくなる (fail-open)。 逆に shape (b) は id と data-req-id を両持ちするため、 素朴な
+# union は 1 row を 2 定義 site に化けさせ偽陽性を出す — div row 行を id-grep から除外して
+# 「div row は data-req-id で 1 回だけ数える」 ことで両者を同時に満たす。
+# node 発見 site (objectgraph / uniqueness / self-def) の共通源 (unique が要る site は sort -u する)。
+folio_scan_req_def_ids_raw() {
+  printf '%s\n' "$1" | grep -vP '<div[^>]*data-component="ears-requirement-row"' 2>/dev/null \
+    | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null
+  folio_scan_divrow_req_ids "$1"
+}
+
+# prose ($1、 folio_prose_only 済) から §2.6 registry の requirement *container* として
+# 実際に認識できた row の id を stdout (小文字 navigable form、 shape (a) の details/section +
+# shape (b)(c) の 生成 div row)。 shape-blindness gate (s) の 「発見」 側 専用。
+#
+# ★folio_scan_req_def_ids_raw と分ける理由 (load-bearing): raw の id-grep は
+#   '\sid="req-..."' の生 match であり *要素名を一切問わない*。 uniqueness / objectgraph /
+#   self-def は 「任意 id の出現」 を正当に必要とするため raw は不触で正しいが、 gate (s) の
+#   「発見」 に raw を流用すると 発見 = 「container を認識できたか」 でなく 「id 属性が在るか」
+#   を測ることになる。 すると <article id="req-ver-003" data-req-id="REQ-VER-003"> のような
+#   *id 付きの未知 shape* は found に入って per-node arm が沈黙し、 node の essence は "" のまま
+#   silent に land する (= 本 gate が塞ぐはずの silent-loss が緑で通る fail-open)。
+#   generator drift は現実に id 付きで到来する (shape (b) 自身が id + data-req-id の両持ち。
+#   div→article/tr の tag 変更、 属性の複数行折返しで data-component と data-req-id が別行へ
+#   割れる等) ため、 発見側は container 認識の実結果に anchor する。
+folio_scan_req_container_ids() {
+  printf '%s\n' "$1" | grep -oP '<(details|section)[^>]*\sid="\K(req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null
+  folio_scan_divrow_req_ids "$1"
+}
+
+# registry の *同名別部品* list (container 候補でないと registry が明示的に決めている shape)。
+#   <tr data-component="ears-requirement-row"> … SRS pack の dense-table 行 (ADR-0042 /
+#   srs-component-taxonomy §5)。 生成 div row と data-component 名が衝突するが、 requirement
+#   container ではない (1 行 = 表の 1 セル列であり essence/normative の block を持たない)。
+#
+# ★なぜ宣言側がこの list を要るか (load-bearing・恒久 false-FAIL 封鎖): gate (s) の宣言側は
+#   「shape 非依存に数える」 のが原則 (発見側と同じ key で数えると未知 shape が 宣言 0 = 発見 0 で
+#   恒真 PASS に化ける) だが、 *素の* data-req-id 出現を数えると 上の同名別部品まで宣言に入る。
+#   すると 生成 SRS で 宣言>0 / 発見=0 が構造的に恒久成立し、 consumer には解消手段が無い:
+#   validate exit 0→1・fix は 「★fixpoint を宣言できない」 で毎回 exit 1 (folio-architect SKILL
+#   Step 3 の boot path が stuck-RED) になり、 しかも violation の処方 (「registry に shape を
+#   追加する」) に従うと dense-table 行が requirement container 化して registry が拒否している
+#   名前衝突をむしろ実現してしまう = 「従っても正しくならない RED」。
+# ★ゆえに 「registry が container 候補でないと *明示的に決めた* 部品だけ」 を宣言母集合から
+#   除外する (未知 shape は従来どおり数える = fail-loud を温存)。 registry の散文が述べていた
+#   弁別を、 実行される述語へ昇格させたもの — 除外 list を広げる = gate を緩めるため、
+#   追加には 「その部品が requirement container でない」 という registry 上の根拠を要する。
+FOLIO_NONCONTAINER_PARTS='<tr[^>]*data-component="ears-requirement-row"'
+
+# prose ($1、 folio_prose_only 済) から requirement row の *宣言* (data-req-id) を shape 非依存に
+# stdout (大文字 canonical form)。 除外は上記 同名別部品 list のみ (gate (s) の宣言側 専用)。
+folio_scan_declared_req_ids() {
+  printf '%s\n' "$1" | grep -vP "$FOLIO_NONCONTAINER_PARTS" 2>/dev/null \
+    | grep -oP 'data-req-id="\K(REQ(-[A-Z]+)+-[0-9]+)(?=")' 2>/dev/null
 }
 
 # ============================================================================
@@ -899,11 +1019,22 @@ folio_check_dual_audience() {
   done
   # -1/-2/-4/-5: 実 dual-audience card (<section class="req"...> ... </section>) を block 走査。
   printf '%s\n' "$body" | awk -v rel="$rel" '
+    # 行 s の <div> 開閉収支 (+1/-1)。 生成 row (shape (b)(c)) は内側に <div class="rq-head">…</div>
+    # を持つため、 単一行 index($0,"</div>") 判定では rq-head の </div> で早期終端し
+    # rq-essence/rq-norm を block から落とす (false 孤立 human / false 空 essence)。 depth で閉じる。
+    function divdelta(s,   t, o, c) {
+      t = s; o = gsub(/<div[ \t>]/, "", t)
+      t = s; c = gsub(/<\/div[ \t>]/, "", t)
+      return o - c
+    }
     function chk(   secid, badgeid, earsid, hp, mp, nhp, seg, mtag, idu, bu, eu) {
       if (!inb) return
       inb = 0
       secid = ""
-      if (match(blk, /id="[^"]*"/)) { secid = substr(blk, RSTART+4, RLENGTH-5) }
+      # requirement-id の SSoT は 生成 row では data-req-id (shape (b)(c))、 canonical では id 属性
+      # (shape (a) は data-req-id を持たないゆえ else 枝 = 従前と byte 同一挙動)。
+      if (match(blk, /data-req-id="[^"]*"/)) { secid = substr(blk, RSTART+13, RLENGTH-14) }
+      else if (match(blk, /id="[^"]*"/)) { secid = substr(blk, RSTART+4, RLENGTH-5) }
       badgeid = ""
       if (match(blk, /badge--req"[^>]*>[^<]*/)) { seg = substr(blk, RSTART, RLENGTH); sub(/^badge--req"[^>]*>/, "", seg); badgeid = seg }
       earsid = ""
@@ -947,8 +1078,27 @@ folio_check_dual_audience() {
     /<(section|details)[^>]*data-audience="human"/ {
       chk(); inb = 1; blk = ""
       closetag = ($0 ~ /<details[^>]*data-audience="human"/) ? "</details>" : "</section>"
+      divdep = 0
     }
-    inb { blk = blk $0 "\n"; if (index($0, closetag)) chk() }
+    # 生成 row (shape (b)(c)) を第 3 枝で追加 — 既存 details/section 枝は byte 温存 (汎用 rewrite 禁止)。
+    # 発見 key = data-component + data-req-id (id 非依存 = id-less shape (c) も同一被覆)。
+    # ★属性は *無順序集合* として問う (3 独立 regex の連言): registry (§2.6) の発見 key は
+    #   「data-component と data-req-id を持つ div」 であって属性の並び順ではない。
+    #   /...data-component="…"[^>]*data-req-id="/ のような順序付き連言にすると、 generator が
+    #   属性順を入れ替える (意味不変の drift) だけで block-walk が silent に walk を止め、
+    #   gate g / readability-floor が [OK] のまま素通る (fail-open)。 発見 proxy 側
+    #   (folio_scan_divrow_req_ids) は 2 段 grep = 順序非依存ゆえ、 順序付きにすると
+    #   gate が守る predicate と 消費側の predicate が乖離し 新 gate が vacuous 化する。
+    /<div[^>]*data-component="ears-requirement-row"/ && /data-req-id="/ && /data-audience="human"/ {
+      chk(); inb = 1; blk = ""
+      closetag = "</div>"
+      divdep = 0
+    }
+    inb {
+      blk = blk $0 "\n"
+      if (closetag == "</div>") { divdep += divdelta($0); if (divdep <= 0) chk() }
+      else if (index($0, closetag)) chk()
+    }
     END { chk() }
   '
 }
@@ -986,11 +1136,19 @@ folio_check_readability_floor_file() {
 
   # (2)(3) essence 非空 block + 句点数 warn — dual-audience container を block 走査 (gate g と同 idiom)。
   # LC_ALL=C = byte-based 固定 (「。」 literal は byte 列 match、 locale 非依存・決定的)。
-  printf '%s\n' "$body" | LC_ALL=C awk -v rel="$rel" -v essblk="$living_ess" -v isadr="$([[ "$dtype" == "adr" ]] && echo 1 || echo 0)" '
+  printf '%s\n' "$body" | LC_ALL=C awk -v rel="$rel" -v essblk="$living_ess" -v essre="$FOLIO_ESSENCE_SEL" -v isadr="$([[ "$dtype" == "adr" ]] && echo 1 || echo 0)" '
+    function divdelta(s,   t, o, c) {
+      t = s; o = gsub(/<div[ \t>]/, "", t)
+      t = s; c = gsub(/<\/div[ \t>]/, "", t)
+      return o - c
+    }
     function esstext(blk,   rest, opentag, out, depth, pos) {
       # essence 要素の内側 text を抽出 (span = depth 追跡で nested <span class="term"> 等を越えて閉じる /
       # p = nested <p> 無しゆえ最初の </p>)。 要素不在は sentinel "\001MISSING" を返す。
-      if (!match(blk, /<(span|p)[^>]*class="(req__)?essence"[^>]*>/)) return "\001MISSING"
+      # selector は §2.6 registry の単一 SSoT (essre = FOLIO_ESSENCE_SEL) を注入 —
+      # folio_essence_in_file (値抽出) と本 gate (非空検査) が同一 predicate を見ることが前提
+      # (2 実装が別の厳しさを持つと 緩い方の [OK] が 厳しい方の silent-loss を隠す)。
+      if (!match(blk, essre)) return "\001MISSING"
       opentag = substr(blk, RSTART, RLENGTH)
       rest = substr(blk, RSTART + RLENGTH)
       if (opentag ~ /^<p/) {
@@ -1012,7 +1170,10 @@ folio_check_readability_floor_file() {
       if (!inb) return
       inb = 0
       secid = ""
-      if (match(blk, /id="[^"]*"/)) secid = substr(blk, RSTART+4, RLENGTH-5)
+      # requirement-id の SSoT: 生成 row = data-req-id / canonical = id 属性 (shape (a) は
+      # data-req-id を持たないゆえ else 枝 = 従前と byte 同一挙動)。
+      if (match(blk, /data-req-id="[^"]*"/)) secid = substr(blk, RSTART+13, RLENGTH-14)
+      else if (match(blk, /id="[^"]*"/)) secid = substr(blk, RSTART+4, RLENGTH-5)
       if (blk !~ /data-audience="machine"/) return   # 孤立 human は gate g (REQ-DA-STRUCT-1) の責務
       txt = esstext(blk)
       plain = txt; gsub(/<[^>]*>/, "", plain); gsub(/[ \t\r\n]/, "", plain)
@@ -1030,8 +1191,21 @@ folio_check_readability_floor_file() {
     /<(section|details)[^>]*data-audience="human"/ {
       chk(); inb = 1; blk = ""
       closetag = ($0 ~ /<details[^>]*data-audience="human"/) ? "</details>" : "</section>"
+      divdep = 0
     }
-    inb { blk = blk $0 "\n"; if (index($0, closetag)) chk() }
+    # 生成 row (shape (b)(c)) を第 3 枝で追加 (gate g と同 idiom・div-DEPTH で閉じる)。
+    # ★属性は無順序集合として問う (3 独立 regex の連言) — 順序付き連言は属性順 drift だけで
+    #   walk が止まり essence 空を [OK] で素通す (gate g 側と同一の理由、 §2.6 registry と同型)。
+    /<div[^>]*data-component="ears-requirement-row"/ && /data-req-id="/ && /data-audience="human"/ {
+      chk(); inb = 1; blk = ""
+      closetag = "</div>"
+      divdep = 0
+    }
+    inb {
+      blk = blk $0 "\n"
+      if (closetag == "</div>") { divdep += divdelta($0); if (divdep <= 0) chk() }
+      else if (index($0, closetag)) chk()
+    }
     END { chk() }
   '
 
@@ -1150,11 +1324,24 @@ folio_xref_class() {
 }
 
 # token ($1) の定義 site anchor を stdout に返す (principle/requirement = 小文字 id、 decision = 空 = file 自体が target)。
+# ★これは 「token の anchor 名」 であって 「その anchor が実在する」 保証ではない (実在は
+#   folio_anchor_exists で別途問う — §2.6 shape (c) 生成 row は id 属性を持たないため、
+#   名前だけで #anchor を組むと必ず dangling する)。
 folio_xref_anchor() {
   case "$(folio_xref_class "$1")" in
     principle|requirement) printf '%s' "$1" | tr '[:upper:]' '[:lower:]' ;;
     *) printf '' ;;
   esac
+}
+
+# target file ($1 = 絶対 path) に anchor id ($2) が実在するか (0 = 実在)。
+# ★判定 idiom は gate (h) xref-resolve の anchor 検査 (grep -qF 'id="x"' / "id='x'") と *同一*:
+#   link を書く側 (fix の wrap / objectGraph の ssot) と 検査する側 (gate h) が同じ predicate を
+#   見ることが detect↔remediate parity の前提であり、 厳しさがずれると 「書いた側は正しいつもり・
+#   検査側は broken」 という自作自演の stuck-RED が生まれる (fix は書いた link を除去できない)。
+folio_anchor_exists() {
+  [[ -f "$1" ]] || return 1
+  grep -qF "id=\"$2\"" "$1" 2>/dev/null || grep -qF "id='$2'" "$1" 2>/dev/null
 }
 
 # token ($1) の SSoT doc を root ($2) 相対 path で stdout に返す (§2.2 registry、 不該当は空)。
@@ -1204,19 +1391,64 @@ folio_xref_essence() {
         }' "$file" | sed -E 's/^[A-Z]+-[0-9]+:[[:space:]]*//' | folio_xref_plain
       ;;
     requirement)
-      lid=$(printf '%s' "$token" | tr '[:upper:]' '[:lower:]')
+      folio_essence_in_file "$file" "$token"
+      ;;
+    decision)
+      folio_extract_summary "$file" | folio_xref_plain
+      ;;
+  esac
+}
+
+# file ($1) 内に定義された requirement token ($2) の essence を plain-text で stdout に返す
+# (§2.6 の 3 shape 対応。 定義 site 不在 / essence 不在は空文字)。
+#   shape (a) canonical … id 属性 + <details|section> container、 <span class="essence"> /
+#                         <p class="req__essence">
+#   shape (b)(c) 生成   … data-component + data-req-id (id 属性の有無に非依存)、 <p class="rq-essence">
+# ★registry (folio_xref_ssot) を経由せず *渡された file の中だけ* を見る: shape-blindness gate は
+#   「scan 中の file 自身から essence を取れるか」 を検査するため registry 解決を挟めない
+#   (registry を挟むと fixture / 未登録 prefix が一律 空 essence になり 偽 FAIL を生む)。
+#   folio_xref_essence は registry で file を決めてから本 helper を呼ぶ (1 entity = 1 機構)。
+folio_essence_in_file() {
+  local file="$1" token="$2" lid
+  [[ -f "$file" ]] || return 0
+  lid=$(printf '%s' "$token" | tr '[:upper:]' '[:lower:]')
       # essence (span 形) は depth 追跡で閉じる: glossary auto-mark が essence 内に <span class="term">
       # を nest しうるため、 最初の </span> 終端だと途中切断して tooltip text が変わる (stale-tooltip 誤検出
       # + 派生 view の text 破壊、 ef4 slice B dogfood で実証)。 nested tag は folio_xref_plain が strip
       # するため、 depth 抽出後の plain text は mark 前と byte 同一に保たれる。 p 形 (req__essence) は
       # nested <p> 無しゆえ最初の </p> のまま。
-      awk -v id="$lid" '
-        index($0,"id=\"" id "\"")>0 && /<(details|section)/ && !cap { cap=1; ct=($0 ~ /<details/)?"</details>":"</section>"; buf="" }
-        cap { buf=buf $0 "\n"; if(index($0,ct)>0 && !fin){ fin=1 } }
+      awk -v id="$lid" -v rid="$token" -v essre="$FOLIO_ESSENCE_SEL" '
+        function divdelta(s,   t, o, c) {
+          t = s; o = gsub(/<div[ \t>]/, "", t)
+          t = s; c = gsub(/<\/div[ \t>]/, "", t)
+          return o - c
+        }
+        index($0,"id=\"" id "\"")>0 && /<(details|section)/ && !cap { cap=1; ct=($0 ~ /<details/)?"</details>":"</section>"; buf=""; dd=0 }
+        # 生成 row (shape (b)(c)) — 発見 key は data-req-id (大文字 SSoT) + data-component であり
+        # id 属性ではない。 id 依存にすると assemble-spec.sh の id-less emit で essence が "" へ
+        # silent 転落する (本 cell の真因)。 close は div-DEPTH (rq-head の </div> で早期終端しない)。
+        !cap && index($0,"data-req-id=\"" rid "\"")>0 && /<div[^>]*data-component="ears-requirement-row"/ { cap=1; ct="</div>"; buf=""; dd=0 }
+        cap {
+          buf=buf $0 "\n"
+          if(ct=="</div>"){ dd += divdelta($0); if(dd<=0 && !fin){ fin=1 } }
+          else if(index($0,ct)>0 && !fin){ fin=1 }
+        }
         fin {
           pos=0; mode=""
-          if(match(buf,/class="essence">/)){ pos=RSTART+RLENGTH; mode="span" }
-          else if(match(buf,/class="req__essence">/)){ pos=RSTART+RLENGTH; mode="p" }
+          # selector は §2.6 registry の単一 SSoT (essre = FOLIO_ESSENCE_SEL) を注入 —
+          # readability-floor の esstext と *同一 predicate・同一 mode 規則* で解く。
+          # ★literal `class="rq-essence">` (> が直後に来ることを要求) にしてはならない: 属性が
+          #   1 つ足される (<p class="rq-essence" data-variant="compact">) だけで match を失い、
+          #   [^>]*> 許容の readability-floor が [OK] を出す裏で essence だけが silent に空へ落ちる
+          #   (parser-differential = 検証機械の内部で同一概念に 2 実装が在る状態)。
+          # ★mode は class 名でなく開いた tag 名で決める (readability の esstext と同規則) —
+          #   <span class="rq-essence"> を決め打ち "p" で解くと </p> が見つからず buf 残余全体
+          #   (machine 側 normative 文言) を essence として返す。
+          if(match(buf,essre)){
+            opentag=substr(buf,RSTART,RLENGTH)
+            pos=RSTART+RLENGTH
+            mode=(opentag ~ /^<p/)?"p":"span"
+          }
           if(pos>0){
             rest=substr(buf,pos)
             if(mode=="p"){ if(match(rest,"</p>")){ print substr(rest,1,RSTART-1) } else { print rest } }
@@ -1235,11 +1467,6 @@ folio_xref_essence() {
           }
           exit
         }' "$file" | folio_xref_plain
-      ;;
-    decision)
-      folio_extract_summary "$file" | folio_xref_plain
-      ;;
-  esac
 }
 
 # token ($1) の data-tooltip 属性値 (escaped essence) を stdout に返す。 fix (書込) と
@@ -1250,13 +1477,24 @@ folio_xref_tooltip_text() {
 
 # referencing doc ($2 = root 相対 path) から token ($1) の SSoT への relative href を stdout。
 # folio_reverse_relid (source=ssot, target_subdir=doc の subdir) を流用し ./foo / ../dir/foo へ正規化。
+#
+# ★#anchor は *定義 site に実在するときだけ* 付ける (fail-safe degrade、 §2.6 shape (c) 対応):
+#   shape (c) 生成 row (assemble-spec.sh emit) は id 属性を持たないため、 token を小文字化した
+#   だけの #anchor は必ず dangling する。 存在検査を挟まないと fix が 「自分の validate が
+#   dead と判定できる link」 を exit 0 + 成功文言で materialize し (書く前に anchor 実在を
+#   assert していない = fail-open)、 書いた後は gate (h) が block するのに 再 fix しても
+#   既 materialize 済ゆえ除去されない = fix→validate deadlock (folio fix は folio-architect
+#   SKILL Step 3 の consumer 正規復旧手順ゆえ、 boot path が stuck-RED で詰む)。
+#   deep-link できない相手には file 単位 link へ degrade する = 壊れた link を書かない。
+#   id を emit するのは生成側 (folio-0x0k) の責務であり、 id が付いた時点で本関数は自動的に
+#   #anchor 付きへ戻る (consumer 側の分岐は存在検査のみ = 生成側の変更を待たずに fail-safe)。
 folio_xref_href() {
   local token="$1" file_rel="$2" root_abs="$3" ssot relid anchor
   ssot=$(folio_xref_ssot "$token" "$root_abs")
   [[ -z "$ssot" ]] && return 1
   relid=$(folio_reverse_relid "$ssot" "${file_rel%%/*}" "$root_abs")
   anchor=$(folio_xref_anchor "$token")
-  [[ -n "$anchor" ]] && relid="${relid}#${anchor}"
+  [[ -n "$anchor" ]] && folio_anchor_exists "${root_abs}/${ssot}" "$anchor" && relid="${relid}#${anchor}"
   printf '%s' "$relid"
 }
 
@@ -1274,12 +1512,46 @@ folio_xref_canon_from_href() {
   fi
 }
 
-# file ($1) の <a class="xref"> が指す token 集合 (distinct) を stdout (canon_from_href 経由)。
+# xref segment ($1 = '<a ... class="xref" ...>' + 直後の anchor text) から canonical token を
+# stdout に返す ($2 = root 絶対、 不明は空)。 xref を消費する全 site (present / gate (i) /
+# tooltip resync) の *単一* 解決規則 (1 entity = 1 機構 — 規則が site ごとに散ると
+# 「wrap は書けるが gate は読めない」 という非対称が再発する)。
+#
+# ★anchor 無し href の復元が要る理由 (load-bearing): folio_xref_href は 定義 site に id が
+#   無い相手 (§2.6 shape (c)) へ file 単位 link へ degrade する。 その href からは token を
+#   逆算できない (1 file に複数 token が同居するため本質的に曖昧) ので canon_from_href は空を
+#   返す。 復元しないと (1) gate (j) completeness が 「resolvable xref が無い」 と報告し続け、
+#   fix は wrap 済 token を present と認識できず次の言及を wrap する = 「fix しても RED が
+#   消えない」 stuck-RED、 (2) gate (i)/resync が tooltip drift を検出も再生成もできない
+#   = degrade した link だけ tooltip が silent に stale 化する。 wrap が anchor text に
+#   置いた token 自身から復元して両方を閉じる。
+# ★復元は 「href が anchor 無し」 かつ 「canon が解けない」 かつ 「href の basename が当該
+#   token の SSoT と一致」 のときに限る: 無条件に anchor text を採ると、 別 token を指す
+#   link の text (誤 label) まで token と数えて gate (j) の orphan 検出を緩める
+#   (gate を緩める方向へ一般化しない)。
+folio_xref_token_from_seg() {
+  local seg="$1" root_abs="${2:-}" h txt tk
+  h=$(printf '%s' "$seg" | grep -oP 'href="\K[^"]*' 2>/dev/null)
+  [[ -z "$h" ]] && return 0
+  tk=$(folio_xref_canon_from_href "$h")
+  if [[ -z "$tk" && "$h" != *"#"* ]]; then
+    txt="${seg#*>}"
+    if [[ -n "$(folio_xref_class "$txt")" ]] \
+       && [[ "$(basename "$h")" == "$(basename "$(folio_xref_ssot "$txt" "$root_abs")")" ]]; then
+      tk="$txt"
+    fi
+  fi
+  printf '%s' "$tk"
+}
+
+# file ($1) の <a class="xref"> が指す token 集合 (distinct) を stdout。
+# $2 = root 絶対 (任意) — anchor 無し href の token 復元 (folio_xref_token_from_seg) に使う。
 folio_xref_present_tokens() {
-  local file="$1" h tk
-  folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null \
-    | grep -oP 'href="\K[^"]*' 2>/dev/null | while IFS= read -r h; do
-        tk=$(folio_xref_canon_from_href "$h"); [[ -n "$tk" ]] && printf '%s\n' "$tk"
+  local file="$1" root_abs="${2:-}" seg tk
+  folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>[^<]*' 2>/dev/null \
+    | while IFS= read -r seg; do
+        tk=$(folio_xref_token_from_seg "$seg" "$root_abs")
+        [[ -n "$tk" ]] && printf '%s\n' "$tk"
       done | LC_ALL=C sort -u
 }
 
@@ -1287,10 +1559,12 @@ folio_xref_present_tokens() {
 # 除外: code/script/style/machine-readable aside (folio_prose_only) / 見出し h2/h3 / 既存 <a>...</a> 内 /
 # 自己定義 token (この doc が id 付き定義 site を持つ object = 自己参照)。 token 形は §2.5 の 3 class。
 folio_xref_scan_prose_tokens() {
-  local file="$1" body selfdefs
+  local file="$1" body selfdefs prose
   body=$(folio_extract_body "$file")
-  selfdefs=$(folio_prose_only "$body" | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null \
-    | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
+  prose=$(folio_prose_only "$body")
+  # 自己定義 token は 3 shape union (生成 div row は id 属性を持たない場合があるため
+  # data-req-id 由来も自己定義に数える — 数え落とすと自 doc の要件を「裸の言及」と誤検出する)。
+  selfdefs=$(folio_scan_req_def_ids_raw "$prose" | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
   # masking 2 層: (a) <a> 要素は anchor text ごと除去 (既 xref/link 済の言及)、 (b) その他の tag は
   # tag 構文 (属性込み) のみ除去し内側 text は保持。 (b) が無いと <span class="term" data-tooltip="...">
   # 等の属性内 text (definition が token を含む) を「裸の言及」と誤検出する — wrap は属性内を wrap
@@ -1331,7 +1605,7 @@ folio_xref_wrap_doc() {
   [[ "$(folio_extract_meta "$file" folio-xref-completeness)" == "enabled" ]] || { printf '0'; return 0; }
 
   local present mapfile tk href tip cand=0
-  present=$(folio_xref_present_tokens "$file")
+  present=$(folio_xref_present_tokens "$file" "$root_abs")
   mapfile=$(mktemp)
   while IFS= read -r tk; do
     [[ -z "$tk" ]] && continue
@@ -1420,19 +1694,30 @@ folio_xref_wrap_doc() {
 # blank tooltip 上書きで二重報告を作らない (detect↔remediate 対称)。 frozen decisions/ は呼出側で除外。
 folio_xref_tooltip_resync_doc() {
   local file="$1" root_abs="$2"
-  # 候補 token (canon) → 期待 tooltip の事前計算 (awk 中で外部関数を呼べないため map 化)。
-  # body 内の <a class="xref"> から href を抽出し canon→essence を一度だけ解決する。
-  local mapfile present_hrefs h tk tip
+  # 候補 token → 期待 tooltip の事前計算 (awk 中で外部関数を呼べないため map 化)。
+  # body 内の <a class="xref"> tag + anchor text を 1 単位 (seg) で取り、 token→essence を解決する。
+  #
+  # map の key (load-bearing): 既定は href。 ただし anchor 無し href (§2.6 shape (c) 定義 site への
+  # degrade link) は *1 file に複数 token が同居する* ため href だけでは token を一意化できず、
+  # href を key にすると同 file を指す別 token の tooltip を取り違えて書き込む (誤 resync)。
+  # そこで token を anchor text から復元した seg に限り key を href \001 text の複合にする
+  # (anchored href は href key のまま = 表示 label を変えた既存 xref の resync 挙動を保つ)。
+  # awk は href key を先に引き、 miss したときだけ複合 key を引く (bash 側が 1 link につき
+  # どちらか一方だけを登録するため曖昧さは生じない)。
+  local mapfile present_segs seg h txt tk tip key
   mapfile=$(mktemp)
-  present_hrefs=$(folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null \
-    | grep -oP 'href="\K[^"]*' 2>/dev/null | LC_ALL=C sort -u)
-  while IFS= read -r h; do
-    [[ -z "$h" ]] && continue
-    tk=$(folio_xref_canon_from_href "$h"); [[ -z "$tk" ]] && continue
+  present_segs=$(folio_extract_body "$file" | grep -oP '<a [^>]*class="xref"[^>]*>[^<]*' 2>/dev/null \
+    | LC_ALL=C sort -u)
+  while IFS= read -r seg; do
+    [[ -z "$seg" ]] && continue
+    h=$(printf '%s' "$seg" | grep -oP 'href="\K[^"]*' 2>/dev/null); [[ -z "$h" ]] && continue
+    tk=$(folio_xref_token_from_seg "$seg" "$root_abs"); [[ -z "$tk" ]] && continue
+    if [[ -n "$(folio_xref_canon_from_href "$h")" ]]; then key="$h"
+    else txt="${seg#*>}"; key="${h}"$'\001'"${txt}"; fi
     tip=$(folio_xref_tooltip_text "$tk" "$root_abs")
     [[ -z "$tip" ]] && continue   # 解決不能 = resolve gate の責務、 tooltip 上書きしない (validate gate と対称)
-    printf '%s\t%s\n' "$h" "$tip" >> "$mapfile"
-  done < <(printf '%s\n' "$present_hrefs")
+    printf '%s\t%s\n' "$key" "$tip" >> "$mapfile"
+  done < <(printf '%s\n' "$present_segs")
   if [[ ! -s "$mapfile" ]]; then rm -f "$mapfile"; printf '0'; return 0; fi
 
   local out cf; out=$(mktemp); cf=$(mktemp)
@@ -1454,13 +1739,19 @@ folio_xref_tooltip_resync_doc() {
           # 責務 = gate i も grep -q data-tooltip で skip するため対称、 越権で新規 tooltip を生やさない)。
           if(tag ~ /class="xref"/ && match(tag,/href="[^"]*"/)){
             href=substr(tag,RSTART+6,RLENGTH-7)
+            # key 解決: href key → miss なら (href \001 anchor-text) の複合 key (anchor 無し href =
+            # 1 file に複数 token が同居しうる degrade link。 bash 側が 1 link につきどちらか
+            # 一方だけを登録する)。 anchor text = tag 直後から次の tag 開始までの text。
+            nxt=substr(seg,gt+1); lt=index(nxt,"<"); txt=(lt>0)?substr(nxt,1,lt-1):nxt
+            key=href
+            if(!(key in tipmap)){ k2=href "\001" txt; if(k2 in tipmap) key=k2 }
             # data-tooltip 値を in-place 置換 (strip+append でなく原位置保持 = 属性順を変えず、
             # 値同一なら byte 不変で false-positive changed を作らない = idempotent 厳密化)。
             # (tipmap = SSoT essence map。 awk 組込 exp() と衝突しない名前。)
-            if((href in tipmap) && match(tag,/data-tooltip="[^"]*"/)){
+            if((key in tipmap) && match(tag,/data-tooltip="[^"]*"/)){
               cur=substr(tag,RSTART+14,RLENGTH-15)   # data-tooltip=" は 14 char、 末尾 " 除く
-              if(cur!=tipmap[href]){
-                tag=substr(tag,1,RSTART-1) "data-tooltip=\"" tipmap[href] "\"" substr(tag,RSTART+RLENGTH)
+              if(cur!=tipmap[key]){
+                tag=substr(tag,1,RSTART-1) "data-tooltip=\"" tipmap[key] "\"" substr(tag,RSTART+RLENGTH)
                 changed++
               }
             }
@@ -1777,7 +2068,9 @@ folio_xref_uniqueness_check() {
     while IFS= read -r f; do
       [[ -z "$f" ]] && continue
       rel=$(realpath -m --relative-to="$root_abs" "$f")
-      folio_prose_only "$(folio_extract_body "$f")" | grep -oP '\sid="\K(p-[0-9]+|req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null \
+      local prose_u; prose_u=$(folio_prose_only "$(folio_extract_body "$f")")
+      # 定義 site は 3 shape union (raw = 重複を潰さない: 同一 file 内の重複 id 検出を保つ)。
+      folio_scan_req_def_ids_raw "$prose_u" \
         | while IFS= read -r cid; do [[ -n "$cid" ]] && printf '%s\t%s\n' "$cid" "$rel"; done
     done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
   done > "$tmp"
@@ -1791,6 +2084,87 @@ folio_xref_uniqueness_check() {
     fi
   done < <(cut -f1 "$tmp" | LC_ALL=C sort -u)
   rm -f "$tmp"
+}
+
+# shape-blindness fail-loud (gate (s)、 §2.6 registry の対称検査)。 文書が data-req-id で
+# requirement row を *宣言* しているのに、 consumer の in-scan 発見がその row を拾えない
+# (= container shape 非認識) 状態を per-FILE / per-node に検出して stdout へ violation 行を出す。
+#
+# ★なぜ要るか (本 gate が塞ぐ fail-open): shape 非認識は「壊れる」のでなく「静かに 0 になる」。
+#   node が消えるか essence が "" へ落ちるだけで inventory は exit 0、 各 gate は container を
+#   1 つも走査しないまま [OK] を返す (vacuous-PASS)。 exit code も gate 出力も無傷ゆえ、
+#   exit code を DONE oracle にすると生成 spec の全要件を失ったまま緑で land しうる。
+#   宣言 (data-req-id) と 発見 (registry の 3 shape) の差分を突き合わせて初めて機械検出できる。
+# ★宣言側は shape 非依存に数える (<div> へ anchor しない) こと が load-bearing: 発見側と同じ
+#   key で数えると、 未知 shape が来たとき 宣言 0 = 発見 0 で恒真 PASS に化ける (自己満足検査)。
+# ★per-FILE (per-dir でない): 同 dir に認識可能な spec が同居しても当該 file の盲を隠さない。
+#
+# 出力 channel (caller が振り分ける、 readability-floor と同 idiom):
+#   "S"            … 適用対象あり (data-req-id を宣言する doc が 1 つ以上)
+#   "V\trel\t…"    … violation (block = exit code 影響)
+# ★適用対象が 0 の corpus では 1 行も出さない = validate 報告に本 gate が現れない。 これは
+#   「宣言する doc が無い corpus では本 gate に判定すべきものが無い」 という意味論の直写であり、
+#   同時に 既存 corpus の validate stdout を byte 不変に保つ (report への無条件 1 行追加は
+#   全 validate golden を dirty にし、 「gate を足したら既存の非回帰が測れない」 状態を作る)。
+folio_check_shape_blindness() {
+  local root_abs="$1" d f rel body prose declared found miss tk ess
+  for d in spec research; do
+    local dir_abs="${root_abs}/${d}"
+    [[ -d "$dir_abs" ]] || continue
+    while IFS= read -r f; do
+      [[ -z "$f" ]] && continue
+      rel=$(realpath -m --relative-to="$root_abs" "$f")
+      body=$(folio_extract_body "$f")
+      prose=$(folio_prose_only "$body")
+      # 宣言側 = shape 非依存 (要素名・属性順に依存しない data-req-id の生 出現)。 ただし registry が
+      # container 候補でないと明示的に決めた 同名別部品 (FOLIO_NONCONTAINER_PARTS = SRS dense-table 行)
+      # だけは母集合から除く — 除かないと 生成 SRS で 宣言>0/発見=0 が恒久成立し、 処方に従っても
+      # 解消できない false-FAIL (validate/fix stuck-RED) になる (folio_scan_declared_req_ids の comment)。
+      declared=$(folio_scan_declared_req_ids "$prose" | LC_ALL=C sort -u)
+      [[ -z "$declared" ]] && continue   # 宣言なし = 本 gate の対象外 (canonical shape (a) は id 属性で発見)
+      printf 'S\n'
+      # 発見側 = registry の 3 shape *container 認識* の実結果 (folio_scan_req_container_ids)。
+      # ★裸の id 属性 grep (folio_scan_req_def_ids_raw) を発見の証拠に使ってはならない: それは
+      #   「container を認識できたか」 でなく 「id 属性が在るか」 を測るため、 id 付きの未知 shape
+      #   (<article id="req-x-001" data-req-id="REQ-X-001"> 等) が found に入り per-node arm が
+      #   沈黙する (essence "" が silent に land = 本 gate が塞ぐはずの fail-open そのもの)。
+      found=$(folio_scan_req_container_ids "$prose" | tr '[:lower:]' '[:upper:]' | LC_ALL=C sort -u)
+      # per-node: 宣言されたのに発見されない row (未知 shape / 発見 key の取り違え)。
+      miss=$(LC_ALL=C comm -23 <(printf '%s\n' "$declared") <(printf '%s\n' "$found"))
+      while IFS= read -r tk; do
+        [[ -z "$tk" ]] && continue
+        printf 'V\t%s\t[shape-blindness] %s は data-req-id で宣言されているが in-scan の requirement container として発見できない (container shape 非認識 = node/essence が silent に 0 へ落ちる、 §2.6 registry に shape を追加する)\n' "$rel" "$tk"
+      done < <(printf '%s\n' "$miss")
+      # per-node essence: 発見できた row *1 本ごと* に 非空 essence を assert する。
+      # ★per-FILE の 0-count (「非空 essence が 1 本も無ければ FAIL」) に短絡してはならない:
+      #   判定が file 単位の 0/非0 になるため、 健全な row が 1 本同居するだけで同 file の
+      #   残り全ての essence 盲が隠れる (per-dir 恒真 PASS の 1 段下の同型 — 本 gate は
+      #   per-dir 恒真を fixture (MK-2) で否定しておきながら per-FILE 恒真を自分で作っていた:
+      #   実測で 「validate clean / ec=0 のまま objectGraph node の essence が空」 が成立した)。
+      #   発見できなかった row は直上の per-node container arm が既に名指すため、
+      #   本 arm の対象は 発見済 (declared ∩ found) に限る (同一欠陥の二重報告を作らない)。
+      # 走査量は declared ∩ found ≦ declared 件の awk pass。 file 単位の 0/非0 に潰す短絡は
+      # 上記のとおり判定そのものを恒真化するため、 性能を理由に戻さない (必要になれば
+      # 「file を 1 度だけ走査して data-req-id → essence を一括抽出する」 単一 pass 化で
+      # per-node のまま O(file) に収める — 判定粒度を落とすのは解でない)。
+      local seen_ess=0
+      while IFS= read -r tk; do
+        [[ -z "$tk" ]] && continue
+        printf '%s\n' "$found" | grep -qxF "$tk" || continue   # 未発見 = container arm の責務
+        seen_ess=1
+        ess=$(folio_essence_in_file "$f" "$tk")
+        [[ -n "$ess" ]] && continue
+        printf 'V\t%s\t[shape-blindness] %s は requirement container として発見できるが 非空 essence を抽出できない (essence selector の shape 非認識 / essence 要素が空 = tooltip/objectGraph が silent に空へ落ちる、 §2.6 registry に essence class を追加する)\n' "$rel" "$tk"
+      done < <(printf '%s\n' "$declared")
+      # per-FILE: 宣言があるのに発見が 1 件も無い file は上の per-node essence arm が 1 度も走らない
+      # (発見 0 = 検査対象 0 = 恒真沈黙)。 「essence selector が全く効いていない」 を file 単位で
+      # 名指すため、 essence arm が空回りした file にだけ本行を出す (per-node arm の補集合)。
+      if [[ "$seen_ess" -eq 0 ]]; then
+        printf 'V\t%s\t[shape-blindness] requirement row を %d 件宣言しているが 非空 essence が 1 本も抽出できない (essence selector の shape 非認識 = tooltip/objectGraph が silent に空へ落ちる、 §2.6 registry に essence class を追加する)\n' \
+          "$rel" "$(printf '%s\n' "$declared" | grep -c . || true)"
+      fi
+    done < <(find "$dir_abs" -maxdepth 1 -type f -name '*.html' | LC_ALL=C sort)
+  done
 }
 
 # corpus ($1=root 絶対) の object-graph (nodes + edges) を JSON で stdout に返す (§2.7 projection)。
@@ -1820,13 +2194,22 @@ folio_xref_build_objectgraph() {
       [[ -z "$f" ]] && continue
       rel=$(realpath -m --relative-to="$root_abs" "$f"); subdir="${rel%%/*}"
       body=$(folio_extract_body "$f")
-      local rid rtok ress
+      local rid rtok ress rssot prose_g
+      prose_g=$(folio_prose_only "$body")
+      # requirement node の発見は 3 shape union。 生成 div row は id 属性を持たない場合があるため
+      # (shape (c) = assemble-spec.sh emit)、 id-grep 単独だと node ごと消失する。
+      # ★ssot の #anchor は *実在するときだけ* 付ける (folio_xref_href と同じ fail-safe degrade):
+      #   shape (c) には id 属性が無いため 「token を小文字化した anchor」 は文書内に存在せず、
+      #   ${rel}#${rid} を無条件に焼くと objectGraph (と golden) が dead anchor を *正* として
+      #   批准してしまう (graph の ssot は 「そこへ行けば定義がある」 という主張ゆえ、 行けない
+      #   anchor を主張してはならない)。 id-less row の ssot は file 単位で honest に述べる。
       while IFS= read -r rid; do
         [[ -z "$rid" ]] && continue
         rtok=$(printf '%s' "$rid" | tr '[:lower:]' '[:upper:]')
         ress=$(folio_xref_essence "$rtok" "$root_abs")
-        printf '%s\t%s\t%s\t%s\n' "$rtok" "requirement" "${rel}#${rid}" "$ress" >> "$nodes_tsv"
-      done < <(folio_prose_only "$body" | grep -oP '\sid="\K(req(-[a-z]+)+-[0-9]+)(?=")' 2>/dev/null | LC_ALL=C sort -u)
+        if folio_anchor_exists "$f" "$rid"; then rssot="${rel}#${rid}"; else rssot="$rel"; fi
+        printf '%s\t%s\t%s\t%s\n' "$rtok" "requirement" "$rssot" "$ress" >> "$nodes_tsv"
+      done < <(folio_scan_req_def_ids_raw "$prose_g" | grep -vP '^p-[0-9]+$' 2>/dev/null | LC_ALL=C sort -u)
       if [[ "$subdir" == "decisions" ]]; then
         local adrid aess
         adrid=$(basename "$f" | grep -oP '^ADR-[0-9]{4}')
@@ -1903,6 +2286,7 @@ folio_cmd_validate() {
   local contract_seen=0 contract_fail=0   # gate (s) spec-contract-pairing (folio-yjap SSoT-first authoring bridge gate、 folio-self-host root のみ発火 = <root>/../.claude-plugin/design-system/generator/ の manifest+contract 実在で seen)
   # xref gate flags (ADR-0034 §2.6): resolve/uniqueness/tooltip = universal、 completeness = opt-in
   local xref_resolve_fail=0 xref_uniq_fail=0 xref_tooltip_fail=0 xref_complete_fail=0 xref_complete_seen=0
+  local shape_blind_fail=0 shape_blind_seen=0
   local glossary_fail=0   # gate (l) glossary resolve/consistency (ADR-0034 §2.8、 opt-in: vocabulary.yaml definition)
   local nav_drift_fail=0 nav_seen=0 chrome_seen=0   # gate (m) nav-regen-drift (ADR-0035 生成 index + ADR-0039 chrome。 chrome_seen は index 由来の nav_seen と分離 = nav-dead-link の SKIP 判定を汚さない)
   local nav_deadlink_fail=0 nav_reach_fail=0 nav_reach_warn=0 nav_reach_seen=0   # gate (n) dead-link / (o) cluster-reachability (ADR-0035 §2.5)
@@ -2044,7 +2428,7 @@ folio_cmd_validate() {
         xtarget="${root_abs}/${xpath}"
         if [[ ! -f "$xtarget" ]]; then
           violations+=("${rel}"$'\t'"[xref-broken] class=xref -> ${xpath} (xref target file not found)"); xref_resolve_fail=1
-        elif [[ -n "$xanchor" ]] && ! grep -qF "id=\"${xanchor}\"" "$xtarget" && ! grep -qF "id='${xanchor}'" "$xtarget"; then
+        elif [[ -n "$xanchor" ]] && ! folio_anchor_exists "$xtarget" "$xanchor"; then   # 書込側 (folio_xref_href / objectGraph ssot) と同一 predicate = detect↔remediate parity
           violations+=("${rel}"$'\t'"[xref-broken] class=xref -> ${xpath}#${xanchor} (xref anchor id not found in target)"); xref_resolve_fail=1
         fi
       done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null | grep -oP 'href="\K[^"]*' 2>/dev/null)
@@ -2055,19 +2439,21 @@ folio_cmd_validate() {
       # detect↔remediate 不変条件 REQ-VER-015 / glossary gate (l) と同基準、 folio-dpz)。 real corpus の
       # decisions に実 <a class="xref"> body anchor は無いため本 guard は no-op (escaped code 例のみ)。
       if [[ "$subdir" == "spec" || "$subdir" == "research" ]]; then
-        local xtag xh xtip xtok xexp
+        local xtag xtip xtok xexp
+        # tag + 直後の anchor text を 1 単位で取る (token 解決は folio_xref_token_from_seg =
+        # 書込側 resync と同一規則。 anchor 無し degrade link は href だけでは token を逆算
+        # できず、 tag のみを見る実装だと degrade link の tooltip drift を検出できない)。
         while IFS= read -r xtag; do
           [[ -z "$xtag" ]] && continue
           printf '%s' "$xtag" | grep -q 'data-tooltip=' || continue
-          xh=$(printf '%s' "$xtag" | grep -oP 'href="\K[^"]*')
           xtip=$(printf '%s' "$xtag" | grep -oP 'data-tooltip="\K[^"]*')
-          xtok=$(folio_xref_canon_from_href "$xh"); [[ -z "$xtok" ]] && continue
+          xtok=$(folio_xref_token_from_seg "$xtag" "$root_abs"); [[ -z "$xtok" ]] && continue
           xexp=$(folio_xref_tooltip_text "$xtok" "$root_abs")
           [[ -z "$xexp" ]] && continue   # 解決不能 token (essence 空) は resolve gate の責務、 tooltip では二重報告しない
           if [[ "$xtip" != "$xexp" ]]; then
             violations+=("${rel}"$'\t'"[xref-stale-tooltip] ${xtok} data-tooltip drifted from current essence (fix で再生成)"); xref_tooltip_fail=1
           fi
-        done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>' 2>/dev/null)
+        done < <(printf '%s\n' "$body" | grep -oP '<a [^>]*class="xref"[^>]*>[^<]*' 2>/dev/null)
       fi
 
       # gate (j) xref completeness — orphan-mention (opt-in: folio-xref-completeness=enabled の doc のみ)。
@@ -2075,7 +2461,7 @@ folio_cmd_validate() {
       if [[ "$(folio_extract_meta "$f" folio-xref-completeness)" == "enabled" ]]; then
         xref_complete_seen=1
         local present_t bare_t
-        present_t=$(folio_xref_present_tokens "$f")
+        present_t=$(folio_xref_present_tokens "$f" "$root_abs")
         while IFS= read -r bare_t; do
           [[ -z "$bare_t" ]] && continue
           printf '%s\n' "$present_t" | grep -qxF "$bare_t" && continue
@@ -2132,6 +2518,19 @@ folio_cmd_validate() {
     [[ -z "$uline" ]] && continue
     violations+=("$uline"); xref_uniq_fail=1
   done < <(folio_xref_uniqueness_check "$root_abs")
+
+  # --- gate (s) shape-blindness — 宣言 (data-req-id) と 発見 (§2.6 3-shape registry) の差分 ---
+  # 他 gate と別軸: 他 gate は 「走査できた container の中身」 を見るため、 container を 1 つも
+  # 認識できない盲は 全 gate [OK] + exit 0 のまま素通る (vacuous-PASS)。 本 gate だけが
+  # 「宣言されたのに 1 つも走査しなかった」 を検出する = exit code に相乗りしない独立 arm。
+  local sbline
+  while IFS= read -r sbline; do
+    [[ -z "$sbline" ]] && continue
+    case "$sbline" in
+      S) shape_blind_seen=1 ;;
+      V*) violations+=("${sbline#V$'\t'}"); shape_blind_fail=1; shape_blind_seen=1 ;;
+    esac
+  done < <(folio_check_shape_blindness "$root_abs")
 
   # --- gate (m) nav-regen-drift + (n) nav-dead-link — top-level <root>/index.html (生成 walkable nav、
   #     ADR-0035 §2.5) を検査。 両 gate は *index 由来* (regen-drift は index を emit と byte-diff、 dead-link
@@ -2365,6 +2764,12 @@ folio_cmd_validate() {
   if [[ "$da_fail" -eq 1 ]]; then printf '  [FAIL] dual-audience-structural\n'; else printf '  [OK] dual-audience-structural\n'; fi
   if [[ "$xref_resolve_fail" -eq 1 ]]; then printf '  [FAIL] xref-resolve\n'; else printf '  [OK] xref-resolve\n'; fi
   if [[ "$xref_uniq_fail" -eq 1 ]]; then printf '  [FAIL] xref-uniqueness\n'; else printf '  [OK] xref-uniqueness\n'; fi
+  # 適用対象 (data-req-id 宣言 doc) が無い corpus では 行を出さない — 判定すべきものが無い gate を
+  # [OK]/[SKIP] として報告すると、 既存 corpus の validate stdout が本 cell の改修で dirty になり
+  # 「gate 追加前後の非回帰」 自体が測れなくなる (report は判定の写しであって gate の目録ではない)。
+  if [[ "$shape_blind_seen" -eq 1 ]]; then
+    if [[ "$shape_blind_fail" -eq 1 ]]; then printf '  [FAIL] shape-blindness\n'; else printf '  [OK] shape-blindness\n'; fi
+  fi
   if [[ "$xref_tooltip_fail" -eq 1 ]]; then printf '  [FAIL] xref-tooltip-consistency\n'; else printf '  [OK] xref-tooltip-consistency\n'; fi
   if [[ "$xref_complete_seen" -eq 0 ]]; then printf '  [SKIP] xref-completeness (folio-xref-completeness=enabled doc 無し = opt-in)\n'
   elif [[ "$xref_complete_fail" -eq 1 ]]; then printf '  [FAIL] xref-completeness\n'; else printf '  [OK] xref-completeness\n'; fi

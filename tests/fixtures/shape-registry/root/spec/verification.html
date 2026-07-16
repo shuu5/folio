@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>shape-registry fixture — verification (shape (a) + shape (b) 同居)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./verification.html", "@type": "schema:TechArticle", "dc:title": "shape-registry verification fixture" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. 要件</h2>
+<p class="section-essence">requirement container の 3 shape (§2.6 registry) を同居させ、 consumer の essence 抽出 / block-walk / node 発見が shape ごとに独立して効くことを固定する。 本 file は shape (a) canonical と shape (b) 生成 id 有 を持つ。</p>
+
+<details class="spec-row" id="req-ver-001" data-audience="human">
+  <summary>
+    <span class="badge badge--req">REQ-VER-001</span>
+    <span class="req__ears req__ears--ubiquitous">Ubiq.</span>
+    <span class="essence">shape (a) canonical は <span class="term" data-term="spec-row" data-tooltip="span depth 追跡の被覆">compact row</span> 形で id 属性から発見する。</span>
+  </summary>
+  <div class="spec-normative" data-audience="machine">
+    <p class="ears" data-ears-pattern="ubiquitous"><span class="ears-id">REQ-VER-001</span>: The canonical compact row <span class="ears-shall">SHALL</span> be recognized by its id attribute.</p>
+  </div>
+</details>
+<div data-component="ears-requirement-row" id="req-ver-002" data-req-id="REQ-VER-002" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-002</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">shape (b) 生成 id 有 は data-component + data-req-id から発見し、 内包する rq-head の div で早期終端しない。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-002</span>: The generated id-bearing row <span class="ears-shall">SHALL</span> be recognized by data-component and data-req-id.</p></details>
+</div>
+<div data-component="ears-requirement-row" id="req-ver-009" data-req-id="REQ-VER-009" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-009</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence" data-variant="compact">★essence 要素に属性が 1 つ付いた row (意味不変の generator drift)。 essence class の直後に閉じ山括弧が来ることを要求する literal selector で書いた実装はここで match を失い、 属性を許容する readability-floor が OK を出す裏で objectGraph の essence だけが silent に空へ落ちる (parser-differential)。 本 golden は essence 値を pin するため、 2 site が単一 selector を共有していないと RED になる。 ★本文に selector の literal 文字列を書かないこと — 書くと essence text 自身が literal 実装の match 対象になり、 mutant が prose から値を拾って生存する (fixture が自分の mutant を無効化する)。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-009</span>: The essence selector <span class="ears-shall">SHALL</span> tolerate additional attributes on the essence element.</p></details>
+</div>
+</section>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<title>xref-degrade fixture — rules (degrade link の定義 site)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./rules.html", "@type": "schema:TechArticle", "dc:title": "xref-degrade rules fixture" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. 要件</h2>
+<p class="section-essence">本 file は degrade link (anchor 無し href) の定義 site を持つ。 shape (c) 生成 id 無 を *同一 file に 2 本* 置くのが load-bearing: degrade link の href は双方とも file 単位 (rules.html) へ落ちるため、 href だけを key にした resync は 2 link の tooltip を同一値へ潰す。 2 essence を別値にすることで その潰れが gate (i) で RED 化する。 shape (b) id 有 を対で置き、 anchored href 経路の退行 (degrade 側だけ直して anchored 側を壊す) も同時に pin する。</p>
+
+<div data-component="ears-requirement-row" data-req-id="REQ-CI-001" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-CI-001</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">degrade link の token は anchor text から復元する (href だけでは 1 file 複数 token ゆえ逆算できない)。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-CI-001</span>: The token of an anchor-less xref <span class="ears-shall">SHALL</span> be restored from its anchor text.</p></details>
+</div>
+<div data-component="ears-requirement-row" data-req-id="REQ-CI-002" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-CI-002</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">同一 file を指す 2 本の degrade link は href と anchor text の複合 key で弁別する。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-CI-002</span>: Two anchor-less xrefs to the same file <span class="ears-shall">SHALL</span> be keyed by href and anchor text.</p></details>
+</div>
+<div data-component="ears-requirement-row" id="req-ci-003" data-req-id="REQ-CI-003" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-CI-003</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">定義 site に id がある token の xref は anchor 付き href (deep-link) を焼く。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-CI-003</span>: An xref to an id-bearing definition site <span class="ears-shall">SHALL</span> carry a deep-link anchor.</p></details>
+</div>
+</section>
+</body>
+</html>

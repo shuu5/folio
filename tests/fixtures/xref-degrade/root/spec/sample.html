@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-xref-completeness" content="enabled">
+<title>xref-degrade fixture — sample (degrade link + 同 token の裸 言及 が同居)</title>
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./sample.html", "@type": "schema:TechArticle", "dc:title": "xref-degrade sample" }
+</script>
+</head>
+<body>
+<section id="s1" class="informative">
+<h2>§1. degrade link (anchor 無し href)</h2>
+<p>本 doc は <a class="xref" href="./rules.html" data-tooltip="degrade link の token は anchor text から復元する (href だけでは 1 file 複数 token ゆえ逆算できない)。">REQ-CI-001</a> と <a class="xref" href="./rules.html" data-tooltip="同一 file を指す 2 本の degrade link は href と anchor text の複合 key で弁別する。">REQ-CI-002</a> に従う。</p>
+<h2>§2. 同 token の裸 言及 (完全性 gate の入口)</h2>
+<p>再言及: REQ-CI-001 は degrade link の復元を、 REQ-CI-002 は複合 key を規定する。 この裸の言及は §1 の degrade link を present と認識できて初めて orphan でなくなる (token を anchor text から復元しない実装では resolvable xref 無しと誤断される)。</p>
+<h2>§3. anchored 対照 (id 有 定義 site)</h2>
+<p><a class="xref" href="./rules.html#req-ci-003" data-tooltip="定義 site に id がある token の xref は anchor 付き href (deep-link) を焼く。">REQ-CI-003</a> は deep-link を持つ。 再言及: REQ-CI-003 は canon_from_href 経路で present と解決される。</p>
+</section>
+</body>
+</html>
