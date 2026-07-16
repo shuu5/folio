@@ -93,26 +93,26 @@ jobs:
       - name: canonical-drift gate (deterministic floor — out-of-scan canonical == fresh 再生成)
         run: .claude-plugin/design-system/generator/verify-canonical-drift.sh
 
-      # glossary 同鏡 gate (folio-9inj)。 定義文字列は 5 site に複製される: (1) vocabulary.yaml の definition /
+      # glossary parity gate (folio-9inj 設置・ADR-0052 で projection モデルへ転換)。 定義文字列は 5 site に複製される: (1) vocabulary.yaml の definition /
       # (2) glossary contract の formal_def / (3) spec contract 3 本の glossary[].def / (4) spec HTML の inline
       # data-tooltip / (5) spec contract の prose html 内 data-tooltip。 (4) は folio validate
       # (xref-tooltip-consistency) が CI blocking で pin する。 (5) は verify-spec §11 round-trip が pin するが
       # CI 非配線 (local admin-funnel gate・CI 配線は folio-vt1t = 6lsu 治癒後)。 (1)(2)(3) の
-      # 逐語同鏡を見る gate は verify-glossary-parity.sh の vocab-mirror / def-parity 節しかない。 CI 非配線のままだと
+      # 逐語一致を見る gate は verify-glossary-parity.sh の vocab-projection / def-parity 節しかない。 CI 非配線のままだと
       # 「vocabulary.yaml だけ編集 → folio fix + folio build → validate green」で contract の formal_def が stale の
       # まま land する fail-open になる (folio-7ts2 の vocab ⊃ contract drift と同一クラス)。 よって deterministic
       # floor に配線して merge block させる。 決定的 (yq/jq のみ・render 非依存) ゆえ verify-census-vocab.sh と同格。
-      - name: glossary 同鏡 gate (deterministic floor — contract formal_def ↔ vocabulary.yaml definition 逐語同鏡)
+      - name: glossary parity gate (deterministic floor — vocab-projection byte 一致 + def-parity 逐語一致)
         run: .claude-plugin/design-system/generator/verify-glossary-parity.sh
 
-      # 上記 gate 自身の検出力 floor-proof (mutation-kill)。 vocab-mirror / def-parity の各不変条件を script mutation で
+      # 上記 gate 自身の検出力 floor-proof (mutation-kill)。 vocab-projection / def-parity の各不変条件を script mutation で
       # 破って FAIL することを実証し、 vacuous-green を封じる。 V0 count pin (129/41) の drift もここで赤くなる
       # (非 CI 期に pin が latent 赤のまま腐った前科の再発防止 = 本 gate を CI に乗せる主目的の 1 つ)。
-      - name: glossary 同鏡 gate 敵対回帰 (gate 自身の検出力 floor-proof)
+      - name: glossary parity gate 敵対回帰 (gate 自身の検出力 floor-proof)
         run: .claude-plugin/design-system/generator/test-adversarial-glossary-parity.sh
 
-      # glossary build→pack 委譲 (ADR-0052 build-orchestrates-pack) の keystone 敵対回帰。 上の同鏡 gate が
-      # SSoT 間の *逐語同鏡* を見るのに対し、 本 suite は folio build が self-host の glossary.html を
+      # glossary build→pack 委譲 (ADR-0052 build-orchestrates-pack) の keystone 敵対回帰。 上の parity gate が
+      # SSoT 間の *定義一致 (projection byte 一致/逐語)* を見るのに対し、 本 suite は folio build が self-host の glossary.html を
       # assemble+inject へ委譲して生成する経路そのものを per-shape mutation-kill で pin する:
       #   - DOM 構造クラス 2 つ (self-host = h4 / consumer fallback = span) の双方に改竄実弾を撃つ
       #     (1 instance の実弾は構造差 instance の穴を証明しない = jyfh/r8k 教訓)
