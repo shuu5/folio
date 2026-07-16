@@ -6,7 +6,7 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="1.2.0">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0052">
 <meta name="folio-adr-date" content="2026-07-16">
@@ -47,7 +47,7 @@
 
 <header class="doc-header">
   <h1>ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層</h1>
-  <div class="meta">Status: proposed &middot; Date: 2026-07-16 &middot; folio v1.2.0 &middot; glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (治癒 = folio-7ts2) ため、 機械導出 + projection stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。 <strong>★本 ADR は status = proposed (未承認) — 本文承認は flip land 承認と同時 1 回。</strong></div>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-16 &middot; folio v1.2.0 &middot; glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (治癒 = folio-7ts2) ため、 機械導出 + projection stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。 <strong>★2026-07-16 user 本文承認済 — status = accepted (bd folio-wg2l の flip land 承認と同時 1 回)。</strong></div>
 </header>
 <!-- folio:chrome-toc -->
 <nav class="toc" aria-label="ページ内目次">
@@ -70,7 +70,7 @@
   <dl>
     <dt>id</dt><dd>ADR-0052</dd>
     <dt>doc-type</dt><dd>adr</dd>
-    <dt>status</dt><dd>proposed</dd>
+    <dt>status</dt><dd>accepted</dd>
     <dt>date</dt><dd>2026-07-16</dd>
     <dt>stakeholders</dt><dd>Developer, AI Agent, External Reviewer</dd>
     <dt>related</dt><dd>ADR-0036 (folio-vocabulary + glossary derive — 本 ADR が §2.1/§2.4/§2.5 を部分 supersede する対象)、 ADR-0050 (dual-audience enforcement の derive 転換 — SSoT-first regime の確立)、 ADR-0051 (WHAT-SSoT 層解釈 — 「正本 (edit-SSoT)」/「canonical WHAT (提示層)」の語彙 pin。 本 ADR はその語彙を glossary へ適用する)。 規範 = constitution P-5 (1 entity = 1 canonical name)・P-7 (3-domain content exclusivity)・P-11 (HOW 部分隔離)。 接地 = bd folio-wg2l (Leg A 実装) / bd folio-gttv (論点5 = 1 switchover) / bd folio-9inj (手動同鏡の設置) / bd folio-7ts2 (同鏡 drift の治癒 ticket)</dd>
