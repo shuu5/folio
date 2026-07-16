@@ -52,11 +52,30 @@ sub decode_ent {
   return $s;
 }
 # plain: タグ除去 + entity decode + 空白畳み + trim (1 行値用)。
+# ★適用先は inline HTML を持たない field に限る (h2/h3 heading = 原本検証で tag 0)。 inline HTML を持つ
+#   人間層 field (essence / statement / table cell) に使うと xref link / term tooltip / delta marker /
+#   <code> mask が *silent に落ちる* (folio-aduv 実測: xref 25 / term 17 / delta 5 / code 374 が喪失) ため rich() を使う。
 sub plain {
   my ($s) = @_; $s //= "";
   $s =~ s/<[^>]*>//g;
   $s = decode_ent($s);
   $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
+  return $s;
+}
+# ★rich: 人間層 field の inner HTML を *逐語* 保持する (folio-aduv / lossless flip 前置)。
+#   plain() と違い タグ除去・entity decode をしない = inline 資産 (a.xref / span.term / ins|del.delta /
+#   <code> / <strong>) が原本のまま契約へ入り、 assembler が raw emit して生成物で復元される。
+#   ★<code>jq -S</code> の <code> mask も保存される = P-11 how-outside の「PRESERVE + mask」(0-e を同一機構で解決。
+#     plain() が <code> を剥ぐと裸の jq -S が prose へ落ち folio_prose_only の mask を外れて [how-outside] FAIL になる)。
+#   空白畳みのみゆえ tab/改行が消え core_validate_strings (tab/改行禁止) を通過し、 単一行で ys() の \\・" escape で閉じる。
+#   機械層の inner_norm と同一規律 (raw 保持) を人間層へ広げたもの = 1 機構 (extract rich → assemble raw emit)。
+# ★@RICHVALS = 契約へ実際に載った raw 値の台帳。 LOG の rich 資産 実数は *この実返り値* から数える
+#   (field を列挙して数え直す式は field 追加時に静かにズレる = 実測を騙る LOG になる。 実際に契約へ入った値だけを数える)。
+my @RICHVALS;
+sub rich {
+  my ($s) = @_; $s //= "";
+  $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
+  push @RICHVALS, $s;
   return $s;
 }
 # preline: code/mermaid 行用 (タグ除去 + decode・leading space 保持・trailing trim・tab→space)。
@@ -77,6 +96,7 @@ sub ys { my ($s)=@_; $s//=""; $s =~ s/\\/\\\\/g; $s =~ s/"/\\"/g; return "\"$s\"
 sub inner_norm {
   my ($s) = @_; $s //= "";
   $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
+  push @RICHVALS, $s;   # ★機械層 blob も契約へ載る raw 値ゆえ rich 資産 LOG の計数母体に含める (rich() と同一台帳)。
   return $s;
 }
 # extract_machine_blocks: region 内の data-audience="machine" 自由文 (<p>/<aside>/<ul>/<div class="demoted">) を document 順に capture。
@@ -94,6 +114,12 @@ sub extract_machine_blocks {
     if (substr($region,$p) =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>/) { $cand{note}  = $p + $-[0]; }
     if (substr($region,$p) =~ /<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $cand{list}  = $p + $-[0]; }
     if (substr($region,$p) =~ /<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>/) { $cand{demoted} = $p + $-[0]; }
+    # ★dl (folio-aduv): <dl class="doc-meta" data-audience="machine"> = 文書前文の機械層 定義リスト。 旧版は p/aside/ul/div.demoted
+    #   のみ対象で <dl> が *死角* であり、 しかも expected 計数 (下記) も <dl> を数えないため ★uncaptured 警告すら出ない
+    #   = no-silent-caps 規律を擦り抜ける silent drop だった (実測: canonical term 27 のうち 1 件 (data-term="spec") が本 dl 内で
+    #   契約へ入らず喪失)。 chrome ではない (folio:chrome-toc 閉じマーカーより後 = bin/folio の chrome 再生成範囲外) ため
+    #   契約責任領域であり capture する。 dl は nested <dl> を持たない (原本検証済) ゆえ非貪欲で正しく閉じる。
+    if (substr($region,$p) =~ /<dl\b[^>]*\sdata-audience="machine"[^>]*>/)    { $cand{dl}    = $p + $-[0]; }
     last unless %cand;
     my ($kind) = sort { $cand{$a} <=> $cand{$b} } keys %cand;
     my $at = $cand{$kind};
@@ -103,6 +129,10 @@ sub extract_machine_blocks {
     } elsif ($kind eq "note") {
       substr($region,$at) =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s;
       push @mb, { type=>"note", html=>inner_norm($1) }; $p = $at + $+[0];
+    } elsif ($kind eq "dl") {
+      # ★dl (folio-aduv): inner (<div><dt>..</dt><dd>..</dd></div> 列) を逐語 capture (cell-2 が raw emit・round-trip 照合)。
+      substr($region,$at) =~ /<dl\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/dl>/s;
+      push @mb, { type=>"dl", html=>inner_norm($1) }; $p = $at + $+[0];
     } elsif ($kind eq "demoted") {
       # ★balanced <div> match で demoted の閉じ </div> を見つける (非貪欲は inner pre/code の </div> 等で誤終端しうる・
       #   speclist と同型の depth 追跡)。 inner を逐語 capture (round-trip で原本 div.demoted と双方向照合)。
@@ -152,9 +182,14 @@ sub extract_machine_blocks {
   $masked =~ s/<aside\b[^>]*\sdata-audience="machine"[^>]*>.*?<\/aside>//gs;
   my $n_dem = () = ($masked =~ /<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>/g);
   $masked =~ s/<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>.*?<\/div>//gs;
+  # ★dl も mask してから数える (folio-aduv): inner の <div>/<dt>/<dd> は data-audience を持たないので二重計上しないが、
+  #   aside/demoted と対称に mask する。 ★本 n_dl を expected へ加算することが silent drop 封鎖の要 —
+  #   capture 側だけ足して expected を据え置くと、 dl の取り逃しが再び ★uncaptured 警告なしで素通る (fail-open)。
+  my $n_dl = () = ($masked =~ /<dl\b[^>]*\sdata-audience="machine"[^>]*>/g);
+  $masked =~ s/<dl\b[^>]*\sdata-audience="machine"[^>]*>.*?<\/dl>//gs;
   my $n_p  = () = ($masked =~ /<p\b[^>]*\sdata-audience="machine"[^>]*>/g);
   my $n_ul = () = ($masked =~ /<ul\b[^>]*\sdata-audience="machine"[^>]*>/g);
-  return (\@mb, $n_aside + $n_dem + $n_p + $n_ul);
+  return (\@mb, $n_aside + $n_dem + $n_dl + $n_p + $n_ul);
 }
 # emit_mblocks: machine block 列を YAML 出力 (key=machine_preamble|machine_blocks, indent=0|4)。 空なら key を出さない。
 sub emit_mblocks {
@@ -180,6 +215,14 @@ $meta{version} = ($H =~ /<meta name="folio-version" content="([^"]*)"/) ? $1 : "
 $meta{status}  = ($H =~ /<meta name="folio-status" content="([^"]*)"/) ? $1 : "active";
 my $stake = ($H =~ /<meta name="folio-stakeholders" content="([^"]*)"/) ? $1 : "Developer, AI Agent";
 my $hmeta = ($H =~ /<div class="meta">(.*?)<\/div>/s) ? plain($1) : "";
+# ★head meta 同期 (folio-aduv 0-c): core_emit_graph_head (lib/=CORE・全 pack 共有) は doc-type/status/version の
+#   3 本しか emit しない。 canonical verification.html はさらに folio-layer / folio-glossary-automark /
+#   folio-stakeholders / folio-xref-completeness を持つ (実測 = 計 7 本) ため、 pack 固有 field として契約へ同期し
+#   assemble-verification.sh emit_head が contract.meta 由来で emit する (CORE 不触・glossary pack の per-pack emit と同型)。
+#   ★folio-xref-completeness は「実 emit を実測で確定」(2mla 0-c 保留分) → canonical に content="enabled" が *実在* を確認済ゆえ同期対象。
+$meta{layer}         = ($H =~ /<meta name="folio-layer" content="([^"]*)"/) ? $1 : "";
+$meta{automark}      = ($H =~ /<meta name="folio-glossary-automark" content="([^"]*)"/) ? $1 : "";
+$meta{xref_complete} = ($H =~ /<meta name="folio-xref-completeness" content="([^"]*)"/) ? $1 : "";
 
 # ---- glossary (span.term[data-term][data-tooltip]) dedup ----
 my (%gseen, @gloss);
@@ -197,11 +240,16 @@ my @reqs;
 while ($H =~ /<details class="spec-row" id="([^"]*)"[^>]*>(.*?)<\/details>/gs) {
   my ($rid, $body) = ($1, $2);
   my $badge = ($body =~ /<span class="badge badge--req">([^<]*)<\/span>/) ? $1 : "";
-  my $ess   = ($body =~ /<span class="essence">(.*?)<\/span>\s*<\/summary>/s) ? plain($1) : "";
+  # ★essence / statement は rich() = inline HTML 逐語 (xref link / term tooltip / delta marker / <code> mask を保存)。
+  #   旧 plain() は これらを silent に落としていた (実測: essence xref2/term7/delta0・statement xref10/term10/delta5)。
+  my $ess   = ($body =~ /<span class="essence">(.*?)<\/span>\s*<\/summary>/s) ? rich($1) : "";
   my $pat   = ($body =~ /data-ears-pattern="([^"]*)"/) ? $1 : "";
-  my $stmt  = ($body =~ /<p class="ears"[^>]*>(.*?)<\/p>/s) ? plain($1) : "";
+  my $stmt  = ($body =~ /<p class="ears"[^>]*>(.*?)<\/p>/s) ? rich($1) : "";
   next unless $badge;
-  push @reqs, { id => $badge, pat => $pat, ess => $ess, stmt => $stmt };
+  # ★anchor = canonical の実 id 属性 (小文字 req-ver-* / req-nav-*) を *逐語 capture* する (folio-aduv 0-a)。
+  #   lc($badge) で導出せず原本 SSoT を運ぶ (導出は canonical との drift を silent に飲む)。 corpus inbound
+  #   (#req-ver-* / #req-nav-*) の解決先ゆえ、 assembler が row へ id= として emit する。
+  push @reqs, { id => $badge, pat => $pat, ess => $ess, stmt => $stmt, anchor => $rid };
 }
 
 # ---- references (前方 照会・外部 doc): a.xref / a[href] → constitution#p-* / ADR-NNNN / verification#req-ver-* ----
@@ -262,9 +310,10 @@ for my $id (@SECORDER) {
   #   非貪欲 mask: demoted は nested div を持たず inner に </div> リテラルも無い (verification.html 検証済) ゆえ最初の </div> で正しく閉じる。
   my $inner = $inner_full;
   $inner =~ s/<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>.*?<\/div>//gs;
+  # ★heading (h2/h3) は plain() 継続 = 原本検証で inline tag 0 件 (rich 化は無意味な契約 diff を生むだけ)。
   my $heading = ($inner =~ /<h2>(.*?)<\/h2>/s) ? plain($1) : $id;
-  # top-level section の最初の section-essence (h2 直後) を section essence とする。
-  my $essence = ($inner =~ /<p class="section-essence"[^>]*>(.*?)<\/p>/s) ? plain($1) : "";
+  # top-level section の最初の section-essence (h2 直後) を section essence とする。 ★rich() = inline HTML 逐語。
+  my $essence = ($inner =~ /<p class="section-essence"[^>]*>(.*?)<\/p>/s) ? rich($1) : "";
   my @blocks;
 
   # doc 順走査: block opener を左から順に処理する。 各 iteration で最も近い opener を見つけて処理し pos を進める。
@@ -285,22 +334,26 @@ for my $id (@SECORDER) {
     my $at = $cand{$kind};
 
     if ($kind eq "h3") {
-      substr($inner,$at) =~ /<h3[^>]*>(.*?)<\/h3>/s;
-      my $h3 = plain($1); my $afterh3 = $at + $+[0];
-      # h3 直後の section-essence を subhead essence にする (無ければ空)。
+      substr($inner,$at) =~ /<h3\b([^>]*)>(.*?)<\/h3>/s;
+      my $h3attr = $1; my $h3 = plain($2); my $afterh3 = $at + $+[0];
+      # ★fine section anchor (folio-aduv 0-a): h3 の実 id 属性を逐語 capture (原本 18/18 が id 保有)。
+      #   corpus inbound の 81 link がこの fine anchor 宛て = 落とすと link-integrity が破断する。
+      my $h3id = ($h3attr =~ /\bid="([^"]*)"/) ? $1 : "";
+      # h3 直後の section-essence を subhead essence にする (無ければ空)。 ★rich() = inline HTML 逐語。
       my $se = "";
-      if (substr($inner,$afterh3,600) =~ /^\s*<p class="section-essence"[^>]*>(.*?)<\/p>/s) { $se = plain($1); }
-      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se };
+      if (substr($inner,$afterh3,600) =~ /^\s*<p class="section-essence"[^>]*>(.*?)<\/p>/s) { $se = rich($1); }
+      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se, anchor=>$h3id };
       $p = $afterh3;
     } elsif ($kind eq "table") {
       substr($inner,$at) =~ /<table\b[^>]*>(.*?)<\/table>/s;
       my $tbl = $1; my $afterend = $at + $+[0];
-      my $cap = ($tbl =~ /<caption>(.*?)<\/caption>/s) ? plain($1) : "";
-      my @headers; while ($tbl =~ /<th\b[^>]*>(.*?)<\/th>/gs) { push @headers, plain($1); }
+      # ★caption / th / td は rich() = inline HTML 逐語 (実測: table 全体で xref13 / a12 / code41 / strong11 を保存)。
+      my $cap = ($tbl =~ /<caption>(.*?)<\/caption>/s) ? rich($1) : "";
+      my @headers; while ($tbl =~ /<th\b[^>]*>(.*?)<\/th>/gs) { push @headers, rich($1); }
       my @rows;
       while ($tbl =~ /<tr\b[^>]*>(.*?)<\/tr>/gs) {
         my $tr = $1; next unless $tr =~ /<td/;   # header 行 (th のみ) は skip
-        my @cells; while ($tr =~ /<td\b[^>]*>(.*?)<\/td>/gs) { push @cells, plain($1); }
+        my @cells; while ($tr =~ /<td\b[^>]*>(.*?)<\/td>/gs) { push @cells, rich($1); }
         push @rows, \@cells if @cells;
       }
       push @blocks, { type=>"table", caption=>$cap, headers=>\@headers, rows=>\@rows } if @headers && @rows;
@@ -308,9 +361,10 @@ for my $id (@SECORDER) {
     } elsif ($kind eq "mermaid") {
       substr($inner,$at) =~ /<pre class="mermaid">(.*?)<\/pre>/s;
       my $src = $1; my $afterend = $at + $+[0];
-      # figcaption (直後の figure 内) を caption に。
+      # figcaption (直後の figure 内) を caption に。 ★rich() = inline HTML 逐語 (原本 figcaption は <code> 2 +
+      #   span.term 1 を持つ = canonical term 27 番目の在処。 plain() だと この 1 件が silent に落ちて occurrence-parity が破れる)。
       my $cap = "";
-      if (substr($inner,$afterend,400) =~ /<figcaption>(.*?)<\/figcaption>/s) { $cap = plain($1); }
+      if (substr($inner,$afterend,400) =~ /<figcaption>(.*?)<\/figcaption>/s) { $cap = rich($1); }
       my @lines = map { preline($_) } split(/\n/, $src, -1);
       shift @lines while @lines && $lines[0] eq "";   # 先頭空行除去
       pop @lines while @lines && $lines[-1] eq "";     # 末尾空行除去
@@ -346,7 +400,10 @@ for my $id (@SECORDER) {
   my $mcap = scalar(@$mblocks);
   push @LOG, "section $id: 機械層 prose capture $mcap 件 (data-audience=machine の <p>/<aside>/<ul>/div.demoted を逐語取り込み)"
     . ($mcap == $mexp ? "" : " ★uncaptured " . ($mexp - $mcap) . " 件 (expected $mexp・要調査)");
-  push @sections, { id=>shortid($id), heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
+  # ★anchor = canonical の top-level section 実 id (s0-reader-guide 等・full form)。 contract の id は short prefix
+  #   (s0..s6 = TINT/KICK の key) ゆえ、 corpus inbound (#s1-contract 等) の解決先となる full id を別 field で運ぶ
+  #   (id を full 化すると TINT/KICK key と band 実装へ波及するため anchor を追加する = CORE 不触の最小形)。
+  push @sections, { id=>shortid($id), anchor=>$id, heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
 }
 
 # ★機械層 preamble (最初の section より前の文書前文 = RFC2119 / constitution 実装宣言の boilerplate aside)。
@@ -378,6 +435,20 @@ print "  version: ", ys($meta{version}), "\n";
 print "  date: ", ys("2026-06-24"), "\n";
 print "  status: ", ys($meta{status}), "\n";
 print "  reader: ", ys("$stake — folio を consume する開発者・AI Agent・外部レビュアー"), "\n";
+# ★head meta 同期 (0-c): CORE (core_emit_graph_head) が emit しない pack 固有 folio-* meta を契約 SSoT として運ぶ。
+#   値が空なら key ごと省略 (assembler も空なら emit しない = canonical に無い meta を捏造しない)。
+#   stakeholders は reader (散文) と別に canonical 逐語を独立 field 化する (meta tag は逐語が SSoT)。
+print "  layer: ", ys($meta{layer}), "\n" if $meta{layer} ne "";
+print "  glossary_automark: ", ys($meta{automark}), "\n" if $meta{automark} ne "";
+print "  xref_completeness: ", ys($meta{xref_complete}), "\n" if $meta{xref_complete} ne "";
+# ★stakeholders は ★YAML sequence で持つ (scalar string 禁止)。 CORE (lib/common.sh core_emit_graph_head) が
+#   同じ .meta.stakeholders を JSON-LD の "folio:stakeholders" へ *そのまま* 転記するため、 scalar で入れると
+#   canonical の array (["Developer","AI Agent","External Reviewer"]) が string へ型退行する (CORE 不触でも
+#   contract 経由で CORE 出力を壊す = fence HIGH-2 の意図違反)。 どの既存 gate も捕捉しない (jsonld-lint は
+#   folio:stakeholders を型検査対象外と明記・inventory は非 array を捨てて meta split fallback で隠蔽) ため
+#   契約側で canonical と同型に固定するのが唯一の構造的封鎖。 meta tag 側 (逐語 1 行) は assembler が join して復元する。
+my @stake_list = grep { $_ ne "" } split(/\s*,\s*/, $stake);
+print "  stakeholders: [", join(", ", map { ys($_) } @stake_list), "]\n" if @stake_list;
 print "\n";
 print "# 承認記録 (core 共用 approval-block)。 verification.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。\n";
 print "approval:\n";
@@ -395,6 +466,7 @@ print "\n" if @$preamble_blocks;
 print "sections:\n";
 for my $s (@sections) {
   print "  - id: ", ys($s->{id}), "\n";
+  print "    anchor: ", ys($s->{anchor}), "\n";
   print "    tint: ", ys($TINT{$s->{id}} // "brand"), "\n";
   print "    kicker: ", ys($KICK{$s->{id}} // $s->{id}), "\n";
   print "    heading: ", ys($s->{heading}), "\n";
@@ -403,7 +475,7 @@ for my $s (@sections) {
     print "    blocks:\n";
     for my $b (@{$s->{blocks}}) {
       if ($b->{type} eq "subhead") {
-        print "      - { type: subhead, heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+        print "      - { type: subhead, anchor: ", ys($b->{anchor}), ", heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
       } elsif ($b->{type} eq "requirements") {
         print "      - type: requirements\n        ids: [", join(", ", map { ys($_) } @{$b->{ids}}), "]\n";
       } elsif ($b->{type} eq "table") {
@@ -430,6 +502,7 @@ print "\n";
 print "requirements:\n";
 for my $r (@reqs) {
   print "  - id: ", ys($r->{id}), "\n";
+  print "    anchor: ", ys($r->{anchor}), "\n";
   print "    ears_pattern: ", ys($r->{pat}), "\n";
   print "    essence: ", ys($r->{ess}), "\n";
   print "    statement: ", ys($r->{stmt}), "\n";
@@ -451,12 +524,24 @@ for my $g (@gloss) {
 print STDERR "=== extract-verification-spec LOG (no silent caps) ===\n";
 print STDERR "$_\n" for @LOG;
 my $mtot = scalar(@$preamble_blocks); $mtot += scalar(@{$_->{machine_blocks}}) for @sections;
-my ($mprose, $mnote, $mlist, $mdem) = (0,0,0,0);
+my ($mprose, $mnote, $mlist, $mdem, $mdl) = (0,0,0,0,0);
 for my $b (@$preamble_blocks, map { @{$_->{machine_blocks}} } @sections) {
-  $mprose++ if $b->{type} eq "prose"; $mnote++ if $b->{type} eq "note"; $mlist++ if $b->{type} eq "list"; $mdem++ if $b->{type} eq "demoted";
+  $mprose++ if $b->{type} eq "prose"; $mnote++ if $b->{type} eq "note"; $mlist++ if $b->{type} eq "list";
+  $mdem++ if $b->{type} eq "demoted"; $mdl++ if $b->{type} eq "dl";
 }
 printf STDERR "抽出: %d sections / %d requirements / %d references / %d glossary terms\n",
   scalar(@sections), scalar(@reqs), scalar(@refs), scalar(@gloss);
-printf STDERR "機械層 prose capture: %d 件 (prose=%d / note=%d / list=%d / demoted=%d・preamble %d 件含む)\n",
-  $mtot, $mprose, $mnote, $mlist, $mdem, scalar(@$preamble_blocks);
+printf STDERR "機械層 prose capture: %d 件 (prose=%d / note=%d / list=%d / demoted=%d / dl=%d・preamble %d 件含む)\n",
+  $mtot, $mprose, $mnote, $mlist, $mdem, $mdl, scalar(@$preamble_blocks);
+# ★rich 資産 LOG (folio-aduv・no silent caps): 人間層 rich field + 機械層 blob に載った inline 資産の実数を出す。
+#   契約へ *何が入ったか* を抽出時点で可視化し、 assembler 側 occurrence-parity assert の期待値と突き合わせられるようにする。
+{
+  my $all = join("\x1e", @RICHVALS);
+  my $x = () = ($all =~ /<a\b[^>]*\bclass="xref"/g);
+  my $t = () = ($all =~ /<span class="term"/g);
+  my $d = () = ($all =~ /<(?:ins|del)\b[^>]*\bclass="delta"/g);
+  my $c = () = ($all =~ /<code>/g);
+  printf STDERR "rich 資産 capture: a.xref=%d / span.term=%d / ins|del.delta=%d / <code>=%d (人間層 rich field + 機械層 blob の実返り値 %d 本を計数)\n",
+    $x, $t, $d, $c, scalar(@RICHVALS);
+}
 PERL

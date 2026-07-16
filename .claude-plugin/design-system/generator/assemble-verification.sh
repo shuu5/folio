@@ -53,10 +53,20 @@ declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [veri
 declare -A TINT_OK=( [brand]=1 [violet]=1 [warn]=1 [info]=1 [ok]=1 [bad]=1 )
 # 対応 block type (これ以外 = silent drop の疑い → fail-closed abort)。
 BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|requirements'
+# ★人間層 rich field の inline tag allowlist (folio-aduv)。
+#   rich field (essence / statement / table cell / caption) は inline HTML を *逐語* 保持し assembler が RAW emit する
+#   (= xref link / term tooltip / delta marker / <code> mask の復元手段)。 raw emit ゆえ 旧 esc() による無差別 escape が
+#   担っていた「契約由来の生 markup が構造へ漏れない」保護が効かなくなる。 そこで escape の代わりに
+#   ★allowlist の fail-closed abort で置き換える (escape より *強い* 保証: <script> 等は escape して表示するのでなく
+#   生成そのものを拒否する)。 allowlist = canonical verification.html の人間層 rich field に実在する inline 要素
+#   (実測: code 376 / span 164 / a 140 / strong 61 / ins 4 / del 1) + 同類の非実行 inline 要素のみ。
+#   block/実行系 (script/style/iframe/form/p/div/pre …) は人間層 rich field に現れてはならない (現れたら構造破壊か注入)。
+RICH_INLINE_ALLOW='a|span|code|strong|em|b|i|ins|del|sub|sup|abbr|br|kbd|samp|var|small|q|cite|time|wbr'
 # ★機械層 (w1f cell-2 / ADR-0045) 対応 block type。 cell-1 schema = data-audience="machine" 自由文 (p→prose / aside→note / ul→list)。
 #   ★tr0 (verification): div.demoted (ADR-0040 機械層降格分・<p>/<ul>/<pre><code> 内包) を demoted として追加。
+#   ★folio-aduv: dl (dl.doc-meta = 文書前文の機械層 定義リスト) を追加。 cell-1 の死角で silent drop されていた分。
 #   これ以外は silent drop の疑い → fail-closed abort (人間層 BLOCK_TYPE_ALLOW と対称)。
-MACHINE_BLOCK_TYPE_ALLOW='prose|note|list|demoted'
+MACHINE_BLOCK_TYPE_ALLOW='prose|note|list|demoted|dl'
 
 # ---- icon SVG (spec-pack 固有 + 共用。 section index で循環選択する静的デザイン資産・contract 由来でない) ----
 ICO_GUIDE='<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
@@ -74,10 +84,196 @@ ICO_GRID='<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" h
 ICO_ARROW='<path d="M5 12h14M12 5l7 7-7 7"/>'
 SECT_ICONS=("$ICO_GUIDE" "$ICO_DIR" "$ICO_TAG" "$ICO_CODE" "$ICO_DELTA" "$ICO_EARS" "$ICO_LAYERS" "$ICO_SCRIPT" "$ICO_LINK" "$ICO_GAVEL" "$ICO_EYE" "$ICO_GRID")
 
+# ★rich field の全値を document 順に吐く (validate / 監査で 1 箇所に集約 = 対象漏れの二重保守を防ぐ)。
+rich_field_values() {
+  q '[ .sections[].essence,
+       (.sections[].blocks[]? | select(.type=="subhead") | .essence),
+       (.sections[].blocks[]? | select(.type=="table") | (.caption // "")),
+       (.sections[].blocks[]? | select(.type=="table") | .headers[]),
+       (.sections[].blocks[]? | select(.type=="table") | .rows[][]),
+       (.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")),
+       .requirements[].essence,
+       .requirements[].statement ] | .[]'
+}
+
+# ★人間層 rich field の inline 健全性 (fail-closed)。 RICH_INLINE_ALLOW 外のタグ・event handler 属性・危険 URL を
+#   1 つでも見つけたら生成前に abort する (旧 esc() 経路が担っていた注入保護の後継・escape でなく拒否)。
+#
+# ★URL 検査は「entity decode 後の *肯定* allowlist」で行う (literal 'javascript:' の部分文字列一致では *ない*)。
+#   理由 (実弾で確認済の fail-open): browser は HTML 属性値の character reference を decode してから scheme を
+#   解釈するため href="&#106;avascript:alert(1)" は live な javascript: link として成立する。 literal 一致の
+#   /javascript:/i は これを素通しし、 <a> は tag allowlist 内・on*= も無いので 3 検査すべてを擦り抜けた
+#   (= 旧 esc() 経路の方が強い分岐が残る = 「escape より強い保証」の宣言に反する回帰)。
+#   ★否定列挙 (javascript:/data:/vbscript: … を弾く) は partial-enumeration trap ゆえ採らない。 契約実測の href は
+#   fragment (#…) / 相対 *.html / 相対 *.md の 3 形のみなので、 その肯定列挙で fail-closed にできる。
+#   新しい URL 形が正当に必要になったら本 allowlist を *意図的に* 広げること (静かに通さない)。
+#
+# ★★検査本体は「naive regex で危険形を探す」のでなく「★厳密 tokenizer で属性列を読み、 肯定 allowlist に
+#   合致しないものを全て落とす」形にする (partial-enumeration からの構造的脱出)。
+#   naive regex 版が実 browser parser と乖離して live な注入を通した実証 4 形 (html5lib 突合済):
+#     B1 <a href="#x"onclick="alert(1)">  … /\son[a-zA-Z]+=/ は on の前に \s を要求するが、 HTML5 の
+#        after-attribute-value-quoted state は非空白を missing-whitespace-between-attributes として ★回復し
+#        before-attribute-name へ reconsume するため onclick は属性として成立する (parser は LIVE と読む)。
+#     B2 <a href=%sjavascript:…%s>  (single-quote) … 値抽出が "([^"]*)" 固定ゆえ URL 検査に ★一度も入らない。
+#     B3 <a href=javascript:…>      (unquoted)     … 同上。
+#     B4 <a title=">" href="javascript:…">          … ([^>]*)> が ★quote 内の > で早期終端し href が属性列の外へ落ちる。
+#   いずれも tag は allowlist 内 (a) ゆえ tag 検査を通過し、 3 検査すべてを擦り抜けた = 改修前 esc() より弱い後退。
+#   ★対策の骨子 (列挙をやめて構造で閉じる):
+#     (1) 値の 3 形 (double / single / unquoted) を明示的に扱い、 ★quote 内の > で終端しない tokenizer で読む。
+#     (2) ★属性名の肯定 allowlist を課す → on*= は「allowlist 外の属性名」として ★形に依らず一律に落ち、
+#         \s 依存 heuristic を廃止できる (B1 が構造的に閉じる)。 style/srcset 等の未列挙 sink も同時に閉じる。
+#     (3) URL 検査は tokenizer が返した ★全 URL 属性値へ quoting 形に依らず適用する (B2/B3/B4 が閉じる)。
+#     (4) ★fail-closed residue: 属性列を strict grammar で完全に tokenize しきれなければ理由を問わず abort。
+#         未知の parser-differential を「通す」でなく「落とす」側へ倒す (これが列挙からの脱出の要)。
+# ★属性名 allowlist は契約実測 (7 種: class 224 / href 140 / data-tooltip 42 / data-term 18 / data-delta-id 5 /
+#   data-delta-date 4 / data-delta-superseded-by 1) + inert な id/title/datetime/lang/dir。 いずれも script 実行・
+#   外部 fetch の sink を持たない。 ★style / srcset / on* 等の sink は *意図的に* 含めない (広げるなら明示的に)。
+RICH_ATTR_ALLOW='class|href|id|title|datetime|lang|dir|data-tooltip|data-term|data-delta-id|data-delta-date|data-delta-superseded-by'
+RICH_HREF_ALLOW_DESC='#fragment / 相対 *.html(#frag) / 相対 *.md(#frag) / https://'
+# ★検査対象の実測下限 (現契約 = 337 値)。 rich_field_values の query drift / 抽出規約の破綻で ★検査対象そのものが
+#   痩せたら (0 件はもちろん ★過少も) それ自体を FAIL にするための pin。 契約が正当に育って下限を超えたら
+#   ★意図的に上げること (静かに下げない = 緩和は常に明示的な行為であること)。
+# ★「下限」であって総数固定でない理由: 契約の成長 (rich field の追加) は正当ゆえ通す。 塞ぎたいのは ★減少方向
+#   (= 被覆の喪失) だけである。
+# ★instance 固有値の扱い (汎化 fence): 本 file は verification 専用 fork (validate() の doc_type==spec 束縛を参照)
+#   ゆえ、 本定数は ★その fork の実測値。 同型を d7bq/bxpm へ波及させる際は ★機構 (被覆量 assert) をそのまま持ち、
+#   値だけ各 pack の実測へ差し替えること (機構を落として値だけ移すと恒真 PASS が復活する)。
+RICH_FIELD_MIN=337
+validate_rich_inline() {
+  local bad vals n rc
+  vals="$(mktemp)"
+  # ★(a) pipeline の exit status を ★自前で検査する (fail-open 封鎖):
+  #   caller は `validate_rich_inline || errs=1` (= || リスト) で呼ぶため、 関数本体では set -e が ★無効化される。
+  #   ゆえ rich_field_values (yq) が落ちても $bad は空文字列になり、 空文字列性だけを見る判定は ★無条件 PASS する
+  #   (最小再現で確認済: validate() が errs=0 のまま CLEAN を報告した)。 status を明示判定して abort する。
+  if ! rich_field_values > "$vals"; then
+    rm -f "$vals"
+    echo "assemble-verification: ★rich field の抽出に失敗 (yq 非 0 exit・検査不能ゆえ fail-closed)" >&2
+    return 1
+  fi
+  # ★(b) 被覆量の fail-closed assert (gate 喪失への ★恒真 PASS 封鎖):
+  #   本 guard の PASS/FAIL を $bad の空文字列性だけで決めると、 rich_field_values が ★空を返した瞬間に
+  #   「検査対象 0 件 → bad なし → PASS」となり、 8 箇所の RAW emit site を覆う ★唯一の注入防御が
+  #   何も検査しないまま緑になる (= 本 diff が esc() を外した代償として集約した保護の喪失)。
+  #   実証: 検査対象 query を .sectionsTYPO[].essence へ drift させると bad=[] で return 0 = PASS だった。
+  #   ゆえ「bad が無いこと」だけでなく ★「何件検査したか」を assert する。
+  n="$(wc -l < "$vals" | tr -d ' ')"
+  if [[ "$n" -lt "$RICH_FIELD_MIN" ]]; then
+    rm -f "$vals"
+    echo "assemble-verification: ★rich field の検査対象が $n 件 (期待下限 $RICH_FIELD_MIN)。 rich_field_values の" >&2
+    echo "  query drift か抽出規約の破綻により ★注入防御が無被覆 (検査対象 0/過少での恒真 PASS を封鎖)。" >&2
+    echo "  契約が正当に育った場合に限り RICH_FIELD_MIN を ★意図的に更新すること。" >&2
+    return 1
+  fi
+  bad="$(ALLOW="$RICH_INLINE_ALLOW" ATTRALLOW="$RICH_ATTR_ALLOW" perl -CSD -ne '
+    BEGIN {
+      our %bad; our $re = qr/^(?:$ENV{ALLOW})$/i; our $attr_re = qr/^(?:$ENV{ATTRALLOW})$/i;
+      # URL を載せうる属性 (allowlist 内に現れたら decode 後 href_ok を課す)。
+      our $url_attr = qr/^(?:href|src|xlink:href|formaction|action)$/i;
+      # character reference decode (数値 10/16 進 + 主要名前付き)。 URL scheme 判定の *前* に必ず通す。
+      sub decode_refs {
+        my ($s) = @_; $s //= "";
+        $s =~ s/&#x([0-9a-fA-F]+);?/chr(hex($1))/ge;
+        $s =~ s/&#(\d+);?/chr($1)/ge;
+        my %n = ("amp"=>"&","lt"=>"<","gt"=>">","quot"=>"\"","apos"=>"\x27","Tab"=>"\t","NewLine"=>"\n","colon"=>":","sol"=>"/");
+        $s =~ s/&([a-zA-Z]+);?/exists $n{$1} ? $n{$1} : "&$1;"/ge;
+        # decode は冪等になるまで回す (多重符号化 &amp;#106; → &#106; → j を取り逃さない)。
+        return $s;
+      }
+      sub decode_full {
+        my ($s) = @_; my $prev = "";
+        for (1..5) { last if $s eq $prev; $prev = $s; $s = decode_refs($s); }
+        return $s;
+      }
+      # 肯定 allowlist: 制御文字・空白を除去した decode 後 URL が下記のいずれかに *完全一致* すること。
+      our $href_ok = qr{^(?:
+            \#[^\s]*                                   # 同一文書 fragment
+          | (?:\.{1,2}/)*[A-Za-z0-9._/-]+\.html(?:\#[^\s]*)?   # 相対 .html (+fragment)
+          | (?:\.{1,2}/)*[A-Za-z0-9._/-]+\.md(?:\#[^\s]*)?     # 相対 .md   (+fragment)
+          | https://[A-Za-z0-9._~:/?\#\[\]@!$&\x27()*+,;=%-]+   # 明示 https のみ (http:// は不可)
+        )$}x;
+    }
+    # ---- ★strict tokenizer: 実 HTML parser の tag/属性 grammar を明示的に辿る (naive regex の parser-differential 封鎖) ----
+    # ★perl 側 message は ★ASCII のみ: -CSD は STDOUT を :utf8 にするが、 script 中の日本語リテラルは
+    #   use utf8 が無い限り byte 列として扱われ ★二重符号化して化ける (実測)。 日本語の説明は bash 側の
+    #   echo が持ち、 perl は機械可読な ASCII token だけを返す (test の理由文字列照合も本 token に合わせる)。
+    my $s = $_; my $n = length($s); my $i = 0;
+    while ($i < $n) {
+      # 次の "<" まではテキスト。 HTML5 と同じく "<" + 非英字 (例: "a < b") は tag 開始でなく literal text。
+      my $lt = index($s, "<", $i);
+      last if $lt < 0;
+      my $rest = substr($s, $lt);
+      # ★markup declaration / PI (<!-- … --> / <!DOCTYPE> / <?…>) は契約に存在しない。 comment 内へ毒を隠す
+      #   経路を残さないため tokenize せず ★一律 abort (fail-closed residue)。
+      if ($rest =~ /^<[!?]/) { $bad{"<! or <? (MALFORMED-MARKUP; declaration/comment not allowed in rich field)"}++; last; }
+      unless ($rest =~ /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)/) { $i = $lt + 1; next; }   # literal "<" として読み飛ばす
+      my ($close, $tag) = ($1, $2);
+      $bad{"<$tag> (allowlist 外)"}++ unless $tag =~ $re;
+      $i = $lt + 1 + length($close) + length($tag);
+      # ---- 属性列を strict grammar で読む ----
+      # ★属性の直前には空白が MUST。 HTML5 は欠落を回復して属性化する (B1) が、 我々は回復せず落とす。
+      while (1) {
+        my $ws = 0;
+        while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; $ws = 1; }
+        # ★fail-closed residue: tag が ">" で閉じないまま値が尽きた (eof-in-tag)。 実 browser は tag を破棄するので
+        #   inert ではあるが、 「strict grammar で完全に tokenize しきれない形は理由を問わず落とす」規律を優先する
+        #   (未知の parser-differential を通さない側へ倒す = 列挙からの脱出の要)。
+        if ($i >= $n) { $bad{"<$tag> (MALFORMED-MARKUP; eof-in-tag = unterminated tag)"}++; last; }
+        my $c = substr($s, $i, 1);
+        if ($c eq ">") { $i++; last; }
+        if ($c eq "/" && substr($s, $i + 1, 1) eq ">") { $i += 2; last; }
+        if ($close) { $bad{"</$tag> (MALFORMED-MARKUP; attributes on end tag)"}++; last; }
+        unless ($ws) {
+          # 例: <a href="#x"onclick="alert(1)"> … HTML5 は onclick を属性として ★成立させる (parser 実測)。
+          $bad{"<$tag> (MALFORMED-MARKUP; missing-whitespace-between-attributes)"}++; last;
+        }
+        unless (substr($s, $i) =~ /^([a-zA-Z_:][-a-zA-Z0-9_:.]*)/) {
+          $bad{"<$tag> (MALFORMED-MARKUP; unreadable attr name: " . substr($s, $i, 12) . ")"}++; last;
+        }
+        my $name = $1; $i += length($name);
+        while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; }
+        my ($has_val, $raw) = (0, "");
+        if (substr($s, $i, 1) eq "=") {
+          $i++;
+          while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; }
+          my $r = substr($s, $i);
+          # ★値の 3 形を明示的に扱う。 quote 内の ">" では ★終端しない (B4)。
+          if    ($r =~ /^"([^"]*)"/)            { $raw = $1; $i += length($1) + 2; $has_val = 1; }
+          elsif ($r =~ /^\x27([^\x27]*)\x27/)   { $raw = $1; $i += length($1) + 2; $has_val = 1; }
+          elsif ($r =~ /^([^\s"\x27>`=<]+)/)    { $raw = $1; $i += length($1);     $has_val = 1; }
+          else { $bad{"$name= (MALFORMED-MARKUP; unreadable attr value: " . substr($r, 0, 12) . ")"}++; last; }
+        }
+        # ★属性名の肯定 allowlist: on*= は「形」でなく「名前」で落ちる (B1 の \s 依存 heuristic が不要になる)。
+        unless ($name =~ $attr_re) {
+          my $why = ($name =~ /^on/i) ? "event handler attribute" : "ATTR-NAME-NOT-ALLOWED";
+          $bad{"$name= ($why)"}++; next;
+        }
+        next unless $has_val && $name =~ $url_attr;
+        my $u = decode_full($raw);
+        $u =~ s/[\x00-\x20\x7f]//g;   # 制御文字/空白の混入で scheme を割る回避を封じる
+        next if $u =~ $href_ok;
+        $bad{"$name=\"$raw\" (URL-ALLOWLIST-VIOLATION; decoded: $u)"}++;
+      }
+    }
+    END { print join("・", map { "$_ x$bad{$_}" } sort keys %bad) if %bad; }
+  ' < "$vals")"; rc=$?
+  rm -f "$vals"
+  # ★(c) tokenizer 自身の異常終了も fail-closed (同じく set -e が効かないため自前判定)。
+  [[ $rc -eq 0 ]] || { echo "assemble-verification: ★rich field の tokenize に失敗 (perl 非 0 exit・検査不能ゆえ fail-closed)" >&2; return 1; }
+  [[ -z "$bad" ]] && return 0
+  echo "assemble-verification: ★人間層 rich field に allowlist 外の markup: $bad" >&2
+  echo "  (rich field = essence / statement / table cell / caption。 RAW emit ゆえ inline 非実行要素のみ許可: $RICH_INLINE_ALLOW)" >&2
+  echo "  (属性名も肯定 allowlist: $RICH_ATTR_ALLOW。 on*= / style / srcset 等は quoting 形に依らず落ちる)" >&2
+  echo "  (URL は entity decode 後の肯定 allowlist 判定: $RICH_HREF_ALLOW_DESC)" >&2
+  echo "  (MALFORMED-MARKUP = strict grammar で tokenize しきれない形。 未知の parser-differential は通さず落とす)" >&2
+  return 1
+}
+
 # ---- fail-closed contract validation (普遍規律 = core_validate_strings、 spec 固有 = doc_type/EARS/role/tint/block/集合) ----
 validate() {
   local errs=0 d p si bi nsec nblk btype nmb mbi mbtype npre pi pbtype
   core_validate_strings "assemble-spec" || errs=1
+  validate_rich_inline || errs=1
   # ★doc_type 束縛 (fail-open 封鎖): 本 fork は verification (doc_type=spec) 専用 assembler。 doc_type が spec 以外なら abort。
   [[ "$(q '.meta.doc_type')" == "spec" ]] || { echo "assemble-verification: ★meta.doc_type は spec 必須 (本 fork は verification 専用・doc_type flip で gate bypass 不可)" >&2; errs=1; }
   # 要件 id 一意性
@@ -220,7 +416,99 @@ ul[data-component="spec-machine-list"] .mli::before{content:"\2014";position:abs
 [data-component="spec-machine-demoted"] pre{background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:9px 12px;overflow-x:auto;font-size:11.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;margin:6px 0}
 [data-component="spec-machine-demoted"] pre code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:none;border:0;padding:0}
 @media print{[data-component="spec-machine-fold"]{display:none}}
+
+/* ===== canonical rich component (folio-aduv 0-d)。 common.css → srs.css token へ写像した pack-local 移植 =====
+ * ★なぜ要るか: 0-d で人間層 rich 資産 (a.xref / span.term + data-tooltip / ins|del.delta / coverage matrix の
+ *   badge--req・cov-req・req__ears・ears-* ) を canonical から ★RAW emit で全復元した。 しかし canonical
+ *   verification.html はこれらの規則を <link href="../../common.css"> で外部から読んでおり、 生成 pack は
+ *   単一 HTML へ inline <style> を焼く自己完結形ゆえ common.css を読まない。 移植しないと DOM だけ復元され
+ *   ★視覚/機能は復元されない (実測: body に 290+ occurrence・inline style に該当規則 0)。
+ *   とくに data-tooltip 66 は ::after 規則が無いと *死に属性* になる (canonical では hover の主 payload)。
+ * ★.term の上書きが要る理由: srs.css:52 の .term は同名 *別コンポーネント* (plain-language-term-inline =
+ *   専門語のやさしい併記 pill: display:inline-block / border-radius:999px / white-space:nowrap)。 canonical の
+ *   .term (dotted underline + cursor:help + tooltip box) とは別物ゆえ、 移植しないと 27 の glossary term が
+ *   ★別コンポーネントとして誤描画される。 本 pack は canonical 意味論を採るので後勝ち (source 順で srs.css の後に
+ *   emit される = 同特異度なら本規則が勝つ) で pill 化 property を明示的に戻す。
+ * ★CORE 不触・pack-local: emit_spec_css() は verification fork 専用ゆえ他 15 pack の artifact byte 回帰ゼロ。
+ * ★token 写像: --folio-brand→--brand / --folio-text-secondary→--ink-soft / --folio-text-primary→--ink /
+ *   --folio-surface-normal→--paper / --folio-border-strong→--line / --folio-success→--ok / --folio-danger→--bad。
+ *   srs.css token 経由ゆえ dark も自動追従する (srs.css の token 定義が両モードを持つ)。
+ */
+/* --- Class A xref (ADR-0034): 点線下線 + brand 色。 canonical と同形 --- */
+a.xref{color:var(--brand);text-decoration:underline dotted;text-underline-offset:2px;text-decoration-thickness:1px;letter-spacing:normal;font-feature-settings:normal}
+a.xref:hover{text-decoration-style:solid;text-decoration-thickness:2px}
+/* --- glossary term (ADR-0034 §2.8 / ADR-0036): 用語マーカー = help cursor + 控えめ dotted。
+ *     ★srs.css の同名 pill を打ち消す (display/padding/margin/radius/bg/font を canonical 意味論へ戻す) --- */
+.term{display:inline;font-size:inherit;font-weight:inherit;line-height:inherit;padding:0;margin-left:0;vertical-align:baseline;background:none;border:0;border-radius:0;white-space:normal;border-bottom:1px dotted var(--ink-soft);cursor:help}
+/* --- CSS-only tooltip box (JS 不要・data-tooltip 属性供給)。 xref / term で共用 --- */
+a.xref[data-tooltip],.term[data-tooltip]{position:relative}
+a.xref[data-tooltip]::after,.term[data-tooltip]::after{content:attr(data-tooltip);position:absolute;left:0;bottom:calc(100% + .5rem);z-index:50;width:max-content;max-width:min(28rem,80vw);padding:.5rem .75rem;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow-lg,0 8px 24px rgba(0,0,0,.18));font-size:12.5px;font-weight:400;line-height:1.5;letter-spacing:normal;font-feature-settings:normal;text-align:left;text-decoration:none;white-space:normal;
+  /* ★display:none で非描画 (visibility:hidden だと layout に残り、 右端の term から viewport 外へ伸びた box が
+     document の overflow に寄与して page 全体へ常時横スクロールを生む = canonical が render-gate で踏んだ実欠陥)。 */
+  display:none;opacity:0;transition:opacity .12s ease-out;pointer-events:none}
+a.xref[data-tooltip]:hover::after,a.xref[data-tooltip]:focus-visible::after,.term[data-tooltip]:hover::after,.term[data-tooltip]:focus-visible::after{display:block;opacity:1}
+@starting-style{a.xref[data-tooltip]:hover::after,a.xref[data-tooltip]:focus-visible::after,.term[data-tooltip]:hover::after,.term[data-tooltip]:focus-visible::after{opacity:0}}
+/* --- delta marker (ins/del + data-delta-id を ::before で可視化) --- */
+ins.delta,del.delta{display:inline;padding:1px 6px;border-radius:5px;text-decoration:none;letter-spacing:normal;font-feature-settings:normal}
+ins.delta{background:var(--ok-tint);border-left:2px solid var(--ok-line)}
+del.delta{background:var(--bad-tint);border-left:2px solid var(--bad-line);text-decoration:line-through}
+ins.delta::before{content:"+" attr(data-delta-id) " ";font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78em;color:var(--ok);margin-right:.25rem}
+del.delta::before{content:"-" attr(data-delta-id) " ";font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78em;color:var(--bad);margin-right:.25rem}
+/* --- coverage matrix の要件 badge / link (canonical §12 表) --- */
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72em;font-weight:600;line-height:1.7;letter-spacing:.02em;vertical-align:middle;border:1px solid transparent}
+.badge--req{background:var(--brand-tint);color:var(--brand);border-color:var(--brand-line,var(--line))}
+a.cov-req{text-decoration:none}
+a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px solid var(--brand);outline-offset:1px;filter:brightness(1.08)}
+/* --- EARS pattern pill (canonical §12 表の req__ears--*) --- */
+.req__ears{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.7em;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid transparent;font-feature-settings:"palt"}
+.req__ears--ubiquitous{background:var(--paper-3,var(--paper-2));color:var(--ink-soft);border-color:var(--line)}
+.req__ears--event{background:var(--brand-tint);color:var(--brand);border-color:var(--brand-line,var(--line))}
+.req__ears--state{background:var(--ok-tint);color:var(--ok);border-color:var(--ok-line)}
+.req__ears--unwanted{background:var(--warn-tint);color:var(--warn);border-color:var(--warn-line)}
+.req__ears--optional{background:var(--violet-tint);color:var(--violet);border-color:var(--violet-line)}
+/* --- EARS 文の inline 強調 (canonical 要件文中の id / SHALL / when 節) --- */
+.ears-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;font-weight:600;color:var(--brand);margin-right:.5rem}
+.ears-when{font-style:italic;color:var(--ink-soft)}
+/* ★--bad (= canonical --folio-normative) を使う。 ★--brand-deep を使ってはならない: srs.css:378 が明記する通り
+ *   --brand-deep は「構造ヘッダ/フッタの *塗り* 専用」 token (dark でも暗色を維持し白文字を載せる前提) で、
+ *   既存用法は全て background:var(--brand-deep); color:#fff。 これを地色 (--paper) 上の *文字色* に使うと
+ *   dark で contrast 1.54 (--paper-2 上 1.38) = WCAG AA 4.5 の 1/3 で ★不可視になる (light は 13.23 ゆえ
+ *   light だけ見ていると気づけない dark 専用の崩れ)。 canonical common.css:319-322 も .ears-shall は
+ *   --folio-normative (#b22323 / dark #ef7a7a = danger 赤) で、 色相ごと --brand-deep とは別物。
+ *   本 pack の写像表 (--folio-danger→--bad) に従うと --bad が両モードで canonical と ★byte 一致する
+ *   (light #b22323 / dark #ef7a7a・dark contrast 5.8 で AA 充足)。
+ * ★gate F は本件を捕捉できない: 生成物の live な .ears-shall は全て閉じた <details class="rq-norm"> 内にあり、
+ *   probe-srs.js が visible() + area>=16 で filter するため評価対象に入らない (= 恒真 PASS)。
+ *   ゆえ本 pair の contrast は selftest 側で token 値から静的に計算して pin する (gate F 緑は無証明領域)。 */
+.ears-shall{font-weight:600;color:var(--bad);text-transform:uppercase}
 CSS
+}
+
+# ---- pack 固有 folio-* head meta (folio-aduv 0-c) ----
+# ★CORE (lib/common.sh core_emit_graph_head) は doc-type / status / version の 3 本固定で、 全 pack (16) 共有ゆえ編集禁止 (B6)。
+#   canonical verification.html はさらに folio-layer / folio-glossary-automark / folio-stakeholders /
+#   folio-xref-completeness を持つ (実測 = 計 7 本)。 欠けると inventory/automark/xref-completeness の opt-in signal が
+#   生成物で失われる (flip 後に gate が keystone skip へ落ちる = 無検査の silent 化)。 ゆえ pack-level で contract.meta 由来 emit する
+#   (glossary pack の per-pack emit と同型・CORE 不触)。 値が無ければ tag ごと省略 = canonical に無い meta を捏造しない (SHOULD 準拠)。
+emit_pack_head_meta() {
+  local layer automark stake xrefc
+  layer="$(q '.meta.layer // ""')"
+  automark="$(q '.meta.glossary_automark // ""')"
+  # ★stakeholders は contract 側が YAML sequence (canonical JSON-LD の array と同型・CORE の型退行封鎖)。
+  #   meta tag の content は canonical 逐語 1 行 ("Developer, AI Agent, External Reviewer") が SSoT ゆえ join して復元する。
+  #   ★scalar が来たら abort する (fail-closed): 素で join すると string を 1 要素扱いで通してしまい、 CORE 側 JSON-LD の
+  #   型退行 (array→string) を pack-level では検出できないまま素通しになる。 型そのものを契約 gate で pin する。
+  local stake_type
+  stake_type="$(q '.meta.stakeholders | type')"
+  [[ "$stake_type" == "!!seq" || "$stake_type" == "!!null" ]] \
+    || { echo "assemble-verification: ★meta.stakeholders は array 必須 (実際: $stake_type)。 scalar は CORE の JSON-LD folio:stakeholders を canonical の array から string へ型退行させる (jsonld-lint / inventory / fedges のいずれも捕捉しない fail-open)" >&2; exit 1; }
+  stake="$(q '(.meta.stakeholders // []) | join(", ")')"
+  xrefc="$(q '.meta.xref_completeness // ""')"
+  [[ -n "$layer"    && "$layer"    != "null" ]] && printf '<meta name="folio-layer" content="%s">\n' "$(esc "$layer")"
+  [[ -n "$automark" && "$automark" != "null" ]] && printf '<meta name="folio-glossary-automark" content="%s">\n' "$(esc "$automark")"
+  [[ -n "$stake"    && "$stake"    != "null" ]] && printf '<meta name="folio-stakeholders" content="%s">\n' "$(esc "$stake")"
+  [[ -n "$xrefc"    && "$xrefc"    != "null" ]] && printf '<meta name="folio-xref-completeness" content="%s">\n' "$(esc "$xrefc")"
+  return 0
 }
 
 emit_head() {
@@ -233,6 +521,7 @@ emit_head() {
   # 図 (mermaid) がある doc にだけ vendor を head に1回 load (defer・図ゼロなら何も出さない)。 ../assets/mermaid.min.js を参照。
   [[ "${HAS_MERMAID:-0}" -gt 0 ]] && printf '<script src="../assets/mermaid.min.js" defer></script>\n'
   core_emit_graph_head
+  emit_pack_head_meta
   printf '</head>\n<body>\n'
 }
 
@@ -262,16 +551,18 @@ emit_code() {
 }
 emit_table() {
   local si="$1" bi="$2" cap nrow ri c
+  # ★caption / th / td は ★RAW emit (rich 契約値・esc 厳禁)。 esc すると原本 table の a.xref 13 / <code> 41 /
+  #   <strong> 11 が &lt;a…&gt; へ化けて可視本文に literal escape が露出する (double-escape)。
   cap="$(q ".sections[$si].blocks[$bi].caption // \"\"")"
   printf '<div class="tbl-wrap"><table data-component="spec-table">'
-  [[ -n "$cap" && "$cap" != "null" ]] && printf '<caption>%s</caption>' "$(esc "$cap")"
+  [[ -n "$cap" && "$cap" != "null" ]] && printf '<caption>%s</caption>' "$cap"
   printf '<thead><tr>'
-  while IFS= read -r h; do printf '<th>%s</th>' "$(esc "$h")"; done < <(q ".sections[$si].blocks[$bi].headers[]")
+  while IFS= read -r h; do printf '<th>%s</th>' "$h"; done < <(q ".sections[$si].blocks[$bi].headers[]")
   printf '</tr></thead><tbody>\n'
   nrow="$(q ".sections[$si].blocks[$bi].rows | length")"
   for ((ri=0; ri<nrow; ri++)); do
     printf '<tr>'
-    while IFS= read -r c; do printf '<td>%s</td>' "$(esc "$c")"; done < <(q ".sections[$si].blocks[$bi].rows[$ri][]")
+    while IFS= read -r c; do printf '<td>%s</td>' "$c"; done < <(q ".sections[$si].blocks[$bi].rows[$ri][]")
     printf '</tr>\n'
   done
   printf '</tbody></table></div>\n'
@@ -285,23 +576,41 @@ emit_mermaid() {
   while IFS= read -r line; do [[ "$first" -eq 1 ]] && first=0 || printf '\n'; printf '%s' "$(esc "$line")"; done < <(q ".sections[$si].blocks[$bi].source_lines[]")
   printf '</pre>'
   # figcaption: contract の caption を優先。 空なら DSL 内の accDescr → accTitle を fallback 抽出 (gate I が figcaption 空を指摘・両者とも SSoT 由来)。
+  # ★caption の由来で escape 規律が分かれる (folio-aduv):
+  #   - contract caption = rich 契約値 (原本 figcaption 逐語・<code> 2 + span.term 1 を内包) ゆえ ★RAW emit。
+  #   - DSL fallback (accDescr/accTitle) = mermaid source の *素テキスト* (preline 済 = tag 除去 + entity decode 後) ゆえ
+  #     ★esc 必須。 raw で出すと DSL 中の < が生タグとして混入し HTML を壊す。 両者を同一変数で混ぜて一括 esc/raw すると
+  #     どちらかが必ず壊れるため、 由来を保持して分岐する。
   cap="$(q ".sections[$si].blocks[$bi].caption // \"\"")"
-  if [[ -z "$cap" ]]; then
+  if [[ -n "$cap" && "$cap" != "null" ]]; then
+    printf '<figcaption>%s</figcaption></figure>\n' "$cap"
+  else
     cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accDescr:[[:space:]]*//p' | head -1)"
     [[ -z "$cap" ]] && cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accTitle:[[:space:]]*//p' | head -1)"
+    printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
   fi
-  printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
 }
+# ★subhead: heading = esc (原本 h3 は inline tag 0 = plain 契約値) / essence = ★RAW (rich 契約値・esc 厳禁)。
+#   anchor (原本 h3 の実 id) があれば h3 へ id= を刻む = corpus の fine section anchor 宛て inbound の解決先。
 emit_subhead() {
-  printf '<div data-component="spec-subhead"><h3>%s</h3><p class="sub-se">%s</p></div>\n' \
-    "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(esc "$(q ".sections[$1].blocks[$2].essence")")"
+  local anchor
+  anchor="$(q ".sections[$1].blocks[$2].anchor // \"\"")"
+  # ★section/requirement anchor と同じ fail-closed 規律 (空 anchor を無言で id 無し h3 として出さない)。
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-verification: ★subhead (section[$1] block[$2]) の anchor が空 (fine section anchor 宛て inbound の解決先を失う・fail-closed)" >&2; exit 1; }
+  printf '<div data-component="spec-subhead"><h3 id="%s">%s</h3><p class="sub-se">%s</p></div>\n' \
+    "$(esc "$anchor")" "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(q ".sections[$1].blocks[$2].essence")"
 }
 # 1 要件 row を emit ($1 = 要件 id)。
 emit_requirement_row() {
-  local id="$1" pat essence stmt class label
+  local id="$1" pat essence stmt class label anchor
   pat="$(q '.requirements[] | select(.id=="'"$id"'") | .ears_pattern')"
   essence="$(q '.requirements[] | select(.id=="'"$id"'") | .essence')"
   stmt="$(q '.requirements[] | select(.id=="'"$id"'") | .statement')"
+  # ★navigable anchor (folio-aduv 0-a): 原本 <details class="spec-row" id="req-ver-001"> の実 id を row へ刻む。
+  #   corpus inbound (#req-ver-* / #req-nav-*) の解決先。 ★これは data-req-id (大文字 SSoT) と .rid 可視 text への
+  #   *追加* であり *置換ではない* (test-adversarial-verification.sh L143/158/219/324 が大文字 data-req-id を pin)。
+  anchor="$(q '.requirements[] | select(.id=="'"$id"'") | .anchor // ""')"
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-verification: ★要件 $id の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
   # validate() が ears_pattern を allowlist 逐値判定済 = ここは到達不能であるべき。 :-unknown silent fallback でなく
   # hard error 化し、 万一 validate を擦り抜けた未知 pattern が無スタイル class="unknown" badge として silent emit されるのを封鎖。
   [[ -v EARS_CLASS[$pat] ]] || { echo "assemble-spec: ★到達不能: emit 時に未知 EARS pattern '$pat' (validate を擦り抜けた・fail-closed)" >&2; exit 1; }
@@ -313,10 +622,13 @@ emit_requirement_row() {
   #   要件 container を <(section|details) data-audience="human"> で key するため、 本 row は <div> ゆえ未被覆
   #   (生成物は /tmp 生成で folio validate 非対象)。 canonical container form (section/details) への寄せ・
   #   validate-gate 被覆は follow-up (folio-tr0 置換/drift gate) 領分。
-  printf '<div data-component="ears-requirement-row" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$id")" "$(esc "$pat")"
+  printf '<div data-component="ears-requirement-row" id="%s" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$anchor")" "$(esc "$id")" "$(esc "$pat")"
   printf '<div class="rq-head"><span class="rid">%s</span><span data-component="ears-badge" class="%s">%s</span></div>\n' "$(esc "$id")" "$class" "$(esc "$label")"
-  printf '<p class="rq-essence">%s</p>\n' "$(esc "$essence")"
-  printf '<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$(esc "$stmt")"
+  # ★essence / statement は ★RAW emit (rich 契約値・esc 厳禁)。 esc すると原本の a.xref / span.term / ins|del.delta /
+  #   <code> が literal escape へ化ける。 特に statement の <code>jq -S</code> が剥がれると 裸の jq -S が可視 prose に落ち
+  #   folio_prose_only の code mask を外れて [how-outside] P-11 primitive を踏む (0-e = PRESERVE + mask をこの raw 経路で担保)。
+  printf '<p class="rq-essence">%s</p>\n' "$essence"
+  printf '<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$stmt"
   printf '</div>\n'
 }
 emit_requirements() {
@@ -342,6 +654,8 @@ emit_machine_block() { # $1 = block への yq path (e.g. ".machine_preamble[0]" 
     # ★demoted (tr0 / verification): ADR-0040 機械層降格分 (<p>/<ul>/<pre><code> 内包) を *逐語* raw emit。
     #   inner は cell-1 が inner_norm 済 = 単一行 raw HTML。 RAW emit (esc 厳禁) ＝ 原本 div.demoted inner と round-trip 一致。
     demoted) printf '<div data-component="spec-machine-demoted" data-audience="machine">%s</div>\n' "$(q "$base.html")" ;;
+    # ★dl (folio-aduv): 原本 <dl class="doc-meta" data-audience="machine"> の inner (<div><dt>/<dd></div> 列) を逐語 raw emit。
+    dl) printf '<dl data-component="spec-machine-dl" data-audience="machine">%s</dl>\n' "$(q "$base.html")" ;;
     *) echo "assemble-verification: ★到達不能: emit 時に未対応 machine block type '$mt' ($base・validate を擦り抜けた・fail-closed)" >&2; exit 1 ;;
   esac
 }
@@ -380,18 +694,44 @@ emit_blocks() {
 }
 
 emit_section() {
-  local si="$1" tint kicker heading essence icon
+  local si="$1" tint kicker heading essence icon anchor
   tint="$(q ".sections[$si].tint")"
   kicker="$(q ".sections[$si].kicker")"
   heading="$(q ".sections[$si].heading")"
   essence="$(q ".sections[$si].essence")"
   icon="${SECT_ICONS[$(( si % ${#SECT_ICONS[@]} ))]}"
+  # ★top-level section anchor (folio-aduv 0-a): 原本 <section id="s1-contract"> の実 id を章頭へ刻む。
+  #   ★band() は lib/common.sh = CORE (16 pack 波及) ゆえ 1 byte も触れない (fence)。 band が開く
+  #   <section data-component="chapter-deck-band"> へ id を足せないため、 pack-level で ★章全体を
+  #   anchor 付き <section> で ★包む (canonical の実構造 <section id="s1-contract" class="normative"> と同形)。
+  #
+  # ★anchor を「band 直前の <span id> sibling」で置いてはならない (実測で確認済の fail-open):
+  #   fragment 解決 (browser) は id を持つ任意要素で成立するが、 ★同じ構造のもう一人の消費者である
+  #   bin/folio の folio_chrome_toc_rows は h2/h3 の TOC target を (a) 見出し自身の id → (b) 最近接の
+  #   ★外側 <section id="…"> の 2 段 fallback でしか解決しない。 band が開く <section> は id を持たず h2 にも
+  #   id が無いため tgt="" となり ★行ごと drop される (span は section でも h2 でもないので参照されない)。
+  #   実測: canonical toc_rows 25 行 (lvl2=7 / lvl3=18) に対し span 形の生成物は 18 行 (★lvl2=0) で、
+  #   章見出し 7 本 (s0-reader-guide … s6-references) が全滅した。 波及は 2 点:
+  #     (1) canonical は <!-- folio:chrome-toc --> に 25 entry を焼いており、 flip 後の folio build 再生成で
+  #         25→18 = ページ内目次から章 entry が全消滅する。
+  #     (2) folio_chrome_skip_target は toc_rows 先頭行を採るため skip-link の行き先が
+  #         #s0-reader-guide → #s1-1-concepts へ静かに移動する (a11y 経路の回帰)。
+  #   ★id 属性の *集合* 一致 (55==55) は ★構造一致を証明しない (集合 assert は span でも緑になる) —
+  #   本件がその実証ゆえ、 self-test は (lvl, target) 列の逐字一致を id 集合とは ★独立に撃つこと。
+  #   ★<section> 包みは CORE 不触のまま canonical 構造へ ★接近する (toc_rows の depth 追跡上、
+  #   外側 sid=s1-contract → 内側 band section (sid="") → h2 が外側へ fallback して正しく解決する)。
+  anchor="$(q ".sections[$si].anchor // \"\"")"
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-verification: ★section[$si] の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
+  printf '<section id="%s">\n' "$(esc "$anchor")"
   band "$tint" "$kicker" "$heading" "$icon"
-  printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
+  # ★essence は ★RAW emit (rich 契約値・esc 厳禁)。
+  printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$essence"
   emit_blocks "$si"
   # ★機械層 (w1f cell-2): この章の data-audience="machine" 自由文を fold で既定非表示・人間層 (essence/blocks) の後に置く。
   emit_machine_fold ".sections[$si].machine_blocks" "$heading の地の文・運用説明・rationale"
   band_end
+  # ★anchor 付き <section> を閉じる (band_end = chapbody の </div> の ★外側)。
+  printf '</section>\n'
 }
 
 # references = 非終端 照会 (前方・他文書へ)。 token/doc/role を固定属性で刻む (verify-spec が echo 厳密一致で突合)。

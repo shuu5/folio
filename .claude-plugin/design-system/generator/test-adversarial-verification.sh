@@ -132,6 +132,15 @@ expect_abort "A15 ★tint 空白 split bypass (allowlist token 並び) を逐値
 cp "$BASE" "$TMP/a16.yaml"; yq -i '.references[0].role = "claim rationale"' "$TMP/a16.yaml"
 expect_abort "A16 ★references role 空白 split bypass (allowlist token 並び) を逐値判定で abort" "$TMP/a16.yaml" "未知の reference role"
 
+# A17. ★meta.stakeholders の型退行 (array → scalar string) を abort (folio-aduv 0-c)。
+#   ★contract 経由で CORE の出力を壊すクラス: lib/common.sh core_emit_graph_head は .meta.stakeholders を JSON-LD の
+#   "folio:stakeholders" へ *そのまま* 転記するため、 scalar を入れると canonical の array が string へ型退行する
+#   (CORE を 1 byte も触らずに CORE 出力が壊れる = fence HIGH-2 の意図違反)。 既存 gate は全て素通りした (実測):
+#   jsonld-lint は folio:stakeholders を型検査対象外と明記、 inventory は非 array を捨て meta split fallback で
+#   同じ配列を作り直して drift を隠蔽、 §11 前方 edge 突合も本 key を見ない。 ゆえ契約段で型を fail-closed に pin する。
+cp "$BASE" "$TMP/a17.yaml"; yq -i '.meta.stakeholders = "Developer, AI Agent, External Reviewer"' "$TMP/a17.yaml"
+expect_abort "A17 ★meta.stakeholders の scalar 退行を abort (CORE JSON-LD の array→string 型退行封鎖)" "$TMP/a17.yaml" "stakeholders は array 必須"
+
 # === fabrication-free (HTML 改竄・生成後 fail-closed) ===
 # F1. ★要件 row を 1 枚削除 → 行数 FAIL
 cp "$TMP/base-filled.html" "$TMP/f1.html"
@@ -144,13 +153,19 @@ perl -0777 -i -pe 's#(data-req-id="REQ-VER-001"[^>]*>\s*<div class="rq-head"><sp
 expect_vfilled_fail "F2 ★可視 rid 改竄 (attr 正) を要件タプルで捕捉" "$TMP/f2.html" "要件"
 
 # F3. ★要件 statement 改竄 → 要件タプル FAIL
+# ★folio-aduv: statement は rich raw emit になり可視形が <span class="ears-id">REQ-VER-001</span>: … へ変わった。
+#   旧 mutation (<p class="rq-stmt">REQ-VER-001:) は no-op 化し「改竄していないのに PASS」= 空撃ちになる。
+#   per-shape で新 shape へ撃ち直す (mutation-kill 維持)。 ★fired 検査つき: 置換 0 件なら ng (空撃ちの再発を封じる)。
 cp "$TMP/base-filled.html" "$TMP/f3.html"
-perl -0777 -i -pe 's#(<p class="rq-stmt">REQ-VER-001:)#${1} 捏造された一文。#' "$TMP/f3.html"
+perl -0777 -i -pe 'our $n; $n += s#(<p class="rq-stmt"><span class="ears-id">REQ-VER-001</span>:)#${1} 捏造された一文。#; END { exit($n?0:9) }' "$TMP/f3.html" \
+  || ng "F3 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "F3 ★要件 statement 改竄を要件タプルで捕捉" "$TMP/f3.html" "要件タプル"
 
 # F4. ★要件 essence 改竄 → 要件タプル FAIL
+# ★folio-aduv: essence も rich raw (<code>tests/scenarios/</code> が live tag) ゆえ旧 literal は no-op 化。 新 shape へ撃ち直す。
 cp "$TMP/base-filled.html" "$TMP/f4.html"
-perl -0777 -i -pe 's#<p class="rq-essence">検証 scenario は tests/scenarios/ 配下の#<p class="rq-essence">捏造された essence・tests/scenarios/ 配下の#' "$TMP/f4.html"
+perl -0777 -i -pe 'our $n; $n += s#<p class="rq-essence">検証 scenario は#<p class="rq-essence">捏造された essence・検証 scenario は#; END { exit($n?0:9) }' "$TMP/f4.html" \
+  || ng "F4 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "F4 ★要件 essence 改竄を要件タプルで捕捉" "$TMP/f4.html" "要件タプル"
 
 # F5. ★EARS badge label 改竄 → 要件タプル FAIL (REQ-VER-007 = unwanted = forbid badge "異常応答")
@@ -195,8 +210,10 @@ perl -0777 -i -pe 's#(<div data-component="spec-machine-demoted" data-audience="
 expect_vfilled_fail "F12 ★機械層 demoted text 改竄を原本↔生成物 round-trip が捕捉" "$TMP/f12.html" "原本↔生成物 機械層"
 
 # F13. ★subhead heading 改竄 → subhead 列 FAIL
+# ★folio-aduv: h3 に fine section anchor (id=) が付いた形へ shape が変わったため撃ち直す (id は温存し heading だけ改竄)。
 cp "$TMP/base-filled.html" "$TMP/f13.html"
-perl -0777 -i -pe 's#(<div data-component="spec-subhead"><h3>)§3\.2 YAML schema#${1}§3.2 捏造#s' "$TMP/f13.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="spec-subhead"><h3 id="[^"]*">)§3\.2 YAML schema#${1}§3.2 捏造#s; END { exit($n?0:9) }' "$TMP/f13.html" \
+  || ng "F13 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "F13 ★subhead heading 改竄を捕捉" "$TMP/f13.html" "subhead heading"
 
 # F14. ★mermaid source 行改竄 → mermaid source FAIL
@@ -219,12 +236,152 @@ cp "$TMP/base-filled.html" "$TMP/f17.html"
 perl -0777 -i -pe 's#(data-slot-id="cover-summary">)[^<]*#${1}改竄された散文#' "$TMP/f17.html"
 expect_vfilled_fail "F17 prose 改竄 (注入忠実) を verify が捕捉" "$TMP/f17.html" "注入"
 
-# F18. ★HTML 注入の escape 健全性 (生 markup が構造へ漏れない・false-positive 防止)。
+# F18. ★HTML 注入の遮断 (生 markup が構造へ漏れない)。
+# ★folio-aduv で保証形が変わった: 人間層 rich field は inline HTML を逐語保持し RAW emit する (xref/term/delta/<code> 復元の手段)
+#   ため、 旧「無差別 esc() して &lt;script&gt; と *表示* する」保証は成立しない。 代わりに validate_rich_inline の
+#   ★allowlist fail-closed abort が引き継ぐ = escape して出すのでなく *生成そのものを拒否* する (旧より強い保証)。
+#   ゆえ期待を「entity へ escape」→「assemble abort」へ移す (assert の削除ではなく、 より強い assert への置換)。
 cp "$BASE" "$TMP/f18.yaml"; yq -i '.requirements[0].essence = "<script>alert(1)</script>危険"' "$TMP/f18.yaml"
-bash "$ASM" "$TMP/f18.yaml" "$TMP/f18.html" >/dev/null 2>&1
-if grep -qE '<script>alert|<(lt|gt|quot);' "$TMP/f18.html"; then ng "F18 escape 破綻 (生 markup か back-ref 化け)"
-elif grep -q '&lt;script&gt;alert' "$TMP/f18.html"; then ok "F18 HTML 注入を正規 entity に escape"
-else ng "F18 正規 entity &lt;script&gt; が出ていない"; fi
+expect_abort "F18 ★rich field への <script> 注入を allowlist fail-closed abort" "$TMP/f18.yaml" "allowlist 外"
+# F18b. ★event handler 属性の注入も abort (allowlist 内タグ <span> に紛れ込む形 = tag 名検査だけでは抜ける穴)。
+cp "$BASE" "$TMP/f18b.yaml"; yq -i '.requirements[0].essence = "<span onclick=\"alert(1)\">危険</span>"' "$TMP/f18b.yaml"
+expect_abort "F18b ★rich field への event handler 属性注入を abort" "$TMP/f18b.yaml" "event handler"
+# F18c. ★生成物に生 <script> が出ていないことの直接 pin (abort 経路が壊れても本 assert が残る = 二重化)。
+if grep -q '<script>alert' "$TMP/base-filled.html"; then ng "F18c 生成物に生 <script> 混入"; else ok "F18c 生成物に生 <script> 混入なし"; fi
+# F18d. ★entity 符号化した URL scheme の注入も abort (per-shape・F18/F18b が撃たない構造クラス)。
+#   ★これを撃たないと F18/F18b の緑は「偽の保証」になる: <a> は tag allowlist 内・on*= も無いため、 literal 部分文字列
+#   一致の scheme 検査だけでは 3 検査すべてを擦り抜けて live な javascript: link が RAW emit される (実弾で確認した回帰)。
+#   browser は属性値の character reference を decode してから scheme を解釈するので、 検査も decode 後に行わねばならない。
+#   符号化の *形ごと* に 1 本ずつ撃つ (10 進 / 16 進 / 多重符号化 / 制御文字割り込み / 非 allowlist scheme)。
+f18d_shape() { # label essence-payload
+  cp "$BASE" "$TMP/f18d.yaml"; yq -i ".requirements[0].essence = \"$2\"" "$TMP/f18d.yaml"
+  expect_abort "F18d $1" "$TMP/f18d.yaml" "URL-ALLOWLIST-VIOLATION"
+}
+f18d_shape "★10 進 entity 符号化 scheme (&#106;avascript:) を abort" '<a href=\"&#106;avascript:alert(1)\">click</a>'
+f18d_shape "★16 進 entity 符号化 scheme (&#x6a;avascript:) を abort"  '<a href=\"&#x6a;avascript:alert(1)\">click</a>'
+f18d_shape "★多重符号化 (&amp;#106;avascript:) を abort"              '<a href=\"&amp;#106;avascript:alert(1)\">click</a>'
+f18d_shape "★制御文字割り込み (java&Tab;script:) を abort"            '<a href=\"java&Tab;script:alert(1)\">click</a>'
+f18d_shape "★data: URL を abort (肯定 allowlist ゆえ scheme 列挙に依らず落ちる)" '<a href=\"data:text/html,xx\">click</a>'
+# F18e. ★空撃ち検査: 上記 abort が「毒とは無関係に常に落ちている」のでないことを pin する。
+#   素の契約 (毒なし) は abort *しない* こと = allowlist が正当な href (#frag / 相対 .html / .md) を通す証明。
+#   これが無いと validate_rich_inline が全 contract を一律 reject していても F18d は緑になる (恒真 abort の見逃し)。
+if bash "$ASM" "$BASE" "$TMP/f18e.html" >/dev/null 2>&1; then ok "F18e ★空撃ち検査: 素の契約 (毒なし) は abort しない = URL allowlist は恒真 reject でない"
+else ng "F18e 素の契約が abort した (URL allowlist が正当 href を弾いている = 恒真 abort ゆえ F18d 群が無意味)"; fi
+
+# F18f. ★★quoting/区切りの *形* ごとの per-shape mutation-kill (F18d が撃たない ★別の構造クラス)。
+#   ★なぜ要るか: F18d は符号化 (entity) の形を per-shape 化したが、 撃った payload は全て ★double-quote + 空白正常形
+#   だった。 mutation-kill は DOM 構造クラスごとに撃つ規律ゆえ、 1 形 (double-quote) の緑は ★構造差のある形
+#   (single / unquoted / 空白欠落 / quote 内 >) の穴を証明しない。 実際 naive regex 版はこの 4 形すべてに fail-open で、
+#   実 browser (html5lib 突合) は 4 形すべてを ★LIVE と解釈した = 86/86 全緑のまま live な javascript:/on*= を RAW emit していた。
+#   ★payload は strenv で渡す: yq の \" escape 経路では ★real な single quote を注入できず (\x27 が literal 化して
+#   別物を撃つ = 空撃ち)、 テストが緑でも当該 shape を検査していない偽の被覆になる (本 group 作成時に実測)。
+f18f_shape() { # label payload expected_reason_token
+  cp "$BASE" "$TMP/f18f.yaml"
+  payload="$2" yq -i '.requirements[0].essence = strenv(payload)' "$TMP/f18f.yaml"
+  expect_abort "F18f $1" "$TMP/f18f.yaml" "$3"
+}
+# B1: HTML5 の after-attribute-value-quoted state は非空白を missing-whitespace-between-attributes として *回復* し
+#     onclick を属性化する。 strict grammar は回復せず落とす (fail-closed residue)。
+f18f_shape "★属性間の空白欠落 (href=\"#x\"onclick=…) を abort" '<a href="#x"onclick="alert(1)">c</a>' "MALFORMED-MARKUP"
+# B2/B3: 値の quoting 形に依らず URL 検査へ入ること。
+f18f_shape "★single-quote 値の javascript: を abort" "<a href='javascript:alert(1)'>c</a>" "URL-ALLOWLIST-VIOLATION"
+f18f_shape "★unquoted 値の javascript: を abort"     '<a href=javascript:alert(1)>c</a>'     "URL-ALLOWLIST-VIOLATION"
+# B4: quote 内の ">" で属性列が早期終端せず、 後続の href が検査対象に残ること。
+f18f_shape "★quote 内 > の後続 href を abort (早期終端しない)" '<a title=">" href="javascript:alert(1)">c</a>' "URL-ALLOWLIST-VIOLATION"
+# 符号化 × quoting の直交合成 (両 per-shape 軸が同時に効くこと)。
+f18f_shape "★single-quote × entity 符号化 scheme を abort" "<a href='&#106;avascript:alert(1)'>c</a>" "URL-ALLOWLIST-VIOLATION"
+# ★属性名 allowlist は *形* に依らず落ちる (\s 依存 heuristic を廃した証明)。
+f18f_shape "★single-quote の on*= を属性名 allowlist で abort" "<span onclick='alert(1)'>x</span>" "event handler attribute"
+# ★未列挙 sink も属性名 allowlist で一律に落ちる (否定列挙なら取りこぼす形)。
+f18f_shape "★style 属性 (未列挙 sink) を abort" '<span style="color:red">x</span>' "ATTR-NAME-NOT-ALLOWED"
+# ★tokenize しきれない形は理由を問わず落とす (未知の parser-differential を通さない側へ倒す)。
+f18f_shape "★eof-in-tag (未終端 tag) を abort" '<a href="#x"' "MALFORMED-MARKUP"
+f18f_shape "★comment 内への隠蔽を abort"       '<!--<a href=javascript:alert(1)>-->x' "MALFORMED-MARKUP"
+
+# === F18g. ★guard 自身の ★喪失を撃つ (per-shape mutation-kill・fail-open クラスの封鎖) ===
+# ★なぜ要るか: 本 fork は 8 箇所の emit site で esc() を外し RAW emit 化し、 その代替保護を
+#   validate_rich_inline の allowlist abort ★一本に集約した。 ゆえ guard が「何も検査しない状態」へ落ちると
+#   注入防御が ★丸ごと消える。 F18/F18b/F18d/F18f 群は guard が *生きている* ことを撃つが、 それらは
+#   guard 自身の ★喪失に対しては ★恒真 (guard が空撃ちでも payload が無ければ緑) ゆえ本 F18g が要る。
+# ★旧実装の穴 (実測): PASS/FAIL を $bad の空文字列性だけで決めていたため rich_field_values の query が drift すると
+#   「検査対象 0 件 → bad なし → return 0 = PASS」で guard が何も覆わないまま緑になった。 RICH_FIELD_MIN の
+#   被覆量 assert がそれを塞ぐ。 本 F18g はその塞ぎが ★実際に効くことを実弾で pin する。
+# ★GUARDLESS は SCRIPT_DIR 直下に置く MUST: assembler は SCRIPT_DIR 経由で lib/common.sh を source するため、
+#   他所へ置くと ★lib 解決に失敗して rc=1 になる (= guard が撃った abort と ★見分けが付かない偽の緑。 実測で踏んだ)。
+#   TMP の外ゆえ EXIT trap へ ★明示的に載せる (途中 kill で untracked の残骸を repo に残さない)。
+GUARDLESS="$SCRIPT_DIR/.f18g-guardless.sh"
+trap 'rm -rf "$TMP"; rm -f "$GUARDLESS"' EXIT
+sed 's/\.sections\[\]\.essence,/.sectionsTYPO[].essence,/' "$ASM" > "$GUARDLESS"
+if diff -q "$ASM" "$GUARDLESS" >/dev/null; then
+  ng "F18g mutation が assembler を変えていない = ★空撃ち (rich_field_values の query 形が変わった疑い)"
+else
+  # (a) 検査対象が痩せた事実そのものを abort する (query drift = 抽出規約の破綻)。
+  g_out="$(bash "$GUARDLESS" "$BASE" "$TMP/f18g.html" 2>&1)"; g_rc=$?
+  if [[ $g_rc -ne 0 && "$g_out" == *"検査対象が"* ]]; then
+    ok "F18g ★rich_field_values の query drift を被覆量 assert が捕捉 (guard 喪失の検出)"
+  else
+    ng "F18g ★query drift が素通り (rc=$g_rc) = guard 喪失に恒真 PASS (fail-open)"
+  fi
+  # (b) ★teeth: guard を殺した assembler へ <script> 注入契約を食わせても ★生成させない。
+  #   drift した field (.sections[].essence) の値は tokenizer の検査対象から外れるため、 被覆量 assert が
+  #   無ければ payload は ★そのまま RAW emit される。 abort することが RAW emit 無防備化の封鎖証明になる。
+  # ★rc≠0 「だけ」で緑にしてはならない (実測で踏んだ罠): assembler を SCRIPT_DIR 外へ置くと lib/common.sh の
+  #   解決に失敗して ★同じ rc=1 を返す。 すなわち「abort した」は ★guard が撃った証明にならず、 tool error でも
+  #   緑になる = 別クラスの恒真 PASS。 ゆえ ★理由 token (被覆量 assert) と ★payload の不在を併せて課す。
+  rm -f "$TMP/f18g2.html"
+  cp "$BASE" "$TMP/f18g.yaml"
+  payload='<script>alert(1)</script>' yq -i '.sections[0].essence = strenv(payload)' "$TMP/f18g.yaml"
+  g_out="$(bash "$GUARDLESS" "$TMP/f18g.yaml" "$TMP/f18g2.html" 2>&1)"; g_rc=$?
+  if [[ $g_rc -eq 0 ]]; then
+    ng "F18g ★guard 喪失時に <script> 注入が素通りし生成された (fail-open = RAW emit が無防備)"
+  elif [[ "$g_out" != *"検査対象が"* ]]; then
+    ng "F18g ★abort したが理由が被覆量 assert でない (tool error 等での ★見せかけの緑。 stderr 末尾: $(printf '%s' "$g_out" | tail -1))"
+  elif grep -q '<script>alert(1)</script>' "$TMP/f18g2.html" 2>/dev/null; then
+    ng "F18g ★abort したが生成物に payload が残留している (部分書き出しでの露出)"
+  else
+    ok "F18g ★guard を殺した assembler でも <script> 注入契約は被覆量 assert で abort し payload 不在 (RAW emit の無防備化を封鎖)"
+  fi
+fi
+rm -f "$GUARDLESS"
+
+# === F19. ★navigable id / head meta / rich 資産の喪失を verify が捕捉する (folio-aduv 0-a/0-c/0-d の per-shape mutation-kill) ===
+# ★なぜ per-shape に分けるか: 1 instance の実弾は *構造差のある* instance の穴を証明しない。 section anchor (章包み
+#   <section id> 要素) / head meta (<meta> tag) / rich 資産 (a.xref / span.term / ins.delta) は DOM 形状が別クラスゆえ
+#   1 本ずつ撃つ。
+# ★これらが無いと、 生成物から資産が丸ごと消えても gate は baseline と同一の FAIL 件数を出す (= 喪失に vacuous PASS)。
+#   実際 mutation-kill 実弾で: emit_pack_head_meta 呼出を落とすと meta 7→3 本、 章 anchor emit 行を落とすと
+#   section id 7→0 本になるのに、 いずれも新規 FAIL ゼロだった (本 F19 群と verify 側 gate の追加で封鎖)。
+f19_mut() { # label perl-expr [reason]
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/f19.html"
+  if ! diff -q "$TMP/base-filled.html" "$TMP/f19.html" >/dev/null; then
+    expect_vfilled_fail "F19 $1" "$TMP/f19.html" "${3:-}"
+  else
+    ng "F19 $1 (mutation が生成物を変えていない = 空撃ち。 selector が実 DOM と不一致の疑い)"
+  fi
+}
+f19_mut "★section anchor 全剥奪 を捕捉 (corpus inbound #s1-contract 等が解決不能)" \
+  's#<section id="[^"]*">\n##g' "section anchor"
+f19_mut "★section anchor id 改竄 を捕捉 (脱落だけでなく値の drift も)" \
+  's#(<section id=")s1-contract#${1}s1-TAMPERED#' "section anchor"
+f19_mut "★head meta (folio-stakeholders) 剥奪 を捕捉" \
+  's#<meta name="folio-stakeholders"[^>]*>\n##' "folio-stakeholders"
+f19_mut "★head meta (folio-layer) 値改竄 を捕捉" \
+  's#(<meta name="folio-layer" content=")[^"]*#${1}TAMPERED#' "folio-layer"
+f19_mut "★rich: a.xref 1 個剥奪 を ORACLE parity が捕捉" \
+  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "a.xref"
+f19_mut "★rich: span.term 1 個剥奪 を ORACLE parity が捕捉" \
+  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "span.term"
+f19_mut "★rich: ins.delta 1 個剥奪 を ORACLE parity が捕捉" \
+  's#<ins class="delta"[^>]*>(.*?)</ins>#$1#s' "delta"
+f19_mut "★0-e: jq -S を text ごと削除 を PRESERVE assert が捕捉 (how-outside は緑のままでも落ちること)" \
+  's#<code>jq -S</code>##' "jq -S"
+# F19z. ★空撃ち検査 (恒真 FAIL の封鎖): 無改変の baseline は上記 gate 群で FAIL しないこと。
+#   これが無いと verify が何を食わせても FAIL する状態でも F19 群は全て緑になる。
+if bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" >/dev/null 2>&1; then
+  ok "F19z ★空撃ち検査: 無改変 baseline は verify PASS = F19 群の FAIL は mutation 由来"
+else
+  ng "F19z 無改変 baseline が verify FAIL (恒真 FAIL ゆえ F19 群が無意味。 環境要因 gate F 等を切り分けること)"
+fi
 
 # === kicker 列 fidelity (folio-l93・決定的フィールド→floor) ===
 # 17n 独立 ceiling (wf_1ffcdb7c HIGH) が炙った floor gap: band() が <span class="kicker"> で可視 emit する
@@ -320,8 +477,10 @@ perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="mach
 expect_vfilled_fail "M6 ★machine 部の aria-hidden を REQ-DA-STRUCT-4 が捕捉" "$TMP/m6.html" "REQ-DA-STRUCT-4"
 
 # M7. ★要件 container の data-audience="human" 剥奪 → tuple + REQ-DA-STRUCT-1 FAIL (孤立 human container 検出)。
+# ★folio-aduv: row opener に id="<navigable id>" が入った形へ shape が変わったため撃ち直す。
 cp "$TMP/base-filled.html" "$TMP/m7.html"
-perl -0777 -i -pe 's#(<div data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*") data-audience="human">#${1}>#' "$TMP/m7.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="ears-requirement-row" id="[^"]*" data-req-id="[^"]*" data-ears-pattern="[^"]*") data-audience="human">#${1}>#g; END { exit($n?0:9) }' "$TMP/m7.html" \
+  || ng "M7 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "M7 ★要件 container の data-audience=human 剥奪を REQ-DA-STRUCT-1 が捕捉" "$TMP/m7.html" "REQ-DA-STRUCT-1"
 
 # M8. ★未対応 machine block type (silent drop 禁止・contract abort) → assemble fail-closed。

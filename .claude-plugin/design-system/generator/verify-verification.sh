@@ -91,6 +91,37 @@ chk "spec-subhead == Σ subhead blocks"    "$(q '[.sections[].blocks[]? | select
 # 1b. ★core 共通 chrome (cover-head/approval/glossary の値突合 + 占有数パリティ・folio-mk9)。
 verify_core_chrome
 
+# 1c. ★pack 固有 folio-* head meta (folio-aduv 0-c)。 CORE (core_emit_graph_head) が emit する 3 本 (doc-type/status/version)
+#   の外側に、 verification.html は folio-layer / folio-glossary-automark / folio-stakeholders / folio-xref-completeness を
+#   持つ (canonical 実測 = 計 7 本)。 これらは inventory / automark / xref-completeness の ★opt-in signal ゆえ、 欠けると
+#   flip 後に該当 gate が keystone skip へ落ちる = 無検査の silent 化になる。
+#   ★mutation-kill 実弾で確認した穴: assembler の emit_pack_head_meta 呼出を 1 行落とすと生成物の folio-* meta が
+#   7→3 本へ落ちるのに、 本 script の FAIL 件数は baseline と完全一致だった (= 喪失に vacuous PASS)。 repro-build の
+#   BYTE-DIFF も artifact 事後改変しか捕まえず、 contract と生成物が両側で同時に欠ける generator 回帰には無力。
+#   ★双方向 chk (捏造も喪失も捕捉): contract に key が在れば逐字存在を要求し、 無ければ生成物にも不在を要求する。
+#   ★stakeholders は contract 側が array (canonical JSON-LD と同型) ゆえ meta content は join(", ") で期待を組む。
+verify_pack_head_meta() {
+  local key tag exp act pair
+  for pair in 'layer:folio-layer' 'glossary_automark:folio-glossary-automark' \
+              'stakeholders:folio-stakeholders' 'xref_completeness:folio-xref-completeness'; do
+    key="${pair%%:*}"; tag="${pair##*:}"
+    if [[ "$key" == "stakeholders" ]]; then exp="$(q '(.meta.stakeholders // []) | join(", ")')"
+    else exp="$(q ".meta.$key // \"\"")"; fi
+    [[ "$exp" == "null" ]] && exp=""
+    act="$(T="$tag" perl -CSD -0777 -ne 'BEGIN{$t=$ENV{T}} while (/<meta name="\Q$t\E" content="([^"]*)">/g){ print "$1\n"; }' "$HTML")"
+    if [[ -n "$exp" ]]; then
+      chk "head meta $tag == contract .meta.$key" "$(esc "$exp")" "$act"
+    else
+      chk "head meta $tag 不在 (contract 側も空 = 捏造禁止)" "" "$act"
+    fi
+  done
+  # ★folio-* meta の総数 pin: 上の per-meta chk は「知っている 4 本」しか見ないため、 CORE 3 本の喪失や
+  #   未知 meta の捏造混入を数で挟む (canonical 実測 = 7 本 = CORE 3 + pack 4)。
+  chk "folio-* head meta 総数 == 7 (CORE 3 + pack 4)" "7" \
+    "$(grep -o '<meta name="folio-[^"]*"' "$HTML" | wc -l | tr -d ' ')"
+}
+verify_pack_head_meta
+
 # 2. id 一意性 + doc_type
 chk_empty "要件 id 一意"     "$(q '.requirements[].id' | sort | uniq -d | tr '\n' ' ')"
 chk_empty "section id 一意"  "$(q '.sections[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -100,9 +131,13 @@ chk "doc_type == spec"       "spec" "$(q '.meta.doc_type')"
 exp_sh="$(q '.sections[].heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
 act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#' | head -n "$NSEC")"
 chk "section 可視 heading 列 == sections[].heading (順序)" "$exp_sh" "$act_sh"
-exp_se="$(q '.sections[].essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
-act_se="$(perl -CSD -0777 -ne 'while (/<div data-component="section-essence-callout"><p class="sec-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
-chk "section essence 列 == sections[].essence (順序)" "$exp_se" "$act_se"
+# ★rich 契約値 (folio-aduv): essence は inline HTML (a.xref / span.term / <code> …) を逐語で持ち assembler が RAW emit する。
+#   ゆえ期待側は esc せず *契約値そのもの*、 実測側は ([^<]*) でなく (.*?) + 固有終端で取る。
+#   ★検出力は落ちない: 期待 == 実測の逐字一致は不変で、 escape 由来の化け・脱落・改竄はそのまま diff に出る
+#   (esc したままだと raw emit と永久に不一致 = gate が意味を失う。 assert を緩めるのでなく *正しい期待値へ* 移す)。
+exp_se="$(q '.sections[].essence')"
+act_se="$(perl -CSD -0777 -ne 'while (/<div data-component="section-essence-callout"><p class="sec-se">(.*?)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
+chk "section essence 列 == sections[].essence (順序・rich raw)" "$exp_se" "$act_se"
 # ★kicker 列 fidelity (folio-l93): band() が可視 emit する <span class="kicker"> の §N/トピック ラベルは
 #   sections[].kicker 由来の *決定的フィールド* ゆえ doctrine 上 floor (heading/essence と同列の section fidelity)。
 #   未突合だと §番号 swap・トピック取り違え・heading の §N との drift が全 gate (floor/persona-walk/fidelity) を素通った (17n ceiling HIGH)。
@@ -114,6 +149,18 @@ STATIC_KICKERS=("この仕様が参照する文書 / 照会 (前方)" "用語集
 exp_kicker="$( { q '.sections[].kicker'; printf '%s\n' "${STATIC_KICKERS[@]}"; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
 act_kicker="$(perl -CSD -0777 -ne 'while (/<span class="kicker"><svg class="ico"[^>]*>.*?<\/svg> ([^<]*)<\/span>/gs){ print "$1\n"; }' "$BODY")"
 chk "section kicker 列 == sections[].kicker + 静的 band 2 件 (順序)" "$exp_kicker" "$act_kicker"
+# ★top-level section anchor 列 (folio-aduv 0-a)。 要件 anchor (tuple 同梱) / subhead anchor (SUBHEAD_RE) と並ぶ
+#   ★3 クラス目の navigable id で、 ここだけ未配線だと非対称な穴になる (mutation-kill 実弾で確認: assembler の
+#   章 anchor emit 行を落とすと生成物の section id が 7→0 本へ消え corpus inbound (#s1-contract 等) が
+#   解決不能になるのに、 本 script の FAIL 件数は baseline と完全一致 = vacuous PASS だった)。
+#   assembler 側の `[[ -n "$anchor" ]] || exit 1` は *契約値が空* の場合しか守らず emit 自体の脱落は守らない。
+#   ★selector は emit_section の ★章包み <section id="…"> 形に固定する (旧 <span data-component="spec-section-anchor">
+#   sibling 形からの追随)。 span 形は bin/folio の folio_chrome_toc_rows から ★不可視で章 TOC を全喪失させたため
+#   canonical と同形の <section> 包みへ是正した (assemble-verification.sh emit_section の注記に機序と実測)。
+#   band が開く <section data-component="chapter-deck-band"> は id を持たないので本 selector には掛からない。
+chk "section anchor 列 == sections[].anchor (順序)" \
+  "$(q '.sections[].anchor' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
+  "$(perl -CSD -0777 -ne 'while (/<section id="([^"]*)">/g){ print "$1\n"; }' "$BODY")"
 
 # 4. 要件 fidelity: data-req-id 集合一致 + emission 順タプル (id, pattern, class, label, essence, statement) 突合。
 exp_rid="$(q '.requirements[].id' | sort -u)"
@@ -126,19 +173,26 @@ while IFS= read -r id; do
   pat="$(q '.requirements[] | select(.id=="'"$id"'") | .ears_pattern')"
   ess="$(q '.requirements[] | select(.id=="'"$id"'") | .essence')"
   stmt="$(q '.requirements[] | select(.id=="'"$id"'") | .statement')"
+  # ★anchor (folio-aduv) = 生成物 row の navigable id (小文字 req-ver-* / req-nav-*)。 tuple に *同梱* して
+  #   「id= が data-req-id (大文字) の置換でなく追加である」ことを 1 本の突合で pin する (両方が同時に等しくなければ FAIL)。
+  anc="$(q '.requirements[] | select(.id=="'"$id"'") | .anchor // ""')"
+  [[ -n "$anc" && "$anc" != "null" ]] || { echo "verify-spec: ★contract 要件 $id の anchor が空 (navigable id 不在・fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; }
   # ★contract 由来 pattern が allowlist 外なら expected タプルを :-unknown で組まず fail-closed (assemble validate と parity)。
   # silent な class="unknown" 同士の偽一致 (双辺で同じ fallback を引いて tuple PASS する fail-open) を封鎖。
   if ! [[ -v EARS_CLASS[$pat] ]]; then echo "verify-spec: ★contract 要件 $id の EARS pattern が allowlist 外: $pat (fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; fi
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$(esc "$ess")" "$(esc "$stmt")"
+  # ★essence / statement は rich 契約値ゆえ esc しない (assembler の RAW emit と対称)。 id/pat/label は esc 経路のまま。
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$anc")" "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$ess" "$stmt"
 done < <(q '.sections[].blocks[]? | select(.type=="requirements") | .ids[]') > "$EXPF"
 perl -CSD -0777 -ne '
   # ★canonical dual-audience form (w1f cell-2): row opener に data-audience="human"、 rq-norm に data-audience="machine" を
   #   literal で要求し structured-regex に組み込む (= REQ-DA-STRUCT-1/-4 の構造 anchor を tuple 突合に同梱・属性 drop は row 脱落→件数 FAIL)。
-  while (/<div data-component="ears-requirement-row" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">([^<]*)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">([^<]*)<\/p><\/details>/g) {
-    my ($rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7);
+  # ★folio-aduv: row opener に id="<小文字 navigable id>" を literal 要求 (anchor 脱落 = row 脱落 → 件数 FAIL = fail-closed)。
+  #   essence / statement は rich raw ゆえ ([^<]*) から (.*?) + 固有終端へ (改行は跨がせない = inner_norm 単一行の暗黙 assert)。
+  while (/<div data-component="ears-requirement-row" id="([^"]*)" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">(.*?)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">(.*?)<\/p><\/details>/g) {
+    my ($anc,$rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7,$8);
     # 可視 rid == data-req-id (attr-vs-visible)
     if ($rid ne $vrid) { print "VIS-MISMATCH:$rid\xe2\x89\xa0$vrid\n"; next; }
-    print "$rid\t$pat\t$cls\t$lab\t$ess\t$stmt\n";
+    print "$anc\t$rid\t$pat\t$cls\t$lab\t$ess\t$stmt\n";
   }
 ' "$BODY" > "$ACTF"
 if diff -q "$EXPF" "$ACTF" >/dev/null 2>&1; then
@@ -164,27 +218,37 @@ chk "note 可視テキスト列 == note blocks.text (順序)" \
 chk "list 項目列 == list blocks.items (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="list") | .items[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(grep -oE '<li class="lbi">[^<]*</li>' "$BODY" | sed -E 's#<li class="lbi">([^<]*)</li>#\1#')"
-# subhead heading + essence
+# subhead anchor + heading + essence
+# ★folio-aduv: h3 に id="<fine section anchor>" を literal 要求 (corpus inbound 81 link の解決先)。 heading は plain 契約値 (esc 経路)、
+#   essence は rich raw。 3 者を同一 regex から取り 3 本の chk で突合する (anchor 脱落は 3 本とも件数 FAIL = fail-closed)。
+SUBHEAD_RE='<div data-component="spec-subhead"><h3 id="([^"]*)">([^<]*)<\/h3><p class="sub-se">(.*?)<\/p><\/div>'
+chk "subhead anchor 列 == subhead blocks.anchor (順序)" \
+  "$(q '.sections[].blocks[]? | select(.type=="subhead") | .anchor' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$1\n"; }' "$BODY")"
 chk "subhead heading 列 == subhead blocks.heading (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<div data-component="spec-subhead"><h3>([^<]*)<\/h3><p class="sub-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
-chk "subhead essence 列 == subhead blocks.essence (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="subhead") | .essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<div data-component="spec-subhead"><h3>[^<]*<\/h3><p class="sub-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$2\n"; }' "$BODY")"
+chk "subhead essence 列 == subhead blocks.essence (順序・rich raw)" \
+  "$(q '.sections[].blocks[]? | select(.type=="subhead") | .essence')" \
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$3\n"; }' "$BODY")"
 # table caption / header / cell (全 spec-table 横断・順序)
-chk "table caption 列 == table blocks.caption (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="table") | (.caption // "")' | grep -v '^$' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<table data-component="spec-table"><caption>([^<]*)<\/caption>/g){ print "$1\n"; }' "$BODY")"
-chk "table th 列 == table blocks.headers (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="table") | .headers[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(grep -oE '<th>[^<]*</th>' "$BODY" | sed -E 's#<th>([^<]*)</th>#\1#')"
-chk "table td 列 == table blocks.rows cells (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="table") | .rows[][]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(grep -oE '<td>[^<]*</td>' "$BODY" | sed -E 's#<td>([^<]*)</td>#\1#')"
+# ★folio-aduv: caption / th / td は rich 契約値 (原本 table は a.xref 13 / <code> 41 / <strong> 11 を内包) ゆえ
+#   期待は esc せず契約値そのもの、 実測は (.*?) + 固有終端。 grep -oE の行内 [^<]* 抽出では tag 入りセルを取り落とす
+#   (= 静かに空集合になり得る) ため perl の要素単位抽出へ寄せる。
+chk "table caption 列 == table blocks.caption (順序・rich raw)" \
+  "$(q '.sections[].blocks[]? | select(.type=="table") | (.caption // "")' | grep -v '^$')" \
+  "$(perl -CSD -0777 -ne 'while (/<table data-component="spec-table"><caption>(.*?)<\/caption>/g){ print "$1\n"; }' "$BODY")"
+chk "table th 列 == table blocks.headers (順序・rich raw)" \
+  "$(q '.sections[].blocks[]? | select(.type=="table") | .headers[]')" \
+  "$(perl -CSD -0777 -ne 'while (/<th>(.*?)<\/th>/g){ print "$1\n"; }' "$BODY")"
+chk "table td 列 == table blocks.rows cells (順序・rich raw)" \
+  "$(q '.sections[].blocks[]? | select(.type=="table") | .rows[][]')" \
+  "$(perl -CSD -0777 -ne 'while (/<td>(.*?)<\/td>/g){ print "$1\n"; }' "$BODY")"
 # mermaid caption + source lines
-chk "mermaid figcaption 列 == mermaid blocks.caption (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")' | grep -v '^$' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<figcaption>([^<]*)<\/figcaption>/g){ print "$1\n"; }' "$BODY")"
+# ★folio-aduv: figcaption も rich 契約値 (原本 figcaption は <code> 2 + span.term 1 を内包 = canonical term 27 番目の在処)。
+chk "mermaid figcaption 列 == mermaid blocks.caption (順序・rich raw)" \
+  "$(q '.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")' | grep -v '^$')" \
+  "$(perl -CSD -0777 -ne 'while (/<figcaption>(.*?)<\/figcaption>/g){ print "$1\n"; }' "$BODY")"
 chk "mermaid source 行列 == mermaid blocks.source_lines (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="mermaid") | .source_lines[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(perl -CSD -0777 -ne 'while (/<pre class="mermaid">(.*?)<\/pre>/gs){ my $b=$1; print "$_\n" for split(/\n/,$b,-1); }' "$BODY")"
@@ -268,6 +332,9 @@ MB_LIST="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select
 MB_LI="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="list")) | [.[].items[]] | length')"
 # ★demoted (tr0 / verification・ADR-0040 機械層降格分): silent drop / 偽 add を件数で捕捉。
 MB_DEMOTED="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="demoted")) | length')"
+# ★dl (folio-aduv): dl.doc-meta = 旧 cell-1 の死角で silent drop されていた機械層 block。 raw emit 経路を足した以上
+#   件数 pin も足す (件数無しだと 脱落/偽 add が §11 round-trip 以外どこにも出ない)。
+MB_DL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | map(select(.type=="dl")) | length')"
 SEC_WITH_MB="$(q '[.sections[] | select((.machine_blocks // []) | length > 0)] | length')"
 EXP_FOLD="$SEC_WITH_MB"; [[ "$NPRE" -gt 0 ]] && EXP_FOLD="$((SEC_WITH_MB + 1))"
 chk "spec-machine-prose == Σ machine prose"  "$MB_PROSE" "$(grep -c 'data-component="spec-machine-prose"' "$BODY")"
@@ -275,6 +342,7 @@ chk "spec-machine-note == Σ machine note"    "$MB_NOTE"  "$(grep -c 'data-compo
 chk "spec-machine-list == Σ machine list"    "$MB_LIST"  "$(grep -c 'data-component="spec-machine-list"' "$BODY")"
 chk "machine li (mli) == Σ machine list items" "$MB_LI"  "$(grep -c 'class="mli"' "$BODY")"
 chk "spec-machine-demoted == Σ machine demoted" "$MB_DEMOTED" "$(grep -c 'data-component="spec-machine-demoted"' "$BODY")"
+chk "spec-machine-dl == Σ machine dl"          "$MB_DL"      "$(grep -c 'data-component="spec-machine-dl"' "$BODY")"
 chk "spec-machine-fold == sections(mb) + preamble" "$EXP_FOLD" "$(grep -c 'data-component="spec-machine-fold"' "$BODY")"
 
 echo
@@ -299,7 +367,7 @@ aria_machine="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b([^>]*)>/g){ my $a=$1; pri
 chk "REQ-DA-STRUCT-4: machine 部に aria-hidden 不在" "0" "$aria_machine"
 # REQ-DA-STRUCT-1: 各 ears-requirement-row (data-audience="human") が data-audience="machine" 子孫 (rq-norm fold) を持つ。
 #   tuple 突合 (§4) が row→rq-norm(machine) の構造隣接を literal 要求済 = NREQ tuple PASS が -1 の構造保証。 件数でも二重に固定。
-chk "REQ-DA-STRUCT-1: human 要件 container 数 == |requirements|" "$NREQ" "$(grep -c 'data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*" data-audience="human"' "$BODY")"
+chk "REQ-DA-STRUCT-1: human 要件 container 数 == |requirements|" "$NREQ" "$(grep -c 'data-component="ears-requirement-row" id="[^"]*" data-req-id="[^"]*" data-ears-pattern="[^"]*" data-audience="human"' "$BODY")"
 chk "REQ-DA-STRUCT-1: machine fold (rq-norm) 数 == |requirements|" "$NREQ" "$(grep -c 'class="rq-norm" data-audience="machine"' "$BODY")"
 # REQ-DA-STRUCT-2 (id 整合) / -5 (EARS-pattern 整合) は §4 要件タプル突合が enforce 済 (data-req-id==rid / class==EARS_CLASS[pattern])。
 printf '  [OK]   %-'"$CHKW"'s %s\n' "REQ-DA-STRUCT-2/-5 (id/EARS-pattern 整合) は §4 tuple が enforce" "委譲"
@@ -328,6 +396,105 @@ chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%
 # ============================================================================
 NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
 ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../design-intent/spec/verification.html}"
+
+# ============================================================================
+# 10b. ★ORACLE 照合 arm (folio-aduv 0-a/0-d/0-e の恒久 gate 化)。
+#   ★なぜ contract 突合と別に要るか: §4/§5 の rich 突合は全て「contract vs 生成物」であり、 ★両側が同時に
+#   退行すると vacuous PASS する (例: extractor が再び plain() へ戻ると contract も生成物も同時に rich を失い、
+#   contract==生成物 は成立したまま canonical との乖離だけが残る = mandate HIGH-4 が名指しする機序)。
+#   ゆえ ★canonical (ORACLE) を独立の第 3 者として直接再抽出し、 生成物と突合する。
+#   ここが守るのは lossless flip の前提そのもの: flip 後に生成物が canonical を置換するため、 canonical に
+#   在って生成物に無い資産は ★そのまま corpus からの永久喪失になる。
+# ★automark 非依存: staging (assemble のみ) では automark が発火しない (folio fix 経路のみ) が、 contract は
+#   canonical の term を逐語で運ぶため occurrence は canonical と一致する。 --artifact (fix 後) でも automark は
+#   canonical と同じ不動点へ収束する。 両モードで同一期待ゆえ mode 分岐を持たない (分岐は緩和の温床)。
+if [[ ! -f "$ORIG" ]]; then
+  printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (ORACLE 照合不能・fail-closed)\n' "ORACLE 照合 arm" "$ORIG"; fail=1
+else
+  # ★navigable id 抽出 = 実タグの id 属性のみ。 naive grep 'id="' は data-req-id / data-delta-id 等の data-* を
+  #   ★部分文字列で拾い両側を汚染する (canonical を 55→60 と誤読する) ゆえ タグ文脈の id= に限定する。
+  o_ids="$(mktemp)"; g_ids="$(mktemp)"
+  ids_of_html() { perl -CSD -0777 -ne '
+      while (/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g) { my $at=$2; while ($at =~ /(?:^|\s)id="([^"]*)"/g) { print "$1\n"; } }
+    ' "$1" | grep -v '^D-' | LC_ALL=C sort -u; }
+  ids_of_html "$ORIG" > "$o_ids"; ids_of_html "$HTML" > "$g_ids"
+  chk "ORACLE navigable id: canonical 総数 == 55" "55" "$(grep -c . "$o_ids")"
+  chk_empty "ORACLE navigable id: 生成物に欠落 0 (corpus inbound の解決先)" \
+    "$(LC_ALL=C comm -23 "$o_ids" "$g_ids" | tr '\n' ' ')"
+  chk_empty "ORACLE navigable id: 生成物に余剰 0 (canonical に無い id の捏造禁止)" \
+    "$(LC_ALL=C comm -13 "$o_ids" "$g_ids" | tr '\n' ' ')"
+  rm -f "$o_ids" "$g_ids"
+  # ★rich 資産 3 クラスの occurrence-parity (単一固定 selector)。
+  #   ★xref は live <a class="…xref…"> のみ数える: canonical の素な grep 'class="xref"' は 34 で、 差の 3 件は
+  #   REQ-VER-017/018 が xref markup 自体を *語る* 散文中の escape 済 literal (<code>&lt;a class="xref"…</code>)。
+  #   それらは live link でなく、 live 化は過剰 linkify ゆえ live 要素だけを基底に固定する。
+  c_xref() { perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /(?:^|\s)class="(?:[^"]*\s)?xref(?:\s[^"]*)?"/; } print $n;' "$1"; }
+  c_term() { perl -CSD -0777 -ne 'my $n=()=(/<span class="term"[^>]*\sdata-term="/g); print $n;' "$1"; }
+  c_delta(){ perl -CSD -0777 -ne 'my $n=()=(/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="/g); print $n;' "$1"; }
+  # ★★canonical 側の ★絶対値 pin (post-flip の ★自己比較恒真化を構造的に封鎖する)。
+  #   ★機序: ORIG = ${SPEC_ORIGIN_HTML:-…/design-intent/spec/verification.html} は flip (= canonical HTML を
+  #   ★破壊的に置換する操作・switchover-harness.sh 冒頭の定義) 後に ★生成物そのもの を指す。 その瞬間
+  #   c_xref(ORIG) vs c_xref(HTML) は ★自己比較となり ★任意の値で PASS する。 すなわち 10b が
+  #   「contract vs 生成物は両側同時退行で vacuous PASS するゆえ canonical を独立の第 3 者として突合する」と
+  #   宣言した当の性質が、 ★oracle 側にも再帰する。
+  #   ★実証: 生成物から a.xref 31 個 + span.term 27 個を ★全剥奪した degraded.html を SPEC_ORIGIN_HTML に与えると
+  #     [OK] ORACLE rich parity: a.xref occurrence == canonical     0
+  #     [OK] ORACLE rich parity: span.term occurrence == canonical  0
+  #   と ★資産の全損が値 0 で [OK] を出した。
+  #   ★非対称の解消: navigable id arm は `chk "… canonical 総数 == 55" "55"` の literal を持つため同条件でも
+  #   生存する。 rich 3 クラス / jq -S / stakeholders は両辺とも file 由来で literal を持たなかった。 ゆえ
+  #   ★相対 parity とは独立に canonical 側の実数を literal で pin し、 ORIG が退行した瞬間に FAIL させる
+  #   (= id arm が既に採っている手法との ★対称回復)。
+  #   ★より強い代替 (flip 前 canonical を generator 配下へ snapshot し SPEC_ORIGIN_HTML の既定をその不動
+  #   snapshot へ向ける = oracle が「生成物に置換されない独立第 3 者」であり続ける形) は lwhz との職掌線引きを
+  #   含むため ★admin 裁定待ち。 本 pin は literal のみで閉じる最小形。
+  chk "ORACLE rich parity: canonical a.xref 実数 == 31 (自己比較恒真化の封鎖)" "31" "$(c_xref "$ORIG")"
+  chk "ORACLE rich parity: canonical span.term 実数 == 27 (同上)"              "27" "$(c_term "$ORIG")"
+  chk "ORACLE rich parity: canonical ins|del.delta 実数 == 5 (同上)"           "5"  "$(c_delta "$ORIG")"
+  chk "ORACLE rich parity: a.xref occurrence == canonical"        "$(c_xref "$ORIG")"  "$(c_xref "$HTML")"
+  chk "ORACLE rich parity: span.term occurrence == canonical"     "$(c_term "$ORIG")"  "$(c_term "$HTML")"
+  chk "ORACLE rich parity: ins|del.delta occurrence == canonical" "$(c_delta "$ORIG")" "$(c_delta "$HTML")"
+  chk "ORACLE rich parity: delta-id 集合 == canonical" \
+    "$(perl -CSD -0777 -ne 'while (/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="([^"]*)"/g){ print "$1\n"; }' "$ORIG" | LC_ALL=C sort -u)" \
+    "$(perl -CSD -0777 -ne 'while (/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="([^"]*)"/g){ print "$1\n"; }' "$HTML" | LC_ALL=C sort -u)"
+  # ★escape 済 literal を live 化していない (過剰 linkify 禁止)。 上の live 31 と両側から挟んで基底を pin する。
+  chk "ORACLE: canonical escape 済 literal 'a class=\"xref\"' 実数 == 3 (自己比較恒真化の封鎖)" "3" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$ORIG")"
+  chk "ORACLE: escape 済 literal 'a class=\"xref\"' 出現 == canonical" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$ORIG")" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$HTML")"
+  # ★jq -S は ★PRESERVE + mask (0-e)。 「削除して how-outside を緑にする」抜け道を封じるため、 how-outside 検査とは
+  #   ★独立に出現数 parity を撃つ (how-outside は anchor 修正等でも緑化しうるので、 緑だけでは何も証明しない)。
+  chk "ORACLE: canonical 'jq -S' 総出現 == 2 (自己比較恒真化の封鎖)" "2" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$ORIG")"
+  chk "ORACLE: canonical masked 'jq -S' == 2 (同上)" "2" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$ORIG")"
+  chk "ORACLE: 'jq -S' 総出現 == canonical (削除での通過を禁止)" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$ORIG")" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$HTML")"
+  chk "ORACLE: 'jq -S' は全て <code> masked == canonical (P-11 primitive 露出なし)" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$ORIG")" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$HTML")"
+  # ★JSON-LD folio:stakeholders の ★型 + 値 が canonical と一致 (folio-aduv 0-c の型退行封鎖)。
+  #   ★どの既存 gate も捕捉しない穴だった (実測): CORE (lib/common.sh core_emit_graph_head) は contract の
+  #   .meta.stakeholders を JSON-LD へ *そのまま* 転記するため、 契約が scalar string だと canonical の array が
+  #   string へ ★型退行する。 しかも jsonld-lint は folio:stakeholders を「形が違うので自動除外」と明記し型検査せず、
+  #   inventory は非 array を捨てて meta tag split fallback で同じ配列を作り直すため ★drift を隠蔽し、
+  #   §11 の前方 edge 突合も folio:stakeholders を対象外にしている。 ゆえ ORACLE 直突合でしか撃てない。
+  #   flip 後にこの JSON-LD が canonical を置換すると lossless flip でなく graph head の型退行になる。
+  ld_stake() { perl -CSD -0777 -ne 'my ($j) = /<script type="application\/ld\+json">(.*?)<\/script>/s; print $j if defined $j;' "$1" \
+    | python3 -c 'import json,sys
+try: d = json.load(sys.stdin)
+except Exception: sys.exit(0)
+v = d.get("folio:stakeholders")
+print(type(v).__name__ + "\t" + json.dumps(v, ensure_ascii=False, sort_keys=True))'; }
+  # ★canonical 側の絶対値 pin (同じく post-flip の自己比較恒真化の封鎖。 型 list + 値の逐字 literal)。
+  chk "ORACLE JSON-LD: canonical folio:stakeholders の型+値 実数 pin (自己比較恒真化の封鎖)" \
+    "$(printf 'list\t["Developer", "AI Agent", "External Reviewer"]')" "$(ld_stake "$ORIG")"
+  chk "ORACLE JSON-LD: folio:stakeholders の型+値 == canonical (array 退行封鎖)" \
+    "$(ld_stake "$ORIG")" "$(ld_stake "$HTML")"
+fi
+
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
   if [[ ! -f "$ORIG" ]]; then
     printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (機械層 contract だが照合不能・fail-closed)\n' "原本↔生成物 機械層集合一致" "$ORIG"; fail=1
@@ -347,10 +514,14 @@ if [[ "$NMB_TOTAL" -gt 0 ]]; then
         if (substr($H,$p)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{list}=$p+$-[0]; }
         # ★demoted (tr0 / verification): div.demoted は balanced div で inner を一括 norm (LEFT・原本 verification.html 由来)。
         if (substr($H,$p)=~/<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>/) { $c{demoted}=$p+$-[0]; }
+        # ★dl (folio-aduv): 原本 <dl data-audience="machine"> の inner を norm (LEFT)。 これを足さないと生成物の
+        #   spec-machine-dl が *原本と突合されない raw blob* になり、 脱落/捏造/二重 escape が素通る (vacuous PASS)。
+        if (substr($H,$p)=~/<dl\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{dl}=$p+$-[0]; }
         last unless %c;
         my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
         if ($k eq "prose") { substr($H,$at)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
         elsif ($k eq "note") { substr($H,$at)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
+        elsif ($k eq "dl") { substr($H,$at)=~/<dl\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/dl>/s; push @u,"dl\t".norm($1); $p=$at+$+[0]; }
         elsif ($k eq "demoted") { my $sub=substr($H,$at); $sub=~/^<div\b[^>]*>/; my $ol=$+[0]; my $d=0; my $eo=length($sub);
                while ($sub=~/(<div\b[^>]*>|<\/div>)/g){ my $t=$1; my $te=pos($sub); if($t=~/^<div/){$d++}else{$d--; if($d==0){$eo=$te;last}} }
                my $w=substr($sub,0,$eo); my $in=substr($w,$ol,length($w)-$ol-length("</div>")); push @u,"demoted\t".norm($in); $p=$at+$eo; }
@@ -373,10 +544,13 @@ if [[ "$NMB_TOTAL" -gt 0 ]]; then
         if (substr($B,$p)=~/<li class="mli">/) { $c{li}=$p+$-[0]; }
         # ★demoted (tr0 / verification): 生成物の spec-machine-demoted を balanced div で inner 一括 norm (RIGHT・LEFT と同型)。
         if (substr($B,$p)=~/<div data-component="spec-machine-demoted" data-audience="machine">/) { $c{demoted}=$p+$-[0]; }
+        # ★dl (folio-aduv): 生成物の spec-machine-dl inner を norm (RIGHT・LEFT と同型)。
+        if (substr($B,$p)=~/<dl data-component="spec-machine-dl" data-audience="machine">/) { $c{dl}=$p+$-[0]; }
         last unless %c;
         my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
         if ($k eq "prose") { substr($B,$at)=~/<p data-component="spec-machine-prose" data-audience="machine">(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
         elsif ($k eq "note") { substr($B,$at)=~/<aside data-component="spec-machine-note" data-audience="machine">(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
+        elsif ($k eq "dl") { substr($B,$at)=~/<dl data-component="spec-machine-dl" data-audience="machine">(.*?)<\/dl>/s; push @u,"dl\t".norm($1); $p=$at+$+[0]; }
         elsif ($k eq "demoted") { my $sub=substr($B,$at); $sub=~/^<div\b[^>]*>/; my $ol=$+[0]; my $d=0; my $eo=length($sub);
                while ($sub=~/(<div\b[^>]*>|<\/div>)/g){ my $t=$1; my $te=pos($sub); if($t=~/^<div/){$d++}else{$d--; if($d==0){$eo=$te;last}} }
                my $w=substr($sub,0,$eo); my $in=substr($w,$ol,length($w)-$ol-length("</div>")); push @u,"demoted\t".norm($in); $p=$at+$eo; }
