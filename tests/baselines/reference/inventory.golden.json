@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-16T01:15:27Z",
+  "generatedAt": "2026-07-16T03:35:55Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -2665,6 +2665,14 @@
       },
       {
         "from": "spec/rules.html",
+        "to": "ADR-0050"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "ADR-0052"
+      },
+      {
+        "from": "spec/rules.html",
         "to": "P-1"
       },
       {
@@ -2706,6 +2714,10 @@
       {
         "from": "spec/rules.html",
         "to": "P-8"
+      },
+      {
+        "from": "spec/rules.html",
+        "to": "REQ-VER-013"
       },
       {
         "from": "spec/rules.html",
