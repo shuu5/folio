@@ -1,0 +1,126 @@
+# capability-registry.yaml — folio verify capability registry
+#   (folio-1kif S5・案B = plugin 内部の静的宣言。 consumer は触らない)
+#
+# 目的:
+#   doc-type ごとに「決定的 floor 検査 script を持つか / ceiling reviewer subagent を持つか /
+#   `folio verify --type <type>` dispatch で配線・検証済みか / finished(提示用) artifact を検査する
+#   floor 呼出 mode は何か」を単一 SSoT で宣言する。
+#   `folio verify --type <type>` はこの registry を読み、 未知 type・未配線 type を floor 実行前に
+#   明示エラーで弾き (fail-closed)、 wired type は floor_mode に従い verify-<type>.sh を呼ぶ。
+#   ceiling lens 集合 (SKILL.md の 3-lens/self-gate literal) もこの registry を SSoT に解決する
+#   (folio-1kif errata must-3: SRS=3 / 非SRS=2 を per-type SSoT 化・機械判定は緩めない)。
+#
+# scope 注記 (folio-1kif = S0 census folio-4y3 の縮退版):
+#   census 撤回方針下、 このセルは SRS+adr の 2 型で dispatch パターンを確立する縮退実装。
+#   他 doc-type は verify-<type>.sh (floor script) が物理存在しても wired=false に据え置く
+#   (後続 bead folio-vxpc が end-to-end 検証して昇格する)。
+#     - floor:      floor script が物理存在するか (存在の宣言・honest best-effort)
+#     - wired:      `folio verify --type` dispatch で floor gate を end-to-end に通し self-test で
+#                   検証済みか (= CLI から安全に呼べる保証)。 未配線は floor 存在でも false=fail-closed。
+#     - floor_mode: finished(提示用・prose 充填済) artifact を検査する floor 呼出 mode。 未配線型は
+#                   null (mode 未確定・dispatch は wired=false で先に弾くため未消費)。
+#
+# schema:
+#   version                          : registry schema バージョン (int)
+#   doc_types.<type>.floor           : floor 検査 script のファイル名 (generator/ 相対)、 無ければ null
+#   doc_types.<type>.floor_mode      : finished artifact 検査の floor 呼出 mode。 値:
+#                                        default  = flag 無し (verify-srs 型・既定 mode が充填を検査)
+#                                        artifact = --artifact (verify-adr 型・既定 mode は pre-fill 検査ゆえ
+#                                                   finished 検査には --artifact で prose 全充填を要求)
+#                                        null     = 未配線ゆえ未確定
+#   doc_types.<type>.ceiling         : ceiling reviewer subagent 名のリスト (無ければ [])。 lens 集合 SSoT。
+#   doc_types.<type>.wired           : verify --type dispatch で配線・検証済みなら true (既定 false)
+#   doc_types.<type>.contract_suffix : contract ファイル名の doctype 部 (<subject>.<suffix>.yaml)
+#
+# 語彙: 14 canonical doc-type (persona-walk-*/fidelity-* subagent と 1:1 = taxonomy §5.3)。
+
+version: 1
+
+doc_types:
+  # --- wired (folio-1kif で dispatch 確立・self-test 検証済み) ---
+  srs:
+    floor: verify-srs.sh
+    floor_mode: default
+    ceiling: [fidelity-srs, persona-walk-srs, completeness-critic-srs]
+    wired: true
+    contract_suffix: srs
+  adr:
+    floor: verify-adr.sh
+    floor_mode: artifact
+    ceiling: [fidelity-adr, persona-walk-adr]
+    wired: true
+    contract_suffix: adr
+
+  # --- not yet wired (floor script は存在するが本 dispatch では未検証・後続 bead folio-vxpc) ---
+  research:
+    floor: verify-research.sh
+    floor_mode: null
+    ceiling: [fidelity-research, persona-walk-research]
+    wired: false
+    contract_suffix: research
+  principle:
+    floor: verify-principle.sh
+    floor_mode: null
+    ceiling: [fidelity-principle, persona-walk-principle]
+    wired: false
+    contract_suffix: principle
+  spec:
+    floor: verify-spec.sh
+    floor_mode: null
+    ceiling: [fidelity-spec, persona-walk-spec]
+    wired: false
+    contract_suffix: spec
+  vision:
+    floor: verify-vision.sh
+    floor_mode: null
+    ceiling: [fidelity-vision, persona-walk-vision]
+    wired: false
+    contract_suffix: vision
+  glossary:
+    floor: verify-glossary.sh
+    floor_mode: null
+    ceiling: [fidelity-glossary, persona-walk-glossary]
+    wired: false
+    contract_suffix: glossary
+  architecture:
+    floor: verify-arch.sh
+    floor_mode: null
+    ceiling: [fidelity-architecture, persona-walk-architecture]
+    wired: false
+    contract_suffix: arch
+  testcases:
+    floor: verify-testcases.sh
+    floor_mode: null
+    ceiling: [fidelity-testcases, persona-walk-testcases]
+    wired: false
+    contract_suffix: testcases
+  datamodel:
+    floor: verify-datamodel.sh
+    floor_mode: null
+    ceiling: [fidelity-datamodel, persona-walk-datamodel]
+    wired: false
+    contract_suffix: datamodel
+  interface:
+    floor: verify-interface.sh
+    floor_mode: null
+    ceiling: [fidelity-interface, persona-walk-interface]
+    wired: false
+    contract_suffix: interface
+  risk:
+    floor: verify-risk.sh
+    floor_mode: null
+    ceiling: [fidelity-risk, persona-walk-risk]
+    wired: false
+    contract_suffix: risk
+  changelog:
+    floor: verify-changelog.sh
+    floor_mode: null
+    ceiling: [fidelity-changelog, persona-walk-changelog]
+    wired: false
+    contract_suffix: changelog
+  roadmap:
+    floor: verify-roadmap.sh
+    floor_mode: null
+    ceiling: [fidelity-roadmap, persona-walk-roadmap]
+    wired: false
+    contract_suffix: roadmap

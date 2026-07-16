@@ -3851,6 +3851,101 @@ folio_cmd_verify_srs() {
 }
 
 # ============================================================================
+# verify: doc-type 別 floor gate の統一 dispatch (folio-1kif S1 + S5)
+#   契約: folio verify --type <doctype> <generated.html> <contract.yaml>
+#   capability-registry.yaml (S5・案B plugin 内部静的宣言) を SSoT に:
+#     - 未知 type (registry に未宣言)      → 明示エラー exit 2
+#     - 未配線 type (wired != true)         → 明示エラー exit 2 ("not yet wired"・fail-closed)
+#     - wired type                          → precheck sentinel 通過後 verify-<type>.sh へ dispatch
+#   precheck sentinel (spec/contract 存在) を全型共通に統一し、 floor 実行前に明示エラーを返す。
+#   引数順 swap: CLI は <html> <contract> (html=主対象)、 floor script は <contract> <html>。
+# ============================================================================
+folio_cmd_verify() {
+  local bin_dir; bin_dir="$(dirname "$(realpath "${BASH_SOURCE[0]}")")"
+  local gen="${bin_dir}/../design-system/generator"
+  local registry="${gen}/capability-registry.yaml"
+
+  # ---- 引数 parse (--type <t> / --type=<t> + positional html/contract) ----
+  local type="" html="" contract=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --type)    type="${2:-}"; shift 2 || { echo "folio verify: --type に値が無い" >&2; return 2; } ;;
+      --type=*)  type="${1#--type=}"; shift ;;
+      -h|--help) echo "usage: folio verify --type <doctype> <generated.html> <contract.yaml>" >&2; return 2 ;;
+      --*)       echo "folio verify: unknown option '$1'" >&2; return 2 ;;
+      *)         if [[ -z "$html" ]]; then html="$1";
+                 elif [[ -z "$contract" ]]; then contract="$1";
+                 else echo "folio verify: 余分な引数 '$1'" >&2; return 2; fi; shift ;;
+    esac
+  done
+
+  # ---- registry 前提 (yq + registry 実在) ----
+  command -v yq >/dev/null 2>&1 || { echo "folio verify: 依存コマンド 'yq' が無い (registry 読取に必須)" >&2; return 2; }
+  [[ -f "$registry" ]] || { echo "folio verify: capability-registry.yaml not found ($registry)" >&2; return 2; }
+
+  local wired_list; wired_list="$(yq -r '.doc_types | to_entries | map(select(.value.wired == true)) | .[].key' "$registry" | paste -sd' ' -)"
+
+  # ---- --type 必須 ----
+  if [[ -z "$type" ]]; then
+    echo "folio verify: --type <doctype> が必須" >&2
+    echo "  配線済み type: ${wired_list}" >&2
+    return 2
+  fi
+  # type 書式 validation (yq 式 injection 防止・doctype は [a-z][a-z0-9-]*)
+  if [[ ! "$type" =~ ^[a-z][a-z0-9-]*$ ]]; then
+    echo "folio verify: 不正な doc-type '$type' (許容: 小文字英数とハイフン)" >&2; return 2
+  fi
+
+  # ---- type 既知性 (registry に宣言があるか) ----
+  local known; known="$(yq -r ".doc_types | has(\"$type\")" "$registry")"
+  if [[ "$known" != "true" ]]; then
+    echo "folio verify: unknown doc-type '$type' (capability-registry.yaml に未宣言)" >&2
+    echo "  既知 type: $(yq -r '.doc_types | keys | .[]' "$registry" | paste -sd' ' -)" >&2
+    return 2
+  fi
+
+  # ---- wired 判定 (未配線 type は floor 実行前に fail-closed) ----
+  local wired; wired="$(yq -r ".doc_types.\"$type\".wired" "$registry")"
+  if [[ "$wired" != "true" ]]; then
+    local flr; flr="$(yq -r ".doc_types.\"$type\".floor" "$registry")"
+    echo "folio verify: doc-type '$type' は 'folio verify --type' で not yet wired" >&2
+    echo "  floor script '${flr}' は存在するが本 dispatch では未検証 (後続 bead で昇格予定)。" >&2
+    echo "  現在配線済み: ${wired_list}" >&2
+    return 2
+  fi
+
+  # ---- floor script 解決 ----
+  local floor; floor="$(yq -r ".doc_types.\"$type\".floor" "$registry")"
+  if [[ -z "$floor" || "$floor" == "null" ]]; then
+    echo "folio verify: doc-type '$type' に floor script が宣言されていない" >&2; return 2
+  fi
+  local floor_abs="${gen}/${floor}"
+  [[ -f "$floor_abs" ]] || { echo "folio verify: floor script not found: $floor_abs" >&2; return 2; }
+
+  # ---- floor_mode 解決 (finished artifact 検査 mode・registry SSoT・folio-1kif errata) ----
+  #   finished(提示用・prose 充填済) artifact を検査する floor 呼出 mode を registry から解決する。
+  #   default=flag無し(verify-srs 型・既定 mode が充填を検査) / artifact=--artifact(verify-adr 型・既定 mode は
+  #   pre-fill 検査ゆえ finished 検査には --artifact で prose 全充填を要求)。 wired なのに mode 未確定=fail-closed。
+  local floor_mode; floor_mode="$(yq -r ".doc_types.\"$type\".floor_mode" "$registry")"
+  local -a floor_flags=()
+  case "$floor_mode" in
+    default)  : ;;
+    artifact) floor_flags=(--artifact) ;;
+    ""|null)  echo "folio verify: doc-type '$type' の floor_mode が未確定 (registry で null)。 wired だが mode 宣言欠落=fail-closed" >&2; return 2 ;;
+    *)        echo "folio verify: doc-type '$type' の floor_mode '$floor_mode' が未対応 (default|artifact のみ)" >&2; return 2 ;;
+  esac
+
+  # ---- precheck sentinel (全型共通・floor 実行前): spec(HTML) 存在 + contract 存在 ----
+  if [[ -z "$html" ]]; then echo "folio verify: <generated.html> が必須 (precheck)" >&2; return 2; fi
+  if [[ -z "$contract" ]]; then echo "folio verify: <contract.yaml> が必須 (precheck)" >&2; return 2; fi
+  if [[ ! -f "$html" ]]; then echo "folio verify: spec (HTML) not found: $html (precheck)" >&2; return 2; fi
+  if [[ ! -f "$contract" ]]; then echo "folio verify: contract not found: $contract (precheck)" >&2; return 2; fi
+
+  # ---- dispatch (CLI <html> <contract> → floor script [floor_flags] <contract> <html> の swap) ----
+  bash "$floor_abs" "${floor_flags[@]}" "$contract" "$html"
+}
+
+# ============================================================================
 # verify-graph: 照会 graph 終端完備の決定的 floor (engine §10 論点④⑦、 B5-I verify-graph.sh へ委譲)
 #   B5-III CI gate 統合 (論点③): 独立 graph script を bin/folio フローへ thin dispatch する
 #   (graph traversal は独立 script に保持・既存 core 不変 = §10④)。 CI(ci.yml) はこの subcommand を
@@ -3951,6 +4046,10 @@ Subcommands:
   build [--root <dir>]     graph から top-level index.html (walkable nav) + glossary.html を生成し、
         [--check]          全 page に chrome (skip-link/breadcrumb/目次/prev-next) を注入・維持 (ADR-0035/0036/0039、
                            決定的・idempotent、 --check で drift 検査 exit 0=ok/1=drift、 既定 write 0=ok/2=error)
+  verify --type <doctype>  doc-type 別 floor gate の統一 dispatch (folio-1kif S1/S5)。 capability-registry.yaml を
+         <html> <contract> SSoT に、 配線済み type (現在 srs/adr) のみ verify-<type>.sh へ dispatch。 未知/未配線 type は
+                           floor 実行前に明示エラー (exit 2・"not yet wired")。 precheck sentinel (spec/contract 存在) を
+                           全型共通化。 exit code は floor script を passthrough (0=floor PASS / 1=FAIL / 2=tool・precheck error)。
   verify-srs <html>        生成 SRS プレゼン HTML の決定的 floor 検査 (taxonomy §5.2 gate A-E,G,H + visual-first、
              <contract>    gate F render は renderer 在で実行・不在は SKIP、 ADR-0041/0042)。 floor 通過でも GREEN にせず CEILING=PENDING を返す
                            (floor 単独 GREEN 禁止)。 GREEN には ceiling (persona-walk-srs + fidelity-srs) 合格が必須。
@@ -4008,6 +4107,11 @@ EOF
   build)
     shift
     folio_cmd_build "$@"
+    exit $?
+    ;;
+  verify)
+    shift
+    folio_cmd_verify "$@"
     exit $?
     ;;
   verify-srs)
