@@ -2931,6 +2931,13 @@ HEAD
   folio_chrome_breadcrumb "glossary.html" "$gl_base"
   printf '<!-- /folio:chrome-top -->\n'
 
+  # ★generated-note は *Layer 1 consumer root にのみ* render される (folio 自身の glossary.html は
+  #   pack 委譲で生成され本 emitter を通らない、 ADR-0052)。 よって note は consumer 文脈で真な事実だけを
+  #   述べる: consumer では vocabulary.yaml が編集元で、 そこから glossary.html が生成される。
+  #   self-host の contract/projection 事情をここへ持ち込まないこと — 読者 (consumer) に無関係で、
+  #   かつ folio 側のモデル変更のたびに consumer 向け note が偽になる (folio-wg2l errata-2: 旧 note は
+  #   「vocabulary.yaml は contract の逐語同鏡ゆえ両者を同一 commit で更新」と述べ、 ADR-0052 の
+  #   projection 転換後も残って *退役した「同鏡 gate」を名指す偽記述* になっていた)。
   cat <<'HEAD2'
 <header class="doc-header">
   <h1>folio-vocabulary — glossary</h1>
@@ -2938,7 +2945,7 @@ HEAD
 </header>
 
 <aside class="informative">
-  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (定義本文を保持する runtime SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 SSoT-first に flip した project (folio 自身を含む) では正本 edit-SSoT は generator contract 側にあり <code>vocabulary.yaml</code> はその逐語同鏡ゆえ、 定義改訂は両者を同一 commit で更新します (片側編集は同鏡 gate が FAIL にします)。 spec 本文の用語 hover tooltip も同じ <code>vocabulary.yaml</code> から供給されます。</p>
+  <p class="generated-note">この glossary は <code>folio build</code> が <code>vocabulary.yaml</code> (定義本文を保持する runtime SSoT) から自動生成します。 <strong>手編集禁止</strong> — 定義を変えるには <code>vocabulary.yaml</code> を編集して再 build してください。 spec 本文の用語 hover tooltip も同じ <code>vocabulary.yaml</code> から供給されます。</p>
 </aside>
 
 <dl class="glossary">

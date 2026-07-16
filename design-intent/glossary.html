@@ -170,7 +170,7 @@
     </section>
     <section class="term-entry" id="term-vocabulary" data-audience="human" data-term="vocabulary">
       <h4 class="term-name">vocabulary</h4>
-      <p class="term-plain" data-slot-id="plain-vocabulary" data-prose-slot="plain-vocabulary">folio で使う言葉の正式な意味を保持しているファイルです。 この用語集ページや、 文書中の用語にかぶせる説明ふきだしは、 すべてここから作られます。 folio 自身では、 書き換えるときに人が触る大もとは別の設計データ側にあり、 このファイルはその写しとして常に同じ内容に保たれます (片側だけ直すと検査で止まります)。</p>
+      <p class="term-plain" data-slot-id="plain-vocabulary" data-prose-slot="plain-vocabulary">folio で使う言葉の正式な意味を保持しているファイルです。 文書中の用語にかぶせる説明ふきだしは、 ここから作られます。 folio 自身では、 書き換えるときに人が触る大もとは別の設計データ側にあり、 このファイルはそこから毎回作り直される生成物です (直接書き換えても次の作り直しで消えます。 作り直し忘れは検査が見つけて止めます)。</p>
       <p class="term-usage" data-audience="human" data-usage-for="vocabulary">使われる文書: 原則 P-5</p>
       <details class="term-machine" data-audience="machine">
         <summary>機械層 — 構造化 term レコード</summary>
@@ -178,7 +178,7 @@
           <dt>canonical (en)</dt><dd data-term-en="vocabulary">vocabulary</dd>
           <dt>slug / anchor</dt><dd data-term-slug="vocabulary">#term-vocabulary</dd>
           <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
-          <dt>正式定義</dt><dd class="term-formal">folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。</dd>
+          <dt>正式定義</dt><dd class="term-formal">folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。</dd>
         </dl>
         <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/vocabulary","name":"vocabulary","inDefinedTermSet":"./glossary.html"}</script>
         <ul class="term-xrefs">
@@ -663,7 +663,7 @@
 </section>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-glossary.glossary.yaml</b> &middot; 生成: <b>2026-07-15 16:37</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-glossary.glossary.yaml</b> &middot; 生成: <b>2026-07-15 22:12</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>glossary-pack</span><span>folio self-host (instance#1)</span><span>canonical-name SSoT + dual-audience term</span></div>
 </div></footer>
 <p class="gen-meta">folio design-system generator — glossary-pack (instance #1 / folio self-host)</p>

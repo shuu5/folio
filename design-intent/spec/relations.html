@@ -403,7 +403,7 @@ flowchart TB
   <li><strong>同一 dir 内 spec</strong>: <code>"@id": "./&lt;filename&gt;"</code>。 例: <code>"./rules.html"</code>。</li>
   <li><strong>上位 dir spec</strong>: <code>"@id": "../&lt;path&gt;"</code>。 例: <code>"./constitution.html"</code>。</li>
   <li><strong>section anchor</strong>: <code>"@id": "&lt;path&gt;#&lt;section-id&gt;"</code>。 例: <code>"./rules.html#s4-format"</code>。</li>
-  <li><strong>絶対 URL 禁止</strong>: <code>design-intent/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。">vocabulary</span> URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。</li>
+  <li><strong>絶対 URL 禁止</strong>: <code>design-intent/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。">vocabulary</span> URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。</li>
 </ol>
 
 <h3 id="s3-4-conformance">§3.4 Conformance Level (Phase 1)</h3>

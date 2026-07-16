@@ -430,7 +430,7 @@ glossary:
   - { term: "xref", en: "xref", def: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。" }
   - { term: "dogfood", en: "dogfood", def: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。" }
   - { term: "keystone", en: "keystone", def: "機構の前提 (marker / opt-in signal) を持たない対象を検査せず skip し clean を保つ設計原則。 誤発火より無検査を選び、 採用は対象側の明示 opt-in に委ねる。" }
-  - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と folio build の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はその逐語同鏡。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。" }
+  - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。" }
   - { term: "data-audience", en: "data-audience", def: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。" }
   - { term: "floor", en: "floor", def: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。" }
   - { term: "ceiling", en: "ceiling", def: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。" }
