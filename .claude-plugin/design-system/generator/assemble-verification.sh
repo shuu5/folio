@@ -139,33 +139,101 @@ RICH_HREF_ALLOW_DESC='#fragment / 相対 *.html(#frag) / 相対 *.md(#frag) / ht
 #   ゆえ、 本定数は ★その fork の実測値。 同型を d7bq/bxpm へ波及させる際は ★機構 (被覆量 assert) をそのまま持ち、
 #   値だけ各 pack の実測へ差し替えること (機構を落として値だけ移すと恒真 PASS が復活する)。
 RICH_FIELD_MIN=337
-validate_rich_inline() {
-  local bad vals n rc
-  vals="$(mktemp)"
-  # ★(a) pipeline の exit status を ★自前で検査する (fail-open 封鎖):
-  #   caller は `validate_rich_inline || errs=1` (= || リスト) で呼ぶため、 関数本体では set -e が ★無効化される。
-  #   ゆえ rich_field_values (yq) が落ちても $bad は空文字列になり、 空文字列性だけを見る判定は ★無条件 PASS する
-  #   (最小再現で確認済: validate() が errs=0 のまま CLEAN を報告した)。 status を明示判定して abort する。
-  if ! rich_field_values > "$vals"; then
-    rm -f "$vals"
-    echo "assemble-verification: ★rich field の抽出に失敗 (yq 非 0 exit・検査不能ゆえ fail-closed)" >&2
-    return 1
-  fi
-  # ★(b) 被覆量の fail-closed assert (gate 喪失への ★恒真 PASS 封鎖):
-  #   本 guard の PASS/FAIL を $bad の空文字列性だけで決めると、 rich_field_values が ★空を返した瞬間に
-  #   「検査対象 0 件 → bad なし → PASS」となり、 8 箇所の RAW emit site を覆う ★唯一の注入防御が
-  #   何も検査しないまま緑になる (= 本 diff が esc() を外した代償として集約した保護の喪失)。
-  #   実証: 検査対象 query を .sectionsTYPO[].essence へ drift させると bad=[] で return 0 = PASS だった。
-  #   ゆえ「bad が無いこと」だけでなく ★「何件検査したか」を assert する。
-  n="$(wc -l < "$vals" | tr -d ' ')"
-  if [[ "$n" -lt "$RICH_FIELD_MIN" ]]; then
-    rm -f "$vals"
-    echo "assemble-verification: ★rich field の検査対象が $n 件 (期待下限 $RICH_FIELD_MIN)。 rich_field_values の" >&2
-    echo "  query drift か抽出規約の破綻により ★注入防御が無被覆 (検査対象 0/過少での恒真 PASS を封鎖)。" >&2
-    echo "  契約が正当に育った場合に限り RICH_FIELD_MIN を ★意図的に更新すること。" >&2
-    return 1
-  fi
-  bad="$(ALLOW="$RICH_INLINE_ALLOW" ATTRALLOW="$RICH_ATTR_ALLOW" perl -CSD -ne '
+# ★型別の実測下限 (folio-eccf S5・RICH_FIELD_MIN の count-only 残余の解消)。 "min:::label:::query" の 3 つ組。
+# ★なぜ総数下限だけでは足りないか (総数は ★型間の相殺を見逃す):
+#   RICH_FIELD_MIN は「総数が減ったら FAIL」しか言えない。 契約が正当に育って table-rows が 220→230 になった後に
+#   sect-essence (7 値) の query が drift すると 総数は 343 ≥ 337 ゆえ ★緑のまま 7 値が無検査になる。
+#   すなわち ★被覆の喪失が契約の成長に紛れて隠れる。 ゆえ ★型ごとに下限を持ち、 型単位の減少を個別に撃つ。
+# ★実測 (現契約): 7 + 18 + 7 + 24 + 220 + 1 + 30 + 30 = 337 = RICH_FIELD_MIN (総数と内訳は同じ集合の別表現)。
+# ★二重保守の封鎖 (この表と rich_field_values は同じ集合を ★別記法で列挙する = drift しうる):
+#   ゆえ validate_rich_inline で ★sum(型別) == rich_field_values の総行数 を ★恒等式として課す。
+#   drift すれば恒等式が破れて abort する = 表と本体の一致を ★機械が保証する (人間の規律に依存しない)。
+#   ★query 記法に注意: 本表の .sections[].essence は ★末尾カンマを持たない (rich_field_values 側とは別記法)。
+#   これは偶然ではない: test-adversarial の F18g は assembler 中の `.sections[].essence,` (★カンマ込み) を sed で
+#   drift させて guard 喪失を撃つため、 本表が同形だと ★両方が同時に mutate されて F18g の意味が変わる。
+RICH_FIELD_TYPE_MINS=(
+  '7:::sect-essence:::.sections[].essence'
+  '18:::subhead-essence:::[.sections[].blocks[]? | select(.type=="subhead") | .essence] | .[]'
+  '7:::table-caption:::[.sections[].blocks[]? | select(.type=="table") | (.caption // "")] | .[]'
+  '24:::table-headers:::[.sections[].blocks[]? | select(.type=="table") | .headers[]] | .[]'
+  '220:::table-rows:::[.sections[].blocks[]? | select(.type=="table") | .rows[][]] | .[]'
+  '1:::mermaid-caption:::[.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")] | .[]'
+  '30:::req-essence:::.requirements[].essence'
+  '30:::req-statement:::.requirements[].statement'
+)
+# ★人間層の絶対 URL scheme allowlist (perl regex 片・下の $href_ok へ env 経由で埋まる)。
+#   ★https のみ (http:// は不可) = 改修前の literal と同値。 実測: 人間層 rich field の href 140 件は
+#   ★全て相対/fragment で絶対 URL は 0 件ゆえ、 本 scheme を狭く保っても現契約は通る (F18e 空撃ちが pin)。
+RICH_HREF_SCHEME='https'
+
+# ---- ★機械層 (machine free-prose) rich field の sanitization (folio-eccf S1・人間層との ★fail-closed 対称化) ----
+# ★何を「対称」にするか (誤読すると全機械層が恒真 abort する):
+#   対称にするのは ★fail-closed 規律 (tokenizer で読み emit 前に abort する) であって ★allowlist の同一ではない。
+#   機械層 (ADR-0045 dual-audience の canonical form) は ★block 構造要素を正当に内包するため
+#   (実測: p18 / div6 / dt6 / dd6 / ul2 / li6 / pre2)、 人間層 RICH_INLINE_ALLOW (inline 限定) を流用すると
+#   ★素の canonical 契約が abort する (恒真 abort = 生成不能)。 逆に人間層 allowlist を block まで広げるのは
+#   人間層を fail-open 化する退行 (人間層 rich field に block が現れたら構造破壊か注入である、 が現行の設計)。
+#   ゆえ ★層ごとに別 allowlist・別抽出関数・別下限を持ち、 ★tokenizer 本体だけを共用する。
+# ★allowlist は canonical contract の ★実測タグ集合を SSoT に決める (想像列挙禁止)。
+#   実測 (machine_preamble + sections[].machine_blocks の html/items): a62 strong29 code27 p18 span11 li6 dt6 div6 dd6 ul2 pre2。
+#   = 人間層 inline 集合の superset として block 群 (p|div|dl|dt|dd|ul|ol|li|pre|aside) を足した形で覆える。
+#   dl/ol/aside は現 field 内に実在しない (dl/aside は emitter 側の wrapper・ol は ul の同型 sibling) が、
+#   ★block 群として一体で許可する (mandate 明示)。 script|style|iframe|object|embed|form|input|button|link|meta は
+#   ★意図的に不在 = 現れたら fail-closed abort する。
+MACHINE_RICH_ALLOW="${RICH_INLINE_ALLOW}|p|div|dl|dt|dd|ul|ol|li|pre|aside"
+# ★属性名は人間層と同一で足りる (実測: href62 / class17 / data-tooltip15 / data-term9 = 人間層 allowlist の部分集合)。
+#   ★別名で束縛する理由: 将来 機械層に固有属性が要ったとき ★人間層を巻き添えで広げない (緩和の scope を層に閉じる)。
+MACHINE_ATTR_ALLOW="$RICH_ATTR_ALLOW"
+# ★機械層の絶対 URL scheme: ★http も許可する。 人間層 (https のみ) からの ★意図的な差分であり、 根拠は canonical 実測
+#   = 機械層 href 62 件の内訳は 相対/fragment 51 + https 10 + ★http 1 (http://requirekit.ai/… = 原本 §参考文献の外部出典)。
+#   ★https のみに絞ると素の canonical が abort する (= 恒真 abort) ため、 実測を SSoT に http を明示許可する。
+#   ★これは注入面の緩和ではない: 危険 scheme (javascript:/data:/vbscript: …) は ★肯定 allowlist の構造上
+#   列挙に依らず一律に落ちる (否定列挙をしていないので http 追加が他 scheme を開くことはない)。
+MACHINE_HREF_SCHEME='https?'
+MACHINE_HREF_ALLOW_DESC='#fragment / 相対 *.html(#frag) / 相対 *.md(#frag) / http(s)://'
+# ★機械層 field の実測下限 (現契約 = 34 値)。 人間層 RICH_FIELD_MIN=337 とは ★別物・★merge 禁止
+#   (合算すると 337 の pin が壊れ、 かつ層別 allowlist の適用先が混ざる)。 意味論は RICH_FIELD_MIN と同じ「下限」で、
+#   ★減少方向 (被覆の喪失) だけを塞ぐ。
+MACHINE_FIELD_MIN=34
+# ★機械層の ★型別 (= 抽出分岐別) 実測下限。 人間層 RICH_FIELD_TYPE_MINS と ★同型の機構・★別の定数束 (merge 禁止)。
+# ★なぜ総数下限 (34) だけでは足りないか — 同一 diff の S5 が人間層で ★既に証明した穴と ★同型ゆえ:
+#   MACHINE_FIELD_MIN=34 は ★たまたま現総数と一致している ので、 今日は任意分岐の drift が総数減で捕捉される。
+#   しかし契約が正当に育って machine_blocks が 3 値増えた瞬間 (総数 37)、 machine_preamble 分岐の query が
+#   drift しても 31+3 = 34 ≥ 34 ゆえ ★総数 assert は緑のまま で、 preamble 3 値の RAW emit が ★無検査になる。
+#   = 被覆の喪失が契約の成長に紛れて隠れる (S5 の 337/360 と厳密に同じ機序)。 ゆえ ★分岐ごとに下限を持つ。
+# ★実測 (現契約): 3 + 0 + 20 + 11 = 34 = MACHINE_FIELD_MIN (総数と内訳は同じ集合の別表現)。
+#   ★preamble-items が 0 なのは ★実測の事実 (現 machine_preamble に type=list が無い)。 下限 0 は単独では teeth を
+#   持たないが、 ★下の総和恒等式が「この分岐が 0 である」ことを ★総数側と束縛する ため無意味ではない
+#   (0 を「無い」と誤魔化さず ★実測のまま置くのが SSoT 規律。 将来 list が入れば恒等式が破れて更新を強制する)。
+# ★二重保守の封鎖: 本表と machine_field_values は ★同じ集合を別記法で列挙する = drift しうる。 ゆえ
+#   validate_machine_inline で ★sum(分岐) == machine_field_values の総行数 を ★恒等式として課す (人間層と同型)。
+# ★query 記法に注意 (人間層 RICH_FIELD_TYPE_MINS と同じ理由): 本表は pipe 周りを ★空白なし で書き、
+#   machine_field_values 側 (★空白込み) と ★意図的に別記法にする。 guard 喪失 mutation-kill (敵対 M17b/M17c・
+#   selftest S1-c) は machine_field_values 側の ★空白込み 記法を sed で drift させるため、 本表が同形だと
+#   ★表と本体が同時に mutate されて mutation-kill の意味が変わる (恒等式が破れず穴が残る)。
+#   ★本 comment に mutation の ★対象 literal を書いてはならない: sed は comment にも当たるため、 literal を
+#   書くと machine_field_values の記法が変わっても comment 側が一致して ★空撃ち検査 (diff -q) が誤って
+#   「mutation 発火」と読む (= 空撃ち検出が壊れる)。 ゆえ記法差は ★散文で述べ literal は置かない。
+MACHINE_FIELD_TYPE_MINS=(
+  '3:::preamble-html:::.machine_preamble[]?|select(.type != "list")|.html'
+  '0:::preamble-items:::.machine_preamble[]?|select(.type == "list")|.items[]'
+  '20:::block-html:::.sections[].machine_blocks[]?|select(.type != "list")|.html'
+  '11:::block-items:::.sections[].machine_blocks[]?|select(.type == "list")|.items[]'
+)
+# ★機械層 raw-emit field の全値を吐く (emit_machine_block の raw emit 経路と ★1:1 対応させる)。
+#   emit 側: prose/note/demoted/dl は .html を、 list は .items[] を ★RAW emit する。 ゆえ検査対象も同じ 2 経路。
+machine_field_values() {
+  q '[ (.machine_preamble[]? | select(.type != "list") | .html),
+       (.machine_preamble[]? | select(.type == "list") | .items[]),
+       (.sections[].machine_blocks[]? | select(.type != "list") | .html),
+       (.sections[].machine_blocks[]? | select(.type == "list") | .items[]) ] | .[]'
+}
+
+# ---- ★tokenizer 本体: 人間層 / 機械層が ★共用する唯一の実体 (parser-differential の二重保守を禁じる) ----
+# ★共用する理由: 上記 4 形 (B1-B4) の parser-differential 封鎖は ★層に依らない性質ゆえ、 層ごとに写経すると
+#   片方だけが退行する (実際 機械層は本 S1 まで ★検査ゼロだった = 非対称の残余)。 層差は env だけで表現する:
+#     ALLOW = tag allowlist / ATTRALLOW = 属性名 allowlist / SCHEMEALLOW = 絶対 URL の scheme (perl regex 片)。
+RICH_TOKENIZE_PL='
     BEGIN {
       our %bad; our $re = qr/^(?:$ENV{ALLOW})$/i; our $attr_re = qr/^(?:$ENV{ATTRALLOW})$/i;
       # URL を載せうる属性 (allowlist 内に現れたら decode 後 href_ok を課す)。
@@ -190,7 +258,7 @@ validate_rich_inline() {
             \#[^\s]*                                   # 同一文書 fragment
           | (?:\.{1,2}/)*[A-Za-z0-9._/-]+\.html(?:\#[^\s]*)?   # 相対 .html (+fragment)
           | (?:\.{1,2}/)*[A-Za-z0-9._/-]+\.md(?:\#[^\s]*)?     # 相対 .md   (+fragment)
-          | https://[A-Za-z0-9._~:/?\#\[\]@!$&\x27()*+,;=%-]+   # 明示 https のみ (http:// は不可)
+          | (?:$ENV{SCHEMEALLOW})://[A-Za-z0-9._~:/?\#\[\]@!$&\x27()*+,;=%-]+   # scheme allowlist (layer 別 env)
         )$}x;
     }
     # ---- ★strict tokenizer: 実 HTML parser の tag/属性 grammar を明示的に辿る (naive regex の parser-differential 封鎖) ----
@@ -208,7 +276,7 @@ validate_rich_inline() {
       if ($rest =~ /^<[!?]/) { $bad{"<! or <? (MALFORMED-MARKUP; declaration/comment not allowed in rich field)"}++; last; }
       unless ($rest =~ /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)/) { $i = $lt + 1; next; }   # literal "<" として読み飛ばす
       my ($close, $tag) = ($1, $2);
-      $bad{"<$tag> (allowlist 外)"}++ unless $tag =~ $re;
+      $bad{"<$tag> (TAG-NOT-ALLOWED)"}++ unless $tag =~ $re;
       $i = $lt + 1 + length($close) + length($tag);
       # ---- 属性列を strict grammar で読む ----
       # ★属性の直前には空白が MUST。 HTML5 は欠落を回復して属性化する (B1) が、 我々は回復せず落とす。
@@ -255,8 +323,67 @@ validate_rich_inline() {
         $bad{"$name=\"$raw\" (URL-ALLOWLIST-VIOLATION; decoded: $u)"}++;
       }
     }
-    END { print join("・", map { "$_ x$bad{$_}" } sort keys %bad) if %bad; }
-  ' < "$vals")"; rc=$?
+    END { print join("; ", map { "$_ x$bad{$_}" } sort keys %bad) if %bad; }
+'
+
+validate_rich_inline() {
+  local bad vals n rc
+  vals="$(mktemp)"
+  # ★(a) pipeline の exit status を ★自前で検査する (fail-open 封鎖):
+  #   caller は `validate_rich_inline || errs=1` (= || リスト) で呼ぶため、 関数本体では set -e が ★無効化される。
+  #   ゆえ rich_field_values (yq) が落ちても $bad は空文字列になり、 空文字列性だけを見る判定は ★無条件 PASS する
+  #   (最小再現で確認済: validate() が errs=0 のまま CLEAN を報告した)。 status を明示判定して abort する。
+  if ! rich_field_values > "$vals"; then
+    rm -f "$vals"
+    echo "assemble-verification: ★rich field の抽出に失敗 (yq 非 0 exit・検査不能ゆえ fail-closed)" >&2
+    return 1
+  fi
+  # ★(b) 被覆量の fail-closed assert (gate 喪失への ★恒真 PASS 封鎖):
+  #   本 guard の PASS/FAIL を $bad の空文字列性だけで決めると、 rich_field_values が ★空を返した瞬間に
+  #   「検査対象 0 件 → bad なし → PASS」となり、 8 箇所の RAW emit site を覆う ★唯一の注入防御が
+  #   何も検査しないまま緑になる (= 本 diff が esc() を外した代償として集約した保護の喪失)。
+  #   実証: 検査対象 query を .sectionsTYPO[].essence へ drift させると bad=[] で return 0 = PASS だった。
+  #   ゆえ「bad が無いこと」だけでなく ★「何件検査したか」を assert する。
+  n="$(wc -l < "$vals" | tr -d ' ')"
+  if [[ "$n" -lt "$RICH_FIELD_MIN" ]]; then
+    rm -f "$vals"
+    echo "assemble-verification: ★rich field の検査対象が $n 件 (期待下限 $RICH_FIELD_MIN)。 rich_field_values の" >&2
+    echo "  query drift か抽出規約の破綻により ★注入防御が無被覆 (検査対象 0/過少での恒真 PASS を封鎖)。" >&2
+    echo "  契約が正当に育った場合に限り RICH_FIELD_MIN を ★意図的に更新すること。" >&2
+    return 1
+  fi
+  # ★(b2) 型別 内訳の下限 assert (folio-eccf S5)。 総数 assert の ★後ろ に置く MUST:
+  #   総数が痩せる drift は ★総数 assert の理由 (「検査対象が」) で落ちる規約が既に F18g の pin になっており、
+  #   本 assert を前に出すと同じ drift が別理由で落ちて F18g の理由照合が壊れる (= 既存 pin の意味を変えない)。
+  local spec tmin tlabel tquery tn sum=0
+  for spec in "${RICH_FIELD_TYPE_MINS[@]}"; do
+    tmin="${spec%%:::*}"; spec="${spec#*:::}"; tlabel="${spec%%:::*}"; tquery="${spec#*:::}"
+    if ! tn="$(q "[ $tquery ] | .[]" 2>/dev/null | wc -l | tr -d ' ')"; then
+      rm -f "$vals"
+      echo "assemble-verification: ★rich field 型別 '$tlabel' の抽出に失敗 (検査不能ゆえ fail-closed)" >&2
+      return 1
+    fi
+    sum=$((sum + tn))
+    if [[ "$tn" -lt "$tmin" ]]; then
+      rm -f "$vals"
+      echo "assemble-verification: ★rich field 型別 '$tlabel' が $tn 件 (期待下限 $tmin)。 型単位で被覆が痩せている" >&2
+      echo "  (総数 $n は下限 $RICH_FIELD_MIN を満たしていても ★型間の相殺で喪失が隠れる。 それを撃つのが本 assert)。" >&2
+      echo "  契約が正当に育った場合に限り RICH_FIELD_TYPE_MINS を ★意図的に更新すること。" >&2
+      return 1
+    fi
+  done
+  # ★(b3) 恒等式: 型別の総和 == rich_field_values の総行数 (folio-eccf S5)。
+  #   RICH_FIELD_TYPE_MINS と rich_field_values は ★同じ field 集合を別記法で列挙する = 二重保守ゆえ drift しうる。
+  #   本恒等式が破れる = 両者が ★違う集合を見ている ということであり、 どちらが正しいかに依らず ★検査の土台が
+  #   壊れている。 ゆえ理由を問わず fail-closed (「片方だけが drift しても総数は下限を満たしうる」穴の構造的封鎖)。
+  if [[ "$sum" -ne "$n" ]]; then
+    rm -f "$vals"
+    echo "assemble-verification: ★rich field の型別 総和 $sum が総行数 $n と不一致 (RICH_FIELD_TYPE_MINS と" >&2
+    echo "  rich_field_values が ★別の集合を列挙している = 二重保守の drift。 検査の土台が壊れているゆえ fail-closed)。" >&2
+    return 1
+  fi
+  bad="$(ALLOW="$RICH_INLINE_ALLOW" ATTRALLOW="$RICH_ATTR_ALLOW" SCHEMEALLOW="$RICH_HREF_SCHEME" \
+         perl -CSD -ne "$RICH_TOKENIZE_PL" < "$vals")"; rc=$?
   rm -f "$vals"
   # ★(c) tokenizer 自身の異常終了も fail-closed (同じく set -e が効かないため自前判定)。
   [[ $rc -eq 0 ]] || { echo "assemble-verification: ★rich field の tokenize に失敗 (perl 非 0 exit・検査不能ゆえ fail-closed)" >&2; return 1; }
@@ -269,11 +396,87 @@ validate_rich_inline() {
   return 1
 }
 
+# ★機械層 rich field の inline 健全性 (folio-eccf S1・validate_rich_inline と ★同一 tokenizer / 別 allowlist)。
+#   ★なぜ要るか (改修前の非対称): emit_machine_block は .html / .items[] を ★RAW emit する (esc 厳禁 = 逐語 round-trip の
+#   ための設計) のに、 人間層と違い ★生成前の sanitization を持たなかった。 すなわち機械層 field への注入は
+#   「verify が後から気づく」だけで ★生成そのものは通っていた (人間層 = 生成時 abort との非対称)。
+#   ★verify 後付けの post-check では対称にならない: verify を回さない経路 (assemble 単体呼出し) が素通りするうえ、
+#   「毒入り生成物が一度 file として存在する」こと自体を許す。 ゆえ ★人間層と同じ emit 前 fail-closed abort に揃える。
+# ★構造は validate_rich_inline と ★意図的に同型 (fail-closed 3 点: 抽出失敗 / 被覆量下限 / tokenizer 異常終了)。
+#   ここを共通関数へ畳まないのは、 層ごとに ★理由文言と定数束を分離したままにするため (F18 群の substring 一致点を
+#   人間層に固定し、 機械層の緩和が人間層へ scope-leak しないようにする)。
+validate_machine_inline() {
+  local bad vals n rc
+  vals="$(mktemp)"
+  # ★(a) 抽出失敗を fail-closed (caller が `|| errs=1` で呼ぶため set -e は無効 = 自前判定が要る)。
+  if ! machine_field_values > "$vals"; then
+    rm -f "$vals"
+    echo "assemble-verification: ★機械層 field の抽出に失敗 (yq 非 0 exit・検査不能ゆえ fail-closed)" >&2
+    return 1
+  fi
+  # ★(b) 被覆量の下限 assert (guard 喪失への恒真 PASS 封鎖・人間層 RICH_FIELD_MIN と同型の teeth)。
+  #   machine_field_values の query が drift すると「検査対象 0 件 → bad なし → PASS」で機械層 RAW emit が
+  #   ★無防備のまま緑になる。 ★件数を assert して初めて guard の生存が証明される。
+  n="$(wc -l < "$vals" | tr -d ' ')"
+  if [[ "$n" -lt "$MACHINE_FIELD_MIN" ]]; then
+    rm -f "$vals"
+    echo "assemble-verification: ★機械層 field の検査対象が $n 件 (期待下限 $MACHINE_FIELD_MIN)。 machine_field_values の" >&2
+    echo "  query drift か抽出規約の破綻により ★機械層の注入防御が無被覆 (検査対象 0/過少での恒真 PASS を封鎖)。" >&2
+    echo "  契約が正当に育った場合に限り MACHINE_FIELD_MIN を ★意図的に更新すること。" >&2
+    return 1
+  fi
+  # ★(b2) 分岐別 内訳の下限 assert (人間層 (b2) と同型・別定数束)。 総数 assert の ★後ろ に置く MUST:
+  #   総数が痩せる drift は ★総数 assert の理由 (「機械層 field の検査対象が」) で落ちる規約が 敵対 M17b/M17c と
+  #   selftest S1-c の理由照合 pin になっており、 本 assert を前に出すと同じ drift が別理由で落ちて pin が壊れる。
+  local mspec tmin tlabel tquery tn msum=0
+  for mspec in "${MACHINE_FIELD_TYPE_MINS[@]}"; do
+    tmin="${mspec%%:::*}"; mspec="${mspec#*:::}"; tlabel="${mspec%%:::*}"; tquery="${mspec#*:::}"
+    if ! tn="$(q "[ $tquery ] | .[]" 2>/dev/null | wc -l | tr -d ' ')"; then
+      rm -f "$vals"
+      echo "assemble-verification: ★機械層 field 分岐 '$tlabel' の抽出に失敗 (検査不能ゆえ fail-closed)" >&2
+      return 1
+    fi
+    msum=$((msum + tn))
+    if [[ "$tn" -lt "$tmin" ]]; then
+      rm -f "$vals"
+      echo "assemble-verification: ★機械層 field 分岐 '$tlabel' が $tn 件 (期待下限 $tmin)。 分岐単位で被覆が痩せている" >&2
+      echo "  (総数 $n は下限 $MACHINE_FIELD_MIN を満たしていても ★分岐間の相殺で喪失が隠れる。 それを撃つのが本 assert)。" >&2
+      echo "  契約が正当に育った場合に限り MACHINE_FIELD_TYPE_MINS を ★意図的に更新すること。" >&2
+      return 1
+    fi
+  done
+  # ★(b3) 恒等式: 分岐別の総和 == machine_field_values の総行数 (人間層 (b3) と同型・別定数束)。
+  #   ★本恒等式が MACHINE_FIELD_MIN の count-only 残余を閉じる本体: 契約が育って総数が下限を上回った後に
+  #   machine_field_values の ★1 分岐だけ が drift すると、 総数 assert も 分岐別下限 (本表は別 query ゆえ無傷) も
+  #   ★両方緑のまま その分岐が無検査になる。 恒等式だけが「本体と表が違う集合を見ている」を検出する。
+  if [[ "$msum" -ne "$n" ]]; then
+    rm -f "$vals"
+    echo "assemble-verification: ★機械層 field の分岐別 総和 $msum が総行数 $n と不一致 (MACHINE_FIELD_TYPE_MINS と" >&2
+    echo "  machine_field_values が ★別の集合を列挙している = 二重保守の drift。 検査の土台が壊れているゆえ fail-closed)。" >&2
+    return 1
+  fi
+  bad="$(ALLOW="$MACHINE_RICH_ALLOW" ATTRALLOW="$MACHINE_ATTR_ALLOW" SCHEMEALLOW="$MACHINE_HREF_SCHEME" \
+         perl -CSD -ne "$RICH_TOKENIZE_PL" < "$vals")"; rc=$?
+  rm -f "$vals"
+  # ★(c) tokenizer 自身の異常終了も fail-closed。
+  [[ $rc -eq 0 ]] || { echo "assemble-verification: ★機械層 field の tokenize に失敗 (perl 非 0 exit・検査不能ゆえ fail-closed)" >&2; return 1; }
+  [[ -z "$bad" ]] && return 0
+  echo "assemble-verification: ★機械層 field に allowlist 外の markup: $bad" >&2
+  echo "  (機械層 field = machine_preamble / sections[].machine_blocks の html・items。 RAW emit ゆえ allowlist: $MACHINE_RICH_ALLOW)" >&2
+  echo "  (属性名も肯定 allowlist: $MACHINE_ATTR_ALLOW。 on*= / style / srcset 等は quoting 形に依らず落ちる)" >&2
+  echo "  (URL は entity decode 後の肯定 allowlist 判定: $MACHINE_HREF_ALLOW_DESC)" >&2
+  echo "  (MALFORMED-MARKUP = strict grammar で tokenize しきれない形。 未知の parser-differential は通さず落とす)" >&2
+  return 1
+}
+
 # ---- fail-closed contract validation (普遍規律 = core_validate_strings、 spec 固有 = doc_type/EARS/role/tint/block/集合) ----
 validate() {
   local errs=0 d p si bi nsec nblk btype nmb mbi mbtype npre pi pbtype
   core_validate_strings "assemble-spec" || errs=1
   validate_rich_inline || errs=1
+  # ★機械層も ★emit 前に同じ fail-closed 規律で通す (folio-eccf S1)。 人間層と ★対称の位置 (validate 内) に置くのが要点:
+  #   emit 後 / verify 側の post-check では「毒入り生成物が一度存在する」ことを許し非対称が残る。
+  validate_machine_inline || errs=1
   # ★doc_type 束縛 (fail-open 封鎖): 本 fork は verification (doc_type=spec) 専用 assembler。 doc_type が spec 以外なら abort。
   [[ "$(q '.meta.doc_type')" == "spec" ]] || { echo "assemble-verification: ★meta.doc_type は spec 必須 (本 fork は verification 専用・doc_type flip で gate bypass 不可)" >&2; errs=1; }
   # 要件 id 一意性

@@ -416,8 +416,22 @@ else
   o_ids="$(mktemp)"; g_ids="$(mktemp)"
   ids_of_html() { perl -CSD -0777 -ne '
       while (/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g) { my $at=$2; while ($at =~ /(?:^|\s)id="([^"]*)"/g) { print "$1\n"; } }
-    ' "$1" | grep -v '^D-' | LC_ALL=C sort -u; }
+    ' "$1" | LC_ALL=C sort -u; }
   ids_of_html "$ORIG" > "$o_ids"; ids_of_html "$HTML" > "$g_ids"
+  # ★D-* id の扱いを ★silent drop から ★fail-closed 検査へ転換する (folio-eccf S6)。
+  #   ★旧形の穴 (narrow fail-open): 抽出器が `| grep -v '^D-'` で D-* id を ★両側から黙って落としていた。
+  #   意図は「delta 印 (data-delta-id) が anchor 集合へ混入したら弾く」防御だったが、 filter は ★混入を報告せず
+  #   捨てる ゆえ、 将来 id="D-…" が ★正当な navigable target として導入されると:
+  #     (a) 真の総数 56 を ★55 と報告し literal pin (== 55) は ★PASS のまま、
+  #     (b) その id が canonical に在り生成物に無くても ★両側から消えるので欠落 assert も ★素通りする
+  #   = その id クラスだけ ★無保護になる (narrow fail-open)。 ★実測: 現 corpus の D-* id は canonical/生成物とも 0 件
+  #   ゆえ filter は redundant であり、 撤去しても現 pin (55) は不変 = ★挙動を変えずに穴だけを閉じられる。
+  #   ★転換後の規律: 落とさず ★数え、 D-* が現れたら ★理由を問わず FAIL する。 delta の混入なら退行として正しく赤くなり、
+  #   正当な D-* を新設したいなら ★本 assert を意図的に更新する (silent drop 禁止 = 緩和は常に明示的な行為)。
+  chk "ORACLE navigable id: canonical の D-* id == 0 (delta 印の anchor 混入を silent drop でなく fail-closed に)" "0" \
+    "$(grep -c '^D-' "$o_ids" || true)"
+  chk "ORACLE navigable id: 生成物の D-* id == 0 (同上・両側で撃つ)" "0" \
+    "$(grep -c '^D-' "$g_ids" || true)"
   chk "ORACLE navigable id: canonical 総数 == 55" "55" "$(grep -c . "$o_ids")"
   chk_empty "ORACLE navigable id: 生成物に欠落 0 (corpus inbound の解決先)" \
     "$(LC_ALL=C comm -23 "$o_ids" "$g_ids" | tr '\n' ' ')"
@@ -463,6 +477,97 @@ else
   chk "ORACLE: escape 済 literal 'a class=\"xref\"' 出現 == canonical" \
     "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$ORIG")" \
     "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$HTML")"
+  # ★★generic inline tag (code/span) の ★人間層 occurrence-parity + double-escape 封鎖 (folio-eccf S2)。
+  #   ★何が未被覆だったか: 従来 double-escape を撃っていたのは xref/term/delta の 3 クラスと jq -S の 2 箇所だけで、
+  #   ★table cell 内の generic <code> 41 個は ★どの assert も数えていなかった (2mla の「literal escape 0」宣言の部分実現)。
+  #   raw emit 経路で <code> が二重 escape されると 可視 prose に &lt;code&gt; が露出するが、 契約突合 (§4/§5) は
+  #   両側が contract 由来ゆえ ★同時退行で緑になり、 §11 round-trip は ★機械層のみを見る。 ゆえ ORACLE 直突合で撃つ。
+  #
+  # ★計数基底の固定 (ここを外すと恒真化する):
+  #   (a) ★全 BODY 素 grep は使わない: canonical の live <code> 総数は 403 で、 その内訳は 人間層 122 +
+  #       ★機械層 (data-audience="machine" の subtree) 281 (= EARS normative 254 + 機械層 block 27) である。
+  #       総数 403 での parity は ★層をまたいだ相殺 (人間層が 1 減り機械層が 1 増える) を見逃す ★誤基底になる。
+  #   (b) ★selector は「data-audience="machine" の subtree の ★外」に単一固定する。 canonical と生成物は
+  #       機械層の marking 語彙が ★異なる (canonical=class="spec-normative"/"demoted" 等・生成物=data-component=
+  #       "spec-machine-*") ため、 その ★語彙を列挙する selector は two-vocabulary な partial enumeration になる。
+  #       data-audience は ★両者で同一の canonical marker (ADR-0045) ゆえ、 これだけを基底にする。
+  #   (c) ★実 HTML parser で ancestor を辿る (naive な tag-strip regex は subtree 境界を読めず parser-differential
+  #       を生む)。 python3 は本 arm の ld_stake が既に使用しており新規依存ではない。
+  #   (d) ★region 別に分けて数え ★総和も撃つ: 人間層 122 の中でも table-cell 41 / caption 2 / rest 79 と
+  #       ★内訳で pin する (総数だけでは region 間の相殺が隠れる = S5 と同型の規律)。
+  #   ★実測 (canonical / 生成物 が ★全 region で一致): code = table-cell 41 + caption 2 + rest 79 = 人間層 122。
+  #
+  # ★<span> は ★table cell / caption だけを基底にする (人間層 rest は基底にしない):
+  #   実測 = table-cell 58/58・caption 1/1 は canonical と生成物で ★一致するが、 人間層 rest は canonical 101 に対し
+  #   生成物 291 で ★正当に乖離する (生成物は fold の mf-kicker/mf-label/mf-count 等 ★chrome span を持つため)。
+  #   ゆえ rest まで parity を課すのは ★偽 assert (常に赤) になる。 契約由来の逐語 raw emit だけが入る
+  #   table cell / caption に基底を絞れば span も parity で pin できる。
+  #
+  # ★literal pin を必ず対で置く (相対 parity のみは flip 後 ORIG==生成物 の ★自己比較で恒真化する。 上の
+  #   xref/term/delta と同型の規律)。
+  h_inline() { # $1=file $2=tag $3=region(table-cell|caption|rest|human) → 人間層の live 出現数
+    python3 - "$1" "$2" "$3" <<'PYEOF'
+from html.parser import HTMLParser
+import sys
+VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','embed','param','track'}
+class W(HTMLParser):
+    def __init__(self, target, region):
+        super().__init__(convert_charrefs=False); self.stack=[]; self.n=0
+        self.target=target; self.region=region
+    def handle_starttag(self, tag, attrs):
+        d=dict(attrs)
+        if tag==self.target:
+            # 機械層 (data-audience="machine") の subtree は人間層でない = 計数基底の外。
+            if not any(a.get('data-audience')=='machine' for _,a in self.stack):
+                r='rest'
+                for t,a in reversed(self.stack):
+                    cls=a.get('class') or ''
+                    if t in ('td','th'): r='table-cell'; break
+                    if t=='figcaption' or 'caption' in cls: r='caption'; break
+                if self.region=='human' or self.region==r: self.n+=1
+        if tag not in VOID: self.stack.append((tag,d))
+    def handle_endtag(self, tag):
+        for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i][0]==tag: del self.stack[i:]; break
+src=open(sys.argv[1],encoding='utf-8').read()
+body=src[src.index('<body'):]
+w=W(sys.argv[2], sys.argv[3]); w.feed(body)
+print(w.n)
+PYEOF
+  }
+  # (1) canonical 絶対値 literal pin (自己比較恒真化の封鎖) + (2) 生成物 == canonical (parity)。
+  chk "ORACLE generic inline: canonical 人間層 <code> table-cell 実数 == 41 (自己比較恒真化の封鎖)" "41" "$(h_inline "$ORIG" code table-cell)"
+  chk "ORACLE generic inline: canonical 人間層 <code> caption 実数 == 2 (同上)"                      "2"  "$(h_inline "$ORIG" code caption)"
+  chk "ORACLE generic inline: canonical 人間層 <code> rest 実数 == 79 (同上)"                        "79" "$(h_inline "$ORIG" code rest)"
+  chk "ORACLE generic inline: canonical 人間層 <code> 総数 == 122 (region 総和・同上)"               "122" "$(h_inline "$ORIG" code human)"
+  chk "ORACLE generic inline: <code> table-cell occurrence == canonical (table cell 41 の被覆)" \
+    "$(h_inline "$ORIG" code table-cell)" "$(h_inline "$HTML" code table-cell)"
+  chk "ORACLE generic inline: <code> caption occurrence == canonical" \
+    "$(h_inline "$ORIG" code caption)" "$(h_inline "$HTML" code caption)"
+  chk "ORACLE generic inline: <code> rest occurrence == canonical" \
+    "$(h_inline "$ORIG" code rest)" "$(h_inline "$HTML" code rest)"
+  chk "ORACLE generic inline: <code> 人間層 総数 == canonical (region 相殺の封鎖)" \
+    "$(h_inline "$ORIG" code human)" "$(h_inline "$HTML" code human)"
+  chk "ORACLE generic inline: canonical 人間層 <span> table-cell 実数 == 58 (自己比較恒真化の封鎖)" "58" "$(h_inline "$ORIG" span table-cell)"
+  chk "ORACLE generic inline: canonical 人間層 <span> caption 実数 == 1 (同上)"                      "1"  "$(h_inline "$ORIG" span caption)"
+  chk "ORACLE generic inline: <span> table-cell occurrence == canonical" \
+    "$(h_inline "$ORIG" span table-cell)" "$(h_inline "$HTML" span table-cell)"
+  chk "ORACLE generic inline: <span> caption occurrence == canonical" \
+    "$(h_inline "$ORIG" span caption)" "$(h_inline "$HTML" span caption)"
+  # (3) ★double-escape の直接検出: 二重 escape されると live 数が減ると同時に &lt;code / &lt;span が ★増える。
+  #   ★両側から挟む: live parity だけだと「元から無い」形の退行 (削除) と区別できず、 literal 数だけだと
+  #   「escape 済 literal が正当に在る」現実 (canonical の &lt;span 2 件 = 散文が span markup を *語る* 文) と衝突する。
+  #   ★canonical 実測: &lt;code = 0 件 / &lt;span = 2 件。 「0」を想定で焼かず ★実測して pin する (2 は正当な散文 literal)。
+  chk "ORACLE double-escape: canonical &lt;code literal 実数 == 0 (自己比較恒真化の封鎖)" "0" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$ORIG")"
+  chk "ORACLE double-escape: canonical &lt;span literal 実数 == 2 (散文中の正当 literal・同上)" "2" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$ORIG")"
+  chk "ORACLE double-escape: &lt;code literal 出現 == canonical (generic <code> の二重 escape 封鎖)" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$ORIG")" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$HTML")"
+  chk "ORACLE double-escape: &lt;span literal 出現 == canonical (過剰 escape / 過剰 live 化の両方向を封鎖)" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$ORIG")" \
+    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$HTML")"
   # ★jq -S は ★PRESERVE + mask (0-e)。 「削除して how-outside を緑にする」抜け道を封じるため、 how-outside 検査とは
   #   ★独立に出現数 parity を撃つ (how-outside は anchor 修正等でも緑化しうるので、 緑だけでは何も証明しない)。
   chk "ORACLE: canonical 'jq -S' 総出現 == 2 (自己比較恒真化の封鎖)" "2" \

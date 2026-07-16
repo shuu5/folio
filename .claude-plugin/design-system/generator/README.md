@@ -201,8 +201,15 @@ SRS/ADR/research/principle generator の機構を **5 例目の doc-type (rules 
 - **bootstrap extractor** (`.claude-plugin/scripts/extract-rules-spec.sh`) — `rules.html` を read-only 走査し contract DRAFT を起こす one-shot。 meta / sections(heading+essence) / requirements(spec-row) / glossary(term span dedup) / references(xref) / content blocks(subhead/table/code/mermaid/requirements) を抽出。 ★**w1f cell-1 で skip→capture へ反転**: `data-audience="machine"` の自由文 (45 prose + 16 note + 10 list = 71 block、 文書前文 1 含む) を `machine_preamble` / `sections[].machine_blocks[]` へ逐語 capture し、 capture 件数を stderr に LOG する (no silent caps)。 旧版は「モデル化しなかった件数を LOG」する skip 設計だったが、 機械層 round-trip (full self-host) のため capture へ反転した。
 - **敵対回帰** = `test-adversarial-spec.sh` (A1-A16 assemble abort [doc_type flip / 未対応 block type / EARS / tint / id 重複 / 孤立要件 / 未定義参照 / 二重配置 / role / 空 token / graph role / 改行 / EARS 空白 split / tint 空白 split / references role 空白 split] + F1-F18 verify FAIL [要件 row 削除 / 可視 rid / statement / essence / EARS badge / section heading / section essence / ref token SET / ref 可視 `<b>` / ref role / table cell / code 行 / subhead / mermaid source / cover-meta / core chrome / prose 注入 / escape 健全] + F19-F22 kicker drift [§番号 swap / topic 取り違え / heading §N 不整合 / 静的 band kicker drift・folio-l93] + F23-F25 EARS 凡例 [label drift / item 削除 / el-when drift・folio-2jr] + G1 空 en glossary (core emit_glossary・folio-4wz) + **M1-M15 機械層 (w1f cell-2)** [prose 改竄 / prose 脱落 / prose 捏造 / list item 脱落 / data-audience 値域違反=REQ-DA-STRUCT-3 / aria-hidden=REQ-DA-STRUCT-4 / human container 剥奪=REQ-DA-STRUCT-1 / 未対応 machine block type abort×2 / 二重 escape=round-trip / **block 順序入替=順序付き round-trip** / **cross-section 誤帰属=順序付き round-trip** / **note 改竄=round-trip** / **note 脱落=件数+round-trip** / **原本不在 fail-closed=SPEC_ORIGIN_HTML override で §11 fail-open 封鎖を red→green pin**] + J1-J2 inject + P1-P2 健全性 = 61 ケース)。 ★abort 系は stderr 理由を検証・verify FAIL 系は理由 substring を検証し false-pass を弾く。
 
+> **⚠ 再抽出は full-overwrite しない (`extract-… > contract/….yaml` は禁止・folio-eccf S4)**
+> extractor は `head_graph` を出力しない。 リダイレクトで上書きすると `head_graph` (rules は 4 key = `id` /
+> `part_of` / `references` / `extends`。 `depends_on` は rules が非宣言) が **★silent drop され前方 edge が消える**。
+> 手順は verification pack 節の **surgical transplant** (extractor → scratch → rich-blob delta のみ移植 →
+> head_graph/lineage/version の byte 保全を機械検査) と同型。
+
 ```bash
-.claude-plugin/scripts/extract-rules-spec.sh > contract/folio-rules.spec.yaml   # ← rules.html から contract DRAFT を機械抽出 (LOG は stderr)
+.claude-plugin/scripts/extract-rules-spec.sh > /tmp/rules-draft.yaml            # ← ★scratch へ出す (契約へ直接リダイレクトしない)
+# rich-blob delta のみを contract/folio-rules.spec.yaml へ移植し、head_graph/lineage/version の byte 保全を確認する。
 ./assemble-spec.sh contract/folio-rules.spec.yaml asm.html
 ./inject-prose.sh prose/folio-rules.prose.yaml asm.html filled.html             # ← SRS/ADR/research/principle と同じ injector
 ./verify-spec.sh --filled prose/folio-rules.prose.yaml contract/folio-rules.spec.yaml filled.html
@@ -217,10 +224,38 @@ spec-pack (rules) を **doc-type=spec の 2 例目** (`design-intent/spec/verifi
 - **★verification 固有差分 = 機械層 `demoted`** (rules.html に無い): verification.html は機械層に `<div class="demoted" data-audience="machine">` を 4 箇所持つ (ADR-0040 圧縮の機械層降格分・中身は `<p>`/`<ul>`/`<pre><code>`)。 現 extractor は `<p>/<aside>/<ul>` のみ拾い div は死角ゆえ、 fork は **div.demoted を machine_block `type: demoted` として balanced div で inner を逐語 capture** (round-trip 被覆)。 assemble は `<div data-component="spec-machine-demoted" data-audience="machine">` で RAW emit (二重 escape 厳禁)、 verify は件数 + 双方向 *順序付き* round-trip に demoted を含める。 ★demoted は `<pre><code>` を内包しうるため extractor の section block scan から mask して human-layer code 誤捕捉を防ぐ (machine_blocks は別途 capture ゆえ無損失)。
 - **fork 時の rules 前提解除**: assemble/verify の `doc_type==rules` guard → `==spec`、 verify の round-trip 原本 `rules.html` → `verification.html`、 cover/band/footer ラベルを spec 文脈へ。 EARS 5-pattern / 非終端 照会 / 機械層 prose/note/list は rules と同型。 verification は human-layer code block を持たない (全 `<pre><code>` は demoted 内 = 機械層)。
 - **floor 通過 = `CEILING=PENDING`** (taxonomy §5.1・floor 単独 GREEN 禁止)。 意味的 fidelity (機械層軸含む) は cell-3 admin が独立 ceiling (fidelity-spec / persona-walk-spec) を `/tmp` 生成物に回す。
-- **敵対回帰** = `test-adversarial-verification.sh` (rules 版を verification anchor へ差し替え + verification 固有の demoted 改竄 F12 [text 改竄=round-trip] / M16 [block 脱落=件数+round-trip] を追加 = 62 ケース)。
+- **敵対回帰** = `test-adversarial-verification.sh` (rules 版を verification anchor へ差し替え + verification 固有の demoted 改竄 F12 [text 改竄=round-trip] / M16 [block 脱落=件数+round-trip] + **M17 機械層 注入の生成前 abort (folio-eccf S1/S5)** [dl/note/demoted/list へ script・event handler・javascript: を per-shape 注入 = `validate_machine_inline` の allowlist fail-closed / M17b・M17c = `machine_field_values` の分岐別 guard 喪失 mutation-kill / M17d = 分岐別下限と総和恒等式の teeth] を追加 = 115 ケース)。 ★M17 群が無いと F18 群 (的は ★人間層のみ) が全緑でも `validate_machine_inline` を削除して suite は緑のまま = 機械層の保護が tracked に無被覆になる。
+
+> **⚠ 再抽出は full-overwrite しない (`extract-… > contract/….yaml` は禁止・folio-eccf S4)**
+> extractor は `verification.html` の **本文** から DRAFT を起こす one-shot であり、**`head_graph` を出力しない**
+> (実測: DRAFT に `head_graph` key が不在)。 ゆえに `extract-… > contract/folio-verification.spec.yaml` と
+> **リダイレクトで上書きすると `head_graph` (5 key = `id` / `part_of` / `references` / `depends_on` / `extends`) が
+> ★silent drop される**。 head_graph は canonical head の forward JSON-LD 転記 (folio-tco6) であり、
+> 落ちると生成物の前方 edge が消える = **lossless flip の前提が壊れる**。 同じ理由で `meta.version` と
+> 先頭 lineage コメント群も上書きで失われる。 ★再抽出は必ず下記の **surgical transplant** で行うこと。
 
 ```bash
-.claude-plugin/scripts/extract-verification-spec.sh > contract/folio-verification.spec.yaml   # ← verification.html から DRAFT 機械抽出
+# ★1) extractor は ★scratch へ出す (契約へ直接リダイレクトしない)。
+.claude-plugin/scripts/extract-verification-spec.sh > /tmp/verif-draft.yaml   # LOG は stderr
+
+# ★2) DRAFT と現契約の差分を ★rich-blob 領域に限って読む (移植して良いのはこの領域だけ)。
+#     rich-blob = sections[].essence / .blocks[] (subhead essence / table caption・headers・rows / mermaid caption)
+#                 / requirements[].essence・statement / machine_preamble・sections[].machine_blocks の html・items。
+diff <(yq -P 'del(.head_graph)' contract/folio-verification.spec.yaml) <(yq -P '.' /tmp/verif-draft.yaml)
+
+# ★3) 上記 rich-blob delta ★のみ を現契約へ手で移植する (DRAFT で丸ごと置換しない)。
+#     ★保全すべき非 rich 領域 (DRAFT に存在しない or 意図的に現契約が持つもの):
+#       - head_graph (5 key)      … DRAFT に無い。 上書きすると消える。
+#       - meta.version / approval … 契約の来歴。 DRAFT の既定値で潰さない。
+#       - 先頭 lineage コメント群 (`^#`) … YAML コメントゆえ yq round-trip でも落ちうる。
+
+# ★4) 移植後の ★不変条件を機械で検査する (目視で済ませない)。 いずれも「差分 0」でなければ移植が壊れている。
+git diff --no-index <(git show HEAD:.claude-plugin/design-system/generator/contract/folio-verification.spec.yaml \
+                        | sed -n '/^head_graph:/,/^$/p') \
+                    <(sed -n '/^head_graph:/,/^$/p' contract/folio-verification.spec.yaml)   # head_graph byte 保全
+yq -r '.head_graph | keys | .[]' contract/folio-verification.spec.yaml                        # → id/part_of/references/depends_on/extends が揃う
+
+# ★5) 通常の build/verify/敵対回帰。
 ./assemble-verification.sh contract/folio-verification.spec.yaml asm.html
 ./inject-prose.sh prose/folio-verification.prose.yaml asm.html filled.html                    # ← 同じ injector (無改変共用)
 ./verify-verification.sh --filled prose/folio-verification.prose.yaml contract/folio-verification.spec.yaml filled.html

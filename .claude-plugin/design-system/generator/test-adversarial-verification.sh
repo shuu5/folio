@@ -344,6 +344,148 @@ else
 fi
 rm -f "$GUARDLESS"
 
+# === M17. ★★機械層 (machine free-prose) field への注入を ★生成前に fail-closed abort する (folio-eccf S1) ===
+# ★なぜ F18 群と ★別に要るか (F18 群は機械層を ★一切撃っていない): F18/F18b/F18d/F18f/F18g の的は全て
+#   ★人間層 (.requirements[].essence / .sections[].essence) であり、 機械層 (machine_preamble / machine_blocks) の
+#   RAW emit 経路は ★別関数 (validate_machine_inline) / ★別 allowlist (MACHINE_RICH_ALLOW) / ★別抽出
+#   (machine_field_values) / ★別下限 (MACHINE_FIELD_MIN) で守られる ★独立の防御である。 ゆえ F18 群が 全緑でも
+#   validate_machine_inline を ★丸ごと削除して suite は緑のまま になる (= tracked な恒久被覆が 0 = 保護の非対称)。
+#   本 M17 群がその非対称を閉じる: 人間層 F18 群と ★同じ検出力を 機械層に対して tracked に固定する。
+# ★空撃ち negative control は F18e が兼ねる: F18e は ★素の契約 (毒なし) が abort しないことを撃ち、 素の契約は
+#   validate() 内で validate_machine_inline も ★必ず通る ゆえ、 機械層 allowlist の恒真 abort も F18e が弾く
+#   (機械層 allowlist が block 群を落とすと 素の canonical が abort し F18e が赤くなる = 恒真 abort の検出)。
+# ★per-shape に分ける理由 (F18d/F18f と同じ規律): dl / note / demoted / list は ★DOM 構造クラスが異なり、
+#   1 instance の実弾は 構造差のある instance の穴を ★証明しない。 payload も tag / 属性 / URL の 3 クラスへ直交させる。
+m17_shape() { # label yq-path payload expected_reason_token
+  cp "$BASE" "$TMP/m17.yaml"
+  payload="$3" yq -i "$2 = strenv(payload)" "$TMP/m17.yaml"
+  # ★(a) mutation 発火検査: 契約が ★実際に変わったか。 これが無いと path が実 schema と不一致でも (yq が黙って
+  #   no-op しても) 「abort しなかった」ではなく「毒を入れていない契約が通った」を撃つ ★空撃ちに退化する。
+  if diff -q "$BASE" "$TMP/m17.yaml" >/dev/null; then
+    ng "M17 $1 (mutation が契約を変えていない = ★空撃ち。 path が実 schema と不一致)"; return
+  fi
+  local out rc; out="$(bash "$ASM" "$TMP/m17.yaml" "$TMP/m17.html" 2>&1)"; rc=$?
+  if [[ $rc -eq 0 ]]; then ng "M17 $1 (★abort せず生成された = 機械層 RAW emit が無防備)"; return; fi
+  # ★理由を ★機械層 guard の文言で照合する MUST: rc≠0 だけで緑にすると、 人間層 guard の巻き添え abort や
+  #   tool error (lib 解決失敗等) でも緑になり ★機械層を検査した証明にならない (F18g で踏んだ罠と同型)。
+  if [[ "$out" != *"機械層 field に allowlist 外の markup"* ]]; then
+    ng "M17 $1 (abort したが理由が ★機械層 guard でない = 別原因の誤 abort。 stderr 末尾: $(printf '%s' "$out" | tail -1))"; return
+  fi
+  if [[ "$out" != *"$4"* ]]; then ng "M17 $1 (abort 理由 token が想定外。 期待 '$4')"; return; fi
+  if [[ -f "$TMP/m17.html" ]] && grep -q 'alert(1)' "$TMP/m17.html" 2>/dev/null; then
+    ng "M17 $1 (abort したが生成物に payload が残留 = 部分書き出しでの露出)"; return
+  fi
+  ok "M17 $1"
+}
+# dl (machine_preamble[0]) / note (machine_preamble[1]) / demoted (sections[1].machine_blocks[1]) = ★実測 path (.html 経路)。
+for m17s in "dl:.machine_preamble[0].html" "note:.machine_preamble[1].html" "demoted:.sections[1].machine_blocks[1].html"; do
+  m17_nm="${m17s%%:*}"; m17_pt="${m17s#*:}"
+  m17_shape "★$m17_nm への <script> 注入を機械層 allowlist で abort"        "$m17_pt" '<script>alert(1)</script>'           "TAG-NOT-ALLOWED"
+  m17_shape "★$m17_nm への event handler 属性注入を abort"                  "$m17_pt" '<div onerror="alert(1)">x</div>'     "event handler attribute"
+  m17_shape "★$m17_nm への javascript: URL 注入を abort"                    "$m17_pt" '<a href="javascript:alert(1)">x</a>' "URL-ALLOWLIST-VIOLATION"
+done
+# ★list は ★別の抽出経路 (.items[] であって .html でない) = 構造クラスが異なるため独立に撃つ。
+m17_shape "★list(.items[] 経路) への <script> 注入を abort" '.sections[5].machine_blocks[1].items[0]' '<script>alert(1)</script>' "TAG-NOT-ALLOWED"
+
+# === M17b/M17c. ★機械層 guard 自身の ★喪失を ★分岐ごとに 撃つ (F18g の機械層版・per-shape mutation-kill) ===
+# ★なぜ分岐ごとか: machine_field_values は ★4 分岐の union (preamble.html / preamble.items[] / blocks.html /
+#   blocks.items[]) であり、 1 分岐の drift を撃った緑は ★他分岐の穴を証明しない (F18d/F18f と同じ per-shape 規律)。
+# ★何が守るか: 分岐 drift → 検査対象が痩せる → MACHINE_FIELD_MIN の被覆量 assert が abort する。 本 case は
+#   その塞ぎが ★実際に効くことを実弾で pin する (guard 喪失クラスの fail-open 封鎖)。
+M17_GUARDLESS="$SCRIPT_DIR/.m17-guardless.sh"
+trap 'rm -rf "$TMP"; rm -f "$GUARDLESS" "$M17_GUARDLESS"' EXIT
+m17_guard_loss() { # label sed-expr
+  # ★GUARDLESS は SCRIPT_DIR 直下に置く MUST (F18g と同じ理由: lib/common.sh の解決失敗が rc=1 で誤緑になる)。
+  sed "$2" "$ASM" > "$M17_GUARDLESS"
+  if diff -q "$ASM" "$M17_GUARDLESS" >/dev/null; then
+    ng "$1 (mutation が assembler を変えていない = ★空撃ち。 machine_field_values の query 形が変わった疑い)"; return
+  fi
+  local g_out g_rc
+  # (a) 検査対象が痩せた事実そのものを abort する (query drift = 抽出規約の破綻)。
+  g_out="$(bash "$M17_GUARDLESS" "$BASE" "$TMP/m17g.html" 2>&1)"; g_rc=$?
+  if [[ $g_rc -ne 0 && "$g_out" == *"機械層 field の検査対象が"* ]]; then
+    ok "$1 (a) ★query drift を MACHINE_FIELD_MIN の被覆量 assert が捕捉 (guard 喪失の検出)"
+  else
+    ng "$1 (a) ★query drift が素通り (rc=$g_rc) = guard 喪失に恒真 PASS (fail-open)"
+  fi
+  # (b) ★teeth: guard を殺した assembler へ 機械層注入契約を食わせても ★生成させない。
+  #   ★rc≠0 「だけ」で緑にしない (F18g で踏んだ罠): ★理由 token と ★payload 不在を併せて課す。
+  rm -f "$TMP/m17g2.html"
+  cp "$BASE" "$TMP/m17g.yaml"
+  payload='<script>alert(1)</script>' yq -i '.machine_preamble[0].html = strenv(payload)' "$TMP/m17g.yaml"
+  g_out="$(bash "$M17_GUARDLESS" "$TMP/m17g.yaml" "$TMP/m17g2.html" 2>&1)"; g_rc=$?
+  if [[ $g_rc -eq 0 ]]; then
+    ng "$1 (b) ★guard 喪失時に機械層 <script> 注入が素通りし生成された (fail-open = RAW emit が無防備)"
+  elif [[ "$g_out" != *"機械層 field の検査対象が"* ]]; then
+    ng "$1 (b) ★abort したが理由が被覆量 assert でない (tool error 等での ★見せかけの緑。 stderr 末尾: $(printf '%s' "$g_out" | tail -1))"
+  elif grep -q '<script>alert(1)</script>' "$TMP/m17g2.html" 2>/dev/null; then
+    ng "$1 (b) ★abort したが生成物に payload が残留している"
+  else
+    ok "$1 (b) ★guard を殺した assembler でも機械層注入は被覆量 assert で abort し payload 不在 (RAW emit 無防備化の封鎖)"
+  fi
+  rm -f "$M17_GUARDLESS"
+}
+m17_guard_loss "M17b ★machine_preamble 分岐の guard 喪失" 's/\.machine_preamble\[\]? | select/.machine_preambleTYPO[]? | select/g'
+m17_guard_loss "M17c ★machine_blocks 分岐の guard 喪失"   's/\.sections\[\]\.machine_blocks\[\]? | select/.sectionsTYPO[].machine_blocks[]? | select/g'
+
+# === M17d. ★機械層 被覆の ★分岐別 内訳と総和恒等式 (folio-eccf S5 の機械層版・count-only 残余の封鎖) ===
+# ★なぜ MACHINE_FIELD_MIN (総数下限) だけでは足りないか: 現 MIN=34 は ★たまたま現総数と一致している ため
+#   今日は任意分岐の drift が総数減で捕捉される。 しかし契約が正当に育って総数が 34 を上回った後は、
+#   ★1 分岐が drift しても総数は下限を満たしたまま で その分岐が ★無検査になる (人間層 S5 の 337/360 と同機序)。
+#   MACHINE_FIELD_TYPE_MINS + 総和恒等式がそれを塞ぐ。 本 case はその塞ぎが ★実際に効くことを実弾で pin する。
+# ★実弾の作り方: 分岐別下限を ★0 へ無力化した上で 表側 query だけを drift させる。 こうすると
+#   (i) 総数 34 は下限 34 を満たし、 (ii) 分岐別下限も 0 ゆえ通り、 ★総和恒等式だけ が破れる = 恒等式を名指しで撃つ。
+M17_IDENT="$SCRIPT_DIR/.m17-ident.sh"
+trap 'rm -rf "$TMP"; rm -f "$GUARDLESS" "$M17_GUARDLESS" "$M17_IDENT"' EXIT
+sed "s/'20:::block-html:::\.sections\[\]\.machine_blocks/'0:::block-html:::.sectionsTYPO[].machine_blocks/" "$ASM" > "$M17_IDENT"
+if diff -q "$ASM" "$M17_IDENT" >/dev/null; then
+  ng "M17d mutation が assembler を変えていない = ★空撃ち (MACHINE_FIELD_TYPE_MINS の記法が変わった疑い)"
+else
+  m17d_out="$(bash "$M17_IDENT" "$BASE" "$TMP/m17d.html" 2>&1)"; m17d_rc=$?
+  if [[ $m17d_rc -ne 0 && "$m17d_out" == *"機械層 field の分岐別 総和"* ]]; then
+    ok "M17d ★表と machine_field_values の drift を総和恒等式が捕捉 (総数下限が緑のままでも落ちる)"
+  else
+    ng "M17d ★分岐 drift が素通り (rc=$m17d_rc) = 総和恒等式が不発 (count-only 残余が残っている)"
+  fi
+fi
+rm -f "$M17_IDENT"
+
+# === M18. ★S2 の ORACLE generic inline / double-escape assert に ★tracked な teeth を与える (folio-eccf S2) ===
+# ★なぜ要るか (M17 と ★同一クラスの非対称): S2 は verify-verification.sh (tracked) へ assert を足したが、
+#   その assert が ★効いていること を撃つ case が tracked suite に無いと、 誰かが assert を消しても suite は
+#   ★緑のまま になる (untracked な worker selftest は cell 終了で消えるため恒久被覆にならない)。
+#   S1 には M17 群がその被覆を与えたので、 ★S2 にも同型に与えて非対称を残さない。
+# ★MK として成立する理由: expect_vfilled_fail は ★理由 substring を照合する。 ゆえ S2 の assert を削除すると
+#   出力から当該 substring が消えて ★本 case が赤くなる (別 gate が巻き添えで赤くしても substring 照合は通らない)。
+# ★変異 = 人間可視領域 (table cell) の live <code> を ★二重 escape する (raw emit 経路が壊れた時の実形)。
+#   実測: table-cell 41→13 / 人間層 122→94 / &lt;code literal 0→28 = live 減と literal 増の ★両側で挟まる。
+#   ★<td> 直後の code を狙う MUST: 素の「最初の <code>」は ★機械層 (data-audience=machine) に在り、
+#   人間層 assert は発火しない (= 空撃ち。 実測で確認)。
+f19_mut_reason() { # label perl-expr reason  (F19 と同型だが理由照合を必須にする)
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/m18.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/m18.html" >/dev/null; then
+    ng "$1 (mutation が生成物を変えていない = ★空撃ち。 selector が実 DOM と不一致の疑い)"
+  else
+    expect_vfilled_fail "$1" "$TMP/m18.html" "$3"
+  fi
+}
+f19_mut_reason "M18 ★table cell の live <code> 二重 escape を ORACLE generic inline が捕捉 (occurrence 減)" \
+  's#(<td[^>]*>)<code>([^<]*)</code>#${1}&lt;code&gt;${2}&lt;/code&gt;#g' \
+  "ORACLE generic inline"
+f19_mut_reason "M18b ★同変異を ORACLE double-escape が literal 増の側から捕捉 (両側で挟む)" \
+  's#(<td[^>]*>)<code>([^<]*)</code>#${1}&lt;code&gt;${2}&lt;/code&gt;#g' \
+  "ORACLE double-escape"
+
+# === M19. ★S6 の D-* fail-closed 検査に ★tracked な teeth を与える (folio-eccf S6) ===
+# ★旧形 (`| grep -v '^D-'`) は D-* id を ★両側から黙って落とす silent filter で、 canonical に正当な id="D-…" が
+#   入ると 真の総数を ★過少報告 したまま欠落 assert も素通りした (narrow fail-open)。 S6 は filter を撤去し
+#   「D-* が現れたら理由を問わず FAIL」へ転換した。 本 case はその検査が ★効いていることを tracked に pin する。
+# ★理由 substring ("D-* id == 0") を課すので、 S6 の assert を消すと ★本 case が赤くなる (余剰 assert が
+#   巻き添えで赤くしても substring は一致しない = 別 gate による ★見せかけの緑を弾く)。
+f19_mut_reason "M19 ★生成物への D-* id 混入 (delta 印の anchor 集合汚染) を fail-closed 検査が捕捉" \
+  's{(<span class="term")}{<span id="D-FAKE-1"></span>${1}}' \
+  "D-* id == 0"
+
 # === F19. ★navigable id / head meta / rich 資産の喪失を verify が捕捉する (folio-aduv 0-a/0-c/0-d の per-shape mutation-kill) ===
 # ★なぜ per-shape に分けるか: 1 instance の実弾は *構造差のある* instance の穴を証明しない。 section anchor (章包み
 #   <section id> 要素) / head meta (<meta> tag) / rich 資産 (a.xref / span.term / ins.delta) は DOM 形状が別クラスゆえ
