@@ -11,15 +11,15 @@ meta:
   title: "folio relations — spec 間の関係性表現規約"
   eyebrow_left: "関係性 spec (Relations)"
   eyebrow_right: "folio — spec 間の関係性表現規約"
-  subtitle: "v1.1.0 · status: active · spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)"
-  version: "1.1.0"
+  subtitle: "v1.2.0 · status: active · spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)"
+  version: "1.2.0"
   date: "2026-06-24"
   status: "active"
   reader: "Developer, AI Agent, External Reviewer — folio spec を編集する開発者・AI Agent・外部レビュアー"
 
 # 承認記録 (core 共用 approval-block)。 relations.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。
 approval:
-  - { role: "文書種別", who: "spec (relation management spec)", when: "v1.1.0", stamp: "active" }
+  - { role: "文書種別", who: "spec (relation management spec)", when: "v1.2.0", stamp: "active" }
   - { role: "生成 (engine tr0 spec-pack fork)", who: "folio design system", when: "2026-06-24 生成", stamp: "生成" }
 
 # ★非終端 照会の graph 接続: relations → constitution (FOLIO-CONSTITUTION 終端) の前方 edge (role=implementation)。
