@@ -29,6 +29,9 @@
 #   MK10 normalize の *過剰* 方向 = 裸日付の drift masking を封鎖 (round3 finding#3・MK7 と対の失敗モード)
 #   MK11 self-host 述語の per-shape 実弾 = manifest 削除 / contract dir 削除 / generator dir 削除
 #        (round3 finding#1: MK6 は 3 shape 中ただ 1 つの *ガード済み* shape しか撃っていなかった)
+#   MK-CSS1/2/3 inline CSS shape = 源泉 srs.css の drift / 不在 / 空 (folio-zpvv self-review finding#1:
+#        verify-asset-sync.sh + その 6 MK の撤去で守りを移した先を tracked に実証する。 不在と空は
+#        guard から見て別の構造クラスゆえ per-shape に撃つ = 旧 gate の MK3/MK4 と MK5 の対応物)
 set -uo pipefail
 shopt -u patsub_replacement 2>/dev/null || true
 
@@ -53,7 +56,7 @@ done
 
 # self-host staging root を組む (real repo を汚さずに folio build を撃つための最小 mini-repo)。
 # ★sibling generator (spec-grandfather.manifest + contract/) を丸ごと持たせて self-host 述語を true にする。
-#   design-system/srs.css も要る (pack pipeline の配信 asset・欠くと genuine 生成にならない)。
+#   design-system/srs.css も要る (assemble-glossary が inline する source・欠くと genuine 生成にならない)。
 mk_selfhost() {
   local d="$1"; rm -rf "$d"
   mkdir -p "$d/.claude-plugin/design-system" "$d/design-intent"
@@ -61,7 +64,6 @@ mk_selfhost() {
   cp "$HERE/../srs.css" "$d/.claude-plugin/design-system/srs.css"
   cp "$VOCAB" "$d/design-intent/vocabulary.yaml"
   cp "$GLOSS" "$d/design-intent/glossary.html"
-  cp "$REPO/design-intent/srs.css" "$d/design-intent/srs.css"
 }
 # consumer root (sibling generator 無し = 内部 emitter の span shape)
 mk_consumer() {
@@ -565,6 +567,95 @@ for mk11_shape in manifest contract-dir generator-dir; do
     bad "MK11d(${mk11_shape}): gate (s) の報告行が消滅 (rc=$rc = 前提崩れを非該当 root と同一視 = 沈黙 skip)"
   fi
 done
+
+# ---------------------------------------------------------------------------
+# MK-CSS1/2 (folio-zpvv self-review finding#1): inline CSS shape の per-shape 実弾。
+#     ★背景: glossary-pack は元々 srs.css を <link> 外部参照し、 配信 root (design-intent/ 直下) へ置いた
+#       その copy は page の byte 比較の *外側* にあったため canonical-drift / nav-regen-drift が検出できず、 専用の
+#       同期 gate (verify-asset-sync.sh) + その検出力 MK 6 本が唯一の番人だった。 folio-zpvv で CSS を
+#       inline 化し、 守りを (1) nav-regen-drift の byte 検査への fold-in と (2) assemble-glossary.sh の
+#       存在 + サイズ下限 (100 byte) の fail-closed guard の 2 点へ移して同期 gate を撤去した。
+#       ★下限は飾りでない: `-f` 単独では 0 byte を通し、 未スタイル page が committed を上書きした瞬間
+#       committed==fresh となって (1) の byte 検査ごと汚染される (旧 gate の MK5 が撃っていた shape)。
+#     ★per-shape 原則 (jyfh/r8k): 置換後の守りにも実弾を対で tracked 化しないと、 撤去した gate の検出力
+#       証明だけが消えて「gate 本体だけが tree に残り誰も検出力を保証しない」状態 (本 suite header が
+#       名指しで存在理由に挙げた状態) を別の場所で再生産する。 既存 MK10 が pin するのは「裸日付の改竄 →
+#       nav-regen-drift RED」であり、 CSS byte が page に入る本 shape は別の構造クラスゆえ穴を証明しない。
+#     ★退行経路: emit_head の `cat "$CSS"` が `2>/dev/null || true` 化される / guard が消される /
+#       nav-regen-drift が glossary で SKIP へ倒れる、 のいずれでも守りは沈黙消滅し committed==fresh の
+#       恒真 PASS 化が起きる。 MK-CSS1 が (1) を、 MK-CSS2 が (2) を撃つ。
+# ---------------------------------------------------------------------------
+# MK-CSS1: 源泉 srs.css の 1 byte drift → nav-regen-drift RED (inline fold-in の実証 = 同期 gate 撤去の正当化)
+#     ★陰性対照を対で置く (MK-CSS1a): 「改竄 → RED」だけでは *CSS byte が RED の原因* を証明できない。
+#       mini-repo が別要因で恒常的に nav-regen-drift RED なら本 MK は ambient RED を記録するだけの
+#       vacuous な assert に堕ちる。 無改竄 = [OK] / 改竄 = RED の対で discrimination を pin する。
+FC1="$WORK/fcss1"; mk_selfhost "$FC1"
+FC1CSS="$FC1/.claude-plugin/design-system/srs.css"
+out="$("$FOLIO" validate --root "$FC1/design-intent" 2>&1)"
+if grep -q '\[OK\] nav-regen-drift' <<<"$out"; then
+  ok "MK-CSS1a 陰性対照: 無改竄 mini-repo は [OK] nav-regen-drift (直後の RED が CSS byte 由来であることの対照)"
+else
+  bad "MK-CSS1a 陰性対照: 無改竄 mini-repo が既に nav-regen-drift RED (ambient RED = MK-CSS1b が原因を証明できない vacuous な assert に堕ちる)"
+fi
+css1_before="$(sha256sum "$FC1CSS" | cut -d' ' -f1)"
+printf '/*QZX*/' >> "$FC1CSS"
+if [[ "$(sha256sum "$FC1CSS" | cut -d' ' -f1)" == "$css1_before" ]]; then
+  bad "MK-CSS1 setup: 源泉 srs.css の改竄が未適用 (MK 空撃ち)"
+else
+  out="$("$FOLIO" validate --root "$FC1/design-intent" 2>&1)"; rc=$?
+  if [[ "$rc" -eq 1 ]] && grep -q '\[nav-regen-drift\]' <<<"$out"; then
+    ok "MK-CSS1b inline fold-in: 源泉 srs.css の 1 byte drift → nav-regen-drift RED (CSS が page の byte に入り専用同期 gate 無しで検出される)"
+  else
+    bad "MK-CSS1b inline fold-in: 源泉 CSS の drift が検出されない (rc=$rc = fold-in が壊れ CSS drift 面が無防備 = 同期 gate 撤去の前提が崩壊)"
+  fi
+fi
+# MK-CSS2: 源泉 srs.css 不在 → folio build が hard-fail + committed glossary.html は byte 不変
+#     ★rc だけ見ない: guard が消えると assemble が <style></style> 空/欠落の劣化 page を emit し、 それが
+#       committed を上書きした瞬間に committed==fresh で恒真 PASS 化する (silent revert クラス)。
+FC2="$WORK/fcss2"; mk_selfhost "$FC2"
+rm -f "$FC2/.claude-plugin/design-system/srs.css"
+if [[ -e "$FC2/.claude-plugin/design-system/srs.css" ]]; then
+  bad "MK-CSS2 setup: 源泉 srs.css の削除が未適用 (MK 空撃ち)"
+else
+  gc2_before="$(sha256sum "$FC2/design-intent/glossary.html" | cut -d' ' -f1)"
+  out="$("$FOLIO" build --root "$FC2/design-intent" 2>&1)"; rc=$?
+  gc2_after="$(sha256sum "$FC2/design-intent/glossary.html" | cut -d' ' -f1)"
+  if [[ "$rc" -eq 2 ]] && grep -q 'srs.css not found' <<<"$out"; then
+    ok "MK-CSS2a CSS 不在: folio build が exit 2 + -f guard 固有 message (guard が委譲 hard-fail へ写る)"
+  else
+    bad "MK-CSS2a CSS 不在: build が hard-fail しない か guard message 不在 (rc=$rc = -f guard 除去が set -e の別 error へ退化する経路を弁別)"
+  fi
+  if [[ "$gc2_before" == "$gc2_after" ]] && grep -q 'folio human-layer design system' "$FC2/design-intent/glossary.html"; then
+    ok "MK-CSS2b CSS 不在: committed glossary.html は inline CSS を保ったまま byte 不変 (素朴 emitter への silent fallback 不発)"
+  else
+    bad "MK-CSS2b CSS 不在: glossary.html が CSS 欠落版へ書き換わった (silent revert が実発生 → 以後 committed==fresh で恒真 PASS 化)"
+  fi
+fi
+# MK-CSS3: 源泉 srs.css が 0 byte → folio build が hard-fail + committed glossary.html は byte 不変
+#     ★per-shape 原則 (jyfh/r8k): 「不在」(MK-CSS2) と「空」は guard から見て別の構造クラス。 `[[ -f ]]` は
+#       存在のみを見てサイズを見ないため 0 byte を *通す* — MK-CSS2 だけでは本 shape の穴を証明できない。
+#       空 file 下限は撤去した verify-asset-sync.sh が明示的に持っていた precondition (その MK5) であり、
+#       inline 化で守りを assemble 側 guard へ移した以上、 実弾も対で移管しないと正味の防御喪失になる。
+FC3="$WORK/fcss3"; mk_selfhost "$FC3"
+FC3CSS="$FC3/.claude-plugin/design-system/srs.css"
+: > "$FC3CSS"
+if [[ -s "$FC3CSS" ]]; then
+  bad "MK-CSS3 setup: 源泉 srs.css の 0 byte 化が未適用 (MK 空撃ち)"
+else
+  gc3_before="$(sha256sum "$FC3/design-intent/glossary.html" | cut -d' ' -f1)"
+  out="$("$FOLIO" build --root "$FC3/design-intent" 2>&1)"; rc=$?
+  gc3_after="$(sha256sum "$FC3/design-intent/glossary.html" | cut -d' ' -f1)"
+  if [[ "$rc" -eq 2 ]] && grep -q '空/切り詰め' <<<"$out"; then
+    ok "MK-CSS3a CSS 空 (0 byte): folio build が exit 2 + サイズ下限 guard 固有 message (-f 素通しを塞ぐ)"
+  else
+    bad "MK-CSS3a CSS 空 (0 byte): build が hard-fail しない か guard message 不在 (rc=$rc = <style></style> の未スタイル page が全 precondition を素通りする経路)"
+  fi
+  if [[ "$gc3_before" == "$gc3_after" ]] && grep -q 'folio human-layer design system' "$FC3/design-intent/glossary.html"; then
+    ok "MK-CSS3b CSS 空 (0 byte): committed glossary.html は inline CSS を保ったまま byte 不変 (silent revert 不発)"
+  else
+    bad "MK-CSS3b CSS 空 (0 byte): glossary.html が CSS 欠落版へ書き換わった (silent revert → committed==fresh で nav-regen-drift が恒真 PASS 化)"
+  fi
+fi
 
 echo ""
 echo "test-adversarial-glossary-pack: ${PASS} passed, ${FAIL} failed"

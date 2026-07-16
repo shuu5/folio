@@ -19,7 +19,17 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib/common.sh"
 
 CONTRACT="${1:-$HERE/contract/folio-glossary.glossary.yaml}"
+CSS="$HERE/../srs.css"
 [[ -f "$CONTRACT" ]] || { echo "assemble-glossary: contract not found: $CONTRACT" >&2; exit 1; }
+[[ -f "$CSS" ]] || { echo "assemble-glossary: srs.css not found: $CSS" >&2; exit 1; }
+# ★空/切り詰め CSS の封鎖 (folio-zpvv self-review finding#1)。 `-f` は存在しか見ず 0 byte を通すため、
+#   未スタイル page (<style></style>) が pack の全 precondition (DOCTYPE / folio-generated marker /
+#   class="term-name" / サイズ下限) を素通りし committed を上書きしうる。 上書きが起きた瞬間
+#   committed==fresh となり nav-regen-drift が恒真 PASS 化する (silent revert = drift の恒久的不可視化)。
+#   撤去した verify-asset-sync.sh の「下限 100 byte」precondition (= その MK5「両方を空 file 化 → rc=2」)
+#   をここへ移管し、 inline 化で唯一の番人となった本 guard を fail-closed に保つ。
+css_sz=$(wc -c < "$CSS")
+[[ "$css_sz" -ge 100 ]] || { echo "assemble-glossary: srs.css が空/切り詰め (${css_sz} byte < 下限 100) — 未スタイル page の emit を封鎖 (fail-closed)" >&2; exit 1; }
 command -v yq >/dev/null || { echo "assemble-glossary: yq required" >&2; exit 1; }
 
 DOC_ID="$(q '.doc_id')"
@@ -65,7 +75,13 @@ emit_head() {
     printf '<meta name="folio-generated" content="%s">\n' "$(esc "$CANON_GEN")"
     printf '<meta name="folio-status" content="%s">\n' "$(esc "$CANON_STATUS")"
   fi
-  printf '<title>%s</title>\n<link rel="stylesheet" href="srs.css">\n' "$(esc "$TITLE")"
+  # ★srs.css は inline (他 15 pack と同方式・自己完結)。 外部 <link> は配信 root に copy を要求し、 その
+  #   copy は page の byte 比較の外側ゆえ canonical-drift / nav-regen-drift が原理的に検出できず、 専用の
+  #   同期 gate を唯一の番人として要した (folio-zpvv で撤去)。 inline なら CSS が本 page の byte に入るため
+  #   drift 面そのものが消滅し、 nav-regen-drift の byte 検査へ守りが畳み込まれる。
+  printf '<title>%s</title>\n<style>\n' "$(esc "$TITLE")"
+  cat "$CSS"
+  printf '\n</style>\n'
   jsonld_safe "$SET_ID"; jsonld_safe "$SET_NAME"
   # DefinedTermSet の @id: canonical page では design-intent 相対 path (素朴 emit 版の head と同じ page 識別)、
   # それ以外は term_set_id (IRI)。 各 term の inDefinedTermSet も同値を指す (set 識別の内部整合を保つ)。
