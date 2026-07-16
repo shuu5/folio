@@ -397,8 +397,24 @@ render_gate_f "$HTML" "PRINCIPLE_SKIP_RENDER"
 
 if [[ "$fail" -eq 0 ]]; then
   bd_note=""; [[ "$DOC_TYPE" == "constitution" ]] && bd_note=" + 終端 + baseline-diff + inbound"
-  if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + term-inline + prose 全充填${bd_note}) — CEILING=PENDING"
-  elif [[ -n "$FILLED_MANIFEST" ]]; then echo "RESULT: filled PASS (構造 contract 完全導出・捏造 0 + prose 注入忠実${bd_note}) — CEILING=PENDING"
-  else echo "RESULT: fabrication-free PASS (構造 contract 完全導出・捏造 0 + prose 空${bd_note}) — CEILING=PENDING"; fi
+  # mode 別詳細 (旧 reason 語 artifact/filled/fabrication-free を substring 保全)。
+  if [[ -n "$ARTIFACT" ]]; then mode_detail="mode=artifact: 構造 fabrication-free + term-inline + prose 全充填${bd_note}"
+  elif [[ -n "$FILLED_MANIFEST" ]]; then mode_detail="mode=filled: 構造 contract 完全導出・捏造 0 + prose 注入忠実${bd_note}"
+  else mode_detail="mode=fabrication-free: 構造 contract 完全導出・捏造 0 + prose 空${bd_note}"; fi
+  # ceiling-precheck sentinel を verify-adr.sh:398 同型で統一 emit (folio-vxpc)。 ceiling-precheck.sh は doc-type
+  # 非依存の文字列照合 = 'RESULT: floor PASS' ∧ 'CEILING=PENDING' を要求する (旧 'RESULT: artifact PASS' は mode 語が
+  # floor 語でなく照合に落ちた)。 gate 全通過時のみ CEILING=PENDING を advisory 宣言 (floor 単独 GREEN 禁止)。
+  # render honest-SKIP は render_gate_f の '[SKIP] gate F' が ceiling-precheck を SKIP-masquerade(exit3) に
+  # 落とす = PENDING と区別する (捏造印字は禁止 = SKIP-masquerade 再輸入)。
+  echo "RESULT: floor PASS ($mode_detail) — ただし CEILING=PENDING (*GREEN ではない*)"
+  # 'render gate 未完' marker (ceiling-precheck.sh の 3-fold SKIP marker の 1 本・load-bearing ゆえ削らない)。
+  if [[ "${PRINCIPLE_SKIP_RENDER:-0}" == "1" || "${SKIP_RENDER:-0}" == "1" ]]; then
+    echo "  ※ render gate 未完 (F=見た目崩れ が未実行: PRINCIPLE_SKIP_RENDER/SKIP_RENDER) — CI/uv 環境で render を回すまで floor は不完全。"
+  fi
+  echo "  ceiling = persona-walk-principle + fidelity-principle (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
+  echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
   exit 0
-else echo "RESULT: FAIL"; exit 1; fi
+else
+  echo "RESULT: floor FAIL — ceiling 以前に blocking arm (構造/prose/term-inline/gate F) が不合格"
+  exit 1
+fi

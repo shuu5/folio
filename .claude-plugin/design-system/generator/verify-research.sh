@@ -330,8 +330,28 @@ echo
 render_gate_f "$HTML" "RESEARCH_SKIP_RENDER"
 
 if [[ "$fail" -eq 0 ]]; then
-  if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + cross-doc 前方照会解決 + term-inline + prose 全充填)"
-  elif [[ -n "$FILLED_MANIFEST" ]]; then echo "RESULT: filled PASS (構造 contract 完全導出・捏造 0 + cross-doc 前方照会解決 + prose 注入忠実)"
-  else echo "RESULT: fabrication-free PASS (構造 contract 完全導出・捏造 0 + cross-doc 前方照会解決 + prose 空)"; fi
+  # mode 別詳細 (旧 reason 語 artifact/filled/fabrication-free を substring 保全)。
+  if [[ -n "$ARTIFACT" ]]; then mode_detail="mode=artifact: 構造 fabrication-free + cross-doc 前方照会解決 + term-inline + prose 全充填"
+  elif [[ -n "$FILLED_MANIFEST" ]]; then mode_detail="mode=filled: 構造 contract 完全導出・捏造 0 + cross-doc 前方照会解決 + prose 注入忠実"
+  else mode_detail="mode=fabrication-free: 構造 contract 完全導出・捏造 0 + cross-doc 前方照会解決 + prose 空"; fi
+  # ceiling-precheck sentinel を verify-adr.sh:398 / verify-srs.sh:386-400 と同型で統一 emit (folio-vxpc)。
+  # ceiling-precheck.sh は doc-type 非依存の文字列照合 = 'RESULT: floor PASS' ∧ 'CEILING=PENDING' を要求する。
+  # ★research は改修前 'RESULT: artifact PASS' (mode 語が floor 語でない) かつ CEILING=PENDING を出力に *持たない*
+  #   (34 行目のコメント言及は出力でない) ため、 precheck へ渡すと floor PASS 検出不能で exit1 に落ちていた = 2 本立て新規。
+  # gate 全通過時のみ CEILING=PENDING を advisory 宣言 (floor 単独で GREEN を宣言しない)。 render honest-SKIP は
+  # render_gate_f が '[SKIP] gate F' を emit し ceiling-precheck が SKIP-masquerade(exit3) に落とす = PENDING と
+  # 区別する (検証実体なしの捏造印字を防ぐ・honest-SKIP≠PENDING)。 捏造印字は禁止 (SKIP-masquerade 再輸入)。
+  echo "RESULT: floor PASS ($mode_detail) — ただし CEILING=PENDING (*GREEN ではない*)"
+  # env-skip 時は verify-srs.sh:391-393 / verify-adr.sh:404-406 と同型の 'render gate 未完' marker も併記し、
+  # ceiling-precheck.sh の 3-fold marker のうち 2 本を本 script 側で load-bearing に保つ (cross-ref pin: この文字列は
+  # ceiling-precheck.sh の SKIP-masquerade guard と load-bearing)。 renderer 不在時は render_gate_f の '[SKIP]' が担保。
+  if [[ "${RESEARCH_SKIP_RENDER:-0}" == "1" || "${SKIP_RENDER:-0}" == "1" ]]; then
+    echo "  ※ render gate 未完 (F=見た目崩れ が未実行: RESEARCH_SKIP_RENDER/SKIP_RENDER) — CI/uv 環境で render を回すまで floor は不完全。"
+  fi
+  echo "  ceiling = persona-walk-research + fidelity-research (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
+  echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
   exit 0
-else echo "RESULT: FAIL"; exit 1; fi
+else
+  echo "RESULT: floor FAIL — ceiling 以前に blocking arm (構造/cross-doc/prose/term-inline/gate F) が不合格"
+  exit 1
+fi

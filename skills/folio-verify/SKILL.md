@@ -25,7 +25,9 @@ Pass1 の 3 lens と Pass2 の finding-refuter を **並列 spawn する側は m
 - `<generated.html>` — 判定対象の生成 SRS プレゼン HTML (generator が assemble + inject-prose で産出した派生成果物)。
 - `<contract.yaml>` — 機械 SSoT (canonical)。ceiling の全 intent anchor はここに接地する。
 
-pack は **SRS + adr** に対応 (folio-1kif)。**doc_type の判定と ceiling lens 集合 (expected_lenses) は `capability-registry.yaml` から型別解決する** (§0)。floor は `folio verify --type <type>`、`ceiling-anchors` は contract から doc_type を自動判定して型別 anchor 表を出す。残 doc-type (research/spec/principle 等 12 型) への一般化は後続 cell (folio-vxpc)。
+対応 pack (wired 集合) の **SSoT は `capability-registry.yaml`** であり、本文に literal 列挙しない (散文と registry のドリフト防止)。**doc_type の判定と ceiling lens 集合 (expected_lenses) は registry から型別解決する** (§0)。floor は `folio verify --type <type>`、`ceiling-anchors` は contract から doc_type を自動判定して型別 anchor 表を出す (contract_suffix → canonical doc-type 写像。`arch` suffix は canonical `architecture` へ alias)。
+
+> **未 wire の残余**: spec 系 3 instance (`folio-rules` / `folio-relations` / `folio-verification`.spec.yaml) は registry key 粒度と ceiling pair 帰属が未解決の設計判断ゆえ後続 cell (folio-vhew) で扱う。`wired != true` の type は `folio verify --type` が fail-closed で弾く。
 
 ---
 
@@ -39,14 +41,14 @@ pack は **SRS + adr** に対応 (folio-1kif)。**doc_type の判定と ceiling 
 
 ```bash
 REG=~/.claude/plugins/folio/.claude-plugin/design-system/generator/capability-registry.yaml
-DOC_TYPE=<contract basename *.<type>.yaml か .meta.doc_id prefix から判定>   # 本 cell の wired 集合 = srs / adr
+DOC_TYPE=<contract basename *.<type>.yaml の suffix (arch→architecture へ alias) か .meta.doc_id prefix から判定>
 WIRED="$(yq -r ".doc_types.\"$DOC_TYPE\".wired" "$REG")"                     # true 以外は未対応 type として停止
 mapfile -t EXPECTED_LENSES < <(yq -r ".doc_types.\"$DOC_TYPE\".ceiling[]" "$REG")
 ```
 
-- `EXPECTED_LENSES` = registry の `.doc_types.<type>.ceiling` = **型別 lens 集合**。SRS=3 lens (`fidelity-srs` / `persona-walk-srs` / `completeness-critic-srs` = gate J/I/K)、adr=2 lens (`fidelity-adr` / `persona-walk-adr` = gate J/I)。以降の Pass1 spawn (§3)・expected_lenses (§7)・commit-check (§8) は全て**この解決集合**に従う。
+- `EXPECTED_LENSES` = registry の `.doc_types.<type>.ceiling` = **型別 lens 集合**。SRS のみ 3 lens (`fidelity-srs` / `persona-walk-srs` / `completeness-critic-srs` = gate J/I/K)、**非 SRS 型は 2 lens** (`fidelity-<type>` / `persona-walk-<type>` = gate J/I)。以降の Pass1 spawn (§3)・expected_lenses (§7)・commit-check (§8) は全て**この解決集合**に従う (literal 固定せず registry を読む)。
 - **completeness-critic は SRS 専用** (registry の SRS ceiling にのみ在る第 3 lens = gate K)。非 SRS 型の ceiling は 2 lens (gate I/J)。**completeness-critic-<type> を新設しない** (registry が型別 lens 数の SSoT・machinery 判定はこの型別集合で満たす)。
-- `wired != true` の type は本 SKILL の対象外 (`folio verify --type` が未配線として弾く・後続 cell folio-vxpc)。
+- `wired != true` の type は本 SKILL の対象外 (`folio verify --type` が未配線として弾く)。現在の未配線残余 = spec 系 3 instance (後続 cell folio-vhew)。
 
 ### 1. floor + precheck (起動順序不変条件)
 
@@ -75,11 +77,11 @@ ANCHORS="$(~/.claude/plugins/folio/.claude-plugin/bin/folio ceiling-anchors <con
 
 `ceiling-anchors` は contract の各 prose slot を SSoT source に対応づけた **anchor manifest** (JSON: `{doc_type, contract, anchors:[{slot, ssot_path, ssot_value}]}`) を stdout へ出す。exit 0 = 成功 / 2 = tool error (入力不在 / doc_type 非対応 / 構造不正)。exit 2 は tool error として停止する。
 
-`ceiling-anchors` は doc_type を contract から自動判定し型別 anchor 表を出す (SRS / adr。adr は fidelity-adr.md §2 が canonical)。この manifest を **completeness-critic-srs (Pass1・SRS のみ) と finding-refuter (Pass2) に必須入力**として渡す (両者は location→contract の解決を manifest で行う)。`fidelity-<type>` は自前の slot↔SSoT 表 (fidelity-<type>.md §2) で、`persona-walk-<type>` は北極星で直接 anchor するため manifest を要さない (contract + HTML を渡す・manifest を渡しても無害だが依存しない)。いずれの lens も **期待集合を生成 HTML の DOM から作らず contract(SSoT) から取る** ことが要 — さもなくば「生成器が落とした要素は期待集合からも消える = 永遠に検出できない」verify-laundering になる。
+`ceiling-anchors` は doc_type を contract から自動判定し型別 anchor 表を出す (対応集合は registry と同期・各型の slot↔SSoT 対応は `agents/fidelity-<type>.md` §2 が canonical)。この manifest を **completeness-critic-srs (Pass1・SRS のみ) と finding-refuter (Pass2) に必須入力**として渡す (両者は location→contract の解決を manifest で行う)。`fidelity-<type>` は自前の slot↔SSoT 表 (fidelity-<type>.md §2) で、`persona-walk-<type>` は北極星で直接 anchor するため manifest を要さない (contract + HTML を渡す・manifest を渡しても無害だが依存しない)。いずれの lens も **期待集合を生成 HTML の DOM から作らず contract(SSoT) から取る** ことが要 — さもなくば「生成器が落とした要素は期待集合からも消える = 永遠に検出できない」verify-laundering になる。
 
 ### 3. Pass1 — expected_lenses 並列 spawn (型別・§0 で解決した集合)
 
-**§0 で解決した `EXPECTED_LENSES` の各 lens を 1 メッセージ内で並列 spawn する** (全 Agent tool 呼び出しを同一 response にまとめる = 並列実行・folio-architect Phase F と同型)。lens 数は型別 (SRS=3 / adr=2)。下表は **SRS の 3 lens を例**に示す (adr は `folio:fidelity-adr` = gate J + `folio:persona-walk-adr` = gate I の 2 lens。severity 語彙は同型で `completeness-critic` は不在):
+**§0 で解決した `EXPECTED_LENSES` の各 lens を 1 メッセージ内で並列 spawn する** (全 Agent tool 呼び出しを同一 response にまとめる = 並列実行・folio-architect Phase F と同型)。lens 数は型別 (SRS=3 / 非 SRS=2)。下表は **SRS の 3 lens を例**に示す (非 SRS 型は `folio:fidelity-<type>` = gate J + `folio:persona-walk-<type>` = gate I の 2 lens。severity 語彙は同型で `completeness-critic` は不在):
 
 | scoped name | gate | 軸 | severity 語彙 |
 |-------------|------|----|--------------|
@@ -142,7 +144,7 @@ commit-check 入力 schema を組む (下記 §8 ceiling-commit-check が読む 
  "findings":[{"id":"F1","agent":"<lens 名>","severity":"<canonical>","verdict":"upheld|refuted|uncertain"}]}
 ```
 
-- `expected_lenses` = **§0 で `capability-registry.yaml` から解決した型別 lens 集合** (`EXPECTED_LENSES`・SRS=3 / adr=2)。literal 固定しない — commit-check の machinery-clean (expected⊆ran) を**型別 expected で判定させる** (機械判定は緩めない)。
+- `expected_lenses` = **§0 で `capability-registry.yaml` から解決した型別 lens 集合** (`EXPECTED_LENSES`・SRS=3 / 非 SRS=2)。literal 固定しない — commit-check の machinery-clean (expected⊆ran) を**型別 expected で判定させる** (機械判定は緩めない)。
 - `ran_lenses` = 実際に spawn/完走した lens (§3 fail-closed)。
 - `floor` = precheck が真 PENDING を確認したので `"PENDING"` (step 1)。
 - `findings` = dedup 後・severity canonicalize 後・verdict マージ後の全 finding。**refuted も含めてよい** (commit-check は refuted を「clear 済」として非 block 扱いにする)。
@@ -213,10 +215,10 @@ ceiling は複数 round 回してよい (skeleton は最大 2 round)。各 round
 ## 制約・注記
 
 - 本 SKILL は `disable-model-invocation: true`。user が明示的に `/folio-verify` で起動する。
-- 本 SKILL は **SKILL のまま (subagent 化しない)** — Pass1 の型別 lens (SRS=3 / adr=2) と Pass2 の refuter を spawn する orchestrator は main-session 必須 (nesting 制約)。
+- 本 SKILL は **SKILL のまま (subagent 化しない)** — Pass1 の型別 lens (SRS=3 / 非 SRS=2) と Pass2 の refuter を spawn する orchestrator は main-session 必須 (nesting 制約)。
 - Pass1 lens (型別・§0 で registry 解決) と Pass2 (finding-refuter) は全て **read-only** — findings/verdicts を返すだけで自ら Edit しない。修正が要る場合は本 SKILL の外 (生成器の manifest 修正 / contract 見直し) で行う。
 - floor が測る構造 (部品存在・RTM 集合一致・no-TBD 等) を ceiling は再検査しない (verify-laundering 禁止: 「floor が緑だから正当」を finding 棄却の根拠にしない)。
-- pack は **SRS + adr** (`ceiling-anchors` / lens 集合を `capability-registry.yaml` から型別解決)。残 12 doc-type への一般化は後続 cell (folio-vxpc)。
+- 対応 pack の集合は `capability-registry.yaml` が SSoT (`ceiling-anchors` / lens 集合を registry から型別解決・本文に literal 列挙しない)。未配線残余 = spec 系 3 instance (後続 cell folio-vhew)。
 
 ## 参照
 

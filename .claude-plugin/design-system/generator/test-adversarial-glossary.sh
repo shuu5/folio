@@ -304,10 +304,28 @@ expect_assemble_fail "★F229-asm-f xref_gloss 欠落 (cross_ref token 無 gloss
 
 # 19. verify が GREEN を *決して* 出さない (floor 単独 GREEN 禁止)
 total=$((total+1))
-if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" 2>/dev/null | grep -q 'GREEN'; then
-  echo "  [SLIP] verify が GREEN を出力 (CEILING=PENDING でなければならない)"
+# ★bare token grep にしない (folio-vxpc errata): verify-*.sh の統一 sentinel は「GREEN ではない」と *否定*
+#   するために GREEN の語を含む。 bare `grep -q 'GREEN'` はその否定文にも lexical 衝突して恒真 [SLIP] となり、
+#   本 suite が exit 1 へ飽和して **他の全 assert が exit-code 判定から不可視になる** (番人喪失 = fail-open)。
+#   assert の意図「floor 単独 GREEN 禁止」は不変のまま、 GREEN を *主張* する行の検出へ精密化する (緩和ではない)。
+#   精密化が番人を殺していないことは直下 2 本 (捏造の陽性対照 / 否定文の陰性対照) が実弾で pin する。
+GREEN_CLAIM='RESULT:[^—]*GREEN|GREEN 認定|全 gate.*GREEN'
+if "$VERIFY" --filled "$MANIFEST" "$CONTRACT" "$GOOD" 2>/dev/null | grep -qE "$GREEN_CLAIM"; then
+  echo "  [SLIP] verify が GREEN を主張 (CEILING=PENDING でなければならない)"
 else
-  echo "  [OK]   GREEN 不在・CEILING=PENDING を強制"; pass=$((pass+1)); fi
+  echo "  [OK]   GREEN 主張なし・CEILING=PENDING を強制"; pass=$((pass+1)); fi
+# 陽性対照: 精密化しても本物の GREEN 捏造は殺せる (殺せないなら精密化でなく番人の喪失)。
+total=$((total+1))
+if printf '%s' "RESULT: GREEN (全 gate 通過)" | grep -qE "$GREEN_CLAIM"; then
+  echo "  [OK]   MK 陽性対照: 本物の 'RESULT: GREEN' 捏造は今も主張パターンで殺せる"; pass=$((pass+1))
+else
+  echo "  [SLIP] MK 陽性対照 破れ: 主張パターンが 'RESULT: GREEN' 捏造を見逃す (緩和が番人を殺した)"; fi
+# 陰性対照: 現行 sentinel の否定文を主張と誤検出しない (誤検出するなら上の番人は恒真 SLIP = 元の衝突の再生産)。
+total=$((total+1))
+if printf '%s' "RESULT: floor PASS (mode=artifact) — ただし CEILING=PENDING (*GREEN ではない*)" | grep -qE "$GREEN_CLAIM"; then
+  echo "  [SLIP] MK 陰性対照 破れ: sentinel の否定文を主張と誤検出 (lexical 衝突の再生産)"
+else
+  echo "  [OK]   MK 陰性対照: sentinel の「GREEN ではない」否定文は主張と誤検出されない"; pass=$((pass+1)); fi
 
 
 # ===== folio-bur round-7 回帰: occupancy-from-contract 完全性 / enumeration 横展開 / display-state guard =====

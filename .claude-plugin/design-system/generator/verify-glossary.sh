@@ -391,8 +391,19 @@ render_gate_f "$HTML" "GLOSSARY_SKIP_RENDER"
 
 echo ""
 if [[ "$fail" == "0" ]]; then
-  if [[ -n "$ARTIFACT" ]]; then echo "RESULT: artifact PASS (構造 fabrication-free + term/機械レコード/照会 fidelity + prose 全充填) — CEILING=PENDING"
-  elif [[ -n "$FILLED_MANIFEST" ]]; then echo "RESULT: filled PASS (構造 contract 完全導出・捏造 0 + prose 注入忠実) — CEILING=PENDING"
-  else echo "RESULT: fabrication-free PASS (構造 contract 完全導出・捏造 0 + prose 空) — CEILING=PENDING"; fi
+  # mode 別詳細 (旧 reason 語 artifact/filled/fabrication-free を substring 保全)。
+  if [[ -n "$ARTIFACT" ]]; then mode_detail="mode=artifact: 構造 fabrication-free + term/機械レコード/照会 fidelity + prose 全充填"
+  elif [[ -n "$FILLED_MANIFEST" ]]; then mode_detail="mode=filled: 構造 contract 完全導出・捏造 0 + prose 注入忠実"
+  else mode_detail="mode=fabrication-free: 構造 contract 完全導出・捏造 0 + prose 空"; fi
+  # ceiling-precheck sentinel を verify-adr.sh:398 同型で統一 emit (folio-vxpc)。 詳細は verify-research.sh の同節参照。
+  echo "RESULT: floor PASS ($mode_detail) — ただし CEILING=PENDING (*GREEN ではない*)"
+  if [[ "${GLOSSARY_SKIP_RENDER:-0}" == "1" || "${SKIP_RENDER:-0}" == "1" ]]; then
+    echo "  ※ render gate 未完 (F=見た目崩れ が未実行: GLOSSARY_SKIP_RENDER/SKIP_RENDER) — CI/uv 環境で render を回すまで floor は不完全。"
+  fi
+  echo "  ceiling = persona-walk-glossary + fidelity-glossary (agents/、 LLM review)。 floor 単独で GREEN を宣言しない。"
+  echo "  taxonomy §5.1: GREEN ⟺ floor 全通過 ∧ ceiling 合格。 exit 0 は floor PASS であって GREEN ではない。"
   exit 0
-else echo "RESULT: FAIL"; exit 1; fi
+else
+  echo "RESULT: floor FAIL — ceiling 以前に blocking arm (構造/term/機械レコード/照会/prose/gate F) が不合格"
+  exit 1
+fi
