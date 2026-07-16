@@ -26,6 +26,12 @@ approval:
 graph:
   principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
 
+head_graph:
+  id: ./rules.html
+  part_of:    [./README.html]
+  references: [./relations.html]
+  extends:    [./constitution.html]
+
 # ★機械層 (w1f cell-1 / ADR-0045): rules.html の data-audience="machine" 自由文を逐語 capture (inner HTML 保持)。
 #   machine_preamble = section 外の文書前文 / sections[].machine_blocks = section 内自由文 (p→prose / aside→note / ul→list)。
 #   cell-2 が canonical <... data-audience="machine"> form で raw emit する。 現 assembler/verifier は本キーを参照せず無視 (人間層 byte 不変)。

@@ -27,6 +27,13 @@ approval:
 graph:
   principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
 
+head_graph:
+  id: ./verification.html
+  part_of:    [./README.html]
+  references: [./rules.html, ./srs-verification.html, ./folio-self-spec.html, ./relations.html, ../research/plugin-sandbox-verification-research.html, ../decisions/ADR-0013-verification-framework.html, ../decisions/ADR-0015-sandbox-vs-experiment-verified.html]
+  depends_on: [./rules.html, ./relations.html]
+  extends:    [./constitution.html]
+
 machine_preamble:
   - { type: note, html: "<p>本文書は folio framework の <strong>verification contract 定義</strong>。 folio plugin (<a href=\"../decisions/ADR-0003-plugin-architecture.html\">ADR-0003</a> minimal scope) を <span class=\"term\" data-term=\"sandbox\" data-tooltip=\"tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。\">sandbox</span> で実機検証する枠組みを集約 <span class=\"term\" data-term=\"SSoT\" data-tooltip=\"Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。\">SSoT</span> 化する。 具体的検証実体は <code>tests/</code> 配下に隔離 (<span class=\"term\" data-term=\"constitution\" data-tooltip=\"folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。\">constitution</span> <a href=\"./constitution.html#s2-principles\">P-11 (HOW 禁止)</a> 整合)。 「verification」 は本 contract の<strong>概念名</strong> (<a class=\"xref\" href=\"./constitution.html#p-13\" data-tooltip=\"Verification &amp; Traceability\">P-13</a> / <code>folio validate</code> / 本 spec) であり、 実体 dir 名 <code>tests/</code> (folio の bash stack 慣習) とは独立する (概念↔dir 分離、 <a href=\"../decisions/ADR-0026-test-placement-model.html\">ADR-0026</a>)。</p> <p>本 spec は <a href=\"../research/plugin-sandbox-verification-research.html\">plugin-sandbox-verification-research.html</a> (87 sources、 critique PASS) の §7 推奨設計を normative に昇格させたもの。 採用根拠は <a href=\"../decisions/ADR-0013-verification-framework.html\">ADR-0013</a>、 twill experiment-verified との境界は <a href=\"../decisions/ADR-0015-sandbox-vs-experiment-verified.html\">ADR-0015</a>。</p>" }
   - { type: note, html: "<p>本文書は IETF <a href=\"https://datatracker.ietf.org/doc/html/rfc2119\"><strong>RFC 2119</strong></a> および <a href=\"https://datatracker.ietf.org/doc/html/rfc8174\"><strong>RFC 8174</strong></a> / <a href=\"https://datatracker.ietf.org/doc/html/bcp14\"><strong>BCP 14</strong></a> に定義される MUST / SHOULD / MAY のキーワード解釈規約に従う。</p>" }
