@@ -125,6 +125,24 @@ jobs:
       - name: glossary pack 委譲 keystone 敵対回帰 (per-shape MK・deterministic floor)
         run: .claude-plugin/design-system/generator/test-adversarial-glossary-pack.sh
 
+      # F6 recapture-parity gate (folio-lwhz Leg B 配線)。 flip 済み spec (verification = ears-requirement-row) と
+      # 未 flip spec (rules/relations = details.spec-row) の per-file shape union で「原本 anchor 集合 == contract
+      # requirements 集合」を照合する。 contract の requirement 追加/削除が原本と乖離したまま land する fail-open を
+      # deterministic に block する (R0 count pin = 3 contract / 60 id)。
+      - name: recapture-parity gate (deterministic floor — 原本 anchor 集合 == contract 集合)
+        run: .claude-plugin/design-system/generator/verify-recapture-parity.sh
+      - name: recapture-parity gate 敵対回帰 (R7b zero-anchors 含む・gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-recapture-parity.sh
+
+      # F8 verification drift gate (folio-lwhz Leg B 配線)。 flip 済み canonical verification.html が
+      # 「contract からの fresh 再生成 (assemble+inject+fix+build) と timestamp 正規化後 byte 一致」であることを
+      # 照合し、 hand-edit 温存や生成 pipeline drift を deterministic に block する (物理指紋 4 clause 込み)。
+      # u7oc の canonical-drift gate の in-scan flip 版 (同クラスの silent drift 前科への恒久 gate)。
+      - name: verification drift gate (deterministic floor — landed == fresh 再生成 byte 一致)
+        run: .claude-plugin/design-system/generator/verify-verification-drift.sh
+      - name: verification drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-verification-drift.sh
+
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
       #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)
