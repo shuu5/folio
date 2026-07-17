@@ -97,10 +97,20 @@ printf '<details class="spec-row" id="req-rel-001"></details>\n' >> "$SD/relatio
 expect_fail "R6b dup-anchor: 原本 anchor 重複 → FAIL" "dup-anchor: 原本 anchor 重複 'REQ-REL-001'"
 rm -rf "$CD" "$SD"
 
-# --- R7 selector rot: 原本の spec-row class を潰す → zero-anchors (vacuous green 拒否) ---
+# --- R7 selector rot (details.spec-row shape): 原本の spec-row class を潰す → zero-anchors (vacuous green 拒否) ---
 fresh
 perl -i -pe 's/class="spec-row"/class="spec-row-rotted"/g' "$SD/relations.html"
 expect_fail "R7 zero-anchors: 原本 anchor 全滅 → FAIL (vacuous green 拒否)" "zero-anchors: 原本に要件 anchor が 0 本 (relations.html)"
+rm -rf "$CD" "$SD"
+
+# --- R7b selector rot (ears-requirement-row shape): 生成物 verification.html の data-component を潰す → zero-anchors ---
+# ★per-shape MK (folio-lwhz F6): R7 は details.spec-row shape (relations 手書き原本) の全滅を pin する。
+#   F6 で union 追加した shape 2 (div.ears-requirement-row = verification flip 生成物) の抽出が rot したとき
+#   verification が全滅することは、shape 2 を直接潰す別 mutant で撃たないと証明できない (1 shape の実弾は
+#   構造差のある shape の穴を証明しない・per-shape 原則)。data-component token を rot させ 30→0 を確認。
+fresh
+perl -i -pe 's/data-component="ears-requirement-row"/data-component="ears-requirement-row-rotted"/g' "$SD/verification.html"
+expect_fail "R7b zero-anchors (ears-requirement-row shape): 生成物 verification anchor 全滅 → FAIL" "zero-anchors: 原本に要件 anchor が 0 本 (verification.html)"
 rm -rf "$CD" "$SD"
 
 # --- R8 malformed: requirements 節が配列でない → FAIL ---

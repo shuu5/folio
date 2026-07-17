@@ -28,9 +28,9 @@
 - summary: 生成 SRS プレゼンの done-condition (完成判定) gate の SSoT — floor + ceiling 二層
 
 ## spec/verification.html
-- title: folio verification spec
+- title: folio verification — sandbox verification framework spec
 - doc-type: spec · status: active
-- summary: sandbox verification framework spec (機能単位 use case verification の SSoT)
+- summary: (none)
 
 ## decisions/ADR-0001-architecture-rules-split.html
 - title: ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)

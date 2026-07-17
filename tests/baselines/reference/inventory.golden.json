@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-16T03:35:55Z",
+  "generatedAt": "2026-07-17T04:30:01Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -219,8 +219,8 @@
     },
     {
       "@id": "spec/verification.html",
-      "title": "folio verification spec",
-      "summary": "sandbox verification framework spec (機能単位 use case verification の SSoT)",
+      "title": "folio verification — sandbox verification framework spec",
+      "summary": "",
       "doc-type": "spec",
       "status": "active",
       "version": "1.2.0",
@@ -230,28 +230,7 @@
         "External Reviewer"
       ],
       "relations": {
-        "folio:depended-by": [
-          "spec/srs-verification.html"
-        ],
-        "dc:isPartOf": [
-          "spec/README.html"
-        ],
         "dc:isReferencedBy": [
-          "spec/srs-verification.html",
-          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
-          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
-          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
-          "decisions/ADR-0041-human-layer-visual-design-system.html",
-          "decisions/ADR-0040-human-layer-presentation-compression.html",
-          "decisions/ADR-0039-presentation-template-layer.html",
-          "decisions/ADR-0037-render-safety-ceiling.html",
-          "decisions/ADR-0033-dual-audience-hub.html",
-          "decisions/ADR-0032-v1-goal-refinement-defer.html",
-          "decisions/ADR-0030-v1-stability-criteria.html",
-          "decisions/ADR-0028-prose-gate-mechanization.html",
-          "decisions/ADR-0029-phase-f-agent-set.html",
-          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
-          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
           "decisions/ADR-0013-verification-framework.html",
@@ -263,10 +242,28 @@
           "decisions/ADR-0021-constitution-x4-amendment.html",
           "decisions/ADR-0024-folio-init-scope.html",
           "decisions/ADR-0025-folio-fix-bidirectional.html",
-          "research/constitution-x4-amendment-proposal.html"
+          "decisions/ADR-0026-test-placement-model.html",
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0029-phase-f-agent-set.html",
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0032-v1-goal-refinement-defer.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0037-render-safety-ceiling.html",
+          "decisions/ADR-0039-presentation-template-layer.html",
+          "decisions/ADR-0040-human-layer-presentation-compression.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+          "research/constitution-x4-amendment-proposal.html",
+          "spec/srs-verification.html"
         ],
-        "folio:extends": [
-          "spec/constitution.html"
+        "folio:depended-by": [
+          "spec/srs-verification.html"
+        ],
+        "dc:isPartOf": [
+          "spec/README.html"
         ],
         "dc:references": [
           "spec/rules.html",
@@ -280,6 +277,9 @@
         "folio:depends-on": [
           "spec/rules.html",
           "spec/relations.html"
+        ],
+        "folio:extends": [
+          "spec/constitution.html"
         ]
       }
     },

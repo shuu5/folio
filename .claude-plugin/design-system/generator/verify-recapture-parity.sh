@@ -96,13 +96,24 @@ for path in "$CONTRACT_DIR"/*.spec.yaml; do
   jq -r '.requirements[] | if type == "object" then ((.id // "") | tostring) else "" end' "$TMP/c.json" > "$TMP/cids"
   if grep -q '^$' "$TMP/cids"; then pfail "malformed-requirements: id 空 or 非 object record in $base"; continue; fi
   # 原本側 anchor 列 (attribute 順序非依存 parse・小文字 anchor を大文字 id へ正規化)
-  # ★class は token 完全一致 (空白 split して eq)。 \bspec-row\b の regex 判定は "spec-row-rotted" 等の
-  #   派生 class にも部分一致してしまう (- が語境界・bhe genuine-shape 教訓の再演を R7 が捕捉)。
+  # ★per-file union の 2 shape (folio-lwhz F6・replace 厳禁 = 一方消すと他方 file が zero-anchors)。
+  #   shape 1: <details class="spec-row" id="req-..."> = hand-authored 原本 (rules.html 26 / relations.html 4)。
+  #     class は token 完全一致 (空白 split して eq)。 \bspec-row\b の regex 判定は "spec-row-rotted" 等の
+  #     派生 class にも部分一致してしまう (- が語境界・bhe genuine-shape 教訓の再演を R7 が捕捉)。
+  #   shape 2: <div data-component="ears-requirement-row" id="req-..."> = contract 生成物 (verification.html
+  #     flip 後・30 anchor)。 data-component は token 完全一致。 ★<tr data-component="ears-requirement-row">
+  #     (SRS pack の dense-table 行・同名別部品) は <div\b 限定ゆえ拾わない (bin/folio:893 と同弁別)。
   perl -CSD -0777 -ne '
     while (/<details\b([^>]*)>/g) {
       my $a = $1;
       my ($cv) = $a =~ /\bclass\s*=\s*"([^"]*)"/; next unless defined $cv;
       next unless grep { $_ eq "spec-row" } split /\s+/, $cv;
+      my ($id) = $a =~ /\bid\s*=\s*"(req-[a-z0-9-]+)"/; print "$id\n" if defined $id;
+    }
+    while (/<div\b([^>]*)>/g) {
+      my $a = $1;
+      my ($dc) = $a =~ /\bdata-component\s*=\s*"([^"]*)"/; next unless defined $dc;
+      next unless $dc eq "ears-requirement-row";
       my ($id) = $a =~ /\bid\s*=\s*"(req-[a-z0-9-]+)"/; print "$id\n" if defined $id;
     }' "$src" | tr '[:lower:]' '[:upper:]' > "$TMP/aids"
   if [[ ! -s "$TMP/aids" ]]; then
