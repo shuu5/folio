@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-17T04:30:01Z",
+  "generatedAt": "2026-07-17T07:31:54Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -220,7 +220,7 @@
     {
       "@id": "spec/verification.html",
       "title": "folio verification — sandbox verification framework spec",
-      "summary": "",
+      "summary": "sandbox verification framework spec (機能単位 use case verification の SSoT)",
       "doc-type": "spec",
       "status": "active",
       "version": "1.2.0",

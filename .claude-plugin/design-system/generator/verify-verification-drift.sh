@@ -127,6 +127,9 @@ fsz="$(wc -c < "$FRESH")"
 # ---- normalize 後 byte 比較 (1 byte drift でも FAIL) ----
 normalize < "$CANON" > "$WORK/canon.norm"
 normalize < "$FRESH" > "$WORK/fresh.norm"
+# ★恒真 PASS 封鎖 (admin fixup 2026-07-17・独立 ceiling 処方): normalize (perl) が失敗すると両出力が
+#   空になり diff 一致 = 恒真 PASS する唯一の無ガード pipeline だった。非空 assert で fail-closed 化。
+[[ -s "$WORK/canon.norm" && -s "$WORK/fresh.norm" ]] || fail "normalize 出力が空 (perl 失敗の疑い・恒真 PASS 封鎖)"
 if ! diff -q "$WORK/canon.norm" "$WORK/fresh.norm" >/dev/null; then
   {
     echo "verify-verification-drift: FAIL: design-intent/spec/verification.html が fresh 再生成と drift (生成 timestamp 正規化後も byte 不一致):"

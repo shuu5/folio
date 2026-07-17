@@ -30,7 +30,7 @@
 ## spec/verification.html
 - title: folio verification — sandbox verification framework spec
 - doc-type: spec · status: active
-- summary: (none)
+- summary: sandbox verification framework spec (機能単位 use case verification の SSoT)
 
 ## decisions/ADR-0001-architecture-rules-split.html
 - title: ADR-0001 — architecture-rules.html を rules.html + folio-self-spec.html に分離 (v3)

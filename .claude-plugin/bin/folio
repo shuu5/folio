@@ -45,12 +45,18 @@ folio_extract_title() {
 
 # <header> .meta div の最終 &middot; セグメントを summary として返す
 # (§4.1 source: spec <header> .meta)。 HTML entity を最小 decode + trim。
+# ★shape 一般化 (folio-lwhz admin fixup 2026-07-17・85xr-fu): 生成物 (doc-cover-band) は .meta を持たず
+#   <p class="cover-sub"> の最終 ·/&middot; セグメントが summary — fallback で抽出する (flip 済み spec の
+#   inventory/prime summary 空化 = Tier-1 digest 情報回帰の解消。d7bq/bxpm の後続 flip にも効く)。
 folio_extract_summary() {
   local meta seg
   meta=$(grep -oP '<div class="meta">\K[^<]*' "$1" 2>/dev/null | head -1)
+  [[ -z "$meta" ]] && meta=$(grep -oP '<p class="cover-sub">\K[^<]*' "$1" 2>/dev/null | head -1)
   [[ -z "$meta" ]] && return 0
   seg="$meta"
-  [[ "$meta" == *"&middot;"* ]] && seg="${meta##*&middot;}"
+  if [[ "$meta" == *"&middot;"* ]]; then seg="${meta##*&middot;}"
+  elif [[ "$meta" == *"·"* ]]; then seg="${meta##*·}"
+  fi
   # trim 前後 whitespace
   seg="${seg#"${seg%%[![:space:]]*}"}"
   seg="${seg%"${seg##*[![:space:]]}"}"

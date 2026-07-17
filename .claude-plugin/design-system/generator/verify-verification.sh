@@ -395,7 +395,14 @@ chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%
 #     二重 escape (生 < → &lt;) は原本テキストと差が出るため本照合が確定検出する (§10 raw-emit より厳密)。
 # ============================================================================
 NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
-ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../design-intent/spec/verification.html}"
+# ★H2 (folio-lwhz Leg B・admin 批准 2026-07-17): flip 後の on-disk canonical は fix 済み生成物のため
+#   ORIG 既定を「flip 前 canonical + H1 heal (dl 1.1.0→1.2.0 の 2 箇所) の不動 snapshot」へ向ける。
+#   oracle は「生成物に置換されない独立第 3 者」であり続ける (自己比較恒真化の構造封鎖)。
+#   snapshot の provenance = `git show c705c75:design-intent/spec/verification.html | sed 's|<dd>1\.1\.0</dd>|<dd>1.2.0</dd>|g'`
+#   (land commit の記録参照)。★契約 (edit-SSoT) が将来進化する場合、machine-block round-trip arm は
+#   bootstrap 忠実性 (snapshot 突合) の意味を持ち続けるため snapshot は更新しない — 進化後の扱い
+#   (arm の意味再定義 or 退役) は spec-sync 起票で裁定する (folio-srpz 系)。
+ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/verification.origin.html}"
 
 # ============================================================================
 # 10b. ★ORACLE 照合 arm (folio-aduv 0-a/0-d/0-e の恒久 gate 化)。

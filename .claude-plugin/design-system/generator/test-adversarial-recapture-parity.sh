@@ -45,6 +45,10 @@ echo "== recapture parity gate 敵対回帰 =="
 #   〔REQ-VER 23 + REQ-NAV 7〕)。 folio-07m (7b47574) の spec 分割で REQ-VER-024/025/026/029/030 が原本 verification.html →
 #   srs-verification.html へ移動したことへの contract 追随ゆえの *縮小* (35→30)。 独立再導出: 原本 anchor grep
 #   (verification.html の details.spec-row) 30 == contract yq (.requirements[].id) 30。
+#   lineage: 2026-07-17 (folio-lwhz flip・admin fixup) = 3 contract / 60 id 不変。★flip 後の verification.html は
+#   div.ears-requirement-row shape の生成物 — 独立再導出は shape union grep で行う (verification =
+#   div.ears-requirement-row id 30 / rules 26 + relations 4 = details.spec-row)。details 前提の旧手順は
+#   verification に対して 0 件を返すので使わない (F6 union 拡張と同じ per-file shape 対応)。
 out="$("$GATE" 2>&1)"; rc=$?
 if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 60 件' <<<"$out"; then
   ok "R0 baseline: clean corpus → exit 0 + 3 contract / 60 id pin"
