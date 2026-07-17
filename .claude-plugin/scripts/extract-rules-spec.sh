@@ -89,8 +89,12 @@ sub extract_machine_blocks {
     my ($kind) = sort { $cand{$a} <=> $cand{$b} } keys %cand;
     my $at = $cand{$kind};
     if ($kind eq "prose") {
-      substr($region,$at) =~ /<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s;
-      push @mb, { type=>"prose", html=>inner_norm($1) }; $p = $at + $+[0];
+      # ★folio-0x0k errata E2: 機械層 <p> の opening tag 属性を捕捉し id を anchor field へ運ぶ (原本 <p id="s3-vocab-schema"> の
+      #   self-anchor を再現・同一文書内 href="#s3-vocab-schema" の解決先)。 data-audience="machine" assertion は温存 (機械 p のみ対象)。
+      substr($region,$at) =~ /<p\b([^>]*\sdata-audience="machine"[^>]*)>(.*?)<\/p>/s;
+      my $popen = $1; my $pinner = $2; my $pend = $+[0];
+      my $pid = ($popen =~ /\bid="([^"]*)"/) ? $1 : "";
+      push @mb, { type=>"prose", html=>inner_norm($pinner), anchor=>$pid }; $p = $at + $pend;
     } elsif ($kind eq "note") {
       substr($region,$at) =~ /<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s;
       push @mb, { type=>"note", html=>inner_norm($1) }; $p = $at + $+[0];
@@ -141,6 +145,9 @@ sub emit_mblocks {
     if ($b->{type} eq "list") {
       print "${ipad}- type: list\n${ipad}  items:\n";
       print "${ipad}    - ", ys($_), "\n" for @{$b->{items}};
+    } elsif ($b->{type} eq "prose" && defined $b->{anchor} && $b->{anchor} ne "") {
+      # ★folio-0x0k errata E2: id 保有機械層 prose (原本 <p id="s3-vocab-schema">) は anchor field 付きで serialize (durability)。
+      print "${ipad}- { type: prose, anchor: ", ys($b->{anchor}), ", html: ", ys($b->{html}), " }\n";
     } else {
       print "${ipad}- { type: ", $b->{type}, ", html: ", ys($b->{html}), " }\n";
     }
@@ -176,7 +183,9 @@ while ($H =~ /<details class="spec-row" id="([^"]*)"[^>]*>(.*?)<\/details>/gs) {
   my $pat   = ($body =~ /data-ears-pattern="([^"]*)"/) ? $1 : "";
   my $stmt  = ($body =~ /<p class="ears"[^>]*>(.*?)<\/p>/s) ? plain($1) : "";
   next unless $badge;
-  push @reqs, { id => $badge, pat => $pat, ess => $ess, stmt => $stmt };
+  # ★navigable anchor (folio-0x0k pre-flip): 原本 <details class="spec-row" id="req-*"> の実 id を逐語 capture (lc(badge) で導出せず
+  #   原本 SSoT を運ぶ = drift silent 化を防ぐ)。 corpus inbound (rules.html#req-ci-010 等) の解決先ゆえ assembler が id= として emit。
+  push @reqs, { id => $badge, pat => $pat, ess => $ess, stmt => $stmt, anchor => $rid };
 }
 
 # ---- references (前方 照会・外部 doc): a.xref / a[href] → constitution#p-* / ADR-NNNN / verification#req-ver-* ----
@@ -255,12 +264,17 @@ for my $id (@SECORDER) {
     my $at = $cand{$kind};
 
     if ($kind eq "h3") {
-      substr($inner,$at) =~ /<h3[^>]*>(.*?)<\/h3>/s;
-      my $h3 = plain($1); my $afterh3 = $at + $+[0];
+      substr($inner,$at) =~ /<h3\b([^>]*)>(.*?)<\/h3>/s;
+      my $h3attr = $1; my $h3 = plain($2); my $afterh3 = $at + $+[0];
+      # ★navigable anchor (folio-0x0k pre-flip): h3 の実 id を逐語 capture = corpus inbound (fine section anchor) の解決先。
+      #   ★rules §10.1-3 は id が h3 でなく wrapping <section id="s10-N"> 側にあるため、 h3 に id 無しなら直前の nested
+      #   <section id> へ fallback する (§4.1-4.4 は直前が section でないので anchor="" = 原本 id 不在の忠実反映・捏造しない)。
+      my $h3id = ($h3attr =~ /\bid="([^"]*)"/) ? $1 : "";
+      if ($h3id eq "" && substr($inner, 0, $at) =~ /<section\b[^>]*\bid="([^"]*)"[^>]*>\s*$/) { $h3id = $1; }
       # h3 直後の section-essence を subhead essence にする (無ければ空)。
       my $se = "";
       if (substr($inner,$afterh3,600) =~ /^\s*<p class="section-essence"[^>]*>(.*?)<\/p>/s) { $se = plain($1); }
-      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se };
+      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se, anchor=>$h3id };
       $p = $afterh3;
     } elsif ($kind eq "table") {
       substr($inner,$at) =~ /<table\b[^>]*>(.*?)<\/table>/s;
@@ -315,7 +329,9 @@ for my $id (@SECORDER) {
   my $mcap = scalar(@$mblocks);
   push @LOG, "section $id: 機械層 prose capture $mcap 件 (data-audience=machine の <p>/<aside>/<ul> を逐語取り込み)"
     . ($mcap == $mexp ? "" : " ★uncaptured " . ($mexp - $mcap) . " 件 (expected $mexp・要調査)");
-  push @sections, { id=>shortid($id), heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
+  # ★navigable anchor (folio-0x0k pre-flip): 原本 top-level section の実 id (s2-directory 等・full form)。 contract の id は
+  #   short prefix (s0..s12 = TINT/KICK key) ゆえ、 corpus inbound (#s2-directory 等) の解決先となる full id を別 field で運ぶ。
+  push @sections, { id=>shortid($id), anchor=>$id, heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
 }
 
 # ★機械層 preamble (最初の section より前の文書前文 = RFC2119 / constitution 実装宣言の boilerplate aside)。
@@ -363,6 +379,7 @@ print "\n" if @$preamble_blocks;
 print "sections:\n";
 for my $s (@sections) {
   print "  - id: ", ys($s->{id}), "\n";
+  print "    anchor: ", ys($s->{anchor}), "\n";
   print "    tint: ", ys($TINT{$s->{id}} // "brand"), "\n";
   print "    kicker: ", ys($KICK{$s->{id}} // $s->{id}), "\n";
   print "    heading: ", ys($s->{heading}), "\n";
@@ -371,7 +388,12 @@ for my $s (@sections) {
     print "    blocks:\n";
     for my $b (@{$s->{blocks}}) {
       if ($b->{type} eq "subhead") {
-        print "      - { type: subhead, heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+        # ★anchor は非空のときだけ emit (§4.1-4.4 は原本 id 不在ゆえ omit = contract hand-edit と durability parity・余剰 id を捏造しない)。
+        if (defined $b->{anchor} && $b->{anchor} ne "") {
+          print "      - { type: subhead, anchor: ", ys($b->{anchor}), ", heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+        } else {
+          print "      - { type: subhead, heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+        }
       } elsif ($b->{type} eq "requirements") {
         print "      - type: requirements\n        ids: [", join(", ", map { ys($_) } @{$b->{ids}}), "]\n";
       } elsif ($b->{type} eq "table") {
@@ -398,6 +420,7 @@ print "\n";
 print "requirements:\n";
 for my $r (@reqs) {
   print "  - id: ", ys($r->{id}), "\n";
+  print "    anchor: ", ys($r->{anchor}), "\n";
   print "    ears_pattern: ", ys($r->{pat}), "\n";
   print "    essence: ", ys($r->{ess}), "\n";
   print "    statement: ", ys($r->{stmt}), "\n";

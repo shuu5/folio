@@ -51,7 +51,7 @@ declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [veri
 # CSS tint allowlist (section.tint / band)。
 declare -A TINT_OK=( [brand]=1 [violet]=1 [warn]=1 [info]=1 [ok]=1 [bad]=1 )
 # 対応 block type (これ以外 = silent drop の疑い → fail-closed abort)。
-BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|requirements'
+BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|subsubhead|requirements'
 # ★機械層 (w1f cell-2 / ADR-0045) 対応 block type。 cell-1 schema = data-audience="machine" 自由文 (p→prose / aside→note / ul→list)。
 #   これ以外は silent drop の疑い → fail-closed abort (人間層 BLOCK_TYPE_ALLOW と対称)。
 MACHINE_BLOCK_TYPE_ALLOW='prose|note|list'
@@ -149,6 +149,8 @@ emit_spec_css() {
 [data-component="spec-subhead"]{margin:14px 0 6px}
 [data-component="spec-subhead"] h3{margin:0 0 3px;font-size:14.5px;font-weight:800;color:var(--ink)}
 [data-component="spec-subhead"] .sub-se{margin:0;font-size:12.5px;line-height:1.65;color:var(--ink-soft);background:var(--paper-2);border-radius:7px;padding:6px 11px}
+[data-component="spec-subsubhead"]{margin:10px 0 4px}
+[data-component="spec-subsubhead"] h4{margin:0;font-size:13px;font-weight:700;color:var(--ink-soft)}
 [data-component="spec-prose"]{margin:8px 0;font-size:13px;line-height:1.75;color:var(--ink-soft)}
 [data-component="spec-note"]{border:1px solid var(--info-line);border-left:3px solid var(--info);border-radius:9px;padding:9px 14px;background:var(--info-tint);margin:8px 0;font-size:12.5px;line-height:1.7;color:var(--ink-soft)}
 [data-component="spec-note"] p{margin:0}
@@ -284,15 +286,36 @@ emit_mermaid() {
   printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
 }
 emit_subhead() {
-  printf '<div data-component="spec-subhead"><h3>%s</h3><p class="sub-se">%s</p></div>\n' \
-    "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(esc "$(q ".sections[$1].blocks[$2].essence")")"
+  # ★navigable anchor (folio-0x0k pre-flip): 原本 h3 の実 id (fine section anchor) を h3 へ刻む = corpus inbound の解決先。
+  #   ★assemble-spec.sh の emit_subhead と ★対称 (両系統同一変更)。 relations は原本 16 h3 が全て id 保有だが、 rules fork の
+  #   §4.1-4.4 (原本 id 不在) と同じ ★条件付き emit を共有する: 非空なら <h3 id="…">、 空なら <h3> (原本に無い id を捏造しない)。
+  #   silent id-loss の fail-closed は verify-relations の「subhead anchor 列」突合が担う。
+  local anchor h3open
+  anchor="$(q ".sections[$1].blocks[$2].anchor // \"\"")"
+  if [[ -n "$anchor" && "$anchor" != "null" ]]; then h3open="<h3 id=\"$(esc "$anchor")\">"; else h3open="<h3>"; fi
+  printf '<div data-component="spec-subhead">%s%s</h3><p class="sub-se">%s</p></div>\n' \
+    "$h3open" "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(esc "$(q ".sections[$1].blocks[$2].essence")")"
+}
+# 1 h4 sub-subhead を emit (folio-0x0k errata E1・relations §4.4.1-3 = 第 4 anchor クラス)。 原本 <h4 id="s4-4-N-*"> の実 id を刻む。
+#   ★全 subsubhead entry が anchor 保有 (原本 h4 4 本中 id 有 3 本のみを extractor が subsubhead 化・:503 の id-less 例見出しは
+#   prose 経路へ fallthrough し subsubhead 化しない = errata E4) = hard fail-closed guard (subhead と異なり空を許さない)。 essence は持たない。
+emit_subsubhead() {
+  local anchor
+  anchor="$(q ".sections[$1].blocks[$2].anchor // \"\"")"
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-relations: ★subsubhead (section[$1] block[$2]) の anchor (navigable id) が空 (corpus inbound #s4-4-1-scan 等の解決先を失う・fail-closed)" >&2; exit 1; }
+  printf '<div data-component="spec-subsubhead"><h4 id="%s">%s</h4></div>\n' \
+    "$(esc "$anchor")" "$(esc "$(q ".sections[$1].blocks[$2].heading")")"
 }
 # 1 要件 row を emit ($1 = 要件 id)。
 emit_requirement_row() {
-  local id="$1" pat essence stmt class label
+  local id="$1" pat essence stmt class label anchor
   pat="$(q '.requirements[] | select(.id=="'"$id"'") | .ears_pattern')"
   essence="$(q '.requirements[] | select(.id=="'"$id"'") | .essence')"
   stmt="$(q '.requirements[] | select(.id=="'"$id"'") | .statement')"
+  # ★navigable anchor (folio-0x0k pre-flip): 原本 <details class="spec-row" id="req-rel-*"> の実 id を row へ刻む (assemble-spec と対称)。
+  #   corpus inbound (relations.html#req-rel-001 等) の解決先。 data-req-id (大文字 SSoT) への *追加* であり置換ではない。 全要件 anchor 保有 = hard fail-closed。
+  anchor="$(q '.requirements[] | select(.id=="'"$id"'") | .anchor // ""')"
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-relations: ★要件 $id の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
   # validate() が ears_pattern を allowlist 逐値判定済 = ここは到達不能であるべき。 :-unknown silent fallback でなく
   # hard error 化し、 万一 validate を擦り抜けた未知 pattern が無スタイル class="unknown" badge として silent emit されるのを封鎖。
   [[ -v EARS_CLASS[$pat] ]] || { echo "assemble-relations: ★到達不能: emit 時に未知 EARS pattern '$pat' (validate を擦り抜けた・fail-closed)" >&2; exit 1; }
@@ -304,7 +327,7 @@ emit_requirement_row() {
   #   要件 container を <(section|details) data-audience="human"> で key するため、 本 row は <div> ゆえ未被覆
   #   (生成物は /tmp 生成で folio validate 非対象)。 canonical container form (section/details) への寄せ・
   #   validate-gate 被覆は follow-up (folio-tr0 置換/drift gate) 領分。
-  printf '<div data-component="ears-requirement-row" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$id")" "$(esc "$pat")"
+  printf '<div data-component="ears-requirement-row" id="%s" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$anchor")" "$(esc "$id")" "$(esc "$pat")"
   printf '<div class="rq-head"><span class="rid">%s</span><span data-component="ears-badge" class="%s">%s</span></div>\n' "$(esc "$id")" "$class" "$(esc "$label")"
   printf '<p class="rq-essence">%s</p>\n' "$(esc "$essence")"
   printf '<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$(esc "$stmt")"
@@ -325,7 +348,13 @@ emit_machine_block() { # $1 = block への yq path (e.g. ".machine_preamble[0]" 
   local base="$1" mt
   mt="$(q "$base.type")"
   case "$mt" in
-    prose) printf '<p data-component="spec-machine-prose" data-audience="machine">%s</p>\n' "$(q "$base.html")" ;;
+    prose) # ★folio-0x0k errata E2: anchor 保有機械層 prose は <p id="…"> で emit (assemble-spec と対称・relations の機械 p は id 無しゆえ常に else 枝)。
+           local manc; manc="$(q "$base.anchor // \"\"")"
+           if [[ -n "$manc" && "$manc" != "null" ]]; then
+             printf '<p id="%s" data-component="spec-machine-prose" data-audience="machine">%s</p>\n' "$(esc "$manc")" "$(q "$base.html")"
+           else
+             printf '<p data-component="spec-machine-prose" data-audience="machine">%s</p>\n' "$(q "$base.html")"
+           fi ;;
     note)  printf '<aside data-component="spec-machine-note" data-audience="machine">%s</aside>\n' "$(q "$base.html")" ;;
     list)  printf '<ul data-component="spec-machine-list" data-audience="machine">\n'
            while IFS= read -r it; do printf '<li class="mli">%s</li>\n' "$it"; done < <(q "$base.items[]")
@@ -361,6 +390,7 @@ emit_blocks() {
       table)        emit_table "$si" "$bi" ;;
       mermaid)      emit_mermaid "$si" "$bi" ;;
       subhead)      emit_subhead "$si" "$bi" ;;
+      subsubhead)   emit_subsubhead "$si" "$bi" ;;
       requirements) emit_requirements "$si" "$bi" ;;
       *) echo "assemble-relations: ★未対応 block type '$btype' (silent drop 禁止・fail-closed)" >&2; exit 1 ;;
     esac
@@ -368,18 +398,25 @@ emit_blocks() {
 }
 
 emit_section() {
-  local si="$1" tint kicker heading essence icon
+  local si="$1" tint kicker heading essence icon anchor
   tint="$(q ".sections[$si].tint")"
   kicker="$(q ".sections[$si].kicker")"
   heading="$(q ".sections[$si].heading")"
   essence="$(q ".sections[$si].essence")"
   icon="${SECT_ICONS[$(( si % ${#SECT_ICONS[@]} ))]}"
+  # ★top-level section anchor (folio-0x0k pre-flip): 原本 <section id="s1-w3c-vocab"> の実 id を章頭へ刻む (assemble-spec と対称)。
+  #   ★band() = CORE 不触ゆえ pack-level で章全体を anchor 付き <section> で包む。 全 section anchor 保有 = hard fail-closed。
+  anchor="$(q ".sections[$si].anchor // \"\"")"
+  [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-relations: ★section[$si] の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
+  printf '<section id="%s">\n' "$(esc "$anchor")"
   band "$tint" "$kicker" "$heading" "$icon"
   printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
   emit_blocks "$si"
   # ★機械層 (w1f cell-2): この章の data-audience="machine" 自由文を fold で既定非表示・人間層 (essence/blocks) の後に置く。
   emit_machine_fold ".sections[$si].machine_blocks" "$heading の地の文・運用説明・rationale"
   band_end
+  # ★anchor 付き <section> を閉じる (band_end = chapbody の </div> の ★外側)。
+  printf '</section>\n'
 }
 
 # references = 非終端 照会 (前方・他文書へ)。 token/doc/role を固定属性で刻む (verify-relations が echo 厳密一致で突合)。

@@ -198,9 +198,68 @@ perl -0777 -i -pe 's#folio\.dev/inventory/v1\.json#folio.dev/inventory/CAPTURED.
 expect_vfilled_fail "F12 ★code 行改竄を code 行列で捕捉" "$TMP/f12.html" "code 行列"
 
 # F13. ★subhead heading 改竄 → subhead 列 FAIL (perl regex の @ 補間を避け §5.1 を狙う)。
+# ★folio-0x0k: §5.1 subhead は id="s5-1-pattern" が付いた形へ shape 変化ゆえ撃ち直す (id は温存し heading だけ改竄) + fired-guard。
 cp "$TMP/base-filled.html" "$TMP/f13.html"
-perl -0777 -i -pe 's#(<div data-component="spec-subhead"><h3>)§5\.1 双方向 dual の対象関係#${1}§5.1 捏造#s' "$TMP/f13.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="spec-subhead"><h3 id="s5-1-pattern">)§5\.1 双方向 dual の対象関係#${1}§5.1 捏造#s; END { exit($n?0:9) }' "$TMP/f13.html" \
+  || ng "F13 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "F13 ★subhead heading 改竄を捕捉" "$TMP/f13.html" "subhead heading"
+
+# === folio-0x0k pre-flip: navigable anchor (section / subhead / requirement id) の per-shape MK ===
+# ★per-shape で撃つ理由: section anchor (章包み <section id>) / subhead anchor (<h3 id>) / 要件 anchor (row id=) は
+#   DOM 形状が別クラスゆえ個別 [FAIL] を pin する (1 instance の実弾は構造差のある instance の穴を証明しない・exit code 相乗り回避)。
+# ANC1. ★section anchor 全剥奪 → section anchor 列 FAIL (corpus inbound #s5-3-ears 等が解決不能)。
+cp "$TMP/base-filled.html" "$TMP/anc1.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="[^"]*">\n##g; END { exit($n?0:9) }' "$TMP/anc1.html" \
+  || ng "ANC1 section anchor strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC1 ★section anchor 全剥奪を section anchor 列が捕捉" "$TMP/anc1.html" "section anchor"
+# ANC2. ★section anchor id 改竄 (値 drift) → section anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/anc2.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id=")s2-folio-vocab#${1}s2-TAMPERED#; END { exit($n?0:9) }' "$TMP/anc2.html" \
+  || ng "ANC2 section anchor tamper mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC2 ★section anchor id 改竄を section anchor 列が捕捉" "$TMP/anc2.html" "section anchor"
+# ANC3. ★subhead anchor 剥奪 (anchored subhead の id 脱落) → subhead anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/anc3.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="spec-subhead"><h3) id="s1-1-dcterms"#${1}#; END { exit($n?0:9) }' "$TMP/anc3.html" \
+  || ng "ANC3 subhead anchor strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC3 ★subhead anchor 剥奪を subhead anchor 列が捕捉" "$TMP/anc3.html" "subhead anchor"
+# ANC4. ★陽性対照: 契約の 1 anchor 削除 → 当該 emit が fail-closed exit1 (assemble abort)。
+cp "$BASE" "$TMP/anc4.yaml"; yq -i '(.sections[] | select(.id=="s2")) |= del(.anchor)' "$TMP/anc4.yaml"
+expect_abort "ANC4 ★契約 section anchor 削除を assemble fail-closed abort (navigable id 不在)" "$TMP/anc4.yaml" "navigable id) が空"
+# ANC5. ★陰性対照: anchor 大文字化 (link 解決 FAIL) → section anchor 列 FAIL (契約 lowercase と値不一致)。
+cp "$TMP/base-filled.html" "$TMP/anc5.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id=")s2-folio-vocab(">)#${1}S2-FOLIO-VOCAB${2}#; END { exit($n?0:9) }' "$TMP/anc5.html" \
+  || ng "ANC5 section anchor uppercase mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC5 ★section anchor 大文字化 (link 解決 FAIL) を section anchor 列が捕捉" "$TMP/anc5.html" "section anchor"
+# ANC6. ★要件 anchor (row id=) 剥奪 → 要件タプル FAIL。 ★3 shape 目 = 要件 row の id= (section/subhead とは別の
+#   code path = tuple 埋込)。 id= 脱落で verify tuple regex (row opener に id="…" を literal 要求) が当該 row を取りこぼし件数/タプル不一致。
+cp "$TMP/base-filled.html" "$TMP/anc6.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="ears-requirement-row") id="req-rel-001"#${1}#; END { exit($n?0:9) }' "$TMP/anc6.html" \
+  || ng "ANC6 要件 anchor strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC6 ★要件 anchor (row id=) 剥奪を要件タプルが捕捉" "$TMP/anc6.html" "要件タプル"
+# ANC7. ★要件 anchor id 改竄 (値 drift) → 要件タプル FAIL。 row は regex match を保つ (id="…" 在) が anchor 列値が契約と不一致
+#   = id= が data-req-id の *追加* であり値も突合対象であることを pin (剥奪でなく値の per-shape kill)。
+cp "$TMP/base-filled.html" "$TMP/anc7.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="ears-requirement-row" id=")req-rel-001"#${1}req-rel-TAMPERED"#; END { exit($n?0:9) }' "$TMP/anc7.html" \
+  || ng "ANC7 要件 anchor tamper mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC7 ★要件 anchor id 改竄を要件タプルが捕捉" "$TMP/anc7.html" "要件タプル"
+# ANC8. ★陽性対照: 契約の要件 anchor 削除 → emit が fail-closed exit1 (assemble abort)。 全要件 anchor 保有 = hard fail-closed。
+cp "$BASE" "$TMP/anc8.yaml"; yq -i 'del(.requirements[0].anchor)' "$TMP/anc8.yaml"
+expect_abort "ANC8 ★契約 要件 anchor 削除を assemble fail-closed abort (navigable id 不在)" "$TMP/anc8.yaml" "navigable id) が空"
+
+# === folio-0x0k errata E1: subsubhead (h4) = 第 4 anchor shape の per-shape MK (relations §4.4.1-3) ===
+# ANC9. ★subsubhead (h4) anchor strip → subsubhead anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/anc9.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="spec-subsubhead"><h4) id="s4-4-1-scan"#${1}#; END { exit($n?0:9) }' "$TMP/anc9.html" \
+  || ng "ANC9 subsubhead anchor strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC9 ★subsubhead (h4) anchor 剥奪を subsubhead anchor 列が捕捉" "$TMP/anc9.html" "subsubhead anchor"
+# ANC10. ★陽性対照: 契約の subsubhead anchor 削除 → assemble fail-closed abort。
+cp "$BASE" "$TMP/anc10.yaml"; yq -i '(.sections[].blocks[] | select(.type=="subsubhead")) |= del(.anchor)' "$TMP/anc10.yaml"
+expect_abort "ANC10 ★契約 subsubhead anchor 削除を assemble fail-closed abort (navigable id 不在)" "$TMP/anc10.yaml" "navigable id) が空"
+# ANC11. ★陰性対照: subsubhead anchor 大文字化 (link 解決 FAIL) → subsubhead anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/anc11.html"
+perl -0777 -i -pe 'our $n; $n += s#(<h4 id=")s4-4-1-scan(">)#${1}S4-4-1-SCAN${2}#; END { exit($n?0:9) }' "$TMP/anc11.html" \
+  || ng "ANC11 subsubhead anchor uppercase mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "ANC11 ★subsubhead anchor 大文字化 (link 解決 FAIL) を subsubhead anchor 列が捕捉" "$TMP/anc11.html" "subsubhead anchor"
 
 # F14. ★mermaid source 行改竄 → mermaid source FAIL
 cp "$TMP/base-filled.html" "$TMP/f14.html"
@@ -316,8 +375,10 @@ perl -0777 -i -pe 's#(<aside data-component="spec-machine-note" data-audience="m
 expect_vfilled_fail "M6 ★machine 部の aria-hidden を REQ-DA-STRUCT-4 が捕捉" "$TMP/m6.html" "REQ-DA-STRUCT-4"
 
 # M7. ★要件 container の data-audience="human" 剥奪 → tuple + REQ-DA-STRUCT-1 FAIL (孤立 human container 検出)。
+# ★folio-0x0k: row opener に id="<navigable id>" が入った形へ shape が変わったため撃ち直す + fired-guard (空撃ち vacuous-green 封鎖)。
 cp "$TMP/base-filled.html" "$TMP/m7.html"
-perl -0777 -i -pe 's#(<div data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*") data-audience="human">#${1}>#' "$TMP/m7.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div data-component="ears-requirement-row" id="[^"]*" data-req-id="[^"]*" data-ears-pattern="[^"]*") data-audience="human">#${1}>#g; END { exit($n?0:9) }' "$TMP/m7.html" \
+  || ng "M7 mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "M7 ★要件 container の data-audience=human 剥奪を REQ-DA-STRUCT-1 が捕捉" "$TMP/m7.html" "REQ-DA-STRUCT-1"
 
 # M8. ★未対応 machine block type (silent drop 禁止・contract abort) → assemble fail-closed。

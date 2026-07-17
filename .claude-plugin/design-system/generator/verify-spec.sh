@@ -135,6 +135,23 @@ chk "section kicker 列 == sections[].kicker + 静的 band 2 件 (順序)" "$exp
 #   single-quote class の decoy で捏造要約/§ラベルを描く hide-twin が素通った (独立 ceiling 実証・decoy が class 担持ゆえ folio-4a4 と異なり
 #   count_attr_token で捕捉可能)。 sec-se/kicker も占有数パリティで pin (content 突合 + 占有数の二層)。
 
+# ★top-level section anchor 列 (folio-0x0k pre-flip): 原本 <section id="s2-directory"> の実 id を章包み <section id> で再現。
+#   要件 anchor (tuple 同梱) / subhead anchor (SUBHEAD_RE) と並ぶ ★3 クラス目の navigable id。 全 section が anchor 保有ゆえ
+#   ここは strict (optional でない): 生成物の <section id="…"> 列を document 順で契約 sections[].anchor と突合する
+#   (assembler の章包み emit を落とすと section id が消え corpus inbound #s2-directory 等が解決不能 = 件数/順序 FAIL)。
+chk "section anchor 列 == sections[].anchor (順序)" \
+  "$(q '.sections[].anchor' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
+  "$(perl -CSD -0777 -ne 'while (/<section id="([^"]*)">/g){ print "$1\n"; }' "$BODY")"
+
+# ★folio-0x0k errata E2: self-anchor 整合 — 生成物内の全 href="#x" が同一文書内 id="x" へ解決する (broken self-anchor 封鎖)。
+#   canonical 突合の盲点 (contract 突合だけでは href/id の同時欠落・id 単独欠落を見逃す) を閉じる恒久 backstop。 p-anchor s3-vocab-schema
+#   (機械層 prose の self-anchor) や section/subhead/subsubhead anchor の drop を href 側から二重に pin する。
+#   ★navigable id 抽出は実タグの id 属性のみ (data-req-id / data-delta-id 等の data-* は除外)。
+self_href="$(grep -oE 'href="#[^"]+"' "$BODY" | sed 's/href="#//; s/"$//' | LC_ALL=C sort -u)"
+self_ids="$(perl -CSD -0777 -ne 'while (/<[a-zA-Z][a-zA-Z0-9]*\b([^>]*)>/g){ my $a=$1; while ($a=~/(?:^|\s)id="([^"]*)"/g){ print "$1\n"; } }' "$BODY" | LC_ALL=C sort -u)"
+chk_empty "self-anchor 整合: 全 href=\"#x\" が同一文書内 id へ解決 (broken self-anchor 0)" \
+  "$(comm -23 <(printf '%s\n' "$self_href" | grep -v '^$') <(printf '%s\n' "$self_ids" | grep -v '^$') | grep -v '^$' | tr '\n' ' ')"
+
 # 4. 要件 fidelity: data-req-id 集合一致 + emission 順タプル (id, pattern, class, label, essence, statement) 突合。
 exp_rid="$(q '.requirements[].id' | sort -u)"
 act_rid="$(grep -oE 'data-req-id="[^"]+"' "$BODY" | sed 's/.*data-req-id="//; s/"$//' | sort -u)"
@@ -146,19 +163,24 @@ while IFS= read -r id; do
   pat="$(q '.requirements[] | select(.id=="'"$id"'") | .ears_pattern')"
   ess="$(q '.requirements[] | select(.id=="'"$id"'") | .essence')"
   stmt="$(q '.requirements[] | select(.id=="'"$id"'") | .statement')"
+  # ★navigable anchor (folio-0x0k pre-flip): 生成物 row の id= (小文字 req-*) を tuple に *同梱* し「id= が data-req-id (大文字 SSoT)
+  #   の置換でなく追加である」ことを 1 本の突合で pin する (両方が同時に等しくなければ FAIL)。 全要件 anchor 保有 = fail-closed。
+  anc="$(q '.requirements[] | select(.id=="'"$id"'") | .anchor // ""')"
+  [[ -n "$anc" && "$anc" != "null" ]] || { echo "verify-spec: ★contract 要件 $id の anchor が空 (navigable id 不在・fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; }
   # ★contract 由来 pattern が allowlist 外なら expected タプルを :-unknown で組まず fail-closed (assemble validate と parity)。
   # silent な class="unknown" 同士の偽一致 (双辺で同じ fallback を引いて tuple PASS する fail-open) を封鎖。
   if ! [[ -v EARS_CLASS[$pat] ]]; then echo "verify-spec: ★contract 要件 $id の EARS pattern が allowlist 外: $pat (fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; fi
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$(esc "$ess")" "$(esc "$stmt")"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$anc")" "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$(esc "$ess")" "$(esc "$stmt")"
 done < <(q '.sections[].blocks[]? | select(.type=="requirements") | .ids[]') > "$EXPF"
 perl -CSD -0777 -ne '
   # ★canonical dual-audience form (w1f cell-2): row opener に data-audience="human"、 rq-norm に data-audience="machine" を
   #   literal で要求し structured-regex に組み込む (= REQ-DA-STRUCT-1/-4 の構造 anchor を tuple 突合に同梱・属性 drop は row 脱落→件数 FAIL)。
-  while (/<div data-component="ears-requirement-row" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">([^<]*)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">([^<]*)<\/p><\/details>/g) {
-    my ($rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7);
+  # ★folio-0x0k: row opener に id="<小文字 navigable id>" を literal 要求 (anchor 脱落 = row 脱落 → 件数 FAIL = fail-closed)。
+  while (/<div data-component="ears-requirement-row" id="([^"]*)" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">([^<]*)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">([^<]*)<\/p><\/details>/g) {
+    my ($anc,$rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7,$8);
     # 可視 rid == data-req-id (attr-vs-visible)
     if ($rid ne $vrid) { print "VIS-MISMATCH:$rid\xe2\x89\xa0$vrid\n"; next; }
-    print "$rid\t$pat\t$cls\t$lab\t$ess\t$stmt\n";
+    print "$anc\t$rid\t$pat\t$cls\t$lab\t$ess\t$stmt\n";
   }
 ' "$BODY" > "$ACTF"
 if diff -q "$EXPF" "$ACTF" >/dev/null 2>&1; then
@@ -189,13 +211,20 @@ chk "list 項目列 == list blocks.items (順序)" \
 #   content 検査 (double-quote/bare-tag) も占有 (不在) も素通った (独立 ceiling 実証・4 blocker)。 §5 各 component に占有数パリティを追加:
 #   count_attr_token は comment 内も数えるゆえ commented genuine が count を inflate し hide-twin を捕捉、 additive decoy も同時に封鎖
 #   (genuine spec の本文に HTML comment は 0 個ゆえ comment-hidden 自体が tamper 信号)。 README:418 rtm-summary 先例と同型の二層 (占有 + 値突合)。
-# subhead heading + essence
+# subhead anchor + heading + essence
+# ★folio-0x0k pre-flip: h3 に id="<fine section anchor>" を刻む形へ shape 変化。 ★rules は §4.1-4.4 のように原本 id 不在の h3 が
+#   実在ゆえ id= は ★optional group (?: id="([^"]*)")? とし、 anchor 空 (§4.1-4.4) と非空を同一 regex で拾う。 本来 anchor を持つ
+#   subhead が id を落とす silent id-loss は ★anchor 列突合が捕捉 = fail-closed。 heading/essence は esc 経路 (spec は plain 契約値)。
+SUBHEAD_RE='<div data-component="spec-subhead"><h3(?: id="([^"]*)")?>([^<]*)<\/h3><p class="sub-se">([^<]*)<\/p><\/div>'
+chk "subhead anchor 列 == subhead blocks.anchor (順序・§4.1-4.4 は原本 id 不在で空)" \
+  "$(q '.sections[].blocks[]? | select(.type=="subhead") | (.anchor // "")' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ my $a=defined($1)?$1:""; print "$a\n"; }' "$BODY")"
 chk "subhead heading 列 == subhead blocks.heading (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<div data-component="spec-subhead"><h3>([^<]*)<\/h3><p class="sub-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$2\n"; }' "$BODY")"
 chk "subhead essence 列 == subhead blocks.essence (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<div data-component="spec-subhead"><h3>[^<]*<\/h3><p class="sub-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$3\n"; }' "$BODY")"
 # table caption / header / cell (全 spec-table 横断・順序)
 chk "table caption 列 == table blocks.caption (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="table") | (.caption // "")' | grep -v '^$' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
@@ -339,7 +368,7 @@ aria_machine="$(perl -CSD -0777 -ne 'while (/<[a-z]+\b([^>]*)>/g){ my $a=$1; pri
 chk "REQ-DA-STRUCT-4: machine 部に aria-hidden 不在" "0" "$aria_machine"
 # REQ-DA-STRUCT-1: 各 ears-requirement-row (data-audience="human") が data-audience="machine" 子孫 (rq-norm fold) を持つ。
 #   tuple 突合 (§4) が row→rq-norm(machine) の構造隣接を literal 要求済 = NREQ tuple PASS が -1 の構造保証。 件数でも二重に固定。
-chk "REQ-DA-STRUCT-1: human 要件 container 数 == |requirements|" "$NREQ" "$(grep -c 'data-component="ears-requirement-row" data-req-id="[^"]*" data-ears-pattern="[^"]*" data-audience="human"' "$BODY")"
+chk "REQ-DA-STRUCT-1: human 要件 container 数 == |requirements|" "$NREQ" "$(grep -c 'data-component="ears-requirement-row" id="[^"]*" data-req-id="[^"]*" data-ears-pattern="[^"]*" data-audience="human"' "$BODY")"
 chk "REQ-DA-STRUCT-1: machine fold (rq-norm) 数 == |requirements|" "$NREQ" "$(grep -c 'class="rq-norm" data-audience="machine"' "$BODY")"
 # REQ-DA-STRUCT-2 (id 整合) / -5 (EARS-pattern 整合) は §4 要件タプル突合が enforce 済 (data-req-id==rid / class==EARS_CLASS[pattern])。
 printf '  [OK]   %-'"$CHKW"'s %s\n' "REQ-DA-STRUCT-2/-5 (id/EARS-pattern 整合) は §4 tuple が enforce" "委譲"
@@ -402,12 +431,14 @@ if [[ "$NMB_TOTAL" -gt 0 ]]; then
       my @u; my $p=0; my $len=length($B);
       while ($p<$len) {
         my %c;
-        if (substr($B,$p)=~/<p data-component="spec-machine-prose" data-audience="machine">/)  { $c{prose}=$p+$-[0]; }
+        # ★folio-0x0k errata E2: prose opener は id="…" 属性を挟みうる (機械層 self-anchor s3-vocab-schema) ため
+        #   exact-match でなく [^>]* を挟む柔軟形にする (LEFT 抽出 line 413 と同型・id 介在で脱落する false-FAIL を封鎖)。
+        if (substr($B,$p)=~/<p\b[^>]*\sdata-component="spec-machine-prose"[^>]*>/)  { $c{prose}=$p+$-[0]; }
         if (substr($B,$p)=~/<aside data-component="spec-machine-note" data-audience="machine">/) { $c{note}=$p+$-[0]; }
         if (substr($B,$p)=~/<li class="mli">/) { $c{li}=$p+$-[0]; }
         last unless %c;
         my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
-        if ($k eq "prose") { substr($B,$at)=~/<p data-component="spec-machine-prose" data-audience="machine">(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
+        if ($k eq "prose") { substr($B,$at)=~/<p\b[^>]*\sdata-component="spec-machine-prose"[^>]*>(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
         elsif ($k eq "note") { substr($B,$at)=~/<aside data-component="spec-machine-note" data-audience="machine">(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
         else { substr($B,$at)=~/<li class="mli">(.*?)<\/li>/s; push @u,"li\t".norm($1); $p=$at+$+[0]; }
       }
