@@ -779,6 +779,36 @@ folio_prose_only() {
 }
 
 # ============================================================================
+# 派生 presentation component skip (folio-1anm scope(1)) — generator emit の rendered 派生
+# component (cross-doc-ref-chip / glossary-term-table / doc-cover-band 等) の *可視 prose* を
+# xref-wrap / glossary-automark の対象から外す。 これらは token (ADR-NNNN / P-N / 用語) を
+# *既に構造化提示* した component ゆえ、 その可視文字列へ二度目の <a class="xref"> / <span class="term">
+# を打つと canonical (これら component を 1 個も持たない hand-authored corpus) に対し over-wrap する
+# (post-fix 42/32 vs canonical 31/27、 folio-1anm 実測)。 skip は chrome/pre と同型の region 判定で、
+# ★remediate 側 (folio_xref_wrap_doc / folio_glossary_automark_doc の wrappable 述語に埋め込む同一
+#   compdepth 論理) と detect 側 (folio_xref_scan_prose_tokens = gate j / gate l = 本 helper) へ
+#   *対称* に適用する (片側のみだと生成物で gate j が orphan-mention を出し続け stuck-RED = false-green)。
+# ★broad primitive folio_prose_only (:759、 objectGraph/essence/vocabulary/inventory が消費) は 1 byte も
+#   触らず、 その *後段* に本 mask を挟む (component region は pre を含まないため prose_only の行 omit と
+#   干渉しない = 実測確認済)。 識別は data-component allowlist (SSoT = FOLIO_DERIVED_COMPONENTS_RE)。
+FOLIO_DERIVED_COMPONENTS_RE='cross-doc-ref-chip|glossary-term-table|doc-cover-band'
+# stdin の各行のうち 派生 component region 内の行を空行に置換して stdout (detect 側 = gate j / gate l 用)。
+# block nesting は div/header/figure/section の per-line net 深さで追跡: 単一行自己完結 (d<=0) は当行のみ
+# skip、 複数行 container (d>0) は閉じ (depth 0 復帰) まで skip。 remediate awk の in_comp 論理と同値。
+folio_blank_derived_components() {
+  awk -v cre="$FOLIO_DERIVED_COMPONENTS_RE" '
+    function bdelta(s,   t,o,c){ t=s; o=gsub(/<(div|header|figure|section)[ >]/,"",t); t=s; c=gsub(/<\/(div|header|figure|section)>/,"",t); return o-c }
+    BEGIN{ depth=0; open_re="<(div|header|figure|section)[^>]*data-component=\"(" cre ")\"" }
+    {
+      in_comp=0
+      if(depth>0){ in_comp=1; depth+=bdelta($0); if(depth<0) depth=0 }
+      else if($0 ~ open_re){ in_comp=1; d=bdelta($0); if(d>0) depth=d }
+      if(in_comp) print ""; else print $0
+    }
+  '
+}
+
+# ============================================================================
 # requirement container shape registry — consumer 層が認識する dual-audience
 # requirement container は 3 shape ある (essence 抽出 / block-walk / node 発見の全 site が
 # この registry に従う。 1 entity = 1 機構、 §6 横断機構):
@@ -1571,7 +1601,7 @@ folio_xref_scan_prose_tokens() {
   # できないため detect↔remediate parity が壊れ stuck-RED になる (ef4 slice B dogfood で実証、 #112 系の属性 hole)。
   # 除去は空 drop でなく単一 space 置換 — 空 drop は隣接 text を連結し語境界を消して token 検出が
   # false-negative になる (<td>Event</td><td>ADR-0017</td> → "EventADR-0017"、 ceiling 実証。 build_mask の space 置換と同 idiom)。
-  folio_prose_only "$body" | grep -vP '<h[23][ >]' 2>/dev/null | awk '
+  folio_prose_only "$body" | folio_blank_derived_components | grep -vP '<h[23][ >]' 2>/dev/null | awk '
     { line=$0; out=""
       while(length(line)>0){
         if(ina){ q=index(line,"</a>"); if(q==0){ line="" } else { line=substr(line,q+4); out=out " "; ina=0 } }
@@ -1622,11 +1652,12 @@ folio_xref_wrap_doc() {
   local before after out
   before=$(grep -o 'class="xref"' "$file" 2>/dev/null | wc -l)   # occurrence 数 (同一行複数 xref に対応、 grep -c は行数で誤る)
   out=$(mktemp)
-  awk -v mapfile="$mapfile" '
+  awk -v mapfile="$mapfile" -v cre="$FOLIO_DERIVED_COMPONENTS_RE" '
     BEGIN{ nt=0
       while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=3){ nt++; toks[nt]=a[1]; href[a[1]]=a[2]; tip[a[1]]=a[3]; wrapped[a[1]]=0 } }
-      ANC=0; skip=0; incode=0 }
+      ANC=0; skip=0; incode=0; compdepth=0; comp_open_re="<(div|header|figure|section)[^>]*data-component=\"(" cre ")\"" }
     function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
+    function bdelta(s,   t,o,c){ t=s; o=gsub(/<(div|header|figure|section)[ >]/,"",t); t=s; c=gsub(/<\/(div|header|figure|section)>/,"",t); return o-c }
     function build_mask(s,   i,c,mk){
       mk=""   # incode は global (ANC と同様 行間 carry) = 複数行に跨る inline <code> を mask (mask-01)。 block <pre><code> は skip が担当
       for(i=1;i<=length(s);i++){
@@ -1648,7 +1679,11 @@ folio_xref_wrap_doc() {
       if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
-      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[23][ >]/)   # chrome 領域 (build 生成 view) は wrap しない (ADR-0039 §2.3、 prose_only と parity)
+      # 派生 presentation component region (folio-1anm scope(1)): folio_blank_derived_components と同一論理
+      in_comp = 0
+      if(compdepth>0){ in_comp=1; compdepth+=bdelta(line); if(compdepth<0) compdepth=0 }
+      else if(line ~ comp_open_re){ in_comp=1; cd=bdelta(line); if(cd>0) compdepth=cd }
+      wrappable = (skip==0) && (chrome==0) && (in_comp==0) && (line !~ /<h[23][ >]/)   # chrome 領域 (build 生成 view) + 派生 component は wrap しない (ADR-0039 §2.3、 prose_only / detect 側 folio_blank_derived_components と parity)
       anc_in=ANC; incode_in=incode; intag_in=intag
       if(wrappable){
         for(ti=1; ti<=nt; ti++){
@@ -1960,10 +1995,40 @@ folio_glossary_populate_doc() {
 
 # file ($1) の prose 内で既に mark 済の term canonical 集合 (data-term 値、 distinct) を stdout。
 # auto-mark の idempotent skip 源 (<span class="term" data-term="X"> を対象、 span 統一後の全 term mark)。
-# prose_only 経由で code/pre/aside 内の raw 例示 mark を除外する = gate (l) と detect/remediate 対称
+# code/pre/script/style/aside.machine-readable/chrome 内の raw 例示 mark は除外する
 # (raw 例示 mark が present に混じり genuine prose 初出の auto-mark を抑止する false-negative を防ぐ、 #131 ceiling)。
+# ★folio-1anm 根因2 (二重 mark 解消): 除外は *文字単位* mask で行う (行単位 skip でなく)。 生成 HTML は
+#   機械層 block (<pre> = spec-machine-demoted / spec-diagram mermaid) を human prose と *同一物理行* に
+#   pack するため、 行単位 folio_prose_only は <pre>...</pre> と同居する human prose の genuine mark まで
+#   silent に落とし、 present 集合から漏れた term に automark が二本目を打つ (非冪等・破損 fixpoint で安定)。
+#   文字単位 mask は block 領域を跨ぐ human prose の mark を保持しつつ、 pre/code 内の例示 mark のみ潰す。
+#   folio_prose_only(:759) は他 site が消費するため touch せず、 present 検出専用の char-mask を持つ。
 folio_glossary_present_terms() {
-  folio_prose_only "$(folio_extract_body "$1")" | grep -oP '<span\s[^>]*class="term"[^>]*>' 2>/dev/null \
+  folio_extract_body "$1" | awk '
+    BEGIN{ inskip=0; closer=""; cl=0; incode=0; chrome=0 }
+    {
+      line=$0
+      if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
+      n=length(line); out=""
+      for(i=1;i<=n;i++){
+        c=substr(line,i,1)
+        if(chrome){ out=out " "; continue }
+        if(inskip){ out=out " "; if(c==">" && substr(line,i-cl+1,cl)==closer) inskip=0; continue }
+        if(incode){ out=out " "; if(c==">" && substr(line,i-6,7)=="</code>") incode=0; continue }
+        if(c=="<"){
+          rest=substr(line,i)
+          if(rest ~ /^<pre[ >]/){ inskip=1; closer="</pre>"; cl=6; out=out " "; continue }
+          else if(rest ~ /^<script[ >]/){ inskip=1; closer="</script>"; cl=9; out=out " "; continue }
+          else if(rest ~ /^<style[ >]/){ inskip=1; closer="</style>"; cl=8; out=out " "; continue }
+          else if(rest ~ /^<aside class="machine-readable"/){ inskip=1; closer="</aside>"; cl=8; out=out " "; continue }
+          else if(rest ~ /^<code[ >]/){ incode=1; out=out " "; continue }
+        }
+        out=out c
+      }
+      print out
+      if(line ~ /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=0
+    }
+  ' | grep -oP '<span\s[^>]*class="term"[^>]*>' 2>/dev/null \
     | grep -oP 'data-term="\K[^"]*' 2>/dev/null | LC_ALL=C sort -u
 }
 
@@ -1994,11 +2059,12 @@ folio_glossary_automark_doc() {
   local before after out
   before=$(grep -o 'class="term"' "$file" 2>/dev/null | wc -l)
   out=$(mktemp)
-  awk -v mapfile="$mapfile" '
+  awk -v mapfile="$mapfile" -v cre="$FOLIO_DERIVED_COMPONENTS_RE" '
     BEGIN{ nt=0
       while((getline l < mapfile)>0){ m=split(l,a,"\t"); if(m>=2){ nt++; toks[nt]=a[1]; tip[a[1]]=a[2]; wrapped[a[1]]=0 } }
-      ANC=0; skip=0; incode=0; inbody=0 }
+      ANC=0; skip=0; incode=0; inbody=0; compdepth=0; comp_open_re="<(div|header|figure|section)[^>]*data-component=\"(" cre ")\"" }
     function isword(ch){ return (ch ~ /[-0-9A-Za-z]/) }
+    function bdelta(s,   t,o,c){ t=s; o=gsub(/<(div|header|figure|section)[ >]/,"",t); t=s; c=gsub(/<\/(div|header|figure|section)>/,"",t); return o-c }
     function build_mask(s,   i,c,mk){
       mk=""   # incode は global (ANC と同様 行間 carry) = 複数行に跨る inline <code> も mask (#116 mask-01)。
       for(i=1;i<=length(s);i++){
@@ -2021,7 +2087,11 @@ folio_glossary_automark_doc() {
       if(line ~ /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/) chrome=1
       openskip = (line ~ /<(pre|script|style)[ >]/) || (line ~ /<aside class="machine-readable"/)
       if(openskip) skip++
-      wrappable = (skip==0) && (chrome==0) && (line !~ /<h[1-6][ >]/) && (line !~ /<div class="meta">/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)。 chrome 領域 (build 生成 view) も wrap しない (ADR-0039 §2.3、 prose_only と parity)。 div.meta (doc summary 行) も除外 — folio_extract_summary は最初の tag で切れる ([^<]*) ため mark が summary を破壊する (inventory/prime の 派生 SSoT、 ef4 slice B dogfood で実証)。 div.meta は単一行が corpus 規約 (line-based 判定ゆえ複数行 div.meta の継続行は除外されない)
+      # 派生 presentation component region (folio-1anm scope(1)): folio_blank_derived_components / xref-wrap と同一論理
+      in_comp = 0
+      if(compdepth>0){ in_comp=1; compdepth+=bdelta(line); if(compdepth<0) compdepth=0 }
+      else if(line ~ comp_open_re){ in_comp=1; cd=bdelta(line); if(cd>0) compdepth=cd }
+      wrappable = (skip==0) && (chrome==0) && (in_comp==0) && (line !~ /<h[1-6][ >]/) && (line !~ /<div class="meta">/)   # 見出し (h1-h6 全て) 除外 = essence/ears の「見出し対象外」claim と一致 (#131 ceiling)。 chrome 領域 (build 生成 view) も wrap しない (ADR-0039 §2.3、 prose_only と parity)。 div.meta (doc summary 行) も除外 — folio_extract_summary は最初の tag で切れる ([^<]*) ため mark が summary を破壊する (inventory/prime の 派生 SSoT、 ef4 slice B dogfood で実証)。 div.meta は単一行が corpus 規約 (line-based 判定ゆえ複数行 div.meta の継続行は除外されない)
       anc_in=ANC; incode_in=incode; intag_in=intag
       if(wrappable){
         for(ti=1; ti<=nt; ti++){
@@ -2479,7 +2549,7 @@ folio_cmd_validate() {
         while IFS= read -r gres; do
           [[ -z "$gres" ]] && continue
           violations+=("${rel}"$'\t'"[glossary-anchor-residue] <a class=\"term\"> は hover-only 転換で撤回済 (<span class=\"term\"> を使う、 REQ-GLOSS-003 / ADR-0036 §2.4)"); glossary_fail=1
-        done < <(folio_prose_only "$body" | grep -oP '<a [^>]*class="term"[^>]*>' 2>/dev/null)
+        done < <(folio_prose_only "$body" | folio_blank_derived_components | grep -oP '<a [^>]*class="term"[^>]*>' 2>/dev/null)
         # resolve + tooltip-consistency は vocabulary.yaml definition 解決時のみ (opt-in、 ADR-0034 §2.8 + ADR-0036)。
         if [[ -n "$glossary_map" ]]; then
           local gtag gterm gtip gdef
@@ -2495,7 +2565,7 @@ folio_cmd_validate() {
             if [[ "$gtip" != "$gdef" ]]; then
               violations+=("${rel}"$'\t'"[glossary-stale-tooltip] term '${gterm}' の data-tooltip が definition と不一致 (fix で再生成、 §2.8 consistency)"); glossary_fail=1
             fi
-          done < <(folio_prose_only "$body" | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
+          done < <(folio_prose_only "$body" | folio_blank_derived_components | grep -oP '<span [^>]*class="term"[^>]*>' 2>/dev/null)
         fi
       fi
 
