@@ -29,7 +29,7 @@
 <details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-004</span>: The id-bearing unknown-shape row <span class="ears-shall">SHALL</span> be reported as shape-blindness (an id attribute is not evidence of container recognition).</p></details>
 </article>
 <div class="tbl-wrap"><table data-component="requirement-matrix-table"><thead><tr><th>ID</th><th>要件</th></tr></thead><tbody>
-<tr data-component="unknown-matrix-row" data-req-id="REQ-VER-005"><td><span class="fid">REQ-VER-005</span></td><td class="resp">★keystone: <tr> を使う *未知* shape の row。 registry が container 候補でないと明示的に決めた 同名別部品 は &lt;tr data-component="ears-requirement-row"&gt; (SRS dense-table 行) *だけ* であり、 本 row はそれとは別 data-component ゆえ 宣言母集合に残って per-node 盲として検出されなければならない。 gate (s) の宣言側 除外を 「&lt;tr 全般」 のような tag 単位へ広げた実装は、 registry の根拠なく未知 tr shape を宣言から落として沈黙する (= 除外が gate を緩める方向の fail-open)。 本 row は 除外 list が *部品単位* (data-component) に keying されていることを固定する。</td></tr>
+<tr data-component="unknown-matrix-row" data-req-id="REQ-VER-005"><td><span class="fid">REQ-VER-005</span></td><td class="resp">★keystone: <tr> を使う *未知* shape の row。 registry が container 候補でないと明示的に決めた 同名別部品 は &lt;tr data-component="ears-requirement-row"&gt; (SRS dense-table 行) *だけ* であり、 本 row はそれとは別 data-component ゆえ 宣言母集合に残って per-node 盲として検出されなければならない。 gate (t) の宣言側 除外を 「&lt;tr 全般」 のような tag 単位へ広げた実装は、 registry の根拠なく未知 tr shape を宣言から落として沈黙する (= 除外が gate を緩める方向の fail-open)。 本 row は 除外 list が *部品単位* (data-component) に keying されていることを固定する。</td></tr>
 </tbody></table></div>
 </section>
 </body>

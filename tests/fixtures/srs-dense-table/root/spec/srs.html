@@ -12,14 +12,14 @@
 <body>
 <section id="s1" class="informative">
 <h2>§1. 要件表 (SRS pack の dense-table)</h2>
-<p class="section-essence">本 file は assemble-srs.sh の実 emit と同形の dense-table 行 (tr data-component="ears-requirement-row") を持つ。 registry はこの行を requirement container として *意図的に扱わない* (生成 div row との名前衝突・ADR-0042 / srs-component-taxonomy §5)。 gate (s) の宣言側が この行の data-req-id まで数えると 宣言>0 / 発見=0 が恒久成立し、 処方 (registry に shape を追加) に従うと registry が拒否している名前衝突をむしろ実現する = 従っても正しくならない RED になる。</p>
+<p class="section-essence">本 file は assemble-srs.sh の実 emit と同形の dense-table 行 (tr data-component="ears-requirement-row") を持つ。 registry はこの行を requirement container として *意図的に扱わない* (生成 div row との名前衝突・ADR-0042 / srs-component-taxonomy §5)。 gate (t) の宣言側が この行の data-req-id まで数えると 宣言>0 / 発見=0 が恒久成立し、 処方 (registry に shape を追加) に従うと registry が拒否している名前衝突をむしろ実現する = 従っても正しくならない RED になる。</p>
 <div class="tbl-wrap"><table data-component="requirement-matrix-table"><thead><tr><th>ID</th><th>タイプ</th><th>いつ (条件)</th><th>何をする</th><th>優先/検証</th></tr></thead><tbody>
 <tr data-component="ears-requirement-row" data-req-id="REQ-BOOK-001" id="REQ-BOOK-001"><td><span class="fid">REQ-BOOK-001</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">患者が日時を選んで空きを問い合わせたとき</td><td class="resp">その枠の空き枠の数を確認して表示する<span class="plain" data-prose-slot="plain" data-slot-id="plain-REQ-BOOK-001"></span></td><td><span class="prio must" data-component="priority-badge">必須</span> <span class="vmeth">テスト</span></td></tr>
 <tr data-component="ears-requirement-row" data-req-id="REQ-BOOK-002" id="REQ-BOOK-002"><td><span class="fid">REQ-BOOK-002</span></td><td><span class="ears trigger">きっかけ</span></td><td class="cond">患者が空いている枠を選んで予約を申し込んだとき</td><td class="resp">その枠を 1 件だけ確保して予約を確定する<span class="plain" data-prose-slot="plain" data-slot-id="plain-REQ-BOOK-002"></span></td><td><span class="prio must" data-component="priority-badge">必須</span> <span class="vmeth">テスト</span></td></tr>
 </tbody></table></div>
 
-<h2>§2. 認識可能な requirement container の同居 (★gate (s) が生きている証拠)</h2>
-<p class="section-essence">同 file に registry 認識可能な生成 div row を 1 本置く。 これにより gate (s) は本 file に対し 「適用対象あり」 (S channel) を出したまま clean になる — 「tr 行を除外したら gate ごと沈黙して恒真 PASS になった」 のでなく 「gate は作動していて tr 行だけが宣言母集合から外れた」 ことを弁別する陽性対照。</p>
+<h2>§2. 認識可能な requirement container の同居 (★gate (t) が生きている証拠)</h2>
+<p class="section-essence">同 file に registry 認識可能な生成 div row を 1 本置く。 これにより gate (t) は本 file に対し 「適用対象あり」 (S channel) を出したまま clean になる — 「tr 行を除外したら gate ごと沈黙して恒真 PASS になった」 のでなく 「gate は作動していて tr 行だけが宣言母集合から外れた」 ことを弁別する陽性対照。</p>
 <div data-component="ears-requirement-row" data-req-id="REQ-CI-001" data-ears-pattern="ubiquitous" data-audience="human">
 <div class="rq-head"><span class="rid">REQ-CI-001</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
 <p class="rq-essence">生成 div row は requirement container として発見され 非空 essence を持つ (dense-table 行と同名だが別部品)。</p>

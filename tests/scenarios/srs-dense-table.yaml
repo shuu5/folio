@@ -5,10 +5,10 @@ kind: "cli-golden"
 description: |
   SRS pack の dense-table 行 (<tr data-component="ears-requirement-row"> = ADR-0042 /
   srs-component-taxonomy §5) を含む corpus が clean のままであることを golden で固定する
-  (gate (s) shape-blindness の *宣言側* が同名別部品を数えない ことを pin する唯一の
+  (gate (t) shape-blindness の *宣言側* が同名別部品を数えない ことを pin する唯一の
   committed scenario)。
 
-  ★塞いだ false-FAIL (「従っても正しくならない RED」): gate (s) の宣言側は 「shape 非依存に
+  ★塞いだ false-FAIL (「従っても正しくならない RED」): gate (t) の宣言側は 「shape 非依存に
   数える」 のが原則 (発見側と同じ key で数えると未知 shape が 宣言 0 = 発見 0 で恒真 PASS へ
   化ける) だが、 *素の* data-req-id 出現を数える実装は 上の dense-table 行まで宣言に入れる。
   発見側は registry どおり <details|section> と <div data-component="ears-requirement-row"> に
@@ -34,7 +34,7 @@ description: |
         (tr data-component="ears-requirement-row" data-req-id + id、 REQ-style id ゆえ宣言側の
         regex に当たる)。 これらは requirement container でないため violation を生まない。
     (2) REQ-CI-001 — 同 file に registry 認識可能な生成 div row を 1 本同居 (★陽性対照)。
-        gate (s) は本 file に 「適用対象あり」 を出したまま clean = 「tr 行を除外したら gate ごと
+        gate (t) は本 file に 「適用対象あり」 を出したまま clean = 「tr 行を除外したら gate ごと
         沈黙して恒真 PASS になった」 のでなく 「gate は作動していて tr 行だけが宣言母集合から
         外れた」 ことを弁別する (除外 list が gate 全体を殺していないことの証明)。
         ★除外 list を広げる = gate を緩めるため、 追加には registry 上の根拠を要する。

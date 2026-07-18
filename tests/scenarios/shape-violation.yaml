@@ -31,7 +31,7 @@ description: |
         ears-id) → [FAIL] dual-audience-structural (REQ-DA-STRUCT-2)。 chk() が secid を
         data-req-id から採る枝 (id 属性優先へ戻すと id 無 row の secid が "" になり本検査が
         silent に消える) を同時に pin する。
-  ★(3)(4) は gate (s) shape-blindness の per-node essence arm でも報告される (独立 2 gate による
+  ★(3)(4) は gate (t) shape-blindness の per-node essence arm でも報告される (独立 2 gate による
     冗長被覆であって恒真ではない — 片方の枝が外れても もう片方が残る)。 golden は両方を固定する。
 
   対の正検査 = shape-registry.yaml (3 shape の essence 集合 golden) / shape-blindness.yaml

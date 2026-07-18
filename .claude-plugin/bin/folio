@@ -832,7 +832,7 @@ folio_blank_derived_components() {
 #   (id 付き (b) だけの緑は (c) の破壊を素通しする)。 id は ssot#anchor 用途に限定する。
 # ★<div> anchor は SRS pack の同名別部品 (<tr data-component="ears-requirement-row"> = dense-table 行、
 #   ADR-0042 / srs-component-taxonomy §5) との弁別に load-bearing (名前衝突・削るな)。
-#   この弁別は *発見側* (folio_scan_req_container_ids) だけでなく gate (s) の *宣言側* にも要る:
+#   この弁別は *発見側* (folio_scan_req_container_ids) だけでなく gate (t) の *宣言側* にも要る:
 #   宣言側が同名別部品まで数えると 宣言>0/発見=0 が恒久成立して false-FAIL になるため、
 #   同名別部品を実行される述語へ昇格させた list = FOLIO_NONCONTAINER_PARTS を宣言側が引く。
 # ============================================================================
@@ -878,11 +878,11 @@ folio_scan_req_def_ids_raw() {
 
 # prose ($1、 folio_prose_only 済) から §2.6 registry の requirement *container* として
 # 実際に認識できた row の id を stdout (小文字 navigable form、 shape (a) の details/section +
-# shape (b)(c) の 生成 div row)。 shape-blindness gate (s) の 「発見」 側 専用。
+# shape (b)(c) の 生成 div row)。 shape-blindness gate (t) の 「発見」 側 専用。
 #
 # ★folio_scan_req_def_ids_raw と分ける理由 (load-bearing): raw の id-grep は
 #   '\sid="req-..."' の生 match であり *要素名を一切問わない*。 uniqueness / objectgraph /
-#   self-def は 「任意 id の出現」 を正当に必要とするため raw は不触で正しいが、 gate (s) の
+#   self-def は 「任意 id の出現」 を正当に必要とするため raw は不触で正しいが、 gate (t) の
 #   「発見」 に raw を流用すると 発見 = 「container を認識できたか」 でなく 「id 属性が在るか」
 #   を測ることになる。 すると <article id="req-ver-003" data-req-id="REQ-VER-003"> のような
 #   *id 付きの未知 shape* は found に入って per-node arm が沈黙し、 node の essence は "" のまま
@@ -900,7 +900,7 @@ folio_scan_req_container_ids() {
 #   srs-component-taxonomy §5)。 生成 div row と data-component 名が衝突するが、 requirement
 #   container ではない (1 行 = 表の 1 セル列であり essence/normative の block を持たない)。
 #
-# ★なぜ宣言側がこの list を要るか (load-bearing・恒久 false-FAIL 封鎖): gate (s) の宣言側は
+# ★なぜ宣言側がこの list を要るか (load-bearing・恒久 false-FAIL 封鎖): gate (t) の宣言側は
 #   「shape 非依存に数える」 のが原則 (発見側と同じ key で数えると未知 shape が 宣言 0 = 発見 0 で
 #   恒真 PASS に化ける) だが、 *素の* data-req-id 出現を数えると 上の同名別部品まで宣言に入る。
 #   すると 生成 SRS で 宣言>0 / 発見=0 が構造的に恒久成立し、 consumer には解消手段が無い:
@@ -915,7 +915,7 @@ folio_scan_req_container_ids() {
 FOLIO_NONCONTAINER_PARTS='<tr[^>]*data-component="ears-requirement-row"'
 
 # prose ($1、 folio_prose_only 済) から requirement row の *宣言* (data-req-id) を shape 非依存に
-# stdout (大文字 canonical form)。 除外は上記 同名別部品 list のみ (gate (s) の宣言側 専用)。
+# stdout (大文字 canonical form)。 除外は上記 同名別部品 list のみ (gate (t) の宣言側 専用)。
 folio_scan_declared_req_ids() {
   printf '%s\n' "$1" | grep -vP "$FOLIO_NONCONTAINER_PARTS" 2>/dev/null \
     | grep -oP 'data-req-id="\K(REQ(-[A-Z]+)+-[0-9]+)(?=")' 2>/dev/null
@@ -2162,7 +2162,7 @@ folio_xref_uniqueness_check() {
   rm -f "$tmp"
 }
 
-# shape-blindness fail-loud (gate (s)、 §2.6 registry の対称検査)。 文書が data-req-id で
+# shape-blindness fail-loud (gate (t)、 §2.6 registry の対称検査)。 文書が data-req-id で
 # requirement row を *宣言* しているのに、 consumer の in-scan 発見がその row を拾えない
 # (= container shape 非認識) 状態を per-FILE / per-node に検出して stdout へ violation 行を出す。
 #
@@ -2595,7 +2595,7 @@ folio_cmd_validate() {
     violations+=("$uline"); xref_uniq_fail=1
   done < <(folio_xref_uniqueness_check "$root_abs")
 
-  # --- gate (s) shape-blindness — 宣言 (data-req-id) と 発見 (§2.6 3-shape registry) の差分 ---
+  # --- gate (t) shape-blindness — 宣言 (data-req-id) と 発見 (§2.6 3-shape registry) の差分 ---
   # 他 gate と別軸: 他 gate は 「走査できた container の中身」 を見るため、 container を 1 つも
   # 認識できない盲は 全 gate [OK] + exit 0 のまま素通る (vacuous-PASS)。 本 gate だけが
   # 「宣言されたのに 1 つも走査しなかった」 を検出する = exit code に相乗りしない独立 arm。
@@ -3463,7 +3463,7 @@ folio_glossary_pack_emit() {
   local con="${gen_dir}/contract/folio-glossary.glossary.yaml" pro="${gen_dir}/prose/folio-glossary.prose.yaml"
 
   # ---- 「生成対象そのものが無い root」の弁別 (folio-wg2l self-review finding#4・fixture 安全弁) ----
-  # contract 不在 *かつ* committed glossary.html も無い = glossary を持たない mini-repo (gate (s) fixture 等)
+  # contract 不在 *かつ* committed glossary.html も無い = glossary を持たない mini-repo (gate (s)/(t) fixture 等)
   # ゆえ return 1 = 内部 emitter と同じ「source 解決不能」扱い (消費点は生成しない)。
   # 一方 committed glossary.html が在るのに contract が無い = *委譲元の消失* であり、 下の入力ガードが
   # return 4 (hard-fail) で落とす — ここを fallback にすると rich→素朴の silent revert が成立する。
