@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-18T15:20:31Z",
+  "generatedAt": "2026-07-18T16:34:05Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -189,15 +189,11 @@
         "External Reviewer"
       ],
       "relations": {
+        "dc:isReferencedBy": [
+          "spec/verification.html"
+        ],
         "dc:isPartOf": [
           "spec/README.html"
-        ],
-        "dc:isReferencedBy": [
-          "spec/verification.html",
-          "spec/rules.html"
-        ],
-        "folio:extends": [
-          "spec/constitution.html"
         ],
         "dc:references": [
           "spec/rules.html",
@@ -214,6 +210,9 @@
         "folio:depends-on": [
           "spec/rules.html",
           "spec/verification.html"
+        ],
+        "folio:extends": [
+          "spec/constitution.html"
         ]
       }
     },

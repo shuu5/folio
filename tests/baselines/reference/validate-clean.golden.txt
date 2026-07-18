@@ -1,6 +1,6 @@
 folio validate — link-integrity + jsonld + broken-reverse + vocabulary + delta-marker + ears-coverage + dual-audience + xref + nav + render-safety + readability-floor + how-outside (ADR-0020/0025/0028/0033/0034/0035/0039)
 root: design-intent
-files checked: 60 · relations checked: 577
+files checked: 60 · relations checked: 576
   [OK] internal link-integrity
   [OK] jsonld structural
   [OK] broken-reverse
@@ -22,7 +22,13 @@ files checked: 60 · relations checked: 577
   [OK] how-outside
   [OK] spec-contract-pairing
 
-warnings (4):
+warnings (10):
+  spec/srs-verification.html [readability-floor] 可視 prose 単一段落 10637 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/srs-verification.html [readability-floor] 可視 prose 単一段落 2064 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/srs-verification.html [readability-floor] 可視 prose 単一段落 2136 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/srs-verification.html [readability-floor] 可視 prose 単一段落 2693 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
+  spec/srs-verification.html [readability-floor] 図ゼロのまま人間層可視 prose 8808 codepoints > 6000 (構造章に mermaid 章図を置く、 rules §11.5 / ADR-0040)
+  spec/srs-verification.html [readability-floor] 章要旨 (p.section-essence) が 1 つも無い (h2 章 7 個 — 各章冒頭に 1〜3 文の要旨を置く、 rules §11.5 / ADR-0040。 v1 は page 単位 presence)
   spec/verification.html [readability-floor] 人間層可視 prose 18944 codepoints > 12000 (読了 20 分の上限 box 超過 — informative 地の文を data-audience="machine" へ降格し章要旨へ圧縮する、 rules §11.5 / ADR-0040)
   spec/verification.html [readability-floor] 可視 prose 単一段落 3278 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
   spec/verification.html [readability-floor] 可視 prose 単一段落 4027 codepoints > 2000 (blob 構造化 ADR-0039 §2.4、 REQ-VER-023 corpus 較正 2026-06-11)
