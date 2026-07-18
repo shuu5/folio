@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-17T07:31:54Z",
+  "generatedAt": "2026-07-18T15:20:31Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -2329,7 +2329,7 @@
         "id": "REQ-VER-015",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-015",
-        "essence": "folio fix は各 forward relation に対応する reverse relation を target に materialize する (idempotent、 exit 0)。 併せて folio validate は第 3 gate broken-reverse を持ち、 fix 適用後は 3-gate clean になる (detect↔remediate 対)。"
+        "essence": "folio fix は各 forward relation に対応する reverse relation を target に materialize する (idempotent)。 exit は 3 値 — 0 = 真の fixpoint / 1 = shape 非認識で fixpoint を宣言できない (fail-closed) / 2 = tool error (fail-closed) — で、 fix 単独の exit 0 は fixpoint を保証せず、 適用後は validate を再走して clean を確認する。 併せて folio validate は第 3 gate broken-reverse を持ち、 fix 適用後は 3-gate clean になる (detect↔remediate 対)。"
       },
       {
         "id": "REQ-VER-016",

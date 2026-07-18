@@ -21,8 +21,8 @@ description: |
   ★fix の exit 語彙は本 scenario で 3 値になる: 0 = materialize 成功/真の fixpoint
   (fix-bidirectional.yaml) / 1 = fixpoint を宣言できない (本 scenario) / 2 = tool error
   (fix-singleline.yaml の 行ベース挿入 anchor 欠落 fail-closed)。 3 値とも committed scenario で pin する。
-  ※ REQ-VER-015 の normative 文言は現時点で 「exit 0」 のみを固定しており、 exit 1 語彙の
-    spec 側 REQ 起票は 本 cell の scope 外 (prose 不触) ゆえ rider へ carve 済 (commit message 参照)。
+  ※ exit 0/1/2 の 3 値語彙は REQ-VER-015 normative に固定済 (folio-srpz spec-sync)。 本 scenario は
+    その conformance (e) = shape 非認識 seed → fix exit 1 を検証する。
 
   fixture = fixtures/shape-blindness/root (cli-golden の shape-blindness.yaml と共有、 cli-fix handler が
   fresh temp copy を作るため実 fixture は不変)。 対の正検査 = fix-bidirectional.yaml (exit 0 = 真の fixpoint)。
