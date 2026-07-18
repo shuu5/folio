@@ -105,6 +105,8 @@ mkdir -p .folio && touch .folio/architect-active
 
 3-gate (internal link-integrity + jsonld structural + broken-reverse) が **clean (exit 0)** であることを確認する。double-link が崩れたら `~/.claude/plugins/folio/.claude-plugin/bin/folio fix` で reverse を materialize してから再 validate する。
 
+> **fix 後は必ず validate を再走する (MUST)**: `folio fix` 単独の exit 0 は fixpoint を保証しない — 「0 changes」は shape 非認識による「発見・抽出 0 件」の帰結でありうるし、mixed corpus では run 順にも依存する。fix の exit 語彙 (0 = 真の fixpoint / 1 = shape 非認識で fixpoint を宣言できない / 2 = tool error) の SSoT は [verification.html REQ-VER-015](../../design-intent/spec/verification.html#req-ver-015) — 本 SKILL に詳細を複製しない。exit 1 は §2.6 registry への shape 追加が要るサインで、完了条件は validate 再走の clean。
+
 ### Step 4: marker を unset (MUST、エラー時も優先実行)
 
 ```bash
@@ -121,7 +123,7 @@ test -f .folio/architect-active && echo "SET (spec 編集可)" || echo "UNSET (s
 
 - [ ] Step 1 で marker を set したか
 - [ ] 編集が `design-intent/spec/` 配下に収まっているか (spec_path 外は path-boundary が deny)
-- [ ] Step 3 で `folio validate` が clean か
+- [ ] Step 3 で `folio validate` が clean か (fix を実行した場合は fix **後に validate を再走**して clean を確認したか — fix 単独 exit 0 は fixpoint 非保証、 SSoT = REQ-VER-015)
 - [ ] Step 4 で marker を削除したか
 - [ ] domain の構造を反映する **HTML 視覚要素** (mermaid stateDiagram / sequenceDiagram / flowchart / classDiagram / erDiagram、 `<table>` / `<details>` / `<dl>` 等) を selective に採用したか (canonical list は [rules.html §4.5](../../design-intent/spec/rules.html#s4-5-visual)、 grill 時の声かけは [refs/grilling-protocol.md `## 視覚表現レパートリー`](./refs/grilling-protocol.md))。 plain text に止まらず folio の HTML 表現メリットを活用する。
 - [ ] 編集した mermaid 図 / spec text が **a11y minimum rule** ([rules.html §4.6](../../design-intent/spec/rules.html#s4-6-a11y)) を満たすか: (a) WCAG 2.2 SC 1.4.3 contrast 4.5:1 (normal) / 3:1 (large)、 (b) mermaid 図に `accTitle` / `accDescr` 付与、 (c) `classDef` / `style` で `fill` を override する場合 `color` paired 指定 (`primaryTextColor` 継承による白文字事故の防止)。 根拠 verbatim quote + paired override 正攻法は [refs/html-spec-craft.md](./refs/html-spec-craft.md) §1-§2 を参照。

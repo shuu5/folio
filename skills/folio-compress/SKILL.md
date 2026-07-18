@@ -48,7 +48,7 @@ rm -f .folio/architect-active                       # unset (MUST)
 
 - `folio validate` — 17 gate clean + 対象ページの readability-floor warn が baseline から改善したか (上限 box 内に入ったか)。
 - **per-chapter 確認 (手動)** — page 単位 warn が消えた後も、 編集した**全 h2/h3 章**に section-essence が付いたかを確認する (floor の presence warn は v1 page 単位しか見ない — §11.5 の MUST は章単位。 章ごとの presence と品質は Step 5 の fidelity (a2) も検査する)。
-- `folio fix` → 再 validate。**REQ essence を改訂した場合**は xref の stale-tooltip に注意 — fix は既存 tooltip を再生成できない (parity hole、 folio-dpz)。`folio_xref_tooltip_text` を source して期待値を計算し手動同期する。
+- `folio fix` → 再 validate は**必ず** (MUST — fix 単独の exit 0 は fixpoint を保証しない: 「0 changes」は shape 非認識による発見 0 件でありうる・mixed corpus で run 順依存。exit 語彙 0/1/2 の SSoT = [REQ-VER-015](../../design-intent/spec/verification.html#req-ver-015)、本 SKILL に複製しない)。**REQ essence を改訂した場合**は xref の stale-tooltip に注意 — fix は既存 tooltip を再生成できない (parity hole、 folio-dpz)。`folio_xref_tooltip_text` を source して期待値を計算し手動同期する。
 - `folio build --check` clean。
 - sandbox 全 suite を **for ループ + exit code 判定**で実行。**validate-clean golden は実 corpus の warn 行を byte-exact で機械追跡している** (codepoint 実数・h2 章数が golden に埋まる) ため、 **可視 prose codepoint / h2 章数 / warn 集合のいずれかが変わる slice では golden regen を同梱**する: `cd tests && bash runner.sh --accept scenarios/validate-clean.yaml` → `git diff` で意図した行だけが変わったことを review してから commit。
 - mermaid 章図を追加/改訂した slice は、 push 後 CI の **render-gate** (REQ-VER-022、 幾何 overlap × 3 viewport) が block しうる — ローカルで先に回すなら `uv run --with playwright==1.60.0 python tests/render-gate/check.py` (validate の render-safety は pure-bash で render 後 DOM を見れない死角。 walk は読書体験の検査で幾何の代替にならない)。
