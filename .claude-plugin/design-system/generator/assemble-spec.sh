@@ -49,6 +49,9 @@ declare -A EARS_WHEN=( [ubiquitous]=常に守る [event-driven]=きっかけが�
 declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [verification]=1 [implementation]=1 )
 # CSS tint allowlist (section.tint / band)。
 declare -A TINT_OK=( [brand]=1 [violet]=1 [warn]=1 [info]=1 [ok]=1 [bad]=1 )
+# section.class allowlist (section.normative / section.informative wrapper・folio-5dad)。 closed 2 値・fail-closed
+#   (§4.4 が定める normative/informative の 2 択・空値は属性省略ゆえ許容)。 canonical rules.html の class を生成側で保持する。
+declare -A CLASS_OK=( [normative]=1 [informative]=1 )
 # 対応 block type (これ以外 = silent drop の疑い → fail-closed abort)。
 BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|requirements'
 # ★機械層 (w1f cell-2 / ADR-0045) 対応 block type。 cell-1 schema = data-audience="machine" 自由文 (p→prose / aside→note / ul→list)。
@@ -86,6 +89,9 @@ validate() {
   while IFS= read -r p; do [[ -v EARS_CLASS[$p] ]] || { echo "assemble-spec: 未知の EARS pattern: $p (ubiquitous|event-driven|state-driven|unwanted|optional)" >&2; errs=1; }; done < <(q '.requirements[].ears_pattern')
   # section tint allowlist (★逐値判定: 同上。 "brand violet" 等が band の class 属性へ stray token を注入する fail-open を封鎖)。
   while IFS= read -r p; do [[ -v TINT_OK[$p] ]] || { echo "assemble-spec: 未知の section tint (CSS allowlist 外): $p" >&2; errs=1; }; done < <(q '.sections[].tint')
+  # ★section class allowlist (★逐値判定: tint と対称。 "normative informative" 等の空白入り値が section wrapper の class へ
+  #  stray token を注入する fail-open を封鎖)。 空値 (// empty で除外) は属性省略ゆえ許容し、 非空値のみ closed 2 値を照合する。
+  while IFS= read -r p; do [[ -z "$p" ]] && continue; [[ -v CLASS_OK[$p] ]] || { echo "assemble-spec: 未知の section class (CSS allowlist 外): $p (normative|informative)" >&2; errs=1; }; done < <(q '.sections[].class // ""')
   # ★block type allowlist (silent drop 禁止・fail-closed): 未対応 block type は捨てず abort する。
   nsec="$(q '.sections | length')"
   for ((si=0; si<nsec; si++)); do
@@ -386,7 +392,7 @@ emit_blocks() {
 }
 
 emit_section() {
-  local si="$1" tint kicker heading essence icon anchor
+  local si="$1" tint kicker heading essence icon anchor cls
   tint="$(q ".sections[$si].tint")"
   kicker="$(q ".sections[$si].kicker")"
   heading="$(q ".sections[$si].heading")"
@@ -399,7 +405,14 @@ emit_section() {
   #   h2/h3 の TOC target を (a) 見出し自身の id → (b) 最近接の外側 <section id> の 2 段 fallback でしか解決せず、 span は参照されない。
   anchor="$(q ".sections[$si].anchor // \"\"")"
   [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-spec: ★section[$si] の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
-  printf '<section id="%s">\n' "$(esc "$anchor")"
+  # ★section.class (folio-5dad): canonical rules.html §4.4 の section.normative / section.informative wrapper を生成側で保持する。
+  #   contract 値は validate() で CLASS_OK (closed 2 値) 照合済ゆえ esc 不要 (直接埋込)。 空値 (contract 非保有) は属性を省略する。
+  cls="$(q ".sections[$si].class // \"\"")"
+  if [[ -n "$cls" && "$cls" != "null" ]]; then
+    printf '<section id="%s" class="%s">\n' "$(esc "$anchor")" "$cls"
+  else
+    printf '<section id="%s">\n' "$(esc "$anchor")"
+  fi
   band "$tint" "$kicker" "$heading" "$icon"
   printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
   emit_blocks "$si"

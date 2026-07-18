@@ -141,7 +141,28 @@ chk "section kicker 列 == sections[].kicker + 静的 band 2 件 (順序)" "$exp
 #   (assembler の章包み emit を落とすと section id が消え corpus inbound #s2-directory 等が解決不能 = 件数/順序 FAIL)。
 chk "section anchor 列 == sections[].anchor (順序)" \
   "$(q '.sections[].anchor' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<section id="([^"]*)">/g){ print "$1\n"; }' "$BODY")"
+  "$(perl -CSD -0777 -ne 'while (/<section id="([^"]*)"[^>]*>/g){ print "$1\n"; }' "$BODY")"
+
+# ★section class 列 fidelity (folio-5dad): canonical rules.html §4.4 の section.normative / section.informative wrapper を
+#   生成側で保持する (旧版は落としていた欠落を解消)。 class は §10.2 二層 (floor/ceiling) の視覚識別を担う決定的フィールド。
+# (i) ★position-sensitive 逐値: 生成物の <section id="…" class="…"> の class 値列を document 順で抽出し、 契約
+#   sections[].class 値列 (順序) と逐値一致させる (count/集合/wildcard 禁止・folio-bur verify-spec:73-79 の wildcard 素通り是正)。
+#   ★class を持たない section は空値 (契約 // "") として突合列へ含める (yq の // は per-element = 12 行を保つ・実測)。
+#   抽出は section wrapper (id 先・class 後) 限定: band の <section data-component ...>(id 無し) と §4.4 escaped 例
+#   (&lt;section …&gt;) は <section id=" prefix を持たないゆえ交絡しない。
+chk "section class 列 == sections[].class (順序・逐値)" \
+  "$(q '.sections[].class // ""')" \
+  "$(perl -CSD -0777 -ne 'while (/<section id="[^"]*"([^>]*)>/g){ my $a=$1; if ($a=~/\bclass="([^"]*)"/){ print "$1\n" } else { print "\n" } }' "$BODY")"
+# (ii) ★契約非依存 census floor (folio-5dad・0/0 恒真封鎖): 契約 class field 一括削除で (i) の逐値突合は空列==空列で
+#   恒真 PASS するため、 生成物の section wrapper class 占有を数値 hardcode で pin する (folio rules 生成出力 = top-level
+#   section 12 本 = normative 11 [s2..s12] + informative 1 [s0])。 STATIC_BAND_H2 / STATIC_KICKERS と同じ rules 専用 literal。
+#   census grep は '<section id="[^"]*" class="…">' で (a) band の class="tint-*"(id 無し) (b) §4.4 escaped 例
+#   (&lt;section class="normative"&gt; = <section id=" prefix 不在) (c) 要件 rq-norm / data-* 属性 を除外する
+#   (生 grep class="normative" は escaped 例・rq-norm で過大計数ゆえ禁止)。
+chk "section class=normative census == 11 (契約非依存 floor・0/0 恒真封鎖)" "11" \
+  "$(grep -oE '<section id="[^"]*" class="normative">' "$BODY" | wc -l | tr -d ' ')"
+chk "section class=informative census == 1 (契約非依存 floor・0/0 恒真封鎖)" "1" \
+  "$(grep -oE '<section id="[^"]*" class="informative">' "$BODY" | wc -l | tr -d ' ')"
 
 # ★folio-0x0k errata E2: self-anchor 整合 — 生成物内の全 href="#x" が同一文書内 id="x" へ解決する (broken self-anchor 封鎖)。
 #   canonical 突合の盲点 (contract 突合だけでは href/id の同時欠落・id 単独欠落を見逃す) を閉じる恒久 backstop。 p-anchor s3-vocab-schema

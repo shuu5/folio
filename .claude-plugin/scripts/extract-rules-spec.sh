@@ -221,12 +221,16 @@ my @SECORDER = qw(s0-reader-guide s2-directory s3-naming s4-format s5-delta s6-e
 sub shortid { my ($f)=@_; return ($f =~ /^(s\d+)/) ? $1 : $f; }
 
 # section の inner を抽出: 各 top-level id について <section id="ID"> から、 次の top-level <section id か </body 直前まで。
-my %SECINNER;
+my %SECINNER; my %SECCLASS;
 for my $i (0..$#SECORDER) {
   my $id = $SECORDER[$i];
   my $next = ($i < $#SECORDER) ? $SECORDER[$i+1] : undef;
   my $startre = qr/<section id="\Q$id\E"[^>]*>/;
   next unless $H =~ /$startre/g;
+  # ★section class capture (folio-5dad): 章包み <section id="…" class="normative|informative"> の class を逐語取り込み。
+  #   canonical rules.html §4.4 wrapper の class を contract の class field へ運ぶ source (assemble-spec が生成側で保持する)。
+  #   class 不在の section は "" (捏造しない・原本忠実)。 $& は startre の match ($H の pos は不変)。
+  $SECCLASS{$id} = ($& =~ /\bclass="([^"]*)"/) ? $1 : "";
   my $start = pos($H);
   my $end;
   if (defined $next) {
@@ -331,7 +335,7 @@ for my $id (@SECORDER) {
     . ($mcap == $mexp ? "" : " ★uncaptured " . ($mexp - $mcap) . " 件 (expected $mexp・要調査)");
   # ★navigable anchor (folio-0x0k pre-flip): 原本 top-level section の実 id (s2-directory 等・full form)。 contract の id は
   #   short prefix (s0..s12 = TINT/KICK key) ゆえ、 corpus inbound (#s2-directory 等) の解決先となる full id を別 field で運ぶ。
-  push @sections, { id=>shortid($id), anchor=>$id, heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
+  push @sections, { id=>shortid($id), anchor=>$id, class=>($SECCLASS{$id}//""), heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
 }
 
 # ★機械層 preamble (最初の section より前の文書前文 = RFC2119 / constitution 実装宣言の boilerplate aside)。
@@ -380,6 +384,8 @@ print "sections:\n";
 for my $s (@sections) {
   print "  - id: ", ys($s->{id}), "\n";
   print "    anchor: ", ys($s->{anchor}), "\n";
+  # ★section class (folio-5dad): 非空のときだけ emit (原本 class 不在の section は omit = 属性省略 parity・捏造しない)。 key 順 id→anchor→class→tint。
+  print "    class: ", ys($s->{class}), "\n" if defined $s->{class} && $s->{class} ne "";
   print "    tint: ", ys($TINT{$s->{id}} // "brand"), "\n";
   print "    kicker: ", ys($KICK{$s->{id}} // $s->{id}), "\n";
   print "    heading: ", ys($s->{heading}), "\n";
