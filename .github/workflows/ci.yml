@@ -143,6 +143,14 @@ jobs:
       - name: verification drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
         run: .claude-plugin/design-system/generator/test-adversarial-verification-drift.sh
 
+      # F8 同型: srs-verification drift gate (folio-bxpm Leg B 配線)。 flip 済み canonical srs-verification.html の
+      # in-scan drift を同原理 (fresh 再生成 byte 一致 + 物理指紋 4 clause) で block する (lwhz F8 の instance#3)。
+      # CI 未配線のまま land すると gate は committed だが dormant = 常時経路 fail-open (bxpm 独立 ceiling major)。
+      - name: srs-verification drift gate (deterministic floor — landed == fresh 再生成 byte 一致)
+        run: .claude-plugin/design-system/generator/verify-srs-verification-drift.sh
+      - name: srs-verification drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-srs-verification-drift.sh
+
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
       #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)
@@ -227,8 +235,8 @@ jobs:
           bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
           python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
 
-      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 12 (risk+changelog+roadmap 追加後) / B 段 = folio-jyfh mermaid 6・user 裁定
-      #      2026-07-08: 全 contract 掃引)。 18 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
+      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 13 (risk+changelog+roadmap+srs-verification 追加後) / B 段 = folio-jyfh mermaid 6・user 裁定
+      #      2026-07-08: 全 contract 掃引)。 19 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
       #      build → render-gate-srs.py (doc-type 非依存 detector) で light/dark × 3 viewport の low-contrast /
       #      horizontal-overflow / component-overlap を blocking 捕捉。 srs.css 共有トークンの contrast 退行
       #      (dark 側の実欠陥 4 点を本 gate 初回実走が検出・land 済) を全 pack 面で再発防止する。
@@ -274,6 +282,7 @@ jobs:
           gate risk            out    risk      clinic-risk.risk.yaml              clinic-risk.risk.prose.yaml
           gate changelog       out    changelog clinic-changelog.changelog.yaml     clinic-changelog.changelog.prose.yaml
           gate roadmap         out    roadmap   clinic-roadmap.roadmap.yaml         clinic-roadmap.roadmap.prose.yaml
+          gate srs-verification out   srs-verification folio-srs-verification.spec.yaml folio-srs-verification.prose.yaml
           # ---- B 段: mermaid 6 instance (SVG settle polling は renderer 側・folio-jyfh) ----
           gate arch            out    arch         clinic-architecture.arch.yaml     clinic-architecture.arch.prose.yaml
           gate datamodel       out    datamodel    clinic-appointment.datamodel.yaml clinic-appointment.datamodel.prose.yaml
@@ -283,7 +292,7 @@ jobs:
           gate vision-clinic   out    vision       clinic-appointment.vision.yaml    clinic-appointment.vision.prose.yaml
           echo "gate F sweep 所要: $(( $(date +%s) - t0 ))s (撤退条件 300s)"
           if [ "$fail" -ne 0 ]; then echo "::error::gate F sweep に FAIL あり"; exit 1; fi
-          echo "gate F sweep GREEN (18 artifact)"
+          echo "gate F sweep GREEN (19 artifact)"
 
       # 全 page × viewport の full-page screenshot を artifact 保存 (ADR-0039 §2.8: 人間 review の
       # 補助に充てるのみで golden 比較はしない — pixel golden は brittle)。 FAIL 時こそ目視材料が
