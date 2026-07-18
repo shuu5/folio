@@ -1,0 +1,23 @@
+# folio engine (folio-bxpm) — spec-pack prose manifest (③「読みやすさの足場」) — srs-verification fork
+#
+# opus 著作物。決定的 assembler が空で出力した data-prose-slot に inject-prose.sh が
+# HTML escape して注入する。slot-id ↔ 散文の 1:1 対応 (集合一致を inject が fail-closed 検査)。
+#
+# 各値は機械 SSoT (contract/folio-srs-verification.spec.yaml = srs-verification.html から機械抽出) 接地。捏造/歪曲/脱落は
+# fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
+#   - cover-summary は doc 全体 (section/要件/照会) に接地する。
+#     ★self-host pack (機械層 dual-audience) では機械層を fold に逐語保持する (原本↔生成物 round-trip を floor が enforce) ため、
+#     「機械向けの詳細は元の *.html を参照」型の文言は禁止 (読者誤誘導 = gate J finding)。 fold を開けば読めると案内する (README ③)。
+#   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
+#   - band 順: 01=§0 読み方 / 02=§1 検証境界 / 03=§2 done-condition REQ / 04=§3 被覆 RTM / 05=§4 参照 / 06=照会 / 07=用語集。
+
+slots:
+  cover-summary: "folio の generator が機械 SSoT (contract + prose の YAML) から生成する『SRS プレゼン HTML』が、 いつ『完成した (GREEN)』と言えるかの完成判定を定める仕様です。 判定は二層で、 件数・構造・見た目の崩れ・再組立の byte 一致など算術的に自明なものを決定的で blocking な floor が裁き、 自由文の捏造・可読性・意味カバレッジは LLM の ceiling が裁きます。 中心は 5 つの規範要件 (EARS 記法の REQ-VER-024〜030・027/028 は欠番) で、 検証被覆の一覧 (RTM) を添え、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の srs-verification.html を機械 SSoT から dual-audience で再生成したもので、 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) を開くと精密な記述を確認できます。"
+
+  chapter-lead-01: "まず読み方から。 §1 が機械と LLM のどちらが何を裁くかの検証境界と完成判定モデルを宣言し、 §2 がその境界に沿って完成判定を 5 つの要件 (REQ-VER-024〜030) で形式化します。 §3 が検証被覆の一覧 (RTM)、 §4 が参照です。 folio 自身の検証 (REQ-VER-001〜023 / REQ-NAV-001〜007) は姉妹 spec の verification.html にあります。"
+  chapter-lead-02: "機械 SSoT から生成した SRS プレゼン HTML の完成判定を、 決定的で blocking な floor と LLM の ceiling の二層で定義します。 件数・構造・render・再組立の一致など算術的に自明なものだけを floor が blocking で裁き、 自由文の捏造・可読性・意味カバレッジは LLM の ceiling が裁く、 という境界の線引きがこの章の要です。 構造の捏造はそもそも構成上できない (fabrication-free-by-construction) ため、 静的な禁止群は blocking でない warn 級の補助に留め、 floor 単独では GREEN を宣言しません。"
+  chapter-lead-03: "生成 SRS の完成判定を、 5 つの規範要件 (REQ-VER-024〜030・027 と 028 は欠番) で形式化します。 各要件が §1 の境界のどこ (blocking な floor / warn 級の補助 / LLM の ceiling) に属すかを、 やさしい要約と機械層の両方に明記します。"
+  chapter-lead-04: "5 つの完成判定要件 (024〜030) が、 それぞれどの検証で確かめられているかを一覧します。 検証の列が空いていれば、 それは『まだ検証されていない』gap の可視化です (030 は検証 scenario の spawn 待ち)。"
+  chapter-lead-05: "本仕様が依拠する内部・外部の参照文書を一覧します。 読んでいて根拠をたどりたくなったら、 ここから姉妹 spec (verification) や上位の原則 (constitution)・決定記録 (ADR)・設計 SSoT (SRS 部品 taxonomy) へ進めます。"
+  chapter-lead-06: "この仕様が前方照会する主要な文書を挙げます。 上位の原則 (constitution の P-x) や決定記録 (ADR) への前方照会で、 srs-verification は照会の終わりではありません — より上位の文書へとつながっています。"
+  chapter-lead-07: "本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。"

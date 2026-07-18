@@ -56,10 +56,11 @@ echo "== glossary en parity gate 敵対回帰 =="
 #   2026-07-14 (folio-pyus rules 再抽出・folio-7ts2 3 語収録の帰結) = 18 contract (分類不変 8/9/1)・en 突合 129 語 (folio-rules に 'design-intent space' 追加 25→26 語・anchor は 7ts2 で収録済ゆえ突合 +1)・anchor 外 local 41 語 (不変)。
 #   2026-07-14 (folio-8cha roadmap-pack・pyus 129/41 基準へ merged tree 実測で再同期) = 19 contract (full 8 / intersect 10 / exempt 1)・en 突合 133 語 (129 + roadmap の clinic union 語 4: 診療枠/満枠/本人確認/リマインド通知)・anchor 外 local 44 語 (+ roadmap メタ語 3: ロードマップ/マイルストーン/優先度 = clinic union SSoT 外・intersect = changelog/risk/datamodel/interface と同型)。
 #   2026-07-15 (folio-6lsu verification 再抽出・07m 分割追随の帰結) = 19 contract (分類不変 8/10/1)・en 突合 132 語 (folio-verification が 28→27 語: 'invariant' は 07m 分割で srs-verification.html へ移動し原本 verification.html に data-term 不在 = 再抽出で正当に drop・pyus の rules 再抽出と同型の corpus *縮小*)・anchor 外 local 44 語 (不変)。
+#   2026-07-19 (folio-bxpm srs-verification flip・admin ceiling fixup) = 20 contract (full 9 / intersect 10 / exempt 1)・en 突合 146 語 (132 + srs-verification の 14 語: 全語 canonical 収録の実測成立ゆえ full/strict = rules/verification と同根拠。 6lsu で verification から正当 drop した 'invariant' の受け皿が本 contract に収録され lineage が閉じる)・anchor 外 local 44 語 (不変)。独立再導出: 14 = yq '.glossary | length' folio-srs-verification.spec.yaml。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q 'full=8 intersect=10 exempt=1 未登録空=0' <<<"$out" \
-   && grep -q 'en 突合 132 語・anchor 外 local 44 語' <<<"$out"; then
-  ok "V0 baseline: clean corpus → exit 0 + 分類 19 本 (8/10/1) + 132/44 語 pin"
+if [[ "$rc" -eq 0 ]] && grep -q 'full=9 intersect=10 exempt=1 未登録空=0' <<<"$out" \
+   && grep -q 'en 突合 146 語・anchor 外 local 44 語' <<<"$out"; then
+  ok "V0 baseline: clean corpus → exit 0 + 分類 20 本 (9/10/1) + 146/44 語 pin"
 else bad "V0 baseline: clean corpus が期待 pin と不一致 (rc=$rc・corpus 成長なら pin を lineage 手順で更新)"; fi
 
 # --- V1 en-drift (full mode): source の en を SSoT からずらす → FAIL ---
@@ -223,8 +224,11 @@ rm -rf "$D"
 
 # V22 vocab-registry-rot: PARITY_REGISTRY 側から glossary SSoT の参照が消えると projection 検査が SSOT_SEEN から
 #     蒸発し「vocab projection 0 本」で緑になりうる。 逆向き検査 (登録済 SSoT の未検査 = FAIL) を pin する。
+#     ★mutation regex は registry の file 名形状と結合している: [a-z-] はハイフン入り contract 名
+#       (folio-srs-verification 等) も strip するための widen (folio-bxpm で [a-z] のままだと新行が mutation を
+#       生き残り SSoT 参照が消えず rot 非発火 = MK 空撃ち)。 registry へ名前形状の新しい行を足したら本 regex を同期する。
 D="$(mktemp -d)"; G2="$D/gate.sh"
-grep -v '^folio-[a-z]*\.\(spec\|principle\|vision\|glossary\)\.yaml|[a-z]*|folio-glossary\.glossary\.yaml$' "$GATE" > "$G2"
+grep -v '^folio-[a-z-]*\.\(spec\|principle\|vision\|glossary\)\.yaml|[a-z]*|folio-glossary\.glossary\.yaml$' "$GATE" > "$G2"
 chmod +x "$G2"
 cp "$SCRIPT_DIR/project-vocabulary.sh" "$D/project-vocabulary.sh"
 out="$("$G2" --contract-dir "$SRC_CONTRACT" --repo-root "$(cd "$SCRIPT_DIR/../../.." && pwd)" 2>&1)"; rc=$?

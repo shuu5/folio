@@ -57,6 +57,7 @@ RECAPTURE_REGISTRY='
 folio-rules.spec.yaml|rules.html
 folio-verification.spec.yaml|verification.html
 folio-relations.spec.yaml|relations.html
+folio-srs-verification.spec.yaml|srs-verification.html
 '
 
 declare -A R_SRC

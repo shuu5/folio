@@ -22,7 +22,7 @@ bad() { total=$((total+1)); printf '  [FAIL] %s\n' "$1"; }
 fresh() { # $1=変数名 prefix。 CD_<p>/SD_<p> に path を格納
   local d1 d2; d1="$(mktemp -d)"; d2="$(mktemp -d)"
   cp "$SRC_CONTRACT"/*.yaml "$d1"/
-  cp "$SRC_SPEC"/rules.html "$SRC_SPEC"/verification.html "$SRC_SPEC"/relations.html "$d2"/
+  cp "$SRC_SPEC"/rules.html "$SRC_SPEC"/verification.html "$SRC_SPEC"/relations.html "$SRC_SPEC"/srs-verification.html "$d2"/
   CD="$d1"; SD="$d2"
 }
 run_gate() { "$GATE" --contract-dir "$CD" --spec-dir "$SD" 2>&1; }
@@ -49,9 +49,14 @@ echo "== recapture parity gate 敵対回帰 =="
 #   div.ears-requirement-row shape の生成物 — 独立再導出は shape union grep で行う (verification =
 #   div.ears-requirement-row id 30 / rules 26 + relations 4 = details.spec-row)。details 前提の旧手順は
 #   verification に対して 0 件を返すので使わない (F6 union 拡張と同じ per-file shape 対応)。
+#   lineage: 2026-07-18 (folio-bxpm srs-verification flip) = 4 contract / 65 id (relations 4 + rules 26 +
+#   verification 30 + srs-verification 5〔REQ-VER-024/025/026/029/030〕)。 +5 = 新設 folio-srs-verification.spec.yaml
+#   ↔ srs-verification.html の登録 (RECAPTURE_REGISTRY 追加)。 srs-verification.html は flip 後 div.ears-requirement-row
+#   shape の生成物ゆえ shape union grep で再導出する。 独立再導出: 原本 anchor grep
+#   (srs-verification.html の div.ears-requirement-row id) 5 == contract yq (.requirements[].id) 5。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 3 本 / id 60 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 3 contract / 60 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 65 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 65 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---

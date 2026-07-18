@@ -104,6 +104,10 @@ clinic-appointment.glossary.yaml|intersect|clinic-appointment.glossary.yaml
 # --- folio suite (SSoT = folio-glossary.glossary.yaml。 rules/verification 2 本は全語収録の実測成立ゆえ full) ---
 folio-rules.spec.yaml|full|folio-glossary.glossary.yaml
 folio-verification.spec.yaml|full|folio-glossary.glossary.yaml
+# srs-verification は 07m 分割で verification.html から切り出された sibling spec (folio-bxpm flip)。 glossary 14 語
+# (invariant 含む = 6lsu で verification から正当 drop した語の受け皿) は全語 canonical 収録の実測成立ゆえ full
+# (rules/verification と同根拠・admin ceiling fixup 2026-07-19)。
+folio-srs-verification.spec.yaml|full|folio-glossary.glossary.yaml
 # relations は文書主題が外部標準語彙 (JSON-LD / dcterms / schema.org / PROV-O 等) ゆえ、 それら主題語は
 # folio canonical vocabulary (SSoT) ではなくページ固有語。 folio-49x (gate I major) で主題語を glossary へ収録し
 # 非エンジニアが引けるようにした結果、 SSoT 外語を含むため intersect へ (SSoT 収録の folio 語 11 は en 逐語一致を継続、
@@ -158,6 +162,7 @@ clinic-roadmap.roadmap.yaml|strict|
 clinic-appointment.glossary.yaml|strict|
 folio-rules.spec.yaml|strict|
 folio-verification.spec.yaml|strict|
+folio-srs-verification.spec.yaml|strict|
 folio-relations.spec.yaml|strict|
 folio-vision.vision.yaml|strict|
 # constitution は非エンジニア読者向けに同語をページ文脈の平易語で定義する doc (例: canonical name =
