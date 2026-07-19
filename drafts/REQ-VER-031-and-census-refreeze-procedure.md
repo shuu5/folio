@@ -28,8 +28,8 @@
   - id: REQ-VER-031
     anchor: req-ver-031
     ears_pattern: ubiquitous
-    essence: "flip 済 spec の生成物機械層 fidelity は、 canonical/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・ADR-0053)。"
-    statement: "folio verification framework は、 flip 済 spec (機械 SSoT 生成の canonical) の生成物が機械層資産を lossless に運ぶことを、 (a) 凍結 literal census (期待値を canonical/artifact/生成物から導出せず生成物 HTML を subject に突合) (b) contract の machine-block から再構成した round-trip (c) extractor 退行 (rich→plain collapse) を撃つ敵対 test の三本柱で検証する MUST。 snapshot oracle との相対 parity は flip 後 ORIG==生成物 で自己比較恒真化するため用いない (ADR-0053)。"
+    essence: "flip 済 spec の生成物 fidelity (人間層 rich + 機械層 normative) は、 canonical/artifact/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・ADR-0053)。"
+    statement: "folio verification framework は、 flip 済 spec (機械 SSoT 生成の canonical) の生成物が canonical の資産 (人間層 rich + 機械層 normative + navigable 構造) を lossless に運ぶことを、 (a) 凍結 literal census (期待値を canonical/artifact/生成物から導出せず生成物 HTML を subject に突合) (b) contract の machine-block から再構成した round-trip (c) extractor 退行 (rich→plain collapse) を撃つ敵対 test の三本柱で検証する MUST。 snapshot oracle との相対 parity は flip 後 ORIG==生成物 で自己比較恒真化するため用いない (ADR-0053)。"
 ```
 
 ★配置 block (2 分岐・**navigable id 増分が異なるので census 目標値が分岐する**・errata-1 must-3):

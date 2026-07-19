@@ -28,7 +28,9 @@
   "dc:references": [
     { "@id": "../design-intent/spec/verification.html#req-ver-031" },
     { "@id": "../design-intent/spec/constitution.html#p-13" },
-    { "@id": "../design-intent/spec/constitution.html#p-6" }
+    { "@id": "../design-intent/spec/constitution.html#p-6" },
+    { "@id": "../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html" },
+    { "@id": "../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html" }
   ]
 }
 </script>
@@ -46,7 +48,7 @@
     政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を
     (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。
     snapshot file (spec-origin/verification.origin.html) は <strong>bootstrap 記録として残置</strong>し、 どの chk も
-    その内容を消費しない (非消費) + 内容 hash pin で cell 内改変を FAIL にする。 verification 済 / rules (d7bq) /
+    その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) /
     srs-verification (bxpm) / 将来の全 flip spec に一般化する。</div>
 </header>
 
@@ -70,20 +72,20 @@
 <section id="s1-context">
   <h2>§1. Context</h2>
   <p>folio は自身の canonical spec (design-intent/spec/verification.html) を「手書き」から「機械 SSoT (contract YAML)
-    生成」へ <strong>flip</strong> した (folio-nnqh 系)。 flip は canonical HTML を破壊的に生成物へ置換する。 生成物が
+    生成」へ <strong>flip</strong> した (folio-nnqh・folio-lwhz)。 flip は canonical HTML を破壊的に生成物へ置換する。 生成物が
     canonical の機械層 (dual-audience の精密 normative・ADR-0045) を lossless に運ぶことを守るため、 verify-verification.sh
     は原本 (ORIG) を独立の第 3 者 oracle として生成物と突合する arm を持っていた。</p>
-  <p>lwhz (folio-lwhz) は、 flip 後 on-disk canonical が生成物そのものになるため ORIG 既定を「flip 前 canonical の不動
-    snapshot」(spec-origin/verification.origin.html) へ向け、 oracle が「生成物に置換されない独立第 3 者」であり続ける形で
-    自己比較恒真化を一旦封鎖した。 しかし snapshot 突合には構造的ハザードが残る:</p>
+  <p>flip 後は on-disk canonical が生成物そのものになるため、 ORIG 既定は「flip 前 canonical の不動
+    snapshot」(spec-origin/verification.origin.html) へ向けられ、 oracle が「生成物に置換されない独立第 3 者」であり続ける形で
+    自己比較恒真化は一旦封鎖された (folio-lwhz)。 しかし snapshot 突合 (= snapshot oracle の ORIG-vs-HTML 比較 arm) には構造的ハザードが残る:</p>
   <ul>
     <li><strong>自己比較恒真化の再帰</strong>: SPEC_ORIGIN_HTML=生成物 (本番自己比較) を与えると、 相対 parity
       (c_xref(ORIG) vs c_xref(HTML)) は両辺同値で <strong>任意値 PASS</strong> する。 資産を全剥奪した degraded 生成物でも
-      0==0 で [OK] を出す (lwhz H2 が実証)。</li>
+      0==0 で [OK] を出す (folio-lwhz で実証)。</li>
     <li><strong>両側同時退行の vacuous PASS</strong>: contract と生成物の rich 突合 (§4/§5) は両側が contract 由来ゆえ、
       extractor が rich()→plain() へ退行すると contract も生成物も同時に rich を失い、 contract==生成物 は成立したまま
       canonical との乖離だけが残る。</li>
-    <li><strong>contract (edit-SSoT) の進化</strong>: contract が正当に育つ (新 REQ 追加等) と snapshot は古くなる。
+    <li><strong>contract (edit-SSoT・<a href="../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a>) の進化</strong>: contract が正当に育つ (新 REQ 追加等) と snapshot は古くなる。
       snapshot を追随更新すると「flip 前の不動 oracle」という独立第 3 者性が失われ、 更新しないと乖離が gate を赤くする。</li>
   </ul>
   <p>user 裁定 (2026-07-18) = <strong>政策 A (bootstrap 退役)</strong>。 snapshot 突合は「flip 時 1 回の bootstrap 忠実性
@@ -98,10 +100,10 @@
     <p>「退役」= <strong>ORIG-vs-HTML 相対 parity の退役</strong>であって、 snapshot file の物理削除でも fail-closed branch
       の撤去でもない。 具体的には:</p>
     <ul>
-      <li>§10b の相対 parity 行 (c_xref(ORIG) vs c_xref(HTML) 等) を <strong>撤去</strong>する (flip 後 ORIG==生成物 で
+      <li>§10b の相対 parity 行 (旧称「ORACLE parity」・c_xref(ORIG) vs c_xref(HTML) 等) を <strong>撤去</strong>する (flip 後 ORIG==生成物 で
         自己比較恒真化するため)。</li>
       <li>§11 round-trip の LEFT を snapshot でなく <strong>contract の machine-block から再構成</strong>する。</li>
-      <li>原本不在 fail-closed branch (照合不能 silent skip の回帰 pin) と M15 敵対 case は <strong>存置</strong>する。
+      <li>原本不在 fail-closed branch (live gate の「ORACLE 存在 pin (bootstrap 記録)」・照合不能 silent skip の回帰 pin) と M15 敵対 case は <strong>存置</strong>する。
         ORIG は census/round-trip を <strong>消費しない</strong>が、 SPEC_ORIGIN_HTML を存在しない path へ向けて gate を
         silent skip する逃げ道は塞ぐ (存在検査のみ・内容不読)。</li>
     </ul>
@@ -109,15 +111,16 @@
 
   <section id="s2-2-census">
     <h3>§2.2 (a) frozen literal census</h3>
-    <p>期待値を canonical / artifact / 生成物から <strong>導出しない凍結 literal</strong> (spec-origin/verification.frozen-census.txt)
+    <p>期待値を canonical / artifact / 生成物から <strong>導出しない凍結 literal census</strong> (spec-origin/verification.frozen-census.txt)
       とし、 measured 側を生成物 HTML (verify の subject) へ固定する。 凍結 literal は両側 (contract / 生成物) と独立ゆえ、
-      両側同時退行 (collapse) しても frozen 31 vs 生成物 6 で FAIL する。 census 対象: navigable id 総数 + <strong>id-rename
-      SET</strong> (count 保存 substitution を凍結 SET との comm で捕捉) / a.xref / span.term / ins|del.delta + delta-id SET /
-      escape 済 literal / 人間層 generic inline (code/span の region 別 + 総和) / double-escape / jq -S PRESERVE+mask /
-      JSON-LD folio:stakeholders 型+値。</p>
+      両側同時退行 (collapse) しても frozen 31 vs 生成物 6 で FAIL する。 census 対象は navigable id 総数と <strong>id-rename
+      SET</strong> (count 保存 substitution を凍結 SET との comm で捕捉)・機械層 rich 資産 (a.xref / span.term / delta) の件数と SET・
+      escape/二重 escape 等の表現健全性に及ぶ (decision 時点の scope)。 全次元の網羅列挙は凍結 census file と
+      verify-verification.sh が保持し、 contract の成長に応じて provenance 付きで更新する (§3)。</p>
     <p><strong>数字上書き防壁</strong> (census-guard.sh): 凍結 census 値の裸の書き換え (契約変更を伴わない census bump =
       退行 launder) を fail-closed で弾く。 (1) provenance sha 整合 = census header の provenance_contract_sha256 == 現
-      contract sha256。 (2) git-diff coupling = census file が base から MODIFIED なのに contract 未変更なら FAIL。</p>
+      contract sha256。 (2) git-diff coupling = census file が base から MODIFIED なのに contract 未変更なら FAIL
+      (初回 freeze の ADDED は coupling 免除)。</p>
   </section>
 
   <section id="s2-3-roundtrip">
@@ -125,7 +128,9 @@
     <p>§11 round-trip の LEFT を snapshot でも live canonical でもなく <strong>contract.machine_preamble[] +
       sections[].machine_blocks[].html</strong> から document 順に再構成し、 RIGHT (生成物 spec-machine-*) と順序付き双方向
       diff する。 live canonical repoint は禁止 (demoted vocab の不整合 + 自己比較恒真化)。 本 arm が守るのは <strong>assembler
-      バグ</strong> (生成物が contract から乖離・silent drop / 順序入替 / cross-section 誤帰属 / 二重 escape) の検出。</p>
+      バグ</strong> (生成物が contract から乖離・silent drop / 順序入替 / cross-section 誤帰属 / 二重 escape) の検出。
+      本節は <a href="../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (機械層 round-trip)
+      の LEFT source 定義を改訂する。</p>
     <p>★(a)(b) は両側 contract 由来ゆえ両側同時退行で vacuous になりうる → 必ず (c) で塞ぐ。</p>
   </section>
 
@@ -139,32 +144,35 @@
   </section>
 
   <section id="s2-5-snapshot-fate">
-    <h3>§2.5 snapshot file の去就 (admin Leg 0 裁定 2026-07-18)</h3>
+    <h3>§2.5 snapshot file の去就 (裁定 2026-07-18)</h3>
     <p>spec-origin/verification.origin.html は <strong>残置</strong> (撤去しない・git-tracked・bootstrap 記録)。 どの chk も
-      その内容を消費しない (<strong>非消費</strong>) + selftest で内容 sha256 を pin し cell 内改変を FAIL にする。
-      provenance: snapshot = <code>git show c705c75:design-intent/spec/verification.html</code> の dl 1.1.0→1.2.0 heal
+      その内容を消費しない (<strong>非消費</strong>)。 検査は存在 pin のみ fail-closed で行い、 内容の完全性は git 管理と review が担う。
+      provenance: snapshot = <code>git show c705c75:design-intent/spec/verification.html</code> の版番号 (dl 内 dd) 1.1.0→1.2.0 置換 heal
       (land commit 83e07b6 = folio-lwhz)。</p>
   </section>
 
   <section id="s2-6-general">
     <h3>§2.6 全 flip spec への一般化</h3>
-    <p>政策 A は verification (本 cell 済) / rules (d7bq) / srs-verification (bxpm) / 将来の全 flip spec に一般化する。
-      各 spec の census/round-trip/collapse arm は同型 (frozen literal + contract round-trip + extractor-collapse)。
-      跨 cell 順序 (7n17 政策供給 → d7bq/bxpm 消費) と各 spec の凍結定数は admin 領分。</p>
+    <p>政策 A は verification (適用済) / rules (folio-d7bq) / srs-verification (folio-bxpm) / 将来の全 flip spec に一般化する。
+      各 spec の census/round-trip/collapse arm は同型 (frozen literal + contract round-trip + extractor-collapse) で、
+      凍結定数 (census) は spec ごとに独立に freeze する。</p>
   </section>
 </section>
 
 <section id="s3-consequences">
   <h2>§3. Consequences</h2>
   <ul>
-    <li><strong>+</strong> 自己比較恒真化 (lwhz H2) の構造的再発を封鎖 (frozen literal は ORIG に依存しない)。</li>
+    <li><strong>+</strong> 自己比較恒真化 (folio-lwhz で実証) の構造的再発を封鎖 (frozen literal census は ORIG に依存しない)。</li>
     <li><strong>+</strong> 両側同時退行 (extractor collapse) を独立 anchor + 敵対 test で捕捉。</li>
     <li><strong>+</strong> contract (edit-SSoT) が進化しても oracle の独立第 3 者性ジレンマが消える (snapshot 追随不要)。</li>
-    <li><strong>−</strong> 凍結 literal の保守コスト: contract が正当に育つ (新 REQ 等) と census 定数を provenance 付きで
+    <li><strong>−</strong> 凍結 literal census の保守コスト: contract が正当に育つ (新 REQ 等) と census 定数を provenance 付きで
       更新する必要がある (census-guard が裸の更新を弾く = 意図的更新を強制)。</li>
     <li><strong>−</strong> census expected と canonical の乖離は「意図的更新漏れ」として FAIL する (fail-closed・望ましい)。</li>
-    <li><strong>実装主体分離</strong>: literal census 更新と extractor-collapse baseline を同一 worker が両方 self-certify
-      しない (CODEOWNERS/branch-protection = reviewer≠committer は Leg B・forge 設定)。</li>
+    <li><strong>常設 enforcement</strong>: 三本柱の敵対 suite (COLLAPSE / M-SELFCMP / F19 census 群) と数字上書き防壁
+      (census-guard) は CI の blocking gate として常設実走される (drift gate は fresh 再生成も同時 collapse するため
+      両側同時退行を構造的に捕捉できず、 代替にならない)。</li>
+    <li><strong>実装主体分離</strong>: literal census 更新と extractor-collapse baseline を同一の主体が両方 self-certify
+      しない (reviewer≠committer の分離は CODEOWNERS/branch-protection 等の forge 設定で担保する)。</li>
   </ul>
 </section>
 
@@ -184,12 +192,15 @@
   <h2>§5. Trace</h2>
   <ul>
     <li>normative: <a href="../design-intent/spec/verification.html#req-ver-031">REQ-VER-031</a> (verification.html contract に
-      greenfield 新設・census/round-trip/collapse の done-condition)。</li>
+      greenfield 新設・census/round-trip/collapse の done-condition)。 REQ-VER-* は verification 系 spec 横断の共有連番で
+      (024-030 は srs-verification.html / rules.html が所有・027/028 は退役欠番)、 verification.html 局所の 023 の次が 031 になる。</li>
     <li>実装: verify-verification.sh (§10b census / §11 round-trip) / test-adversarial-verification.sh (F19 per-shape /
       M-SELFCMP / COLLAPSE) / census-guard.sh / spec-origin/verification.frozen-census.txt。</li>
     <li>前提: <a href="../design-intent/spec/constitution.html#p-13">P-13 (Verification &amp; Traceability)</a> /
-      <a href="../design-intent/spec/constitution.html#p-6">P-6 (link-integrity)</a> / ADR-0045 (dual-audience) /
-      folio-lwhz (H2 snapshot oracle 化)。</li>
+      <a href="../design-intent/spec/constitution.html#p-6">P-6 (link-integrity)</a> /
+      <a href="../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (dual-audience round-trip) /
+      <a href="../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> (edit-SSoT / canonical 語彙 pin) /
+      folio-lwhz (snapshot oracle 化)。</li>
     <li>起票: folio-7n17 (政策 A ADR + arm 改修)。 user 起票承認済 2026-07-18。</li>
   </ul>
 </section>
