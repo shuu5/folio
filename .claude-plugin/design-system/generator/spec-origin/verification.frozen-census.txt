@@ -1,0 +1,99 @@
+# folio-verification frozen census — policy A (folio-7n17 / ADR-0053)
+# ============================================================================
+# 政策 A (user 裁定 2026-07-18 = bootstrap 退役): snapshot oracle は「flip 時 1 回の
+# bootstrap 忠実性証明」に縮退し、恒久防御は (a) literal census (本 file) + (b) contract
+# 対 machine-block round-trip + (c) extractor-collapse 敵対 test が代替する。
+#
+# ★本 file の値は canonical / artifact / 生成物から【導出しない】凍結 literal (frozen literal)。
+#   measured 側 (生成物 HTML = verify の subject) とのみ突合する。両側 contract 由来の相対 parity
+#   (flip 後 ORIG==生成物 で自己比較恒真化) を撤去した後の唯一の独立 anchor。
+#
+# provenance:
+#   canonical = design-intent/spec/verification.html @ base 2f53388b (srpz land 済)
+#   snapshot(bootstrap) = spec-origin/verification.origin.html @ 83e07b6 (lwhz land)
+#   provenance_contract_sha256 = 1703ce44db68fbf04ec07f77d00a032fd37d588c705816709956b1a37ed1dd43
+#     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
+#      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
+# ============================================================================
+
+# ---- scalars (frozen literal・subject = 生成物 HTML) ----
+FZ_ID_COUNT=55
+FZ_XREF=31
+FZ_TERM=27
+FZ_DELTA=5
+FZ_ESC_XREF=3
+FZ_CODE_TABLE_CELL=41
+FZ_CODE_CAPTION=2
+FZ_CODE_REST=79
+FZ_CODE_TOTAL=122
+FZ_SPAN_TABLE_CELL=58
+FZ_SPAN_CAPTION=1
+FZ_ESC_CODE=0
+FZ_ESC_SPAN=2
+FZ_JQS_TOTAL=2
+FZ_JQS_MASKED=2
+# JSON-LD folio:stakeholders の型+値 (ld_stake 出力形式: 型\t値・tab 区切り)。source せず fz_ld() で読む。
+FZ_STAKEHOLDERS_LD=list	["Developer", "AI Agent", "External Reviewer"]
+
+#BEGIN_ID_SET
+req-nav-001
+req-nav-002
+req-nav-003
+req-nav-004
+req-nav-005
+req-nav-006
+req-nav-007
+req-ver-001
+req-ver-002
+req-ver-003
+req-ver-004
+req-ver-005
+req-ver-006
+req-ver-007
+req-ver-008
+req-ver-009
+req-ver-010
+req-ver-011
+req-ver-012
+req-ver-013
+req-ver-014
+req-ver-015
+req-ver-016
+req-ver-017
+req-ver-018
+req-ver-019
+req-ver-020
+req-ver-021
+req-ver-022
+req-ver-023
+s0-reader-guide
+s1-1-concepts
+s1-2-scope-boundary
+s1-contract
+s2-1-targets
+s2-2-out-of-scope
+s2-scope
+s3-1-scenario-format
+s3-2-yaml-schema
+s3-3-assertion
+s3-4-baseline
+s3-5-ears-mapping
+s3-6-verification-specific
+s3-7-coverage-rtm
+s3-8-nav-req
+s3-9-srs-done-condition
+s3-ears
+s4-1-3step
+s4-2-completion-vs-prototype
+s4-implementation
+s5-1-gaps
+s5-2-pending-adrs
+s5-3-related-adrs
+s5-open-questions
+s6-references
+#END_ID_SET
+
+#BEGIN_DELTA_SET
+D-2026-05-27-001
+D-2026-05-27-002
+#END_DELTA_SET

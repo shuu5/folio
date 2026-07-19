@@ -382,138 +382,60 @@ chk "raw-emit: 機械層に live <a href 生存"          "$([[ "$(printf '%s' "
 chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%s' "$mfold_region" | grep -c '<span class="term"')" -gt 0 ]] && echo yes || echo no)" "yes"
 
 # ============================================================================
-# 11. ★原本↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
-#     原本 (design-intent/spec/verification.html) を *直 grep して生成 path から独立に* 再抽出し、 生成物の機械層と
-#     ★tr0: p/aside/ul に加え div.demoted (ADR-0040 機械層降格分) も balanced div で inner 一括 capture し双方向照合する。
-#     双方向 (完全性 = 原本の全機械層が生成物に / no-fabrication = 生成物の機械層が全て原本に) を照合する。
+# 11. ★contract↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
+#     ★政策 A (folio-7n17 / ADR-0053): LEFT を snapshot でも live canonical でもなく
+#     ★contract.machine_preamble[] + sections[].machine_blocks[] (25 block) から再構成する。
+#     旧版は原本 (snapshot ORIG) を直 grep して LEFT にしていたが、 flip 後 ORIG==生成物 で自己比較恒真化する
+#     ため、 政策 A では LEFT を edit-SSoT (contract) 由来へ re-home した。 RIGHT は生成物の機械層。
+#     ★tr0: p/aside/ul/li に加え div.demoted (ADR-0040 機械層降格分) と dl も対象 (contract type / 生成物 component 対称)。
+#     双方向 (完全性 = contract の全機械層が生成物に / no-fabrication = 生成物の機械層が全て contract に) を照合する。
 #     ★順序付き (集合でない): 両側を sort せず document 順の配列のまま diff する (人間層 §4/§5 と対称)。
-#       - 原本順保存 (契約 description 受入): 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
+#       - 順序保存: 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
 #       - section 帰属: machine_blocks[] は section ごとに連続して emit される (build()/emit_section) ため、
-#         ある block を別 section の fold へ移すと document 順が原本順とずれる → cross-section 誤帰属も検出。
-#       (旧版は両側 LC_ALL=C sort した集合一致で、 順序入替・cross-section 移動を素通していた=major fix。)
-#     ★fail-open しない: 機械層を持つ contract で原本不在なら FAIL (照合不能を素通さない)。
-#     二重 escape (生 < → &lt;) は原本テキストと差が出るため本照合が確定検出する (§10 raw-emit より厳密)。
+#         ある block を別 section の fold へ移すと document 順が contract 順とずれる → cross-section 誤帰属も検出。
+#     ★本 arm が守るのは assembler バグ (生成物が contract から乖離): silent drop / 順序入替 / cross-section 誤帰属 /
+#       二重 escape。 ★両側 contract 由来ゆえ ★両側同時退行 (extractor collapse) では vacuous PASS しうる →
+#       §10b 凍結 census + extractor-collapse 敵対 test が塞ぐ (mandate: (a)(b) は両側 contract 由来ゆえ (c) で塞ぐ)。
 # ============================================================================
 NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
-# ★H2 (folio-lwhz Leg B・admin 批准 2026-07-17): flip 後の on-disk canonical は fix 済み生成物のため
-#   ORIG 既定を「flip 前 canonical + H1 heal (dl 1.1.0→1.2.0 の 2 箇所) の不動 snapshot」へ向ける。
-#   oracle は「生成物に置換されない独立第 3 者」であり続ける (自己比較恒真化の構造封鎖)。
-#   snapshot の provenance = `git show c705c75:design-intent/spec/verification.html | sed 's|<dd>1\.1\.0</dd>|<dd>1.2.0</dd>|g'`
-#   (land commit の記録参照)。★契約 (edit-SSoT) が将来進化する場合、machine-block round-trip arm は
-#   bootstrap 忠実性 (snapshot 突合) の意味を持ち続けるため snapshot は更新しない — 進化後の扱い
-#   (arm の意味再定義 or 退役) は spec-sync 起票で裁定する (folio-srpz 系)。
+# ★ORIG (snapshot) = 政策 A で census / round-trip の【非消費】へ転換 (bootstrap 記録として残置)。 §10b / §11 の
+#   存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15) のみが ORIG を参照する (内容不読)。 snapshot の
+#   provenance (folio-lwhz land) = `git show c705c75:design-intent/spec/verification.html | sed 's|<dd>1\.1\.0</dd>|<dd>1.2.0</dd>|g'`。
+#   snapshot は cell 内改変禁止 (selftest が sha256 pin + 非消費 assert で保護・ADR-0053 に去就を記載)。
 ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/verification.origin.html}"
 
 # ============================================================================
-# 10b. ★ORACLE 照合 arm (folio-aduv 0-a/0-d/0-e の恒久 gate 化)。
-#   ★なぜ contract 突合と別に要るか: §4/§5 の rich 突合は全て「contract vs 生成物」であり、 ★両側が同時に
-#   退行すると vacuous PASS する (例: extractor が再び plain() へ戻ると contract も生成物も同時に rich を失い、
-#   contract==生成物 は成立したまま canonical との乖離だけが残る = mandate HIGH-4 が名指しする機序)。
-#   ゆえ ★canonical (ORACLE) を独立の第 3 者として直接再抽出し、 生成物と突合する。
-#   ここが守るのは lossless flip の前提そのもの: flip 後に生成物が canonical を置換するため、 canonical に
-#   在って生成物に無い資産は ★そのまま corpus からの永久喪失になる。
-# ★automark 非依存: staging (assemble のみ) では automark が発火しない (folio fix 経路のみ) が、 contract は
-#   canonical の term を逐語で運ぶため occurrence は canonical と一致する。 --artifact (fix 後) でも automark は
-#   canonical と同じ不動点へ収束する。 両モードで同一期待ゆえ mode 分岐を持たない (分岐は緩和の温床)。
-if [[ ! -f "$ORIG" ]]; then
-  printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (ORACLE 照合不能・fail-closed)\n' "ORACLE 照合 arm" "$ORIG"; fail=1
-else
-  # ★navigable id 抽出 = 実タグの id 属性のみ。 naive grep 'id="' は data-req-id / data-delta-id 等の data-* を
-  #   ★部分文字列で拾い両側を汚染する (canonical を 55→60 と誤読する) ゆえ タグ文脈の id= に限定する。
-  o_ids="$(mktemp)"; g_ids="$(mktemp)"
-  ids_of_html() { perl -CSD -0777 -ne '
-      while (/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g) { my $at=$2; while ($at =~ /(?:^|\s)id="([^"]*)"/g) { print "$1\n"; } }
-    ' "$1" | LC_ALL=C sort -u; }
-  ids_of_html "$ORIG" > "$o_ids"; ids_of_html "$HTML" > "$g_ids"
-  # ★D-* id の扱いを ★silent drop から ★fail-closed 検査へ転換する (folio-eccf S6)。
-  #   ★旧形の穴 (narrow fail-open): 抽出器が `| grep -v '^D-'` で D-* id を ★両側から黙って落としていた。
-  #   意図は「delta 印 (data-delta-id) が anchor 集合へ混入したら弾く」防御だったが、 filter は ★混入を報告せず
-  #   捨てる ゆえ、 将来 id="D-…" が ★正当な navigable target として導入されると:
-  #     (a) 真の総数 56 を ★55 と報告し literal pin (== 55) は ★PASS のまま、
-  #     (b) その id が canonical に在り生成物に無くても ★両側から消えるので欠落 assert も ★素通りする
-  #   = その id クラスだけ ★無保護になる (narrow fail-open)。 ★実測: 現 corpus の D-* id は canonical/生成物とも 0 件
-  #   ゆえ filter は redundant であり、 撤去しても現 pin (55) は不変 = ★挙動を変えずに穴だけを閉じられる。
-  #   ★転換後の規律: 落とさず ★数え、 D-* が現れたら ★理由を問わず FAIL する。 delta の混入なら退行として正しく赤くなり、
-  #   正当な D-* を新設したいなら ★本 assert を意図的に更新する (silent drop 禁止 = 緩和は常に明示的な行為)。
-  chk "ORACLE navigable id: canonical の D-* id == 0 (delta 印の anchor 混入を silent drop でなく fail-closed に)" "0" \
-    "$(grep -c '^D-' "$o_ids" || true)"
-  chk "ORACLE navigable id: 生成物の D-* id == 0 (同上・両側で撃つ)" "0" \
-    "$(grep -c '^D-' "$g_ids" || true)"
-  chk "ORACLE navigable id: canonical 総数 == 55" "55" "$(grep -c . "$o_ids")"
-  chk_empty "ORACLE navigable id: 生成物に欠落 0 (corpus inbound の解決先)" \
-    "$(LC_ALL=C comm -23 "$o_ids" "$g_ids" | tr '\n' ' ')"
-  chk_empty "ORACLE navigable id: 生成物に余剰 0 (canonical に無い id の捏造禁止)" \
-    "$(LC_ALL=C comm -13 "$o_ids" "$g_ids" | tr '\n' ' ')"
-  rm -f "$o_ids" "$g_ids"
-  # ★rich 資産 3 クラスの occurrence-parity (単一固定 selector)。
-  #   ★xref は live <a class="…xref…"> のみ数える: canonical の素な grep 'class="xref"' は 34 で、 差の 3 件は
-  #   REQ-VER-017/018 が xref markup 自体を *語る* 散文中の escape 済 literal (<code>&lt;a class="xref"…</code>)。
-  #   それらは live link でなく、 live 化は過剰 linkify ゆえ live 要素だけを基底に固定する。
-  c_xref() { perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /(?:^|\s)class="(?:[^"]*\s)?xref(?:\s[^"]*)?"/; } print $n;' "$1"; }
-  c_term() { perl -CSD -0777 -ne 'my $n=()=(/<span class="term"[^>]*\sdata-term="/g); print $n;' "$1"; }
-  c_delta(){ perl -CSD -0777 -ne 'my $n=()=(/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="/g); print $n;' "$1"; }
-  # ★★canonical 側の ★絶対値 pin (post-flip の ★自己比較恒真化を構造的に封鎖する)。
-  #   ★機序: ORIG = ${SPEC_ORIGIN_HTML:-…/design-intent/spec/verification.html} は flip (= canonical HTML を
-  #   ★破壊的に置換する操作・switchover-harness.sh 冒頭の定義) 後に ★生成物そのもの を指す。 その瞬間
-  #   c_xref(ORIG) vs c_xref(HTML) は ★自己比較となり ★任意の値で PASS する。 すなわち 10b が
-  #   「contract vs 生成物は両側同時退行で vacuous PASS するゆえ canonical を独立の第 3 者として突合する」と
-  #   宣言した当の性質が、 ★oracle 側にも再帰する。
-  #   ★実証: 生成物から a.xref 31 個 + span.term 27 個を ★全剥奪した degraded.html を SPEC_ORIGIN_HTML に与えると
-  #     [OK] ORACLE rich parity: a.xref occurrence == canonical     0
-  #     [OK] ORACLE rich parity: span.term occurrence == canonical  0
-  #   と ★資産の全損が値 0 で [OK] を出した。
-  #   ★非対称の解消: navigable id arm は `chk "… canonical 総数 == 55" "55"` の literal を持つため同条件でも
-  #   生存する。 rich 3 クラス / jq -S / stakeholders は両辺とも file 由来で literal を持たなかった。 ゆえ
-  #   ★相対 parity とは独立に canonical 側の実数を literal で pin し、 ORIG が退行した瞬間に FAIL させる
-  #   (= id arm が既に採っている手法との ★対称回復)。
-  #   ★より強い代替 (flip 前 canonical を generator 配下へ snapshot し SPEC_ORIGIN_HTML の既定をその不動
-  #   snapshot へ向ける = oracle が「生成物に置換されない独立第 3 者」であり続ける形) は lwhz との職掌線引きを
-  #   含むため ★admin 裁定待ち。 本 pin は literal のみで閉じる最小形。
-  chk "ORACLE rich parity: canonical a.xref 実数 == 31 (自己比較恒真化の封鎖)" "31" "$(c_xref "$ORIG")"
-  chk "ORACLE rich parity: canonical span.term 実数 == 27 (同上)"              "27" "$(c_term "$ORIG")"
-  chk "ORACLE rich parity: canonical ins|del.delta 実数 == 5 (同上)"           "5"  "$(c_delta "$ORIG")"
-  chk "ORACLE rich parity: a.xref occurrence == canonical"        "$(c_xref "$ORIG")"  "$(c_xref "$HTML")"
-  chk "ORACLE rich parity: span.term occurrence == canonical"     "$(c_term "$ORIG")"  "$(c_term "$HTML")"
-  chk "ORACLE rich parity: ins|del.delta occurrence == canonical" "$(c_delta "$ORIG")" "$(c_delta "$HTML")"
-  chk "ORACLE rich parity: delta-id 集合 == canonical" \
-    "$(perl -CSD -0777 -ne 'while (/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="([^"]*)"/g){ print "$1\n"; }' "$ORIG" | LC_ALL=C sort -u)" \
-    "$(perl -CSD -0777 -ne 'while (/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="([^"]*)"/g){ print "$1\n"; }' "$HTML" | LC_ALL=C sort -u)"
-  # ★escape 済 literal を live 化していない (過剰 linkify 禁止)。 上の live 31 と両側から挟んで基底を pin する。
-  chk "ORACLE: canonical escape 済 literal 'a class=\"xref\"' 実数 == 3 (自己比較恒真化の封鎖)" "3" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$ORIG")"
-  chk "ORACLE: escape 済 literal 'a class=\"xref\"' 出現 == canonical" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$ORIG")" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$HTML")"
-  # ★★generic inline tag (code/span) の ★人間層 occurrence-parity + double-escape 封鎖 (folio-eccf S2)。
-  #   ★何が未被覆だったか: 従来 double-escape を撃っていたのは xref/term/delta の 3 クラスと jq -S の 2 箇所だけで、
-  #   ★table cell 内の generic <code> 41 個は ★どの assert も数えていなかった (2mla の「literal escape 0」宣言の部分実現)。
-  #   raw emit 経路で <code> が二重 escape されると 可視 prose に &lt;code&gt; が露出するが、 契約突合 (§4/§5) は
-  #   両側が contract 由来ゆえ ★同時退行で緑になり、 §11 round-trip は ★機械層のみを見る。 ゆえ ORACLE 直突合で撃つ。
-  #
-  # ★計数基底の固定 (ここを外すと恒真化する):
-  #   (a) ★全 BODY 素 grep は使わない: canonical の live <code> 総数は 403 で、 その内訳は 人間層 122 +
-  #       ★機械層 (data-audience="machine" の subtree) 281 (= EARS normative 254 + 機械層 block 27) である。
-  #       総数 403 での parity は ★層をまたいだ相殺 (人間層が 1 減り機械層が 1 増える) を見逃す ★誤基底になる。
-  #   (b) ★selector は「data-audience="machine" の subtree の ★外」に単一固定する。 canonical と生成物は
-  #       機械層の marking 語彙が ★異なる (canonical=class="spec-normative"/"demoted" 等・生成物=data-component=
-  #       "spec-machine-*") ため、 その ★語彙を列挙する selector は two-vocabulary な partial enumeration になる。
-  #       data-audience は ★両者で同一の canonical marker (ADR-0045) ゆえ、 これだけを基底にする。
-  #   (c) ★実 HTML parser で ancestor を辿る (naive な tag-strip regex は subtree 境界を読めず parser-differential
-  #       を生む)。 python3 は本 arm の ld_stake が既に使用しており新規依存ではない。
-  #   (d) ★region 別に分けて数え ★総和も撃つ: 人間層 122 の中でも table-cell 41 / caption 2 / rest 79 と
-  #       ★内訳で pin する (総数だけでは region 間の相殺が隠れる = S5 と同型の規律)。
-  #   ★実測 (canonical / 生成物 が ★全 region で一致): code = table-cell 41 + caption 2 + rest 79 = 人間層 122。
-  #
-  # ★<span> は ★table cell / caption だけを基底にする (人間層 rest は基底にしない):
-  #   実測 = table-cell 58/58・caption 1/1 は canonical と生成物で ★一致するが、 人間層 rest は canonical 101 に対し
-  #   生成物 291 で ★正当に乖離する (生成物は fold の mf-kicker/mf-label/mf-count 等 ★chrome span を持つため)。
-  #   ゆえ rest まで parity を課すのは ★偽 assert (常に赤) になる。 契約由来の逐語 raw emit だけが入る
-  #   table cell / caption に基底を絞れば span も parity で pin できる。
-  #
-  # ★literal pin を必ず対で置く (相対 parity のみは flip 後 ORIG==生成物 の ★自己比較で恒真化する。 上の
-  #   xref/term/delta と同型の規律)。
-  h_inline() { # $1=file $2=tag $3=region(table-cell|caption|rest|human) → 人間層の live 出現数
-    python3 - "$1" "$2" "$3" <<'PYEOF'
+# 10b. ★literal census arm (folio-7n17 政策 A・snapshot oracle bootstrap 退役後の恒久防御 (a))。
+#   ★政策 A への転換 (user 裁定 2026-07-18 / ADR-0053): 旧 arm は ORIG (=snapshot 既定・flip 後 生成物) と
+#     HTML の ★相対 parity (c_xref(ORIG) vs c_xref(HTML)) を撃っていたが、 flip 後 ORIG==生成物 で ★自己比較
+#     恒真化する (verify-verification.sh 旧:461-464 実証)。 政策 A はこれを撤去し、 expected を canonical /
+#     artifact / 生成物から【導出しない】★凍結 literal (spec-origin/verification.frozen-census.txt) とし、
+#     measured 側を ★生成物 HTML (verify の subject) へ固定する。 ORIG は census を【消費しない】 (下記存在 pin のみ)。
+#   ★なぜ独立 anchor が要るか: §4/§5 の rich 突合は全て「contract vs 生成物」で ★両側同時退行で vacuous PASS
+#     する (extractor が plain() へ戻ると contract も生成物も同時に rich を失う = mandate HIGH-4)。 凍結 literal
+#     census は両側と独立ゆえ、 collapse しても frozen 31 vs 生成物 0 で FAIL する (test-adversarial の collapse
+#     test / 本番自己比較 MK が red→green で実証)。
+#   ★ORIG 存在 fail-closed pin は【存置】(照合不能 silent skip の回帰 pin・M15)。 snapshot file は bootstrap
+#     記録として残置し census は消費しない (非消費 = selftest の非消費 assert + hash pin が cell 内改変を FAIL に)。
+# ============================================================================
+# 凍結 census 読み取り (frozen literal SSoT・source せず grep で読む = tab / bracket / quote 安全)。
+FROZEN_CENSUS="$SCRIPT_DIR/spec-origin/verification.frozen-census.txt"
+[[ -f "$FROZEN_CENSUS" ]] || { echo "verify-spec: ★凍結 census 不在 (政策A anchor 喪失・fail-closed): $FROZEN_CENSUS" >&2; exit 2; }
+fz()     { grep -m1 "^$1=" "$FROZEN_CENSUS" | sed "s/^$1=//"; }                                  # scalar
+fz_ld()  { grep -m1 "^FZ_STAKEHOLDERS_LD=" "$FROZEN_CENSUS" | sed 's/^FZ_STAKEHOLDERS_LD=//'; }  # 型\t値 (tab 保持)
+fz_set() { sed -n "/#BEGIN_$1/,/#END_$1/p" "$FROZEN_CENSUS" | grep -vE '^#'; }                    # id / delta set
+
+# 抽出 helper (census subject = 生成物 HTML / ORIG は非消費)。
+ids_of_html() { perl -CSD -0777 -ne '
+    while (/<([a-zA-Z][a-zA-Z0-9]*)\b([^>]*)>/g) { my $at=$2; while ($at =~ /(?:^|\s)id="([^"]*)"/g) { print "$1\n"; } }
+  ' "$1" | LC_ALL=C sort -u; }
+# ★xref は live <a class="…xref…"> のみ数える (escape 済 literal <code>&lt;a class="xref"…</code> は live link でない)。
+c_xref() { perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /(?:^|\s)class="(?:[^"]*\s)?xref(?:\s[^"]*)?"/; } print $n;' "$1"; }
+c_term() { perl -CSD -0777 -ne 'my $n=()=(/<span class="term"[^>]*\sdata-term="/g); print $n;' "$1"; }
+c_delta(){ perl -CSD -0777 -ne 'my $n=()=(/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="/g); print $n;' "$1"; }
+# generic inline (code/span) の ★人間層 (data-audience="machine" subtree の外) occurrence を region 別に数える。
+#   実 HTML parser で ancestor を辿る (naive tag-strip regex は subtree 境界を読めず parser-differential を生む)。
+h_inline() { python3 - "$1" "$2" "$3" <<'PYEOF'
 from html.parser import HTMLParser
 import sys
 VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','embed','param','track'}
@@ -524,7 +446,6 @@ class W(HTMLParser):
     def handle_starttag(self, tag, attrs):
         d=dict(attrs)
         if tag==self.target:
-            # 機械層 (data-audience="machine") の subtree は人間層でない = 計数基底の外。
             if not any(a.get('data-audience')=='machine' for _,a in self.stack):
                 r='rest'
                 for t,a in reversed(self.stack):
@@ -541,146 +462,129 @@ body=src[src.index('<body'):]
 w=W(sys.argv[2], sys.argv[3]); w.feed(body)
 print(w.n)
 PYEOF
-  }
-  # (1) canonical 絶対値 literal pin (自己比較恒真化の封鎖) + (2) 生成物 == canonical (parity)。
-  chk "ORACLE generic inline: canonical 人間層 <code> table-cell 実数 == 41 (自己比較恒真化の封鎖)" "41" "$(h_inline "$ORIG" code table-cell)"
-  chk "ORACLE generic inline: canonical 人間層 <code> caption 実数 == 2 (同上)"                      "2"  "$(h_inline "$ORIG" code caption)"
-  chk "ORACLE generic inline: canonical 人間層 <code> rest 実数 == 79 (同上)"                        "79" "$(h_inline "$ORIG" code rest)"
-  chk "ORACLE generic inline: canonical 人間層 <code> 総数 == 122 (region 総和・同上)"               "122" "$(h_inline "$ORIG" code human)"
-  chk "ORACLE generic inline: <code> table-cell occurrence == canonical (table cell 41 の被覆)" \
-    "$(h_inline "$ORIG" code table-cell)" "$(h_inline "$HTML" code table-cell)"
-  chk "ORACLE generic inline: <code> caption occurrence == canonical" \
-    "$(h_inline "$ORIG" code caption)" "$(h_inline "$HTML" code caption)"
-  chk "ORACLE generic inline: <code> rest occurrence == canonical" \
-    "$(h_inline "$ORIG" code rest)" "$(h_inline "$HTML" code rest)"
-  chk "ORACLE generic inline: <code> 人間層 総数 == canonical (region 相殺の封鎖)" \
-    "$(h_inline "$ORIG" code human)" "$(h_inline "$HTML" code human)"
-  chk "ORACLE generic inline: canonical 人間層 <span> table-cell 実数 == 58 (自己比較恒真化の封鎖)" "58" "$(h_inline "$ORIG" span table-cell)"
-  chk "ORACLE generic inline: canonical 人間層 <span> caption 実数 == 1 (同上)"                      "1"  "$(h_inline "$ORIG" span caption)"
-  chk "ORACLE generic inline: <span> table-cell occurrence == canonical" \
-    "$(h_inline "$ORIG" span table-cell)" "$(h_inline "$HTML" span table-cell)"
-  chk "ORACLE generic inline: <span> caption occurrence == canonical" \
-    "$(h_inline "$ORIG" span caption)" "$(h_inline "$HTML" span caption)"
-  # (3) ★double-escape の直接検出: 二重 escape されると live 数が減ると同時に &lt;code / &lt;span が ★増える。
-  #   ★両側から挟む: live parity だけだと「元から無い」形の退行 (削除) と区別できず、 literal 数だけだと
-  #   「escape 済 literal が正当に在る」現実 (canonical の &lt;span 2 件 = 散文が span markup を *語る* 文) と衝突する。
-  #   ★canonical 実測: &lt;code = 0 件 / &lt;span = 2 件。 「0」を想定で焼かず ★実測して pin する (2 は正当な散文 literal)。
-  chk "ORACLE double-escape: canonical &lt;code literal 実数 == 0 (自己比較恒真化の封鎖)" "0" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$ORIG")"
-  chk "ORACLE double-escape: canonical &lt;span literal 実数 == 2 (散文中の正当 literal・同上)" "2" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$ORIG")"
-  chk "ORACLE double-escape: &lt;code literal 出現 == canonical (generic <code> の二重 escape 封鎖)" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$ORIG")" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$HTML")"
-  chk "ORACLE double-escape: &lt;span literal 出現 == canonical (過剰 escape / 過剰 live 化の両方向を封鎖)" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$ORIG")" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$HTML")"
-  # ★jq -S は ★PRESERVE + mask (0-e)。 「削除して how-outside を緑にする」抜け道を封じるため、 how-outside 検査とは
-  #   ★独立に出現数 parity を撃つ (how-outside は anchor 修正等でも緑化しうるので、 緑だけでは何も証明しない)。
-  chk "ORACLE: canonical 'jq -S' 総出現 == 2 (自己比較恒真化の封鎖)" "2" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$ORIG")"
-  chk "ORACLE: canonical masked 'jq -S' == 2 (同上)" "2" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$ORIG")"
-  chk "ORACLE: 'jq -S' 総出現 == canonical (削除での通過を禁止)" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$ORIG")" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$HTML")"
-  chk "ORACLE: 'jq -S' は全て <code> masked == canonical (P-11 primitive 露出なし)" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$ORIG")" \
-    "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$HTML")"
-  # ★JSON-LD folio:stakeholders の ★型 + 値 が canonical と一致 (folio-aduv 0-c の型退行封鎖)。
-  #   ★どの既存 gate も捕捉しない穴だった (実測): CORE (lib/common.sh core_emit_graph_head) は contract の
-  #   .meta.stakeholders を JSON-LD へ *そのまま* 転記するため、 契約が scalar string だと canonical の array が
-  #   string へ ★型退行する。 しかも jsonld-lint は folio:stakeholders を「形が違うので自動除外」と明記し型検査せず、
-  #   inventory は非 array を捨てて meta tag split fallback で同じ配列を作り直すため ★drift を隠蔽し、
-  #   §11 の前方 edge 突合も folio:stakeholders を対象外にしている。 ゆえ ORACLE 直突合でしか撃てない。
-  #   flip 後にこの JSON-LD が canonical を置換すると lossless flip でなく graph head の型退行になる。
-  ld_stake() { perl -CSD -0777 -ne 'my ($j) = /<script type="application\/ld\+json">(.*?)<\/script>/s; print $j if defined $j;' "$1" \
-    | python3 -c 'import json,sys
+}
+# JSON-LD folio:stakeholders の型+値 (型\t値・生成物 HTML から抽出)。
+ld_stake() { perl -CSD -0777 -ne 'my ($j) = /<script type="application\/ld\+json">(.*?)<\/script>/s; print $j if defined $j;' "$1" \
+  | python3 -c 'import json,sys
 try: d = json.load(sys.stdin)
 except Exception: sys.exit(0)
 v = d.get("folio:stakeholders")
 print(type(v).__name__ + "\t" + json.dumps(v, ensure_ascii=False, sort_keys=True))'; }
-  # ★canonical 側の絶対値 pin (同じく post-flip の自己比較恒真化の封鎖。 型 list + 値の逐字 literal)。
-  chk "ORACLE JSON-LD: canonical folio:stakeholders の型+値 実数 pin (自己比較恒真化の封鎖)" \
-    "$(printf 'list\t["Developer", "AI Agent", "External Reviewer"]')" "$(ld_stake "$ORIG")"
-  chk "ORACLE JSON-LD: folio:stakeholders の型+値 == canonical (array 退行封鎖)" \
-    "$(ld_stake "$ORIG")" "$(ld_stake "$HTML")"
+
+# ★ORIG 存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15・非消費)。 snapshot は census を消費しないが、
+#   SPEC_ORIGIN_HTML を存在しない path へ向けて gate を silent skip する逃げ道は塞ぐ (存在検査のみ・内容不読)。
+if [[ ! -f "$ORIG" ]]; then
+  printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "ORACLE 存在 pin (bootstrap 記録)" "$ORIG"; fail=1
 fi
 
+# --- (a) literal census: expected = 凍結 literal / subject = 生成物 HTML (ORIG 非消費) ---
+# navigable id census (count + rename SET・deliverable 5)。
+g_ids="$(mktemp)"; ids_of_html "$HTML" > "$g_ids"
+# D-* (delta 印) は navigable id へ混入禁止 (fail-closed・生成物側で撃つ)。
+chk "census navigable id: 生成物の D-* id == 0 (delta 印 anchor 混入を fail-closed に)" "0" "$(grep -c '^D-' "$g_ids" || true)"
+# ★count census (frozen literal・subject=生成物)。
+chk "census navigable id: 総数 == 凍結 $(fz FZ_ID_COUNT)" "$(fz FZ_ID_COUNT)" "$(grep -c . "$g_ids")"
+# ★id-rename SET census (deliverable 5): count 保存 substitution (55==55) を見逃さないよう凍結 SET と comm。
+FZ_IDS="$(mktemp)"; fz_set ID_SET | LC_ALL=C sort -u > "$FZ_IDS"
+chk_empty "census id-rename SET: 生成物にあり凍結 SET に無い余剰 0 (rename / 捏造)" "$(LC_ALL=C comm -13 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
+chk_empty "census id-rename SET: 凍結 SET にあり生成物に無い欠落 0 (rename / 脱落)" "$(LC_ALL=C comm -23 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
+rm -f "$g_ids" "$FZ_IDS"
+# ★rich 資産 occurrence (frozen literal・subject=生成物)。
+chk "census rich: a.xref occurrence == 凍結 $(fz FZ_XREF)"        "$(fz FZ_XREF)"  "$(c_xref "$HTML")"
+chk "census rich: span.term occurrence == 凍結 $(fz FZ_TERM)"     "$(fz FZ_TERM)"  "$(c_term "$HTML")"
+chk "census rich: ins|del.delta occurrence == 凍結 $(fz FZ_DELTA)" "$(fz FZ_DELTA)" "$(c_delta "$HTML")"
+# delta-id SET census (frozen・count 保存 rename を見逃さない)。
+G_DID="$(mktemp)"; FZ_DID="$(mktemp)"
+perl -CSD -0777 -ne 'while (/<(?:ins|del)\b[^>]*\bclass="delta"[^>]*\sdata-delta-id="([^"]*)"/g){ print "$1\n"; }' "$HTML" | LC_ALL=C sort -u > "$G_DID"
+fz_set DELTA_SET | LC_ALL=C sort -u > "$FZ_DID"
+chk_empty "census delta-id SET: 余剰 0 (凍結 SET 対)" "$(LC_ALL=C comm -13 "$FZ_DID" "$G_DID" | tr '\n' ' ')"
+chk_empty "census delta-id SET: 欠落 0 (凍結 SET 対)" "$(LC_ALL=C comm -23 "$FZ_DID" "$G_DID" | tr '\n' ' ')"
+rm -f "$G_DID" "$FZ_DID"
+# escape 済 literal 'a class="xref"' (過剰 linkify 禁止・subject=生成物)。
+chk "census escape: 'a class=\"xref\"' literal == 凍結 $(fz FZ_ESC_XREF)" "$(fz FZ_ESC_XREF)" \
+  "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;a class="xref"/g); print $n;' "$HTML")"
+# generic inline (code/span) の人間層 region 別 occurrence (frozen・subject=生成物・region 相殺封鎖のため総和も撃つ)。
+chk "census generic: 人間層 <code> table-cell == 凍結 $(fz FZ_CODE_TABLE_CELL)" "$(fz FZ_CODE_TABLE_CELL)" "$(h_inline "$HTML" code table-cell)"
+chk "census generic: 人間層 <code> caption == 凍結 $(fz FZ_CODE_CAPTION)"       "$(fz FZ_CODE_CAPTION)"    "$(h_inline "$HTML" code caption)"
+chk "census generic: 人間層 <code> rest == 凍結 $(fz FZ_CODE_REST)"            "$(fz FZ_CODE_REST)"       "$(h_inline "$HTML" code rest)"
+chk "census generic: 人間層 <code> 総数 == 凍結 $(fz FZ_CODE_TOTAL) (region 相殺封鎖)" "$(fz FZ_CODE_TOTAL)" "$(h_inline "$HTML" code human)"
+chk "census generic: 人間層 <span> table-cell == 凍結 $(fz FZ_SPAN_TABLE_CELL)" "$(fz FZ_SPAN_TABLE_CELL)" "$(h_inline "$HTML" span table-cell)"
+chk "census generic: 人間層 <span> caption == 凍結 $(fz FZ_SPAN_CAPTION)"       "$(fz FZ_SPAN_CAPTION)"    "$(h_inline "$HTML" span caption)"
+# double-escape 直接検出 (frozen・subject=生成物)。
+chk "census double-escape: &lt;code literal == 凍結 $(fz FZ_ESC_CODE)" "$(fz FZ_ESC_CODE)" \
+  "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;code/g); print $n;' "$HTML")"
+chk "census double-escape: &lt;span literal == 凍結 $(fz FZ_ESC_SPAN) (散文中の正当 literal)" "$(fz FZ_ESC_SPAN)" \
+  "$(perl -CSD -0777 -ne 'my $n=()=(/&lt;span/g); print $n;' "$HTML")"
+# jq -S PRESERVE + mask (frozen・subject=生成物)。
+chk "census jq-S: 'jq -S' 総出現 == 凍結 $(fz FZ_JQS_TOTAL)" "$(fz FZ_JQS_TOTAL)" \
+  "$(perl -CSD -0777 -ne 'my $n=()=(/jq -S/g); print $n;' "$HTML")"
+chk "census jq-S: masked <code> == 凍結 $(fz FZ_JQS_MASKED) (P-11 primitive 露出なし)" "$(fz FZ_JQS_MASKED)" \
+  "$(perl -CSD -0777 -ne 'my $n=()=(/<code>[^<]*jq -S[^<]*<\/code>/g); print $n;' "$HTML")"
+# JSON-LD folio:stakeholders 型+値 (frozen literal・subject=生成物・array 型退行封鎖)。
+chk "census JSON-LD: folio:stakeholders 型+値 == 凍結 literal (array 退行封鎖)" \
+  "$(fz_ld)" "$(ld_stake "$HTML")"
+
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
+  # ★ORIG 存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15・非消費)。 §11 LEFT は政策 A (folio-7n17) で
+  #   contract 由来へ re-home したため ORIG を消費しないが、 SPEC_ORIGIN_HTML=/nonexistent による silent skip の
+  #   逃げ道は §10b と対称に塞ぐ (存在検査のみ・内容不読)。
   if [[ ! -f "$ORIG" ]]; then
-    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (機械層 contract だが照合不能・fail-closed)\n' "原本↔生成物 機械層集合一致" "$ORIG"; fail=1
-  else
-    LF="$(mktemp)"; RF="$(mktemp)"
-    # LEFT: 原本の live data-audience="machine" 自由文 (<p>→prose / <aside>→note / <ul>→li 単位) を document 順に再抽出 + inner_norm。
-    #   live tag (実 <) のみゆえ escape 済例示 (&lt;p) を除外。 spec-normative の <div> は p/aside/ul でないため対象外 (= 26 EARS 除外)。
-    #   ★sort しない (document 順を保存) = 順序付き突合 (人間層 §4/§5 と対称)。
-    perl -CSD -0777 -e '
-      local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $H=<$fh>; close $fh;
-      sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
-      my @u; my $p=0; my $len=length($H);
-      while ($p<$len) {
-        my %c;
-        if (substr($H,$p)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{prose}=$p+$-[0]; }
-        if (substr($H,$p)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>/) { $c{note}=$p+$-[0]; }
-        if (substr($H,$p)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{list}=$p+$-[0]; }
-        # ★demoted (tr0 / verification): div.demoted は balanced div で inner を一括 norm (LEFT・原本 verification.html 由来)。
-        if (substr($H,$p)=~/<div\b[^>]*\bclass="demoted"[^>]*\sdata-audience="machine"[^>]*>/) { $c{demoted}=$p+$-[0]; }
-        # ★dl (folio-aduv): 原本 <dl data-audience="machine"> の inner を norm (LEFT)。 これを足さないと生成物の
-        #   spec-machine-dl が *原本と突合されない raw blob* になり、 脱落/捏造/二重 escape が素通る (vacuous PASS)。
-        if (substr($H,$p)=~/<dl\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{dl}=$p+$-[0]; }
-        last unless %c;
-        my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
-        if ($k eq "prose") { substr($H,$at)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "note") { substr($H,$at)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "dl") { substr($H,$at)=~/<dl\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/dl>/s; push @u,"dl\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "demoted") { my $sub=substr($H,$at); $sub=~/^<div\b[^>]*>/; my $ol=$+[0]; my $d=0; my $eo=length($sub);
-               while ($sub=~/(<div\b[^>]*>|<\/div>)/g){ my $t=$1; my $te=pos($sub); if($t=~/^<div/){$d++}else{$d--; if($d==0){$eo=$te;last}} }
-               my $w=substr($sub,0,$eo); my $in=substr($w,$ol,length($w)-$ol-length("</div>")); push @u,"demoted\t".norm($in); $p=$at+$eo; }
-        else { substr($H,$at)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/ul>/s; my $in=$1; my $e=$at+$+[0];
-               while ($in=~/<li\b[^>]*>(.*?)<\/li>/gs){ push @u,"li\t".norm($1); } $p=$e; }
-      }
-      print "$_\n" for @u;
-    ' "$ORIG" > "$LF"
-    # RIGHT: 生成物の機械層 block を document 順に再抽出 + inner_norm。 prose/note/li は fold 内で交互に出現しうるため、
-    #   型ごとに別 pass で集めず *位置走査* で混在順序を保存する (LEFT と同型・順序付き突合のため必須)。
-    #   mli は machine list 専有 class・spec-machine-{prose,note} は machine 専有 component ゆえ live tag のみ抽出。
-    perl -CSD -0777 -e '
-      local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $B=<$fh>; close $fh;
-      sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
-      my @u; my $p=0; my $len=length($B);
-      while ($p<$len) {
-        my %c;
-        if (substr($B,$p)=~/<p data-component="spec-machine-prose" data-audience="machine">/)  { $c{prose}=$p+$-[0]; }
-        if (substr($B,$p)=~/<aside data-component="spec-machine-note" data-audience="machine">/) { $c{note}=$p+$-[0]; }
-        if (substr($B,$p)=~/<li class="mli">/) { $c{li}=$p+$-[0]; }
-        # ★demoted (tr0 / verification): 生成物の spec-machine-demoted を balanced div で inner 一括 norm (RIGHT・LEFT と同型)。
-        if (substr($B,$p)=~/<div data-component="spec-machine-demoted" data-audience="machine">/) { $c{demoted}=$p+$-[0]; }
-        # ★dl (folio-aduv): 生成物の spec-machine-dl inner を norm (RIGHT・LEFT と同型)。
-        if (substr($B,$p)=~/<dl data-component="spec-machine-dl" data-audience="machine">/) { $c{dl}=$p+$-[0]; }
-        last unless %c;
-        my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
-        if ($k eq "prose") { substr($B,$at)=~/<p data-component="spec-machine-prose" data-audience="machine">(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "note") { substr($B,$at)=~/<aside data-component="spec-machine-note" data-audience="machine">(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "dl") { substr($B,$at)=~/<dl data-component="spec-machine-dl" data-audience="machine">(.*?)<\/dl>/s; push @u,"dl\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "demoted") { my $sub=substr($B,$at); $sub=~/^<div\b[^>]*>/; my $ol=$+[0]; my $d=0; my $eo=length($sub);
-               while ($sub=~/(<div\b[^>]*>|<\/div>)/g){ my $t=$1; my $te=pos($sub); if($t=~/^<div/){$d++}else{$d--; if($d==0){$eo=$te;last}} }
-               my $w=substr($sub,0,$eo); my $in=substr($w,$ol,length($w)-$ol-length("</div>")); push @u,"demoted\t".norm($in); $p=$at+$eo; }
-        else { substr($B,$at)=~/<li class="mli">(.*?)<\/li>/s; push @u,"li\t".norm($1); $p=$at+$+[0]; }
-      }
-      print "$_\n" for @u;
-    ' "$BODY" > "$RF"
-    if diff -q "$LF" "$RF" >/dev/null 2>&1; then
-      printf '  [OK]   %-'"$CHKW"'s %s\n' "原本↔生成物 機械層 双方向 順序付き一致 (round-trip)" "$(grep -c . "$LF")"
-    else
-      printf '  [FAIL] %-'"$CHKW"'s\n' "原本↔生成物 機械層 不一致 (脱落 / 捏造 / 二重 escape / 改竄 / 順序入替 / cross-section 誤帰属)"
-      echo "    --- 順序付き diff (< 原本 / > 生成物) ---"; diff "$LF" "$RF" | sed 's/^/      /' | head -20
-      echo "    --- 原本のみ (生成物に脱落) ---"; LC_ALL=C comm -23 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
-      echo "    --- 生成物のみ (原本に無い = 捏造/改竄) ---"; LC_ALL=C comm -13 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
-      fail=1
-    fi
-    rm -f "$LF" "$RF"
+    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "機械層 round-trip 存在 pin" "$ORIG"; fail=1
   fi
+  command -v jq >/dev/null || { echo "verify-spec: jq required (§11 contract round-trip)" >&2; exit 2; }
+  LF="$(mktemp)"; RF="$(mktemp)"
+  # LEFT: ★政策 A (folio-7n17)。 snapshot / live canonical でなく contract.machine_preamble[] +
+  #   sections[].machine_blocks[] (25 block) から document 順に再構成する。 contract の html field は
+  #   extract-verification-spec.sh の inner_norm 済 (空白畳み + trim) ゆえ RIGHT の norm 出力と 1:1 で突合する
+  #   (folio-7n17 で snapshot LEFT とバイト一致を実測)。 list は items[] を li 単位へ展開 (RIGHT の <li class="mli"> と対称)。
+  #   ★両側 contract 由来ゆえ両側同時退行で vacuous になりうる → §10b 凍結 census + extractor-collapse test で塞ぐ
+  #     (mandate: (a)(b) は両側 contract 由来ゆえ (c) で塞ぐ)。 本 arm が守るのは assembler バグ (生成物が
+  #     contract から乖離・silent drop / 順序入替 / cross-section 誤帰属) の検出。
+  yq -o=json '[.machine_preamble[]?, .sections[].machine_blocks[]?]' "$CONTRACT" | jq -r '.[] |
+    if .type=="list" then (.items[] | "li\t"+.)
+    elif .type=="prose" then "prose\t"+.html
+    elif .type=="note" then "note\t"+.html
+    elif .type=="demoted" then "demoted\t"+.html
+    elif .type=="dl" then "dl\t"+.html
+    else "UNKNOWN\t"+(.type//"?") end' > "$LF"
+  # RIGHT: 生成物の機械層 block を document 順に再抽出 + inner_norm。 prose/note/li は fold 内で交互に出現しうるため、
+  #   型ごとに別 pass で集めず *位置走査* で混在順序を保存する (LEFT と同型・順序付き突合のため必須)。
+  #   mli は machine list 専有 class・spec-machine-{prose,note} は machine 専有 component ゆえ live tag のみ抽出。
+  perl -CSD -0777 -e '
+    local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $B=<$fh>; close $fh;
+    sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
+    my @u; my $p=0; my $len=length($B);
+    while ($p<$len) {
+      my %c;
+      if (substr($B,$p)=~/<p data-component="spec-machine-prose" data-audience="machine">/)  { $c{prose}=$p+$-[0]; }
+      if (substr($B,$p)=~/<aside data-component="spec-machine-note" data-audience="machine">/) { $c{note}=$p+$-[0]; }
+      if (substr($B,$p)=~/<li class="mli">/) { $c{li}=$p+$-[0]; }
+      # ★demoted (tr0 / verification): 生成物の spec-machine-demoted を balanced div で inner 一括 norm (RIGHT・LEFT と同型)。
+      if (substr($B,$p)=~/<div data-component="spec-machine-demoted" data-audience="machine">/) { $c{demoted}=$p+$-[0]; }
+      # ★dl (folio-aduv): 生成物の spec-machine-dl inner を norm (RIGHT・LEFT と同型)。
+      if (substr($B,$p)=~/<dl data-component="spec-machine-dl" data-audience="machine">/) { $c{dl}=$p+$-[0]; }
+      last unless %c;
+      my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
+      if ($k eq "prose") { substr($B,$at)=~/<p data-component="spec-machine-prose" data-audience="machine">(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
+      elsif ($k eq "note") { substr($B,$at)=~/<aside data-component="spec-machine-note" data-audience="machine">(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
+      elsif ($k eq "dl") { substr($B,$at)=~/<dl data-component="spec-machine-dl" data-audience="machine">(.*?)<\/dl>/s; push @u,"dl\t".norm($1); $p=$at+$+[0]; }
+      elsif ($k eq "demoted") { my $sub=substr($B,$at); $sub=~/^<div\b[^>]*>/; my $ol=$+[0]; my $d=0; my $eo=length($sub);
+             while ($sub=~/(<div\b[^>]*>|<\/div>)/g){ my $t=$1; my $te=pos($sub); if($t=~/^<div/){$d++}else{$d--; if($d==0){$eo=$te;last}} }
+             my $w=substr($sub,0,$eo); my $in=substr($w,$ol,length($w)-$ol-length("</div>")); push @u,"demoted\t".norm($in); $p=$at+$eo; }
+      else { substr($B,$at)=~/<li class="mli">(.*?)<\/li>/s; push @u,"li\t".norm($1); $p=$at+$+[0]; }
+    }
+    print "$_\n" for @u;
+  ' "$BODY" > "$RF"
+  if diff -q "$LF" "$RF" >/dev/null 2>&1; then
+    printf '  [OK]   %-'"$CHKW"'s %s\n' "contract↔生成物 機械層 双方向 順序付き一致 (round-trip)" "$(grep -c . "$LF")"
+  else
+    printf '  [FAIL] %-'"$CHKW"'s\n' "contract↔生成物 機械層 不一致 (脱落 / 捏造 / 二重 escape / 改竄 / 順序入替 / cross-section 誤帰属)"
+    echo "    --- 順序付き diff (< contract / > 生成物) ---"; diff "$LF" "$RF" | sed 's/^/      /' | head -20
+    echo "    --- contract のみ (生成物に脱落) ---"; LC_ALL=C comm -23 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+    echo "    --- 生成物のみ (contract に無い = 捏造/改竄) ---"; LC_ALL=C comm -13 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+    fail=1
+  fi
+  rm -f "$LF" "$RF"
 fi
 
 echo

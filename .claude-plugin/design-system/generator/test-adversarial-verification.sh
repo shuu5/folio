@@ -40,7 +40,13 @@ expect_abort() { # label contract expected_stderr_substring
 expect_vfilled_fail() { # label html [reason]
   local out rc; out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$2" 2>&1)"; rc=$?
   if [[ $rc -eq 0 ]]; then ng "$1 (--filled verify が PASS した)"; return; fi
-  if [[ -n "${3:-}" && "$out" != *"$3"* ]]; then ng "$1 (FAIL したが理由が想定外。 期待 '$3')"; return; fi
+  # ★reason 照合は [FAIL] 行 anchor (errata-1 must-1)。 census chk ラベルは [OK] 行にも常時出力される (frozen census は
+  #   PASS 時も件数を表示) ため、 単純 substring 一致だと census クラスで恒真 (巻き添え FAIL guard が inert) になる。
+  #   COLLAPSE-2/3・cc_seed と同じ [FAIL] 行限定へ統一する。 reason は括弧/ドット等の regex metachar を含みうるため
+  #   -E でなく fixed-string 2 段 (該当 reason を含む行のうち [FAIL] を含む行が在るか) で anchor する (regex-safe)。
+  if [[ -n "${3:-}" ]] && ! printf '%s\n' "$out" | grep -F -- "$3" | grep -qF -- '[FAIL]'; then
+    ng "$1 (FAIL したが理由が [FAIL] 行に無い。 期待 '$3' を [FAIL] 行で)"; return
+  fi
   ok "$1"
 }
 expect_vprefill_fail() { # label contract html [reason]
@@ -207,7 +213,7 @@ expect_vfilled_fail "F11 ★table セル改竄を td 列で捕捉" "$TMP/f11.htm
 #      verification は human-layer code block を持たず (全 <pre><code> は demoted 内 = 機械層) ゆえ rules の code-行 改竄 (旧 F12) を demoted 改竄へ置換。
 cp "$TMP/base-filled.html" "$TMP/f12.html"
 perl -0777 -i -pe 's#(<div data-component="spec-machine-demoted" data-audience="machine">)#${1}ZZDEMOTEDTAMPERZZ #' "$TMP/f12.html"
-expect_vfilled_fail "F12 ★機械層 demoted text 改竄を原本↔生成物 round-trip が捕捉" "$TMP/f12.html" "原本↔生成物 機械層"
+expect_vfilled_fail "F12 ★機械層 demoted text 改竄を原本↔生成物 round-trip が捕捉" "$TMP/f12.html" "機械層 不一致"
 
 # F13. ★subhead heading 改竄 → subhead 列 FAIL
 # ★folio-aduv: h3 に fine section anchor (id=) が付いた形へ shape が変わったため撃ち直す (id は温存し heading だけ改竄)。
@@ -469,12 +475,14 @@ f19_mut_reason() { # label perl-expr reason  (F19 と同型だが理由照合を
     expect_vfilled_fail "$1" "$TMP/m18.html" "$3"
   fi
 }
-f19_mut_reason "M18 ★table cell の live <code> 二重 escape を ORACLE generic inline が捕捉 (occurrence 減)" \
+# ★政策 A (folio-7n17): S2 の ORACLE assert は census へ改称された (「census generic」/「census double-escape」・
+#   subject=生成物・frozen literal)。 reason substring も新 label へ追随する (改称後も teeth が効くことを pin)。
+f19_mut_reason "M18 ★table cell の live <code> 二重 escape を census generic が捕捉 (occurrence 減)" \
   's#(<td[^>]*>)<code>([^<]*)</code>#${1}&lt;code&gt;${2}&lt;/code&gt;#g' \
-  "ORACLE generic inline"
-f19_mut_reason "M18b ★同変異を ORACLE double-escape が literal 増の側から捕捉 (両側で挟む)" \
+  "census generic"
+f19_mut_reason "M18b ★同変異を census double-escape が literal 増の側から捕捉 (両側で挟む)" \
   's#(<td[^>]*>)<code>([^<]*)</code>#${1}&lt;code&gt;${2}&lt;/code&gt;#g' \
-  "ORACLE double-escape"
+  "census double-escape"
 
 # === M19. ★S6 の D-* fail-closed 検査に ★tracked な teeth を与える (folio-eccf S6) ===
 # ★旧形 (`| grep -v '^D-'`) は D-* id を ★両側から黙って落とす silent filter で、 canonical に正当な id="D-…" が
@@ -509,20 +517,145 @@ f19_mut "★head meta (folio-stakeholders) 剥奪 を捕捉" \
   's#<meta name="folio-stakeholders"[^>]*>\n##' "folio-stakeholders"
 f19_mut "★head meta (folio-layer) 値改竄 を捕捉" \
   's#(<meta name="folio-layer" content=")[^"]*#${1}TAMPERED#' "folio-layer"
-f19_mut "★rich: a.xref 1 個剥奪 を ORACLE parity が捕捉" \
-  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "a.xref"
-f19_mut "★rich: span.term 1 個剥奪 を ORACLE parity が捕捉" \
-  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "span.term"
-f19_mut "★rich: ins.delta 1 個剥奪 を ORACLE parity が捕捉" \
-  's#<ins class="delta"[^>]*>(.*?)</ins>#$1#s' "delta"
-f19_mut "★0-e: jq -S を text ごと削除 を PRESERVE assert が捕捉 (how-outside は緑のままでも落ちること)" \
-  's#<code>jq -S</code>##' "jq -S"
+# ★政策 A per-shape 張替 (folio-7n17 deliverable 3/4): 旧「ORACLE parity」依存を frozen census (subject=生成物・
+#   凍結 literal) へ張り替える。 各 shape で「変異 → どの census chk が FAIL 転落するか」を各行に明記し、 1 shape で
+#   全代表しない (jyfh/r8k)。 剥奪すると生成物側 occurrence が frozen literal を下回り census が FAIL する
+#   (相対 parity 依存でないため SPEC_ORIGIN_HTML=mutated の自己比較でも生きる = 下記 M-SELFCMP 群が別途 pin)。
+f19_mut "★rich: a.xref 1 個剥奪 → census rich a.xref (31→30) FAIL" \
+  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "census rich: a.xref"
+f19_mut "★rich: span.term 1 個剥奪 → census rich span.term (27→26) FAIL" \
+  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "census rich: span.term"
+f19_mut "★rich: ins.delta 1 個剥奪 → census rich ins|del.delta (5→4) FAIL" \
+  's#<ins class="delta"[^>]*>(.*?)</ins>#$1#s' "census rich: ins|del.delta"
+f19_mut "★0-e: jq -S を text ごと削除 → census jq-S (PRESERVE assert・how-outside 緑でも落ちる) FAIL" \
+  's#<code>jq -S</code>##' "census jq-S"
+# ★generic inline (code/span) の人間層 table-cell occurrence 剥奪 (M18 二重 escape と別の「純減」経路)。
+f19_mut "★generic: 人間層 <code> table-cell 1 個の <code> wrapper 剥奪 → census generic <code> table-cell (41→40) FAIL" \
+  's#(<td[^>]*>[^<]*)<code>([^<]*)</code>#${1}${2}#' "census generic: 人間層 <code> table-cell"
+f19_mut "★generic: 人間層 <span> table-cell 1 個の span wrapper 剥奪 → census generic <span> table-cell (58→57) FAIL" \
+  's#(<td[^>]*>)<span\b[^>]*>(.*?)</span>#${1}${2}#s' "census generic: 人間層 <span> table-cell"
+# ★errata-1 must-2: per-shape 穴 4 領域の teeth (M18 は code table-cell しか撃たない・[FAIL] 行限定 reason で該当 census
+#   chk が実弾で落ちることを per-mut で pin する)。 各 reason は census chk ラベルの一意 substring で [FAIL] 行 anchor。
+# (a) FZ_ESC_XREF: 散文中の escape 済 literal '&lt;a class="xref"' を 1 個潰す (3→2) → census escape が FAIL。
+f19_mut "★escape: &lt;a class=\"xref\" literal 1 個潰し (3→2) → census escape FAIL" \
+  's#&lt;a class="xref"#\&lt;a class="ZZDROP"#' "census escape"
+# (b) FZ_ESC_SPAN: 人間層 td の live <span> を 1 個二重 escape → &lt;span literal 増 (2→3) → census double-escape &lt;span が FAIL。
+f19_mut "★double-escape: td の live <span> を二重 escape (&lt;span 2→3) → census double-escape &lt;span FAIL" \
+  's#(<td[^>]*>)<span\b([^>]*)>(.*?)</span>#${1}\&lt;span$2\&gt;$3\&lt;/span\&gt;#s' "census double-escape: &lt;span"
+# (c) generic <code> caption 領域: figcaption 内の <code> を 1 個剥奪 (2→1) → census generic <code> caption が FAIL。
+f19_mut "★generic: figcaption の <code> wrapper 剥奪 (caption 2→1) → census generic <code> caption FAIL" \
+  's#(<figcaption>.*?)<code>([^<]*)</code>#${1}${2}#s' "census generic: 人間層 <code> caption"
+# (d) generic <code> rest 領域: rq-essence 内の <code> を 1 個剥奪 (79→78) → census generic <code> rest が FAIL。
+f19_mut "★generic: rq-essence の <code> wrapper 剥奪 (rest 79→78) → census generic <code> rest FAIL" \
+  's#(class="rq-essence">[^<]*)<code>([^<]*)</code>#${1}${2}#' "census generic: 人間層 <code> rest"
+# (e) generic <span> caption 領域: figcaption 内の <span> を 1 個剥奪 (1→0) → census generic <span> caption が FAIL。
+f19_mut "★generic: figcaption の <span> wrapper 剥奪 (caption 1→0) → census generic <span> caption FAIL" \
+  's#(<figcaption>.*?)<span\b[^>]*>(.*?)</span>#${1}${2}#s' "census generic: 人間層 <span> caption"
+# ★JSON-LD folio:stakeholders の array→string 型退行 → census JSON-LD (型退行封鎖) FAIL。
+f19_mut "★JSON-LD: folio:stakeholders array→string 型退行 → census JSON-LD FAIL (型退行封鎖)" \
+  's#"folio:stakeholders": \[[^\]]*\]#"folio:stakeholders": "Developer, AI Agent, External Reviewer"#' "census JSON-LD"
+# ★id-rename (count 保存 substitution・deliverable 5): count は 55==55 で素通るが SET census が捕捉。
+f19_mut "★id-rename: req-ver-001→req-ver-RENAMED (count 55 保存) → census id-rename SET FAIL (count census は素通る)" \
+  's#id="req-ver-001"#id="req-ver-RENAMED"#' "census id-rename SET"
+# ★delta-id rename (count 保存 substitution・deliverable 5・SET arm の teeth): id-rename SET (navigable) と対称に、
+#   delta-id SET census が「件数不変で delta-id を改名した」退行クラス (SET arm を新設した当の理由) を捕捉することを
+#   per-shape で pin する (jyfh/r8k: ins.delta 剥奪の count 減だけでは SET arm の count 保存 teeth を証明しない)。
+#   D-2026-05-27-001 (4 occurrence) を別値へ rename → count は 5==5 で素通るが SET が 余剰/欠落 で FAIL。
+f19_mut "★delta-id rename: D-2026-05-27-001→D-RENAMED (count 5 保存) → census delta-id SET FAIL (count census は素通る)" \
+  's#data-delta-id="D-2026-05-27-001"#data-delta-id="D-RENAMED"#g' "census delta-id SET"
+# ★machine-block round-trip: 生成物の spec-machine-prose に語を注入 → contract と乖離 → round-trip FAIL。
+f19_mut "★machine-block: spec-machine-prose に語注入 → contract↔生成物 round-trip FAIL (assembler 乖離検出)" \
+  's#(<p data-component="spec-machine-prose" data-audience="machine">)#${1}ZZTAMPERZZ #' "機械層 不一致"
 # F19z. ★空撃ち検査 (恒真 FAIL の封鎖): 無改変の baseline は上記 gate 群で FAIL しないこと。
 #   これが無いと verify が何を食わせても FAIL する状態でも F19 群は全て緑になる。
 if bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" >/dev/null 2>&1; then
   ok "F19z ★空撃ち検査: 無改変 baseline は verify PASS = F19 群の FAIL は mutation 由来"
 else
   ng "F19z 無改変 baseline が verify FAIL (恒真 FAIL ゆえ F19 群が無意味。 環境要因 gate F 等を切り分けること)"
+fi
+
+# === M-SELFCMP. ★本番自己比較 MK (folio-7n17 deliverable 4): SPEC_ORIGIN_HTML=mutated_html でも frozen census が
+#   依然 FAIL する (ORIG==生成物 の自己比較でも census が生きる証明)。 政策 A の核心 — 旧相対 parity なら
+#   c_xref(ORIG)==c_xref(HTML)==30 で vacuous PASS したが、 frozen 31 vs 生成物 30 で FAIL する。
+#   flip 後に canonical が生成物へ置換され ORIG==生成物 になる本番条件を SPEC_ORIGIN_HTML=mutated で模す。 ===
+selfcmp_mut() { # label perl-expr reason
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/selfcmp.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/selfcmp.html" >/dev/null; then
+    ng "M-SELFCMP $1 (mutation 空撃ち)"; return
+  fi
+  local out rc; out="$(SPEC_ORIGIN_HTML="$TMP/selfcmp.html" bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/selfcmp.html" 2>&1)"; rc=$?
+  # ★reason 照合は [FAIL] 行 anchor (errata-1 must-1): census chk ラベルは [OK] 行にも出るため fixed-string 2 段で anchor。
+  if [[ $rc -ne 0 ]] && printf '%s\n' "$out" | grep -F -- "$3" | grep -qF -- '[FAIL]'; then ok "M-SELFCMP $1"
+  else ng "M-SELFCMP $1 (SPEC_ORIGIN_HTML=mutated 自己比較で census が [FAIL] 行に無い rc=$rc / reason '$3' 不発 = 相対 parity 恒真化の回帰)"; fi
+}
+selfcmp_mut "★a.xref 1 個剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census FAIL (自己比較恒真化の封鎖)" \
+  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "census rich: a.xref"
+selfcmp_mut "★span.term 1 個剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census FAIL" \
+  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "census rich: span.term"
+selfcmp_mut "★人間層 <code> table-cell wrapper 剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census generic FAIL" \
+  's#(<td[^>]*>[^<]*)<code>([^<]*)</code>#${1}${2}#' "census generic: 人間層 <code> table-cell"
+
+# === COLLAPSE. ★extractor-collapse 敵対 test (folio-7n17 deliverable 4) ===
+# extract-verification-spec.sh の人間層 rich() を関数レベルで plain() 相当へ collapse し、 ★extractor の
+# pre-flip source (spec-origin/verification.origin.html = 現行 canonical は flip 済で ears-requirement-row 形ゆえ
+# extractor が理解できない・snapshot が extractor の設計対象 form) から re-extract → collapsed contract →
+# in-place generator で assemble → collapsed 生成物。 ★狙い: ① contract==生成物 の §4/§5 + round-trip vacuous
+# PASS (両側同時退行で緑) を実演し、 ② frozen census (§10b) が collapsed 生成物を独立 anchor として FAIL させる
+# ことを red→green 固定。 ★rich 減少 assert だけの相対 parity (6==6 恒真) は禁止 — frozen literal で撃つ。
+# ★full-repo staging で genuine 再生成 (cp -r は親 dir 資産欠落で不可・real generator を in-place 実行)。
+COLLAPSE_EXTRACT="$SCRIPT_DIR/../../scripts/extract-verification-spec.sh"
+COLLAPSE_SNAP="$SCRIPT_DIR/spec-origin/verification.origin.html"
+if [[ ! -f "$COLLAPSE_EXTRACT" || ! -f "$COLLAPSE_SNAP" ]]; then
+  ng "COLLAPSE ★前提喪失 (extractor / snapshot 不在): $COLLAPSE_EXTRACT / $COLLAPSE_SNAP"
+else
+  # rich() の lexical $s copy にタグ除去を注入 (関数レベル collapse・read-only $1 arg を壊さない)。
+  perl -0777 -pe 's{(sub rich \{\n  my \(\$s\) = \@_; \$s //= "";)}{$1\n  \$s =~ s/<[^>]*>//g;}' \
+    "$COLLAPSE_EXTRACT" > "$TMP/extract-collapsed.sh"
+  if diff -q "$COLLAPSE_EXTRACT" "$TMP/extract-collapsed.sh" >/dev/null; then
+    ng "COLLAPSE-0 ★rich()→plain() collapse mutate が空撃ち (rich sub の記法変化の疑い)"
+  else
+    ok "COLLAPSE-0 ★rich()→plain() collapse mutate が適用された (関数レベル)"
+    bash "$TMP/extract-collapsed.sh" "$COLLAPSE_SNAP" > "$TMP/collapsed.yaml" 2>/dev/null
+    if bash "$ASM" "$TMP/collapsed.yaml" "$TMP/collapsed.html" >/dev/null 2>&1; then
+      cx_g="$(perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /class="(?:[^"]*\s)?xref/; } print $n;' "$TMP/collapsed.html")"
+      # collapsed verify を回し ① §4/§5 vacuous PASS と ② frozen census FAIL を同一 run で確認する。
+      #   ★heavy suite 下の subprocess 一過性ヒッカプ (yq|jq pipe 等) に対し fail-closed かつ resilient にするため、
+      #     出力が incomplete (RESULT 行 or census a.xref 行を欠く) なら最大 2 回まで retry する (genuine な §4/§11 破断は
+      #     両試行で再現し retry では緑化しない = 真の regression は依然 fail-closed)。
+      col_out=""; col_rc=1
+      for _attempt in 1 2; do
+        col_out="$(bash "$VER" "$TMP/collapsed.yaml" "$TMP/collapsed.html" 2>&1)"; col_rc=$?
+        if printf '%s\n' "$col_out" | grep -qF 'census rich: a.xref' && printf '%s\n' "$col_out" | grep -qF '要件タプル'; then break; fi
+      done
+      # ① contract==生成物 vacuous PASS: 要件タプル (§4) と round-trip (§11) が [OK] (両側同時退行で緑)。
+      #   line-based robust grep (grep -E の [^\n] 曖昧性を回避): 該当行を抽出し [OK] を含むか判定。
+      tup_line="$(printf '%s\n' "$col_out" | grep -F '要件タプル' | head -1)"
+      rt_line="$(printf '%s\n' "$col_out" | grep -F 'round-trip' | grep -F '機械層' | head -1)"
+      if printf '%s' "$tup_line" | grep -qF '[OK]' && printf '%s' "$rt_line" | grep -qF '[OK]'; then
+        ok "COLLAPSE-1 ★§4 要件タプル + §11 round-trip の vacuous PASS を実演 (contract==生成物・collapsed a.xref=$cx_g < frozen 31)"
+      else
+        ng "COLLAPSE-1 ★vacuous PASS の実演に失敗 (§4/§11 が [OK] でない = collapse が contract-vs-生成物 を割った)"
+        printf '%s\n' "$col_out" > "$SCRIPT_DIR/../../../.folio-7n17-tmp/collapse-col-out.log" 2>/dev/null || true
+        echo "      [debug] §4: ${tup_line:-<none>}" >&2
+        echo "      [debug] §11: ${rt_line:-<none>}" >&2
+      fi
+      # ② frozen census が collapsed 生成物を FAIL させる (独立 anchor・rich 減少 6<31)。
+      if [[ $col_rc -ne 0 ]] && printf '%s\n' "$col_out" | grep -qE '\[FAIL\][^\n]*census rich: a.xref'; then
+        ok "COLLAPSE-2 ★frozen census が collapse を FAIL (§4/§11 vacuous PASS を独立 anchor が捕捉・rich 減少 6<31)"
+      else
+        ng "COLLAPSE-2 ★frozen census が collapse を捕捉できず (rc=$col_rc・vacuous PASS 未封鎖 = 政策A 失効)"
+      fi
+      # ③ 本番自己比較を模す: SPEC_ORIGIN_HTML=collapsed でも census が生きる (ORIG==生成物 でも frozen で FAIL)。
+      sc_out="$(SPEC_ORIGIN_HTML="$TMP/collapsed.html" bash "$VER" "$TMP/collapsed.yaml" "$TMP/collapsed.html" 2>&1)"; sc_rc=$?
+      if [[ $sc_rc -ne 0 ]] && printf '%s\n' "$sc_out" | grep -qE '\[FAIL\][^\n]*census rich: a.xref'; then
+        ok "COLLAPSE-3 ★SPEC_ORIGIN_HTML=collapsed の自己比較でも frozen census FAIL (ORIG 非消費の実証)"
+      else
+        ng "COLLAPSE-3 ★自己比較で census FAIL せず (rc=$sc_rc = census が ORIG を消費している回帰)"
+      fi
+    else
+      ng "COLLAPSE ★collapsed contract の assemble に失敗 (genuine 再生成不能)"
+    fi
+  fi
 fi
 
 # === kicker 列 fidelity (folio-l93・決定的フィールド→floor) ===
@@ -591,7 +724,7 @@ expect_inject_abort "J2 manifest orphan キーを inject が abort" "$TMP/j2.pro
 # M1. ★機械層 prose テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・テキスト差のみ = round-trip 単独検出)。
 cp "$TMP/base-filled.html" "$TMP/m1.html"
 perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine">)#${1}ZZTAMPERZZ #' "$TMP/m1.html"
-expect_vfilled_fail "M1 ★機械層 prose 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m1.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M1 ★機械層 prose 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m1.html" "機械層 不一致"
 
 # M2. ★機械層 prose 脱落 (silent drop) → 件数 + round-trip FAIL。
 cp "$TMP/base-filled.html" "$TMP/m2.html"
@@ -601,7 +734,7 @@ expect_vfilled_fail "M2 ★機械層 prose 脱落を件数+round-trip が捕捉"
 # M3. ★機械層 prose 捏造 (原本に無い block を add) → 件数 + round-trip FAIL (生成物のみ)。
 cp "$TMP/base-filled.html" "$TMP/m3.html"
 perl -0777 -i -pe 's#(<div class="machine-body">\n)#${1}<p data-component="spec-machine-prose" data-audience="machine">捏造された機械層</p>\n#' "$TMP/m3.html"
-expect_vfilled_fail "M3 ★機械層 prose 捏造を round-trip (生成物のみ) が捕捉" "$TMP/m3.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M3 ★機械層 prose 捏造を round-trip (生成物のみ) が捕捉" "$TMP/m3.html" "機械層 不一致"
 
 # M4. ★機械層 list item (mli) 脱落 → mli 件数 + round-trip FAIL。
 cp "$TMP/base-filled.html" "$TMP/m4.html"
@@ -638,7 +771,7 @@ expect_abort "M9 ★machine_preamble の未対応 type を fail-closed abort" "$
 #   機械層 note は必ず <a href を含む (ADR 参照リンク) ため note の最初の <a href を二重 escape して round-trip 検出を固定する。
 cp "$TMP/base-filled.html" "$TMP/m10.html"
 perl -0777 -i -pe 's#(<aside data-component="spec-machine-note" data-audience="machine">.*?)<a href=#${1}&lt;a href=#s' "$TMP/m10.html"
-expect_vfilled_fail "M10 ★機械層の二重 escape を round-trip が捕捉" "$TMP/m10.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M10 ★機械層の二重 escape を round-trip が捕捉" "$TMP/m10.html" "機械層 不一致"
 
 # M11. ★機械層 block 順序入替 (隣接 prose 2 件を swap・件数/集合不変・順序のみ差) → 順序付き round-trip FAIL。
 #   旧版 (集合一致) では素通っていた = §11 を順序付きに強化した major fix の red→green pin (人間層 §4/§5 と対称)。
@@ -650,7 +783,7 @@ perl -0777 -i -e '
   $H=~s/\Q$a\E/__M11A__/; $H=~s/\Q$b\E/__M11B__/; $H=~s/__M11A__/$b/; $H=~s/__M11B__/$a/;
   print $H;
 ' "$TMP/m11.html"
-expect_vfilled_fail "M11 ★機械層 block 順序入替を順序付き round-trip が捕捉" "$TMP/m11.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M11 ★機械層 block 順序入替を順序付き round-trip が捕捉" "$TMP/m11.html" "機械層 不一致"
 
 # M12. ★cross-section 誤帰属 (ある fold の machine prose を別 fold の machine-body へ移動・件数/集合不変・document 順のみ差)
 #   → 順序付き round-trip FAIL。 集合一致では section 帰属を検証できず素通っていた (major fix の red→green pin)。
@@ -663,13 +796,13 @@ perl -0777 -i -e '
   my $ins=$pos[-1]; $H=substr($H,0,$ins).$blk.substr($H,$ins);
   print $H;
 ' "$TMP/m12.html"
-expect_vfilled_fail "M12 ★cross-section 誤帰属を順序付き round-trip が捕捉" "$TMP/m12.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M12 ★cross-section 誤帰属を順序付き round-trip が捕捉" "$TMP/m12.html" "機械層 不一致"
 
 # M13. ★機械層 note (aside) テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・最複雑 modality の content fidelity pin)。
 #   note は nested <p>・<span class=term>・<a> を含む最も構造複雑な block 種ゆえ専用の改竄敵対が要る (prose M1 と対称)。
 cp "$TMP/base-filled.html" "$TMP/m13.html"
 perl -0777 -i -pe 's#(<aside data-component="spec-machine-note" data-audience="machine">)#${1}ZZNOTETAMPERZZ #' "$TMP/m13.html"
-expect_vfilled_fail "M13 ★機械層 note 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m13.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M13 ★機械層 note 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m13.html" "機械層 不一致"
 
 # M14. ★機械層 note 脱落 (silent drop) → spec-machine-note 件数 + round-trip FAIL (prose M2 と対称)。
 cp "$TMP/base-filled.html" "$TMP/m14.html"
