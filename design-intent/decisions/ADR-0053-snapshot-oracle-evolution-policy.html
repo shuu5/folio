@@ -6,12 +6,12 @@
 <meta name="folio-doc-type" content="adr">
 <meta name="folio-layer" content="scratch">
 <meta name="folio-version" content="1.2.0">
-<meta name="folio-status" content="proposed">
+<meta name="folio-status" content="accepted">
 <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
 <meta name="folio-adr-id" content="0053">
 <meta name="folio-adr-date" content="2026-07-19">
-<title>ADR-0053 (DRAFT・未 land) — snapshot oracle 進化政策 A: bootstrap 突合の退役と census/round-trip/extractor-collapse 三本柱への代替</title>
-<link rel="stylesheet" href="../design-intent/common.css">
+<title>ADR-0053 — snapshot oracle 進化政策 A: bootstrap 突合の退役と census/round-trip/extractor-collapse 三本柱への代替</title>
+<link rel="stylesheet" href="../../common.css">
 <script type="application/ld+json">
 {
   "@context": {
@@ -23,50 +23,51 @@
   "@type": "schema:TechArticle",
   "dc:title": "ADR-0053 — snapshot oracle 進化政策 A: bootstrap 突合の退役と census/round-trip/extractor-collapse 三本柱への代替",
   "folio:version": "1.2.0",
-  "folio:status": "proposed",
+  "folio:status": "accepted",
   "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
   "dc:references": [
-    { "@id": "../design-intent/spec/verification.html#req-ver-031" },
-    { "@id": "../design-intent/spec/constitution.html#p-13" },
-    { "@id": "../design-intent/spec/constitution.html#p-6" },
-    { "@id": "../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html" },
-    { "@id": "../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html" }
+    { "@id": "../spec/verification.html#req-ver-031" },
+    { "@id": "../spec/constitution.html#p-13" },
+    { "@id": "../spec/constitution.html#p-6" },
+    { "@id": "./ADR-0045-spec-pack-machine-layer-round-trip.html" },
+    { "@id": "./ADR-0051-what-ssot-layer-interpretation.html" }
+  ],
+  "dc:isReferencedBy": [
+    { "@id": "../spec/verification.html" }
   ]
 }
 </script>
 </head>
 <body>
-<!-- ★DRAFT NOTICE (worker folio-7n17 Leg A 生成・未 land): 本 ADR は draft。 land 前に (1) Phase F ceiling
-     (spec-review-* / fidelity-adr / persona-walk-adr) → (2) user への文案提示・本文承認 (frozen 資産ゆえ新規起票は
-     user 承認必須) → (3) design-intent/decisions/ADR-0053-*.html への配置 が必要 (Leg B = admin 領分)。
-     folio-adr-status は proposed。 land 時に accepted へ更新し本 notice を除去すること。 -->
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0053</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
 <header class="doc-header">
-  <h1>ADR-0053 (DRAFT・未 land) — snapshot oracle 進化政策 A</h1>
-  <div class="meta">Status: proposed (draft・未 land) &middot; Date: 2026-07-19 &middot; folio v1.2.0 &middot;
-    folio 自身の canonical spec が「手書き」から「機械 SSoT 生成」へ flip した後、 生成物の機械層 fidelity を守る
-    snapshot oracle 突合 arm が <strong>自己比較恒真化</strong> (flip 後 ORIG==生成物 で任意値 PASS) の再発ハザードを持つ。
-    政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を
-    (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。
-    snapshot file (spec-origin/verification.origin.html) は <strong>bootstrap 記録として残置</strong>し、 どの chk も
-    その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) /
-    srs-verification (bxpm) / 将来の全 flip spec に一般化する。</div>
+  <h1>ADR-0053 — snapshot oracle 進化政策 A</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-19 &middot; folio v1.2.0 &middot; folio 自身の canonical spec が「手書き」から「機械 SSoT 生成」へ flip した後、 生成物の機械層 fidelity を守る snapshot oracle 突合 arm が 自己比較恒真化 (flip 後 ORIG==生成物 で任意値 PASS) の再発ハザードを持つ。 政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。 snapshot file (spec-origin/verification.origin.html) は bootstrap 記録として残置し、 どの chk も その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) / srs-verification (bxpm) / 将来の全 flip spec に一般化する。 <strong>★2026-07-19 user 文案承認済 — status = accepted。</strong></div>
 </header>
-
+<!-- folio:chrome-toc -->
 <nav class="toc" aria-label="ページ内目次">
 <ol>
   <li><a href="#s1-context">§1. Context</a></li>
   <li><a href="#s2-decision">§2. Decision (政策 A)</a></li>
   <li class="toc--sub"><a href="#s2-1-retire">§2.1 snapshot 突合の退役 (物理定義)</a></li>
   <li class="toc--sub"><a href="#s2-2-census">§2.2 (a) frozen literal census</a></li>
-  <li class="toc--sub"><a href="#s2-3-roundtrip">§2.3 (b) contract 対 round-trip</a></li>
+  <li class="toc--sub"><a href="#s2-3-roundtrip">§2.3 (b) contract 対 machine-block round-trip</a></li>
   <li class="toc--sub"><a href="#s2-4-collapse">§2.4 (c) extractor-collapse 敵対 test</a></li>
-  <li class="toc--sub"><a href="#s2-5-snapshot-fate">§2.5 snapshot file の去就</a></li>
+  <li class="toc--sub"><a href="#s2-5-snapshot-fate">§2.5 snapshot file の去就 (裁定 2026-07-18)</a></li>
   <li class="toc--sub"><a href="#s2-6-general">§2.6 全 flip spec への一般化</a></li>
   <li><a href="#s3-consequences">§3. Consequences</a></li>
   <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
   <li><a href="#s5-trace">§5. Trace</a></li>
 </ol>
 </nav>
+<!-- /folio:chrome-toc -->
 
 <main>
 <section id="s1-context">
@@ -85,7 +86,7 @@
     <li><strong>両側同時退行の vacuous PASS</strong>: contract と生成物の rich 突合 (§4/§5) は両側が contract 由来ゆえ、
       extractor が rich()→plain() へ退行すると contract も生成物も同時に rich を失い、 contract==生成物 は成立したまま
       canonical との乖離だけが残る。</li>
-    <li><strong>contract (edit-SSoT・<a href="../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a>) の進化</strong>: contract が正当に育つ (新 REQ 追加等) と snapshot は古くなる。
+    <li><strong>contract (edit-SSoT・<a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a>) の進化</strong>: contract が正当に育つ (新 REQ 追加等) と snapshot は古くなる。
       snapshot を追随更新すると「flip 前の不動 oracle」という独立第 3 者性が失われ、 更新しないと乖離が gate を赤くする。</li>
   </ul>
   <p>user 裁定 (2026-07-18) = <strong>政策 A (bootstrap 退役)</strong>。 snapshot 突合は「flip 時 1 回の bootstrap 忠実性
@@ -129,7 +130,7 @@
       sections[].machine_blocks[].html</strong> から document 順に再構成し、 RIGHT (生成物 spec-machine-*) と順序付き双方向
       diff する。 live canonical repoint は禁止 (demoted vocab の不整合 + 自己比較恒真化)。 本 arm が守るのは <strong>assembler
       バグ</strong> (生成物が contract から乖離・silent drop / 順序入替 / cross-section 誤帰属 / 二重 escape) の検出。
-      本節は <a href="../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (機械層 round-trip)
+      本節は <a href="./ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (機械層 round-trip)
       の LEFT source 定義を改訂する。</p>
     <p>★(a)(b) は両側 contract 由来ゆえ両側同時退行で vacuous になりうる → 必ず (c) で塞ぐ。</p>
   </section>
@@ -191,19 +192,64 @@
 <section id="s5-trace">
   <h2>§5. Trace</h2>
   <ul>
-    <li>normative: <a href="../design-intent/spec/verification.html#req-ver-031">REQ-VER-031</a> (verification.html contract に
+    <li>normative: <a href="../spec/verification.html#req-ver-031">REQ-VER-031</a> (verification.html contract に
       greenfield 新設・census/round-trip/collapse の done-condition)。 REQ-VER-* は verification 系 spec 横断の共有連番で
       (024-030 は srs-verification.html / rules.html が所有・027/028 は退役欠番)、 verification.html 局所の 023 の次が 031 になる。</li>
     <li>実装: verify-verification.sh (§10b census / §11 round-trip) / test-adversarial-verification.sh (F19 per-shape /
       M-SELFCMP / COLLAPSE) / census-guard.sh / spec-origin/verification.frozen-census.txt。</li>
-    <li>前提: <a href="../design-intent/spec/constitution.html#p-13">P-13 (Verification &amp; Traceability)</a> /
-      <a href="../design-intent/spec/constitution.html#p-6">P-6 (link-integrity)</a> /
-      <a href="../design-intent/decisions/ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (dual-audience round-trip) /
-      <a href="../design-intent/decisions/ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> (edit-SSoT / canonical 語彙 pin) /
+    <li>前提: <a href="../spec/constitution.html#p-13">P-13 (Verification &amp; Traceability)</a> /
+      <a href="../spec/constitution.html#p-6">P-6 (link-integrity)</a> /
+      <a href="./ADR-0045-spec-pack-machine-layer-round-trip.html">ADR-0045</a> (dual-audience round-trip) /
+      <a href="./ADR-0051-what-ssot-layer-interpretation.html">ADR-0051</a> (edit-SSoT / canonical 語彙 pin) /
       folio-lwhz (snapshot oracle 化)。</li>
     <li>起票: folio-7n17 (政策 A ADR + arm 改修)。 user 起票承認済 2026-07-18。</li>
   </ul>
 </section>
 </main>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0052-glossary-ssot-reassignment.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0052 — glossary SSoT 再指定: contract = edit-SSoT / vocabulary.yaml = 生成 projection / canonical glossary.html = build-orchestrates-pack の提示層</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
 </body>
 </html>

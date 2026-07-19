@@ -11,22 +11,22 @@
 # provenance:
 #   canonical = design-intent/spec/verification.html @ base 2f53388b (srpz land 済)
 #   snapshot(bootstrap) = spec-origin/verification.origin.html @ 83e07b6 (lwhz land)
-#   provenance_contract_sha256 = 1703ce44db68fbf04ec07f77d00a032fd37d588c705816709956b1a37ed1dd43
+#   provenance_contract_sha256 = ab9dc41ca07813aaa4adfe20db5b78414ccdb920bc06e4914feb55f670e2ea47
 #     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
 # ============================================================================
 
 # ---- scalars (frozen literal・subject = 生成物 HTML) ----
-FZ_ID_COUNT=55
+FZ_ID_COUNT=57
 FZ_XREF=31
 FZ_TERM=27
 FZ_DELTA=5
 FZ_ESC_XREF=3
-FZ_CODE_TABLE_CELL=41
+FZ_CODE_TABLE_CELL=43
 FZ_CODE_CAPTION=2
 FZ_CODE_REST=79
-FZ_CODE_TOTAL=122
-FZ_SPAN_TABLE_CELL=58
+FZ_CODE_TOTAL=124
+FZ_SPAN_TABLE_CELL=60
 FZ_SPAN_CAPTION=1
 FZ_ESC_CODE=0
 FZ_ESC_SPAN=2
@@ -66,6 +66,7 @@ req-ver-020
 req-ver-021
 req-ver-022
 req-ver-023
+req-ver-031
 s0-reader-guide
 s1-1-concepts
 s1-2-scope-boundary
@@ -74,6 +75,7 @@ s2-1-targets
 s2-2-out-of-scope
 s2-scope
 s3-1-scenario-format
+s3-10-flip-fidelity
 s3-2-yaml-schema
 s3-3-assertion
 s3-4-baseline

@@ -44,6 +44,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5   # node24 ランタイム (v4 = node20 は 2026-06-02 強制移行で deprecation)
+        with:
+          fetch-depth: 0   # census-guard の base-ref coupling が base sha を必要とする (政策A / folio-7n17)
 
       # yq は ubuntu-latest に非搭載。 runner.sh + vocabulary gate (mikefarah/yq v4.x) が依存。
       # local 開発環境 (v4.53.2) と同 minor に pin して再現性を確保する。
@@ -150,6 +152,16 @@ jobs:
         run: .claude-plugin/design-system/generator/verify-srs-verification-drift.sh
       - name: srs-verification drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
         run: .claude-plugin/design-system/generator/test-adversarial-srs-verification-drift.sh
+
+      # 政策A 恒久防御 (a)(c) の常設配線 (ADR-0053 / folio-7n17)。 drift gate が捕捉できない両側同時退行
+      # (extractor-collapse の vacuous PASS — fresh 再生成も同様に collapse し byte 一致で PASS する) を
+      # frozen census + COLLAPSE/M-SELFCMP/F19 敵対 test で block する (REQ-VER-031 の常設 enforcement)。
+      - name: verification census/collapse 敵対回帰 (§10b frozen census arm + COLLAPSE + M-SELFCMP + F19 census 群)
+        run: .claude-plugin/design-system/generator/test-adversarial-verification.sh
+      # 数字上書き防壁: frozen census の裸の値変更 (契約変更を伴わない census bump = 退行 launder) を
+      # base-ref coupling で block する。 base-ref は PR base sha / push は before sha (fetch-depth: 0 が前提)。
+      - name: census-guard (数字上書き防壁・census 値変更 ⟺ contract 変更 coupling)
+        run: .claude-plugin/design-system/generator/census-guard.sh "${{ github.event.pull_request.base.sha || github.event.before }}"
 
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、

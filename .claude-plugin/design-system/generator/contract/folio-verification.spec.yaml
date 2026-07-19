@@ -145,7 +145,7 @@ sections:
         ids: ["REQ-VER-007", "REQ-VER-008", "REQ-VER-009", "REQ-VER-010", "REQ-VER-011", "REQ-VER-012", "REQ-VER-013", "REQ-VER-014", "REQ-VER-015", "REQ-VER-016", "REQ-VER-017", "REQ-VER-018", "REQ-VER-019", "REQ-VER-020", "REQ-VER-021", "REQ-VER-022", "REQ-VER-023"]
       - { type: subhead, anchor: "s3-7-coverage-rtm", heading: "§3.7 Coverage RTM (requirement traceability)", essence: "全 REQ の検証被覆を一覧し、 <strong>scenario 列が空 = 未検証 gap</strong> を可視化する (例 VER-006)。" }
       - type: table
-        caption: "verification-framework requirement coverage matrix (REQ-VER-001〜023 + §3.8 の REQ-NAV-*。 VER-005 は §4 のため・VER-024〜030 は <a href=\"srs-verification.html\">srs-verification.html</a> へ分離ゆえ除外)"
+        caption: "verification-framework requirement coverage matrix (REQ-VER-001〜023・031 + §3.8 の REQ-NAV-*。 VER-005 は §4 のため・VER-024〜030 は <a href=\"srs-verification.html\">srs-verification.html</a> へ分離ゆえ除外)"
         headers: ["REQ", "EARS", "derives-from", "scenario (verifies)", "verified"]
         rows:
           - ["<a class=\"cov-req\" href=\"#req-ver-001\"><span class=\"badge badge--req\">VER-001</span></a>", "<span class=\"req__ears req__ears--ubiquitous\">Ubiq.</span>", "<a class=\"xref\" href=\"../decisions/ADR-0013-verification-framework.html\" data-tooltip=\"folio v0.4.2-draft\">ADR-0013</a> / §3.2", "<code>scenarios/*.yaml</code>", "✓"]
@@ -170,6 +170,7 @@ sections:
           - ["<a class=\"cov-req\" href=\"#req-ver-021\"><span class=\"badge badge--req\">VER-021</span></a>", "<span class=\"req__ears req__ears--event\">Event</span>", "<a class=\"xref\" href=\"../decisions/ADR-0020-validate-scope.html\" data-tooltip=\"forward (Track 3、 user 承認済、 実装は spawn)\">ADR-0020</a> / rules §4.5", "<code>render-safety.yaml</code>", "✓"]
           - ["<a class=\"cov-req\" href=\"#req-ver-022\"><span class=\"badge badge--req\">VER-022</span></a>", "<span class=\"req__ears req__ears--event\">Event</span>", "<a class=\"xref\" href=\"../decisions/ADR-0037-render-safety-ceiling.html\">ADR-0037</a> + <a href=\"../decisions/ADR-0039-presentation-template-layer.html\">ADR-0039</a> §2.8 / VER-021 (二層)", "<code>render-gate/check.py --selftest</code> + CI <code>render-gate</code> job (CI-only、 sandbox 被覆外)", "✓"]
           - ["<a class=\"cov-req\" href=\"#req-ver-023\"><span class=\"badge badge--req\">VER-023</span></a>", "<span class=\"req__ears req__ears--event\">Event</span>", "<a href=\"../decisions/ADR-0039-presentation-template-layer.html\">ADR-0039</a> §2.7 / P-14", "<code>readability-floor</code> / <code>-hero.yaml</code>", "✓"]
+          - ["<a class=\"cov-req\" href=\"#req-ver-031\"><span class=\"badge badge--req\">VER-031</span></a>", "<span class=\"req__ears req__ears--ubiquitous\">Ubiq.</span>", "<a href=\"../decisions/ADR-0053-snapshot-oracle-evolution-policy.html\">ADR-0053</a> / P-13", "<code>census-guard.sh</code> + <code>test-adversarial-verification.sh</code> (COLLAPSE / M-SELFCMP / F19)", "✓"]
           - ["<a class=\"cov-req\" href=\"#req-nav-001\"><span class=\"badge badge--req\">NAV-001</span></a>", "<span class=\"req__ears req__ears--event\">Event</span>", "<a href=\"../decisions/ADR-0035-walkable-architecture-nav-derive.html\">ADR-0035</a> §2.5", "<code>nav-validate-clean</code> / <code>-drift</code> / <code>-keystone.yaml</code>", "✓"]
           - ["<a class=\"cov-req\" href=\"#req-nav-002\"><span class=\"badge badge--req\">NAV-002</span></a>", "<span class=\"req__ears req__ears--unwanted\">Unw.</span>", "<a class=\"xref\" href=\"../decisions/ADR-0035-walkable-architecture-nav-derive.html\" data-tooltip=\"architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を\">ADR-0035</a> §2.5", "<code>nav-validate-deadlink.yaml</code>", "✓"]
           - ["<a class=\"cov-req\" href=\"#req-nav-003\"><span class=\"badge badge--req\">NAV-003</span></a>", "<span class=\"req__ears req__ears--unwanted\">Unw.</span>", "ADR-0035 §2.5", "<code>nav-validate-reachability.yaml</code>", "✓"]
@@ -181,6 +182,9 @@ sections:
       - type: requirements
         ids: ["REQ-NAV-001", "REQ-NAV-002", "REQ-NAV-003", "REQ-NAV-004", "REQ-NAV-005", "REQ-NAV-006", "REQ-NAV-007"]
       - { type: subhead, anchor: "s3-9-srs-done-condition", heading: "§3.9 生成 SRS の done-condition gate → srs-verification.html へ分離", essence: "生成 SRS プレゼンの done-condition (VER-024〜030) は、 readability box 整合のため別 spec <a href=\"srs-verification.html\">srs-verification.html</a> へ分離した (<a href=\"../decisions/ADR-0040-human-layer-presentation-compression.html\">ADR-0040</a>)。 folio 自身の verification (本 spec、 REQ-VER-001〜023 / REQ-NAV-001〜007) と consumer 生成物 (SRS) の verification を別 audience に分ける。" }
+      - { type: subhead, anchor: "s3-10-flip-fidelity", heading: "§3.10 flip 済 spec の fidelity done-condition (REQ-VER-031)", essence: "flip 済 spec (機械 SSoT 生成の canonical) の生成物 fidelity を、 凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (<a href=\"../decisions/ADR-0053-snapshot-oracle-evolution-policy.html\">ADR-0053</a>・政策 A)。 snapshot oracle は bootstrap 1 回証明へ退役した。" }
+      - type: requirements
+        ids: ["REQ-VER-031"]
     machine_blocks:
       - { type: note, html: "<p>本 §3 は verification framework の規範要件を EARS notation で集約する。 各 REQ-VER-* は <a href=\"rules.html#s6-ears\">rules.html §6 EARS Notation</a> に従う。 scenario YAML file への 1:1 mapping は <a href=\"https://conductofcode.io/post/easy-approach-to-requirements-syntax-and-the-segue-to-behavior-driven-development/\">EARS → Gherkin BDD 変換 pattern</a> で導出される。</p>" }
       - { type: note, html: "<p>以下、 各 REQ-VER-* は <a href=\"rules.html#s7-2-canonical-pattern\">compact 1 行 (<code>.spec-row</code>)</a> で提示する: <strong>badge + EARS pattern + <span class=\"term\" data-term=\"essence\" data-tooltip=\"defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。\">essence</span> (human 要約)</strong> が常時可視、 行をクリックすると machine canonical normative (EARS 文) が開く (最小読量で「何があるか」を一望)。 全 REQ の derives / scenario / verified 被覆は <a href=\"#s3-7-coverage-rtm\">§3.7 coverage RTM</a> に一覧し、 <strong>scenario 列が空 = link は valid だが未検証 = <code>folio validate</code> が捕らない gap</strong> を可視化する。</p>" }
@@ -427,6 +431,12 @@ requirements:
     essence: "Phase X3 着手時に Step 1 (hook script unit test) を実装する (Step 2/3 は SHOULD/MAY で段階追加)。"
     statement: "<span class=\"ears-id\">REQ-VER-005</span>: Phase X3 着手時点で Step 1 (hook script unit test) を <span class=\"ears-shall\">MUST</span> 実装する。 Step 2 / Step 3 は段階追加 (SHOULD / MAY)。"
 
+  - id: "REQ-VER-031"
+    anchor: "req-ver-031"
+    ears_pattern: "ubiquitous"
+    essence: "flip 済 spec の生成物 fidelity (人間層 rich + 機械層 normative) は、 canonical/artifact/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・<a href=\"../decisions/ADR-0053-snapshot-oracle-evolution-policy.html\">ADR-0053</a>)。"
+    statement: "<span class=\"ears-id\">REQ-VER-031</span>: The folio verification framework <span class=\"ears-shall\">SHALL</span> verify that the generated output of a flipped spec (canonical generated from its machine SSoT) losslessly carries the canonical assets (human-layer rich, machine-layer normative, and navigable structure) via three pillars: (a) a frozen literal census whose expected values are derived from neither canonical, artifact, nor generated output, checked against the generated HTML as subject; (b) a round-trip reconstructed from the contract machine blocks; (c) adversarial tests that fire on extractor regression (rich-to-plain collapse). The framework <span class=\"ears-shall\">SHALL NOT</span> use relative parity against the snapshot oracle, which is retired to a one-time bootstrap fidelity proof (self-comparison becomes tautological after flip; <a href=\"../decisions/ADR-0053-snapshot-oracle-evolution-policy.html\">ADR-0053</a>)."
+
 # 非終端 照会 (前方・他文書へ)。 constitution P-x (role=implementation) / ADR (rationale) / verification REQ-VER (verification)。
 references:
   - { token: "P-13", doc: "constitution.html", role: "implementation" }
@@ -458,6 +468,7 @@ references:
   - { token: "ADR-0019", doc: "decisions/", role: "rationale" }
   - { token: "ADR-0035", doc: "decisions/", role: "rationale" }
   - { token: "ADR-0029", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0053", doc: "decisions/", role: "rationale" }
 
 # 用語集 (core 共用 glossary-term-table)。 term = 表示語 / en = canonical (data-term) / def = data-tooltip 由来定義。
 glossary:

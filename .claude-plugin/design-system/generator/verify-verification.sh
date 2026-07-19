@@ -413,7 +413,7 @@ ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/verification.origin.html}"
 #     measured 側を ★生成物 HTML (verify の subject) へ固定する。 ORIG は census を【消費しない】 (下記存在 pin のみ)。
 #   ★なぜ独立 anchor が要るか: §4/§5 の rich 突合は全て「contract vs 生成物」で ★両側同時退行で vacuous PASS
 #     する (extractor が plain() へ戻ると contract も生成物も同時に rich を失う = mandate HIGH-4)。 凍結 literal
-#     census は両側と独立ゆえ、 collapse しても frozen 31 vs 生成物 0 で FAIL する (test-adversarial の collapse
+#     census は両側と独立ゆえ、 collapse しても frozen 31 vs 生成物 6 で FAIL する (test-adversarial の collapse
 #     test / 本番自己比較 MK が red→green で実証)。
 #   ★ORIG 存在 fail-closed pin は【存置】(照合不能 silent skip の回帰 pin・M15)。 snapshot file は bootstrap
 #     記録として残置し census は消費しない (非消費 = selftest の非消費 assert + hash pin が cell 内改変を FAIL に)。
@@ -471,7 +471,7 @@ except Exception: sys.exit(0)
 v = d.get("folio:stakeholders")
 print(type(v).__name__ + "\t" + json.dumps(v, ensure_ascii=False, sort_keys=True))'; }
 
-# ★ORIG 存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15・非消費)。 snapshot は census を消費しないが、
+# ★ORACLE 存在 pin (bootstrap 記録・fail-closed。 照合不能 silent skip の回帰 pin・M15・非消費)。 snapshot は census を消費しないが、
 #   SPEC_ORIGIN_HTML を存在しない path へ向けて gate を silent skip する逃げ道は塞ぐ (存在検査のみ・内容不読)。
 if [[ ! -f "$ORIG" ]]; then
   printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "ORACLE 存在 pin (bootstrap 記録)" "$ORIG"; fail=1
@@ -525,7 +525,7 @@ chk "census JSON-LD: folio:stakeholders 型+値 == 凍結 literal (array 退行�
   "$(fz_ld)" "$(ld_stake "$HTML")"
 
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
-  # ★ORIG 存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15・非消費)。 §11 LEFT は政策 A (folio-7n17) で
+  # ★ORACLE 存在 pin (bootstrap 記録・fail-closed。 照合不能 silent skip の回帰 pin・M15・非消費)。 §11 LEFT は政策 A (folio-7n17) で
   #   contract 由来へ re-home したため ORIG を消費しないが、 SPEC_ORIGIN_HTML=/nonexistent による silent skip の
   #   逃げ道は §10b と対称に塞ぐ (存在検査のみ・内容不読)。
   if [[ ! -f "$ORIG" ]]; then

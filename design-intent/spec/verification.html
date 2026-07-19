@@ -576,6 +576,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
     { "@id": "../decisions/ADR-0042-hybrid-generation-dense-table-readability.html" },
     { "@id": "../decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
     { "@id": "../decisions/ADR-0047-how-outside-floor2-hard-gate.html" },
+    { "@id": "../decisions/ADR-0053-snapshot-oracle-evolution-policy.html" },
     { "@id": "../research/constitution-x4-amendment-proposal.html" },
     { "@id": "./srs-verification.html" }
   ],
@@ -652,7 +653,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <h1>folio verification — sandbox verification framework spec</h1>
 <p class="cover-sub">v1.2.0 · status: active · sandbox verification framework spec (機能単位 use case verification の SSoT)</p>
 <div class="summary-card"><span class="ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffe8a8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span><div><p class="lab">この仕様が約束すること (1 文サマリ)</p><p class="txt" data-prose-slot="cover-summary" data-slot-id="cover-summary">folio plugin を sandbox (隔離環境) で実機検証する枠組みの仕様です。 検証の 3 つの状態・何を検証し何を範囲外とするか・規範要件 (EARS 記法の REQ-VER / REQ-NAV)・段階的な実装の進め方を章立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の verification.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます。</p></div></div>
-<div class="cover-meta"><span class="m"><span class="k">章の数</span><span class="v">7 章</span></span><span class="m"><span class="k">規範要件</span><span class="v">30 件 (EARS)</span></span><span class="m"><span class="k">用語</span><span class="v">27 語</span></span><span class="m"><span class="k">版</span><span class="v">v1.2.0 / 2026-06-24</span></span></div>
+<div class="cover-meta"><span class="m"><span class="k">章の数</span><span class="v">7 章</span></span><span class="m"><span class="k">規範要件</span><span class="v">31 件 (EARS)</span></span><span class="m"><span class="k">用語</span><span class="v">27 語</span></span><span class="m"><span class="k">版</span><span class="v">v1.2.0 / 2026-06-24</span></span></div>
 <div data-component="approval-block">
 <div class="sign"><span class="role">文書種別</span><span class="who">spec (verification framework)</span><span class="when">v1.2.0</span><span class="stamp self">active</span></div>
 <div class="sign"><span class="role">生成 (engine tr0 spec-pack)</span><span class="who">folio design system</span><span class="when">2026-06-24 生成</span><span class="stamp self">生成</span></div>
@@ -679,6 +680,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
   <li class="toc--sub"><a href="#s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</a></li>
   <li class="toc--sub"><a href="#s3-8-nav-req">§3.8 walkable-nav / chrome scenario REQ (REQ-NAV-001〜007)</a></li>
   <li class="toc--sub"><a href="#s3-9-srs-done-condition">§3.9 生成 SRS の done-condition gate → srs-verification.html へ分離</a></li>
+  <li class="toc--sub"><a href="#s3-10-flip-fidelity">§3.10 flip 済 spec の fidelity done-condition (REQ-VER-031)</a></li>
   <li><a href="#s4-implementation">§4. Implementation Phase</a></li>
   <li class="toc--sub"><a href="#s4-1-3step">§4.1 3-Step approach</a></li>
   <li class="toc--sub"><a href="#s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</a></li>
@@ -908,7 +910,7 @@ flowchart TB
 </div>
 </div>
 <div data-component="spec-subhead"><h3 id="s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</h3><p class="sub-se">全 REQ の検証被覆を一覧し、 <strong>scenario 列が空 = 未検証 gap</strong> を可視化する (例 VER-006)。</p></div>
-<div class="tbl-wrap"><table data-component="spec-table"><caption>verification-framework requirement coverage matrix (REQ-VER-001〜023 + §3.8 の REQ-NAV-*。 VER-005 は §4 のため・VER-024〜030 は <a href="srs-verification.html">srs-verification.html</a> へ分離ゆえ除外)</caption><thead><tr><th>REQ</th><th>EARS</th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead><tbody>
+<div class="tbl-wrap"><table data-component="spec-table"><caption>verification-framework requirement coverage matrix (REQ-VER-001〜023・031 + §3.8 の REQ-NAV-*。 VER-005 は §4 のため・VER-024〜030 は <a href="srs-verification.html">srs-verification.html</a> へ分離ゆえ除外)</caption><thead><tr><th>REQ</th><th>EARS</th><th>derives-from</th><th>scenario (verifies)</th><th>verified</th></tr></thead><tbody>
 <tr><td><a class="cov-req" href="#req-ver-001"><span class="badge badge--req">VER-001</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a class="xref" href="../decisions/ADR-0013-verification-framework.html" data-tooltip="folio v0.4.2-draft">ADR-0013</a> / §3.2</td><td><code>scenarios/*.yaml</code></td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-ver-002"><span class="badge badge--req">VER-002</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td>rules §10 / relations §5.3</td><td>(全 scenario)</td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-ver-003"><span class="badge badge--req">VER-003</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a class="xref" href="../decisions/ADR-0017-unit-integration-boundary.html" data-tooltip="retrospective (sandbox=unit / e2e=integration 境界確定、 compact-source 実証込)">ADR-0017</a> (exit-code 中心)</td><td>(全 hook scenario)</td><td>✓</td></tr>
@@ -931,6 +933,7 @@ flowchart TB
 <tr><td><a class="cov-req" href="#req-ver-021"><span class="badge badge--req">VER-021</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a class="xref" href="../decisions/ADR-0020-validate-scope.html" data-tooltip="forward (Track 3、 user 承認済、 実装は spawn)">ADR-0020</a> / rules §4.5</td><td><code>render-safety.yaml</code></td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-ver-022"><span class="badge badge--req">VER-022</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a class="xref" href="../decisions/ADR-0037-render-safety-ceiling.html">ADR-0037</a> + <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.8 / VER-021 (二層)</td><td><code>render-gate/check.py --selftest</code> + CI <code>render-gate</code> job (CI-only、 sandbox 被覆外)</td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-ver-023"><span class="badge badge--req">VER-023</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a> §2.7 / P-14</td><td><code>readability-floor</code> / <code>-hero.yaml</code></td><td>✓</td></tr>
+<tr><td><a class="cov-req" href="#req-ver-031"><span class="badge badge--req">VER-031</span></a></td><td><span class="req__ears req__ears--ubiquitous">Ubiq.</span></td><td><a href="../decisions/ADR-0053-snapshot-oracle-evolution-policy.html">ADR-0053</a> / P-13</td><td><code>census-guard.sh</code> + <code>test-adversarial-verification.sh</code> (COLLAPSE / M-SELFCMP / F19)</td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-nav-001"><span class="badge badge--req">NAV-001</span></a></td><td><span class="req__ears req__ears--event">Event</span></td><td><a href="../decisions/ADR-0035-walkable-architecture-nav-derive.html">ADR-0035</a> §2.5</td><td><code>nav-validate-clean</code> / <code>-drift</code> / <code>-keystone.yaml</code></td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-nav-002"><span class="badge badge--req">NAV-002</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td><a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> §2.5</td><td><code>nav-validate-deadlink.yaml</code></td><td>✓</td></tr>
 <tr><td><a class="cov-req" href="#req-nav-003"><span class="badge badge--req">NAV-003</span></a></td><td><span class="req__ears req__ears--unwanted">Unw.</span></td><td>ADR-0035 §2.5</td><td><code>nav-validate-reachability.yaml</code></td><td>✓</td></tr>
@@ -978,6 +981,14 @@ flowchart TB
 </div>
 </div>
 <div data-component="spec-subhead"><h3 id="s3-9-srs-done-condition">§3.9 生成 SRS の done-condition gate → srs-verification.html へ分離</h3><p class="sub-se">生成 SRS プレゼンの done-condition (VER-024〜030) は、 readability box 整合のため別 spec <a href="srs-verification.html">srs-verification.html</a> へ分離した (<a href="../decisions/ADR-0040-human-layer-presentation-compression.html">ADR-0040</a>)。 folio 自身の verification (本 spec、 REQ-VER-001〜023 / REQ-NAV-001〜007) と consumer 生成物 (SRS) の verification を別 audience に分ける。</p></div>
+<div data-component="spec-subhead"><h3 id="s3-10-flip-fidelity">§3.10 flip 済 spec の fidelity done-condition (REQ-VER-031)</h3><p class="sub-se">flip 済 spec (機械 SSoT 生成の canonical) の生成物 fidelity を、 凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (<a href="../decisions/ADR-0053-snapshot-oracle-evolution-policy.html">ADR-0053</a>・政策 A)。 snapshot oracle は bootstrap 1 回証明へ退役した。</p></div>
+<div class="rq-list">
+<div data-component="ears-requirement-row" id="req-ver-031" data-req-id="REQ-VER-031" data-ears-pattern="ubiquitous" data-audience="human">
+<div class="rq-head"><span class="rid">REQ-VER-031</span><span data-component="ears-badge" class="always">無条件不変条件</span></div>
+<p class="rq-essence">flip 済 spec の生成物 fidelity (人間層 rich + 機械層 normative) は、 canonical/artifact/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・<a href="../decisions/ADR-0053-snapshot-oracle-evolution-policy.html">ADR-0053</a>)。</p>
+<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt"><span class="ears-id">REQ-VER-031</span>: The folio verification framework <span class="ears-shall">SHALL</span> verify that the generated output of a flipped spec (canonical generated from its machine SSoT) losslessly carries the canonical assets (human-layer rich, machine-layer normative, and navigable structure) via three pillars: (a) a frozen literal census whose expected values are derived from neither canonical, artifact, nor generated output, checked against the generated HTML as subject; (b) a round-trip reconstructed from the contract machine blocks; (c) adversarial tests that fire on extractor regression (rich-to-plain collapse). The framework <span class="ears-shall">SHALL NOT</span> use relative parity against the snapshot oracle, which is retired to a one-time bootstrap fidelity proof (self-comparison becomes tautological after flip; <a href="../decisions/ADR-0053-snapshot-oracle-evolution-policy.html">ADR-0053</a>).</p></details>
+</div>
+</div>
 <details data-component="spec-machine-fold" class="machine-fold">
 <summary><span class="mf-kicker">機械層 (machine-readable)</span> <span class="mf-label">§3. EARS Requirements (REQ-VER-001〜) の地の文・運用説明・rationale</span> <span class="mf-count">9 件</span></summary>
 <div class="machine-body">
@@ -1115,6 +1126,7 @@ flowchart TB
 <div data-component="cross-doc-ref-chip" data-ref-token="ADR-0019" data-ref-role="rationale"><span class="rf-token"><b>ADR-0019</b></span><span class="rf-arrow">→</span><span class="rf-doc">decisions/</span><span class="rf-role">rationale</span></div>
 <div data-component="cross-doc-ref-chip" data-ref-token="ADR-0035" data-ref-role="rationale"><span class="rf-token"><b>ADR-0035</b></span><span class="rf-arrow">→</span><span class="rf-doc">decisions/</span><span class="rf-role">rationale</span></div>
 <div data-component="cross-doc-ref-chip" data-ref-token="ADR-0029" data-ref-role="rationale"><span class="rf-token"><b>ADR-0029</b></span><span class="rf-arrow">→</span><span class="rf-doc">decisions/</span><span class="rf-role">rationale</span></div>
+<div data-component="cross-doc-ref-chip" data-ref-token="ADR-0053" data-ref-role="rationale"><span class="rf-token"><b>ADR-0053</b></span><span class="rf-arrow">→</span><span class="rf-doc">decisions/</span><span class="rf-role">rationale</span></div>
 </div>
 </div>
 <section data-component="chapter-deck-band" class="tint-brand"><span class="num">09</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.6 13.4 13 21l-9-9V4h8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg> 用語集 / この文書で使う専門語</span><h2>本文に出てくる専門語のやさしい説明</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-09">本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。</p></section>
@@ -1152,7 +1164,7 @@ flowchart TB
 </div>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-verification.spec.yaml</b> &middot; 生成: <b>2026-07-18 15:18</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-verification.spec.yaml</b> &middot; 生成: <b>2026-07-19 07:57</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>spec-pack (verification fork)</span><span>folio engine tr0</span><span>EARS 章立て + 非終端 照会 + 機械層 demoted</span></div>
 </div></footer>
 <script>

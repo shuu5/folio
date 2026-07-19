@@ -316,7 +316,8 @@ f18f_shape "★comment 内への隠蔽を abort"       '<!--<a href=javascript:a
 #   他所へ置くと ★lib 解決に失敗して rc=1 になる (= guard が撃った abort と ★見分けが付かない偽の緑。 実測で踏んだ)。
 #   TMP の外ゆえ EXIT trap へ ★明示的に載せる (途中 kill で untracked の残骸を repo に残さない)。
 GUARDLESS="$SCRIPT_DIR/.f18g-guardless.sh"
-trap 'rm -rf "$TMP"; rm -f "$GUARDLESS"' EXIT
+EPOCH_ASM="$SCRIPT_DIR/.collapse-epoch-asm.sh"   # COLLAPSE 用 epoch 固定 assembler (SCRIPT_DIR 配置 = lib 解決・COLLAPSE 節参照)
+trap 'rm -rf "$TMP"; rm -f "$GUARDLESS" "$EPOCH_ASM"' EXIT
 sed 's/\.sections\[\]\.essence,/.sectionsTYPO[].essence,/' "$ASM" > "$GUARDLESS"
 if diff -q "$ASM" "$GUARDLESS" >/dev/null; then
   ng "F18g mutation が assembler を変えていない = ★空撃ち (rich_field_values の query 形が変わった疑い)"
@@ -616,7 +617,33 @@ else
   else
     ok "COLLAPSE-0 ★rich()→plain() collapse mutate が適用された (関数レベル)"
     bash "$TMP/extract-collapsed.sh" "$COLLAPSE_SNAP" > "$TMP/collapsed.yaml" 2>/dev/null
-    if bash "$ASM" "$TMP/collapsed.yaml" "$TMP/collapsed.html" >/dev/null 2>&1; then
+    # ★epoch 固定 assembler: collapsed.yaml は凍結 snapshot (55-id epoch) の re-extract ゆえ rich/machine field
+    #   件数は凍結 epoch 実測 (rich 337 = 7+18+7+24+220+1+30+30 / machine 34 = 3+0+20+11) を持つ。 live assembler の
+    #   RICH_FIELD_MIN / *_TYPE_MINS は現行契約の成長へ追随更新される (assembler 内規) ため、 現行値のまま snapshot
+    #   epoch の contract を assemble すると被覆量 assert (b1)/(b2) が構造発火する (契約成長の初回 = folio-7n17 Leg B
+    #   の REQ-VER-031 追加で顕在化)。 snapshot は非追随 (ADR-0053 §2.5・案 B 却下) ゆえ epoch 定数は★永久安定 —
+    #   test-local copy の MIN 群だけを epoch 値へ pin する (本番 assembler の fail-closed は★不変・本 test の検査
+    #   対象は census (下流) であって MIN ではない・GUARDLESS と同じ SCRIPT_DIR 配置 + EXIT trap 掃除)。
+    sed -E \
+      -e 's/^RICH_FIELD_MIN=[0-9]+$/RICH_FIELD_MIN=337/' \
+      -e 's/^MACHINE_FIELD_MIN=[0-9]+$/MACHINE_FIELD_MIN=34/' \
+      -e 's/^(  .)[0-9]+(:::sect-essence)/\17\2/' \
+      -e 's/^(  .)[0-9]+(:::subhead-essence)/\118\2/' \
+      -e 's/^(  .)[0-9]+(:::table-caption)/\17\2/' \
+      -e 's/^(  .)[0-9]+(:::table-headers)/\124\2/' \
+      -e 's/^(  .)[0-9]+(:::table-rows)/\1220\2/' \
+      -e 's/^(  .)[0-9]+(:::mermaid-caption)/\11\2/' \
+      -e 's/^(  .)[0-9]+(:::req-essence)/\130\2/' \
+      -e 's/^(  .)[0-9]+(:::req-statement)/\130\2/' \
+      -e 's/^(  .)[0-9]+(:::preamble-html)/\13\2/' \
+      -e 's/^(  .)[0-9]+(:::preamble-items)/\10\2/' \
+      -e 's/^(  .)[0-9]+(:::block-html)/\120\2/' \
+      -e 's/^(  .)[0-9]+(:::block-items)/\111\2/' \
+      "$ASM" > "$EPOCH_ASM"
+    if ! grep -q '^RICH_FIELD_MIN=337$' "$EPOCH_ASM" || ! grep -q "18:::subhead-essence" "$EPOCH_ASM" \
+       || ! grep -q "220:::table-rows" "$EPOCH_ASM"; then
+      ng "COLLAPSE ★epoch assembler の MIN pin が不成立 (sed 空撃ち = 定数記法の変化疑い)"
+    elif bash "$EPOCH_ASM" "$TMP/collapsed.yaml" "$TMP/collapsed.html" >/dev/null 2>&1; then
       cx_g="$(perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /class="(?:[^"]*\s)?xref/; } print $n;' "$TMP/collapsed.html")"
       # collapsed verify を回し ① §4/§5 vacuous PASS と ② frozen census FAIL を同一 run で確認する。
       #   ★heavy suite 下の subprocess 一過性ヒッカプ (yq|jq pipe 等) に対し fail-closed かつ resilient にするため、

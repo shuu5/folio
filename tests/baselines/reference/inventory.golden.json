@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-18T16:34:05Z",
+  "generatedAt": "2026-07-19T08:07:50Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -255,6 +255,7 @@
           "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
           "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
           "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+          "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
           "research/constitution-x4-amendment-proposal.html",
           "spec/srs-verification.html"
         ],
@@ -1298,6 +1299,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
           "decisions/ADR-0050-dual-audience-enforcement-derive.html",
           "research/doctype-coverage-audit.html"
         ],
@@ -1449,6 +1451,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
           "decisions/ADR-0052-glossary-ssot-reassignment.html"
         ],
         "dc:references": [
@@ -1482,6 +1485,31 @@
           "spec/constitution.html#p-5",
           "spec/constitution.html#p-7",
           "spec/constitution.html#p-11"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
+      "title": "ADR-0053 — snapshot oracle 進化政策 A: bootstrap 突合の退役と census/round-trip/extractor-collapse 三本柱への代替",
+      "summary": "folio 自身の canonical spec が「手書き」から「機械 SSoT 生成」へ flip した後、 生成物の機械層 fidelity を守る snapshot oracle 突合 arm が 自己比較恒真化 (flip 後 ORIG==生成物 で任意値 PASS) の再発ハザードを持つ。 政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。 snapshot file (spec-origin/verification.origin.html) は bootstrap 記録として残置し、 どの chk も その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) / srs-verification (bxpm) / 将来の全 flip spec に一般化する。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/verification.html#req-ver-031",
+          "spec/constitution.html#p-13",
+          "spec/constitution.html#p-6",
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html"
+        ],
+        "dc:isReferencedBy": [
+          "spec/verification.html"
         ]
       }
     },
@@ -1959,6 +1987,12 @@
         "essence": "glossary の SSoT を 3 層に再指定する — glossary contract YAML = 唯一の edit-SSoT / vocabulary.yaml = そこからの生成 projection (runtime SSoT) / canonical glossary.html = folio build が pack pipeline へ委譲して生成する提示層。 ADR-0036 が置いた「vocabulary.yaml を上流で author する」前提と、 ADR-0051 の SSoT-first 転換で contract 側に生まれた正本が二重保持 (手動同鏡) になっていた矛盾を、 導出で解消する。 手動同鏡は人間規律に依存し実際に drift した (治癒 = folio-7ts2) ため、 機械導出 + projection stale gate へ置換する。 委譲は 3 消費点が単一 dispatcher を呼ぶ lockstep で、 前提崩れは内部 emitter へ fallback せず hard-fail する (fallback は提示層を素朴版へ silent revert させ gate を恒真 PASS 化するため)。 Layer 1 consumer の内部 emitter 経路は不変。 ADR-0036 §2.1/§2.4/§2.5 を部分 supersede する (frozen 本文は不触)。 user 承認 = bd folio-wg2l の flip land 承認と同時 1 回 (constitution 無改訂ゆえ P-10 Amendment 不要)。"
       },
       {
+        "id": "ADR-0053",
+        "class": "decision",
+        "ssot": "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
+        "essence": "folio 自身の canonical spec が「手書き」から「機械 SSoT 生成」へ flip した後、 生成物の機械層 fidelity を守る snapshot oracle 突合 arm が 自己比較恒真化 (flip 後 ORIG==生成物 で任意値 PASS) の再発ハザードを持つ。 政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。 snapshot file (spec-origin/verification.origin.html) は bootstrap 記録として残置し、 どの chk も その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) / srs-verification (bxpm) / 将来の全 flip spec に一般化する。"
+      },
+      {
         "id": "P-1",
         "class": "principle",
         "ssot": "spec/constitution.html#p-1",
@@ -2407,6 +2441,12 @@
         "class": "requirement",
         "ssot": "spec/srs-verification.html#req-ver-030",
         "essence": ""
+      },
+      {
+        "id": "REQ-VER-031",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-ver-031",
+        "essence": "flip 済 spec の生成物 fidelity (人間層 rich + 機械層 normative) は、 canonical/artifact/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・ADR-0053)。"
       },
       {
         "id": "REQ-XREF-001",
