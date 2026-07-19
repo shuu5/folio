@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-19T08:07:50Z",
+  "generatedAt": "2026-07-19T15:33:29Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -116,63 +116,59 @@
     },
     {
       "@id": "spec/rules.html",
-      "title": "folio rules",
+      "title": "folio rules — Layer 1 consumer universal rules",
       "summary": "Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)",
       "doc-type": "rules",
       "status": "active",
       "version": "1.2.0",
-      "stakeholders": [
-        "Developer",
-        "AI Agent",
-        "External Reviewer"
-      ],
+      "stakeholders": [],
       "relations": {
-        "dc:isPartOf": [
-          "spec/README.html"
-        ],
         "dc:isReferencedBy": [
-          "spec/srs-verification.html",
-          "decisions/ADR-0048-design-intent-dir-rename.html",
-          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
-          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
-          "decisions/ADR-0044-spec-pack-folio-self-host.html",
-          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
-          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
-          "decisions/ADR-0041-human-layer-visual-design-system.html",
-          "decisions/ADR-0040-human-layer-presentation-compression.html",
-          "decisions/ADR-0038-constitution-p14-human-readability.html",
-          "decisions/ADR-0039-presentation-template-layer.html",
-          "research/presentation-design-patterns.html",
-          "decisions/ADR-0037-render-safety-ceiling.html",
-          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
-          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
-          "decisions/ADR-0034-object-term-xref-system.html",
-          "decisions/ADR-0033-dual-audience-hub.html",
-          "decisions/ADR-0028-prose-gate-mechanization.html",
-          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
-          "decisions/ADR-0026-test-placement-model.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0006-caller-marker-hook.html",
           "decisions/ADR-0020-validate-scope.html",
           "decisions/ADR-0021-constitution-x4-amendment.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html",
           "decisions/ADR-0024-folio-init-scope.html",
+          "decisions/ADR-0026-test-placement-model.html",
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0037-render-safety-ceiling.html",
+          "decisions/ADR-0038-constitution-p14-human-readability.html",
+          "decisions/ADR-0039-presentation-template-layer.html",
+          "decisions/ADR-0040-human-layer-presentation-compression.html",
+          "decisions/ADR-0041-human-layer-visual-design-system.html",
+          "decisions/ADR-0042-hybrid-generation-dense-table-readability.html",
+          "decisions/ADR-0043-reference-graph-terminal-how-outside-enforcement.html",
+          "decisions/ADR-0044-spec-pack-folio-self-host.html",
+          "decisions/ADR-0045-spec-pack-machine-layer-round-trip.html",
+          "decisions/ADR-0047-how-outside-floor2-hard-gate.html",
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "research/constitution-x4-amendment-proposal.html",
           "research/plugin-sandbox-verification-research.html",
+          "research/presentation-design-patterns.html",
           "spec/folio-self-spec.html",
           "spec/relations.html",
+          "spec/srs-verification.html",
           "spec/verification.html"
         ],
         "folio:depended-by": [
-          "spec/srs-verification.html",
           "spec/relations.html",
+          "spec/srs-verification.html",
           "spec/verification.html"
         ],
-        "folio:extends": [
-          "spec/constitution.html"
+        "dc:isPartOf": [
+          "spec/README.html"
         ],
         "dc:references": [
           "spec/relations.html"
+        ],
+        "folio:extends": [
+          "spec/constitution.html"
         ]
       }
     },
@@ -2164,7 +2160,7 @@
         "id": "REQ-DA-STRUCT-1",
         "class": "requirement",
         "ssot": "spec/rules.html#req-da-struct-1",
-        "essence": "dual-audience を採用する spec の各 [data-audience=\"human\"] requirement container は [data-audience=\"machine\"] 子孫を持つ MUST (孤立 human の排除)。"
+        "essence": "dual-audience を採用する spec の各 [data-audience=&quot;human&quot;] requirement container は [data-audience=&quot;machine&quot;] 子孫を持つ MUST (孤立 human の排除)。"
       },
       {
         "id": "REQ-DA-STRUCT-2",
@@ -2182,7 +2178,7 @@
         "id": "REQ-DA-STRUCT-4",
         "class": "requirement",
         "ssot": "spec/rules.html#req-da-struct-4",
-        "essence": "machine 部 ([data-audience=\"machine\"]) は aria-hidden を持たない MUST NOT (AI / accessibility-tree からの normative 不可視化を防ぐ)。"
+        "essence": "machine 部 ([data-audience=&quot;machine&quot;]) は aria-hidden を持たない MUST NOT (AI / accessibility-tree からの normative 不可視化を防ぐ)。"
       },
       {
         "id": "REQ-DA-STRUCT-5",
@@ -2452,7 +2448,7 @@
         "id": "REQ-XREF-001",
         "class": "requirement",
         "ssot": "spec/rules.html#req-xref-001",
-        "essence": "defined-object への inline 参照は &lt;a class=\"xref\" href data-tooltip&gt; 形を用い、 href は §9.1 registry に従い object の SSoT 定義 site に解決する。"
+        "essence": "defined-object への inline 参照は &lt;a class=&quot;xref&quot; href data-tooltip&gt; 形を用い、 href は §9.1 registry に従い object の SSoT 定義 site に解決する。"
       },
       {
         "id": "REQ-XREF-002",

@@ -18,7 +18,7 @@
 - summary: spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)
 
 ## spec/rules.html
-- title: folio rules
+- title: folio rules — Layer 1 consumer universal rules
 - doc-type: rules · status: active
 - summary: Layer 1 consumer 向け universal rules (markup + naming + EARS + Mandatory Actions)
 
