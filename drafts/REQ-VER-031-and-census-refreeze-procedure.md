@@ -29,7 +29,7 @@
     anchor: req-ver-031
     ears_pattern: ubiquitous
     essence: "flip 済 spec の生成物 fidelity (人間層 rich + 機械層 normative) は、 canonical/artifact/生成物から導出しない凍結 literal census + contract 対 round-trip + extractor-collapse 敵対 test の三本柱で検証する (snapshot oracle は bootstrap 1 回証明へ退役・ADR-0053)。"
-    statement: "folio verification framework は、 flip 済 spec (機械 SSoT 生成の canonical) の生成物が canonical の資産 (人間層 rich + 機械層 normative + navigable 構造) を lossless に運ぶことを、 (a) 凍結 literal census (期待値を canonical/artifact/生成物から導出せず生成物 HTML を subject に突合) (b) contract の machine-block から再構成した round-trip (c) extractor 退行 (rich→plain collapse) を撃つ敵対 test の三本柱で検証する MUST。 snapshot oracle との相対 parity は flip 後 ORIG==生成物 で自己比較恒真化するため用いない (ADR-0053)。"
+    statement: "<span class=\"ears-id\">REQ-VER-031</span>: The folio verification framework <span class=\"ears-shall\">SHALL</span> verify that the generated output of a flipped spec (canonical generated from its machine SSoT) losslessly carries the canonical assets (human-layer rich, machine-layer normative, and navigable structure) via three pillars: (a) a frozen literal census whose expected values are derived from neither canonical, artifact, nor generated output, checked against the generated HTML as subject; (b) a round-trip reconstructed from the contract machine blocks; (c) adversarial tests that fire on extractor regression (rich-to-plain collapse). The framework <span class=\"ears-shall\">SHALL NOT</span> use relative parity against the snapshot oracle, which is retired to a one-time bootstrap fidelity proof (self-comparison becomes tautological after flip; ADR-0053)."
 ```
 
 ★配置 block (2 分岐・**navigable id 増分が異なるので census 目標値が分岐する**・errata-1 must-3):
@@ -45,9 +45,13 @@
 (旧 draft は分岐 B を推奨しつつ §2 を 56 固定にしていた矛盾 = admin land で id census 自己 RED = false-BLOCKED。errata-1 で是正)。
 可読性 (§3.9 と別 subhead で done-condition を独立提示) を採るなら分岐 B、 census 増分最小 (id +1) を採るなら分岐 A。 admin 裁定。
 
-★essence/statement は **rich raw** (xref link を含めてよい) だが、 census 定数への影響を admin が予測できるよう、
-上記 draft は xref link を **含めない** plain 寄り text にした (census delta を navigable id 増分のみに抑える意図)。
-ceiling で xref/term/code を足す場合は §2 の再測定 one-liner で該当 FZ_* 定数も更新する。
+★essence/statement は **rich raw** (xref link を含めてよい)。 上記 draft は xref link を**含めず** (navigable id 増分を
+REQ 本体分のみに抑える)、 statement は既存 30 REQ の canonical EARS markup (ears-id prefix + ears-shall span・英語
+SHALL-form) に整合させた (Phase F round-1 R1+R2)。 span/code の追加は FZ_* (generic inline 等) を動かしうるため、
+§2 の再測定 one-liner で該当 FZ_* 定数を**実測更新**する (実測 = 唯一の真値・目標値の事前固定はしない)。
+
+★§3.7 Coverage RTM 行 (Phase F round-1 R7): 既存 REQ-VER は §3.7 cov-req 表に全件行を持つが、 floor は RTM 完全性を
+検査しない (silent 欠落する) — REQ-VER-031 の行も contract の §3.7 該当 block へ**同時に追加**する。
 
 ## 2. census re-freeze 手順 (canonical regen 後)
 
