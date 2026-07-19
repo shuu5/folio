@@ -153,6 +153,13 @@ jobs:
       - name: srs-verification drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
         run: .claude-plugin/design-system/generator/test-adversarial-srs-verification-drift.sh
 
+      # F8 同型: rules drift gate (folio-d7bq Leg B 配線)。 flip 済み canonical rules.html の in-scan drift を
+      # 同原理 (fresh 再生成 byte 一致 + 物理指紋 4 clause) で block する (lwhz F8 の instance#4・spec-pack 経路)。
+      - name: rules drift gate (deterministic floor — landed == fresh 再生成 byte 一致)
+        run: .claude-plugin/design-system/generator/verify-rules-drift.sh
+      - name: rules drift gate 敵対回帰 (per-shape MK 7 本・gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-rules-drift.sh
+
       # 政策A 恒久防御 (a)(c) の常設配線 (ADR-0053 / folio-7n17)。 drift gate が捕捉できない両側同時退行
       # (extractor-collapse の vacuous PASS — fresh 再生成も同様に collapse し byte 一致で PASS する) を
       # frozen census + COLLAPSE/M-SELFCMP/F19 敵対 test で block する (REQ-VER-031 の常設 enforcement)。

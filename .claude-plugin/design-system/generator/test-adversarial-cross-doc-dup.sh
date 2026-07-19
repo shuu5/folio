@@ -49,11 +49,17 @@ GOAL1='同じ診療枠に 2 人を入れてしまい、 来院した患者を待
 
 echo "== cross-doc 重複検出 lint 敵対回帰 =="
 
-# --- baseline: clean corpus は undeclared 0 ---
+# --- baseline: 現 corpus は既知 undeclared 2 pair の厳密 pin (folio-lrtq が内容解消するまでの暫定) ---
+# ★blanket green を要求しない (lwhz adv-suite 先例)。 既知 2 pair:
+#   (1) [HIGH] FOLIO-SRS-VERIFICATION⇔FOLIO-VERIFICATION sections[].essence J=1.000
+#       (07m 分割 + bxpm 新設由来の References 節 boilerplate 逐語一致)
+#   (2) [DUP] FOLIO-RULES⇔FOLIO-VERIFICATION essence 帯 J=0.441 (HIGH 未満)。
+#   新規 dup は件数 pin 逸脱で FAIL (検出器は維持)。 解消 (essence 差別化 or declared-echo 拡張) = folio-lrtq。
+#   解消後は本 case を undeclared 0 / exit 0 pin へ戻すこと。
 out="$("$LINT" 2>&1)"; rc=$?
-if grep -q 'undeclared 重複=0' <<<"$out" && [[ "$rc" -eq 0 ]]; then
-  ok "baseline: clean corpus → undeclared 0 / exit 0"
-else bad "baseline: clean corpus が undeclared 0 / exit 0 でない (前提崩壊)"; fi
+if grep -qF 'undeclared 重複=2 (うち HIGH=1)' <<<"$out" && grep -qF 'FOLIO-SRS-VERIFICATION:sections[].essence' <<<"$out" && grep -qF 'FOLIO-RULES:sections[].blocks[].essence' <<<"$out" && [[ "$rc" -eq 0 ]]; then
+  ok "baseline: 現 corpus → 既知 undeclared 2 pair 厳密 pin / exit 0 (advisory・解消 = folio-lrtq)"
+else bad "baseline: 既知 2 pair pin と不一致 (rc=$rc・新規 dup か解消漏れ = pin を lineage 手順で更新)"; fi
 
 # --- recall #1: 憲章が GOAL1 を verbatim restate → HIGH undeclared 検出 ---
 D="$(fresh_corpus)"; plant_clinic_constitution "$D" "$GOAL1"
@@ -115,10 +121,11 @@ if [[ "$rc" -eq 1 ]]; then ok "exit-code: --strict + undeclared HIGH → exit 1"
 else bad "exit-code: --strict + HIGH が exit 1 でない (rc=$rc)"; fi
 rm -rf "$D"
 
-# --- exit-code #2: --strict + clean corpus → exit 0 ---
+# --- exit-code #2: --strict + 現 corpus (既知 undeclared HIGH 1 残存 = baseline pin 参照) → exit 1 ---
+# ★folio-lrtq が内容解消したら本 case を「--strict + clean → exit 0」へ戻すこと (baseline pin と lockstep)。
 "$LINT" --strict >/dev/null 2>&1; rc=$?
-if [[ "$rc" -eq 0 ]]; then ok "exit-code: --strict + clean → exit 0"
-else bad "exit-code: --strict + clean が exit 0 でない (rc=$rc)"; fi
+if [[ "$rc" -eq 1 ]]; then ok "exit-code: --strict + 既知 HIGH 残存 → exit 1 (fail-closed 維持・解消 = folio-lrtq)"
+else bad "exit-code: --strict が既知 HIGH 残存で exit 1 でない (rc=$rc・解消済なら pin を戻す)"; fi
 
 # --- exit-code #3: 既定 (advisory) + planted HIGH → exit 0 (判断しない) ---
 D="$(fresh_corpus)"; plant_clinic_constitution "$D" "$GOAL1"

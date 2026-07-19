@@ -54,14 +54,17 @@ echo "照会 graph adversarial regression (fail-closed / warn-correct expected):
 #   folio-wdv0 (risk-register-pack) で RISK-CLINIC-APPT が RISK→SRS backward + toward-terminal で終端完備化し 15→16。
 #   folio-8ptq (changelog-pack) で CHANGELOG-CLINIC-APPT が CHANGELOG→{ADR,SRS} backward + toward-terminal で終端完備化し 16→17。
 #   folio-8cha (roadmap-pack) で ROADMAP-CLINIC-APPT が ROADMAP→{VISION,SRS} forward (toward-terminal) で VISION 経由 principle 終端到達し 17→18 (自前 principle 終端は持たない = c5r.11・changelog/testcases と同型)。
+#   folio-bxpm (srs-verification pack land 2026-07-19) で FOLIO-SRS-VERIFICATION が終端完備化し 18→19。 bxpm land が
+#   本 pin の同期を欠き latent 赤 (49x 同型)・folio-d7bq Leg B で治癒 (独立再導出: 終端到達 grep 19 行に
+#   FOLIO-SRS-VERIFICATION が新出・他 18 は lineage 既知集合と一致・substring pin も追加)。
 #   ★「終端到達: TC-CLINIC-APPT」substring は B2 の意味 pin (backward への退行は count と substring の両方で割れる)。
 #   ★「免除: SRS-EC-CHECKOUT」substring は免除宣言の可視一覧 pin (silent 化の退行を検出)。
 #   ★「非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)」substring は qvv 裁定A の可視 pin (silent skip 化の退行を検出)。
 D="$(mktmp)"
-if run "$D" && [[ "$RUNOUT" == *"終端完備=18 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
-   && "$RUNOUT" == *"終端到達: VISION-FOLIO"* && "$RUNOUT" == *"終端到達: DM-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: IF-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: RISK-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: CHANGELOG-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: ROADMAP-CLINIC-APPT"* && "$RUNOUT" == *"非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)"* \
+if run "$D" && [[ "$RUNOUT" == *"終端完備=19 免除(warn)=1 孤立(block)=0"* && "$RUNOUT" == *"終端到達: TC-CLINIC-APPT"* \
+   && "$RUNOUT" == *"終端到達: VISION-FOLIO"* && "$RUNOUT" == *"終端到達: DM-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: IF-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: RISK-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: CHANGELOG-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: ROADMAP-CLINIC-APPT"* && "$RUNOUT" == *"終端到達: FOLIO-SRS-VERIFICATION"* && "$RUNOUT" == *"非発火 (照会 0 件 + 照会先なし = opt-in cross_doc)"* \
    && "$RUNOUT" == *"免除: SRS-EC-CHECKOUT"* && "$RUNOUT" == *"RESULT: FLOOR-OK"* ]]; then
-  ok "H0 happy path (終端完備=18 / 免除=1 / 孤立=0 / TC+VISION-FOLIO+DM+IF+RISK+CHANGELOG+ROADMAP 終端到達 / 非発火可視 / EC 免除可視 / FLOOR-OK / exit 0)"
+  ok "H0 happy path (終端完備=19 / 免除=1 / 孤立=0 / TC+VISION-FOLIO+DM+IF+RISK+CHANGELOG+ROADMAP+SRS-VERIFICATION 終端到達 / 非発火可視 / EC 免除可視 / FLOOR-OK / exit 0)"
 else ng "H0 happy path 不一致 (rc=$? / 末尾: $(printf '%s' "$RUNOUT" | tail -2 | tr '\n' '|'))"; fi
 
 # G1. contract 改竄: ADR justifies role を別 allowlist role へ swap → pin FAIL

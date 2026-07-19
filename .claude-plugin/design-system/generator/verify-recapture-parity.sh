@@ -98,11 +98,12 @@ for path in "$CONTRACT_DIR"/*.spec.yaml; do
   if grep -q '^$' "$TMP/cids"; then pfail "malformed-requirements: id 空 or 非 object record in $base"; continue; fi
   # 原本側 anchor 列 (attribute 順序非依存 parse・小文字 anchor を大文字 id へ正規化)
   # ★per-file union の 2 shape (folio-lwhz F6・replace 厳禁 = 一方消すと他方 file が zero-anchors)。
-  #   shape 1: <details class="spec-row" id="req-..."> = hand-authored 原本 (rules.html 26 / relations.html 4)。
+  #   shape 1: <details class="spec-row" id="req-..."> = hand-authored 原本 (relations.html 4。 rules.html 26 は
+  #     folio-d7bq flip で shape 2 へ移動)。
   #     class は token 完全一致 (空白 split して eq)。 \bspec-row\b の regex 判定は "spec-row-rotted" 等の
   #     派生 class にも部分一致してしまう (- が語境界・bhe genuine-shape 教訓の再演を R7 が捕捉)。
-  #   shape 2: <div data-component="ears-requirement-row" id="req-..."> = contract 生成物 (verification.html
-  #     flip 後・30 anchor)。 data-component は token 完全一致。 ★<tr data-component="ears-requirement-row">
+  #   shape 2: <div data-component="ears-requirement-row" id="req-..."> = contract 生成物 (verification.html 31 /
+  #     srs-verification.html 5 / rules.html 26 = flip 後)。 data-component は token 完全一致。 ★<tr data-component="ears-requirement-row">
   #     (SRS pack の dense-table 行・同名別部品) は <div\b 限定ゆえ拾わない (bin/folio:893 と同弁別)。
   perl -CSD -0777 -ne '
     while (/<details\b([^>]*)>/g) {

@@ -54,9 +54,15 @@ echo "== recapture parity gate 敵対回帰 =="
 #   ↔ srs-verification.html の登録 (RECAPTURE_REGISTRY 追加)。 srs-verification.html は flip 後 div.ears-requirement-row
 #   shape の生成物ゆえ shape union grep で再導出する。 独立再導出: 原本 anchor grep
 #   (srs-verification.html の div.ears-requirement-row id) 5 == contract yq (.requirements[].id) 5。
+#   lineage: 2026-07-19 (folio-7n17 Leg B・REQ-VER-031 新設) = 4 contract / 66 id (verification 30→31)。 7n17 land
+#   が本 pin の同期を欠き latent 赤 (49x 同型)・folio-d7bq Leg B で治癒。 独立再導出: verification.html の
+#   div.ears-requirement-row id grep 31 == contract yq (.requirements[].id) 31。
+#   lineage: 2026-07-19 (folio-d7bq rules flip) = 件数不変 (rules 26 は id-value 保存)。 shape 移動のみ:
+#   rules.html は details.spec-row → div.ears-requirement-row (独立再導出: rules ears-row grep 26 == yq 26・
+#   details.spec-row 残は relations 4 のみ)。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 65 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 65 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 66 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 66 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---
