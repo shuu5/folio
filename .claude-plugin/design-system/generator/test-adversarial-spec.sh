@@ -17,7 +17,14 @@ INJ="$SCRIPT_DIR/inject-prose.sh"
 VER="$SCRIPT_DIR/verify-spec.sh"
 BASE="$SCRIPT_DIR/contract/folio-rules.spec.yaml"
 BASE_PROSE="$SCRIPT_DIR/prose/folio-rules.prose.yaml"
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+# ★COLLAPSE 用 epoch 固定 assembler (folio-7wbn): lib/ 解決のため ★SCRIPT_DIR 直下に置く transient (tracked 化しない)。
+#   EXIT trap で必ず掃除する (残骸を worktree へ持ち込まない)。
+EPOCH_ASM="$SCRIPT_DIR/.collapse-epoch-asm-spec.sh"
+# ★SNAPPIN 用 transient verify copy (folio-7wbn ceiling fix): census file path を差し替えた verify-spec を
+#   ★SCRIPT_DIR 直下に置く (tmp へ copy すると SCRIPT_DIR が動き lib/ 解決に失敗して exit 2 = 「arm 不在」と
+#   区別できない偽 RED になる)。 EXIT trap で必ず掃除する。
+PIN_VER="$SCRIPT_DIR/.census-pin-verify-spec.sh"
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP" "$EPOCH_ASM" "$PIN_VER"' EXIT
 pass=0; fail=0
 # repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持し
 # (arm 未 skip は assemble 再 build で timeout)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
@@ -462,10 +469,10 @@ cp "$BASE_PROSE" "$TMP/j2.prose.yaml"; yq -i '.slots.["ghost-slot"] = "幽霊"' 
 expect_inject_abort "J2 manifest orphan キーを inject が abort" "$TMP/j2.prose.yaml" "$TMP/base.html"
 
 # === w1f cell-2: 機械層 (machine free-prose dual-audience) round-trip + REQ-DA-STRUCT ===
-# M1. ★機械層 prose テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・テキスト差のみ = round-trip 単独検出)。
+# M1. ★機械層 prose テキスト改竄 → contract↔生成物 round-trip FAIL (件数不変・テキスト差のみ = round-trip 単独検出)。
 cp "$TMP/base-filled.html" "$TMP/m1.html"
 perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine">)#${1}ZZTAMPERZZ #' "$TMP/m1.html"
-expect_vfilled_fail "M1 ★機械層 prose 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m1.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M1 ★機械層 prose 改竄を contract↔生成物 round-trip が捕捉" "$TMP/m1.html" "機械層 不一致"
 
 # M2. ★機械層 prose 脱落 (silent drop) → 件数 + round-trip FAIL。
 cp "$TMP/base-filled.html" "$TMP/m2.html"
@@ -475,7 +482,7 @@ expect_vfilled_fail "M2 ★機械層 prose 脱落を件数+round-trip が捕捉"
 # M3. ★機械層 prose 捏造 (原本に無い block を add) → 件数 + round-trip FAIL (生成物のみ)。
 cp "$TMP/base-filled.html" "$TMP/m3.html"
 perl -0777 -i -pe 's#(<div class="machine-body">\n)#${1}<p data-component="spec-machine-prose" data-audience="machine">捏造された機械層</p>\n#' "$TMP/m3.html"
-expect_vfilled_fail "M3 ★機械層 prose 捏造を round-trip (生成物のみ) が捕捉" "$TMP/m3.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M3 ★機械層 prose 捏造を round-trip (生成物のみ) が捕捉" "$TMP/m3.html" "機械層 不一致"
 
 # M4. ★機械層 list item (mli) 脱落 → mli 件数 + round-trip FAIL。
 cp "$TMP/base-filled.html" "$TMP/m4.html"
@@ -510,7 +517,7 @@ expect_abort "M9 ★machine_preamble の未対応 type を fail-closed abort" "$
 # M10. ★機械層 prose の二重 escape (live <code> が &lt;code&gt; 化) → round-trip FAIL (原本テキストと差)。
 cp "$TMP/base-filled.html" "$TMP/m10.html"
 perl -0777 -i -pe 's#(<p data-component="spec-machine-prose" data-audience="machine">[^<]*)<code>#${1}&lt;code&gt;#' "$TMP/m10.html"
-expect_vfilled_fail "M10 ★機械層の二重 escape を round-trip が捕捉" "$TMP/m10.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M10 ★機械層の二重 escape を round-trip が捕捉" "$TMP/m10.html" "機械層 不一致"
 
 # M11. ★機械層 block 順序入替 (隣接 prose 2 件を swap・件数/集合不変・順序のみ差) → 順序付き round-trip FAIL。
 #   旧版 (集合一致) では素通っていた = §11 を順序付きに強化した major fix の red→green pin (人間層 §4/§5 と対称)。
@@ -522,7 +529,7 @@ perl -0777 -i -e '
   $H=~s/\Q$a\E/__M11A__/; $H=~s/\Q$b\E/__M11B__/; $H=~s/__M11A__/$b/; $H=~s/__M11B__/$a/;
   print $H;
 ' "$TMP/m11.html"
-expect_vfilled_fail "M11 ★機械層 block 順序入替を順序付き round-trip が捕捉" "$TMP/m11.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M11 ★機械層 block 順序入替を順序付き round-trip が捕捉" "$TMP/m11.html" "機械層 不一致"
 
 # M12. ★cross-section 誤帰属 (ある fold の machine prose を別 fold の machine-body へ移動・件数/集合不変・document 順のみ差)
 #   → 順序付き round-trip FAIL。 集合一致では section 帰属を検証できず素通っていた (major fix の red→green pin)。
@@ -535,13 +542,13 @@ perl -0777 -i -e '
   my $ins=$pos[-1]; $H=substr($H,0,$ins).$blk.substr($H,$ins);
   print $H;
 ' "$TMP/m12.html"
-expect_vfilled_fail "M12 ★cross-section 誤帰属を順序付き round-trip が捕捉" "$TMP/m12.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M12 ★cross-section 誤帰属を順序付き round-trip が捕捉" "$TMP/m12.html" "機械層 不一致"
 
-# M13. ★機械層 note (aside) テキスト改竄 → 原本↔生成物 round-trip FAIL (件数不変・最複雑 modality の content fidelity pin)。
+# M13. ★機械層 note (aside) テキスト改竄 → contract↔生成物 round-trip FAIL (件数不変・最複雑 modality の content fidelity pin)。
 #   note は nested <p>・<span class=term>・<a> を含む最も構造複雑な block 種ゆえ専用の改竄敵対が要る (prose M1 と対称)。
 cp "$TMP/base-filled.html" "$TMP/m13.html"
 perl -0777 -i -pe 's#(<aside data-component="spec-machine-note" data-audience="machine">)#${1}ZZNOTETAMPERZZ #' "$TMP/m13.html"
-expect_vfilled_fail "M13 ★機械層 note 改竄を原本↔生成物 round-trip が捕捉" "$TMP/m13.html" "原本↔生成物 機械層"
+expect_vfilled_fail "M13 ★機械層 note 改竄を contract↔生成物 round-trip が捕捉" "$TMP/m13.html" "機械層 不一致"
 
 # M14. ★機械層 note 脱落 (silent drop) → spec-machine-note 件数 + round-trip FAIL (prose M2 と対称)。
 cp "$TMP/base-filled.html" "$TMP/m14.html"
@@ -609,6 +616,309 @@ elif [[ "$m15_out" != *"原本不在"* ]]; then
   ng "M15 ★原本不在 fail-closed (FAIL したが理由が想定外。 期待 '原本不在')"
 else
   ok "M15 ★原本不在を verify-spec §11 が fail-closed FAIL (照合不能を素通さない)"
+fi
+
+# ============================================================================
+# === 政策 A (folio-7wbn / ADR-0053 §2.6 rules arm) の敵対 test 3 群 ===
+#   verify-spec.sh §10b の ★凍結 census (spec-origin/rules.frozen-census.txt) が「両側 contract 由来」の
+#   §4/§5/§11 と独立な anchor として効いていることを red→green で固定する。
+#   (a) CEN 群   = per-shape mutation-kill (各 census arm が実弾で [FAIL] に落ちる)。
+#   (b) M-SELFCMP = SPEC_ORIGIN_HTML=mutated の ★自己比較でも census が生きる (ORIG 非消費の証明)。
+#   (c) COLLAPSE  = extractor collapse で contract と生成物が ★同時退行しても census が捕捉する。
+#   ★rules 非該当軸 (jq -S / JSON-LD folio:stakeholders) の MK は ★作らない (census arm ごと不在 = 空撃ち MK 禁止)。
+# ============================================================================
+# ★reason 照合は [FAIL] 行 anchor + fixed-string 2 段: census chk ラベルは [OK] 行にも出るため、 素の substring
+#   照合では「別 gate の巻き添え FAIL + 当該 census は [OK]」を緑と誤判定する (false-pass)。
+cen_mut() { # label perl-expr reason
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/cen.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/cen.html" >/dev/null; then
+    ng "$1 (mutation が生成物を変えていない = ★空撃ち。 selector が実 DOM と不一致の疑い)"; return
+  fi
+  local out rc; out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen.html" 2>&1)"; rc=$?
+  if [[ $rc -ne 0 ]] && printf '%s\n' "$out" | grep -F -- "$3" | grep -qF -- '[FAIL]'; then ok "$1"
+  else ng "$1 (exit=$rc / [FAIL] 行に census reason '$3' 不発 = 当該 census arm 無効化の回帰)"; fi
+}
+# --- navigable id census (count / SET / D-* 混入) ---
+cen_mut "CEN-id1 ★navigable id 1 個剥奪 (58→57) → census navigable id 総数 FAIL" \
+  's# id="s5-delta"##' "census navigable id: 総数"
+cen_mut "CEN-id2 ★id rename (req-ci-001→RENAMED・count 58 保存) → census id-rename SET FAIL (count census は素通る)" \
+  's#id="req-ci-001"#id="req-ci-RENAMED"#' "census id-rename SET"
+cen_mut "CEN-id3 ★生成物への D-* id 混入 (delta 印の anchor 集合汚染) を fail-closed 検査が捕捉" \
+  's{(<span class="term")}{<span id="D-FAKE-1"></span>${1}}' "D-* id == 0"
+# ★CEN-id4 (folio-7wbn 3 巡目 ceiling major fix): id の ★重複 は count / SET census が共に dedup 後を見るため
+#   unique 58 を保存したまま素通っていた shape (実測 rc=0 / [FAIL] 行ゼロ)。 文書順 first-match の fragment 解決ゆえ
+#   本文より前の空 複製 anchor は当該 id への全 xref を hijack する。 per-shape MK (剥奪 / rename / D-* 混入 に続く第 4 形状)。
+cen_mut "CEN-id4 ★既存 id の複製注入 (unique 58 保存・anchor hijack) を重複 chk が FAIL" \
+  's{(<body[^>]*>)}{${1}<div id="s5-delta"></div>}' "census navigable id: 重複 0"
+# --- rich 資産 occurrence (per-shape: a.xref / span.term / ins.delta は DOM 形状が別クラス) ---
+cen_mut "CEN-rich1 ★a.xref 1 個剥奪 (26→25) → census rich a.xref FAIL" \
+  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "census rich: a.xref"
+cen_mut "CEN-rich2 ★span.term 1 個剥奪 (18→17) → census rich span.term FAIL" \
+  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "census rich: span.term"
+cen_mut "CEN-rich3 ★ins.delta 1 個剥奪 (1→0) → census rich ins|del.delta FAIL" \
+  's#<ins class="delta"[^>]*>(.*?)</ins>#$1#s' "census rich: ins|del.delta"
+cen_mut "CEN-rich4 ★delta-id rename (D-2026-05-28-001→D-RENAMED・count 1 保存) → census delta-id SET FAIL" \
+  's#data-delta-id="D-2026-05-28-001"#data-delta-id="D-RENAMED"#g' "census delta-id SET"
+# --- escape / double-escape ---
+cen_mut "CEN-esc1 ★散文中の &lt;a class=\"xref\" literal 1 個潰し (1→0) → census escape FAIL" \
+  's#&lt;a class="xref"#\&lt;a class="ZZDROP"#' "census escape"
+cen_mut "CEN-esc2 ★人間層 <code> を二重 escape (&lt;code 0→1) → census double-escape &lt;code FAIL" \
+  's#<code>([^<]*)</code>#\&lt;code\&gt;$1\&lt;/code\&gt;#' "census double-escape: &lt;code"
+cen_mut "CEN-esc3 ★td 内 live <span> を二重 escape (&lt;span 19→20) → census double-escape &lt;span FAIL" \
+  's#(<a class="cov-req"[^>]*>)<span\b([^>]*)>(.*?)</span>#${1}\&lt;span$2\&gt;$3\&lt;/span\&gt;#s' "census double-escape: &lt;span"
+# --- generic inline (code/span) の人間層 region 別 occurrence ---
+# ★rules の frozen 値は table-cell / caption が 0 ゆえ、 これらは ★注入 (0→1) 方向で撃つ (減らせない軸を
+#   「MK が書けないから」と撤去すると人間層 table/caption への捏造 inline 混入が無被覆になる)。
+cen_mut "CEN-gen1 ★pre 内 human <code> wrapper 剥奪 (rest 9→8) → census generic <code> rest FAIL" \
+  's#(<pre[^>]*>)<code>(.*?)</code>#${1}${2}#s' "census generic: 人間層 <code> rest"
+cen_mut "CEN-gen2 ★td へ <code> 注入 (table-cell 0→1) → census generic <code> table-cell FAIL (注入方向 teeth)" \
+  's#(<td>)#${1}<code>ZZINJ</code>#' "census generic: 人間層 <code> table-cell"
+cen_mut "CEN-gen3 ★figcaption へ <code> 注入 (caption 0→1) → census generic <code> caption FAIL (注入方向 teeth)" \
+  's#(<figcaption>)#${1}<code>ZZINJ</code>#' "census generic: 人間層 <code> caption"
+cen_mut "CEN-gen4 ★td 内 <span> wrapper 剥奪 (table-cell 7→6) → census generic <span> table-cell FAIL" \
+  's#(<a class="cov-req"[^>]*>)<span\b[^>]*>(.*?)</span>#${1}${2}#s' "census generic: 人間層 <span> table-cell"
+cen_mut "CEN-gen5 ★figcaption へ <span> 注入 (caption 0→1) → census generic <span> caption FAIL (注入方向 teeth)" \
+  's#(<figcaption>)#${1}<span>ZZINJ</span>#' "census generic: 人間層 <span> caption"
+# --- 空撃ち検査 (恒真 FAIL の封鎖): 無改変 baseline が上記 census 群で FAIL しないこと ---
+#   これが無いと verify が何を食わせても FAIL する状態でも CEN 群は全て緑になる。
+if bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" >/dev/null 2>&1; then
+  ok "CEN-z ★空撃ち検査: 無改変 baseline は verify PASS = CEN 群の FAIL は mutation 由来"
+else
+  ng "CEN-z 無改変 baseline が verify FAIL (恒真 FAIL ゆえ CEN 群が無意味。 環境要因を切り分けること)"
+fi
+
+# === M-SELFCMP. ★本番自己比較 MK: SPEC_ORIGIN_HTML=mutated_html でも frozen census が依然 FAIL する ===
+#   政策 A の核心 — 旧「相対 parity」なら c_xref(ORIG)==c_xref(HTML)==25 で vacuous PASS したが、
+#   frozen 26 vs 生成物 25 で FAIL する。 flip 後に canonical が生成物へ置換され ORIG==生成物 になる本番条件を
+#   SPEC_ORIGIN_HTML=mutated で模す (ORIG 非消費の実証)。
+selfcmp_mut() { # label perl-expr reason
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/selfcmp.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/selfcmp.html" >/dev/null; then
+    ng "M-SELFCMP $1 (mutation 空撃ち)"; return
+  fi
+  local out rc; out="$(SPEC_ORIGIN_HTML="$TMP/selfcmp.html" bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/selfcmp.html" 2>&1)"; rc=$?
+  if [[ $rc -ne 0 ]] && printf '%s\n' "$out" | grep -F -- "$3" | grep -qF -- '[FAIL]'; then ok "M-SELFCMP $1"
+  else ng "M-SELFCMP $1 (SPEC_ORIGIN_HTML=mutated 自己比較で census が [FAIL] 行に無い rc=$rc / reason '$3' 不発 = 相対 parity 恒真化の回帰)"; fi
+}
+selfcmp_mut "★a.xref 1 個剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census FAIL (自己比較恒真化の封鎖)" \
+  's#<a class="xref"[^>]*>(.*?)</a>#$1#s' "census rich: a.xref"
+selfcmp_mut "★span.term 1 個剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census FAIL" \
+  's#<span class="term" data-term="[^"]*"[^>]*>(.*?)</span>#$1#s' "census rich: span.term"
+selfcmp_mut "★pre 内 human <code> wrapper 剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census generic FAIL" \
+  's#(<pre[^>]*>)<code>(.*?)</code>#${1}${2}#s' "census generic: 人間層 <code> rest"
+
+# === CEN-cmt. ★HTML コメント laundering (parser-differential) の封鎖 ===
+#   census の regex counter が ★コメント内のタグ様文字列 を live として数えると、 政策A の【唯一の独立 anchor】が
+#   edit-SSoT (contract.machine_blocks[].html は raw 出力) 側から水増しできてしまう:
+#     live a.xref を 1 個失っても `<!-- <a class="xref"></a> -->` を 1 個足せば凍結 26 へ復元でき COLLAPSE-2 が破れる。
+#   ★両方向 (deflate laundering / inflate false-FAIL) を撃つ: 数え漏らしと数え過ぎは別の失効モード。
+CEN_DECOY='<!-- decoy: <a class="xref" href="#x">z</a> <span class="term" data-term="z">z</span> <ins class="delta" data-delta-id="D-ZZ-1">z</ins> <code>z</code> <div id="ZZDECOY"></div> &lt;a class="xref" &lt;code &lt;span -->'
+# (1) deflate: live 1 個剥奪 + コメント decoy 1 個で凍結値へ「復元」しても census は FAIL し続けること。
+cen_mut "CEN-cmt1 ★a.xref 剥奪 + コメント decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_DECOY}" "census rich: a.xref"
+cen_mut "CEN-cmt2 ★span.term 剥奪 + コメント decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_DECOY}" "census rich: span.term"
+# (2) inflate: 正当な HTML コメント (タグ様文字列を含む) を足しただけでは ★§10b census 群 が動かないこと。
+#   ★assert は verify 全体の PASS ではなく ★census 行 ([FAIL] 直後のラベルが "census " で始まる = §10b 固有) に
+#   絞る: 同 decoy は §10b 外の arm (self-anchor 整合 / human 層 xref floor) を落とすが、 それらは本 finding の
+#   対象外かつ ★fail-closed 方向 (偽 FAIL) の別欠陥ゆえ本 case で conflate しない (別 bead へ handoff)。
+perl -0777 -pe "s{(<body[^>]*>)}{\$1$CEN_DECOY}" "$TMP/base-filled.html" > "$TMP/cen-cmt3.html"
+if diff -q "$TMP/base-filled.html" "$TMP/cen-cmt3.html" >/dev/null; then
+  ng "CEN-cmt3 ★decoy 注入が空撃ち (<body> opener の記法変化の疑い)"
+else
+  c3_out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-cmt3.html" 2>&1)"
+  c3_bad="$(printf '%s\n' "$c3_out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
+  c3_okn="$(printf '%s\n' "$c3_out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
+  if [[ -z "$c3_bad" && "$c3_okn" -ge 10 ]]; then
+    ok "CEN-cmt3 ★コメント内タグ様文字列は §10b census を inflate しない (census 行 $c3_okn 本すべて [OK]・偽 FAIL 封鎖)"
+  else
+    ng "CEN-cmt3 ★コメント注入で census が動いた (census 行を live 計数 = parser-differential 回帰 / [OK] 数 $c3_okn): $c3_bad"
+  fi
+fi
+
+# === CEN-attr. ★属性値 laundering (parser-differential の残余) の封鎖 ===
+#   CEN-cmt が塞いだのは comment / script / style ★本体 のみで、 ★属性値 は raw byte として残る。 census 計数が
+#   naive regex なら「単引用符属性の中に書いたタグ様文字列」を live 要素として数えるため、 CEN-cmt と ★同一クラス の
+#   laundering が開いたままになる (folio-7wbn 2 巡目 ceiling major):
+#     `<div data-launder='<a class="xref" href="#z">z</a>'>`         → a.xref を +1 (凍結 26 を復元)
+#     `<div data-launder='<section id="s5-delta"></section>'>`       → id count 58 と id SET を ★同時に 復元 (CEN-id1/id2 が破れる)
+#   到達性は CEN-cmt と同じ (contract.machine_blocks[].html は raw 出力・extractor は原本 inner HTML を逐語 capture)。
+#   ★両方向 (deflate laundering / inflate false-FAIL) を撃つ。 ★id 軸を必ず含める (count + SET の同時復元が最悪形)。
+CEN_ATTR_DECOY="<div data-launder='<a class=\"xref\" href=\"#z\">z</a> <span class=\"term\" data-term=\"z\">z</span> <ins class=\"delta\" data-delta-id=\"D-ZZ-1\">z</ins> <section id=\"s5-delta\"></section> <section id=\"req-ci-001\"></section> <code>z</code> <span>z</span>'></div>"
+# (1) deflate: live 1 個剥奪 + ★属性 decoy で凍結値へ「復元」しても census は FAIL し続けること。
+cen_mut "CEN-attr1 ★a.xref 剥奪 + 単引用符属性 decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census rich: a.xref"
+cen_mut "CEN-attr2 ★span.term 剥奪 + 属性 decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census rich: span.term"
+cen_mut "CEN-attr3 ★id 剥奪 (58→57) + 属性 decoy で count 復元を狙う laundering を census 総数が FAIL" \
+  "s{ id=\"s5-delta\"}{}; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census navigable id: 総数"
+cen_mut "CEN-attr4 ★id rename + 属性 decoy で SET 復元を狙う laundering を census id-rename SET が FAIL" \
+  "s{id=\"req-ci-001\"}{id=\"req-ci-RENAMED\"}; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census id-rename SET"
+# (2) inflate: 正当な単引用符属性 (タグ様文字列を含む) を足しただけでは ★§10b census 群 が動かないこと。
+#   ★assert は CEN-cmt3 と同型に census 行のみへ絞る (§10b 外の arm の巻き添えは本 finding の対象外)。
+perl -0777 -pe "s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "$TMP/base-filled.html" > "$TMP/cen-attr5.html"
+if diff -q "$TMP/base-filled.html" "$TMP/cen-attr5.html" >/dev/null; then
+  ng "CEN-attr5 ★decoy 注入が空撃ち (<body> opener の記法変化の疑い)"
+else
+  a5_out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-attr5.html" 2>&1)"
+  a5_bad="$(printf '%s\n' "$a5_out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
+  a5_okn="$(printf '%s\n' "$a5_out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
+  if [[ -z "$a5_bad" && "$a5_okn" -ge 10 ]]; then
+    ok "CEN-attr5 ★属性値内タグ様文字列は §10b census を inflate しない (census 行 $a5_okn 本すべて [OK]・偽 FAIL 封鎖)"
+  else
+    ng "CEN-attr5 ★属性 decoy で census が動いた (属性値を live 計数 = parser-differential 回帰 / [OK] 数 $a5_okn): $a5_bad"
+  fi
+fi
+
+# === CEN-tpl. ★非描画 subtree (<template>) laundering の封鎖 ===
+#   CEN-cmt (comment) / CEN-attr (属性値) と ★同一クラス の第 3 vector (folio-7wbn 3 巡目 ceiling major)。
+#   <template> の内容は browser が描画しない = live 資産でないのに census が数えていたため、 live な a.xref を
+#   1 個失っても `<template><a class="xref">z</a></template>` を 1 個足すだけで凍結 26 が [OK] へ ★復元 され、
+#   COLLAPSE-2 が守る性質 (両側同時退行を独立 anchor が捕捉する) が同じ手で破れた (実測再現済 → 修正済)。
+#   ★element 軸 (a.xref / span.term / id) と ★text 軸 (escape literal) の両方に decoy を積み、 ★両方向 を撃つ。
+CEN_TPL_DECOY='<template><a class="xref" href="#z">z</a><span class="term" data-term="z">z</span><ins class="delta" data-delta-id="D-ZZ-1">z</ins><section id="s5-delta"></section><section id="req-ci-001"></section><code>z</code><span>z</span>&lt;a class="xref" &lt;code &lt;span</template>'
+# (1) deflate: live 1 個剥奪 + <template> decoy で凍結値へ「復元」しても census は FAIL し続けること。
+cen_mut "CEN-tpl1 ★a.xref 剥奪 + <template> decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census rich: a.xref"
+cen_mut "CEN-tpl2 ★span.term 剥奪 + <template> decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census rich: span.term"
+cen_mut "CEN-tpl3 ★id 剥奪 (58→57) + <template> decoy で count 復元を狙う laundering を census 総数が FAIL" \
+  "s{ id=\"s5-delta\"}{}; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census navigable id: 総数"
+cen_mut "CEN-tpl4 ★人間層 <code> 剥奪 + <template> decoy laundering を census generic が FAIL (h_inline 側の同 vector)" \
+  "s{(<pre[^>]*>)<code>(.*?)</code>}{\${1}\${2}}s; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census generic: 人間層 <code> rest"
+# (2) inflate: 正当な <template> を足しただけでは ★§10b census 群 が動かないこと (偽 FAIL 封鎖・CEN-cmt3/attr5 と同型)。
+perl -0777 -pe "s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "$TMP/base-filled.html" > "$TMP/cen-tpl5.html"
+if diff -q "$TMP/base-filled.html" "$TMP/cen-tpl5.html" >/dev/null; then
+  ng "CEN-tpl5 ★decoy 注入が空撃ち (<body> opener の記法変化の疑い)"
+else
+  t5_out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-tpl5.html" 2>&1)"
+  t5_bad="$(printf '%s\n' "$t5_out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
+  t5_okn="$(printf '%s\n' "$t5_out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
+  if [[ -z "$t5_bad" && "$t5_okn" -ge 10 ]]; then
+    ok "CEN-tpl5 ★<template> 内の資産/タグ様文字列は §10b census を inflate しない (census 行 $t5_okn 本すべて [OK])"
+  else
+    ng "CEN-tpl5 ★<template> decoy で census が動いた (非描画 subtree を live 計数 = 回帰 / [OK] 数 $t5_okn): $t5_bad"
+  fi
+fi
+
+# === SNAPPIN. ★snapshot 完全性 + census fail-closed の ★tracked 恒久 pin (folio-7wbn ceiling fix) ===
+#   これらは以前 cell-local な untracked selftest にしか無く、 land 後に消える = 「保護されている」という
+#   verify-spec.sh のコメントが shipped 状態で偽になっていた。 恒久 regression の所在は本 suite ゆえ移植する。
+#   ★実態開示 (folio-7wbn 2 巡目 ceiling): 本 suite は現状 ★CI 未配線 (.github/workflows/ci.yml に
+#   test-adversarial-spec.sh の step が無い・verification 側 test-adversarial-verification.sh とは非対称)。
+#   よって本 SNAPPIN 群 / CEN 群 / M-SELFCMP / COLLAPSE は tracked だが ★自動実行されない (committed but dormant)。
+#   ★★加えて (3 巡目 ceiling major): 検査対象である ★verify-spec.sh 本体にも CI 到達経路が無い
+#   (ci.yml に step 無し / `folio validate` は呼ばない / `folio verify --type spec` は capability-registry の
+#    `spec: wired: false` で fail-closed 拒否)。 ゆえに Leg B の必要配線は ★3 点 = (1) `census-guard.sh rules <base>`
+#   の per-spec step / (2) 本 suite の step / (3) spec doc-type の wired 化 または verify-spec.sh の直接 CI step。
+#   CI 配線は folio-7wbn Leg B (admin・ci.yml / capability-registry.yaml は本 cell の禁止面) で追加予定 —
+#   それまでは手動実行時のみ発火する。 ★Leg B 完了までは本 arm を「保護確立」と扱わないこと。
+SNAP_PIN="$SCRIPT_DIR/spec-origin/rules.origin.html"
+CENSUS_PIN="$SCRIPT_DIR/spec-origin/rules.frozen-census.txt"
+if [[ ! -f "$SNAP_PIN" || ! -f "$CENSUS_PIN" ]]; then
+  ng "SNAPPIN ★前提喪失 (snapshot / census 不在): $SNAP_PIN / $CENSUS_PIN"
+else
+  # SNAPPIN-1: snapshot の sha256 が census header の宣言値と一致 (COLLAPSE 群が re-extract 元として消費する
+  #   snapshot の完全性 pin。 post-flip canonical 等へ差し替えられると COLLAPSE-2 は緑のまま teeth だけ腐る)。
+  decl_sha="$(grep -oE 'sha256 [0-9a-f]{64}' "$CENSUS_PIN" | head -1 | awk '{print $2}')"
+  act_sha="$(sha256sum "$SNAP_PIN" | cut -d' ' -f1)"
+  if [[ -n "$decl_sha" && "$decl_sha" == "$act_sha" ]]; then
+    ok "SNAPPIN-1 ★snapshot sha256 == census header 宣言値 ($act_sha)"
+  else
+    ng "SNAPPIN-1 ★snapshot 完全性 pin 不成立 (宣言 '${decl_sha:-<none>}' / 実 $act_sha = COLLAPSE 前提の腐敗)"
+  fi
+  # SNAPPIN-2: 凍結 census 不在 → exit 2 fail-closed (silent skip の封鎖)。
+  perl -0777 -pe 's{\$SCRIPT_DIR/spec-origin/rules\.frozen-census\.txt}{/nonexistent/rules.frozen-census.txt}' \
+    "$VER" > "$PIN_VER"; chmod +x "$PIN_VER"
+  if ! grep -qF '/nonexistent/rules.frozen-census.txt' "$PIN_VER"; then
+    ng "SNAPPIN-2 ★census path 差し替えが空撃ち (FROZEN_CENSUS の記法変化の疑い)"
+  else
+    p2_out="$(bash "$PIN_VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" 2>&1)"; p2_rc=$?
+    if [[ $p2_rc -eq 2 ]] && printf '%s\n' "$p2_out" | grep -qF '凍結 census 不在'; then
+      ok "SNAPPIN-2 ★凍結 census 不在で exit 2 fail-closed (理由 anchor 一致・照合不能を素通さない)"
+    else
+      ng "SNAPPIN-2 ★census 不在が fail-closed でない (rc=$p2_rc / 理由不一致 = fail-open 回帰)"
+    fi
+  fi
+  # SNAPPIN-3: 凍結 census の値 mutate → §10b census 消費 arm が [FAIL] (arm 実在の red→green pin)。
+  #   ★tracked census を in-place で触らない (worktree 汚染回避): mutate copy を tmp に置き PIN_VER の path を向ける。
+  sed -E 's/^FZ_XREF=[0-9]+$/FZ_XREF=99/' "$CENSUS_PIN" > "$TMP/census.mut.txt"
+  perl -0777 -pe "s{\\\$SCRIPT_DIR/spec-origin/rules\\.frozen-census\\.txt}{$TMP/census.mut.txt}" "$VER" > "$PIN_VER"
+  chmod +x "$PIN_VER"
+  if ! grep -q '^FZ_XREF=99$' "$TMP/census.mut.txt" || ! grep -qF "$TMP/census.mut.txt" "$PIN_VER"; then
+    ng "SNAPPIN-3 ★census mutate / path 差し替えが空撃ち"
+  else
+    p3_out="$(bash "$PIN_VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" 2>&1)"; p3_rc=$?
+    if [[ $p3_rc -ne 0 ]] && printf '%s\n' "$p3_out" | grep -F -- 'census rich: a.xref' | grep -qF -- '[FAIL]'; then
+      ok "SNAPPIN-3 ★凍結 census 値 mutate (FZ_XREF→99) を §10b arm が [FAIL] 検出 (census 消費 arm 実在)"
+    else
+      ng "SNAPPIN-3 ★census 消費 arm 不在/無効 (rc=$p3_rc = 政策A anchor の false-green)"
+    fi
+  fi
+  rm -f "$PIN_VER"
+fi
+
+# === COLLAPSE. ★extractor-collapse 敵対 test ===
+# extract-rules-spec.sh の人間層 richplain() を関数レベルで plain() 相当へ collapse し、 ★extractor の pre-flip
+# source (spec-origin/rules.origin.html = 現行 canonical は flip 済 = 生成物形ゆえ extractor の設計対象でない)
+# から re-extract → collapsed contract → epoch 固定 assembler で assemble → collapsed 生成物。
+# ★狙い: ① contract==生成物 の §4 + §11 round-trip が vacuous PASS する (両側同時退行で緑) ことを実演し、
+#   ② frozen census (§10b) が collapsed 生成物を ★独立 anchor として FAIL させることを red→green 固定。
+# ★rich 減少 assert だけの相対 parity (17==17 恒真) は禁止 — frozen literal (26) で撃つ。
+# ★原本 no-touch: extract-rules-spec.sh は改変せず tmp copy を mutate する。
+COLLAPSE_EXTRACT="$SCRIPT_DIR/../../scripts/extract-rules-spec.sh"
+COLLAPSE_SNAP="$SCRIPT_DIR/spec-origin/rules.origin.html"
+if [[ ! -f "$COLLAPSE_EXTRACT" || ! -f "$COLLAPSE_SNAP" ]]; then
+  ng "COLLAPSE ★前提喪失 (extractor / snapshot 不在): $COLLAPSE_EXTRACT / $COLLAPSE_SNAP"
+else
+  # richplain() の lexical $s copy にタグ除去を注入 (関数レベル collapse・read-only $1 arg を壊さない)。
+  #   ★"sub rich" 決め打ちは rules extractor に該当実体が無く空撃ち FAIL になる — 実体は "sub richplain" (my $probe=$s; を含む本体)。
+  perl -0777 -pe 's{(sub richplain \{\n  my \(\$s\) = \@_; \$s //= "";)}{$1\n  \$s =~ s/<[^>]*>//g;}' \
+    "$COLLAPSE_EXTRACT" > "$TMP/extract-collapsed.sh"
+  if diff -q "$COLLAPSE_EXTRACT" "$TMP/extract-collapsed.sh" >/dev/null; then
+    ng "COLLAPSE-0 ★richplain()→plain() collapse mutate が空撃ち (richplain sub の記法変化の疑い)"
+  else
+    ok "COLLAPSE-0 ★richplain()→plain() collapse mutate が適用された (関数レベル)"
+    bash "$TMP/extract-collapsed.sh" "$COLLAPSE_SNAP" > "$TMP/collapsed.yaml" 2>/dev/null
+    # ★epoch 固定 assembler: collapsed.yaml は凍結 snapshot の re-extract ゆえ rich field 件数は凍結 epoch 実測
+    #   (33) を持つ。 live assembler の RICH_FIELD_MIN は現行契約の成長へ追随更新される (assembler 内規) ため、
+    #   現行値のまま snapshot epoch の contract を assemble すると被覆量 assert が将来 構造発火する。 snapshot は
+    #   非追随ゆえ epoch 定数は ★永久安定 — test-local copy の MIN だけを epoch 値へ pin する (本番 assembler の
+    #   fail-closed は ★不変・本 test の検査対象は census (下流) であって MIN ではない)。
+    #   ★MACHINE_FIELD_MIN / demoted / dl の pin は rules assembler に当該定数・型が不在ゆえ写さない (空撃ち sed 禁止)。
+    sed -E -e 's/^RICH_FIELD_MIN=[0-9]+$/RICH_FIELD_MIN=33/' "$ASM" > "$EPOCH_ASM"
+    if ! grep -q '^RICH_FIELD_MIN=33$' "$EPOCH_ASM"; then
+      ng "COLLAPSE ★epoch assembler の MIN pin が不成立 (sed 空撃ち = 定数記法の変化疑い)"
+    elif bash "$EPOCH_ASM" "$TMP/collapsed.yaml" "$TMP/collapsed.html" >/dev/null 2>&1; then
+      cx_g="$(perl -CSD -0777 -ne 'my $n=0; while (/<a\b([^>]*)>/g){ my $a=$1; $n++ if $a =~ /class="(?:[^"]*\s)?xref/; } print $n;' "$TMP/collapsed.html")"
+      col_out="$(bash "$VER" "$TMP/collapsed.yaml" "$TMP/collapsed.html" 2>&1)"; col_rc=$?
+      # ① contract==生成物 vacuous PASS: 要件タプル (§4) と round-trip (§11) が [OK] (両側同時退行で緑)。
+      tup_line="$(printf '%s\n' "$col_out" | grep -F '要件タプル' | head -1)"
+      rt_line="$(printf '%s\n' "$col_out" | grep -F 'round-trip' | grep -F '機械層' | head -1)"
+      if printf '%s' "$tup_line" | grep -qF '[OK]' && printf '%s' "$rt_line" | grep -qF '[OK]'; then
+        ok "COLLAPSE-1 ★§4 要件タプル + §11 round-trip の vacuous PASS を実演 (contract==生成物・collapsed a.xref=$cx_g < frozen 26)"
+      else
+        ng "COLLAPSE-1 ★vacuous PASS の実演に失敗 (§4/§11 が [OK] でない = collapse が contract-vs-生成物 を割った)"
+        echo "      [debug] §4: ${tup_line:-<none>}" >&2
+        echo "      [debug] §11: ${rt_line:-<none>}" >&2
+      fi
+      # ② frozen census が collapsed 生成物を FAIL させる (独立 anchor・rich 減少 17<26)。
+      if [[ $col_rc -ne 0 ]] && printf '%s\n' "$col_out" | grep -F 'census rich: a.xref' | grep -qF '[FAIL]'; then
+        ok "COLLAPSE-2 ★frozen census が collapse を FAIL (§4/§11 vacuous PASS を独立 anchor が捕捉)"
+      else
+        ng "COLLAPSE-2 ★frozen census が collapse を捕捉できず (rc=$col_rc・vacuous PASS 未封鎖 = 政策A 失効)"
+      fi
+      # ③ 本番自己比較を模す: SPEC_ORIGIN_HTML=collapsed でも census が生きる (ORIG==生成物 でも frozen で FAIL)。
+      sc_out="$(SPEC_ORIGIN_HTML="$TMP/collapsed.html" bash "$VER" "$TMP/collapsed.yaml" "$TMP/collapsed.html" 2>&1)"; sc_rc=$?
+      if [[ $sc_rc -ne 0 ]] && printf '%s\n' "$sc_out" | grep -F 'census rich: a.xref' | grep -qF '[FAIL]'; then
+        ok "COLLAPSE-3 ★SPEC_ORIGIN_HTML=collapsed の自己比較でも frozen census FAIL (ORIG 非消費の実証)"
+      else
+        ng "COLLAPSE-3 ★自己比較で census FAIL せず (rc=$sc_rc = census が ORIG を消費している回帰)"
+      fi
+    else
+      ng "COLLAPSE ★collapsed contract の assemble に失敗 (genuine 再生成不能)"
+    fi
+  fi
 fi
 
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===

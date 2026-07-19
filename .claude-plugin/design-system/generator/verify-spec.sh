@@ -459,45 +459,300 @@ chk "raw-emit: 機械層に live <a href 生存"          "$([[ "$(printf '%s' "
 chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%s' "$mfold_region" | grep -c '<span class="term"')" -gt 0 ]] && echo yes || echo no)" "yes"
 
 # ============================================================================
-# 11. ★原本↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
-#     原本 (design-intent/spec/rules.html) を *直 grep して生成 path から独立に* 再抽出し、 生成物の機械層と
-#     双方向 (完全性 = 原本の全機械層が生成物に / no-fabrication = 生成物の機械層が全て原本に) を照合する。
+# 11. ★contract↔生成物 機械層テキスト 双方向 *順序付き* 一致 (round-trip fidelity)。
+#     ★政策 A (folio-7wbn / ADR-0053 §2.6 rules arm): LEFT を snapshot でも live canonical でもなく
+#     ★contract.machine_preamble[] + sections[].machine_blocks[] (74 block = prose46/note18/list10) から再構成する。
+#     旧版は原本 (既定 = live canonical design-intent/spec/rules.html) を直 grep して LEFT にしていたが、
+#     folio-d7bq flip 後は canonical == 生成物 ゆえ ★自己比較恒真化する。 政策 A では LEFT を edit-SSoT
+#     (contract) 由来へ re-home した。 RIGHT は生成物の機械層。
+#     ★demoted / dl 分岐は移植しない (rules contract に当該 type 不在 = 空撃ち arm を作らない)。
+#     双方向 (完全性 = contract の全機械層が生成物に / no-fabrication = 生成物の機械層が全て contract に) を照合する。
 #     ★順序付き (集合でない): 両側を sort せず document 順の配列のまま diff する (人間層 §4/§5 と対称)。
-#       - 原本順保存 (契約 description 受入): 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
+#       - 順序保存: 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
 #       - section 帰属: machine_blocks[] は section ごとに連続して emit される (build()/emit_section) ため、
-#         ある block を別 section の fold へ移すと document 順が原本順とずれる → cross-section 誤帰属も検出。
-#       (旧版は両側 LC_ALL=C sort した集合一致で、 順序入替・cross-section 移動を素通していた=major fix。)
-#     ★fail-open しない: 機械層を持つ contract で原本不在なら FAIL (照合不能を素通さない)。
-#     二重 escape (生 < → &lt;) は原本テキストと差が出るため本照合が確定検出する (§10 raw-emit より厳密)。
+#         ある block を別 section の fold へ移すと document 順が contract 順とずれる → cross-section 誤帰属も検出。
+#     ★本 arm が守るのは assembler バグ (生成物が contract から乖離): silent drop / 順序入替 / cross-section 誤帰属 /
+#       二重 escape。 ★両側 contract 由来ゆえ ★両側同時退行 (extractor collapse) では vacuous PASS しうる →
+#       §10b 凍結 census + extractor-collapse 敵対 test (test-adversarial-spec.sh COLLAPSE 群) が塞ぐ。
 # ============================================================================
 NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')"
-ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/../../../design-intent/spec/rules.html}"
+# ★ORIG (snapshot) = 政策 A で census / round-trip の【非消費】へ転換 (bootstrap 記録として残置)。 §10b / §11 の
+#   存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15) のみが ORIG を参照する (内容不読)。 既定を live
+#   canonical から snapshot へ redirect した (canonical は flip 済 = 生成物ゆえ原本 anchor たりえない)。 snapshot の
+#   provenance (folio-d7bq flip commit a86ec1f の親) = `git show 1744d9f:design-intent/spec/rules.html`。
+#   snapshot は改変禁止 — 保護の所在は ★tracked な test-adversarial-spec.sh の SNAPPIN 群 (sha256 == census header
+#   宣言値 / census 不在の exit 2 fail-closed / census 値 mutate で arm 発火) にある (cell-local selftest は land 後に
+#   消えるため所在たりえない)。 ★ただし現状 test-adversarial-spec.sh は ★CI 未配線 (.github/workflows/ci.yml に step
+#   が無い = tracked だが自動実行経路ゼロ = committed but dormant)。 CI 配線は folio-7wbn Leg B (admin・ci.yml は
+#   本 cell の禁止面) で追加予定であり、 それまで本 pin は ★手動実行時のみ 発火する。
+#   ★★さらに (folio-7wbn 3 巡目 ceiling major): ★本 script (verify-spec.sh) 自体にも自動実行経路が無い。
+#   ci.yml に verify-spec.sh を走らせる step が一切無く (gate F sweep の `gate rules ...` は assemble → inject →
+#   render-gate-srs.py で floor を呼ばない)、 `folio validate` は 18-gate の link/jsonld floor で本 script を呼ばず、
+#   統一 dispatch `folio verify --type spec` は capability-registry.yaml の `spec: wired: false` により fail-closed で
+#   拒否される。 よって §10b 凍結 census arm と §11 round-trip は shipped 状態で ★稼働ゼロ であり、 Leg B の必要配線は
+#   ★3 点 = (1) per-spec census-guard step (`census-guard.sh rules <base>`) / (2) test-adversarial-spec.sh step /
+#   (3) spec doc-type の wired 化 または verify-spec.sh の直接 CI step。 (1)(2) だけでは本 script が動かないため
+#   census arm は依然発火しない — Leg B の scope をこの 3 点で見積もること (詳細は rules.frozen-census.txt ★実態開示)。
+ORIG="${SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/rules.origin.html}"
+
+# ============================================================================
+# 10b. ★literal census arm (folio-7wbn 政策 A・snapshot oracle bootstrap 退役後の恒久防御 (a))。
+#   ★なぜ独立 anchor が要るか: §4/§5 の rich 突合と §11 round-trip は全て「contract vs 生成物」で ★両側同時退行で
+#     vacuous PASS する (extractor が richplain() → plain() 相当へ戻ると contract も生成物も同時に rich を失う)。
+#     凍結 literal census は両側と独立ゆえ、 collapse しても frozen 26 vs 生成物 17 で FAIL する
+#     (test-adversarial-spec.sh の COLLAPSE 群 / 本番自己比較 MK が red→green で実証)。
+#   ★expected = canonical / artifact / 生成物から【導出しない】凍結 literal (spec-origin/rules.frozen-census.txt)、
+#     measured = ★生成物 HTML (verify の subject)。 ORIG は census を【消費しない】 (下記存在 pin のみ)。
+#   ★rules 非該当軸 (jq -S census 2 本 / JSON-LD folio:stakeholders) は arm ごと除去した (移植でなく削除・
+#     census file header 参照)。 対応する mutation-kill も test-adversarial-spec.sh に作らない (空撃ち MK 禁止)。
+# ============================================================================
+# 凍結 census 読み取り (frozen literal SSoT・source せず grep で読む = tab / bracket / quote 安全)。
+FROZEN_CENSUS="$SCRIPT_DIR/spec-origin/rules.frozen-census.txt"
+[[ -f "$FROZEN_CENSUS" ]] || { echo "verify-spec: ★凍結 census 不在 (政策A anchor 喪失・fail-closed): $FROZEN_CENSUS" >&2; exit 2; }
+fz()     { grep -m1 "^$1=" "$FROZEN_CENSUS" | sed "s/^$1=//"; }                                  # scalar
+fz_set() { sed -n "/#BEGIN_$1/,/#END_$1/p" "$FROZEN_CENSUS" | grep -vE '^#'; }                    # id / delta set
+
+# ★inert region 除去 (folio-7wbn ceiling major fix・parser-differential 封鎖)。
+#   census の regex counter は raw HTML を素で舐めるため、 ★HTML コメント (<!-- ... -->) と <script>/<style> の
+#   text 本体に書かれた「タグ様文字列」を live 要素として数えてしまう。 これは政策A の【唯一の独立 anchor】を
+#   edit-SSoT (contract) 側から水増し/目減りさせる laundering 経路になる:
+#     - deflate/laundering: live な a.xref を 1 個失っても `<!-- <a class="xref"></a> -->` を 1 個足せば凍結値へ復元でき、
+#       COLLAPSE-2 が守る性質 (両側同時退行の捕捉) が破れる。 contract の machine_blocks[].html は raw 出力ゆえ到達可能。
+#     - false-FAIL: 機械層 block に正当なコメント (タグ様文字列を含む) を 1 つ書くだけで census が偽 FAIL する。
+#   ★同一 arm 内で計数方式を揃える: h_inline は実 HTML parser で subtree 境界を読む (parser-differential 回避) 一方、
+#   regex counter だけが naive だった。 そこで ★実 HTML parser (html.parser) で comment / script / style の span を
+#   特定し、 その ★raw byte 範囲だけを除去した view を作り、 後段の計数はその view に対して走らせる。
+#   (parser を「除去範囲の特定」にのみ使い本文は byte 保存する。)
+#   ★★本 view だけでは足りない (folio-7wbn 2 巡目 ceiling major・attribute laundering): comment / script / style を
+#   除いても ★属性値 は raw byte として残るため、 naive regex counter は単引用符属性の中のタグ様文字列を live 要素として
+#   数えてしまう (例 `<div data-note='<a class="xref" href="#z">z</a>'>` で c_xref が +1 / `data-x='<section id="s5-delta">'`
+#   で id census も復元できる = CEN-id1/id2・CEN-rich1/2・COLLAPSE-2 の teeth が同一クラスの手で破れる)。
+#   ゆえに ★全 census 計数 (id / a.xref / span.term / ins|del.delta / delta-id / escape literal) を regex から
+#   ★実 HTML parser の walk (census_dump) へ寄せた: 属性値は attrs として構造的に読まれ本文計数へ混入しえず、
+#   escape literal (&lt;a class="xref" 等) は ★text node 限定 (entity 記法を復元して) 数える。 comment / script /
+#   style は parser 段でも非計数ゆえ strip_inert は ★二重の帯 (view 生成の失敗時も計数側が単独で成立する)。
+strip_inert() { python3 - "$1" <<'PYEOF'
+from html.parser import HTMLParser
+import sys
+src = open(sys.argv[1], encoding='utf-8').read()
+starts = []; acc = 0
+for line in src.splitlines(keepends=True):
+    starts.append(acc); acc += len(line)
+starts.append(acc)
+def off(pos):
+    ln, col = pos
+    return starts[ln - 1] + col
+class S(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False); self.cuts = []; self.raw = None
+    def handle_comment(self, data):          # <!-- ... --> = 4 + len + 3 byte
+        s = off(self.getpos()); self.cuts.append((s, s + len(data) + 7))
+    def handle_starttag(self, tag, attrs):
+        if tag in ('script', 'style'): self.raw = tag
+    def handle_data(self, data):             # CDATA mode ゆえ raw text と 1:1
+        if self.raw:
+            s = off(self.getpos()); self.cuts.append((s, s + len(data)))
+    def handle_endtag(self, tag):
+        if tag == self.raw: self.raw = None
+p = S(); p.feed(src); p.close()
+out = []; prev = 0
+for a, b in p.cuts:
+    if a < prev: continue
+    out.append(src[prev:a]); prev = b
+out.append(src[prev:])
+sys.stdout.write(''.join(out))
+PYEOF
+}
+# ★census subject の live view (comment / script / style 本体を除去済)。 以降の regex counter は ★全て 本 view を舐める。
+HTML_LIVE="$(mktemp)"
+strip_inert "$HTML" > "$HTML_LIVE" || { echo "verify-spec: ★census live view 生成に失敗 (fail-closed): $HTML" >&2; exit 2; }
+[[ -s "$HTML_LIVE" ]] || { echo "verify-spec: ★census live view が空 (fail-closed): $HTML" >&2; exit 2; }
+
+# ★census 計数 helper (census subject = 生成物 HTML の live view / ORIG は非消費)。
+#   ★実 HTML parser の 1 walk で全軸を出す (attribute laundering 封鎖・上記 ★★参照):
+#     - element 軸 (id / a.xref / span.term / ins|del.delta / delta-id) は starttag の ★attrs から数える
+#       (属性値の中に書かれたタグ様文字列は attrs の ★値 でしかなく、 要素として計上されえない)。
+#     - escape literal 軸 (&lt;a class="xref" / &lt;code / &lt;span) は ★text node のみ から数える
+#       (entityref / charref を元記法へ復元して連結。 属性値・comment・script/style 本文は非計数)。
+#   出力形式: `KEY=n` 行 → `#IDS` 節 (navigable id) → `#DIDS` 節 (delta-id)。
+census_dump() { python3 - "$1" <<'PYEOF'
+from html.parser import HTMLParser
+import sys, re
+VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','embed','param','track'}
+# ★非描画 subtree (folio-7wbn 3 巡目 ceiling major fix): <template> の内容は browser が ★描画しない
+#   (inert DocumentFragment) ため「live 資産」ではなく census が数えてはならない。 数えると comment / 属性値と
+#   ★同一クラス の laundering 経路が開く: live な a.xref を 1 個失っても
+#   `<template><a class="xref" href="#z">z</a></template>` を 1 個足せば凍結 26 へ「復元」でき、
+#   COLLAPSE-2 が守る性質 (両側同時退行を独立 anchor が捕捉する) が破れる (実測再現済)。
+#   到達性は comment / 属性 vector と同じ (contract.machine_blocks[].html は raw 出力・extractor は原本 inner HTML を
+#   逐語 capture)。 ★element 軸 (id / a.xref / span.term / delta) と ★text 軸 (escape literal) の ★両方 を除外する
+#   (片方だけだと escape literal 側に同じ穴が残る)。
+#   ★noscript は除外しない: scripting 無効時には ★描画される = live たりうるため、 除外すると逆に「正当な資産の
+#   数え落とし」= 偽 FAIL / 隠し場所を作る。 除外の対象は「どの条件でも描画されない」template に限る。
+INERT_SUBTREE={'template'}
+class C(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=False)
+        self.stack=[]; self.raw=None; self.ids=[]; self.dids=[]; self.text=[]
+        self.n_xref=0; self.n_term=0; self.n_delta=0
+    def inert(self):
+        return any(t in INERT_SUBTREE for t in self.stack)
+    def _tag(self, tag, attrs):
+        if self.inert(): return
+        d={}
+        for k,v in attrs:
+            if k not in d: d[k] = v if v is not None else ''
+        if d.get('id'): self.ids.append(d['id'])
+        cls = d.get('class') or ''
+        if tag=='a' and 'xref' in cls.split(): self.n_xref+=1
+        if tag=='span' and cls=='term' and 'data-term' in d: self.n_term+=1
+        if tag in ('ins','del') and cls=='delta' and 'data-delta-id' in d:
+            self.n_delta+=1; self.dids.append(d['data-delta-id'])
+    def handle_starttag(self, tag, attrs):
+        self._tag(tag, attrs)
+        if tag in ('script','style'): self.raw=tag
+        if tag not in VOID: self.stack.append(tag)
+    def handle_startendtag(self, tag, attrs):
+        self._tag(tag, attrs)
+    def handle_endtag(self, tag):
+        if tag==self.raw: self.raw=None
+        for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i]==tag: del self.stack[i:]; break
+    def handle_data(self, data):
+        if not self.raw and not self.inert(): self.text.append(data)
+    def handle_entityref(self, name):
+        if not self.raw and not self.inert(): self.text.append('&'+name+';')
+    def handle_charref(self, name):
+        if not self.raw and not self.inert(): self.text.append('&#'+name+';')
+p=C(); p.feed(open(sys.argv[1], encoding='utf-8').read()); p.close()
+t=''.join(p.text)
+print('C_XREF=%d' % p.n_xref)
+print('C_TERM=%d' % p.n_term)
+print('C_DELTA=%d' % p.n_delta)
+print('ESC_XREF=%d' % len(re.findall(r'&lt;a class="xref"', t)))
+print('ESC_CODE=%d' % len(re.findall(r'&lt;code', t)))
+print('ESC_SPAN=%d' % len(re.findall(r'&lt;span', t)))
+# ★ID_TOTAL = dedup ★前 の総出現数 (folio-7wbn 3 巡目 ceiling major fix)。 下段 #IDS 節は set() で dedup するため、
+#   ★既存 id の複製注入 (例 <div id="s5-delta"></div> を body 直後へ) は count census (unique 58) でも SET census でも
+#   原理的に検出できず verify を rc=0 で素通っていた (実測再現済)。 HTML の fragment 解決は文書順 first-match ゆえ、
+#   本文より前へ空の複製 anchor を置くと当該 id を指す全 xref がその空要素へ ★hijack され navigation が壊れる。
+#   unique == 総出現 を ★構造的不変条件 として撃つ (凍結 literal を増やさない = census file / provenance sha 無改訂)。
+print('ID_TOTAL=%d' % len(p.ids))
+print('#IDS')
+for i in sorted(set(p.ids)): print(i)
+print('#DIDS')
+for i in sorted(set(p.dids)): print(i)
+PYEOF
+}
+# generic inline (code/span) の ★人間層 (data-audience="machine" subtree の外) occurrence を region 別に数える。
+#   実 HTML parser で ancestor を辿る (naive tag-strip regex は subtree 境界を読めず parser-differential を生む)。
+h_inline() { python3 - "$1" "$2" "$3" <<'PYEOF'
+from html.parser import HTMLParser
+import sys
+VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','embed','param','track'}
+class W(HTMLParser):
+    def __init__(self, target, region):
+        super().__init__(convert_charrefs=False); self.stack=[]; self.n=0
+        self.target=target; self.region=region
+    def handle_starttag(self, tag, attrs):
+        d=dict(attrs)
+        # ★非描画 subtree 除外 (census_dump と同型・folio-7wbn 3 巡目 ceiling): <template> 内は描画されないため
+        #   live inline 資産でない。 除外しないと td/figcaption へ <template><code>z</code></template> を置くだけで
+        #   region 別 occurrence を水増しでき、 element 軸を閉じた意味が無くなる (計数方式を arm 内で揃える)。
+        if tag==self.target and not any(t=='template' for t,_ in self.stack):
+            if not any(a.get('data-audience')=='machine' for _,a in self.stack):
+                r='rest'
+                for t,a in reversed(self.stack):
+                    cls=a.get('class') or ''
+                    if t in ('td','th'): r='table-cell'; break
+                    if t=='figcaption' or 'caption' in cls: r='caption'; break
+                if self.region=='human' or self.region==r: self.n+=1
+        if tag not in VOID: self.stack.append((tag,d))
+    def handle_endtag(self, tag):
+        for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i][0]==tag: del self.stack[i:]; break
+src=open(sys.argv[1],encoding='utf-8').read()
+body=src[src.index('<body'):]
+w=W(sys.argv[2], sys.argv[3]); w.feed(body)
+print(w.n)
+PYEOF
+}
+
+# ★ORACLE 存在 pin (bootstrap 記録・fail-closed。 照合不能 silent skip の回帰 pin・M15・非消費)。 snapshot は census を消費しないが、
+#   SPEC_ORIGIN_HTML を存在しない path へ向けて gate を silent skip する逃げ道は塞ぐ (存在検査のみ・内容不読)。
+if [[ ! -f "$ORIG" ]]; then
+  printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "ORACLE 存在 pin (bootstrap 記録)" "$ORIG"; fail=1
+fi
+
+# --- (a) literal census: expected = 凍結 literal / subject = 生成物 HTML (ORIG 非消費) ---
+# ★census 実測は parser walk 1 回に集約する (計数方式の混在 = parser-differential の温床ゆえ single-source)。
+CEN_DUMP="$(mktemp)"
+census_dump "$HTML_LIVE" > "$CEN_DUMP" || { echo "verify-spec: ★census parser walk に失敗 (fail-closed): $HTML" >&2; exit 2; }
+grep -q '^C_XREF=' "$CEN_DUMP" || { echo "verify-spec: ★census parser walk の出力が不正 (fail-closed): $HTML" >&2; exit 2; }
+cen()  { grep -m1 "^$1=" "$CEN_DUMP" | sed "s/^$1=//"; }
+cen_ids()  { sed -n '/^#IDS$/,/^#DIDS$/p' "$CEN_DUMP" | grep -v '^#' | LC_ALL=C sort -u; }
+cen_dids() { sed -n '/^#DIDS$/,$p'        "$CEN_DUMP" | grep -v '^#' | LC_ALL=C sort -u; }
+# navigable id census (count + rename SET)。
+g_ids="$(mktemp)"; cen_ids > "$g_ids"
+# D-* (delta 印) は navigable id へ混入禁止 (fail-closed・生成物側で撃つ)。
+chk "census navigable id: 生成物の D-* id == 0 (delta 印 anchor 混入を fail-closed に)" "0" "$(grep -c '^D-' "$g_ids" || true)"
+# ★count census (frozen literal・subject=生成物)。
+chk "census navigable id: 総数 == 凍結 $(fz FZ_ID_COUNT)" "$(fz FZ_ID_COUNT)" "$(grep -c . "$g_ids")"
+# ★重複 0 の構造的不変条件 (folio-7wbn 3 巡目 ceiling major fix)。 count / SET census は共に dedup 後の unique 集合を
+#   見るため ★既存 id の複製注入 (unique 58 保存) を原理的に検出できない。 文書順 first-match の fragment 解決ゆえ
+#   複製は anchor hijack を起こす。 凍結 literal でなく「unique == 総出現」で撃つ (census file 無改訂)。
+chk "census navigable id: 重複 0 (unique == 総出現・anchor hijack 封鎖)" "$(cen ID_TOTAL)" "$(grep -c . "$g_ids")"
+# ★id-rename SET census: count 保存 substitution (58==58) を見逃さないよう凍結 SET と comm。
+FZ_IDS="$(mktemp)"; fz_set ID_SET | LC_ALL=C sort -u > "$FZ_IDS"
+chk_empty "census id-rename SET: 生成物にあり凍結 SET に無い余剰 0 (rename / 捏造)" "$(LC_ALL=C comm -13 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
+chk_empty "census id-rename SET: 凍結 SET にあり生成物に無い欠落 0 (rename / 脱落)" "$(LC_ALL=C comm -23 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
+rm -f "$g_ids" "$FZ_IDS"
+# ★rich 資産 occurrence (frozen literal・subject=生成物)。
+chk "census rich: a.xref occurrence == 凍結 $(fz FZ_XREF)"        "$(fz FZ_XREF)"  "$(cen C_XREF)"
+chk "census rich: span.term occurrence == 凍結 $(fz FZ_TERM)"     "$(fz FZ_TERM)"  "$(cen C_TERM)"
+chk "census rich: ins|del.delta occurrence == 凍結 $(fz FZ_DELTA)" "$(fz FZ_DELTA)" "$(cen C_DELTA)"
+# delta-id SET census (frozen・count 保存 rename を見逃さない)。
+G_DID="$(mktemp)"; FZ_DID="$(mktemp)"
+cen_dids > "$G_DID"
+fz_set DELTA_SET | LC_ALL=C sort -u > "$FZ_DID"
+chk_empty "census delta-id SET: 余剰 0 (凍結 SET 対)" "$(LC_ALL=C comm -13 "$FZ_DID" "$G_DID" | tr '\n' ' ')"
+chk_empty "census delta-id SET: 欠落 0 (凍結 SET 対)" "$(LC_ALL=C comm -23 "$FZ_DID" "$G_DID" | tr '\n' ' ')"
+rm -f "$G_DID" "$FZ_DID"
+# escape 済 literal 'a class="xref"' (過剰 linkify 禁止・subject=生成物・★text node 限定計数)。
+chk "census escape: 'a class=\"xref\"' literal == 凍結 $(fz FZ_ESC_XREF)" "$(fz FZ_ESC_XREF)" "$(cen ESC_XREF)"
+# generic inline (code/span) の人間層 region 別 occurrence (frozen・subject=生成物・region 相殺封鎖のため総和も撃つ)。
+#   ★0 の軸 (table-cell / caption) も存置する: 「減らせない」代わりに ★注入 (0→1) を撃つ teeth があり、 撤去すると
+#   人間層 table/caption への捏造 inline 混入が無被覆になる (F19 群も注入方向の MK で pin 済 = 空撃ちでない)。
+chk "census generic: 人間層 <code> table-cell == 凍結 $(fz FZ_CODE_TABLE_CELL)" "$(fz FZ_CODE_TABLE_CELL)" "$(h_inline "$HTML_LIVE" code table-cell)"
+chk "census generic: 人間層 <code> caption == 凍結 $(fz FZ_CODE_CAPTION)"       "$(fz FZ_CODE_CAPTION)"    "$(h_inline "$HTML_LIVE" code caption)"
+chk "census generic: 人間層 <code> rest == 凍結 $(fz FZ_CODE_REST)"            "$(fz FZ_CODE_REST)"       "$(h_inline "$HTML_LIVE" code rest)"
+chk "census generic: 人間層 <code> 総数 == 凍結 $(fz FZ_CODE_TOTAL) (region 相殺封鎖)" "$(fz FZ_CODE_TOTAL)" "$(h_inline "$HTML_LIVE" code human)"
+chk "census generic: 人間層 <span> table-cell == 凍結 $(fz FZ_SPAN_TABLE_CELL)" "$(fz FZ_SPAN_TABLE_CELL)" "$(h_inline "$HTML_LIVE" span table-cell)"
+chk "census generic: 人間層 <span> caption == 凍結 $(fz FZ_SPAN_CAPTION)"       "$(fz FZ_SPAN_CAPTION)"    "$(h_inline "$HTML_LIVE" span caption)"
+# double-escape 直接検出 (frozen・subject=生成物・★text node 限定計数)。
+chk "census double-escape: &lt;code literal == 凍結 $(fz FZ_ESC_CODE)" "$(fz FZ_ESC_CODE)" "$(cen ESC_CODE)"
+chk "census double-escape: &lt;span literal == 凍結 $(fz FZ_ESC_SPAN) (散文中の正当 literal)" "$(fz FZ_ESC_SPAN)" "$(cen ESC_SPAN)"
+rm -f "$HTML_LIVE" "$CEN_DUMP"
+
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
+  # ★ORACLE 存在 pin (bootstrap 記録・fail-closed。 照合不能 silent skip の回帰 pin・M15・非消費)。 §11 LEFT は政策 A で
+  #   contract 由来へ re-home したため ORIG を消費しないが、 SPEC_ORIGIN_HTML=/nonexistent による silent skip の
+  #   逃げ道は §10b と対称に塞ぐ (存在検査のみ・内容不読)。
   if [[ ! -f "$ORIG" ]]; then
-    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (機械層 contract だが照合不能・fail-closed)\n' "原本↔生成物 機械層集合一致" "$ORIG"; fail=1
-  else
-    LF="$(mktemp)"; RF="$(mktemp)"
-    # LEFT: 原本の live data-audience="machine" 自由文 (<p>→prose / <aside>→note / <ul>→li 単位) を document 順に再抽出 + inner_norm。
-    #   live tag (実 <) のみゆえ escape 済例示 (&lt;p) を除外。 spec-normative の <div> は p/aside/ul でないため対象外 (= 26 EARS 除外)。
+    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "機械層 round-trip 存在 pin" "$ORIG"; fail=1
+  fi
+  command -v jq >/dev/null || { echo "verify-spec: jq required (§11 contract round-trip)" >&2; exit 2; }
+  LF="$(mktemp)"; RF="$(mktemp)"
+    # LEFT: ★政策 A (folio-7wbn)。 snapshot / live canonical でなく contract.machine_preamble[] +
+    #   sections[].machine_blocks[] (74 block) から document 順に再構成する。 contract の html field は
+    #   extract-rules-spec.sh の inner_norm 済 (空白畳み + trim) ゆえ RIGHT の norm 出力と 1:1 で突合する。
+    #   list は items[] を li 単位へ展開 (RIGHT の <li class="mli"> と対称)。
     #   ★sort しない (document 順を保存) = 順序付き突合 (人間層 §4/§5 と対称)。
-    perl -CSD -0777 -e '
-      local $/; open(my $fh,"<:encoding(UTF-8)",$ARGV[0]) or die; my $H=<$fh>; close $fh;
-      sub norm { my ($s)=@_; $s//=""; $s=~s/\s+/ /g; $s=~s/^\s+//; $s=~s/\s+$//; return $s; }
-      my @u; my $p=0; my $len=length($H);
-      while ($p<$len) {
-        my %c;
-        if (substr($H,$p)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{prose}=$p+$-[0]; }
-        if (substr($H,$p)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>/) { $c{note}=$p+$-[0]; }
-        if (substr($H,$p)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>/)    { $c{list}=$p+$-[0]; }
-        last unless %c;
-        my ($k)=sort { $c{$a}<=>$c{$b} } keys %c; my $at=$c{$k};
-        if ($k eq "prose") { substr($H,$at)=~/<p\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/p>/s; push @u,"prose\t".norm($1); $p=$at+$+[0]; }
-        elsif ($k eq "note") { substr($H,$at)=~/<aside\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/aside>/s; push @u,"note\t".norm($1); $p=$at+$+[0]; }
-        else { substr($H,$at)=~/<ul\b[^>]*\sdata-audience="machine"[^>]*>(.*?)<\/ul>/s; my $in=$1; my $e=$at+$+[0];
-               while ($in=~/<li\b[^>]*>(.*?)<\/li>/gs){ push @u,"li\t".norm($1); } $p=$e; }
-      }
-      print "$_\n" for @u;
-    ' "$ORIG" > "$LF"
+    yq -o=json '[.machine_preamble[]?, .sections[].machine_blocks[]?]' "$CONTRACT" | jq -r '.[] |
+      if .type=="list" then (.items[] | "li\t"+.)
+      elif .type=="prose" then "prose\t"+.html
+      elif .type=="note" then "note\t"+.html
+      else "UNKNOWN\t"+(.type//"?") end' > "$LF"
     # RIGHT: 生成物の機械層 block を document 順に再抽出 + inner_norm。 prose/note/li は fold 内で交互に出現しうるため、
     #   型ごとに別 pass で集めず *位置走査* で混在順序を保存する (LEFT と同型・順序付き突合のため必須)。
     #   mli は machine list 専有 class・spec-machine-{prose,note} は machine 専有 component ゆえ live tag のみ抽出。
@@ -520,17 +775,16 @@ if [[ "$NMB_TOTAL" -gt 0 ]]; then
       }
       print "$_\n" for @u;
     ' "$BODY" > "$RF"
-    if diff -q "$LF" "$RF" >/dev/null 2>&1; then
-      printf '  [OK]   %-'"$CHKW"'s %s\n' "原本↔生成物 機械層 双方向 順序付き一致 (round-trip)" "$(grep -c . "$LF")"
-    else
-      printf '  [FAIL] %-'"$CHKW"'s\n' "原本↔生成物 機械層 不一致 (脱落 / 捏造 / 二重 escape / 改竄 / 順序入替 / cross-section 誤帰属)"
-      echo "    --- 順序付き diff (< 原本 / > 生成物) ---"; diff "$LF" "$RF" | sed 's/^/      /' | head -20
-      echo "    --- 原本のみ (生成物に脱落) ---"; LC_ALL=C comm -23 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
-      echo "    --- 生成物のみ (原本に無い = 捏造/改竄) ---"; LC_ALL=C comm -13 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
-      fail=1
-    fi
-    rm -f "$LF" "$RF"
+  if diff -q "$LF" "$RF" >/dev/null 2>&1; then
+    printf '  [OK]   %-'"$CHKW"'s %s\n' "contract↔生成物 機械層 双方向 順序付き一致 (round-trip)" "$(grep -c . "$LF")"
+  else
+    printf '  [FAIL] %-'"$CHKW"'s\n' "contract↔生成物 機械層 不一致 (脱落 / 捏造 / 二重 escape / 改竄 / 順序入替 / cross-section 誤帰属)"
+    echo "    --- 順序付き diff (< contract / > 生成物) ---"; diff "$LF" "$RF" | sed 's/^/      /' | head -20
+    echo "    --- contract のみ (生成物に脱落) ---"; LC_ALL=C comm -23 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+    echo "    --- 生成物のみ (contract に無い = 捏造/改竄) ---"; LC_ALL=C comm -13 <(LC_ALL=C sort "$LF") <(LC_ALL=C sort "$RF") | sed 's/^/      /' | head -10
+    fail=1
   fi
+  rm -f "$LF" "$RF"
 fi
 
 

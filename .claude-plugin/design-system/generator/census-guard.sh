@@ -15,14 +15,26 @@
 #       (初回確立は contract 変更を伴わないのが正常)。 これにより「既存 frozen 値を黙って書き換える」将来の
 #       edit を弾く (初回 freeze は素通す)。
 #
-# usage: census-guard.sh [<base-ref>]
-#   base-ref 省略時は coupling 検査 (2) を skip し provenance 整合 (1) のみ実施 (git 文脈非依存の最小 gate)。
+# ★spec 名引数化 (folio-7wbn / admin 裁定 案X): 単一実装を per-spec 呼出しで使い回す (fork = 二重保守ゆえ不採択)。
+#   {census, contract} の ★両方 を per-spec に解決し、 (1) provenance / (2) coupling を ★その spec の census file に
+#   対して課す。 片側 spec のみ検査する形は他 spec の naked bump を素通す fail-open ゆえ、 CI は per-spec step で
+#   全 spec 分を回す (ci.yml 配線 = admin Leg B)。 registry 粒度の設計 (対象 spec 一覧の自動導出) は別 bead
+#   folio-vhew の領分で、 本 script は「引数化 + 既知 spec の解決」の最小汎化に留める。
+#
+# usage: census-guard.sh [<spec-name>] [<base-ref>]
+#   spec-name 省略時は verification (後方互換の既定)。 base-ref 省略時は coupling 検査 (2) を skip し
+#   provenance 整合 (1) のみ実施 (git 文脈非依存の最小 gate)。
 # exit:  0 = PASS / 1 = FAIL (裸の census 変更 or provenance drift) / 2 = tool/前提エラー
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CENSUS="$SCRIPT_DIR/spec-origin/verification.frozen-census.txt"
-CONTRACT="$SCRIPT_DIR/contract/folio-verification.spec.yaml"
+# ★後方互換: 第 1 引数が既知 spec 名でなければ base-ref とみなす (旧 `census-guard.sh <base-ref>` 呼出しを壊さない)。
+KNOWN_SPECS=" verification rules "
+SPEC="verification"
+if [[ -n "${1:-}" && "$KNOWN_SPECS" == *" $1 "* ]]; then SPEC="$1"; shift; fi
+CENSUS="$SCRIPT_DIR/spec-origin/$SPEC.frozen-census.txt"
+CONTRACT="$SCRIPT_DIR/contract/folio-$SPEC.spec.yaml"
 BASE_REF="${1:-}"
+echo "census-guard: spec=$SPEC (census=$(basename "$CENSUS") / contract=$(basename "$CONTRACT"))"
 [[ -f "$CENSUS" ]]   || { echo "census-guard: frozen census 不在: $CENSUS" >&2; exit 2; }
 [[ -f "$CONTRACT" ]] || { echo "census-guard: contract 不在: $CONTRACT" >&2; exit 2; }
 command -v sha256sum >/dev/null || { echo "census-guard: sha256sum required" >&2; exit 2; }
@@ -68,6 +80,26 @@ if [[ -n "$BASE_REF" ]]; then
   fi
 else
   echo "  [SKIP] census-guard (2) coupling は base-ref 未指定ゆえ skip (provenance 整合のみ)"
+fi
+
+# (3) ★未保護 census の loud 開示 (folio-7wbn 3 巡目 ceiling major fix)。
+#   本 script は 1 実行につき ★1 spec しか検査しない。 CI が per-spec step 化されるまで (Leg B・ci.yml は
+#   folio-7wbn cell の禁止面)、 現行の 1 引数呼出し `census-guard.sh <base-sha>` は第 1 引数が既知 spec 名でないため
+#   ★verification へ黙って解決され、 spec-origin/ に増えた他の census file (rules 等) は provenance も coupling も
+#   ★一度も評価されない = 数字上書き防壁が届かない fail-open。 「census を足したが guard 呼出しに載せ忘れる」を
+#   ★沈黙させない ために、 ディレクトリ走査 (列挙でなく実在 file が SSOT) で今回の検査対象外を必ず名指しする。
+#   ★exit code は変えない (fail-closed 化は Leg B 未着地の CI を即赤にするため admin 裁定が前提・恒久形は
+#   folio-vhew の registry 導出で「全 census を必ず検査する」形へ寄せる)。
+unchecked=()
+for f in "$SCRIPT_DIR"/spec-origin/*.frozen-census.txt; do
+  [[ -e "$f" ]] || continue
+  [[ "$f" == "$CENSUS" ]] && continue
+  unchecked+=("$(basename "$f")")
+done
+if [[ "${#unchecked[@]}" -gt 0 ]]; then
+  echo "  [WARN] census-guard (3) ★本実行で未検査の census file が ${#unchecked[@]} 本ある (この実行は spec=$SPEC のみ):" >&2
+  for u in "${unchecked[@]}"; do echo "         - $u ← provenance / coupling ★未評価 (裸 bump が素通る)" >&2; done
+  echo "         → CI を per-spec step 化し全 census を検査すること (例: census-guard.sh rules <base-sha>)。" >&2
 fi
 
 if [[ "$fail" -eq 0 ]]; then echo "census-guard: PASS"; exit 0; else echo "census-guard: FAIL"; exit 1; fi

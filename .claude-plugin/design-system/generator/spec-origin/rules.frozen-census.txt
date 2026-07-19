@@ -1,0 +1,186 @@
+# folio-rules frozen census — policy A (folio-7wbn / ADR-0053 §2.6 rules arm)
+# ============================================================================
+# 政策 A (user 裁定 2026-07-18 = bootstrap 退役): snapshot oracle は「flip 時 1 回の
+# bootstrap 忠実性証明」に縮退し、恒久防御は (a) literal census (本 file) + (b) contract
+# 対 machine-block round-trip + (c) extractor-collapse 敵対 test が代替する。
+#
+# ★本 file の値は canonical / artifact / 生成物から【導出しない】凍結 literal (frozen literal)。
+#   measured 側 (生成物 HTML = verify の subject) とのみ突合する。両側 contract 由来の相対 parity
+#   (flip 後 ORIG==生成物 で自己比較恒真化) を撤去した後の唯一の独立 anchor。
+#
+# ★verification.frozen-census.txt からの値 literal 移植は禁止 (subject が別文書ゆえ自 RED)。
+#   本 file の値は base a50e1bc の post-flip canonical design-intent/spec/rules.html を subject に
+#   bootstrap 1 回で捕捉した実測 (「導出しない」は runtime chk の話・bootstrap 捕捉は許容)。
+#
+# ★rules 非該当軸は arm ごと除去した (移植でなく削除・空撃ち census を作らない):
+#   - jq -S census 2 本 (FZ_JQS_TOTAL / FZ_JQS_MASKED): rules.html の 'jq -S' 出現 = 0 (該当なし)。
+#   - JSON-LD folio:stakeholders census: rules.html の JSON-LD に当該 key 不在 (null)。 head meta /
+#     dl 側の stakeholders は verify-spec.sh §1c head-meta pin が別途被覆ゆえ欠落でない。
+#   対応する F19 / M-SELFCMP mutation-kill も同時削除済 (空撃ち MK を残さない)。
+#
+# ★section-class 件数 (verify-spec.sh 内 11/1 hardcode) と XREF_HUMAN_FLOOR=11 は in-script hardcode の
+#   まま存置し本 census へ集約しない (verification.frozen-census.txt も同 2 軸を持たない = 分離が既定)。
+#
+# provenance:
+#   canonical  = design-intent/spec/rules.html @ base a50e1bc (folio-d7bq flip land 済 = 生成物)
+#   snapshot(bootstrap) = spec-origin/rules.origin.html (pre-flip canonical・git show 1744d9f から決定的再構成
+#     = flip commit a86ec1f の親・150524 byte・sha256 ca58363a577c2cdb416616b66463a935982e0d8bf6cbc285cac3603b2c601390)
+#   provenance_contract_sha256 = fd3beb923bd579942deaf0258086e167536c3bb7277cfe2777ee7283ddafdf5a
+#     (folio-rules.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★rules が
+#      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
+#   ★実態開示 (folio-7wbn 2〜3 巡目 ceiling): 政策A の恒久防御は ★rules では 3 点とも CI 未配線 = shipped 状態で
+#     ★稼働ゼロ (committed but dormant)。 開示は fail-open を解消しない — Leg B 完了まで本 arm を「保護確立」と
+#     扱わないこと。 未配線は以下の ★3 点 であり、 2 点 (census-guard / adversarial) だけを直しても
+#     ★floor 本体が動かないため census arm は依然発火しない (Leg B の scope 見積りを過少にしないための開示):
+#     (i) census-guard が rules へ届かない: ci.yml の呼出しは旧 1 引数形 (`census-guard.sh <base-sha>`) ゆえ
+#         第 1 引数が既知 spec 名でなく ★verification へ解決され、 本 file の provenance / coupling は
+#         ★一度も評価されない (実測: `bash census-guard.sh a50e1bc` → `spec=verification`)。 すなわち本 census 値を
+#         裸で bump しても現状 CI は素通す。 → 必要配線: `census-guard.sh rules "<base-sha>"` の per-spec step。
+#         (緩和として census-guard.sh 側に「本実行で未検査の census file」を名指しする loud WARN を実装済
+#          (検査 (3)・exit code 不変)。 沈黙を消すだけで防壁の代替ではない。)
+#     (ii) test-adversarial-spec.sh の step が ci.yml に ★無い: 本 census の teeth (CEN / CEN-cmt / CEN-attr /
+#         CEN-tpl / M-SELFCMP / SNAPPIN / COLLAPSE 群) を運ぶ唯一の carrier が自動実行されない。 verification 側は
+#         test-adversarial-verification.sh が blocking step として配線済 = ★非対称。 → 必要配線: 同格の step 追加。
+#     (iii) ★floor 本体 (verify-spec.sh) 自体に自動実行経路が無い: ci.yml に verify-spec.sh を走らせる step が
+#         一切無く (gate F sweep の `gate rules ...` は assemble → inject → render-gate-srs.py で floor を呼ばない)、
+#         `folio validate` は 18-gate の link/jsonld floor で verify-spec.sh を呼ばず、 統一 dispatch
+#         `folio verify --type spec` は capability-registry.yaml が `spec: wired: false` ゆえ fail-closed で拒否される。
+#         よって §10b census arm と §11 round-trip は ★手動 `bash verify-spec.sh` でしか発火しない。
+#         → 必要配線: spec doc-type の wired 化 (registry・folio-vhew 領分) ★または verify-spec.sh の直接 CI step。
+#     配線はいずれも folio-7wbn Leg B (admin・ci.yml / capability-registry.yaml は本 cell の禁止面)。
+#     恒久策は spec 名列挙でなく spec-origin/*.frozen-census.txt を走査して全 census を必ず検査する形 (folio-vhew)。
+#
+# ★★bootstrap 忠実性の【未達開示】 (folio-7wbn ceiling major・admin 裁定待ち)
+#   政策A の前提は「snapshot oracle は flip 時 1 回の bootstrap 忠実性証明に縮退する」であり、 snapshot 残置の
+#   理由はその証明が成立したという記録である。 ★rules arm ではこの証明が ★成立していない (実測)。
+#   ★開示範囲の訂正 (3 巡目 ceiling major): 旧版は未達を span.term / &lt;a class="xref" の ★2 軸 と提示していたが、
+#     これは事実として ★過少 だった。 独立計測 (html.parser の ancestor walk で人間層 / 機械層を分離) の結果:
+#
+#   (A) ★corroborate されている軸 (snapshot == subject = bootstrap 証明が成立):
+#     軸                       snapshot(1744d9f)   subject(a50e1bc)   凍結値
+#     a.xref                        26                  26            FZ_XREF=26
+#     navigable id (unique)         58                  58            FZ_ID_COUNT=58
+#     ins/del.delta                  1                   1            FZ_DELTA=1
+#     &lt;code literal (text)        0                   0            FZ_ESC_CODE=0
+#     &lt;span literal (text)       19                  19            FZ_ESC_SPAN=19
+#
+#   (B) ★corroborate されていない軸 = ★人間層 inline の 8 軸【全域】 (自己撮影値。 pre-flip 原本と突合できていない):
+#     軸                              snapshot(1744d9f)   subject(a50e1bc)   凍結値
+#     span.term (人間層+機械層 合計)         26                  18          FZ_TERM=18       ★-8
+#     &lt;a class="xref" literal              5                   1          FZ_ESC_XREF=1    ★-4
+#     人間層 <code> table-cell               62                   0          FZ_CODE_TABLE_CELL=0  ★-62
+#     人間層 <code> rest                     45                   9          FZ_CODE_REST=9        ★-36
+#     人間層 <code> 総数                    107                   9          FZ_CODE_TOTAL=9       ★-98
+#     人間層 <span> table-cell               15                   7          FZ_SPAN_TABLE_CELL=7  ★-8
+#     人間層 <code> caption                   0                   0          FZ_CODE_CAPTION=0   (0/0 = ★vacuous
+#     人間層 <span> caption                   0                   0          FZ_SPAN_CAPTION=0    一致・裏付け力なし)
+#
+#   ★機械層は無傷: data-audience="machine" 祖先を持つ span.term は pre-flip 18 / post-flip 18 で ★完全一致
+#     (term 名の集合も同一)。 すなわち ★逐語 capture (機械層 round-trip の対象) は損なわれておらず、
+#     ★損失は人間層に限局する。 失われた span.term 8 件は重複でなく ★人間層の別 term の glossary markup:
+#     chrome / dual-audience / EARS / essence / fold / frozen / landing / progressive disclosure (人間層 8 → 0)。
+#   commit 単位では 1744d9f(term 26) → flip commit a86ec1f(18) → a50e1bc(18) で、 間に rules.html への content
+#   commit が皆無 = 減少は ★flip 生成そのもの で発生している。
+#   (先行 land 済の verification arm では snapshot==subject が全軸一致 = 証明が実際に成立している。 rules だけ非対称。)
+#   検証コマンド (再現用):
+#     git show 1744d9f:design-intent/spec/rules.html | perl -CSD -0777 -ne 'my $n=()=(/<span class="term"[^>]*\sdata-term="/g); print $n'   # => 26
+#     perl -CSD -0777 -ne 'my $n=()=(/<span class="term"[^>]*\sdata-term="/g); print $n' design-intent/spec/rules.html                      # => 18
+#     (人間層 / 機械層 別の内訳と code/span の region 別 occurrence は html.parser の ancestor walk で再現する
+#      — data-audience="machine" 祖先の有無で分類し、 td/th → table-cell / figcaption → caption / それ以外 → rest。)
+#   ★裁定待ちの論点 (★3 択・旧版は 2 択しか提示していなかった):
+#     (1) 「意図的な flip 挙動」= extractor の設計上の非対象。
+#     (2) 「folio-d7bq の未検出退行」。
+#     (3) ★「人間層は flip で再著述された」= pre/post の inline census 比較が ★原理的に成立しない。
+#         人間層 <code> 107 → 9 という桁違いの差 (および人間層 <span> の 95 → 337 という逆方向の増加) は、
+#         個別 markup の脱落では説明できず、 人間層が別文書として書き直されたことを示唆する。 この場合、
+#         (B) の 8 軸は「損失」ではなく「別文書の実測」であり、 snapshot との突合は bootstrap 証明たりえない
+#         (= snapshot は (A) 5 軸に対してのみ oracle として機能した、 という限定記録になる)。
+#   ★未裁定である以上、 (B) 8 軸の凍結値 (FZ_TERM=18 / FZ_ESC_XREF=1 / FZ_CODE_* / FZ_SPAN_*) は
+#     【post-flip 実測を暫定凍結したもの】であり ★「正しい値」の主張ではない。 (2) だった場合、 本 census は
+#     損失後の値を期待値にするため以後どの gate でも当該損失は検出できない (§4/§5/§11 は両側 contract 由来ゆえ元から不能)。
+#   ★なお本節は「凍結値が過去の損失を既に内包している可能性の範囲」の開示であり、 arm 自体の false-green ではない:
+#     census は frozen literal として ★以後の drift / collapse を捕捉する機能を (B) 軸でも果たす。
+#   ★取り扱い: 裁定が「退行」なら失われた term を復元し FZ_TERM / FZ_ESC_XREF を同時 bump する
+#     (census-guard の coupling により contract 変更を伴う正規経路でのみ可能)。 復元は extractor / contract 面ゆえ
+#     ★本 cell の fence 外 = folio-d7bq 系 follow-up bead へ escalation 済 (admin 引き継ぎ事項)。
+# ============================================================================
+
+# ---- scalars (frozen literal・subject = 生成物 HTML) ----
+FZ_ID_COUNT=58
+FZ_XREF=26
+FZ_TERM=18
+FZ_DELTA=1
+FZ_ESC_XREF=1
+FZ_CODE_TABLE_CELL=0
+FZ_CODE_CAPTION=0
+FZ_CODE_REST=9
+FZ_CODE_TOTAL=9
+FZ_SPAN_TABLE_CELL=7
+FZ_SPAN_CAPTION=0
+FZ_ESC_CODE=0
+FZ_ESC_SPAN=19
+
+#BEGIN_ID_SET
+req-adr-001
+req-ci-001
+req-ci-010
+req-ci-011
+req-ci-012
+req-ci-013
+req-ci-014
+req-ci-015
+req-ci-016
+req-cm-001
+req-cm-002
+req-cm-003
+req-da-js-1
+req-da-js-2
+req-da-struct-1
+req-da-struct-2
+req-da-struct-3
+req-da-struct-4
+req-da-struct-5
+req-gloss-001
+req-gloss-002
+req-gloss-003
+req-xref-001
+req-xref-002
+req-xref-003
+req-xref-004
+s0-reader-guide
+s10-1
+s10-2
+s10-3
+s10-mandatory
+s11-1-readers
+s11-2-remediate
+s11-3-defaults
+s11-4-review-procedure
+s11-5-compression
+s11-presentation
+s12-srs-design-system
+s2-directory
+s3-naming
+s3-vocab-schema
+s4-5-visual
+s4-6-a11y
+s4-format
+s5-delta
+s6-ears
+s7-1-taxonomy
+s7-2-canonical-pattern
+s7-3-floor
+s7-4-human-view
+s7-dual-audience
+s8-js-governance
+s9-1-markup
+s9-2-essence
+s9-3-tooltip-css
+s9-4-requirements
+s9-5-glossary
+s9-xref
+#END_ID_SET
+
+#BEGIN_DELTA_SET
+D-2026-05-28-001
+#END_DELTA_SET
