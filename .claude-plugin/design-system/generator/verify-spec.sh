@@ -116,9 +116,14 @@ exp_sh="$( { q '.sections[].heading'; printf '%s\n' "${STATIC_BAND_H2[@]}"; } | 
 act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#')"
 chk "section 可視 heading 列 == sections[].heading + 静的 band 2 件 (順序)" "$exp_sh" "$act_sh"
 chk "h2 総数 == NSEC+2 (band h2 切詰・大文字注入の盲点是正)" "$((NSEC+2))" "$(grep -oiE '<h2\b' "$BODY" | wc -l | tr -d ' ')"
-exp_se="$(q '.sections[].essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
-act_se="$(perl -CSD -0777 -ne 'while (/<div data-component="section-essence-callout"><p class="sec-se">([^<]*)<\/p><\/div>/g){ print "$1\n"; }' "$BODY")"
-chk "section essence 列 == sections[].essence (順序)" "$exp_se" "$act_se"
+# ★folio-a405: essence_rich=true の section は RAW emit ゆえ raw 逐語 (markup 込み) で突合、 plain は既存 esc。
+#   actual は sec-se innerHTML を (.*?) で raw 抽出し expected と ★逐語一致させる (tag-strip 退化 = markup-blind へ退化させない:
+#   href/tooltip 改竄は raw 不一致で FAIL・plain field への tag 混入も expected(tag 無し) と不一致で FAIL ゆえ [^<]* の厳格さを保つ)。
+exp_se="$(q '.sections[] | ((.essence_rich // false | tostring) + "\t" + .essence)' | while IFS=$'\t' read -r rich v; do
+  if [[ "$rich" == "true" ]]; then printf '%s\n' "$v"; else esc "$v"; printf '\n'; fi
+done)"
+act_se="$(perl -CSD -0777 -ne 'while (/<div data-component="section-essence-callout"><p class="sec-se">(.*?)<\/p><\/div>/gs){ print "$1\n"; }' "$BODY")"
+chk "section essence 列 == sections[].essence (順序・rich=raw逐語/plain=esc)" "$exp_se" "$act_se"
 # ★kicker 列 fidelity (folio-l93): band() が可視 emit する <span class="kicker"> の §N/トピック ラベルは
 #   sections[].kicker 由来の *決定的フィールド* ゆえ doctrine 上 floor (heading/essence と同列の section fidelity)。
 #   未突合だと §番号 swap・トピック取り違え・heading の §N との drift が全 gate (floor/persona-walk/fidelity) を素通った (17n ceiling HIGH)。
@@ -236,30 +241,42 @@ chk "list 項目列 == list blocks.items (順序)" \
 # ★folio-0x0k pre-flip: h3 に id="<fine section anchor>" を刻む形へ shape 変化。 ★rules は §4.1-4.4 のように原本 id 不在の h3 が
 #   実在ゆえ id= は ★optional group (?: id="([^"]*)")? とし、 anchor 空 (§4.1-4.4) と非空を同一 regex で拾う。 本来 anchor を持つ
 #   subhead が id を落とす silent id-loss は ★anchor 列突合が捕捉 = fail-closed。 heading/essence は esc 経路 (spec は plain 契約値)。
-SUBHEAD_RE='<div data-component="spec-subhead"><h3(?: id="([^"]*)")?>([^<]*)<\/h3><p class="sub-se">([^<]*)<\/p><\/div>'
+# ★folio-a405: essence 部を [^<]* → (.*?) へ (§4.5 subhead essence は P-8/REQ-VER-021 xref を raw 保持ゆえ [^<]* が破断し
+#   regex 全体が §4.5 に不一致 = anchor/heading 列まで巻き込み FAIL していた)。 heading・anchor は plain 維持 ([^<]*/[^"]* 据置き)。
+SUBHEAD_RE='<div data-component="spec-subhead"><h3(?: id="([^"]*)")?>([^<]*)<\/h3><p class="sub-se">(.*?)<\/p><\/div>'
 chk "subhead anchor 列 == subhead blocks.anchor (順序・§4.1-4.4 は原本 id 不在で空)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | (.anchor // "")' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ my $a=defined($1)?$1:""; print "$a\n"; }' "$BODY")"
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/gs){ my $a=defined($1)?$1:""; print "$a\n"; }' "$BODY")"
 chk "subhead heading 列 == subhead blocks.heading (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$2\n"; }' "$BODY")"
-chk "subhead essence 列 == subhead blocks.essence (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="subhead") | .essence' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$3\n"; }' "$BODY")"
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/gs){ print "$2\n"; }' "$BODY")"
+# ★folio-a405: essence_rich=true の subhead は raw 逐語 (markup 込み) 突合、 plain は既存 esc (§4.5 の P-8/REQ-VER-021 保存)。
+chk "subhead essence 列 == subhead blocks.essence (順序・rich=raw逐語/plain=esc)" \
+  "$(q '.sections[].blocks[]? | select(.type=="subhead") | ((.essence_rich // false | tostring) + "\t" + .essence)' | while IFS=$'\t' read -r rich v; do
+     if [[ "$rich" == "true" ]]; then printf '%s\n' "$v"; else esc "$v"; printf '\n'; fi; done)" \
+  "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/gs){ print "$3\n"; }' "$BODY")"
 # table caption / header / cell (全 spec-table 横断・順序)
-chk "table caption 列 == table blocks.caption (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="table") | (.caption // "")' | grep -v '^$' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<table data-component="spec-table"><caption>([^<]*)<\/caption>/g){ print "$1\n"; }' "$BODY")"
+# ★folio-a405: caption_rich=true の table caption は raw 逐語突合、 plain は既存 esc (§9.1 ADR-0034 / §11.1 ADR-0039)。
+#   actual は caption innerHTML を (.*?) で raw 抽出し逐語一致 (tag-strip 退化させない)。 tab 終端 (caption 空) は grep で除外。
+chk "table caption 列 == table blocks.caption (順序・rich=raw逐語/plain=esc)" \
+  "$(q '.sections[].blocks[]? | select(.type=="table") | ((.caption_rich // false | tostring) + "\t" + (.caption // ""))' | grep -v '	$' | while IFS=$'\t' read -r rich v; do
+     if [[ "$rich" == "true" ]]; then printf '%s\n' "$v"; else esc "$v"; printf '\n'; fi; done)" \
+  "$(perl -CSD -0777 -ne 'while (/<table data-component="spec-table"><caption>(.*?)<\/caption>/gs){ print "$1\n"; }' "$BODY")"
 chk "table th 列 == table blocks.headers (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="table") | .headers[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(grep -oE '<th>[^<]*</th>' "$BODY" | sed -E 's#<th>([^<]*)</th>#\1#')"
-chk "table td 列 == table blocks.rows cells (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="table") | .rows[][]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(grep -oE '<td>[^<]*</td>' "$BODY" | sed -E 's#<td>([^<]*)</td>#\1#')"
+# ★folio-a405: cells_rich=true の table (7-gate) の td は raw 逐語突合 (cov-req/xref 保存)、 plain は既存 esc。 各 cell に
+#   block の cells_rich flag を tab prefix し per-cell 判定。 actual は td innerHTML を (.*?) で raw 抽出し逐語一致。
+chk "table td 列 == table blocks.rows cells (順序・rich=raw逐語/plain=esc)" \
+  "$(q '.sections[].blocks[]? | select(.type=="table") | (.cells_rich // false) as $cr | .rows[][] | (($cr | tostring) + "\t" + .)' | while IFS=$'\t' read -r rich v; do
+     if [[ "$rich" == "true" ]]; then printf '%s\n' "$v"; else esc "$v"; printf '\n'; fi; done)" \
+  "$(perl -CSD -0777 -ne 'while (/<td>(.*?)<\/td>/gs){ print "$1\n"; }' "$BODY")"
 # mermaid caption + source lines
-chk "mermaid figcaption 列 == mermaid blocks.caption (順序)" \
-  "$(q '.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")' | grep -v '^$' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
-  "$(perl -CSD -0777 -ne 'while (/<figcaption>([^<]*)<\/figcaption>/g){ print "$1\n"; }' "$BODY")"
+# ★folio-a405: caption_rich=true の figcaption は raw 逐語突合 (§10.2 ADR-0028)、 plain は既存 esc。
+chk "mermaid figcaption 列 == mermaid blocks.caption (順序・rich=raw逐語/plain=esc)" \
+  "$(q '.sections[].blocks[]? | select(.type=="mermaid") | ((.caption_rich // false | tostring) + "\t" + (.caption // ""))' | grep -v '	$' | while IFS=$'\t' read -r rich v; do
+     if [[ "$rich" == "true" ]]; then printf '%s\n' "$v"; else esc "$v"; printf '\n'; fi; done)" \
+  "$(perl -CSD -0777 -ne 'while (/<figcaption>(.*?)<\/figcaption>/gs){ print "$1\n"; }' "$BODY")"
 chk "mermaid source 行列 == mermaid blocks.source_lines (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="mermaid") | .source_lines[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(perl -CSD -0777 -ne 'while (/<pre class="mermaid">(.*?)<\/pre>/gs){ my $b=$1; print "$_\n" for split(/\n/,$b,-1); }' "$BODY")"
@@ -267,6 +284,44 @@ chk "mermaid source 行列 == mermaid blocks.source_lines (順序)" \
 chk "code 行列 == code blocks.lines (順序)" \
   "$(q '.sections[].blocks[]? | select(.type=="code") | .lines[]' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(perl -CSD -0777 -ne 'while (/<pre data-component="spec-code"><code>(.*?)<\/code><\/pre>/gs){ my $b=$1; print "$_\n" for split(/\n/,$b,-1); }' "$BODY")"
+
+# ★folio-a405: grafted human 層 xref の DOM 位置 assert (11 本が machine fold/body の *外* に render される構造 pin =
+#   form-strict edge の担体 <a class="xref"> が人間層 DOM に生きていることを機械保証)。 ★DOM 構造マスク: data-audience="machine"
+#   を持つ details/p/aside/ul/div を -0777 slurp で内側ごとマスク (grep/行 heuristic でなく複数行を跨ぐ祖先鎖判定の近似)。
+#   残る human 領域に 11 本の graft href が存在するか (per-href) + 総数 census を pin。 expected は contract 由来固定の href
+#   literal (canonical を真値源にしない = d7bq flip 後の self-reference vacuous 防止)。
+XREF_HUMAN_FLOOR=11   # ★section-class census (11/1) と別名・別 grep・contract 非依存 hardcode。 §2 P-13 + §4.5 P-8/REQ-VER-021 + §9.1 ADR-0034 + §10.2 ADR-0028 + §11.1 ADR-0039 + 7-gate P-6/P-4/P-3/P-11/P-5 = 11。
+# ★folio-a405: mask→census→per-href を perl -0777 で BODY 直接に 1 パス完結する (72KB 級 UTF-8 body を shell 変数へ $()
+#   キャプチャ→grep する経路は実測で非決定 count を出した = 巨大 UTF-8 コマンド置換の不安定性ゆえ perl 内で閉じ、 出力は
+#   小さい "miss:census" だけ返す)。 DOM 構造マスク: data-audience="machine" を持つ details/p/aside/ul/div を内側ごとマスク
+#   (grep/行 heuristic でなく複数行を跨ぐ祖先鎖判定の近似)。 href literal は contract 由来固定 (canonical を真値源にしない =
+#   d7bq flip 後の self-reference vacuous 防止)。 census floor は section-class census 11/1 とは別軸の独立 floor (0/0 恒真封鎖)。
+xref_human_res="$(perl -CSD -0777 -e '
+  local $/; my $b = <>;
+  1 while $b =~ s{<(details|p|aside|ul|div)\b[^>]*\sdata-audience="machine"[^>]*>.*?</\1>}{}gs;
+  my @want = ("./constitution.html#p-13","./constitution.html#p-8","./verification.html#req-ver-021",
+              "../decisions/ADR-0034-object-term-xref-system.html","../decisions/ADR-0028-prose-gate-mechanization.html",
+              "../decisions/ADR-0039-presentation-template-layer.html",
+              "./constitution.html#p-6","./constitution.html#p-4","./constitution.html#p-3","./constitution.html#p-11","./constitution.html#p-5");
+  my $census = 0; $census++ while $b =~ /<a class="xref"/g;
+  my $miss = 0;
+  for my $h (@want) { my $needle = "<a class=\"xref\" href=\"$h\""; $miss++ unless index($b, $needle) >= 0; }
+  print "$miss:$census";
+' "$BODY")"
+xref_human_miss="${xref_human_res%%:*}"
+xref_human_census="${xref_human_res##*:}"
+chk "grafted xref 11 本が human 層 (machine fold/body 外) に全存在 (DOM 構造マスク後・per-href)" "0" "$xref_human_miss"
+chk "human 層 xref census == $XREF_HUMAN_FLOOR (別名 floor・contract 非依存・0/0 恒真封鎖)" "$XREF_HUMAN_FLOOR" "$xref_human_census"
+# ★essence 3 本 (P-13/P-8/REQ-VER-021) は ★該当 section 内の sec-se/sub-se に render される per-section 位置固定 (別 field/別
+#   section への重複 graft = FAIL)。 section id (s2-directory / s4-format) を anchor に含め、 「任意 sec-se に P-13 があれば PASS」
+#   の緩い判定を封鎖する (別 section の sec-se が無傷なら PASS してしまう穴を塞ぐ・folio-a405 RX8 が isolate)。
+ess_xref_pos=1
+perl -CSD -0777 -ne 'exit(($_ =~ /<section id="s2-directory"[^>]*>.*?<p class="sec-se">[^<]*<a class="xref" href="\.\/constitution\.html#p-13"/s) ? 0 : 1)' "$BODY" || ess_xref_pos=0
+# ★folio-a405 errata-1 (should-3): §2 sec-se ([^<]* tight) と対称の tight 形へ。 sub-se 内 P-8→REQ-VER-021 の間を [^<]*</a>[^<]*
+#   で厳密化し、 .*? /s の段落跨ぎ緩さ (xref 前への inline 挿入を吸収し RX13 を素通りさせる) を封鎖する。 P-8 が sub-se の最初の
+#   tag・その </a> 後テキスト・REQ-VER-021 開始 を連続で pin (§4.1-4.4 の p-8 無し sub-se は前半 .*? がバックトラックで跨ぐ)。
+perl -CSD -0777 -ne 'exit(($_ =~ /<section id="s4-format"[^>]*>.*?<p class="sub-se">[^<]*<a class="xref" href="\.\/constitution\.html#p-8"[^<]*<\/a>[^<]*<a class="xref" href="\.\/verification\.html#req-ver-021"/s) ? 0 : 1)' "$BODY" || ess_xref_pos=0
+chk "essence 3 本 (P-13 §2 sec-se / P-8+REQ-VER-021 §4 sub-se) が該当 section 内 render (per-section 位置固定・別 field graft 封鎖)" "1" "$ess_xref_pos"
 
 # 6. ★非終端 照会 (references) fidelity: chip echo 厳密一致。
 NREF="$(q '.references | length')"

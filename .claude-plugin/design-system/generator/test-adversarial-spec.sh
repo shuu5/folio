@@ -299,6 +299,79 @@ perl -0777 -i -pe 'our ($f0,$f2); $f0 += s#(<section id="s0-reader-guide" class=
   || ng "MK-e s0↔s2 count-preserving class swap-pair mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "MK-e ★count-preserving swap-pair (s0 informative→normative + s2 normative→informative) を逐値 class 列 (position) が捕捉 (census は PASS・position 単独 isolation)" "$TMP/mke.html" "section class 列"
 
+# === folio-a405: raw xref graft の per-shape MK (essence/caption/figcaption/td の 4 形) ===
+# ★per-shape で撃つ理由: raw 経路 (essence_rich/caption_rich/cells_rich) の allowlist abort・xref drop・href 改竄 (tag-strip
+#   退化封鎖)・位置固定・esc 既定非回帰を、 4 形ごとに独立 isolate する。 1 instance の実弾は構造差のある instance の穴を証明しない。
+# --- assemble tokenizer abort (contract mutation → validate_rich_inline が生成前 fail-closed・silent esc fallback 禁止) ---
+# RX1. ★essence_rich field に allowlist 外 tag (div) → tokenizer abort。
+cp "$BASE" "$TMP/rx1.yaml"; yq -i '(.sections[] | select(.id=="s2")).essence = "raw test <div>bad</div>"' "$TMP/rx1.yaml"
+expect_abort "RX1 ★essence_rich field の allowlist 外 tag (div) を tokenizer abort" "$TMP/rx1.yaml" "allowlist 外の markup"
+# RX2. ★essence_rich field に href 無し <a> → abort (raw field の a は href 必須・href 無し例示 a の誤混入封鎖・folio-a405 追加検査)。
+cp "$BASE" "$TMP/rx2.yaml"; yq -i '(.sections[] | select(.id=="s2")).essence = "raw test <a>no-href</a>"' "$TMP/rx2.yaml"
+expect_abort "RX2 ★essence_rich field の href 無し <a> を tokenizer abort (anchor-without-href)" "$TMP/rx2.yaml" "allowlist 外の markup"
+# RX3. ★caption_rich field に on*= 属性 → abort (event handler・quoting 形に依らず属性名 allowlist で落ちる)。
+cp "$BASE" "$TMP/rx3.yaml"; yq -i '(.sections[].blocks[]? | select(.caption_rich==true) | .caption) |= "raw <span onclick=\"x\">y</span>"' "$TMP/rx3.yaml"
+expect_abort "RX3 ★caption_rich field の on*= 属性を tokenizer abort (event handler)" "$TMP/rx3.yaml" "allowlist 外の markup"
+# --- verify FAIL: xref drop / href 改竄 (tag-strip 退化封鎖) を 4 形で per-shape ---
+# RX4. ★essence xref (P-13 §2 sec-se) drop → human 層 census 10 で FAIL (essence shape)。
+cp "$TMP/base-filled.html" "$TMP/rx4.html"
+perl -0777 -i -pe 'our $n; $n += s{<a class="xref" href="\./constitution\.html#p-13"[^>]*>P-13</a>}{P-13}g; END { exit($n?0:9) }' "$TMP/rx4.html" \
+  || ng "RX4 P-13 drop mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX4 ★essence xref (P-13) drop を human 層 xref census が捕捉" "$TMP/rx4.html" "human 層 xref census"
+# RX5. ★caption xref (ADR-0034 §9.1) href 改竄 → table caption 逐語突合 FAIL (tag-strip 退化なら href 差を無視し PASS = 禁止)。
+cp "$TMP/base-filled.html" "$TMP/rx5.html"
+perl -0777 -i -pe 'our $n; $n += s{(<a class="xref" href=")\.\./decisions/ADR-0034-object-term-xref-system\.html(")}{${1}../decisions/ADR-9999-fake.html${2}}g; END { exit($n?0:9) }' "$TMP/rx5.html" \
+  || ng "RX5 ADR-0034 href 改竄 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX5 ★caption xref (ADR-0034) href 改竄を table caption 逐語突合が捕捉 (tag-strip 退化封鎖)" "$TMP/rx5.html" "table caption 列"
+# RX6. ★figcaption xref (ADR-0028 §10.2) href 改竄 → mermaid figcaption 逐語突合 FAIL。
+cp "$TMP/base-filled.html" "$TMP/rx6.html"
+perl -0777 -i -pe 'our $n; $n += s{(<a class="xref" href=")\.\./decisions/ADR-0028-prose-gate-mechanization\.html(")}{${1}../decisions/ADR-9999-fake.html${2}}g; END { exit($n?0:9) }' "$TMP/rx6.html" \
+  || ng "RX6 ADR-0028 href 改竄 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX6 ★figcaption xref (ADR-0028) href 改竄を mermaid figcaption 逐語突合が捕捉 (tag-strip 退化封鎖)" "$TMP/rx6.html" "mermaid figcaption 列"
+# RX7. ★td xref (P-6 §10.2 7-gate cell) href 改竄 → table td 逐語突合 FAIL。
+cp "$TMP/base-filled.html" "$TMP/rx7.html"
+perl -0777 -i -pe 'our $n; $n += s{(<a class="xref" href=")\./constitution\.html#p-6(")}{${1}./constitution.html#p-99${2}}g; END { exit($n?0:9) }' "$TMP/rx7.html" \
+  || ng "RX7 P-6 href 改竄 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX7 ★td xref (P-6) href 改竄を table td 逐語突合が捕捉 (tag-strip 退化封鎖)" "$TMP/rx7.html" "table td 列"
+# RX8. ★essence 位置固定 isolate: sec-se 内 P-13 の前に別 inline (code) を挿入 → census 11 は維持されるが位置固定 arm が FAIL
+#   (別 field 重複 graft / sec-se 内位置ズレを census とは独立に捕捉する対称)。
+cp "$TMP/base-filled.html" "$TMP/rx8.html"
+perl -0777 -i -pe 'our $n; $n += s{(<section id="s2-directory".*?<p class="sec-se">)([^<]*<a class="xref" href="\./constitution\.html#p-13")}{${1}<code>x</code>${2}}s; END { exit($n?0:9) }' "$TMP/rx8.html" \
+  || ng "RX8 §2 sec-se P-13 前 inline 挿入 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX8 ★essence per-section 位置固定: §2 sec-se 内 P-13 前への inline 挿入 (census 維持) を位置固定 arm が捕捉" "$TMP/rx8.html" "位置固定"
+# --- esc 既定の非回帰 (raw は per-field opt-in・raw 未宣言 field は esc 経路のまま) ---
+# RX9. ★raw 未宣言 field (heading) に HTML 注入 → 生成物で生 <b> でなく &lt;b&gt; に esc される (raw 経路が heading へ漏れない)。
+cp "$BASE" "$TMP/rx9.yaml"; yq -i '(.sections[] | select(.id=="s2")).heading = "H <b>raw</b>"' "$TMP/rx9.yaml"
+bash "$ASM" "$TMP/rx9.yaml" "$TMP/rx9.html" >/dev/null 2>&1 || ng "RX9 assemble 失敗 (esc 経路が壊れた)"
+if grep -qF '&lt;b&gt;raw&lt;/b&gt;' "$TMP/rx9.html" && ! grep -qF '<b>raw</b>' "$TMP/rx9.html"; then
+  ok "RX9 ★esc 既定の非回帰: raw 未宣言 field (heading) の HTML は esc される (raw 漏れ無し)"
+else
+  ng "RX9 ★heading の HTML が esc されず raw 漏れ (esc 既定が破れた = raw 経路の per-field opt-in 違反)"
+fi
+# RX10. ★RICH_FIELD_MIN 恒真 PASS 封鎖 floor の非回帰: 全 rich flag を剥がすと rich_field_values が空振りし検査対象 0<33 →
+#   validate_rich_inline の被覆量下限割れで abort (floor 自身が壊れて 0 件検査を恒真 PASS する退行を封鎖・sweep 表/収束装置の
+#   独立監査 = 0/0 恒真封鎖 doctrine)。 tokenizer bad の有無でなく「何件検査したか」を撃つ唯一の MK (RX1-9 は全て非空検査ゆえ floor 非駆動)。
+cp "$BASE" "$TMP/rx10.yaml"
+yq -i 'del(.sections[].essence_rich) | del(.sections[].blocks[]?.essence_rich) | del(.sections[].blocks[]?.caption_rich) | del(.sections[].blocks[]?.cells_rich)' "$TMP/rx10.yaml"
+expect_abort "RX10 ★RICH_FIELD_MIN floor: 全 rich flag 剥離で検査対象 0<33 → 被覆量下限割れ abort (恒真 PASS 封鎖の非回帰)" "$TMP/rx10.yaml" "検査対象が"
+# === folio-a405 errata-1 追加 MK (must-1 protocol-relative bypass / must-2 sub-se per-shape) ===
+# RX11. ★href_ok protocol-relative bypass 封鎖 (must-1): raw field の href に // 始まり (protocol-relative) を入れると
+#   fix 後の href_ok (path 先頭 / 抜き class) が URL-ALLOWLIST-VIOLATION で abort する (旧 char-class は // を ALLOW する fail-open)。
+cp "$BASE" "$TMP/rx11.yaml"; yq -i '(.sections[] | select(.id=="s2")).essence = "x <a class=\"xref\" href=\"//evil.com/x.html\">bad</a>"' "$TMP/rx11.yaml"
+expect_abort "RX11 ★protocol-relative href (//evil.com/x.html) を href_ok URL allowlist が abort (fail-open 封鎖)" "$TMP/rx11.yaml" "allowlist 外の markup"
+# RX12. ★sub-se shape の href 改竄 (must-2a): §4.5 sub-se の REQ-VER-021 href-only 改竄 → 「subhead essence 列」逐語突合 arm が
+#   FAIL (sec-se とは別 DOM shape=<p class="sub-se">・別 regex SUBHEAD_RE $3 ゆえ sec-se の RX5-7 では証明されない独立 kill)。
+cp "$TMP/base-filled.html" "$TMP/rx12.html"
+perl -0777 -i -pe 'our $n; $n += s{(<p class="sub-se">.*?<a class="xref" href=")\./verification\.html#req-ver-021(")}{${1}./verification.html#req-ver-999${2}}gs; END { exit($n?0:9) }' "$TMP/rx12.html" \
+  || ng "RX12 §4.5 sub-se REQ-VER-021 href 改竄 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX12 ★sub-se xref (REQ-VER-021) href 改竄を subhead essence 列 逐語突合が捕捉 (sec-se と別 shape の独立 kill・tag-strip 退化封鎖)" "$TMP/rx12.html" "subhead essence 列"
+# RX13. ★sub-se position の inline 挿入 (must-2b): §4 section + §4.5 sub-se 限定で P-8 前に inline (code) 挿入 → §4 位置固定 arm
+#   FAIL (sec-se の RX8 と chk 共有だが sub-se 側からの独立 kill を証明・should-3 の tight 化が無いと素通りする)。
+cp "$TMP/base-filled.html" "$TMP/rx13.html"
+perl -0777 -i -pe 'our $n; $n += s{(<section id="s4-format".*?<p class="sub-se">)([^<]*<a class="xref" href="\./constitution\.html#p-8")}{${1}<code>x</code>${2}}s; END { exit($n?0:9) }' "$TMP/rx13.html" \
+  || ng "RX13 §4.5 sub-se P-8 前 inline 挿入 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "RX13 ★sub-se position: §4.5 sub-se 内 P-8 前への inline 挿入を §4 位置固定 arm が捕捉 (sub-se 側独立 kill)" "$TMP/rx13.html" "位置固定"
+
 # F14. ★mermaid source 行改竄 → mermaid source FAIL
 cp "$TMP/base-filled.html" "$TMP/f14.html"
 perl -0777 -i -pe 's#flowchart TB#flowchart CAPTURED#' "$TMP/f14.html"

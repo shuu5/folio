@@ -53,6 +53,23 @@ sub plain {
   $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
   return $s;
 }
+# richplain: graft 対象 human field (essence / caption / td cell) の rich 抽出 (folio-a405)。 plain() と違い
+#   inline markup を *raw 保持*・entity を decode しない (xref round-trip: assemble が RAW emit する前提)。
+#   plain() は tag 除去 + decode ゆえ <a class="xref"> が消えて form-strict edge が落ちる — rich は原本の markup を
+#   逐語運搬し、 canonical human 層 xref を contract → 生成物へ保存する (P-3/4/5/6/8/11/13・ADR-0028/0034/0039・
+#   REQ-VER-021 の 11 本)。 空白畳み + trim のみ (canonical human field は単一空白ゆえ round-trip 一致)。
+#   ★fail-closed: allowlist inline tag (a/code/span/strong) 以外の live tag が混入したら die (graft field へ未知
+#   構造を通さない原本忠実性 backstop)。 escaped &lt; は literal text ゆえ対象外。 tokenizer allowlist は assemble 側。
+sub richplain {
+  my ($s) = @_; $s //= "";
+  my $probe = $s;
+  $probe =~ s{</?(?:a|code|span|strong)\b[^>]*>}{}g;   # allowlist inline tag を除去
+  if ($probe =~ /<\s*\/?\s*[a-zA-Z]/) {
+    die "extract-rules-spec: \x{2605}richplain graft field に allowlist 外の tag (a/code/span/strong のみ許可): $s\n";
+  }
+  $s =~ s/\s+/ /g; $s =~ s/^\s+//; $s =~ s/\s+$//;
+  return $s;
+}
 # preline: code/mermaid 行用 (タグ除去 + decode・leading space 保持・trailing trim・tab→space)。
 sub preline {
   my ($s) = @_; $s //= "";
@@ -247,7 +264,10 @@ for my $id (@SECORDER) {
   my $inner = $SECINNER{$id} // next;
   my $heading = ($inner =~ /<h2>(.*?)<\/h2>/s) ? plain($1) : $id;
   # top-level section の最初の section-essence (h2 直後) を section essence とする。
-  my $essence = ($inner =~ /<p class="section-essence"[^>]*>(.*?)<\/p>/s) ? plain($1) : "";
+  # ★folio-a405: essence に <a class="xref"> があれば rich 抽出 (raw 保持) + essence_rich flag。 §2 の P-13 xref を保存。
+  my $ess_raw = ($inner =~ /<p class="section-essence"[^>]*>(.*?)<\/p>/s) ? $1 : "";
+  my $essence_rich = ($ess_raw =~ /<a class="xref"/) ? 1 : 0;
+  my $essence = $essence_rich ? richplain($ess_raw) : plain($ess_raw);
   my @blocks;
 
   # doc 順走査: block opener を左から順に処理する。 各 iteration で最も近い opener を見つけて処理し pos を進める。
@@ -276,33 +296,53 @@ for my $id (@SECORDER) {
       my $h3id = ($h3attr =~ /\bid="([^"]*)"/) ? $1 : "";
       if ($h3id eq "" && substr($inner, 0, $at) =~ /<section\b[^>]*\bid="([^"]*)"[^>]*>\s*$/) { $h3id = $1; }
       # h3 直後の section-essence を subhead essence にする (無ければ空)。
-      my $se = "";
-      if (substr($inner,$afterh3,600) =~ /^\s*<p class="section-essence"[^>]*>(.*?)<\/p>/s) { $se = plain($1); }
-      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se, anchor=>$h3id };
+      # ★folio-a405: window を 600→3000 へ拡大 (§4.5 essence は長い xref tooltip で raw が 600 字超のため旧版は
+      #   </p> に届かず essence="" だった)。 xref があれば rich 抽出 (raw 保持) + essence_rich flag。 §4.5 の P-8/REQ-VER-021 を保存。
+      my $se = ""; my $se_rich = 0;
+      if (substr($inner,$afterh3,3000) =~ /^\s*<p class="section-essence"[^>]*>(.*?)<\/p>/s) {
+        my $se_raw = $1;
+        $se_rich = ($se_raw =~ /<a class="xref"/) ? 1 : 0;
+        $se = $se_rich ? richplain($se_raw) : plain($se_raw);
+      }
+      push @blocks, { type=>"subhead", heading=>$h3, essence=>$se, essence_rich=>$se_rich, anchor=>$h3id };
       $p = $afterh3;
     } elsif ($kind eq "table") {
       substr($inner,$at) =~ /<table\b[^>]*>(.*?)<\/table>/s;
       my $tbl = $1; my $afterend = $at + $+[0];
-      my $cap = ($tbl =~ /<caption>(.*?)<\/caption>/s) ? plain($1) : "";
+      # ★folio-a405: caption に xref があれば rich (§9.1 ADR-0034 / §11.1 ADR-0039)。 headers は plain 据置き。
+      my $cap_raw = ($tbl =~ /<caption>(.*?)<\/caption>/s) ? $1 : "";
+      my $cap_rich = ($cap_raw =~ /<a class="xref"/) ? 1 : 0;
+      my $cap = $cap_rich ? richplain($cap_raw) : plain($cap_raw);
       my @headers; while ($tbl =~ /<th\b[^>]*>(.*?)<\/th>/gs) { push @headers, plain($1); }
-      my @rows;
+      # ★folio-a405: td cell は先に raw で集めて xref 有無を判定。 いずれかの cell に xref があれば table 全体を
+      #   cells_rich (7-gate 表 = §10.2 の P-6/P-4/P-3/P-11/P-5)。 cells_rich なら全 cell を richplain、 でなければ全 cell を plain
+      #   (per-field 一貫: rich 抽出は rich emit・plain 抽出は esc emit をペアにする)。 §9.1 registry 表は cell に xref 無し = plain 据置き。
+      my @rawrows; my $cells_rich = 0;
       while ($tbl =~ /<tr\b[^>]*>(.*?)<\/tr>/gs) {
         my $tr = $1; next unless $tr =~ /<td/;   # header 行 (th のみ) は skip
-        my @cells; while ($tr =~ /<td\b[^>]*>(.*?)<\/td>/gs) { push @cells, plain($1); }
-        push @rows, \@cells if @cells;
+        my @cells; while ($tr =~ /<td\b[^>]*>(.*?)<\/td>/gs) { my $c = $1; $cells_rich = 1 if $c =~ /<a class="xref"/; push @cells, $c; }
+        push @rawrows, \@cells if @cells;
       }
-      push @blocks, { type=>"table", caption=>$cap, headers=>\@headers, rows=>\@rows } if @headers && @rows;
+      my @rows;
+      for my $r (@rawrows) { push @rows, [ map { $cells_rich ? richplain($_) : plain($_) } @$r ]; }
+      push @blocks, { type=>"table", caption=>$cap, caption_rich=>$cap_rich, headers=>\@headers, rows=>\@rows, cells_rich=>$cells_rich } if @headers && @rows;
       $p = $afterend;
     } elsif ($kind eq "mermaid") {
       substr($inner,$at) =~ /<pre class="mermaid">(.*?)<\/pre>/s;
       my $src = $1; my $afterend = $at + $+[0];
       # figcaption (直後の figure 内) を caption に。
-      my $cap = "";
-      if (substr($inner,$afterend,400) =~ /<figcaption>(.*?)<\/figcaption>/s) { $cap = plain($1); }
+      # ★folio-a405: window を 400→3000 へ拡大 (§10.2 figcaption は長い ADR-0028 tooltip で raw が 400 字超)。
+      #   xref があれば rich 抽出 (raw 保持) + caption_rich flag。 §10.2 の ADR-0028 を保存。
+      my $cap = ""; my $cap_rich = 0;
+      if (substr($inner,$afterend,3000) =~ /<figcaption>(.*?)<\/figcaption>/s) {
+        my $cap_raw = $1;
+        $cap_rich = ($cap_raw =~ /<a class="xref"/) ? 1 : 0;
+        $cap = $cap_rich ? richplain($cap_raw) : plain($cap_raw);
+      }
       my @lines = map { preline($_) } split(/\n/, $src, -1);
       shift @lines while @lines && $lines[0] eq "";   # 先頭空行除去
       pop @lines while @lines && $lines[-1] eq "";     # 末尾空行除去
-      push @blocks, { type=>"mermaid", caption=>$cap, source_lines=>\@lines } if @lines;
+      push @blocks, { type=>"mermaid", caption=>$cap, caption_rich=>$cap_rich, source_lines=>\@lines } if @lines;
       $p = $afterend;
     } elsif ($kind eq "code") {
       substr($inner,$at) =~ /<pre><code>(.*?)<\/code><\/pre>/s;
@@ -335,7 +375,7 @@ for my $id (@SECORDER) {
     . ($mcap == $mexp ? "" : " ★uncaptured " . ($mexp - $mcap) . " 件 (expected $mexp・要調査)");
   # ★navigable anchor (folio-0x0k pre-flip): 原本 top-level section の実 id (s2-directory 等・full form)。 contract の id は
   #   short prefix (s0..s12 = TINT/KICK key) ゆえ、 corpus inbound (#s2-directory 等) の解決先となる full id を別 field で運ぶ。
-  push @sections, { id=>shortid($id), anchor=>$id, class=>($SECCLASS{$id}//""), heading=>$heading, essence=>$essence, blocks=>\@blocks, machine_blocks=>$mblocks };
+  push @sections, { id=>shortid($id), anchor=>$id, class=>($SECCLASS{$id}//""), heading=>$heading, essence=>$essence, essence_rich=>$essence_rich, blocks=>\@blocks, machine_blocks=>$mblocks };
 }
 
 # ★機械層 preamble (最初の section より前の文書前文 = RFC2119 / constitution 実装宣言の boilerplate aside)。
@@ -390,29 +430,36 @@ for my $s (@sections) {
   print "    kicker: ", ys($KICK{$s->{id}} // $s->{id}), "\n";
   print "    heading: ", ys($s->{heading}), "\n";
   print "    essence: ", ys($s->{essence}), "\n";
+  # ★folio-a405: essence が rich (xref 保持) のとき flag emit。 assemble が RAW emit する field を宣言する。
+  print "    essence_rich: true\n" if $s->{essence_rich};
   if (@{$s->{blocks}}) {
     print "    blocks:\n";
     for my $b (@{$s->{blocks}}) {
       if ($b->{type} eq "subhead") {
         # ★anchor は非空のときだけ emit (§4.1-4.4 は原本 id 不在ゆえ omit = contract hand-edit と durability parity・余剰 id を捏造しない)。
+        my $srich = $b->{essence_rich} ? ", essence_rich: true" : "";   # ★folio-a405: subhead essence の rich flag (flow-style)。
         if (defined $b->{anchor} && $b->{anchor} ne "") {
-          print "      - { type: subhead, anchor: ", ys($b->{anchor}), ", heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+          print "      - { type: subhead, anchor: ", ys($b->{anchor}), ", heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), $srich, " }\n";
         } else {
-          print "      - { type: subhead, heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), " }\n";
+          print "      - { type: subhead, heading: ", ys($b->{heading}), ", essence: ", ys($b->{essence}), $srich, " }\n";
         }
       } elsif ($b->{type} eq "requirements") {
         print "      - type: requirements\n        ids: [", join(", ", map { ys($_) } @{$b->{ids}}), "]\n";
       } elsif ($b->{type} eq "table") {
         print "      - type: table\n";
         print "        caption: ", ys($b->{caption}), "\n";
+        print "        caption_rich: true\n" if $b->{caption_rich};   # ★folio-a405: caption raw emit 宣言。
         print "        headers: [", join(", ", map { ys($_) } @{$b->{headers}}), "]\n";
+        print "        cells_rich: true\n" if $b->{cells_rich};        # ★folio-a405: rows cell raw emit 宣言 (7-gate 表)。
         print "        rows:\n";
         for my $r (@{$b->{rows}}) { print "          - [", join(", ", map { ys($_) } @$r), "]\n"; }
       } elsif ($b->{type} eq "code") {
         print "      - type: code\n        lines:\n";
         for my $l (@{$b->{lines}}) { print "          - ", ys($l), "\n"; }
       } elsif ($b->{type} eq "mermaid") {
-        print "      - type: mermaid\n        caption: ", ys($b->{caption}), "\n        source_lines:\n";
+        print "      - type: mermaid\n        caption: ", ys($b->{caption}), "\n";
+        print "        caption_rich: true\n" if $b->{caption_rich};   # ★folio-a405: figcaption raw emit 宣言。
+        print "        source_lines:\n";
         for my $l (@{$b->{source_lines}}) { print "          - ", ys($l), "\n"; }
       }
     }

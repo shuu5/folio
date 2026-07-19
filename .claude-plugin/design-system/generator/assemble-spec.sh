@@ -58,6 +58,142 @@ BLOCK_TYPE_ALLOW='prose|note|list|code|table|mermaid|subhead|requirements'
 #   これ以外は silent drop の疑い → fail-closed abort (人間層 BLOCK_TYPE_ALLOW と対称)。
 MACHINE_BLOCK_TYPE_ALLOW='prose|note|list'
 
+# ---- ★human 層 rich inline 機構 (folio-a405: verification pack の validate_rich_inline/RICH_TOKENIZE を inline port) ----
+# ★目的: canonical rules.html の human 層 <a class="xref"> を生成物へ保存する (form-strict edge = <a class="xref"> のみ・
+#   contract yaml §9.1 form-strict)。 contract の per-field opt-in flag (essence_rich / caption_rich / cells_rich) が立つ
+#   field のみ RAW emit し、 残りは従来どおり esc() 既定 (raw は per-field opt-in・既定 esc 不変)。 RAW emit する値は生成前に
+#   tokenizer で allowlist 検証する (silent esc fallback 禁止・未知 tag/属性名/URL/malformed は生成前 fail-closed abort)。
+# ★lib へ refactor せず本 file へ inline port する (契約: 6th file 化禁止・machine block の naive raw を human 層へ流用禁止)。
+# ★closed allowlist (verification pack の広い allowlist より狭い): xref graft に要る inline のみ (a.xref / code / span.term / strong)。
+RICH_INLINE_ALLOW='a|code|span|strong'
+RICH_ATTR_ALLOW='class|href|data-tooltip|data-term'
+# ★href scheme allowlist (raw field の href は全て相対/fragment・絶対 URL は現契約 0 件だが href_ok の scheme arm に必要ゆえ https を置く)。
+RICH_HREF_SCHEME='https'
+# ★rich field 検査対象の被覆量下限 (folio-a405): rich_field_values の query drift で検査対象が痩せると「対象 0 件 →
+#   bad なし → 恒真 PASS」で RAW emit が無防備に緑化する。 件数下限で恒真 PASS を封鎖する (契約が正当に育ったら意図的に更新)。
+#   現契約 = §2 section essence 1 + §4.5 subhead essence 1 + caption 3 (§9.1/§11.1/§10.2fig) + 7-gate cells 28 (7 行 × 4 列) = 33。
+RICH_FIELD_MIN=33
+
+# ★RAW emit する human field の全値を document 順に吐く (validate と emit で 1 対応・対象漏れの二重保守を防ぐ)。
+#   essence_rich=true の section essence / subhead essence + caption_rich=true の caption + cells_rich=true の rows cell。
+rich_field_values() {
+  q '[ (.sections[] | select(.essence_rich==true) | .essence),
+       (.sections[].blocks[]? | select(.type=="subhead" and .essence_rich==true) | .essence),
+       (.sections[].blocks[]? | select(.caption_rich==true) | .caption),
+       (.sections[].blocks[]? | select(.cells_rich==true) | .rows[][]) ] | .[]'
+}
+
+# ★strict tokenizer 本体 (verification pack と同型・実 HTML parser の tag/属性 grammar を辿る parser-differential 封鎖)。
+#   perl 側 message は ASCII のみ (-CSD 下で日本語リテラルは二重符号化ゆえ)。 ★folio-a405 追加: 開始 <a> が href を持たねば
+#   malformed (raw field の xref/cov-req/nav link は href 必須・href 無し例示 a を raw 経路へ誤って入れたら fail-closed)。
+RICH_TOKENIZE_PL='
+    BEGIN {
+      our %bad; our $re = qr/^(?:$ENV{ALLOW})$/i; our $attr_re = qr/^(?:$ENV{ATTRALLOW})$/i;
+      our $url_attr = qr/^(?:href|src|xlink:href|formaction|action)$/i;
+      sub decode_refs {
+        my ($s) = @_; $s //= "";
+        $s =~ s/&#x([0-9a-fA-F]+);?/chr(hex($1))/ge;
+        $s =~ s/&#(\d+);?/chr($1)/ge;
+        my %n = ("amp"=>"&","lt"=>"<","gt"=>">","quot"=>"\"","apos"=>"\x27","Tab"=>"\t","NewLine"=>"\n","colon"=>":","sol"=>"/");
+        $s =~ s/&([a-zA-Z]+);?/exists $n{$1} ? $n{$1} : "&$1;"/ge;
+        return $s;
+      }
+      sub decode_full {
+        my ($s) = @_; my $prev = "";
+        for (1..5) { last if $s eq $prev; $prev = $s; $s = decode_refs($s); }
+        return $s;
+      }
+      # ★folio-a405 errata-1 (must-1): 相対 arm の path class 先頭 1 文字を / 抜き class へ固定する。 旧 [A-Za-z0-9._/-]+ は
+      #   path class に / を含み先頭 // が match するため protocol-relative (//evil.com/x.html) / 多重スラッシュ (///a.html) が
+      #   ALLOW される fail-open だった (perl 実測)。 先頭を [A-Za-z0-9._-] (/ 無し) に固定し、 2 文字目以降のみ / を許す。
+      #   ./constitution.html#p-6 / ../decisions/ADR-0034.html 等の正規 doc-relative は不変で通る (実測)。
+      our $href_ok = qr{^(?:
+            \#[^\s]*
+          | (?:\.{1,2}/)*[A-Za-z0-9._-][A-Za-z0-9._/-]*\.html(?:\#[^\s]*)?
+          | (?:\.{1,2}/)*[A-Za-z0-9._-][A-Za-z0-9._/-]*\.md(?:\#[^\s]*)?
+          | (?:$ENV{SCHEMEALLOW})://[A-Za-z0-9._~:/?\#\[\]@!$&\x27()*+,;=%-]+
+        )$}x;
+    }
+    my $s = $_; my $n = length($s); my $i = 0;
+    while ($i < $n) {
+      my $lt = index($s, "<", $i);
+      last if $lt < 0;
+      my $rest = substr($s, $lt);
+      if ($rest =~ /^<[!?]/) { $bad{"<! or <? (MALFORMED-MARKUP; declaration/comment not allowed in rich field)"}++; last; }
+      unless ($rest =~ /^<(\/?)([a-zA-Z][a-zA-Z0-9]*)/) { $i = $lt + 1; next; }
+      my ($close, $tag) = ($1, $2);
+      $bad{"<$tag> (TAG-NOT-ALLOWED)"}++ unless $tag =~ $re;
+      my $need_href = (!$close && lc($tag) eq "a") ? 1 : 0;
+      my $saw_href = 0;
+      $i = $lt + 1 + length($close) + length($tag);
+      while (1) {
+        my $ws = 0;
+        while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; $ws = 1; }
+        if ($i >= $n) { $bad{"<$tag> (MALFORMED-MARKUP; eof-in-tag = unterminated tag)"}++; last; }
+        my $c = substr($s, $i, 1);
+        if ($c eq ">") { $i++; last; }
+        if ($c eq "/" && substr($s, $i + 1, 1) eq ">") { $i += 2; last; }
+        if ($close) { $bad{"</$tag> (MALFORMED-MARKUP; attributes on end tag)"}++; last; }
+        unless ($ws) {
+          $bad{"<$tag> (MALFORMED-MARKUP; missing-whitespace-between-attributes)"}++; last;
+        }
+        unless (substr($s, $i) =~ /^([a-zA-Z_:][-a-zA-Z0-9_:.]*)/) {
+          $bad{"<$tag> (MALFORMED-MARKUP; unreadable attr name: " . substr($s, $i, 12) . ")"}++; last;
+        }
+        my $name = $1; $i += length($name);
+        $saw_href = 1 if lc($name) eq "href";
+        while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; }
+        my ($has_val, $raw) = (0, "");
+        if (substr($s, $i, 1) eq "=") {
+          $i++;
+          while ($i < $n && substr($s, $i, 1) =~ /\s/) { $i++; }
+          my $r = substr($s, $i);
+          if    ($r =~ /^"([^"]*)"/)            { $raw = $1; $i += length($1) + 2; $has_val = 1; }
+          elsif ($r =~ /^\x27([^\x27]*)\x27/)   { $raw = $1; $i += length($1) + 2; $has_val = 1; }
+          elsif ($r =~ /^([^\s"\x27>`=<]+)/)    { $raw = $1; $i += length($1);     $has_val = 1; }
+          else { $bad{"$name= (MALFORMED-MARKUP; unreadable attr value: " . substr($r, 0, 12) . ")"}++; last; }
+        }
+        unless ($name =~ $attr_re) {
+          my $why = ($name =~ /^on/i) ? "event handler attribute" : "ATTR-NAME-NOT-ALLOWED";
+          $bad{"$name= ($why)"}++; next;
+        }
+        next unless $has_val && $name =~ $url_attr;
+        my $u = decode_full($raw);
+        $u =~ s/[\x00-\x20\x7f]//g;
+        next if $u =~ $href_ok;
+        $bad{"$name=\"$raw\" (URL-ALLOWLIST-VIOLATION; decoded: $u)"}++;
+      }
+      $bad{"<a> (MALFORMED-MARKUP; anchor-without-href)"}++ if $need_href && !$saw_href;
+    }
+    END { print join("; ", map { "$_ x$bad{$_}" } sort keys %bad) if %bad; }
+'
+
+# ★human 層 rich field の inline 健全性 (folio-a405)。 caller は `|| errs=1` で呼ぶため set -e は無効 = 自前 exit-status 判定。
+#   fail-closed 3 点: (a) 抽出失敗 (yq 非0) / (b) 被覆量下限割れ (恒真 PASS 封鎖) / (c) tokenizer 異常終了。
+validate_rich_inline() {
+  local bad vals n rc
+  vals="$(mktemp)"
+  if ! rich_field_values > "$vals"; then
+    rm -f "$vals"; echo "assemble-spec: ★rich field の抽出に失敗 (yq 非 0 exit・検査不能ゆえ fail-closed)" >&2; return 1
+  fi
+  n="$(wc -l < "$vals" | tr -d ' ')"
+  if [[ "$n" -lt "$RICH_FIELD_MIN" ]]; then
+    rm -f "$vals"
+    echo "assemble-spec: ★rich field の検査対象が $n 件 (期待下限 $RICH_FIELD_MIN)。 rich_field_values の query drift か" >&2
+    echo "  flag 消失により RAW emit の注入防御が無被覆 (検査対象 0/過少での恒真 PASS を封鎖)。 契約が育った時のみ RICH_FIELD_MIN 更新。" >&2
+    return 1
+  fi
+  bad="$(ALLOW="$RICH_INLINE_ALLOW" ATTRALLOW="$RICH_ATTR_ALLOW" SCHEMEALLOW="$RICH_HREF_SCHEME" \
+         perl -CSD -ne "$RICH_TOKENIZE_PL" < "$vals")"; rc=$?
+  rm -f "$vals"
+  [[ $rc -eq 0 ]] || { echo "assemble-spec: ★rich field の tokenize に失敗 (perl 非 0 exit・検査不能ゆえ fail-closed)" >&2; return 1; }
+  [[ -z "$bad" ]] && return 0
+  echo "assemble-spec: ★human 層 rich field に allowlist 外の markup: $bad" >&2
+  echo "  (rich field = essence_rich / caption_rich / cells_rich が立つ essence / caption / td cell。 RAW emit ゆえ inline 非実行要素のみ許可: $RICH_INLINE_ALLOW)" >&2
+  echo "  (属性名も肯定 allowlist: $RICH_ATTR_ALLOW。 href 無し <a> / on*= / style は fail-closed)" >&2
+  return 1
+}
+
 # ---- icon SVG (spec-pack 固有 + 共用。 section index で循環選択する静的デザイン資産・contract 由来でない) ----
 ICO_GUIDE='<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>'
 ICO_DIR='<path d="M3 7a2 2 0 0 1 2-2h4l2 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
@@ -78,6 +214,9 @@ SECT_ICONS=("$ICO_GUIDE" "$ICO_DIR" "$ICO_TAG" "$ICO_CODE" "$ICO_DELTA" "$ICO_EA
 validate() {
   local errs=0 d p si bi nsec nblk btype nmb mbi mbtype npre pi pbtype
   core_validate_strings "assemble-spec" || errs=1
+  # ★folio-a405: RAW emit する human 層 rich field (essence_rich/caption_rich/cells_rich) を emit 前に tokenizer 検証
+  #   (人間層と対称の位置 = validate 内・emit 前 fail-closed。 emit 後 post-check では毒入り生成物が一度存在する非対称が残る)。
+  validate_rich_inline || errs=1
   # ★doc_type 束縛 (fail-open 封鎖): 本 pack は rules 専用 assembler。 doc_type が rules 以外なら abort。
   [[ "$(q '.meta.doc_type')" == "rules" ]] || { echo "assemble-spec: ★meta.doc_type は rules 必須 (spec-pack は rules 専用・doc_type flip で gate bypass 不可)" >&2; errs=1; }
   # 要件 id 一意性
@@ -257,23 +396,32 @@ emit_code() {
   printf '</code></pre>\n'
 }
 emit_table() {
-  local si="$1" bi="$2" cap nrow ri c
+  local si="$1" bi="$2" cap nrow ri c cap_rich cells_rich
   cap="$(q ".sections[$si].blocks[$bi].caption // \"\"")"
+  # ★folio-a405: per-field opt-in raw flag。 立てば validate_rich_inline 検証済ゆえ esc せず RAW emit (§9.1/§11.1 caption / §10.2 7-gate cells)。
+  cap_rich="$(q ".sections[$si].blocks[$bi].caption_rich // false")"
+  cells_rich="$(q ".sections[$si].blocks[$bi].cells_rich // false")"
   printf '<div class="tbl-wrap"><table data-component="spec-table">'
-  [[ -n "$cap" && "$cap" != "null" ]] && printf '<caption>%s</caption>' "$(esc "$cap")"
+  if [[ -n "$cap" && "$cap" != "null" ]]; then
+    if [[ "$cap_rich" == "true" ]]; then printf '<caption>%s</caption>' "$cap"; else printf '<caption>%s</caption>' "$(esc "$cap")"; fi
+  fi
   printf '<thead><tr>'
   while IFS= read -r h; do printf '<th>%s</th>' "$(esc "$h")"; done < <(q ".sections[$si].blocks[$bi].headers[]")
   printf '</tr></thead><tbody>\n'
   nrow="$(q ".sections[$si].blocks[$bi].rows | length")"
   for ((ri=0; ri<nrow; ri++)); do
     printf '<tr>'
-    while IFS= read -r c; do printf '<td>%s</td>' "$(esc "$c")"; done < <(q ".sections[$si].blocks[$bi].rows[$ri][]")
+    if [[ "$cells_rich" == "true" ]]; then
+      while IFS= read -r c; do printf '<td>%s</td>' "$c"; done < <(q ".sections[$si].blocks[$bi].rows[$ri][]")
+    else
+      while IFS= read -r c; do printf '<td>%s</td>' "$(esc "$c")"; done < <(q ".sections[$si].blocks[$bi].rows[$ri][]")
+    fi
     printf '</tr>\n'
   done
   printf '</tbody></table></div>\n'
 }
 emit_mermaid() {
-  local si="$1" bi="$2" cap
+  local si="$1" bi="$2" cap cap_rich
   # ★render target = <pre class="mermaid"> (head の mermaid.min.js が SVG 描画する) + raw DSL を逐語保持 (round-trip 維持)。
   #   旧 <pre class="mermaid-src"> は raw DSL を露出するだけで描画されず gate I blocker (図の約束と実体が乖離) だった。
   printf '<figure data-component="spec-diagram" class="diagram"><pre class="mermaid">'
@@ -282,11 +430,17 @@ emit_mermaid() {
   printf '</pre>'
   # figcaption: contract の caption を優先。 空なら DSL 内の accDescr → accTitle を fallback 抽出 (gate I が figcaption 空を指摘・両者とも SSoT 由来)。
   cap="$(q ".sections[$si].blocks[$bi].caption // \"\"")"
+  cap_rich="$(q ".sections[$si].blocks[$bi].caption_rich // false")"   # ★folio-a405: figcaption raw flag (§10.2 ADR-0028 xref)。
   if [[ -z "$cap" ]]; then
     cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accDescr:[[:space:]]*//p' | head -1)"
     [[ -z "$cap" ]] && cap="$(q ".sections[$si].blocks[$bi].source_lines[]" | sed -n 's/^[[:space:]]*accTitle:[[:space:]]*//p' | head -1)"
+    # ★fallback (accDescr/accTitle 由来) は SSoT の raw markup でない = 常に esc (caption_rich は contract caption 専用)。
+    printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
+  elif [[ "$cap_rich" == "true" ]]; then
+    printf '<figcaption>%s</figcaption></figure>\n' "$cap"
+  else
+    printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
   fi
-  printf '<figcaption>%s</figcaption></figure>\n' "$(esc "$cap")"
 }
 emit_subhead() {
   # ★navigable anchor (folio-0x0k pre-flip): 原本 h3 の実 id (fine section anchor) を h3 へ刻む = corpus inbound の解決先。
@@ -294,11 +448,19 @@ emit_subhead() {
   #   ゆえ section/requirement (全 entry が anchor 保有 = hard fail-closed) と異なり、 subhead は anchor 空を許す ★条件付き emit:
   #   非空なら <h3 id="…">、 空 (原本 id 不在の §4.1-4.4) なら <h3> を emit する (原本に無い id を捏造しない = 集合再現 余剰0)。
   #   silent id-loss (本来 anchor を持つ subhead が id を落とす) の fail-closed は verify-spec の「subhead anchor 列」突合が担う。
-  local anchor h3open
+  local anchor h3open erich ess
   anchor="$(q ".sections[$1].blocks[$2].anchor // \"\"")"
   if [[ -n "$anchor" && "$anchor" != "null" ]]; then h3open="<h3 id=\"$(esc "$anchor")\">"; else h3open="<h3>"; fi
-  printf '<div data-component="spec-subhead">%s%s</h3><p class="sub-se">%s</p></div>\n' \
-    "$h3open" "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(esc "$(q ".sections[$1].blocks[$2].essence")")"
+  # ★folio-a405: essence_rich なら essence を RAW emit (§4.5 の P-8/REQ-VER-021 xref を保存)、 else 従来 esc。 heading は常に esc。
+  erich="$(q ".sections[$1].blocks[$2].essence_rich // false")"
+  ess="$(q ".sections[$1].blocks[$2].essence")"
+  if [[ "$erich" == "true" ]]; then
+    printf '<div data-component="spec-subhead">%s%s</h3><p class="sub-se">%s</p></div>\n' \
+      "$h3open" "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$ess"
+  else
+    printf '<div data-component="spec-subhead">%s%s</h3><p class="sub-se">%s</p></div>\n' \
+      "$h3open" "$(esc "$(q ".sections[$1].blocks[$2].heading")")" "$(esc "$ess")"
+  fi
 }
 # 1 要件 row を emit ($1 = 要件 id)。
 emit_requirement_row() {
@@ -392,11 +554,12 @@ emit_blocks() {
 }
 
 emit_section() {
-  local si="$1" tint kicker heading essence icon anchor cls
+  local si="$1" tint kicker heading essence icon anchor cls erich
   tint="$(q ".sections[$si].tint")"
   kicker="$(q ".sections[$si].kicker")"
   heading="$(q ".sections[$si].heading")"
   essence="$(q ".sections[$si].essence")"
+  erich="$(q ".sections[$si].essence_rich // false")"   # ★folio-a405: section essence raw flag (§2 の P-13 xref)。
   icon="${SECT_ICONS[$(( si % ${#SECT_ICONS[@]} ))]}"
   # ★top-level section anchor (folio-0x0k pre-flip): 原本 <section id="s2-directory"> の実 id を章頭へ刻む。
   #   ★band() は lib/common.sh = CORE (16 pack 波及) ゆえ不触。 band が開く <section data-component="chapter-deck-band">
@@ -414,7 +577,12 @@ emit_section() {
     printf '<section id="%s">\n' "$(esc "$anchor")"
   fi
   band "$tint" "$kicker" "$heading" "$icon"
-  printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
+  # ★folio-a405: essence_rich なら section essence を RAW emit (§2 の P-13 xref を保存)、 else 従来 esc。
+  if [[ "$erich" == "true" ]]; then
+    printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$essence"
+  else
+    printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$(esc "$essence")"
+  fi
   emit_blocks "$si"
   # ★機械層 (w1f cell-2): この章の data-audience="machine" 自由文を fold で既定非表示・人間層 (essence/blocks) の後に置く。
   emit_machine_fold ".sections[$si].machine_blocks" "$heading の地の文・運用説明・rationale"
