@@ -30,6 +30,7 @@ graph:
 sections:
   - id: "s0"
     anchor: "s0-reader-guide"
+    class: "informative"
     tint: "info"
     kicker: "§0 / 読み方"
     heading: "§0. Reader's Guide"
@@ -48,6 +49,7 @@ sections:
           - "  DIG -->|\"SessionStart hook 注入\"| AI([\"AI agent の初期 context\"])"
   - id: "s1"
     anchor: "s1-w3c-vocab"
+    class: "normative"
     tint: "brand"
     kicker: "§1 / W3C 標準語彙"
     heading: "§1. W3C Standard Vocabulary"
@@ -83,6 +85,7 @@ sections:
       - { type: note, html: "<p>folio relation は <strong>W3C 既存標準語彙を最優先</strong>とする (interoperability + 学習コスト削減)。 独自命名 (folio:* prefix) は §1 で表現できない関係に限り §2 で個別定義する。</p>" }
   - id: "s2"
     anchor: "s2-folio-vocab"
+    class: "normative"
     tint: "violet"
     kicker: "§2 / folio 独自語彙"
     heading: "§2. folio Custom Vocabulary"
@@ -101,6 +104,7 @@ sections:
       - { type: note, html: "<p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し <span class=\"term\" data-term=\"constitution\" data-tooltip=\"folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。\">constitution</span> <a class=\"xref\" href=\"./constitution.html#p-10\" data-tooltip=\"Constitution 自身への変更前 user 確認\">P-10</a> に準じた user 承認を経る MUST。</p>" }
   - id: "s3"
     anchor: "s3-jsonld"
+    class: "normative"
     tint: "info"
     kicker: "§3 / JSON-LD"
     heading: "§3. JSON-LD Schema in <head>"
@@ -160,6 +164,7 @@ sections:
       - { type: note, html: "<p>各 spec file は <code>&lt;head&gt;</code> 内に <code>&lt;script type=\"application/ld+json\"&gt;</code> ブロックを 1 個 MUST 含む (<a href=\"rules.html#s4-format\">rules.html §4.1</a>)。 ブロック内容の関係性表現 schema を本 §3 で規定する。</p>" }
   - id: "s4"
     anchor: "s4-inventory"
+    class: "normative"
     tint: "warn"
     kicker: "§4 / inventory"
     heading: "§4. Inventory Schema"
@@ -244,6 +249,7 @@ sections:
       - { type: note, html: "<p>本 §4.4 は <code>folio inventory</code> CLI (<a href=\"folio-self-spec.html#s7-6-phase-x3-minimal\">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href=\"folio-self-spec.html#s9-bindings\">folio-self-spec.html §9 Bindings</a> に隔離 (<a class=\"xref\" href=\"./constitution.html#p-11\" data-tooltip=\"design-intent 文書に HOW を書かない\">P-11</a>)。</p>" }
   - id: "s5"
     anchor: "s5-bidirectional"
+    class: "normative"
     tint: "ok"
     kicker: "§5 / 双方向参照"
     heading: "§5. Bidirectional Reference"
@@ -284,6 +290,7 @@ sections:
       - { type: note, html: "<p>双方向 auto-materialize の precedent として <a href=\"https://github.com/thomvaill/log4brains/blob/develop/packages/core/src/adr/domain/Adr.ts\">log4brains <code>Adr.supersedeBy()</code></a> がある (ADR-A が ADR-B を supersede した際、 ADR-B 側に逆参照を自動追加するパターン)。 folio framework も同設計を採用予定 (具体的な CLI 構文 / 実装機構は <a href=\"folio-self-spec.html#s7-harness\">folio-self-spec.html §7 系</a> に集約予定、 Phase X3+)。 詳細は <a href=\"../research/spec-graph-management-research.html#s3-integrated\">spec-graph-management-research.html §3</a> を参照。</p>" }
   - id: "s6"
     anchor: "s6-refs"
+    class: "informative"
     tint: "brand"
     kicker: "§6 / 参照"
     heading: "§6. References"

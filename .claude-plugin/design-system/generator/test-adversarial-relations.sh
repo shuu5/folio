@@ -136,6 +136,16 @@ expect_abort "A15 ★tint 空白 split bypass (allowlist token 並び) を逐値
 cp "$BASE" "$TMP/a16.yaml"; yq -i '.references[0].role = "claim rationale"' "$TMP/a16.yaml"
 expect_abort "A16 ★references role 空白 split bypass (allowlist token 並び) を逐値判定で abort" "$TMP/a16.yaml" "未知の reference role"
 
+# A17. ★section class の allowlist 外値 (folio-jmz1): normative/informative 以外は section wrapper へ stray class を
+#      注入する fail-open ゆえ逐値判定で abort する (A15 tint と対称・CLASS_OK closed 2 値)。
+cp "$BASE" "$TMP/a17.yaml"; yq -i '.sections[0].class = "rainbow"' "$TMP/a17.yaml"
+expect_abort "A17 ★未知の section class を abort (CSS allowlist 外)" "$TMP/a17.yaml" "未知の section class"
+
+# A18. ★section class の word-split bypass (folio-jmz1): "normative informative" は IFS split すれば個々が allowlist を
+#      pass する fail-open だが、 逐値判定 (IFS= read -r で行全体を 1 値) で full 文字列を 1 件として abort する (A15 と対称)。
+cp "$BASE" "$TMP/a18.yaml"; yq -i '.sections[0].class = "normative informative"' "$TMP/a18.yaml"
+expect_abort "A18 ★section class 空白 split bypass を逐値判定で abort" "$TMP/a18.yaml" "未知の section class"
+
 # === fabrication-free (HTML 改竄・生成後 fail-closed) ===
 # F1. ★要件 row を 1 枚削除 → 行数 FAIL (REQ-REL-001 を REQ-REL-002 直前まで削除)。
 cp "$TMP/base-filled.html" "$TMP/f1.html"
@@ -209,7 +219,7 @@ expect_vfilled_fail "F13 ★subhead heading 改竄を捕捉" "$TMP/f13.html" "su
 #   DOM 形状が別クラスゆえ個別 [FAIL] を pin する (1 instance の実弾は構造差のある instance の穴を証明しない・exit code 相乗り回避)。
 # ANC1. ★section anchor 全剥奪 → section anchor 列 FAIL (corpus inbound #s5-3-ears 等が解決不能)。
 cp "$TMP/base-filled.html" "$TMP/anc1.html"
-perl -0777 -i -pe 'our $n; $n += s#<section id="[^"]*">\n##g; END { exit($n?0:9) }' "$TMP/anc1.html" \
+perl -0777 -i -pe 'our $n; $n += s#<section id="[^"]*"[^>]*>\n##g; END { exit($n?0:9) }' "$TMP/anc1.html" \
   || ng "ANC1 section anchor strip mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "ANC1 ★section anchor 全剥奪を section anchor 列が捕捉" "$TMP/anc1.html" "section anchor"
 # ANC2. ★section anchor id 改竄 (値 drift) → section anchor 列 FAIL。
@@ -227,7 +237,7 @@ cp "$BASE" "$TMP/anc4.yaml"; yq -i '(.sections[] | select(.id=="s2")) |= del(.an
 expect_abort "ANC4 ★契約 section anchor 削除を assemble fail-closed abort (navigable id 不在)" "$TMP/anc4.yaml" "navigable id) が空"
 # ANC5. ★陰性対照: anchor 大文字化 (link 解決 FAIL) → section anchor 列 FAIL (契約 lowercase と値不一致)。
 cp "$TMP/base-filled.html" "$TMP/anc5.html"
-perl -0777 -i -pe 'our $n; $n += s#(<section id=")s2-folio-vocab(">)#${1}S2-FOLIO-VOCAB${2}#; END { exit($n?0:9) }' "$TMP/anc5.html" \
+perl -0777 -i -pe 'our $n; $n += s#(<section id=")s2-folio-vocab("[^>]*>)#${1}S2-FOLIO-VOCAB${2}#; END { exit($n?0:9) }' "$TMP/anc5.html" \
   || ng "ANC5 section anchor uppercase mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "ANC5 ★section anchor 大文字化 (link 解決 FAIL) を section anchor 列が捕捉" "$TMP/anc5.html" "section anchor"
 # ANC6. ★要件 anchor (row id=) 剥奪 → 要件タプル FAIL。 ★3 shape 目 = 要件 row の id= (section/subhead とは別の
@@ -245,6 +255,50 @@ expect_vfilled_fail "ANC7 ★要件 anchor id 改竄を要件タプルが捕捉"
 # ANC8. ★陽性対照: 契約の要件 anchor 削除 → emit が fail-closed exit1 (assemble abort)。 全要件 anchor 保有 = hard fail-closed。
 cp "$BASE" "$TMP/anc8.yaml"; yq -i 'del(.requirements[0].anchor)' "$TMP/anc8.yaml"
 expect_abort "ANC8 ★契約 要件 anchor 削除を assemble fail-closed abort (navigable id 不在)" "$TMP/anc8.yaml" "navigable id) が空"
+
+# === folio-jmz1: section.class (normative/informative wrapper) の per-shape MK ===
+# ★per-shape で撃つ理由: 1 instance の実弾は *構造差のある* instance の穴を証明しない。 informative strip / normative strip /
+#   count-preserving swap / 契約 field 削除 (emit 属性省略経路) / per-class count 保存の swap-pair は別クラスゆえ個別 [FAIL] を
+#   pin する。 逐値 class 列 (position 層 i) と census floor (層 ii) の二層を各々 *独立に* isolate する: MK-d は census を唯一の
+#   FAIL 源に (position 0/0 恒真)、 MK-e は position を唯一の FAIL 源に (census PASS) する対称配置。 全 MK は fired-guard 付き
+#   (shape drift = 空撃ちを検出)。 ★relations 固有値: normative 5 (s1..s5) / informative 2 (s0/s6) — rules fork の 11/1 流用禁止。
+# MK-a. ★s0 informative strip → informative census == 2 FAIL (class 属性のみ剥奪・id 温存)。
+cp "$TMP/base-filled.html" "$TMP/mka.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s0-reader-guide") class="informative">#${1}>#; END { exit($n?0:9) }' "$TMP/mka.html" \
+  || ng "MK-a s0 informative strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "MK-a ★s0 informative strip を informative census floor が捕捉" "$TMP/mka.html" "informative census"
+# MK-b. ★normative 1 本 (s1) strip → normative census == 5 FAIL (class 属性のみ剥奪・id 温存)。
+cp "$TMP/base-filled.html" "$TMP/mkb.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s1-w3c-vocab") class="normative">#${1}>#; END { exit($n?0:9) }' "$TMP/mkb.html" \
+  || ng "MK-b s1 normative strip mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "MK-b ★normative 1 本 (s1) strip を normative census floor が捕捉" "$TMP/mkb.html" "normative census"
+# MK-c. ★count-preserving swap (s0 informative→normative) → 総数 7 は保存されるが per-class census が破れる
+#   (informative 2→1 / normative 5→6) + 逐値 class 列も FAIL。 件数保存の swap を per-class census + 逐値が殺す。
+cp "$TMP/base-filled.html" "$TMP/mkc.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s0-reader-guide" class=")informative(">)#${1}normative${2}#; END { exit($n?0:9) }' "$TMP/mkc.html" \
+  || ng "MK-c s0 informative→normative swap mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "MK-c ★count-preserving swap (s0 informative→normative) を informative census + 逐値 class 列が捕捉" "$TMP/mkc.html" "informative census"
+# MK-d. ★契約 s0 class 削除 → 再生成 (emit 属性省略経路) → census floor が捕捉。 ★position (逐値 class 列) は
+#   mutated 契約 vs mutated HTML が空==空で 0/0 恒真 PASS するため、 census (契約非依存 hardcode) が唯一の FAIL 源
+#   = census が load-bearing であることを isolate する (契約 field 削除の 0/0 恒真封鎖の実弾)。
+cp "$BASE" "$TMP/mkd.yaml"; yq -i 'del(.sections[0].class)' "$TMP/mkd.yaml"
+bash "$ASM" "$TMP/mkd.yaml" "$TMP/mkd.html" >/dev/null 2>&1 || ng "MK-d assemble 失敗 (emit 属性省略経路が壊れた)"
+# 補助 positive control: mutated 契約 vs mutated HTML の class 列は自己整合 (position 0/0 PASS) を明示確認。
+mkd_exp="$(yq -r '.sections[].class // ""' "$TMP/mkd.yaml")"
+mkd_act="$(perl -CSD -0777 -ne 'while (/<section id="[^"]*"([^>]*)>/g){ my $a=$1; if ($a=~/\bclass="([^"]*)"/){ print "$1\n" } else { print "\n" } }' "$TMP/mkd.html")"
+[[ "$mkd_exp" == "$mkd_act" ]] && ok "MK-d 補助 ★position class 列は mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)" || ng "MK-d 補助 ★position が自己整合せず (census 単独 isolation の前提崩れ)"
+expect_vprefill_fail "MK-d ★契約 s0 class 削除→再生成 (emit 属性省略経路) を census floor が捕捉 (position は 0/0 恒真 PASS)" "$TMP/mkd.yaml" "$TMP/mkd.html" "informative census"
+# MK-e. ★per-class count を保存する swap-pair (s0 informative→normative + s1 normative→informative) → normative 5 / informative 2
+#   は不変ゆえ census (層 ii) は PASS し続けるが、 逐値 class 列 (層 i・position) が s0/s1 の位置で契約順とズレて FAIL する。
+#   ★これは census では原理的に捕えられない唯一の mutation クラス = position 層が census とは独立に load-bearing であることを
+#   isolate する (MK-d の census 単独 isolation と対称)。 ★swap 対の要件は informative↔normative の *対* であること
+#   (per-class count = relations では 5/2 を保存し census を PASS させるため)。 rules fork の実弾 (s0-reader-guide ↔
+#   s2-directory) は同要件を 11/1 で満たすが、 anchor id `s2-directory` が relations に存在しないため literal 流用は
+#   できない。 relations では s0-reader-guide(informative) ↔ s1-w3c-vocab(normative) を採る。
+cp "$TMP/base-filled.html" "$TMP/mke.html"
+perl -0777 -i -pe 'our ($f0,$f1); $f0 += s#(<section id="s0-reader-guide" class=")informative(">)#${1}normative${2}#; $f1 += s#(<section id="s1-w3c-vocab" class=")normative(">)#${1}informative${2}#; END { exit(($f0 && $f1)?0:9) }' "$TMP/mke.html" \
+  || ng "MK-e s0↔s1 count-preserving class swap-pair mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "MK-e ★count-preserving swap-pair (s0 informative→normative + s1 normative→informative) を逐値 class 列 (position) が捕捉 (census は PASS・position 単独 isolation)" "$TMP/mke.html" "section class 列"
 
 # === folio-0x0k errata E1: subsubhead (h4) = 第 4 anchor shape の per-shape MK (relations §4.4.1-3) ===
 # ANC9. ★subsubhead (h4) anchor strip → subsubhead anchor 列 FAIL。
