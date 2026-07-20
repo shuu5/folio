@@ -28,8 +28,10 @@ export SKIP_REPRO="${SKIP_REPRO:-1}"
 # (folio-jyfh) で mermaid も render 対象になったが、 bash floor では従来通り skip し CI 側で実 render する。
 export SKIP_RENDER="${SKIP_RENDER:-1}"
 source "$SCRIPT_DIR/lib/test-repro-pins.sh"
-ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); }
-ng() { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); }
+# ★SEEN_IDS = 実行された case の先頭 token (CASEPIN が宣言集合と突合し silent skip を検出する)
+declare -a SEEN_IDS=()
+ok() { printf '  [PASS] %s\n' "$1"; pass=$((pass+1)); SEEN_IDS+=("${1%% *}"); }
+ng() { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); SEEN_IDS+=("${1%% *}"); }
 
 expect_abort() { # label contract expected_stderr_substring
   local out rc; out="$(bash "$ASM" "$2" "$TMP/o.html" 2>&1)"; rc=$?
@@ -623,18 +625,31 @@ f19_mut_reason "CEN-cmt2 ★span.term 剥奪 + コメント decoy laundering を
 #   かつ fail-closed 方向の別欠陥ゆえ conflate しない。 ★[OK] census 行の下限を課すのは「census arm 群が実際に走った」
 #   ことの pin (silent skip なら [OK] 0 本で緑になる = 恒真 PASS の封鎖)。 現行 §10b は census 22 本。
 cen_inflate() { # label decoy
-  local lbl="$1" decoy="$2" out bad okn
-  perl -0777 -pe "s{(<body[^>]*>)}{\$1$decoy}" "$TMP/base-filled.html" > "$TMP/cen-inflate.html"
+  # ★第 3 引数 = 注入 anchor (既定 <body> opener)。 CEN-head 群は <head> へ注入するため必要
+  #   (既存 case は全て <body> opener 固定で、 head vector が ★構造的に無被覆 だった)。
+  local lbl="$1" decoy="$2" anchor="${3:-<body[^>]*>}" out bad okn miss lab
+  perl -0777 -pe "s{($anchor)}{\$1$decoy}" "$TMP/base-filled.html" > "$TMP/cen-inflate.html"
   if diff -q "$TMP/base-filled.html" "$TMP/cen-inflate.html" >/dev/null; then
-    ng "$lbl ★decoy 注入が空撃ち (<body> opener の記法変化の疑い)"; return
+    ng "$lbl ★decoy 注入が空撃ち (注入 anchor '$anchor' が実 DOM と不一致の疑い)"; return
   fi
   out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-inflate.html" 2>&1)"
   bad="$(printf '%s\n' "$out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
   okn="$(printf '%s\n' "$out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
-  if [[ -z "$bad" && "$okn" -ge 20 ]]; then
-    ok "$lbl (census 行 $okn 本すべて [OK]・偽 FAIL 封鎖)"
+  # ★行数下限だけでは inflate 方向の恒真 PASS を防げない: 主 assert は「census の [FAIL] 行が無いこと」ゆえ
+  #   census 検査が ★丸ごと消えても FAIL 0 本 = PASS になる。 旧下限 10 は実測 19 本 (rules) / 22 本 (verification)
+  #   に対して緩すぎ、 消失を許す 9 本の中に本 helper の case (CEN-tplsc2 / tplsc4 / dupattr2) が ★実際に依存する
+  #   h_inline generic 軸が丸ごと入っていた = 守るべき軸を失った状態でも PASS しえた。
+  #   ゆえに (1) 実測値まで下限を上げ、 かつ (2) ★依存軸のラベルが [OK] 行として実在すること を fixed-string で撃つ。
+  #   ★(2) が本体: 行数は census 増減でドリフトするが、 ラベル存在は「この case が何に依存しているか」を直接 pin する。
+  #   ★[OK] 行へ anchor してから照合する 2 段構え (census ラベルは [FAIL] 行にも出るため素朴 substring は恒真)。
+  miss=""
+  for lab in 'census rich: a.xref' 'census generic: 人間層 <code> rest' 'census generic: 人間層 <code> 総数' 'census generic: 人間層 <span> table-cell'; do
+    printf '%s\n' "$out" | grep -E '^[[:space:]]*\[OK\][[:space:]]+census ' | grep -qF -- "$lab" || miss="$miss [$lab]"
+  done
+  if [[ -z "$bad" && -z "$miss" && "$okn" -ge 22 ]]; then
+    ok "$lbl (census 行 $okn 本すべて [OK]・依存軸 4 本実在・偽 FAIL 封鎖)"
   else
-    ng "$lbl ★decoy で census が動いた (inert 領域を live 計数 = parser-differential 回帰 / [OK] 数 $okn): $bad"
+    ng "$lbl ★decoy で census が動いた/依存軸が消えた (inert 領域を live 計数 = parser-differential 回帰 / [OK] 数 $okn / 依存軸欠落:$miss): $bad"
   fi
 }
 cen_inflate "CEN-cmt3 ★コメント内タグ様文字列は §10b census を inflate しない" "$CEN_DECOY"
@@ -728,12 +743,158 @@ cen_inflate "CEN-dupattr2 ★重複属性 data-audience の ★最初 (machine) 
 #   h_inline は本 hook を override しておらず base 既定 (starttag→endtag) が走るため push 直後に pop され、
 #   ★inert 区間にならなかった = `/` 1 文字で CEN-tpl4/8 の per-shape MK が全滅していた (実測再現済)。
 #   HTML Standard では ★非 void 要素の trailing solidus は無視され `<template/>` は template を ★開く (中身は inert)。
-#   ★本 case が撃つのは h_inline (text/inline 軸) のみ。 census_dump (element 軸) の同一迂回は契約 (a) の
-#   byte-identical 逐語移植ゆえ ★両 arm 同時是正が要り、 folio-gt4s で追跡する (decoy も element 資産を含めない)。
+#   ★element 軸 (census_dump) の同一迂回は ★folio-gt4s で両 arm 同時に是正済 (handle_startendtag で
+#   INERT_SUBTREE のみ push する最小形)。 element 軸と text/inline 軸は別実装ゆえ ★両軸を per-shape で撃つ (片軸は残穴)。
+#   ★push を template のみ に絞る最小形が要件: `not in VOID` 相当だと canonical の自己閉じ SVG (`<path/>` 等) が
+#   閉じられず stack を汚染し region / inert 判定を壊す (別クラスの誤計数)。 ★その回帰のうち CEN-tplsc4 が
+#   実際に撃てるのは ★text/inline 軸 のみ (element 軸は naive 形にしても差が出ず ★恒真 PASS だった = errata-1
+#   MUST-6)。 element 軸の最小形要件は ★MINFORM 節の静的 fixed-string pin が担う。
 CEN_TPLSC_DECOY='<template/><code>z</code></template>'
-f19_mut_reason "CEN-tplsc1 ★人間層 <code> 剥奪 + ★自己閉じ <template/> decoy による復元を census generic が FAIL" \
+CEN_TPLSC_EL_DECOY='<template/><a class="xref" href="#z">z</a><span class="term" data-term="z">z</span><ins class="delta" data-delta-id="D-ZZ-1">z</ins><section id="s6-references"></section><section id="req-ver-001"></section><code>z</code><span>z</span>&lt;a class="xref" &lt;code &lt;span</template>'
+f19_mut_reason "CEN-tplsc1 ★人間層 <code> 剥奪 + ★自己閉じ <template/> decoy による復元を census generic が FAIL (text/inline 軸)" \
   "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_TPLSC_DECOY}" "census generic: 人間層 <code> rest"
-cen_inflate "CEN-tplsc2 ★自己閉じ <template/> 内の inline 資産は §10b census を inflate しない" "$CEN_TPLSC_DECOY"
+cen_inflate "CEN-tplsc2 ★自己閉じ <template/> 内の資産/タグ様文字列は §10b census を inflate しない (両軸)" "$CEN_TPLSC_EL_DECOY"
+f19_mut_reason "CEN-tplsc3 ★a.xref 剥奪 + ★自己閉じ <template/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPLSC_EL_DECOY}" "census rich: a.xref"
+# ★最小形 (push を INERT_SUBTREE のみ に絞る) の ★実弾 pin: template ★以外 の自己閉じ要素まで push すると
+#   stack が閉じられず、 後続の inert 判定 (element 軸) と region 判定 (text/inline 軸) が巻き添えで壊れる。
+#   ★decoy は「汚染 stack が回収されず、 かつ汚染区間内に計数対象が居る」形でないと ★恒真 PASS になる:
+#   旧 decoy `<svg><path/><circle/><rect/></svg>` は (a) `</svg>` が `del self.stack[i:]` で汚染を ★即回収 し、
+#   (b) 汚染区間に計数対象が 1 個も無いため、 naive 形 (`not in VOID` 相当) と最小形の出力が ★完全同一 だった
+#   (実測: 両 arm とも rc 0 / census [FAIL] 0 = 何も pin していない vacuous-green ゆえ差し替えた)。
+#   ★現 decoy は red→green を ★両 arm・両軸 で実弾実証済 (naive 形注入で下記が動く / 最小形では全軸不動):
+#     element 軸     = `<span/>` が push されたまま残り `</span>` が ★template ごと stack を巻き取る
+#                      (del self.stack[i:]) → template 内 a.xref が live 化 → C_XREF 26→27 (verification arm 31→32)。
+#     text/inline 軸 = `<td/>` が push されたまま残り、 以降の人間層 <code> が全て table-cell へ誤 region 化
+#                      → code rest 9→0 / table-cell 0→10 (verification arm 79→0 / 43→123)。
+#   inflate 方向で撃つ (最小形なら census は 1 軸も動かない = 動いたら NG)。
+cen_inflate "CEN-tplsc4 ★template 以外の自己閉じ要素は stack を汚染せず §10b census を偽 FAIL させない (★text/inline 軸のみ・element 軸の最小形要件は MINFORM が静的に pin)" \
+  '<td/><span/><template></span><a class="xref" href="#z">z</a><code>z</code></template>'
+
+# --- CEN-head. ★<head> 内容も census の視野に入る (folio-gt4s errata-1 MUST-1 の anti-regression pin・3 軸) ---
+#   本 cell は一度 census_dump / h_inline へ「<body> 開始タグまで非計数」の inbody scoping を新設したが、
+#   ★それは base で機能していた防壁を殺す live fail-open だった: HTML5 の insertion mode では <head> 内の
+#   flow content は body へ移送され ★実際に描画される。 html.parser は insertion mode を持たないため
+#   <body> latch は「描画されるのに census が数えない」= ★攻撃者専用の隠し場所 を新設していた。
+#   実測 (同一 head mutant): inbody 版 = exit0 / FAIL 0 で ★素通り、 base 8d4eeda 版と errata 是正版 = 共に
+#   4 本 FAIL で ★検出。 ゆえに inbody scoping を撤去し base 挙動 (文書全体 subject) へ回帰した。
+#   ★本群は「head が blind spot でないこと」を ★inflate 方向 で撃つ (head へ資産を置けば census が動く)。
+#   将来また head scoping が入ると本群が赤くなる = 回帰の tracked 検出器。
+#   ★「head へ live 資産を注入して剥奪分を復元する」形は ★MK にしない: 注入資産は実際に描画される live
+#   資産ゆえ復元は正当であり、 head 固有の脆弱性ではなく frozen count 一般の限界 (admin 裁定)。
+#   ★element / escape / text-inline の 3 軸は別実装ゆえ per-shape で撃つ (片軸だけでは残穴)。
+f19_mut_reason "CEN-head1 ★<head> への既存 id 複製注入を census が検出 (★element 軸が head を視野に入れている)" \
+  "s{(<head[^>]*>)}{\$1<div id=\"req-ver-001\"></div>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-head2 ★<head> への escape literal 注入を census が検出 (★escape 軸が head を視野に入れている)" \
+  "s{(<head[^>]*>)}{\$1&lt;span }" "census double-escape: &lt;span"
+f19_mut_reason "CEN-head3 ★<head> への人間層 <code> 注入を census が検出 (★text/inline 軸が head を視野に入れている)" \
+  "s{(<head[^>]*>)}{\$1<code>z</code>}" "census generic: 人間層 <code> rest"
+
+# --- CEN-tplesc. ★stray end tag による inert subtree の巻き取り (folio-gt4s ceiling 2 巡目 major fix・両軸) ---
+#   handle_endtag の素朴な `del self.stack[i:]` は ★祖先 に一致する end tag でも template を巻き取って外すため、
+#   `<template></div>...</template>` のように ★不一致 end tag を 1 本置くだけで inert 区間が解除され、
+#   中身 (browser では ★非描画) が live 計上された。 HTML5 の in-template 挿入モードでは不一致 end tag は
+#   parse error として ★無視 され template は開いたまま。 ★element 軸 / text 軸 / 自己閉じ形 を per-shape で撃つ。
+CEN_TPLESC_DECOY='<div data-audience="machine"><template></div><a class="xref" href="#z">z</a><code>z</code></template></div>'
+CEN_TPLESC_SC_DECOY='<div data-audience="machine"><template/></div><a class="xref" href="#z">z</a><code>z</code></template></div>'
+f19_mut_reason "CEN-tplesc1 ★a.xref 剥奪 + stray </div> で <template> を巻き取る decoy の凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPLESC_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-tplesc2 ★人間層 <code> 剥奪 + 同 decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_TPLESC_DECOY}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-tplesc3 ★自己閉じ <template/> + stray </div> 形 (別 shape) の element 軸復元を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPLESC_SC_DECOY}" "census rich: a.xref"
+cen_inflate "CEN-tplesc4 ★stray end tag 入り <template> は §10b census を inflate しない (偽 FAIL 封鎖・両軸)" "$CEN_TPLESC_DECOY"
+
+# --- CEN-scsc. ★自己閉じ <script/> による raw text 区間の live 計上 (folio-gt4s ceiling 2 巡目 major fix・両軸) ---
+#   通常形 <script> は html.parser の CDATA mode が中身をタグとして emit しないため実害が無かったが、
+#   ★自己閉じ形 `<script/>` は handle_startendtag 発火ゆえ CDATA mode に入らず、 browser が `</script>` まで
+#   raw text (= ★非描画) 扱いする区間を census が live 計上していた (`/` 1 文字の迂回・CEN-tplsc と同一クラス)。
+#   ★canonical に自己閉じ script/style は 0 件 (grep verified) ゆえ是正の副作用なし。 両軸を per-shape で撃つ。
+CEN_SCSC_EL_DECOY='<div data-audience="machine"><script/><a class="xref" href="#z">z</a></script></div>'
+CEN_SCSC_TX_DECOY='<script/><code>z</code></script>'
+f19_mut_reason "CEN-scsc1 ★a.xref 剥奪 + 自己閉じ <script/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_SCSC_EL_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-scsc2 ★人間層 <code> 剥奪 + 自己閉じ <script/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_SCSC_TX_DECOY}" "census generic: 人間層 <code> rest"
+cen_inflate "CEN-scsc3 ★自己閉じ <script/> 区間は §10b census を inflate しない (偽 FAIL 封鎖・element 軸)" "$CEN_SCSC_EL_DECOY"
+
+
+# --- CEN-rt. ★raw text / RCDATA 要素の ★自己閉じ形 による inert 迂回 (folio-gt4s errata-1 MUST-3・両軸) ---
+#   INERT を {'template','script','style'} と ★手書き列挙 した版は partial-enumeration trap だった:
+#   textarea / title / xmp / iframe / noembed / noframes の自己閉じで ★同一クラスが再開通した (実測)。
+#   是正は集合を ★parser 自身から導出すること (HTMLParser.CDATA_CONTENT_ELEMENTS | RCDATA_CONTENT_ELEMENTS):
+#   parser の認識と census の inert 判定が構造的に同期し、 列挙漏れが原理的に生じない。
+#   ★本群は「導出集合が痩せたら赤くなる」検出器。 ★1 tag の実弾は別 tag の穴を証明しない ゆえ ★全 tag ×
+#   element 軸 / text-inline 軸 を per-shape で撃つ (deflate = 剥奪 + decoy 復元が封鎖され続けること)。
+f19_mut_reason "CEN-rt-script-el ★a.xref 剥奪 + 自己閉じ <script/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><script/><a class=\"xref\" href=\"#z\">z</a></script></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-style-el ★a.xref 剥奪 + 自己閉じ <style/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><style/><a class=\"xref\" href=\"#z\">z</a></style></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-xmp-el ★a.xref 剥奪 + 自己閉じ <xmp/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><xmp/><a class=\"xref\" href=\"#z\">z</a></xmp></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-iframe-el ★a.xref 剥奪 + 自己閉じ <iframe/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><iframe/><a class=\"xref\" href=\"#z\">z</a></iframe></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-noembed-el ★a.xref 剥奪 + 自己閉じ <noembed/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><noembed/><a class=\"xref\" href=\"#z\">z</a></noembed></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-noframes-el ★a.xref 剥奪 + 自己閉じ <noframes/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><noframes/><a class=\"xref\" href=\"#z\">z</a></noframes></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-textarea-el ★a.xref 剥奪 + 自己閉じ <textarea/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><textarea/><a class=\"xref\" href=\"#z\">z</a></textarea></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-title-el ★a.xref 剥奪 + 自己閉じ <title/> decoy による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<div data-audience=\"machine\"><title/><a class=\"xref\" href=\"#z\">z</a></title></div>}" "census rich: a.xref"
+f19_mut_reason "CEN-rt-script-tx ★人間層 <code> 剥奪 + 自己閉じ <script/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<script/><code>z</code></script>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-style-tx ★人間層 <code> 剥奪 + 自己閉じ <style/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<style/><code>z</code></style>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-xmp-tx ★人間層 <code> 剥奪 + 自己閉じ <xmp/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<xmp/><code>z</code></xmp>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-iframe-tx ★人間層 <code> 剥奪 + 自己閉じ <iframe/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<iframe/><code>z</code></iframe>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-noembed-tx ★人間層 <code> 剥奪 + 自己閉じ <noembed/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<noembed/><code>z</code></noembed>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-noframes-tx ★人間層 <code> 剥奪 + 自己閉じ <noframes/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<noframes/><code>z</code></noframes>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-textarea-tx ★人間層 <code> 剥奪 + 自己閉じ <textarea/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<textarea/><code>z</code></textarea>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rt-title-tx ★人間層 <code> 剥奪 + 自己閉じ <title/> decoy による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<title/><code>z</code></title>}" "census generic: 人間層 <code> rest"
+
+# --- CEN-nest. ★入れ子 inert を ★外から 閉じる stray end tag (folio-gt4s errata-1 MUST-4・両軸) ---
+#   ★★本群の捕捉範囲 (宣言能力 == 実能力・errata-2 MUST-B):
+#     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
+#               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
+#               <script/><template></script>) — CEN-nest1..5 で per-shape に実弾 pin 済。
+#     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を ★自己閉じで
+#               開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形。 挟んだ区間が census の ★有界な盲点
+#               になる (8 タグ × 両軸で同型・base 8d4eeda にも存在する pre-existing)。 → ★folio-ahn3 へ移譲。
+#   inert scope 境界の探索下限を「end tag 名が inert でないとき」だけ導出していた版は、 inert 名の end tag が
+#   ★入れ子 inert を外から閉じられた: `<template><script/></template>` で <script/> が開いた raw text 区間ごと
+#   解除され、 後続が live 計上された (実測: 凍結値復元が成立)。 HTML5 では raw text 内の `</template>` は
+#   ★ただの文字列 ゆえ script も template も閉じない。
+#   是正は探索下限を ★最内 inert 位置から無条件に 導出すること (inert 名の end tag は最内 inert 自身のみを
+#   閉じうる)。 ★入れ子の組み合わせは構造が別クラスゆえ per-shape で撃つ。
+f19_mut_reason "CEN-nest1 ★a.xref 剥奪 + <template><script/></template> による凍結値復元を census が FAIL (★element 軸)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<template><script/></template><a class=\"xref\" href=\"#z\">z</a>}" "census rich: a.xref"
+f19_mut_reason "CEN-nest2 ★人間層 <code> 剥奪 + 同 vector による復元を census generic が FAIL (★text/inline 軸)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<template><script/></template><code>z</code>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-nest3 ★内側 tag 違い <template><textarea/></template> 形 (別 shape) の element 軸復元を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<template><textarea/></template><a class=\"xref\" href=\"#z\">z</a>}" "census rich: a.xref"
+f19_mut_reason "CEN-nest4 ★入れ子順 逆 <script/><template></script> 形 (別 shape) の element 軸復元を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<script/><template></script><a class=\"xref\" href=\"#z\">z</a>}" "census rich: a.xref"
+# ★inflate 方向は ★正しく閉じた 入れ子 inert で撃つ。 ★閉じない形 (<template><script/></template>) を
+#   inflate case に使ってはならない: 自己閉じ <script/> は HTML5 で raw text を開き `</template>` は
+#   ★ただの文字列 ゆえ script も template も閉じず、 ★以降の文書全体が正当に inert 化する (census 0 = 実測)。
+#   これは browser 準拠の ★正しい 挙動であり偽 FAIL ではない。 ゆえに「動かないはず」と主張する形は
+#   ★誤った pin になる。
+#   ★訂正 (errata-2 MUST-A・実測で偽だった旧記述の是正): 「攻撃者が使えば全 census が 0 へ落ちて即 FAIL
+#   = fail-closed」とは ★言えない。 攻撃者は末尾で `</template></script>` と ★閉じ直せる ため、 挟んだ区間
+#   だけを census の盲点にして ★他の census 値を無傷 に保てる (= 有界な盲点。 実測: canonical <body> 直後へ
+#   `<script/><template></script><div id="INJECTED-HIJACK">…</div></template></script>` を注入すると
+#   両 arm exit0 / FAIL 0 で、 注入区間の id / 人間層 code / escape literal が ★いずれも非計数)。
+#   当該クラスは base 8d4eeda にも存在する ★pre-existing な穴で、 fix 本体は ★folio-ahn3 へ移譲済。
+#   ★本 suite は当該クラスを ★捕れない (過大宣言をしない = 本 cell の主題)。
+cen_inflate "CEN-nest5 ★正しく閉じた入れ子 inert (<template><script></script>...</template>) は §10b census を inflate しない (偽 FAIL 封鎖)" \
+  '<template><script>z</script><code>z</code><a class="xref" href="#z">z</a><span>z</span>&lt;code &lt;span</template>'
 
 # === COLLAPSE. ★extractor-collapse 敵対 test (folio-7n17 deliverable 4) ===
 # extract-verification-spec.sh の人間層 rich() を関数レベルで plain() 相当へ collapse し、 ★extractor の
@@ -1019,6 +1180,66 @@ cc_seed "CC-mlist ★空 spec-machine-list 追加 を census-count arm が捕捉
 cc_seed "CC-mfold ★空 spec-machine-fold 追加 (fold 再グルーピング近似) を census-count arm が捕捉" spec-machine-fold
 
 if repro_pins "$VER" verification "$BASE" "$BASE_PROSE" "$ASM" "$INJ" --filled "$BASE_PROSE"; then ok "repro-build conformance (a-d) 全 pass"; else ng "repro-build conformance (a-d) 逸脱"; fi
+# --- CEN-escrt. ★escape literal 軸 (handle_data/entityref/charref) の inert guard を per-shape で撃つ (errata-1 SHOULD-1) ---
+#   MUST-1 で head scoping が消えた後も、 escape 軸には ★load-bearing な guard が残る (実測: 3 hook から
+#   `not self.inert()` を外すと <template> / 自己閉じ <script/> 内の &lt;span / &lt;code が ★共に 1 へ計上される)。
+#   ゆえに「不要」ではなく ★追加が必要 と判断した。 element 軸 (CEN-rt-*-el) / text-inline 軸 (CEN-rt-*-tx) は
+#   別実装ゆえ escape 軸の穴を証明しない。 ★全 raw text tag + 入れ子形 を per-shape で撃つ。
+f19_mut_reason "CEN-escrt-script ★&lt;span literal 1 個潰し + 自己閉じ <script/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<script/>&lt;span </script>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-style ★&lt;span literal 1 個潰し + 自己閉じ <style/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<style/>&lt;span </style>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-xmp ★&lt;span literal 1 個潰し + 自己閉じ <xmp/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<xmp/>&lt;span </xmp>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-iframe ★&lt;span literal 1 個潰し + 自己閉じ <iframe/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<iframe/>&lt;span </iframe>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-noembed ★&lt;span literal 1 個潰し + 自己閉じ <noembed/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<noembed/>&lt;span </noembed>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-noframes ★&lt;span literal 1 個潰し + 自己閉じ <noframes/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<noframes/>&lt;span </noframes>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-textarea ★&lt;span literal 1 個潰し + 自己閉じ <textarea/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<textarea/>&lt;span </textarea>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-title ★&lt;span literal 1 個潰し + 自己閉じ <title/> decoy による復元を census escape が FAIL (★escape literal 軸)" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<title/>&lt;span </title>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-escrt-nest ★同 literal 潰し + <template><script/></template> 入れ子 decoy による復元を census escape が FAIL" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1<template><script/></template>&lt;span }" "census double-escape: &lt;span"
+
+# === MINFORM. ★census_dump.handle_startendtag の ★最小形 (契約固定) の tracked 静的 pin (errata-1 MUST-6) ===
+#   CEN-tplsc4 は当初 element 軸の最小形要件も撃つと称していたが ★恒真 PASS だった: census_dump 側を契約禁止の
+#   naive 形 (`if tag not in VOID`) にしても全 case が緑のままで、 最小形と naive 形を ★区別できていなかった。
+#   element 軸の「push は INERT_SUBTREE のみ」は canonical に自己閉じ SVG が存在して初めて差が出る性質で、
+#   MK 実弾では安定に撃てない (差が出ない形を「撃っている」と表示するのが verify-laundering)。
+#   ゆえに ★批准済み契約 (最小形逐字温存) は変えず、 pin 側を LIVEPIN 同型の ★静的 fixed-string 照合へ移す。
+#   ★恒真化封鎖: 「naive 形が無いこと」(負の主張) だけを撃つと ★hook 消失・改称で黙って成立するため、
+#   ★producer 存在 assert (最小形の行が 1 件実在) と ★対で 課す。
+for mf in verify-spec.sh verify-verification.sh; do
+  mp="$SCRIPT_DIR/$mf"
+  mf_hook="$(awk '/^    def handle_startendtag\(self, tag, attrs\):$/{f=1} f{print} f&&/^    def handle_endtag/{exit}' "$mp" | head -40)"
+  mf_min="$(printf '%s\n' "$mf_hook" | grep -cF 'if tag in INERT_SUBTREE: self.stack.append(tag)')"
+  mf_naive="$(printf '%s\n' "$mf_hook" | grep -cF 'if tag not in VOID')"
+  if [[ "$mf_min" -eq 1 && "$mf_naive" -eq 0 ]]; then
+    ok "MINFORM-$mf ★handle_startendtag は契約固定の最小形 (INERT_SUBTREE のみ push 1 件 / naive not-in-VOID 0 件)"
+  else
+    ng "MINFORM-$mf ★最小形が崩れている (最小形行=$mf_min 期待 1 / naive 行=$mf_naive 期待 0 — 前者 0 は hook 消失/改称)"
+  fi
+done
+
+# === CASEPIN. ★宣言済 CEN-* case が ★全て実行されたか の突合 (errata-1 MUST-2・silent skip の fail-closed 検出) ===
+#   実害の前例: CEN-head3/head4 は label 内の ★未 escape backtick を bash がコマンド置換と解釈したため
+#   ★一度も実行されず、 それでも suite は「170 passed, 0 failed」と GREEN を報告していた
+#   (= 本 cell が主題にしている vacuous-green の再発・消失を N passed 形式は検出できない)。
+#   ★宣言 (本 script 中の "CEN-<id> literal) と ★実出力 (ok/ng が記録した先頭 token) を集合突合し、
+#   宣言されたのに出力されなかった case を fail-closed で撃つ。
+casepin_declared="$(grep -oE '"CEN-[A-Za-z0-9-]+' "$0" | sed 's/^"//' | sort -u)"
+casepin_seen="$(printf '%s\n' "${SEEN_IDS[@]:-}" | grep -E '^CEN-' | sort -u)"
+casepin_missing="$(comm -23 <(printf '%s\n' "$casepin_declared") <(printf '%s\n' "$casepin_seen") | tr '\n' ' ')"
+casepin_n="$(printf '%s\n' "$casepin_declared" | grep -c .)"
+if [[ -z "${casepin_missing// /}" && "$casepin_n" -ge 30 ]]; then
+  ok "CASEPIN ★宣言済 CEN-* case $casepin_n 本が全て実行された (silent skip 0)"
+else
+  ng "CASEPIN ★宣言済 CEN-* case が実行されていない (宣言 $casepin_n 本・未実行: ${casepin_missing:-なし} — 未 escape backtick 等による silent skip の疑い)"
+fi
+
 echo
 echo "adversarial: ${pass} passed, ${fail} failed"
 [[ "$fail" -eq 0 ]] || exit 1

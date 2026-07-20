@@ -443,7 +443,8 @@ fz_set() { sed -n "/#BEGIN_$1/,/#END_$1/p" "$FROZEN_CENSUS" | grep -vE '^#'; }  
 #   ゆえに ★全 census 計数 (id / a.xref / span.term / ins|del.delta / delta-id / escape literal) を regex から
 #   ★実 HTML parser の walk (census_dump) へ寄せた: 属性値は attrs として構造的に読まれ本文計数へ混入しえず、
 #   escape literal (&lt;a class="xref" 等) は ★text node 限定 (entity 記法を復元して) 数える。 comment / script /
-#   style は parser 段でも非計数ゆえ strip_inert は ★二重の帯 (view 生成の失敗時も計数側が単独で成立する)。
+#   style は parser 段でも非計数。 ★この結果 strip_inert 前処理は冗長となり (計数側が単独で成立する)、 かつ bogus
+#   comment のオフセット誤算という fail-open を持つため ★両 arm とも census subject から外してある (folio-gt4s・下記隔離注記)。
 strip_inert() { python3 - "$1" <<'PYEOF'
 from html.parser import HTMLParser
 import sys
@@ -488,11 +489,10 @@ PYEOF
 #   ★修正方針 (finding 提案 A = 呼び先のみ是正): census_dump / h_inline は ★共に実 HTML parser であり、
 #   comment / script / style を非計数・<template> を除外 ★済 ゆえ、 strip_inert 前処理は「二重の帯」ではなく
 #   ★実際には唯一の穴 だった。 よって census subject を RAW $HTML へ戻す (実測: 生 $HTML で 31/57/79 = 凍結一致)。
-#   ★関数本体 (strip_inert) は契約 (a) の verify-spec.sh からの byte-identical 逐語移植ゆえ本 cell では ★改変しない。
-#   同一欠陥は rules arm (verify-spec.sh) にも存在し (:690 census_dump "$HTML_LIVE" / :726-731 h_inline "$HTML_LIVE" を
-#   実消費・ci.yml で blocking 配線済 = ★rules 側は現に fail-open)、 片 arm のみの本体修正は cross-arm 非対称の
-#   新設になるため、 本体是正 (両 arm 同時) は ★folio-gt4s で追跡する (bd 起票済・実弾再現手順と rules 側 MK 追加を
-#   acceptance に含む)。 ★本注記だけを唯一の記録にしない (回避表記封鎖 = c5r.2)。
+#   ★関数本体 (strip_inert) は契約 (a) の verify-spec.sh からの byte-identical 逐語移植ゆえ ★改変しない。
+#   同一欠陥は rules arm (verify-spec.sh) にも存在したが、 ★folio-gt4s で ★両 arm 同時に 同じ経路 (呼び先のみ
+#   RAW $HTML へ切替・本体は無改変) で是正済 = 現在は ★両 arm とも strip_inert を消費しない対称形。
+#   ★本注記だけを唯一の記録にしない (回避表記封鎖 = c5r.2・追跡は folio-gt4s / folio-7st6)。
 #   ★本 view は構造 parity 維持のため生成のみ残置し ★どの census も消費しない。 再配線するなら先に本体を直すこと。
 HTML_LIVE="$(mktemp)"
 strip_inert "$HTML" > "$HTML_LIVE" || { echo "verify-spec: ★census live view 生成に失敗 (fail-closed): $HTML" >&2; exit 2; }
@@ -505,14 +505,13 @@ strip_inert "$HTML" > "$HTML_LIVE" || { echo "verify-spec: ★census live view �
 #     - escape literal 軸 (&lt;a class="xref" / &lt;code / &lt;span) は ★text node のみ から数える
 #       (entityref / charref を元記法へ復元して連結。 属性値・comment・script/style 本文は非計数)。
 #   出力形式: `KEY=n` 行 → `#IDS` 節 (navigable id) → `#DIDS` 節 (delta-id)。
-# ★【既知の残穴・folio-gt4s で追跡】本関数の handle_startendtag は自己閉じ形 `<template/>` を stack へ push しない
-#   ため INERT_SUBTREE 判定が効かず、 ★element 軸だけ 1 byte で inert 除外を迂回できる (HTML Standard では非 void
-#   要素の trailing solidus は無視され `<template/>` は template を ★開く = 中身は inert)。 是正は
-#   `if tag not in VOID: self.stack.append(tag)` 相当だが、 ★本関数は契約 (a) の verify-spec.sh からの
-#   byte-identical 逐語移植ゆえ片 arm のみの改変は cross-arm 非対称の新設になる → ★両 arm 同時に folio-gt4s で行う。
-#   text/inline 軸 (h_inline) の同一迂回は ★本 cell で是正済 (下記 h_inline.handle_startendtag)。
-#   ★注記は関数本体の ★外 に置く: 本体へ 1 行でも足すと契約 (a) の byte-identical が literal に破れ、
-#   両 arm の逐語 drift 検査 (関数抽出 diff) が「差分あり」を恒常的に報告するようになるため。
+# ★【是正済・folio-gt4s】自己閉じ形 `<template/>` による element 軸の 1 byte 迂回は handle_startendtag を
+#   ★HTML 準拠 (非 void の trailing solidus は無視され template を ★開く) へ寄せて封鎖済:
+#   `self._tag(tag, attrs); if tag in INERT_SUBTREE: self.stack.append(tag)` (★両 arm へ逐字同一に適用)。
+#   ★push を INERT_SUBTREE のみ に絞るのが要点: `if tag not in VOID` 相当だと canonical の SVG foreign content
+#   (`<path/>` 等) が閉じられず stack を汚染し、 region / inert 判定を巻き添えで壊す (別クラスの誤計数)。
+#   text/inline 軸 (h_inline) の同一迂回は folio-7st6 で是正済 (下記 h_inline.handle_startendtag)。
+#   ★本体へ手を入れる際は ★両 arm 同時 に逐字同一で行う (片 arm のみの改変は cross-arm 非対称の新設)。
 census_dump() { python3 - "$1" <<'PYEOF'
 from html.parser import HTMLParser
 import sys, re
@@ -527,7 +526,22 @@ VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','
 #   (片方だけだと escape literal 側に同じ穴が残る)。
 #   ★noscript は除外しない: scripting 無効時には ★描画される = live たりうるため、 除外すると逆に「正当な資産の
 #   数え落とし」= 偽 FAIL / 隠し場所を作る。 除外の対象は「どの条件でも描画されない」template に限る。
-INERT_SUBTREE={'template'}
+#   ★raw text / RCDATA 要素も inert に含める (folio-gt4s errata-1 MUST-3)。 通常形は html.parser の CDATA mode が
+#   中身をタグとして emit しないため実害が無かったが、 ★自己閉じ形 `<script/>` `<xmp/>` 等は handle_startendtag
+#   発火ゆえ CDATA mode に入らず、 browser が閉じタグまで raw text (= 要素として描画しない) 扱いする区間を
+#   census が ★live 計上 していた (実測: 凍結値復元が成立)。
+#   ★集合は ★手書き列挙せず parser 自身から導出する (partial-enumeration trap の回避): {'script','style'} だけを
+#   手書きした版は textarea / title / xmp / iframe / noembed / noframes の自己閉じで ★同一クラスが再開通した。
+#   html.parser が自ら宣言する CDATA / RCDATA 集合を土台にすれば、 parser の認識と census の inert 判定が
+#   ★構造的に同期する (parser 側が集合を増やせば census も自動追随し、 列挙漏れが原理的に生じない)。
+#   ★noscript は入らない (導出集合に含まれない) = 正しい: scripting 無効時には ★描画される = live たりうるため、
+#   除外すると逆に「正当な資産の数え落とし」= 偽 FAIL / 隠し場所を作る (folio-7wbn 裁定を維持)。
+#   ★INERT_SUBTREE へ足す形ゆえ handle_startendtag の最小形 (契約固定) を ★逐字そのまま 使える
+#   (push 条件が `tag in INERT_SUBTREE` ゆえ全 raw text 要素が同経路で inert 区間になる)。
+#   canonical に該当要素の自己閉じは 0 件 (grep verified) ゆえ正当な資産の計数には無影響。
+INERT_SUBTREE = ({'template'}
+    | set(HTMLParser.CDATA_CONTENT_ELEMENTS)
+    | set(getattr(HTMLParser, 'RCDATA_CONTENT_ELEMENTS', ('textarea', 'title'))))
 class C(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=False)
@@ -551,10 +565,40 @@ class C(HTMLParser):
         if tag in ('script','style'): self.raw=tag
         if tag not in VOID: self.stack.append(tag)
     def handle_startendtag(self, tag, attrs):
+        # ★自己閉じ形 `<template/>` の 1 byte 迂回封鎖 (folio-gt4s・element 軸)。 HTML Standard では非 void 要素の
+        #   trailing solidus は無視され `<template/>` は template を ★開く (中身は inert)。 一方 Python html.parser は
+        #   本 hook を発火し stack へ push しないため INERT_SUBTREE 判定が効かず、 element 軸だけ 1 文字で
+        #   inert 除外を迂回できていた (実測再現済)。 ★push は inert 判定に必要な template のみ に限る:
+        #   canonical は SVG foreign content (`<path/>` 等) を持ち、 これらは自己閉じが ★正規 ゆえ無条件に push すると
+        #   閉じられず stack を汚染し、 region / inert 判定を巻き添えで壊す (fail-closed でなく ★別クラスの誤計数)。
         self._tag(tag, attrs)
+        if tag in INERT_SUBTREE: self.stack.append(tag)
     def handle_endtag(self, tag):
         if tag==self.raw: self.raw=None
+        # ★inert subtree は ★scope 境界 (folio-gt4s errata-1 MUST-4)。 素朴な `del self.stack[i:]` は ★祖先 に
+        #   一致する end tag でも inert を巻き取って外すため、 stray end tag 1 本で inert 区間が解除され中身が
+        #   live 計上された。 HTML5 では inert 内の不一致 end tag は無視され (raw text 内なら ★ただの文字列)
+        #   inert は開いたまま = 中身は非描画。
+        #   ★探索下限は ★最内 inert 位置から ★無条件に 導出する (以前は `tag not in INERT_SUBTREE` のときだけ
+        #   導出していたため、 inert 名の end tag が ★入れ子 inert を外から閉じられた:
+        #   `<template><script/></template>` で凍結値復元が成立・実測)。 inert 名の end tag は ★最内 inert 自身
+        #   のみを閉じうる (lo=m)、 それ以外は最内 inert より ★内側 のみ (lo=m+1)。 inert 不在なら従来どおり全域。
+        #   ★★この scope 境界が捕れるクラス / 捕れないクラス (宣言能力 == 実能力・errata-2 MUST-B):
+        #     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
+        #               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
+        #               <script/><template></script>)。 per-shape MK (CEN-nest1..5) で実弾 pin 済。
+        #     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を
+        #               ★自己閉じで開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形
+        #               (例 `<script/><template></script>…</template></script>`)。 挟んだ区間の資産が
+        #               census の ★有界な盲点 になる (他の census 値は無傷・8 タグ × 両軸で同型・実測)。
+        #               ★base 8d4eeda にも存在する pre-existing (本 cell の land による退行ではない)。
+        #               fix 本体は INERT を RAWTEXT 系 / element 系へ分離し set_cdata_mode 相当を自己閉じ
+        #               経路へ適用する parser semantics の再設計ゆえ ★folio-ahn3 へ移譲 (本 cell では扱わない)。
+        m=-1
         for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i] in INERT_SUBTREE: m=i; break
+        lo = 0 if m<0 else (m if tag in INERT_SUBTREE else m+1)
+        for i in range(len(self.stack)-1,lo-1,-1):
             if self.stack[i]==tag: del self.stack[i:]; break
     def handle_data(self, data):
         if not self.raw and not self.inert(): self.text.append(data)
@@ -588,10 +632,23 @@ h_inline() { python3 - "$1" "$2" "$3" <<'PYEOF'
 from html.parser import HTMLParser
 import sys
 VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','embed','param','track'}
+# ★非描画 subtree 集合 (census_dump の INERT_SUBTREE と ★同一 導出・folio-gt4s errata-1 MUST-3)。
+#   template に加え raw text / RCDATA 要素を含める: 通常形は html.parser の CDATA mode が中身をタグとして
+#   emit しないため実害が無かったが、 ★自己閉じ形 `<script/>` `<xmp/>` 等は handle_startendtag 発火ゆえ
+#   CDATA mode に入らず、 browser が閉じタグまで raw text (非描画) 扱いする区間の <code> / <span> を
+#   ★live 計上 していた (実測: 凍結値復元が成立)。
+#   ★手書き列挙せず parser 自身から導出する (partial-enumeration trap の回避): {'script','style'} だけを
+#   手書きした版は textarea / title / xmp / iframe / noembed / noframes の自己閉じで同一クラスが再開通した。
+#   ★noscript は導出集合に含まれない = 正しい (scripting 無効時に描画されるため除外しない・folio-7wbn 裁定)。
+INERT = ({'template'}
+    | set(HTMLParser.CDATA_CONTENT_ELEMENTS)
+    | set(getattr(HTMLParser, 'RCDATA_CONTENT_ELEMENTS', ('textarea', 'title'))))
 class W(HTMLParser):
     def __init__(self, target, region):
         super().__init__(convert_charrefs=False); self.stack=[]; self.n=0
         self.target=target; self.region=region
+    def inert(self):
+        return any(t in INERT for t,_ in self.stack)
     def handle_starttag(self, tag, attrs):
         # ★重複属性は ★first-wins (folio-7st6 ceiling major fix)。 HTML Standard では 2 つ目以降の同名属性は
         #   parse error として ★破棄 される (最初が勝つ)。 dict(attrs) は last-wins ゆえ
@@ -605,7 +662,7 @@ class W(HTMLParser):
         # ★非描画 subtree 除外 (census_dump と同型・folio-7wbn 3 巡目 ceiling): <template> 内は描画されないため
         #   live inline 資産でない。 除外しないと td/figcaption へ <template><code>z</code></template> を置くだけで
         #   region 別 occurrence を水増しでき、 element 軸を閉じた意味が無くなる (計数方式を arm 内で揃える)。
-        if tag==self.target and not any(t=='template' for t,_ in self.stack):
+        if tag==self.target and not self.inert():
             if not any(a.get('data-audience')=='machine' for _,a in self.stack):
                 r='rest'
                 for t,a in reversed(self.stack):
@@ -625,13 +682,35 @@ class W(HTMLParser):
         #   自己閉じが ★正規 ゆえ無条件に push すると閉じられず stack を汚染し、 後続の region 判定と
         #   data-audience="machine" 判定を巻き添えで壊す (fail-closed でなく ★別クラスの誤計数 になる)。
         self.handle_starttag(tag, attrs)
-        if tag != 'template' and self.stack and self.stack[-1][0] == tag: self.stack.pop()
+        if tag not in INERT and self.stack and self.stack[-1][0] == tag: self.stack.pop()
     def handle_endtag(self, tag):
+        # ★inert subtree は ★scope 境界 (census_dump と同型・folio-gt4s errata-1 MUST-4)。 素朴な
+        #   `del self.stack[i:]` は ★祖先 に一致する stray end tag でも inert を巻き取って外すため、
+        #   stray end tag 1 本で inert 区間が解除され中身が live 計上された。 HTML5 では inert 内の不一致
+        #   end tag は無視され (raw text 内なら ★ただの文字列) inert は開いたまま = 非描画。
+        #   ★探索下限は ★最内 inert 位置から ★無条件に 導出する (以前は `tag not in INERT` のときだけ導出して
+        #   いたため、 inert 名の end tag が ★入れ子 inert を外から閉じられた: `<template><script/></template>`
+        #   で凍結値復元が成立・実測)。 inert 名の end tag は ★最内 inert 自身のみを閉じうる (lo=m)、
+        #   それ以外は最内 inert より ★内側 のみ (lo=m+1)。 inert 不在なら従来どおり全域。
+        #   ★★この scope 境界が捕れるクラス / 捕れないクラス (宣言能力 == 実能力・errata-2 MUST-B):
+        #     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
+        #               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
+        #               <script/><template></script>)。 per-shape MK (CEN-nest1..5) で実弾 pin 済。
+        #     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を
+        #               ★自己閉じで開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形
+        #               (例 `<script/><template></script>…</template></script>`)。 挟んだ区間の資産が
+        #               census の ★有界な盲点 になる (他の census 値は無傷・8 タグ × 両軸で同型・実測)。
+        #               ★base 8d4eeda にも存在する pre-existing (本 cell の land による退行ではない)。
+        #               fix 本体は INERT を RAWTEXT 系 / element 系へ分離し set_cdata_mode 相当を自己閉じ
+        #               経路へ適用する parser semantics の再設計ゆえ ★folio-ahn3 へ移譲 (本 cell では扱わない)。
+        m=-1
         for i in range(len(self.stack)-1,-1,-1):
+            if self.stack[i][0] in INERT: m=i; break
+        lo = 0 if m<0 else (m if tag in INERT else m+1)
+        for i in range(len(self.stack)-1,lo-1,-1):
             if self.stack[i][0]==tag: del self.stack[i:]; break
 src=open(sys.argv[1],encoding='utf-8').read()
-body=src[src.index('<body'):]
-w=W(sys.argv[2], sys.argv[3]); w.feed(body)
+w=W(sys.argv[2], sys.argv[3]); w.feed(src)
 print(w.n)
 PYEOF
 }
