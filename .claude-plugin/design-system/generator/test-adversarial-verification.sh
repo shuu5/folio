@@ -596,6 +596,145 @@ selfcmp_mut "★span.term 1 個剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen c
 selfcmp_mut "★人間層 <code> table-cell wrapper 剥奪 + SPEC_ORIGIN_HTML=mutated でも frozen census generic FAIL" \
   's#(<td[^>]*>[^<]*)<code>([^<]*)</code>#${1}${2}#' "census generic: 人間層 <code> table-cell"
 
+# === CEN-{cmt,attr,tpl} / CEN-id4. ★parser-differential laundering 3 vector + id 重複 の封鎖 (folio-7st6) ===
+#   ★rules arm (folio-7wbn / verify-spec.sh §10b + test-adversarial-spec.sh CEN 群) で是正された parser-differential
+#   が verification 側 counter に ★残存していた非対称の解消。 §10b の census counter を naive regex から実 HTML
+#   parser の 1 walk (census_dump) へ寄せたので、 その teeth を per-shape mutation-kill で tracked に pin する。
+#   ★per-shape に分ける理由 (jyfh/r8k): comment 本体 / 属性値 / 非描画 subtree は DOM 形状が別クラスゆえ、
+#   1 instance の実弾は構造差のある instance の穴を証明しない。
+#   ★両方向を撃つ: (1) deflate = live 資産 1 個剥奪 + decoy で凍結値へ「復元」しても census が FAIL し続けること
+#   (laundering 封鎖)、 (2) inflate = 正当な decoy を足しただけでは census が動かないこと (偽 FAIL 封鎖)。
+#   ★decoy の id / delta-id は verification 実 census shape (req-ver-* / s6-references / D-2026-05-27-*) を使う
+#   (rules の req-ci-001 / s5-delta を写経すると生成物に存在せず SET 復元を狙う teeth が空撃ちになる)。
+#   ★reason 照合は f19_mut_reason ([FAIL] 行 anchor + fixed-string 2 段) へ翻案する: census ラベルは [OK] 行にも
+#   出るため素朴 substring では「別 gate の巻き添え FAIL + 当該 census は [OK]」を緑と誤判定する (恒真 = vacuous-green)。
+
+# --- CEN-cmt. ★HTML コメント laundering ---
+#   live な a.xref を 1 個失っても `<!-- <a class="xref"></a> -->` を 1 個足せば凍結 31 へ復元でき、 政策 A の
+#   【唯一の独立 anchor】が edit-SSoT 側 (contract.machine_blocks[].html は raw 出力) から水増しできてしまう。
+CEN_DECOY='<!-- decoy: <a class="xref" href="#x">z</a> <span class="term" data-term="z">z</span> <ins class="delta" data-delta-id="D-ZZ-1">z</ins> <code>z</code> <div id="ZZDECOY"></div> &lt;a class="xref" &lt;code &lt;span -->'
+f19_mut_reason "CEN-cmt1 ★a.xref 剥奪 + コメント decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-cmt2 ★span.term 剥奪 + コメント decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_DECOY}" "census rich: span.term"
+
+# ★inflate assert の共通形 (CEN-cmt3 / attr5 / tpl5)。 assert は verify 全体の PASS ではなく ★census 行だけに絞る:
+#   同 decoy は §10b 外の arm (self-anchor 整合 / 人間層 xref floor 等) を落としうるが、 それは本 finding の対象外
+#   かつ fail-closed 方向の別欠陥ゆえ conflate しない。 ★[OK] census 行の下限を課すのは「census arm 群が実際に走った」
+#   ことの pin (silent skip なら [OK] 0 本で緑になる = 恒真 PASS の封鎖)。 現行 §10b は census 22 本。
+cen_inflate() { # label decoy
+  local lbl="$1" decoy="$2" out bad okn
+  perl -0777 -pe "s{(<body[^>]*>)}{\$1$decoy}" "$TMP/base-filled.html" > "$TMP/cen-inflate.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/cen-inflate.html" >/dev/null; then
+    ng "$lbl ★decoy 注入が空撃ち (<body> opener の記法変化の疑い)"; return
+  fi
+  out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-inflate.html" 2>&1)"
+  bad="$(printf '%s\n' "$out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
+  okn="$(printf '%s\n' "$out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
+  if [[ -z "$bad" && "$okn" -ge 20 ]]; then
+    ok "$lbl (census 行 $okn 本すべて [OK]・偽 FAIL 封鎖)"
+  else
+    ng "$lbl ★decoy で census が動いた (inert 領域を live 計数 = parser-differential 回帰 / [OK] 数 $okn): $bad"
+  fi
+}
+cen_inflate "CEN-cmt3 ★コメント内タグ様文字列は §10b census を inflate しない" "$CEN_DECOY"
+
+# --- CEN-attr. ★属性値 laundering (comment / script / style 本体を除いても raw byte として残る残余) ---
+#   naive regex counter は単引用符属性の中のタグ様文字列を live 要素として数える。 ★id 軸を必ず含める
+#   (`<section id="req-ver-001">` を属性値に置くと count 総数と SET を ★同時に 復元でき最悪形になる)。
+#   ★escape literal も必ず含める (folio-7st6 ceiling major fix): 本 port は escape 軸 (ESC_XREF/ESC_CODE/ESC_SPAN) の
+#   計数意味を「全文 raw regex」から「census_dump の ★text node 限定」へ変更した = 属性値の `&lt;code` 等は
+#   ★今回から非計数 になった新しい封鎖クラス。 decoy に含めないと CEN-attr5 の inflate が escape 軸を ★一切踏まない。
+CEN_ATTR_DECOY="<div data-launder='<a class=\"xref\" href=\"#z\">z</a> <span class=\"term\" data-term=\"z\">z</span> <ins class=\"delta\" data-delta-id=\"D-ZZ-1\">z</ins> <section id=\"s6-references\"></section> <section id=\"req-ver-001\"></section> <code>z</code> <span>z</span> &lt;a class=\"xref\" &lt;code &lt;span'></div>"
+f19_mut_reason "CEN-attr1 ★a.xref 剥奪 + 単引用符属性 decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-attr2 ★span.term 剥奪 + 属性 decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census rich: span.term"
+f19_mut_reason "CEN-attr3 ★id 剥奪 (57→56) + 属性 decoy で count 復元を狙う laundering を census 総数が FAIL" \
+  "s{ id=\"s6-references\"}{}; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census navigable id: 総数"
+f19_mut_reason "CEN-attr4 ★id rename + 属性 decoy で SET 復元を狙う laundering を census id-rename SET が FAIL" \
+  "s{id=\"req-ver-001\"}{id=\"req-ver-RENAMED\"}; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census id-rename SET"
+cen_inflate "CEN-attr5 ★属性値内タグ様文字列は §10b census を inflate しない" "$CEN_ATTR_DECOY"
+
+# --- CEN-tpl. ★非描画 subtree (<template>) laundering ---
+#   <template> の内容は browser が描画しない (inert DocumentFragment) = live 資産でないのに census が数えていた。
+#   ★element 軸 (a.xref / span.term / id) と ★text/inline 軸 (h_inline の human <code>) の ★両方 を撃つ
+#   (片方だけ直すと h_inline 側に同一 vector の穴が残る = CEN-tpl4 が当の pin)。
+CEN_TPL_DECOY='<template><a class="xref" href="#z">z</a><span class="term" data-term="z">z</span><ins class="delta" data-delta-id="D-ZZ-1">z</ins><section id="s6-references"></section><section id="req-ver-001"></section><code>z</code><span>z</span>&lt;a class="xref" &lt;code &lt;span</template>'
+f19_mut_reason "CEN-tpl1 ★a.xref 剥奪 + <template> decoy による凍結値復元 (laundering) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-tpl2 ★span.term 剥奪 + <template> decoy laundering を census が FAIL" \
+  "s{<span class=\"term\" data-term=\"[^\"]*\"[^>]*>(.*?)</span>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census rich: span.term"
+f19_mut_reason "CEN-tpl3 ★id 剥奪 (57→56) + <template> decoy で count 復元を狙う laundering を census 総数が FAIL" \
+  "s{ id=\"s6-references\"}{}; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census navigable id: 総数"
+f19_mut_reason "CEN-tpl4 ★人間層 <code> 剥奪 + <template> decoy laundering を census generic が FAIL (h_inline 側の同 vector)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census generic: 人間層 <code> rest"
+cen_inflate "CEN-tpl5 ★<template> 内の資産/タグ様文字列は §10b census を inflate しない" "$CEN_TPL_DECOY"
+
+# --- CEN-tpl6/7. ★bogus comment 前置による <template> inert 除外の破壊 (folio-7st6 ceiling major) ---
+#   ★4 byte で per-shape MK 群が全滅した実例の pin。 census subject を strip_inert の出力 (live view) に置いた版では、
+#   strip_inert の handle_comment が cut 終端を `s + len(data) + 7` (`<!--` 4 + `-->` 3 の決め打ち) で算出する一方、
+#   Python html.parser は ★bogus comment `<!x>` (実長 4 byte) にも handle_comment(data='x') を発火するため、
+#   計算長 8 で ★直後の live 4 byte を過剰削除した。 結果 `<!x><template>` → `plate>` となり ★<template> 開始タグが
+#   破壊されて中身が live 化し、 CEN-tpl1..5 が封鎖したはずの laundering クラスが ★丸ごと再開通していた (実測再現済)。
+#   ★対策は census subject を RAW $HTML へ戻すこと (census_dump / h_inline は共に実 HTML parser で comment /
+#   script / style を非計数・<template> を除外済ゆえ strip_inert 前処理は不要どころか ★唯一の穴 だった)。
+#   ★両方向を撃つ: tpl6 = inflate (前置しても census は動かない) / tpl7 = deflate (前置しても復元は封鎖され続ける)。
+#   ★4 byte を足すだけで CEN-tpl1 の実弾が空砲化したので、 tpl7 は「同 mutation から `<!x>` を外した control でも
+#   FAIL する」ことに依存せず ★`<!x>` 付きの側 が FAIL することを直接 assert する (control は CEN-tpl1 が担当)。
+CEN_BOGUS_TPL_DECOY="<!x>$CEN_TPL_DECOY"
+cen_inflate 'CEN-tpl6 ★bogus comment <!x> 前置でも <template> 内は §10b census を inflate しない' "$CEN_BOGUS_TPL_DECOY"
+f19_mut_reason "CEN-tpl7 ★a.xref 剥奪 + <!x> 前置 <template> decoy による凍結値復元 (inert 除外の 4 byte 破壊) を census が FAIL" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1$CEN_BOGUS_TPL_DECOY}" "census rich: a.xref"
+f19_mut_reason "CEN-tpl8 ★人間層 <code> 剥奪 + <!x> 前置 <template> decoy laundering を census generic が FAIL (h_inline 側の同 vector)" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_BOGUS_TPL_DECOY}" "census generic: 人間層 <code> rest"
+
+# --- CEN-id4. ★id 重複 (unique 保存・anchor hijack) ---
+#   count census も SET census も共に ★dedup 後 の unique 集合を見るため、 既存 id の複製注入は unique 57 を保存した
+#   まま原理的に検出できなかった。 HTML の fragment 解決は文書順 first-match ゆえ、 本文より前に空の複製 anchor を
+#   置くと当該 id を指す全 xref がその空要素へ hijack され navigation が壊れる。 ★凍結 literal を増やさず
+#   「unique == 総出現」の構造的不変条件で撃つ (census file / provenance sha 無改訂)。
+f19_mut_reason "CEN-id4 ★既存 id の複製注入 (unique 57 保存・anchor hijack) を重複 chk が FAIL" \
+  's{(<body[^>]*>)}{${1}<div id="s6-references"></div>}' "census navigable id: 重複 0"
+
+# --- CEN-esc. ★escape literal 軸 (ESC_XREF / ESC_SPAN) の deflate/laundering (folio-7st6 ceiling major) ---
+#   本 port は escape 軸の計数意味を「全文 raw regex (perl -0777 /&lt;code/g)」から「census_dump の ★text node 限定」へ
+#   ★変更した (契約 b)。 つまり comment / 属性値 / <template> 内の `&lt;code` は今回から ★非計数 = 新たに閉じた
+#   laundering クラスである。 ところが既存 teeth は f19_mut の素の増減のみで、 ★攻撃形そのものである deflate-復元
+#   方向 (live literal を 1 個潰し inert decoy で凍結値へ戻す) が全 shape で 0 本だった。 handle_data /
+#   handle_entityref / handle_charref の `not self.inert()` や text 限定判定を将来緩めても suite が緑のままになるため、
+#   ★per-shape (cmt / tpl / attr) × deflate で tracked に pin する (element 軸の CEN-cmt/attr/tpl と同 doctrine)。
+#   ★ESC_CODE は凍結 0 ゆえ deflate 不能 (0 未満にできない) = inflate 側 (CEN-cmt3 / attr5 / tpl5) が唯一の teeth。
+f19_mut_reason "CEN-esc1 ★&lt;a class=\"xref\" literal 1 個潰し + ★コメント decoy で凍結値復元を狙う laundering を census escape が FAIL" \
+  "s{&lt;a class=\"xref\"}{&lt;a class=\"ZZDROP\"}; s{(<body[^>]*>)}{\$1$CEN_DECOY}" "census escape"
+f19_mut_reason "CEN-esc2 ★同 literal 潰し + ★<template> decoy による復元を census escape が FAIL" \
+  "s{&lt;a class=\"xref\"}{&lt;a class=\"ZZDROP\"}; s{(<body[^>]*>)}{\$1$CEN_TPL_DECOY}" "census escape"
+f19_mut_reason "CEN-esc3 ★&lt;span literal 1 個潰し + ★属性値 decoy による復元を census double-escape が FAIL" \
+  "s{&lt;span}{&lt;ZZSPAN}; s{(<body[^>]*>)}{\$1$CEN_ATTR_DECOY}" "census double-escape: &lt;span"
+
+# --- CEN-dupattr. ★重複属性 last-wins による data-audience laundering (folio-7st6 ceiling major) ---
+#   HTML Standard では重複属性は ★最初 が勝つ (2 つ目以降は parse error として破棄) ため
+#   `<div data-audience="machine" data-audience="human">` を browser は ★機械層 と解釈する。 h_inline が
+#   `dict(attrs)` (= last-wins) だと ★人間層 として計上し、 「live な人間層 <code> を 1 個剥奪 → 重複属性で
+#   偽の人間層資産を 1 個注入」で凍結値へ復元できた (CEN-tpl4 / M18 が守る性質が同一クラスの手で破れる)。
+#   census_dump は既に first-wins ゆえ ★同一 walk 内の非対称 だった。 両方向を撃つ。
+CEN_DUPATTR_DECOY='<div data-audience="machine" data-audience="human"><code>z</code></div>'
+f19_mut_reason "CEN-dupattr1 ★人間層 <code> 剥奪 + 重複属性 (machine→human 上書き) decoy による復元を census generic が FAIL" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_DUPATTR_DECOY}" "census generic: 人間層 <code> rest"
+cen_inflate "CEN-dupattr2 ★重複属性 data-audience の ★最初 (machine) が勝ち §10b census を inflate しない" "$CEN_DUPATTR_DECOY"
+
+# --- CEN-tplsc. ★自己閉じ形 <template/> による inert 除外の 1 byte 迂回 (folio-7st6 ceiling major) ---
+#   Python html.parser は `<template/>` に対し handle_starttag ではなく ★handle_startendtag を発火する。
+#   h_inline は本 hook を override しておらず base 既定 (starttag→endtag) が走るため push 直後に pop され、
+#   ★inert 区間にならなかった = `/` 1 文字で CEN-tpl4/8 の per-shape MK が全滅していた (実測再現済)。
+#   HTML Standard では ★非 void 要素の trailing solidus は無視され `<template/>` は template を ★開く (中身は inert)。
+#   ★本 case が撃つのは h_inline (text/inline 軸) のみ。 census_dump (element 軸) の同一迂回は契約 (a) の
+#   byte-identical 逐語移植ゆえ ★両 arm 同時是正が要り、 folio-gt4s で追跡する (decoy も element 資産を含めない)。
+CEN_TPLSC_DECOY='<template/><code>z</code></template>'
+f19_mut_reason "CEN-tplsc1 ★人間層 <code> 剥奪 + ★自己閉じ <template/> decoy による復元を census generic が FAIL" \
+  "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1$CEN_TPLSC_DECOY}" "census generic: 人間層 <code> rest"
+cen_inflate "CEN-tplsc2 ★自己閉じ <template/> 内の inline 資産は §10b census を inflate しない" "$CEN_TPLSC_DECOY"
+
 # === COLLAPSE. ★extractor-collapse 敵対 test (folio-7n17 deliverable 4) ===
 # extract-verification-spec.sh の人間層 rich() を関数レベルで plain() 相当へ collapse し、 ★extractor の
 # pre-flip source (spec-origin/verification.origin.html = 現行 canonical は flip 済で ears-requirement-row 形ゆえ
