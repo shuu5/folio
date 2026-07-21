@@ -3,6 +3,13 @@
 # doc_type = spec (spec 間の関係性表現規約)。 EARS 章立て規範文 + 非終端 照会 (前方 references)。
 # ★抽出範囲 = relations.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + EARS 要件 + 用語 + 照会) + 機械層自由文 (w1f cell-1)。
 #   機械層 = data-audience="machine" の <p>/<aside>/<ul> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture。
+#   ★ただし machine_blocks は「機械層 capture」専用ではない: 人間層 rich list の raw 保持先を兼ねる (下記 手起こし追記 を参照)。
+# ★手起こし追記 (folio-0qz9・抽出物ではない): canonical relations.html の人間層 body list 6 本 (25 項 = §2.2 決定順序 ol 4 / §2.2 ADR 要件 ul 3 / §3.3 @id Resolution ol 5 / §4.4.1 Scan target ul 4 / §4.4.2 Output path ul 1 / §6 References ul 8)
+#   + 同伴 MUST prose 3 本 + §4.4.1/§4.4.2 ラベル prose を sections[].machine_blocks の type:list / type:prose として逐語 port した。
+#   配置層が machine_blocks である理由: 人間層経路の emit_list は esc() で item 内の inline HTML (<code>/<a>/<span class=term>) を壊すため使えない (確定裁定)。
+#   ★extract-relations-spec.sh は本経路を再現しない (同 script L88 が人間層 ul/ol を capture しない) — full 再抽出を走らせると本追記 25 項が *silent に消える*。
+#   再抽出は禁止 (fence bwif: 下方の 用語 band 12 行を byte 不変に保つこと。 anchor 文字列は本 header に転記しない — 転記すると fence 抽出の始端が header 側に誤 match する)。
+#   許容差 (user 批准 2026-07-21): ol→ul の形式 degrade / §6 References の機械 fold 退避。
 #   ★JSON-LD: head の <script type=application/ld+json> は doc 自身のメタデータ (assemble が head 生成・machine_blocks でない)。 §3 の <pre><code>&lt;script…&gt;</code></pre> は人間層エスケープ code 例 (通常の code block として往復・特別機構なし)。
 
 meta:
@@ -102,6 +109,21 @@ sections:
       - { type: subhead, anchor: "s2-2-naming-rules", heading: "§2.2 命名規則 (standard 優先原則)", essence: "新規関係は標準語彙 → 既存独自語彙 → 新規 folio: 語彙の順で採用判断し、 独自語彙の ADR には却下理由・逆語彙・使用例を含める MUST。" }
     machine_blocks:
       - { type: note, html: "<p>§1 標準語彙で表現できない folio 固有の関係性のみ、 <code>folio:</code> prefix で独自定義する。 独自語彙の追加は ADR を起票し <span class=\"term\" data-term=\"constitution\" data-tooltip=\"folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。\">constitution</span> <a class=\"xref\" href=\"./constitution.html#p-10\" data-tooltip=\"Constitution 自身への変更前 user 確認\">P-10</a> に準じた user 承認を経る MUST。</p>" }
+      - type: prose
+        html: 新規関係を spec で導入する際は、 以下の順で採用語彙を決定する MUST。
+      - type: list
+        items:
+        - §1 標準語彙 (dcterms / schema.org / PROV-O) で表現可能か検討する
+        - 表現可能なら標準語彙を使用する MUST (独自命名禁止)
+        - 表現不可能 (意味が弱い / 強い / 不適合) と判断した場合、 §2.1 既存独自語彙で代替可能か検討する
+        - 既存独自語彙で表現不可能な場合のみ、 新規 <code>folio:*</code> 語彙を ADR で提案する
+      - type: prose
+        html: '独自語彙導入時の ADR には以下を MUST 含める:'
+      - type: list
+        items:
+        - 標準語彙で表現できない理由 (どの語彙を検討したか、 なぜ却下したか)
+        - 逆語彙の有無 (双方向 dual を採用するか、 単方向で済むか)
+        - 使用 spec 例 (どの spec で本語彙を使う予定か)
   - id: "s3"
     anchor: "s3-jsonld"
     class: "normative"
@@ -162,6 +184,15 @@ sections:
           - ["標準語彙優先 (§2.2)", "MUST", "MUST"]
     machine_blocks:
       - { type: note, html: "<p>各 spec file は <code>&lt;head&gt;</code> 内に <code>&lt;script type=\"application/ld+json\"&gt;</code> ブロックを 1 個 MUST 含む (<a href=\"rules.html#s4-format\">rules.html §4.1</a>)。 ブロック内容の関係性表現 schema を本 §3 で規定する。</p>" }
+      - type: prose
+        html: '<code>@id</code> および参照値 (<code>{ "@id": "..." }</code>) は以下の規則で記述する MUST。'
+      - type: list
+        items:
+        - '<strong>自己参照 (self)</strong>: <code>"@id": "./&lt;self-filename&gt;"</code> 形式で、 file 名のみ記述。 例: <code>"./relations.html"</code>。'
+        - '<strong>同一 dir 内 spec</strong>: <code>"@id": "./&lt;filename&gt;"</code>。 例: <code>"./rules.html"</code>。'
+        - '<strong>上位 dir spec</strong>: <code>"@id": "../&lt;path&gt;"</code>。 例: <code>"./constitution.html"</code>。'
+        - '<strong>section anchor</strong>: <code>"@id": "&lt;path&gt;#&lt;section-id&gt;"</code>。 例: <code>"./rules.html#s4-format"</code>。'
+        - '<strong>絶対 URL 禁止</strong>: <code>design-intent/</code> 配下では http(s):// で始まる絶対 URL を <code>@id</code> として記述しない (相対 path で表現する)。 例外: <code>@context</code> の <span class="term" data-term="vocabulary" data-tooltip="folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。">vocabulary</span> URI (<code>http://purl.org/dc/terms/</code> 等) は絶対 URL MUST。'
   - id: "s4"
     anchor: "s4-inventory"
     class: "normative"
@@ -247,6 +278,19 @@ sections:
       - { type: note, html: "<p>folio は全 spec の集約 index (<code>inventory.json</code>) を <strong>auto-generate</strong> する設計を採用する (将来の試作 plugin で実装予定)。 AI agent は inventory.json のみで全体構造を把握でき、 必要な spec だけ Read することで context window を効率的に使う。</p> <p>本 §4 では schema を規定する。 inventory.json の <strong>実体 file は作成しない</strong> (試作 plugin の <code>folio inventory</code> CLI で auto-generate される、 manual 作成は禁止)。</p>" }
       - { type: note, html: "<p>本モデルは <a href=\"https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills\">Anthropic Agent Skills</a> の 3-tier loading パターンに基づく (調査レポート §3.3)。 AI agent が必要分のみ読み込み、 context window を効率化する。</p>" }
       - { type: note, html: "<p>本 §4.4 は <code>folio inventory</code> CLI (<a href=\"folio-self-spec.html#s7-6-phase-x3-minimal\">folio-self-spec.html §7.6</a> の minimal scope) の WHAT を規定する。 具体的実装 (CLI 引数 / 言語 / 内部 algorithm) は <a href=\"folio-self-spec.html#s9-bindings\">folio-self-spec.html §9 Bindings</a> に隔離 (<a class=\"xref\" href=\"./constitution.html#p-11\" data-tooltip=\"design-intent 文書に HOW を書かない\">P-11</a>)。</p>" }
+      - type: prose
+        html: <strong>§4.4.1 Scan target directories</strong>
+      - type: list
+        items:
+        - <code>design-intent/spec/</code> + <code>design-intent/decisions/</code> + <code>design-intent/research/</code> を MUST scan (X4-C で <code>scratch/</code> から canonical layout へ物理移植済、 changes/ は <a class="xref" href="../decisions/ADR-0021-constitution-x4-amendment.html" data-tooltip="forward (constitution X4 amendment、 user 承認済、 編集は Phase 1 PARENT)">ADR-0021</a> で廃止)
+        - 'scan 対象 file: <code>*.html</code> のうち <code>&lt;head&gt;</code> JSON-LD ブロックを持つもの'
+        - '<strong>除外</strong>: <code>@type=FolioConstitution</code> の doc (folio 自身の不変 constitution) は scan 対象外 (<code>FolioConstitution</code> schema = spec の @context-object + @id 規約と別形のため spec graph に含めない、 <a class="xref" href="../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html" data-tooltip="forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)">ADR-0023</a>)。 除外は <code>@type</code> による schema-based 判定で<strong>ファイル名 (<code>constitution.html</code>) に依存しない</strong>ため、 consumer の conforming constitution (<code>@type=schema:TechArticle</code>) は通常 spec として scan + link-integrity 検査される (<a href="../decisions/ADR-0024-folio-init-scope.html">ADR-0024 §2.2</a>、 2026-05-26 に ADR-0023 の name-based 除外を refine)'
+        - '<strong>生成 view は scan 外</strong>: <code>folio build</code> が graph から導出する表示層 (<code>design-intent/index.html</code> <span class="term" data-term="landing" data-tooltip="design-intent/index.html の入口 template (hero 一文 → 単一 CTA → 読者別カード → cluster 一覧、 ADR-0039 §2.2)。 型は build 所有・文言は curated。">landing</span> / <code>glossary.html</code>) は design-intent/ 直下 (3 dir の外) に置かれ scan 対象に入らない — graph (<span class="term" data-term="SSoT" data-tooltip="Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。">SSoT</span>) → view (派生) の一方向を保つ (<a class="xref" href="../decisions/ADR-0035-walkable-architecture-nav-derive.html" data-tooltip="architecture/ を「歩ける website」に: top-level index + cluster 横断 nav を">ADR-0035</a> / <a class="xref" href="../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" data-tooltip="folio が folio-framework 語の canonical 定義を上流で author→ship、 consumer は derive (自動 mark)、 描画は hover tooltip のみ (glossary.html は nav/index から到達する独立辞書、 用語 mark から直接 deep-link しない)。 closed (folio 所有・自動 derive) / open (consumer-domain・#110 手動 best-effort) の分割を明文化。 completeness は">ADR-0036</a> / <a href="../decisions/ADR-0039-presentation-template-layer.html">ADR-0039</a>。 view の鮮度は validate の nav-regen-drift / chrome-drift が検査)'
+      - type: prose
+        html: <strong>§4.4.2 Output path</strong>
+      - type: list
+        items:
+        - repo-root <code>inventory.json</code> (走査 base = <code>design-intent/</code> と出力先 = repo-root を decouple、 x4-plan §5 SSoT / ADR-0023)。 試作 plugin の <code>folio inventory</code> CLI で auto-generate、 manual 作成は禁止、 <code>.gitignore</code> 対象
   - id: "s5"
     anchor: "s5-bidirectional"
     class: "normative"
@@ -296,6 +340,17 @@ sections:
     heading: "§6. References"
     essence: "本 spec が依拠する constitution / rules / 調査レポートと、 W3C 標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を列挙する。"
     blocks: []
+    machine_blocks:
+      - type: list
+        items:
+        - <a href="./constitution.html">constitution.html</a> — folio の 14 不変原則 (本 spec は <a class="xref" href="./constitution.html#p-2" data-tooltip="format は HTML + common.css のみ">P-2</a> HTML SSoT、 <a class="xref" href="./constitution.html#p-7" data-tooltip="Content domain exclusivity">P-7</a> Content domain exclusivity に従う)
+        - <a href="rules.html">rules.html</a> — Layer 1 consumer 向け universal rules (本 spec は §4.1 head metadata の延長として位置付く)
+        - <a href="../research/spec-graph-management-research.html">spec-graph-management-research.html</a> — 117 ソース調査レポート (本 spec の Phase 1 採用根拠)
+        - <a href="https://www.dublincore.org/specifications/dublin-core/dcmi-terms/">DCMI Metadata Terms</a> — Dublin Core 標準語彙
+        - <a href="https://schema.org/TechArticle">schema.org TechArticle</a> — 技術文書型
+        - <a href="https://www.w3.org/TR/prov-o/">PROV-O</a> — W3C Provenance Ontology
+        - <a href="https://www.w3.org/TR/json-ld11/">JSON-LD 1.1</a> — W3C 標準
+        - <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">Anthropic Agent Skills</a> — Progressive Disclosure 3-tier model 原典
 
 requirements:
   - id: "REQ-REL-001"
