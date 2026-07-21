@@ -539,9 +539,14 @@ VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','
 #   ★INERT_SUBTREE へ足す形ゆえ handle_startendtag の最小形 (契約固定) を ★逐字そのまま 使える
 #   (push 条件が `tag in INERT_SUBTREE` ゆえ全 raw text 要素が同経路で inert 区間になる)。
 #   canonical に該当要素の自己閉じは 0 件 (grep verified) ゆえ正当な資産の計数には無影響。
-INERT_SUBTREE = ({'template'}
-    | set(HTMLParser.CDATA_CONTENT_ELEMENTS)
+# ★RAWTEXT 系 / element 系の分離 (folio-ahn3)。 両者は「中身を描画しない」点で同じ inert だが ★閉じ方の
+#   semantics が違う: RAWTEXT 系 (CDATA / RCDATA) は ★自分の end tag だけ が閉じ、 間のタグは ★ただの文字列 —
+#   一方 template は通常の element ゆえ入れ子構造を持つ。 集合の ★実体は不変 (INERT_SUBTREE は従来と同一) で、
+#   ★自己閉じ経路に CDATA mode を与えるための ★名前付き部分集合 を切り出すだけ (parser 由来導出も従来どおり
+#   維持 = 手書き列挙による partial-enumeration trap を再導入しない)。
+RAWTEXT_INERT = (set(HTMLParser.CDATA_CONTENT_ELEMENTS)
     | set(getattr(HTMLParser, 'RCDATA_CONTENT_ELEMENTS', ('textarea', 'title'))))
+INERT_SUBTREE = {'template'} | RAWTEXT_INERT
 class C(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=False)
@@ -571,7 +576,19 @@ class C(HTMLParser):
         #   inert 除外を迂回できていた (実測再現済)。 ★push は inert 判定に必要な template のみ に限る:
         #   canonical は SVG foreign content (`<path/>` 等) を持ち、 これらは自己閉じが ★正規 ゆえ無条件に push すると
         #   閉じられず stack を汚染し、 region / inert 判定を巻き添えで壊す (fail-closed でなく ★別クラスの誤計数)。
+        # ★RAWTEXT 系は push ★だけ では足りない (folio-ahn3)。 push は「中身を数えない」を作るが、 HTML5 の
+        #   raw text 区間は ★自分の end tag だけ が閉じ、 間のタグは ★ただの文字列 という semantics を持つ。
+        #   push のみだと html.parser は区間内の `<template>` 等を ★実タグとして emit し stack へ積むため、
+        #   後続の `</script>` が (最内 inert = template に阻まれ) 自分自身を閉じられず inert が解除されない。
+        #   結果 attacker は `<script/><template></script>…</template></script>` で「browser では ★描画される
+        #   のに census は数えない」★有界な盲点 (他 census 値は無傷) を 8 タグ × 両軸で作れた (実測・base
+        #   8d4eeda からの pre-existing)。 ★是正は parser 自身の CDATA mode を ★自己閉じ経路にも与えること:
+        #   set_cdata_mode により区間は handle_data へ流れ (= タグとして emit されない)、 `</script>` が
+        #   handle_endtag を発火して inert を ★正しく閉じ、 以降が live 計上へ戻る (ground truth 一致)。
+        #   ★push は撤去しない (追加であって置換ではない): set_cdata_mode 単独だと raw 区間の handle_data が
+        #   stack 上の inert 不在ゆえ text 軸 (escape literal) を汚染する。 push が inert() を真に保つ。
         self._tag(tag, attrs)
+        if tag in RAWTEXT_INERT: self.set_cdata_mode(tag)
         if tag in INERT_SUBTREE: self.stack.append(tag)
     def handle_endtag(self, tag):
         if tag==self.raw: self.raw=None
@@ -583,17 +600,38 @@ class C(HTMLParser):
         #   導出していたため、 inert 名の end tag が ★入れ子 inert を外から閉じられた:
         #   `<template><script/></template>` で凍結値復元が成立・実測)。 inert 名の end tag は ★最内 inert 自身
         #   のみを閉じうる (lo=m)、 それ以外は最内 inert より ★内側 のみ (lo=m+1)。 inert 不在なら従来どおり全域。
-        #   ★★この scope 境界が捕れるクラス / 捕れないクラス (宣言能力 == 実能力・errata-2 MUST-B):
+        #   ★★この scope 境界の ★捕捉範囲 (宣言能力 == 実能力・errata-2 MUST-B / ★folio-ahn3 で
+        #   ★HTML 名前空間の当該形を閉塞・★foreign content 経由は ★未閉塞):
         #     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
-        #               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
-        #               <script/><template></script>)。 per-shape MK (CEN-nest1..5) で実弾 pin 済。
-        #     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を
-        #               ★自己閉じで開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形
-        #               (例 `<script/><template></script>…</template></script>`)。 挟んだ区間の資産が
-        #               census の ★有界な盲点 になる (他の census 値は無傷・8 タグ × 両軸で同型・実測)。
-        #               ★base 8d4eeda にも存在する pre-existing (本 cell の land による退行ではない)。
-        #               fix 本体は INERT を RAWTEXT 系 / element 系へ分離し set_cdata_mode 相当を自己閉じ
-        #               経路へ適用する parser semantics の再設計ゆえ ★folio-ahn3 へ移譲 (本 cell では扱わない)。
+        #               指定 2 shape (<template><script/></template> / <template><textarea/></template>)。
+        #               per-shape MK (CEN-nest1/2/3/5) で実弾 pin 済。 ★逆順 shape (<script/><template></script>)
+        #               は folio-ahn3 の是正で ★捕捉対象から外れた: `</script>` が raw text を閉じ後続は
+        #               ground truth どおり ★live ゆえ、 剥奪分を live 資産で復元する形は ★正当 (既 admin 裁定
+        #               「実描画される注入での復元は MK にしない」と同クラス)。 CEN-nest4 は ★期待反転 で保持され
+        #               (admin 裁定 2026-07-21)、 「後続が live 計上される」ground truth 整合を pin する。
+        #     ★閉塞済 (folio-ahn3・★HTML 名前空間 に限る) = RAWTEXT 系 inert (script/style/xmp/iframe/
+        #               noembed/noframes/textarea/title) を ★自己閉じで開いた後に別の inert 開始タグを挟み
+        #               ★末尾で閉じ直す 形 (例 `<script/><template></script>…</template></script>`)。 かつては
+        #               挟んだ区間の資産が census の ★有界な盲点 になっていた (他の census 値は無傷・8 タグ ×
+        #               両軸で同型・実測。 ★base 8d4eeda から存在した pre-existing)。 ★是正済: handle_startendtag
+        #               が RAWTEXT 系に set_cdata_mode を与えるため区間内のタグは emit されず (= 挟めない)、
+        #               自分の end tag が inert を正しく閉じて以降は live 計上へ戻る。 CEN-rawnest 群が 8 タグ ×
+        #               両軸 × 両 arm で per-shape に実弾 pin し、 SETCDATA 存在 pin が producer 側を静的に押さえる。
+        #     ★未閉塞 (★同族・foreign content 経由・★live fail-open) = `<svg>` / `<math>` 内の ★自己閉じ RAWTEXT。
+        #               foreign content では自己閉じが ★正規に閉じる ため実 browser は raw text を ★開かない が、
+        #               本 census は set_cdata_mode を ★名前空間非依存 に与えるため raw 区間を開いてしまい、
+        #               attacker は末尾の stray end tag で閉じ直せる。 ★実測 fixture (両 arm 同一結果):
+        #                 <html><body><svg><script/></svg><div id="INJ"></div><code>zz</code>&lt;span
+        #                 </script><div id="tail"></div></body></html>
+        #               → IDS=[tail] のみ (INJ ★非計数) / ESC_SPAN=0 / 人間層 code=0 なのに tail は計上され続ける
+        #               = ★他 census 値は無傷 の同族 bounded blind spot。 ground truth (html5lib) では INJ の
+        #               ancestor chain = ['html','body','div'] = ★実描画。 同型が `<math><style/></math>…</style>` /
+        #               `<svg><textarea/></svg>…</textarea>` でも再現 (CDATA / RCDATA 双方)。
+        #               ★base c55bac6 でも同一挙動 = pre-existing (folio-ahn3 の退行ではない)。 fix は名前空間
+        #               追跡を要する parser semantics の再設計で本 cell の契約 (3 分岐の逐字温存) の外ゆえ
+        #               ★folio-3z10 として ★起票済 (admin 裁定 2026-07-21)。 本 cell は ★宣言を実能力へ縮小する
+        #               に留める (「全クラス閉塞」と書けば次の cell が探索を打ち切る = false record ゆえ書かない。
+        #               「ついでに塞ぐ」も禁止 = 契約 fence 外)。
         m=-1
         for i in range(len(self.stack)-1,-1,-1):
             if self.stack[i] in INERT_SUBTREE: m=i; break
@@ -640,9 +678,12 @@ VOID={'br','img','meta','link','input','hr','wbr','source','col','area','base','
 #   ★手書き列挙せず parser 自身から導出する (partial-enumeration trap の回避): {'script','style'} だけを
 #   手書きした版は textarea / title / xmp / iframe / noembed / noframes の自己閉じで同一クラスが再開通した。
 #   ★noscript は導出集合に含まれない = 正しい (scripting 無効時に描画されるため除外しない・folio-7wbn 裁定)。
-INERT = ({'template'}
-    | set(HTMLParser.CDATA_CONTENT_ELEMENTS)
+# ★RAWTEXT 系 / element 系の分離 (folio-ahn3・census_dump の RAWTEXT_INERT と ★同一 導出)。 RAWTEXT 系は
+#   ★自分の end tag だけ が閉じ間のタグは ★ただの文字列 という semantics を持つため、 自己閉じ経路へ
+#   CDATA mode を与える必要がある (下記 handle_startendtag)。 集合の ★実体は不変 (INERT は従来と同一)。
+RAWTEXT_INERT = (set(HTMLParser.CDATA_CONTENT_ELEMENTS)
     | set(getattr(HTMLParser, 'RCDATA_CONTENT_ELEMENTS', ('textarea', 'title'))))
+INERT = {'template'} | RAWTEXT_INERT
 class W(HTMLParser):
     def __init__(self, target, region):
         super().__init__(convert_charrefs=False); self.stack=[]; self.n=0
@@ -681,7 +722,15 @@ class W(HTMLParser):
         #   template のみ に限る: canonical は SVG foreign content (`<path/>` 16 / `<circle/>` 3) を持ち、 これらは
         #   自己閉じが ★正規 ゆえ無条件に push すると閉じられず stack を汚染し、 後続の region 判定と
         #   data-audience="machine" 判定を巻き添えで壊す (fail-closed でなく ★別クラスの誤計数 になる)。
+        # ★RAWTEXT 系は push ★だけ では足りない (folio-ahn3・census_dump と ★同型)。 HTML5 の raw text 区間は
+        #   ★自分の end tag だけ が閉じ、 間のタグは ★ただの文字列。 push のみだと区間内の `<template>` 等が
+        #   ★実タグとして emit され stack へ積まれ、 後続の `</script>` が最内 inert に阻まれて自分を閉じられず
+        #   inert が解除されない → `<script/><template></script>…</template></script>` で「browser では描画される
+        #   のに census は数えない」★有界な盲点 が 8 タグ × 両軸に開いていた (実測・base 8d4eeda から pre-existing)。
+        #   ★是正は parser 自身の CDATA mode を自己閉じ経路へ与えること (set_cdata_mode)。 ★push は撤去しない
+        #   (追加であって置換ではない): 単独適用だと raw 区間が region / machine 判定へ素通りする。
         self.handle_starttag(tag, attrs)
+        if tag in RAWTEXT_INERT: self.set_cdata_mode(tag)
         if tag not in INERT and self.stack and self.stack[-1][0] == tag: self.stack.pop()
     def handle_endtag(self, tag):
         # ★inert subtree は ★scope 境界 (census_dump と同型・folio-gt4s errata-1 MUST-4)。 素朴な
@@ -692,17 +741,38 @@ class W(HTMLParser):
         #   いたため、 inert 名の end tag が ★入れ子 inert を外から閉じられた: `<template><script/></template>`
         #   で凍結値復元が成立・実測)。 inert 名の end tag は ★最内 inert 自身のみを閉じうる (lo=m)、
         #   それ以外は最内 inert より ★内側 のみ (lo=m+1)。 inert 不在なら従来どおり全域。
-        #   ★★この scope 境界が捕れるクラス / 捕れないクラス (宣言能力 == 実能力・errata-2 MUST-B):
+        #   ★★この scope 境界の ★捕捉範囲 (宣言能力 == 実能力・errata-2 MUST-B / ★folio-ahn3 で
+        #   ★HTML 名前空間の当該形を閉塞・★foreign content 経由は ★未閉塞):
         #     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
-        #               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
-        #               <script/><template></script>)。 per-shape MK (CEN-nest1..5) で実弾 pin 済。
-        #     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を
-        #               ★自己閉じで開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形
-        #               (例 `<script/><template></script>…</template></script>`)。 挟んだ区間の資産が
-        #               census の ★有界な盲点 になる (他の census 値は無傷・8 タグ × 両軸で同型・実測)。
-        #               ★base 8d4eeda にも存在する pre-existing (本 cell の land による退行ではない)。
-        #               fix 本体は INERT を RAWTEXT 系 / element 系へ分離し set_cdata_mode 相当を自己閉じ
-        #               経路へ適用する parser semantics の再設計ゆえ ★folio-ahn3 へ移譲 (本 cell では扱わない)。
+        #               指定 2 shape (<template><script/></template> / <template><textarea/></template>)。
+        #               per-shape MK (CEN-nest1/2/3/5) で実弾 pin 済。 ★逆順 shape (<script/><template></script>)
+        #               は folio-ahn3 の是正で ★捕捉対象から外れた: `</script>` が raw text を閉じ後続は
+        #               ground truth どおり ★live ゆえ、 剥奪分を live 資産で復元する形は ★正当 (既 admin 裁定
+        #               「実描画される注入での復元は MK にしない」と同クラス)。 CEN-nest4 は ★期待反転 で保持され
+        #               (admin 裁定 2026-07-21)、 「後続が live 計上される」ground truth 整合を pin する。
+        #     ★閉塞済 (folio-ahn3・★HTML 名前空間 に限る) = RAWTEXT 系 inert (script/style/xmp/iframe/
+        #               noembed/noframes/textarea/title) を ★自己閉じで開いた後に別の inert 開始タグを挟み
+        #               ★末尾で閉じ直す 形 (例 `<script/><template></script>…</template></script>`)。 かつては
+        #               挟んだ区間の資産が census の ★有界な盲点 になっていた (他の census 値は無傷・8 タグ ×
+        #               両軸で同型・実測。 ★base 8d4eeda から存在した pre-existing)。 ★是正済: handle_startendtag
+        #               が RAWTEXT 系に set_cdata_mode を与えるため区間内のタグは emit されず (= 挟めない)、
+        #               自分の end tag が inert を正しく閉じて以降は live 計上へ戻る。 CEN-rawnest 群が 8 タグ ×
+        #               両軸 × 両 arm で per-shape に実弾 pin し、 SETCDATA 存在 pin が producer 側を静的に押さえる。
+        #     ★未閉塞 (★同族・foreign content 経由・★live fail-open) = `<svg>` / `<math>` 内の ★自己閉じ RAWTEXT。
+        #               foreign content では自己閉じが ★正規に閉じる ため実 browser は raw text を ★開かない が、
+        #               本 census は set_cdata_mode を ★名前空間非依存 に与えるため raw 区間を開いてしまい、
+        #               attacker は末尾の stray end tag で閉じ直せる。 ★実測 fixture (両 arm 同一結果):
+        #                 <html><body><svg><script/></svg><div id="INJ"></div><code>zz</code>&lt;span
+        #                 </script><div id="tail"></div></body></html>
+        #               → IDS=[tail] のみ (INJ ★非計数) / ESC_SPAN=0 / 人間層 code=0 なのに tail は計上され続ける
+        #               = ★他 census 値は無傷 の同族 bounded blind spot。 ground truth (html5lib) では INJ の
+        #               ancestor chain = ['html','body','div'] = ★実描画。 同型が `<math><style/></math>…</style>` /
+        #               `<svg><textarea/></svg>…</textarea>` でも再現 (CDATA / RCDATA 双方)。
+        #               ★base c55bac6 でも同一挙動 = pre-existing (folio-ahn3 の退行ではない)。 fix は名前空間
+        #               追跡を要する parser semantics の再設計で本 cell の契約 (3 分岐の逐字温存) の外ゆえ
+        #               ★folio-3z10 として ★起票済 (admin 裁定 2026-07-21)。 本 cell は ★宣言を実能力へ縮小する
+        #               に留める (「全クラス閉塞」と書けば次の cell が探索を打ち切る = false record ゆえ書かない。
+        #               「ついでに塞ぐ」も禁止 = 契約 fence 外)。
         m=-1
         for i in range(len(self.stack)-1,-1,-1):
             if self.stack[i][0] in INERT: m=i; break

@@ -652,6 +652,32 @@ cen_inflate() { # label decoy
     ng "$lbl ★decoy で census が動いた/依存軸が消えた (inert 領域を live 計数 = parser-differential 回帰 / [OK] 数 $okn / 依存軸欠落:$miss): $bad"
   fi
 }
+
+# ★mutation 後に census が ★動かないこと を撃つ helper (folio-ahn3・admin 裁定 round-1 (a))。
+#   cen_inflate と判定は同型 (census [FAIL] 行が無い + 依存軸 4 本が [OK] 実在 + [OK] census 行下限) だが、
+#   ★注入のみ でなく ★剥奪 + 注入 の perl expr を取る点が違う (「剥奪分が ★live 資産で正当に復元される」
+#   ground truth 整合を pin するため)。 ★恒真 PASS 封鎖が本体: 主 assert が「[FAIL] 行が無いこと」ゆえ
+#   census 検査が丸ごと消えても成立してしまう — 依存軸の [OK] 実在と行数下限を ★対で 課して塞ぐ。
+cen_mut_pass() { # label perl-expr
+  local lbl="$1" out bad okn miss lab
+  perl -0777 -pe "$2" "$TMP/base-filled.html" > "$TMP/cen-mutpass.html"
+  if diff -q "$TMP/base-filled.html" "$TMP/cen-mutpass.html" >/dev/null; then
+    ng "$lbl (mutation が生成物を変えていない = ★空撃ち。 selector が実 DOM と不一致の疑い)"; return
+  fi
+  out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/cen-mutpass.html" 2>&1)"
+  bad="$(printf '%s\n' "$out" | grep -E '^[[:space:]]*\[FAIL\][[:space:]]+census ' | head -3)"
+  okn="$(printf '%s\n' "$out" | grep -cE '^[[:space:]]*\[OK\][[:space:]]+census ')"
+  miss=""
+  for lab in 'census rich: a.xref' 'census generic: 人間層 <code> rest' 'census generic: 人間層 <code> 総数' 'census generic: 人間層 <span> table-cell'; do
+    printf '%s\n' "$out" | grep -E '^[[:space:]]*\[OK\][[:space:]]+census ' | grep -qF -- "$lab" || miss="$miss [$lab]"
+  done
+  if [[ -z "$bad" && -z "$miss" && "$okn" -ge 22 ]]; then
+    ok "$lbl (census 行 $okn 本すべて [OK]・依存軸 4 本実在)"
+  else
+    ng "$lbl ★census が動いた/依存軸が消えた ([OK] 数 $okn / 依存軸欠落:$miss): $bad"
+  fi
+}
+
 cen_inflate "CEN-cmt3 ★コメント内タグ様文字列は §10b census を inflate しない" "$CEN_DECOY"
 
 # --- CEN-attr. ★属性値 laundering (comment / script / style 本体を除いても raw byte として残る残余) ---
@@ -860,13 +886,28 @@ f19_mut_reason "CEN-rt-title-tx ★人間層 <code> 剥奪 + 自己閉じ <title
   "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<title/><code>z</code></title>}" "census generic: 人間層 <code> rest"
 
 # --- CEN-nest. ★入れ子 inert を ★外から 閉じる stray end tag (folio-gt4s errata-1 MUST-4・両軸) ---
-#   ★★本群の捕捉範囲 (宣言能力 == 実能力・errata-2 MUST-B):
+#   ★★本群の捕捉範囲 (宣言能力 == 実能力・errata-2 MUST-B / ★folio-ahn3 で ★HTML 名前空間の当該形を閉塞・
+#   ★foreign content 経由は ★未閉塞):
 #     ★捕れる = element 系 inert (template) の scope 境界 / 正しく閉じた入れ子 inert /
-#               指定 3 shape (<template><script/></template> / <template><textarea/></template> /
-#               <script/><template></script>) — CEN-nest1..5 で per-shape に実弾 pin 済。
-#     ★捕れない = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/textarea/title) を ★自己閉じで
-#               開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形。 挟んだ区間が census の ★有界な盲点
-#               になる (8 タグ × 両軸で同型・base 8d4eeda にも存在する pre-existing)。 → ★folio-ahn3 へ移譲。
+#               指定 2 shape (<template><script/></template> / <template><textarea/></template>) —
+#               CEN-nest1/2/3/5 で per-shape に実弾 pin 済。 ★逆順 shape (<script/><template></script>) は
+#               folio-ahn3 の是正で ★捕捉対象から外れた (後続は ground truth どおり live ゆえ live 資産による
+#               復元は正当)。 CEN-nest4 は ★期待反転 で保持され (admin 裁定 2026-07-21)、 「後続が live 計上
+#               される」ground truth 整合を pin する ★生きた MK として残る。
+#     ★閉塞済 (folio-ahn3・★HTML 名前空間 に限る) = RAWTEXT 系 inert (script/style/xmp/iframe/noembed/noframes/
+#               textarea/title) を ★自己閉じで開いた後に別の inert 開始タグを挟み ★末尾で閉じ直す 形。 かつては
+#               挟んだ区間が census の ★有界な盲点 になっていた (8 タグ × 両軸で同型・base 8d4eeda からの
+#               pre-existing)。 ★是正済: handle_startendtag が RAWTEXT 系へ set_cdata_mode を与えるため区間内の
+#               タグは emit されず (= 挟めない)、 自分の end tag が inert を正しく閉じる。 ★CEN-rawnest 群
+#               (8 タグ × element / text-inline / escape literal の 3 軸) が per-shape に実弾 pin する。
+#     ★未閉塞 (★同族・foreign content 経由・★live fail-open) = `<svg>` / `<math>` 内の ★自己閉じ RAWTEXT
+#               (例 `<svg><script/></svg>…</script>`)。 foreign content では自己閉じが ★正規に閉じる ため実
+#               browser は raw text を開かないが、 census は set_cdata_mode を ★名前空間非依存 に与えるため raw
+#               区間を開いてしまい、 末尾 stray end tag で閉じ直せる (実測: INJ 非計数 / ESC_SPAN=0 の一方で
+#               tail は計上 = ★他 census 値は無傷 の同族 bounded blind spot・両 arm 同型・★base c55bac6 でも
+#               同一挙動 = pre-existing)。 名前空間追跡を要する parser semantics の再設計ゆえ folio-ahn3 の
+#               契約外 = ★folio-3z10 として ★起票済 (admin 裁定 2026-07-21・本 cell では触らない)。
+#               ★本群は当該クラスを ★撃っていない (過大宣言をしない)。
 #   inert scope 境界の探索下限を「end tag 名が inert でないとき」だけ導出していた版は、 inert 名の end tag が
 #   ★入れ子 inert を外から閉じられた: `<template><script/></template>` で <script/> が開いた raw text 区間ごと
 #   解除され、 後続が live 計上された (実測: 凍結値復元が成立)。 HTML5 では raw text 内の `</template>` は
@@ -879,8 +920,18 @@ f19_mut_reason "CEN-nest2 ★人間層 <code> 剥奪 + 同 vector による復�
   "s{(class=\"rq-essence\">[^<]*)<code>([^<]*)</code>}{\${1}\${2}}; s{(<body[^>]*>)}{\$1<template><script/></template><code>z</code>}" "census generic: 人間層 <code> rest"
 f19_mut_reason "CEN-nest3 ★内側 tag 違い <template><textarea/></template> 形 (別 shape) の element 軸復元を census が FAIL" \
   "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<template><textarea/></template><a class=\"xref\" href=\"#z\">z</a>}" "census rich: a.xref"
-f19_mut_reason "CEN-nest4 ★入れ子順 逆 <script/><template></script> 形 (別 shape) の element 軸復元を census が FAIL" \
-  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<script/><template></script><a class=\"xref\" href=\"#z\">z</a>}" "census rich: a.xref"
+#   ★★CEN-nest4 は ★期待反転 で保持 (admin 裁定 2026-07-21・folio-ahn3)。 folio-ahn3 が RAWTEXT 系 inert の
+#   自己閉じ経路へ CDATA mode を与えたことで、 本 shape (`<script/><template></script>X`) の X は HTML5 の
+#   ground truth どおり ★live (`</script>` が raw text を閉じる) になった。 admin が uv + html5lib で独立に
+#   ground truth を取得し (後続 a.xref の ancestors = [html, body] = 実描画)、 worker 差戻し主張と一致を確認
+#   した上で「退役ではなく ★期待反転 で保持」と裁定 (fix 後の正挙動を pin する ★生きた MK として価値が残る)。
+#   ★旧期待 (census が FAIL する) は ★folio-ahn3 が塞いだ盲点そのものに依存していた: base では後続が inert 化
+#   して a.xref=0 へ落ちるため「復元を検出した」ように見えていた。 是正後は剥奪分を ★live 資産で復元する形 =
+#   既 admin 裁定「注入資産が実描画される復元は ★正当 ゆえ MK にしない」(CEN-head 節) と同じクラスへ移る。
+#   ★新期待 = census が ★動かないこと + ★依存軸の [OK] 実在 (恒真 PASS 封鎖)。 base c55bac6 では赤・是正後は緑
+#   = genuine red→green ゆえ、 盲点が再開通すれば本 case が ★赤で気付ける (回帰検出器として生き続ける)。
+cen_mut_pass "CEN-nest4 ★入れ子順 逆 <script/><template></script> 形 — </script> 相当の end tag が raw text を閉じ後続が ★live 計上 される (ground truth 整合・admin 裁定 2026-07-21 で期待反転)" \
+  "s{<a class=\"xref\"[^>]*>(.*?)</a>}{\$1}s; s{(<body[^>]*>)}{\$1<script/><template></script><a class=\"xref\" href=\"#z\">z</a>}"
 # ★inflate 方向は ★正しく閉じた 入れ子 inert で撃つ。 ★閉じない形 (<template><script/></template>) を
 #   inflate case に使ってはならない: 自己閉じ <script/> は HTML5 で raw text を開き `</template>` は
 #   ★ただの文字列 ゆえ script も template も閉じず、 ★以降の文書全体が正当に inert 化する (census 0 = 実測)。
@@ -891,10 +942,76 @@ f19_mut_reason "CEN-nest4 ★入れ子順 逆 <script/><template></script> 形 (
 #   だけを census の盲点にして ★他の census 値を無傷 に保てる (= 有界な盲点。 実測: canonical <body> 直後へ
 #   `<script/><template></script><div id="INJECTED-HIJACK">…</div></template></script>` を注入すると
 #   両 arm exit0 / FAIL 0 で、 注入区間の id / 人間層 code / escape literal が ★いずれも非計数)。
-#   当該クラスは base 8d4eeda にも存在する ★pre-existing な穴で、 fix 本体は ★folio-ahn3 へ移譲済。
-#   ★本 suite は当該クラスを ★捕れない (過大宣言をしない = 本 cell の主題)。
+#   当該クラスは base 8d4eeda から存在した ★pre-existing な穴で、 ★folio-ahn3 が ★HTML 名前空間の当該形 を
+#   閉塞した (handle_startendtag へ set_cdata_mode を追加)。 ★本 suite は ★HTML 名前空間形 を ★CEN-rawnest 群で
+#   捕れる ——ただし ★1 点を宣言から除く (宣言能力 == 実能力): ★foreign content 経由 (`<svg>/<math>` 内の
+#   自己閉じ RAWTEXT) の同族形は ★未閉塞 (live fail-open・base c55bac6 からの pre-existing・★folio-3z10 として
+#   起票済)。 なお ★CEN-nest4 は本是正により ★期待反転 で保持されている (admin 裁定 2026-07-21・上記 注記)。
 cen_inflate "CEN-nest5 ★正しく閉じた入れ子 inert (<template><script></script>...</template>) は §10b census を inflate しない (偽 FAIL 封鎖)" \
   '<template><script>z</script><code>z</code><a class="xref" href="#z">z</a><span>z</span>&lt;code &lt;span</template>'
+
+
+# --- CEN-rawnest. ★RAWTEXT 系 inert の ★自己閉じ + inert 挟み + 末尾閉じ直し による ★有界な盲点 (folio-ahn3) ---
+#   ★攻撃形: `<script/><template></script>PAYLOAD</template></script>`。 HTML5 では `<script/>` が raw text を
+#   開き `<template>` は ★ただの文字列、 `</script>` が raw text を閉じるため ★PAYLOAD は live (実描画)。
+#   是正前の census は `<template>` を ★実タグとして stack へ積んでいたため `</script>` が最内 inert に阻まれて
+#   自分を閉じられず、 PAYLOAD が非計数になっていた。 しかも末尾 `</template></script>` で inert を ★閉じ直せる
+#   ため ★他の census 値は無傷 = 全 census 0 へ落ちる fail-closed ではなく ★攻撃者専用の隠し場所 だった
+#   (実測: 両 arm exit0 / FAIL 0 で素通り・base 8d4eeda からの pre-existing)。
+#   ★是正 = handle_startendtag が RAWTEXT 系へ set_cdata_mode を与える (両 arm・census_dump / h_inline)。
+#   ★本群は ★inflate (注入) 方向 で撃つ: 盲点へ live 資産を置けば census が ★動く こと。 「盲点だから
+#   数えない」のが穴ゆえ、 剥奪 + 復元形では撃てない (盲点内の資産は復元にも使えない)。
+#   ★1 tag の実弾は別 tag の穴を証明しない ゆえ ★CDATA 6 + RCDATA 2 の 8 タグ × ★element / text-inline /
+#   escape literal の 3 軸 を per-shape で撃つ (両 arm)。 producer 側は SETCDATA 存在 pin が対で押さえる。
+
+f19_mut_reason "CEN-rawnest-script-el ★自己閉じ <script/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<script/><template></script><div id=\"req-ver-001\"></div></template></script>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-script-tx ★自己閉じ <script/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<script/><template></script><code>z</code></template></script>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-script-esc ★自己閉じ <script/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<script/><template></script>&lt;span </template></script>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-style-el ★自己閉じ <style/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<style/><template></style><div id=\"req-ver-001\"></div></template></style>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-style-tx ★自己閉じ <style/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<style/><template></style><code>z</code></template></style>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-style-esc ★自己閉じ <style/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<style/><template></style>&lt;span </template></style>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-xmp-el ★自己閉じ <xmp/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<xmp/><template></xmp><div id=\"req-ver-001\"></div></template></xmp>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-xmp-tx ★自己閉じ <xmp/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<xmp/><template></xmp><code>z</code></template></xmp>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-xmp-esc ★自己閉じ <xmp/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<xmp/><template></xmp>&lt;span </template></xmp>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-iframe-el ★自己閉じ <iframe/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<iframe/><template></iframe><div id=\"req-ver-001\"></div></template></iframe>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-iframe-tx ★自己閉じ <iframe/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<iframe/><template></iframe><code>z</code></template></iframe>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-iframe-esc ★自己閉じ <iframe/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<iframe/><template></iframe>&lt;span </template></iframe>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-noembed-el ★自己閉じ <noembed/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<noembed/><template></noembed><div id=\"req-ver-001\"></div></template></noembed>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-noembed-tx ★自己閉じ <noembed/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<noembed/><template></noembed><code>z</code></template></noembed>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-noembed-esc ★自己閉じ <noembed/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<noembed/><template></noembed>&lt;span </template></noembed>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-noframes-el ★自己閉じ <noframes/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<noframes/><template></noframes><div id=\"req-ver-001\"></div></template></noframes>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-noframes-tx ★自己閉じ <noframes/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<noframes/><template></noframes><code>z</code></template></noframes>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-noframes-esc ★自己閉じ <noframes/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<noframes/><template></noframes>&lt;span </template></noframes>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-textarea-el ★自己閉じ <textarea/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<textarea/><template></textarea><div id=\"req-ver-001\"></div></template></textarea>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-textarea-tx ★自己閉じ <textarea/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<textarea/><template></textarea><code>z</code></template></textarea>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-textarea-esc ★自己閉じ <textarea/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<textarea/><template></textarea>&lt;span </template></textarea>}" "census double-escape: &lt;span"
+f19_mut_reason "CEN-rawnest-title-el ★自己閉じ <title/> + <template> 挟み + 末尾閉じ直しの ★盲点への既存 id 複製注入 を census が検出 (★element 軸)" \
+  "s{(<body[^>]*>)}{\$1<title/><template></title><div id=\"req-ver-001\"></div></template></title>}" "census navigable id: 重複 0"
+f19_mut_reason "CEN-rawnest-title-tx ★自己閉じ <title/> + <template> 挟み + 末尾閉じ直しの ★盲点への人間層 <code> 注入 を census が検出 (★text/inline 軸)" \
+  "s{(<body[^>]*>)}{\$1<title/><template></title><code>z</code></template></title>}" "census generic: 人間層 <code> rest"
+f19_mut_reason "CEN-rawnest-title-esc ★自己閉じ <title/> + <template> 挟み + 末尾閉じ直しの ★盲点へのescape literal 注入 を census が検出 (★escape literal 軸)" \
+  "s{(<body[^>]*>)}{\$1<title/><template></title>&lt;span </template></title>}" "census double-escape: &lt;span"
 
 # === COLLAPSE. ★extractor-collapse 敵対 test (folio-7n17 deliverable 4) ===
 # extract-verification-spec.sh の人間層 rich() を関数レベルで plain() 相当へ collapse し、 ★extractor の
@@ -1212,6 +1329,11 @@ f19_mut_reason "CEN-escrt-nest ★同 literal 潰し + <template><script/></temp
 #   ゆえに ★批准済み契約 (最小形逐字温存) は変えず、 pin 側を LIVEPIN 同型の ★静的 fixed-string 照合へ移す。
 #   ★恒真化封鎖: 「naive 形が無いこと」(負の主張) だけを撃つと ★hook 消失・改称で黙って成立するため、
 #   ★producer 存在 assert (最小形の行が 1 件実在) と ★対で 課す。
+#   ★folio-ahn3 lockstep: hook には RAWTEXT 系へ CDATA mode を与える行が ★別行として 併存する (if/elif 統合は
+#   最小形を崩すため禁止)。 本 pin は従来どおり ★最小形 push 行 1 件 / naive 形 0 件 のみを見る (併存行は
+#   push 条件を変えないため mf_min / mf_naive は不変) — 併存行そのものは ★下段 SETCDATA 節 が per-site に撃つ。
+#   ★2 つの pin は別の producer を見ており、 片方だけでは他方の消失を検出できない (MINFORM は set_cdata_mode
+#   消失に無反応・SETCDATA は naive 形化に無反応) = ★対で 1 つの網。
 for mf in verify-spec.sh verify-verification.sh; do
   mp="$SCRIPT_DIR/$mf"
   mf_hook="$(awk '/^    def handle_startendtag\(self, tag, attrs\):$/{f=1} f{print} f&&/^    def handle_endtag/{exit}' "$mp" | head -40)"
@@ -1222,6 +1344,32 @@ for mf in verify-spec.sh verify-verification.sh; do
   else
     ng "MINFORM-$mf ★最小形が崩れている (最小形行=$mf_min 期待 1 / naive 行=$mf_naive 期待 0 — 前者 0 は hook 消失/改称)"
   fi
+done
+
+
+# === SETCDATA. ★set_cdata_mode 存在 pin (folio-ahn3・MINFORM と ★対) ===
+#   RAWTEXT 系 inert の自己閉じ経路へ CDATA mode を与える 1 行は ★MINFORM が撃たない (MINFORM は最小形 push 行と
+#   naive 形不在しか見ない)。 この行を誤って削っても MINFORM も CEN-rawnest 以外の全 case も緑のままになりうる
+#   = ★silent regression する producer。 ゆえに ★静的 producer 存在 assert を新設し、 ★per-shape MK
+#   (CEN-rawnest 群 = 8 タグ × 3 軸 × 両 arm の実弾 red→green) と ★対で 課す (静的 pin 単独 / MK 単独は
+#   どちらか一方が恒真化しうる: 静的 pin は「行があるだけ」で効いている証明にならず、 MK は producer が
+#   別実装へ差し替わっても表面的に緑になりうる)。
+#   ★恒真化封鎖: 抽出が空 / hook 不在なら「1 件」は自明に不成立ゆえ、 抽出の非空も ★別 assert で撃つ
+#   (関数改名・hook 消失で検査が黙って無力化するのを防ぐ = 本 suite 自身に対する trust anchor)。
+#   ★4 site (verify-spec / verify-verification × census_dump / h_inline) を ★個別に 撃つ: 片 arm・片関数だけの
+#   適用は cross-arm / intra-arm 非対称 = 残穴 (XARM gate と多重化した二重の網)。
+for scf in verify-spec.sh verify-verification.sh; do
+  for scfn in census_dump h_inline; do
+    sc_body="$(awk -v fn="$scfn" 'index($0,fn"() { python3")==1{f=1} f{print} f&&/^}$/{exit}' "$SCRIPT_DIR/$scf")"
+    sc_hook="$(printf '%s\n' "$sc_body" | awk '/^    def handle_startendtag\(self, tag, attrs\):$/{f=1} f{print} f&&/^    def handle_endtag/{exit}')"
+    sc_n="$(printf '%s\n' "$sc_hook" | grep -cF 'set_cdata_mode(tag)')"
+    sc_guard="$(printf '%s\n' "$sc_hook" | grep -cF 'def handle_startendtag')"
+    if [[ "$sc_n" -eq 1 && "$sc_guard" -eq 1 ]]; then
+      ok "SETCDATA-$scf-$scfn ★handle_startendtag に set_cdata_mode(tag) が 1 件実在 (RAWTEXT 系 inert の自己閉じ閉塞)"
+    else
+      ng "SETCDATA-$scf-$scfn ★set_cdata_mode 行が消えている/抽出不能 (実在=$sc_n 期待 1 / hook 抽出=$sc_guard 期待 1 — 後者 0 は関数改名/hook 消失で検査が無力化)"
+    fi
+  done
 done
 
 # === CASEPIN. ★宣言済 CEN-* case が ★全て実行されたか の突合 (errata-1 MUST-2・silent skip の fail-closed 検出) ===
