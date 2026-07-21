@@ -112,9 +112,14 @@ printf '<details class="spec-row" id="req-rel-001"></details>\n' >> "$SD/relatio
 expect_fail "R6b dup-anchor: 原本 anchor 重複 → FAIL" "dup-anchor: 原本 anchor 重複 'REQ-REL-001'"
 rm -rf "$CD" "$SD"
 
-# --- R7 selector rot (details.spec-row shape): 原本の spec-row class を潰す → zero-anchors (vacuous green 拒否) ---
+# --- R7 selector rot (relations・ears-requirement-row shape): 原本の anchor 保有 component を潰す → zero-anchors (vacuous green 拒否) ---
+# ★folio-6vox flip 追随 (2026-07-21): relations.html は flip で details.spec-row → ears-requirement-row shape へ
+#   変わったため、旧 mut (class="spec-row" rot) は 0-match の vacuous mutation 化した (battery 13/14 で検出)。
+#   R7b (verification) と同 shape だが per-file の zero-anchors liveness は別 pin (file ごとに撃つ)。
+#   ★なお corpus から details.spec-row shape は絶滅 (全 4 spec が flip 済) — 抽出側の spec-row union arm は
+#   dead code 方向 (fail-safe)。退役判断は follow-up (folio-6vox close notes 参照)。
 fresh
-perl -i -pe 's/class="spec-row"/class="spec-row-rotted"/g' "$SD/relations.html"
+perl -i -pe 's/data-component="ears-requirement-row"/data-component="ears-requirement-row-rotted"/g' "$SD/relations.html"
 expect_fail "R7 zero-anchors: 原本 anchor 全滅 → FAIL (vacuous green 拒否)" "zero-anchors: 原本に要件 anchor が 0 本 (relations.html)"
 rm -rf "$CD" "$SD"
 
