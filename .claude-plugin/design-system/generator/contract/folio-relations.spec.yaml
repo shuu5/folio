@@ -34,6 +34,20 @@ approval:
 graph:
   principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
 
+# ★head JSON-LD の前方 (forward) 関係宣言 (core_emit_graph_head が emit・top-level MUST)。
+#   canonical design-intent/spec/relations.html head の self node (@id ./relations.html) から逐語転記した
+#   (rules/verification の値を写したものではない)。 reverse (dc:isReferencedBy 14 + folio:depended-by 1) は
+#   folio fix が corpus から毎回導出するため手書きしない (SSoT 二重化 = drift 源)。
+#   ★extends は書かない: canonical relations head に folio:extends は不在で rules/verification と非対称。
+#     書くと folio:extends → ./constitution.html を実 emit し @id census が 21→22 へドリフトする。
+#     憲法参照は references の ./constitution.html#s2-principles として既存 (extends とは別物)。
+#   references の 2 本は anchor 付き (#s4-format / #s2-principles)。 file 単位へ丸めない。
+head_graph:
+  id: ./relations.html
+  part_of:    [./README.html]
+  references: [./rules.html#s4-format, ./constitution.html#s2-principles, ../research/spec-graph-management-research.html]
+  depends_on: [./rules.html]
+
 sections:
   - id: "s0"
     anchor: "s0-reader-guide"
