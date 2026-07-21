@@ -23,6 +23,8 @@ meta:
   date: "2026-06-24"
   status: "active"
   reader: "Developer, AI Agent, External Reviewer — folio spec を編集する開発者・AI Agent・外部レビュアー"
+  # ★folio-6vox Leg A 調停 (2026-07-21): canonical head の folio:stakeholders を逐語転記 (uncovered-loss ゼロ・lwhz 裁定の型・verification contract 同配置)。
+  stakeholders: ["Developer", "AI Agent", "External Reviewer"]
 
 # 承認記録 (core 共用 approval-block)。 relations.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。
 approval:

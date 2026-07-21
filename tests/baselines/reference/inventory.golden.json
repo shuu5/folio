@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-19T15:33:29Z",
+  "generatedAt": "2026-07-21T12:46:14Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -71,7 +71,7 @@
     },
     {
       "@id": "spec/relations.html",
-      "title": "folio relations spec",
+      "title": "folio relations — spec 間の関係性表現規約",
       "summary": "spec 間の関係性表現規約 (JSON-LD + W3C 語彙 + inventory)",
       "doc-type": "spec",
       "status": "active",
@@ -82,19 +82,16 @@
         "External Reviewer"
       ],
       "relations": {
-        "dc:isPartOf": [
-          "spec/README.html"
-        ],
         "dc:isReferencedBy": [
-          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
-          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
-          "decisions/ADR-0034-object-term-xref-system.html",
-          "decisions/ADR-0033-dual-audience-hub.html",
-          "decisions/ADR-0030-v1-stability-criteria.html",
           "decisions/ADR-0004-jsonld-lint-mechanism.html",
           "decisions/ADR-0007-context-injection.html",
           "decisions/ADR-0021-constitution-x4-amendment.html",
           "decisions/ADR-0025-folio-fix-bidirectional.html",
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
           "research/constitution-x4-amendment-proposal.html",
           "research/plugin-sandbox-verification-research.html",
           "spec/folio-self-spec.html",
@@ -103,6 +100,9 @@
         ],
         "folio:depended-by": [
           "spec/verification.html"
+        ],
+        "dc:isPartOf": [
+          "spec/README.html"
         ],
         "dc:references": [
           "spec/rules.html#s4-format",
@@ -2644,23 +2644,11 @@
       },
       {
         "from": "spec/relations.html",
-        "to": "P-1"
-      },
-      {
-        "from": "spec/relations.html",
         "to": "P-10"
       },
       {
         "from": "spec/relations.html",
         "to": "P-11"
-      },
-      {
-        "from": "spec/relations.html",
-        "to": "P-13"
-      },
-      {
-        "from": "spec/relations.html",
-        "to": "P-14"
       },
       {
         "from": "spec/relations.html",
