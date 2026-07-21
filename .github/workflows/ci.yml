@@ -186,6 +186,53 @@ jobs:
       - name: 政策A floor 実走 — verify-spec/rules (landed canonical vs frozen census + contract round-trip)
         run: SKIP_REPRO=1 SKIP_RENDER=1 .claude-plugin/design-system/generator/verify-spec.sh --artifact .claude-plugin/design-system/generator/contract/folio-rules.spec.yaml design-intent/spec/rules.html
 
+      # ======================================================================
+      # relations arm (folio-uryh Leg W が追記・★blocking 発火は admin Leg A)
+      # ----------------------------------------------------------------------
+      # ★★land 前提 (これを守らないと main が中間 RED になる): 下記 6 step は ★live canonical を実走しうる。
+      #   folio-6vox の flip (relations.html を contract 生成物へ置換) が ★未 land の間は該当 step が RED になるのが
+      #   ★正常 — canonical が hand-authored 原本ゆえ物理指紋段 / 構造段で正しく落ちる (gate バグではない)。
+      #   ゆえに本 step 群は ★flip commit と同一 bundle (flip-first) で land すること (admin Leg A・lwhz/d7bq/bxpm 同型)。
+      #   ★soft 化 (continue-on-error) / dormant 化での単独配線は ★却下 (latent-red-rot = fail-open。 契約
+      #   folio-uryh「CI 発火経路の完全性」)。 blocking のまま bundle で入れるのが唯一の正しい land 形。
+      # ----------------------------------------------------------------------
+      # F8 同型: relations drift gate (lwhz F8 の instance#5・spec-pack 経路)。 ★relations 固有の穴:
+      # verify-relations.sh は generated ⊆ contract (fabrication-free) しか見ず generated == canonical を
+      # 見ないため、 DRAFT contract が自己整合 PASS しつつ canonical に対し lossy な silent クラス (8kuf 実証) を
+      # 検出できない。 本 gate が「landed == fresh 再生成 byte 一致 + 物理指紋 4 clause」で塞ぐ。
+      - name: relations drift gate (deterministic floor — landed == fresh 再生成 byte 一致)
+        run: .claude-plugin/design-system/generator/verify-relations-drift.sh
+      - name: relations drift gate 敵対回帰 (per-shape MK 14 case・gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-relations-drift.sh
+
+      # ★relations base 敵対 suite の blocking 配線 (folio-uryh 自己点検 ceiling major fix)。
+      #   ★peer 非対称の是正: verification は test-adversarial-verification.sh が、 rules は test-adversarial-spec.sh が
+      #   base arm (M1-M15 round-trip / census-count / repro-build conformance) と census/collapse arm を ★1 file に
+      #   同居 させるため 1 step で両方発火する。 relations は census/collapse を別 file へ切り出した結果、
+      #   ★base arm がどの CI step からも走らない 状態になっていた (= verify-relations.sh の中核検出力 —
+      #   機械層 round-trip の順序付き一致 / 未対応 block type の fail-closed abort / census-count / repro-build
+      #   BYTE-DIFF — が blocking backstop 無しになる fail-open。 将来の骨抜き改変が CI 緑のまま通る)。
+      #   ★ORIGIN 明示注入は下記 floor step と ★同理由: 既定 ORIG は flip 後 live landed == 生成物 の自己比較へ
+      #   退化し P1/P2 が恒真 PASS 化する (COLLAPSE-1 が当該 vacuity を実演済)。 ★実測: 本 step の逐語形で 83/0。
+      #   ★M15 は RELATIONS_ORIGIN_HTML を ★呼出し単位 でインライン指定するため step 単位注入に上書きされない。
+      - name: relations 敵対回帰 (base arm・M1-M15 round-trip / census-count / repro-build conformance)
+        run: RELATIONS_ORIGIN_HTML=.claude-plugin/design-system/generator/spec-origin/relations.origin.html .claude-plugin/design-system/generator/test-adversarial-relations.sh
+
+      # 政策A relations arm の常設配線 (ADR-0053 §2.6 / folio-uryh・verification/rules 対と同型)。
+      - name: relations census/collapse 敵対回帰 (§10b frozen census arm + CEN/CEN-rel + M-SELFCMP + SNAPPIN + COLLAPSE + XARM/LIVEPIN)
+        run: .claude-plugin/design-system/generator/test-adversarial-relations-census.sh
+      - name: census-guard relations (数字上書き防壁・per-spec 呼出し = 案X spec 名引数化)
+        run: .claude-plugin/design-system/generator/census-guard.sh relations "${{ github.event.pull_request.base.sha || github.event.before }}"
+
+      # 政策A floor 本体の landed canonical 直接実走 (verification/rules 対と同型)。
+      # ★RELATIONS_ORIGIN_HTML を ★明示注入 する: §11 の既定 ORIG は live landed canonical ゆえ、 flip 後は
+      #   ORIG==生成物 の ★自己比較 に退化し extractor collapse に恒真 PASS する。 独立 oracle = flip 前 canonical
+      #   + heal snapshot (provenance は spec-origin/relations.origin.heal.py に逐語記録) を与えて非 vacuous 化する。
+      # ★SKIP_REPRO / SKIP_RENDER の必須性 (lyl6 継承): SKIP_REPRO 欠落 = in-scan flip の repro arm が構造
+      #   false-drift で RED / SKIP_RENDER 欠落 = verify job で render_gate_f が crash する。 rules 版 (上記) と逐語同型。
+      - name: 政策A floor 実走 — verify-relations (landed canonical vs frozen census + 原本 round-trip)
+        run: SKIP_REPRO=1 SKIP_RENDER=1 RELATIONS_ORIGIN_HTML=.claude-plugin/design-system/generator/spec-origin/relations.origin.html .claude-plugin/design-system/generator/verify-relations.sh --artifact .claude-plugin/design-system/generator/contract/folio-relations.spec.yaml design-intent/spec/relations.html
+
       # sandbox 全 scenario。 runner は 1 scenario/起動ゆえ glob ループ。 全件集約し 1 件でも FAIL なら block。
       # (cli-golden の inventory/prime/validate-clean は spec 数変化で golden 再生成 = --accept が必要になり、
       #  未再生成 PR はここで FAIL する = golden maintenance を強制する設計。)

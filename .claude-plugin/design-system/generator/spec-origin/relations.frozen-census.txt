@@ -1,0 +1,126 @@
+# folio-relations frozen census — policy A (folio-uryh / ADR-0053 §2.6 relations arm)
+# ============================================================================
+# 政策 A (user 裁定 2026-07-18 = bootstrap 退役): snapshot oracle は「flip 時 1 回の
+# bootstrap 忠実性証明」に縮退し、恒久防御は (a) literal census (本 file) + (b) 原本
+# 対 machine-block round-trip + (c) extractor-collapse 敵対 test が代替する。
+#
+# ★本 file の値は canonical / artifact / 生成物から【導出しない】凍結 literal (frozen literal)。
+#   measured 側 (生成物 HTML = verify の subject) とのみ突合する。両側 contract 由来の相対 parity
+#   (flip 後 ORIG==生成物 で自己比較恒真化) を撤去した後の唯一の独立 anchor。
+#
+# ★verification.frozen-census.txt / rules.frozen-census.txt からの値 literal 移植は禁止
+#   (subject が別文書ゆえ自 RED)。 本 file の値は base 4c6a3a5b の contract から full-repo staging で
+#   再生成した ★fresh 生成物 (110915 byte) を subject に bootstrap 1 回で捕捉した実測
+#   (「導出しない」は runtime chk の話・bootstrap 捕捉は許容)。 ★live canonical を subject にしていない
+#   のは pre-flip 期ゆえ (folio-6vox flip 前は canonical が hand-authored 原本 = 生成物 shape でない)。
+#
+# ★relations 非該当軸は arm ごと除去した (移植でなく削除・空撃ち census を作らない):
+#   - jq -S census 2 本 (FZ_JQS_TOTAL / FZ_JQS_MASKED): relations.html の 'jq -S' 出現 = 0 (該当なし)。
+#   - JSON-LD folio:stakeholders census: relations.html の live JSON-LD に当該 key 不在
+#     (本文の folio:stakeholders 言及は全て escape 済 code 例示ゆえ live データでない = 実測確認済)。
+#   対応する mutation-kill も敵対 suite に作らない (空撃ち MK 禁止)。
+#
+# ★0 値の軸は ★存置する (rules/verification と同基準)。 「減らせない」代わりに ★注入 (0→1) を撃つ teeth が
+#   あり、 撤去すると当該領域への捏造混入が無被覆になる。 対応 MK は注入方向で pin する (空撃ちでない)。
+#
+# ★relations 固有 3 軸 (FZ_MACHINE_LIST / FZ_MLI / FZ_GROW) は契約 (folio-uryh) が hard acceptance として
+#   要求する「再抽出 vacuous-green backstop」。 verify-relations.sh の既存 :347/:348/:362/:78/:297 は
+#   ★contract-vs-body の自己整合 ゆえ両側同時 collapse に vacuous で backstop にならない。 full 再抽出
+#   (extract-relations-spec.sh 再走行) は手起こし 25 項を消すと同時に §11 round-trip を red→green へ反転させる
+#   (緑化が喪失の隠蔽になる最悪形) ため、 契約非依存の凍結 literal で存在を pin する。
+#   ★FZ_MACHINE_LIST は ★要素 anchored 計数 必須 ('<ul data-component="spec-machine-list"')。 naive substring
+#   計数は inline <style> の CSS 属性 selector 3 行を拾い ★9 へ膨張する (実測罠・verify-relations.sh:142 の
+#   anchored 規律と同型)。 FZ_MLI / FZ_GROW は naive == 要素 anchored (実測 25/25・20/20) だが、 将来の CSS 追加で
+#   同じ罠が開くため ★3 軸とも要素 anchored 形で計数する。
+#   ★★計数方式の実態 (宣言能力 == 実能力・folio-uryh 自己点検 ceiling major fix): 本 3 軸は verify-relations.sh
+#   の ★実 HTML parser walk (floor_census) が ★element 軸 で数える。 初版は raw-byte の `grep -oE ... "$BODY"`
+#   だったが、 $BODY を作る make_body は ★HTML コメントを逐語温存する ため 「live 要素を 1 個剥奪 + 同一 literal を
+#   コメントで 1 個注入」で凍結値へ復元でき、 3 軸とも素通った (実測)。 = (a) 軸が census_dump を parser へ寄せて
+#   閉塞したのと ★同一クラス の laundering の再導入。 現行は attrs 構造から数えるため comment / 属性値 /
+#   script/style 本体 / <template> ほか inert subtree は ★構造的に非計上 で、 当該 laundering は原理的に閉じる
+#   (CEN-rel1L/2L/3L + M-SELFCMP laundering 版が per-shape に実弾 pin)。
+#   ★★依然として本 3 軸は「存在の floor」であり ★同型 element の ★別 section への移設 (count 保存 relocation) は
+#   捕捉しない (それは §11 round-trip の document 順突合が担う)。 独立性の主張は「contract / ORIG を消費しない」
+#   ことに限られ、 「あらゆる退行を単独で捕捉する」ではない。
+#
+# ★凍結値 lockstep 則: 契約成長 land では本 file の literal を実測へ bump し、 対応 mutation-kill と
+#   golden を ★同一 land で lockstep 更新すること (裸の bump は census-guard.sh relations が弾く)。
+#
+# provenance:
+#   canonical(pre-flip) = design-intent/spec/relations.html @ base 4c6a3a5b
+#     (51924 byte・sha256 a578ca7a68e62f53331978979fb86e78e24f13825cb5818efdebb61c3fc56ed1)
+#   subject(bootstrap 実測元) = 上記 base の contract から full-repo staging で再生成した fresh 生成物
+#     (assemble-relations → inject-prose → folio fix --root → folio build --root・110915 byte)
+#   snapshot(bootstrap oracle) = spec-origin/relations.origin.html
+#     (52288 byte・sha256 50626829911619699331e8b2902668e3bf69cced01245039ef74f1ab6af17a35)
+#     生成 provenance = spec-origin/relations.origin.heal.py に ★逐語 記録 (再実行可能・T1 属性付与 7 /
+#     T2 容器正規化 ol→ul 2 / T3 h4 由来 prose 純追加 2 = 計 11 変換・★本文テキストは 1 byte も不変)
+#   provenance_contract_sha256 = 6717aa9e02778740dc2fee0469f478d642dd5088bb1214c7bb42d8339f7e7abb
+#     (folio-relations.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★relations が
+#      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
+#   ★実態開示 (pre-flip 期の稼働状態): 本 census を消費する verify-relations.sh §10b arm と、 それを CI で
+#     発火させる step (政策A floor 実走 / census-guard relations / census-collapse 敵対 suite) は
+#     ★folio-uryh Leg W では ci.yml へ ★コードとして追記されるのみ で、 blocking 昇格の land は
+#     ★admin Leg A (folio-6vox flip との flip-first bundle) に委譲されている。 それまで本 arm は
+#     ★手動実行時のみ 発火する (committed but not yet blocking)。 開示は fail-open を解消しない —
+#     Leg A 完了まで本 arm を「保護確立」と扱わないこと。
+# ============================================================================
+
+# ---- scalars (frozen literal・subject = 生成物 HTML) ----
+FZ_ID_COUNT=30
+FZ_XREF=8
+FZ_TERM=5
+FZ_DELTA=0
+FZ_ESC_XREF=0
+FZ_CODE_TABLE_CELL=0
+FZ_CODE_CAPTION=0
+FZ_CODE_REST=3
+FZ_CODE_TOTAL=3
+FZ_SPAN_TABLE_CELL=0
+FZ_SPAN_CAPTION=0
+FZ_ESC_CODE=0
+FZ_ESC_SPAN=0
+
+# ---- relations 固有 3 軸 (再抽出 vacuous-green backstop・要素 anchored 計数) ----
+# 内訳: machine list 6 本 / その li 25 項 (4+3+5+4+1+8) / glossary band grow 20 語 (contract glossary length と一致)
+FZ_MACHINE_LIST=6
+FZ_MLI=25
+FZ_GROW=20
+
+#BEGIN_ID_SET
+req-rel-001
+req-rel-002
+req-rel-003
+req-rel-004
+s0-reader-guide
+s1-1-dcterms
+s1-2-schema-org
+s1-3-prov-o
+s1-w3c-vocab
+s2-1-vocab-table
+s2-2-naming-rules
+s2-folio-vocab
+s3-1-minimal
+s3-2-full
+s3-3-id-resolution
+s3-4-conformance
+s3-jsonld
+s4-1-structure
+s4-2-tier
+s4-3-generation
+s4-4-1-scan
+s4-4-2-output
+s4-4-3-failure
+s4-4-input-output
+s4-inventory
+s5-1-pattern
+s5-2-precedent
+s5-3-ears
+s5-bidirectional
+s6-refs
+#END_ID_SET
+
+# ★DELTA_SET は空 (relations は delta 印 0 = FZ_DELTA=0)。 空 SET の comm は削除方向に vacuous だが
+#   ★注入方向 (捏造 delta-id が生成物に現れる) には teeth を持つ = 空撃ちでない。
+#BEGIN_DELTA_SET
+#END_DELTA_SET

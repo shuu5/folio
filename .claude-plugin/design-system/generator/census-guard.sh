@@ -28,7 +28,7 @@
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ★後方互換: 第 1 引数が既知 spec 名でなければ base-ref とみなす (旧 `census-guard.sh <base-ref>` 呼出しを壊さない)。
-KNOWN_SPECS=" verification rules "
+KNOWN_SPECS=" verification rules relations "
 SPEC="verification"
 if [[ -n "${1:-}" && "$KNOWN_SPECS" == *" $1 "* ]]; then SPEC="$1"; shift; fi
 CENSUS="$SCRIPT_DIR/spec-origin/$SPEC.frozen-census.txt"
