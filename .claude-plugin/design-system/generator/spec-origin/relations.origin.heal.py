@@ -28,7 +28,7 @@
 #     その selftest は cell-local な ★untracked file であり land で消える = shipped 状態で本コメントが ★偽 に
 #     なっていた (folio-7wbn ceiling が同型で defect 認定したクラス)。 恒久 regression の所在は上記 suite。
 #
-# ■ 変換クラス (3 種・それぞれ独立に監査可能。 ★fuzzy な一括置換をしない)
+# ■ 変換クラス (4 種・それぞれ独立に監査可能。 ★fuzzy な一括置換をしない)
 #   T1 属性付与のみ (7 要素 = <p> 3 + <ul> 4):
 #       正規化 inner text が生成物の機械層 unit と一致する <p> / <ul> へ ` data-audience="machine"` を挿入する。
 #       ★挿入文字列はこの 1 種のみ。 テキストは不変。
@@ -36,10 +36,15 @@
 #       port は順序リスト 2 本を machine list として表現したが、 §11 の LEFT 抽出子は <ul ... data-audience="machine">
 #       しか見ないため <ol> のままでは原理的に拾えない。 開始/終了タグ名のみを ul へ揃え audience 属性を付ける。
 #       ★<li> は 1 byte も触らない (内容逐語)。
-#   T3 見出し由来 prose の ★追加 (2 要素):
+#   T3 見出し由来 prose の ★追加 (2 要素 + folio-6vox errata で §4.2 の 1 要素):
 #       port は <h4 id="s4-4-{1,2}-*">…</h4> を機械層 prose (<strong>見出し語</strong>) として表現した。 §11 LEFT は
 #       <h4> を見ないため、 ★h4 を温存したまま 直後へ <p data-audience="machine"><strong>{h4 inner 逐語}</strong></p>
 #       を挿入する (rewrite でなく ★純追加 = canonical byte を破壊しない最小変換)。
+#   T4 <aside> への属性付与のみ (folio-6vox flip ceiling errata 2026-07-21 で追加):
+#       flip fidelity ceiling が検出した contract 捕捉漏れ 18 block の逐語復元 (contract header「手起こし追記 第 2 弾」)
+#       により、 人間層 aside (class="informative" / "reader-persona") 由来の機械 note が gen-units に加わった。
+#       正規化 inner が note unit と一致する <aside> へ ` data-audience="machine"` を挿入する (T1 と同型の
+#       属性付与のみ・テキスト payload 不変 = SNAPPIN-4 の text node 双方向一致は保たれる)。
 #
 # ■ 入力 / 出力 (再実行手順)
 #   $ python3 spec-origin/relations.origin.heal.py \
@@ -55,7 +60,7 @@ H = open(canon_path, encoding='utf-8').read()
 def norm(s):
     return re.sub(r'\s+', ' ', s or '').strip()
 
-want_prose, want_li = set(), set()
+want_prose, want_li, want_note = set(), set(), set()
 for line in open(gen_units_path, encoding='utf-8'):
     line = line.rstrip('\n')
     if not line:
@@ -65,6 +70,8 @@ for line in open(gen_units_path, encoding='utf-8'):
         want_prose.add(v)
     elif k == 'li':
         want_li.add(v)
+    elif k == 'note':
+        want_note.add(v)
 
 AUD = ' data-audience="machine"'
 edits = []   # (start, end, replacement, cls) — 元 span を replacement へ差し替える (後ろから適用)
@@ -83,6 +90,14 @@ for m in re.finditer(r'<ul\b([^>]*)>(.*?)</ul>', H, re.S):
     if items and all(i in want_li for i in items):
         ins = m.start(1) + len(m.group(1))
         edits.append((ins, ins, AUD, 'T1-ul'))
+
+# ---- T4: <aside> への属性付与のみ (人間層 aside 由来の機械 note・folio-6vox errata) ----
+for m in re.finditer(r'<aside\b([^>]*)>(.*?)</aside>', H, re.S):
+    if 'data-audience' in m.group(1):
+        continue
+    if norm(m.group(2)) in want_note:
+        ins = m.start(1) + len(m.group(1))
+        edits.append((ins, ins, AUD, 'T4-aside'))
 
 # ---- T2: <ol> → <ul data-audience="machine"> (容器タグのみ・<li> 逐語) ----
 for m in re.finditer(r'<ol\b([^>]*)>(.*?)</ol>', H, re.S):

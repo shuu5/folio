@@ -275,7 +275,7 @@ else
     ng "SNAPPIN-5 ★同上により heal 再現性を検証不能"
   else
     # SNAPPIN-4: ★本文捏造 0 — snapshot の text node 集合が pre-flip canonical と ★双方向 一致 (extra 0 / missing 0)。
-    #   heal が触ってよいのは属性付与 (T1) / 容器タグ形 (T2) / h4 逐語の純追加 (T3) のみでテキスト payload は原本逐語、
+    #   heal が触ってよいのは属性付与 (T1 p/ul・T4 aside) / 容器タグ形 (T2) / h4 逐語の純追加 (T3) のみでテキスト payload は原本逐語、
     #   という heal.py の宣言不変条件を ★tracked に 機械 assert する (片方向の部分集合検査では脱落方向が無被覆)。
     s4_out="$(python3 - "$CANON_PRE" "$SNAP" 2>&1 <<'PYEOF'
 import re, sys, html

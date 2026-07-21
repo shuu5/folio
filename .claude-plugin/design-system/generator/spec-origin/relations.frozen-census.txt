@@ -10,14 +10,17 @@
 #
 # ★verification.frozen-census.txt / rules.frozen-census.txt からの値 literal 移植は禁止
 #   (subject が別文書ゆえ自 RED)。 本 file の値は base 4c6a3a5b の contract から full-repo staging で
-#   再生成した ★fresh 生成物 (110915 byte) を subject に bootstrap 1 回で捕捉した実測
+#   再生成した ★fresh 生成物 (bootstrap 時 110915 byte・folio-6vox flip ceiling errata の脱落 18 block 復元後は
+#   118605 byte で再実測 = FZ_TERM 5→9 の lockstep bump) を subject に捕捉した実測
 #   (「導出しない」は runtime chk の話・bootstrap 捕捉は許容)。 ★live canonical を subject にしていない
 #   のは pre-flip 期ゆえ (folio-6vox flip 前は canonical が hand-authored 原本 = 生成物 shape でない)。
 #
 # ★relations 非該当軸は arm ごと除去した (移植でなく削除・空撃ち census を作らない):
 #   - jq -S census 2 本 (FZ_JQS_TOTAL / FZ_JQS_MASKED): relations.html の 'jq -S' 出現 = 0 (該当なし)。
-#   - JSON-LD folio:stakeholders census: relations.html の live JSON-LD に当該 key 不在
-#     (本文の folio:stakeholders 言及は全て escape 済 code 例示ゆえ live データでない = 実測確認済)。
+#   - JSON-LD folio:stakeholders census: 除去時 (bootstrap 4c6a3a5b) は live JSON-LD に当該 key 不在だったが、
+#     ★folio-6vox Leg A 調停 (2026-07-21) の contract meta stakeholders graft により live JSON-LD へ emit される
+#     ようになった (旧記載「不在」は graft 後は成立しない = 記録訂正)。head の byte 被覆は drift gate (F8) が担い、
+#     本 file への census 軸再導入は follow-up (folio-cc3h) の §11 既定 ORIG 同型化と合わせて判断する。
 #   対応する mutation-kill も敵対 suite に作らない (空撃ち MK 禁止)。
 #
 # ★0 値の軸は ★存置する (rules/verification と同基準)。 「減らせない」代わりに ★注入 (0→1) を撃つ teeth が
@@ -50,12 +53,13 @@
 #   canonical(pre-flip) = design-intent/spec/relations.html @ base 4c6a3a5b
 #     (51924 byte・sha256 a578ca7a68e62f53331978979fb86e78e24f13825cb5818efdebb61c3fc56ed1)
 #   subject(bootstrap 実測元) = 上記 base の contract から full-repo staging で再生成した fresh 生成物
-#     (assemble-relations → inject-prose → folio fix --root → folio build --root・110915 byte)
+#     (assemble-relations → inject-prose → folio fix --root → folio build --root・errata 後 118605 byte)
 #   snapshot(bootstrap oracle) = spec-origin/relations.origin.html
-#     (52288 byte・sha256 50626829911619699331e8b2902668e3bf69cced01245039ef74f1ab6af17a35)
-#     生成 provenance = spec-origin/relations.origin.heal.py に ★逐語 記録 (再実行可能・T1 属性付与 7 /
-#     T2 容器正規化 ol→ul 2 / T3 h4 由来 prose 純追加 2 = 計 11 変換・★本文テキストは 1 byte も不変)
-#   provenance_contract_sha256 = 6717aa9e02778740dc2fee0469f478d642dd5088bb1214c7bb42d8339f7e7abb
+#     (52780 byte・sha256 ba9365415d41e7e039a540c91ba1a7fbb26b60c876ff406c74c78fee35c5516c)
+#     生成 provenance = spec-origin/relations.origin.heal.py に ★逐語 記録 (再実行可能・T1 属性付与 20 (p16+ul4) /
+#     T2 容器正規化 ol→ul 2 / T3 h4 由来 prose 純追加 3 / T4 aside 属性付与 4 = 計 29 変換 (6vox errata 後)・
+#     ★本文テキストは 1 byte も不変)
+#   provenance_contract_sha256 = 004c56803c50d4a9e5b78113be2c92a62aa0038ae8fe08a522f4d059d78a9686
 #     (folio-relations.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★relations が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (pre-flip 期の稼働状態): 本 census を消費する verify-relations.sh §10b arm と、 それを CI で
@@ -67,9 +71,10 @@
 # ============================================================================
 
 # ---- scalars (frozen literal・subject = 生成物 HTML) ----
+# ★FZ_TERM=9 は 6vox errata bump (復元 18 block 中の span.term 4 個 = spec/inventory/ADR/golden が +4)。
 FZ_ID_COUNT=30
 FZ_XREF=8
-FZ_TERM=5
+FZ_TERM=9
 FZ_DELTA=0
 FZ_ESC_XREF=0
 FZ_CODE_TABLE_CELL=0
