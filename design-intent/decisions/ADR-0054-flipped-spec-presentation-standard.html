@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="folio-doc-type" content="adr">
+  <meta name="folio-layer" content="scratch">
+  <meta name="folio-version" content="1.2.0">
+  <meta name="folio-status" content="accepted">
+  <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+  <meta name="folio-adr-id" content="0054">
+  <meta name="folio-adr-date" content="2026-07-22">
+  <title>ADR-0054 — flip 済 spec の提示層を pack 生成文書の標準形へ統一</title>
+  <link rel="stylesheet" href="../../common.css">
+  <script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0054-flipped-spec-presentation-standard.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0054 — flip 済 spec の提示層を pack 生成文書の標準形へ統一 (chrome-less 人間ファースト・機械層逐語不変)",
+  "folio:version": "1.2.0",
+  "folio:status": "accepted",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "../spec/constitution.html#p-14" },
+    { "@id": "./ADR-0039-presentation-template-layer.html" },
+    { "@id": "./ADR-0050-dual-audience-enforcement-derive.html" },
+    { "@id": "./ADR-0051-what-ssot-layer-interpretation.html" }
+  ]
+}
+  </script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0054</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0054 — flip 済 spec の提示層を pack 生成文書の標準形へ統一</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-07-22 &middot; folio v1.2.0 &middot; 正本 (edit-SSoT) = contract YAML から生成される canonical spec の提示層を、 folio が他 project 向けに pack pipeline で生成する文書 (以下「pack 生成文書」) と同じ「chrome なしの人間ファースト (human-first) 形」に統一する。 生成 spec ページでは folio build は chrome のうちページ内目次 (nav.toc) と breadcrumb を注入せず、 script 注入の audience-toggle も行わない (skip-link は focus 時のみ可視で温存・prev-next は下部導線として存続)。 提示層は pack assembler が完結所有し、 rules.html §11 の「全ページ chrome」MUST は生成 spec について本 ADR が supersede する (spec 本文の整合改訂は contract 経由)。 機械層 (data-audience=machine の逐語 normative・head JSON-LD・census / round-trip / drift gate) は不変。 標準形の normative は本文 §2.2 の構成要素列挙が持ち、 mockup Variant A v2 (2026-07-22 user 実機 walk 批准) は時点付き参考実装。 実装は assembler + chrome 注入判定 + gate lockstep の改修として行う。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-chrome">§2.1 生成 spec ページは chrome-less (提示層は pack が完結所有)</a></li>
+  <li class="toc--sub"><a href="#s2-2-standard">§2.2 人間ファースト標準形の構成要素</a></li>
+  <li class="toc--sub"><a href="#s2-3-invariant">§2.3 不変条件</a></li>
+  <li class="toc--sub"><a href="#s2-4-scope">§2.4 適用範囲</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<main>
+
+<section id="s1-context">
+  <h2>§1. Context</h2>
+  <p>folio の canonical spec は flip (ADR-0050 / ADR-0051) により contract YAML を edit-SSoT とする生成物へ移行した。 flip の批准要件は内容の忠実性 (機械層逐語 round-trip・fidelity errata) に限られており、 <strong>提示層 (見た目・導線) がこの形でよいかを人間が批准した記録は無かった</strong> — 過去 flip の gate I persona-walk は subagent proxy による walk であり、 実人間の受容ではない。</p>
+  <p>2026-07-22、 実人間 user が flip 済 relations.html の提示層に違和感を表明した (folio-d6vl・逐語は同 bead notes)。 d6vl prep の調査 (3 facet 並列分析 + blind persona walk 2 lens) を受け、 folio-uncc の設計 dossier が重畳構造を verified した: 提示層は <strong>2 つの独立した emit 主体の重畳</strong>でできていた。 (a) pack assembler が emit する生成本体 (cover hero・章 deck-band 等 = pack 共有 core)、 (b) folio build が graph-node へ後付け注入する chrome (nav.toc・audience-toggle・breadcrumb・skip-link = ADR-0039)。 pack 生成文書の instance (vision / glossary 等) は chrome 注入を受けないため人間ファースト形で自己完結するのに対し、 flip 済 spec だけが「旧 spec 時代の chrome + 新生成装飾のハイブリッド」になっていた。 加えて band 連番 (01-09) と節番号 (§0-§6) の不整合、 前方照会章と用語集章の目次欠落 (references / glossary band が section id で包まれない実装欠落)、 既定表示で本文ゼロの空 subsection 見出し、 裸 ID + 英語 role ラベルの照会チップ、 人間層 inline 用語注釈の不在が、 blind walk で独立に指摘された。</p>
+</section>
+
+<section id="s2-decision">
+  <h2>§2. Decision</h2>
+
+  <section id="s2-1-chrome">
+    <h3>§2.1 生成 spec ページは chrome-less (提示層は pack が完結所有)</h3>
+    <p>生成された canonical spec ページでは、 folio build は chrome のうちページ内目次 (nav.toc) と breadcrumb を注入せず、 script 注入の audience-toggle も行わない。 skip-link は撤去ではなく「focus 時のみ可視」の標準実装とする (accessibility 温存)。 prev-next は下部導線として存続し、 所属表示と一覧への導線 (locator) も下部 (prev-next の直上) に置く。 提示層は pack assembler が pack 生成文書と同型に完結所有する。 chrome 注入は非生成ページ (現行の constitution.html・cluster README・index 等) に対して存続する。 本決定は <strong>ADR-0039 の適用範囲を生成 spec について狭め</strong> (ADR-0039 本文は frozen・適用解釈は本 ADR と CLAUDE.md §6 で trace する。 同型 precedent = Phase 2.5 における ADR-0003 §2.3 の narrowing)、 あわせて <strong>rules.html §11 の「表示層の regen は folio build が一元所有する MUST — 全ページ chrome の生成・維持」を生成 spec について supersede する</strong> (rules.html は正本 (edit-SSoT) = contract 経由で本決定に整合改訂する — §2.4)。</p>
+  </section>
+
+  <section id="s2-2-standard">
+    <h3>§2.2 人間ファースト標準形の構成要素</h3>
+    <p>標準形の normative は<strong>本節の構成要素列挙</strong>が持つ。 mockup Variant A v2 (2026-07-22・user 実機 walk 批准・批准記録 = bd folio-uncc notes) は時点付き参考実装であり、 durable な WHAT の家は提示層 spec (rules.html §11 系) と pack contract — 本決定を反映する整合改訂は §2.4 の実装 scope に含む。 構成要素:</p>
+    <ul>
+      <li>章 deck-band の巨大番号は節番号と一致させる (§0..§N)。 前方照会と用語集は <strong>section id 付きで節化</strong>し、 章としての到達可能性を持つ (relations では §7 / §8 — 番号は例示であり、 不変条件は「section id を持つ章であること」)。</li>
+      <li>EARS 規範要件 row に「やさしく言うと」の平易行と RFC-2119 優先度の平易バッジ (必須 / 推奨) を付す。 精密 normative は「正確な条文 (機械向けの厳密な書き方)」として折りたたみ表示する。</li>
+      <li>前方照会チップは裸 ID を出さない — 照会先の一行タイトルを併記し、 role ラベルは平易語 (implementation = この規約が実装する原則 / rationale = そう決めた理由の記録) で表示する。 章見出しは実在する照会種別のみを約束する (over-promise 禁止)。</li>
+      <li>既定 (人間層) 表示で本文ゼロの見出しを作らない — 機械層へ全降格した subsection には人間層 1 行要約を残すか、 見出し自体を出さない。</li>
+      <li>References の一次参照 (W3C 等の外部 URL) は人間層に可視で出す。</li>
+      <li>内部コード名 (Phase X2/X3 等) には平易注釈を付す。 machine fold のラベルは平易語 (機械向けの詳細 = 原文そのまま) とする。</li>
+    </ul>
+  </section>
+
+  <section id="s2-3-invariant">
+    <h3>§2.3 不変条件</h3>
+    <p>機械層は逐語不変 — data-audience=machine の normative テキスト・head JSON-LD・frozen literal census・contract 対 machine-block round-trip・drift gate の防御構造は本決定で変更しない。 flip の fidelity として批准済みの内容層裁定 (用語 band 化・list 形式 degrade 等) も再オープンしない。 本決定は提示層のみを対象とする。</p>
+  </section>
+
+  <section id="s2-4-scope">
+    <h3>§2.4 適用範囲</h3>
+    <p>flip 済の全生成 spec (relations / rules / verification / srs-verification) と、 以後 flip する全 spec (constitution 含む) に適用する。 実装 scope = assembler 改修・chrome 注入判定・verify 系 shape pin の lockstep・golden / suite 移行・および rules.html §11 の chrome MUST の整合改訂 (contract 経由)。</p>
+  </section>
+</section>
+
+<section id="s3-consequences">
+  <h2>§3. Consequences</h2>
+  <ul>
+    <li>spec-pack fork 家系 (assemble-spec / -relations / -verification / -srs-verification) の提示層 emit と、 bin/folio の chrome 注入判定 (生成 spec の識別) の改修が必要。 verify 系 floor は DOM shape を regex + 件数で pin するため assembler と lockstep で改修する (detect↔remediate parity)。 実装の追跡は bd folio-31oz epic。</li>
+    <li>canonical 再生成により golden (canonical HTML・inventory / prime / validate-clean)・敵対 suite の shape 参照・render gate 対象が移行する。 drift gate (canonical == fresh 再生成) は再生成後も自動的に成立する。</li>
+    <li>照会チップの一行タイトルは照会先文書の title からの導出を第一候補とする (手書き二重管理を避ける)。 inline 用語注釈 (glossary 由来 tooltip) の contract schema 拡張は実装時の別判断とし、 本 ADR は方向のみ記録する。</li>
+    <li>persona-walk 系 gate I は提示層の設計言語一貫性を被覆できていなかった (proxy と人間の乖離)。 gate 強化は folio-h2v9 で扱い、 <strong>提示層標準の変更は人間 walk を最終検査器とする</strong>運用を維持する。</li>
+  </ul>
+</section>
+
+<section id="s4-alternatives">
+  <h2>§4. Alternatives Considered</h2>
+  <ul>
+    <li><strong>目次を「索引」として存置 (mockup Variant B)</strong> — 章欠け解消 + 番号整合で重複感を設計解消する案。 不採択 (user 裁定 2026-07-22: 他の生成文書と統一する)。</li>
+    <li><strong>継ぎ目の個別修正のみ</strong> (帯番号・目次欠け・空見出しの spot fix) — 最小コストだが「旧形式 + 新装飾のハイブリッド」構造が温存される。 不採択 (user 裁定: 提示層設計そのものを統一)。</li>
+    <li><strong>人間向けと機械向けの分離 (別ファイル / 別ビュー)</strong> — 1-DOM dual-audience 同居 + 乖離の gate 封じという folio 中核設計 (ADR-0028 系) を毀損し、 double-SSoT のドリフト危険が戻る。 不採択。</li>
+  </ul>
+</section>
+
+<section id="s5-trace">
+  <h2>§5. Trace</h2>
+  <ul>
+    <li>発端と grill 裁定: bd folio-d6vl (user feedback 逐語 + prep 調査 = 3 facet 分析・blind walk 2 lens + 批准 envelope 判定 = 提示層は新規裁定事項)。</li>
+    <li>設計 dossier と mockup 批准: bd folio-uncc (重畳構造の verified・mockup Variant A/B・user walk 批准 3 回)。 実装 epic: bd folio-31oz。</li>
+    <li>独立に発見・是正済みの図 fidelity errata: bd folio-op0e (mermaid label 改行復元・d6c2071・本 ADR とは独立の内容層修正) と、 その恒久 fix follow-up = folio-bqzl (extractor) / folio-4ly3 (oracle round-trip gate)。 gate 強化 follow-up: bd folio-h2v9 (persona-walk 被覆漏れ)。</li>
+  </ul>
+</section>
+
+</main>
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0053-snapshot-oracle-evolution-policy.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0053 — snapshot oracle 進化政策 A: bootstrap 突合の退役と census/round-trip/extractor-collapse 三本柱への代替</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

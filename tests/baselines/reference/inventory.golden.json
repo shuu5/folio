@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-07-21T13:39:46Z",
+  "generatedAt": "2026-07-22T07:17:02Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -1121,6 +1121,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0054-flipped-spec-presentation-standard.html",
           "decisions/ADR-0041-human-layer-visual-design-system.html",
           "decisions/ADR-0040-human-layer-presentation-compression.html"
         ],
@@ -1420,6 +1421,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0054-flipped-spec-presentation-standard.html",
           "decisions/ADR-0052-glossary-ssot-reassignment.html",
           "decisions/ADR-0051-what-ssot-layer-interpretation.html"
         ],
@@ -1447,6 +1449,7 @@
       ],
       "relations": {
         "dc:isReferencedBy": [
+          "decisions/ADR-0054-flipped-spec-presentation-standard.html",
           "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
           "decisions/ADR-0052-glossary-ssot-reassignment.html"
         ],
@@ -1506,6 +1509,27 @@
         ],
         "dc:isReferencedBy": [
           "spec/verification.html"
+        ]
+      }
+    },
+    {
+      "@id": "decisions/ADR-0054-flipped-spec-presentation-standard.html",
+      "title": "ADR-0054 — flip 済 spec の提示層を pack 生成文書の標準形へ統一 (chrome-less 人間ファースト・機械層逐語不変)",
+      "summary": "正本 (edit-SSoT) = contract YAML から生成される canonical spec の提示層を、 folio が他 project 向けに pack pipeline で生成する文書 (以下「pack 生成文書」) と同じ「chrome なしの人間ファースト (human-first) 形」に統一する。 生成 spec ページでは folio build は chrome のうちページ内目次 (nav.toc) と breadcrumb を注入せず、 script 注入の audience-toggle も行わない (skip-link は focus 時のみ可視で温存・prev-next は下部導線として存続)。 提示層は pack assembler が完結所有し、 rules.html §11 の「全ページ chrome」MUST は生成 spec について本 ADR が supersede する (spec 本文の整合改訂は contract 経由)。 機械層 (data-audience=machine の逐語 normative・head JSON-LD・census / round-trip / drift gate) は不変。 標準形の normative は本文 §2.2 の構成要素列挙が持ち、 mockup Variant A v2 (2026-07-22 user 実機 walk 批准) は時点付き参考実装。 実装は assembler + chrome 注入判定 + gate lockstep の改修として行う。",
+      "doc-type": "adr",
+      "status": "accepted",
+      "version": "1.2.0",
+      "stakeholders": [
+        "Developer",
+        "AI Agent",
+        "External Reviewer"
+      ],
+      "relations": {
+        "dc:references": [
+          "spec/constitution.html#p-14",
+          "decisions/ADR-0039-presentation-template-layer.html",
+          "decisions/ADR-0050-dual-audience-enforcement-derive.html",
+          "decisions/ADR-0051-what-ssot-layer-interpretation.html"
         ]
       }
     },
@@ -1987,6 +2011,12 @@
         "class": "decision",
         "ssot": "decisions/ADR-0053-snapshot-oracle-evolution-policy.html",
         "essence": "folio 自身の canonical spec が「手書き」から「機械 SSoT 生成」へ flip した後、 生成物の機械層 fidelity を守る snapshot oracle 突合 arm が 自己比較恒真化 (flip 後 ORIG==生成物 で任意値 PASS) の再発ハザードを持つ。 政策 A (user 裁定 2026-07-18) はこの snapshot 突合を「flip 時 1 回の bootstrap 忠実性証明」に退役させ、 恒久防御を (a) frozen literal census (b) contract 対 machine-block round-trip (c) extractor-collapse 敵対 test の三本柱へ移す。 snapshot file (spec-origin/verification.origin.html) は bootstrap 記録として残置し、 どの chk も その内容を消費しない (非消費・存在検査のみ fail-closed)。 内容の完全性は git 管理 (tracked) と review が担う。 verification 済 / rules (d7bq) / srs-verification (bxpm) / 将来の全 flip spec に一般化する。"
+      },
+      {
+        "id": "ADR-0054",
+        "class": "decision",
+        "ssot": "decisions/ADR-0054-flipped-spec-presentation-standard.html",
+        "essence": "正本 (edit-SSoT) = contract YAML から生成される canonical spec の提示層を、 folio が他 project 向けに pack pipeline で生成する文書 (以下「pack 生成文書」) と同じ「chrome なしの人間ファースト (human-first) 形」に統一する。 生成 spec ページでは folio build は chrome のうちページ内目次 (nav.toc) と breadcrumb を注入せず、 script 注入の audience-toggle も行わない (skip-link は focus 時のみ可視で温存・prev-next は下部導線として存続)。 提示層は pack assembler が完結所有し、 rules.html §11 の「全ページ chrome」MUST は生成 spec について本 ADR が supersede する (spec 本文の整合改訂は contract 経由)。 機械層 (data-audience=machine の逐語 normative・head JSON-LD・census / round-trip / drift gate) は不変。 標準形の normative は本文 §2.2 の構成要素列挙が持ち、 mockup Variant A v2 (2026-07-22 user 実機 walk 批准) は時点付き参考実装。 実装は assembler + chrome 注入判定 + gate lockstep の改修として行う。"
       },
       {
         "id": "P-1",

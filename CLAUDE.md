@@ -81,6 +81,8 @@ folio/                                      Layer 0 META FRAMEWORK plugin root (
 
 **X4-G (ADR-0048)**: design-intent 空間 dir を `architecture/` → `design-intent/` に rename (c5r.7 canonical 語彙「design-intent space」と物理名を一致)。 語彙「architecture」は doc-type (architecture-description) / constitution §1 用法として **dir 名と独立に存続** (X4-F と同じ原理)。 constitution 無改訂 (ADR-0021 の layout 非依存設計により P-10 不要)。 consumer 公開 default (plugin.json `spec_path` / `folio init` scaffold) も同時変更で Layer 0/1 同型維持。 frozen ADR の歴史 prose は据置 (機能参照のみ rewrite)。 検証: `folio validate` 3-gate clean + sandbox 全 GREEN + repo-root landing / render-gate 独立確認。
 
+**ADR-0054 (2026-07-22)**: 生成 spec ページ (flip 済 canonical) は chrome-less — folio build は nav.toc / breadcrumb を注入せず audience-toggle も行わない (skip-link は focus 時のみ可視・prev-next は下部導線として存続)。提示層は pack assembler が完結所有。ADR-0039 の chrome 注入は生成 spec について適用範囲 narrowing (frozen 本文不触・本注記が trace)・rules.html §11 の「全ページ chrome」MUST は生成 spec について supersede (spec 本文の整合改訂は folio-31oz で contract 経由)。実装完了までの過渡期は現行 chrome が残る。
+
 ## 7. Beads Issue Tracker (bd) + scribe
 
 タスク追跡は **bd (beads)**。 SessionStart hook が `bd prime` で bd 基礎の文脈を毎セッション注入する (SSOT = `.beads/PRIME.md`)。 本節は bd 未導入時のフォールバック。
