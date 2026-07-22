@@ -1,0 +1,46 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-007"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  chrome 部分抑制 (ADR-0054 §2.1) が **両方向に** 壊れた corpus を folio validate が exit 1 で
+  block することを実証する (chrome-scope-clean.yaml = clean 側の対)。 fixture は chrome-scope の
+  copy に静的退行を焼いたもので、 chrome-scope arm の **全 assert 分岐を 1 回の validate で
+  逐語 pin する** ことを設計目標にしている (下記「分岐被覆」)。 fixture は静的 bytes ゆえ build 不要、
+  1 箇所の編集がそのまま 1 violation 行に対応する。
+  焼いた退行:
+    - spec/generated.html (陰性 = 生成 spec): breadcrumb と nav.toc を戻し audience-toggle 生成 JS を
+      戻す / skip-link・print 全展開 handler・所属 locator・prev-next を落とす / pack 構造 signature
+      (doc-cover-band) を落とす。
+    - spec/handwritten.html (陽性対照 = 非生成 page): breadcrumb・skip-link・nav.toc・prev-next・
+      inline script (audience-toggle と print handler の両方) を剥がす = 抑制が非生成 page へ漏れた land。
+    - spec/README.html (陽性対照 = 非生成 README): cluster-nav を剥がす。 ★兄弟 cluster (research/)
+      を fixture に実在させてあるのは、 emitter (folio_chrome_clusternav) が「兄弟 cluster README が
+      実在するときだけ」cluster-nav を出す = 単一 cluster corpus ではこの assert が構造的に撃てず
+      恒真 PASS 化するため。
+    - spec/constitution.html (逆向き anchor): spec-pack *家系* の generator meta (canonical 述語には
+      非該当) + doc-cover-band を持たせる = 述語の取りこぼしの再現。
+  ★分岐被覆 (この scenario の存在理由): chrome-scope arm は 18 の assert 分岐を持ち、 うち 16 本
+  (陰性 7 / 陽性 7 / 誤分類 anchor 2) を本 golden が逐語行で pin する。 18 分岐を 1 本ずつ削除する
+  実弾 (assert 行 delete → 本 scenario 実行) で 16/18 が KILLED になることを実測済 (2026-07-22)。
+  逆に言えば **この 16 行のどれかが消える改変は本 scenario の diff として必ず現れる** (assert の
+  削除・文言の弱化・条件の narrowing が CI を素通りしない)。
+  残る 2 本 = cohort 非空 (生成 spec 0 件 / 非生成 0 件) は「corpus 全体の分類が片側へ潰れた形」を
+  見るため、 本 fixture のように両 cohort が非空な corpus からは原理的に撃てない (SURVIVED の 2 本)。
+  述語を常時 true / 常時 false へ潰す mutation では self-host corpus 上で両者とも実際に鳴ることを
+  実測済だが、 その pin は cell 0 の self-test (MK5 / MK6) 側にあり **committed な CI 資産ではない** —
+  cohort 2 分岐の恒久 pin は chrome-scope arm の mutation-kill harness 常設化 (follow-up) に残る。
+  chrome-drift (render との byte 不一致) は同じ page に同時に当たる。 両者が並ぶことは冗長ではなく
+  分業の証跡である: chrome-drift は「build で再生成せよ」の remediate 可能な drift を、 chrome-scope は
+  「build しても直らない = 抑制判定そのものの誤り」を名指す (fixture では静的な改竄ゆえ両方に当たるが、
+  実 corpus の退行では前者が沈黙し後者だけが鳴る — その形は selftest の mutation-kill が担保する)。
+  なお constitution.html は逆向き anchor だけを鳴らし chrome-drift は鳴らさない = 「build しても
+  直らない」側だけが単独で鳴る形を fixture 内に 1 件持たせてある。
+
+command: ["validate", "--root", "tests/fixtures/chrome-scope-violation"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-scope-violation.golden.txt"
+
+expect:
+  exit_code: 1

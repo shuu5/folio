@@ -1,0 +1,31 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-007"
+ears_pattern: "state-driven"
+kind: "cli-golden"
+description: |
+  生成 spec ページ (pack assembler 産物) の chrome 部分抑制 (ADR-0054 §2.1) を、 手書き page と
+  同一 corpus に並べた fixture で clean (exit 0) 側から pin する (chrome-scope-violation.yaml =
+  違反側の対)。 fixture は ../.claude-plugin/bin/folio build --root fixtures/chrome-scope で生成済で、
+  committed bytes が二方向の期待形そのものを担う:
+    - spec/generated.html (陰性 = generator meta "folio spec-pack assembler" 持ち):
+      nav.toc / breadcrumb / audience-toggle 生成 JS が **無く**、 skip-link・print 全展開 handler
+      (beforeprint/afterprint)・所属 locator (p.doc-locator)・prev-next は **在る**。
+    - spec/handwritten.html + spec/README.html + spec/constitution.html + research/README.html
+      (陽性対照 = generator meta 無し): breadcrumb・audience-toggle 生成 JS・print 全展開 handler が
+      従来どおり在り、 emitter と同一述語で条件付く skip-link / nav.toc / cluster-nav / prev-next も
+      在る。 ★兄弟 cluster research/ を置いてあるのは cluster-nav (emitter が「兄弟 cluster README が
+      実在するときだけ」出す chrome) を非空にするため — 単一 cluster corpus では cluster-nav 系の
+      assert が構造的に発火せず、 violation 側 scenario でも撃てない (恒真 PASS)。
+  chrome-drift (render == file の自己整合検査) はこの二方向を区別できない — render 側が抑制を
+  失っても build 後の file が追随して恒真 PASS になる — ため、 validate の chrome-scope arm が
+  committed bytes を render 非依存に読む。 本 scenario はその clean 側 (誤検出しないこと) と、
+  抑制形 bytes 自体を golden で pin する。 constitution (@type FolioConstitution) を含む
+  self-host 型 corpus ゆえ cohort 非空 assert (生成 spec ≥1 かつ 非生成 ≥1) も同時に走る。
+
+command: ["validate", "--root", "tests/fixtures/chrome-scope"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-scope-clean.golden.txt"
+
+expect:
+  exit_code: 0

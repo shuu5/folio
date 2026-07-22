@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer">
+<meta name="generator" content="folio spec-pack assembler (fixture fork) — deterministic structure, prose slots unfilled">
+<title>generated spec</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./generated.html",
+  "@type": "schema:TechArticle",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "dc:title": "generated spec",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">spec</a></li>
+  <li aria-current="page">generated</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+<header class="doc-header"><h1>generated spec</h1><div class="meta">v0.1.0-draft &middot; status: draft</div></header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-h2-own">§1. Overview</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+<section id="s1-overview" class="informative">
+<h2 id="s1-h2-own">§1. Overview</h2>
+<p>pack assembler の generator meta を持つ生成 page (chrome-scope の陰性側)。 提示層は pack が完結所有するため chrome の nav.toc / breadcrumb / audience-toggle は注入されず、 skip-link・print 全展開 handler・prev-next・所属 locator だけが残る (ADR-0054 §2.1)。 chain 末尾 (prev=handwritten・next 無し)。</p>
+<h3>§1.1 Sub-detail</h3>
+<p>見出し id を持つ h2 が在っても目次は生成されない — 抑制は「目次が作れない」ではなく「作らない」ことの pin。</p>
+</section>
+<!-- folio:chrome-bottom -->
+<script>
+(function () {
+  /* 退行の再現: 生成 spec に audience-toggle 生成 JS が戻り、 かつ print 全展開 handler
+     (印刷前後の listener 2 本) が落ちた形。 ADR-0054 §2.1 は「toggle 撤去は print handler を
+     巻き込まない」ゆえ、 この 2 つは *独立の* 違反として同時に鳴らなければならない。
+     ★この注釈に handler 名を逐語で書かない: 検査は chrome 領域の fixed-string grep ゆえ、
+     コメント内の 1 語が assert を恒真 PASS 化する (焼き込み時に実測した footgun)。 */
+  if (!document.querySelector('[data-audience]')) return;
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  document.body.insertBefore(bar, document.body.firstChild);
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

@@ -1188,7 +1188,10 @@ a.reader-card:focus-visible {
 /* ========================================================================
  * Chrome (ADR-0039 §2.3、 folio build が全ページに注入する marker 領域)。
  *   chrome-top = skip-link + breadcrumb / chrome-toc = cluster-nav (README) +
- *   on-this-page 目次 / chrome-bottom = prev-next。 領域内は build 所有。
+ *   on-this-page 目次 / chrome-bottom = 所属 locator + prev-next。 領域内は build 所有。
+ *   ★生成 spec ページ (pack assembler 産物) では nav.toc / breadcrumb / audience-toggle を
+ *   注入しない (ADR-0054 §2.1) — skip-link (focus 時のみ可視) と prev-next は存続し、
+ *   所属と一覧への導線は下部 locator (.doc-locator) が担う。
  * ====================================================================== */
 
 /* skip-link: 視覚非表示 → keyboard focus で出現 (W3C APG)。 */
@@ -1258,6 +1261,16 @@ nav.prevnext .prevnext__title {
 }
 nav.prevnext a:hover .prevnext__title { text-decoration: underline; }
 nav.prevnext a.prevnext__next { margin-left: auto; text-align: right; }
+
+/* 所属 locator (ADR-0054 §2.1): 生成 spec ページで上部 breadcrumb の代わりに下部
+ * (prev-next 直上) が担う「所属 + 一覧へ」の導線。 小さく secondary (mockup A v2 準拠)。 */
+p.doc-locator {
+  margin: 2.5rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--folio-border-default);
+  font-size: var(--folio-text-small);
+  color: var(--folio-text-secondary);
+}
 
 /* ========================================================================
  * Audience toggle (ADR-0039 §2.5 / rules §11.3) — chrome の inline script が

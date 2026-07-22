@@ -619,11 +619,6 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <body>
 <!-- folio:chrome-top -->
 <a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
-<nav class="breadcrumb" aria-label="パンくず"><ol>
-  <li><a href="../index.html">design-intent</a></li>
-  <li><a href="./README.html">spec</a></li>
-  <li aria-current="page">srs-verification</li>
-</ol></nav>
 <!-- /folio:chrome-top -->
 <div class="page" data-component="requirement-type-color-tokens">
 <header data-component="doc-cover-band">
@@ -639,15 +634,6 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <div class="reader-chip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 想定読者: Developer, AI Agent, External Reviewer — folio を consume する開発者・AI Agent・外部レビュアー</div>
 </header>
 <!-- folio:chrome-toc -->
-<nav class="toc" aria-label="ページ内目次">
-<ol>
-  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
-  <li><a href="#s1-boundary-model">§1. 機械/LLM 検証境界と done-condition モデル</a></li>
-  <li><a href="#s2-done-condition-req">§2. done-condition REQ (REQ-VER-024〜030)</a></li>
-  <li><a href="#s3-coverage-rtm">§3. Coverage RTM (requirement traceability)</a></li>
-  <li><a href="#s4-references">§4. References</a></li>
-</ol>
-</nav>
 <!-- /folio:chrome-toc -->
 <div data-component="ears-legend"><span class="el-cap">EARS 5 型 (規範要件の種類)</span><span class="el-item"><span data-component="ears-legend-item" class="always">無条件不変条件</span><span class="el-when">常に守る</span></span><span class="el-item"><span data-component="ears-legend-item" class="trigger">event 応答</span><span class="el-when">きっかけがある時</span></span><span class="el-item"><span data-component="ears-legend-item" class="state">状態継続中</span><span class="el-when">状態が続く間</span></span><span class="el-item"><span data-component="ears-legend-item" class="option">機能オプション</span><span class="el-when">機能を使う時</span></span><span class="el-item"><span data-component="ears-legend-item" class="forbid">異常応答</span><span class="el-when">異常が起きた時</span></span></div>
 <details data-component="spec-machine-fold" class="machine-fold">
@@ -796,6 +782,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <div class="tags" data-audience="machine"><span>folio design system</span><span>spec-pack (srs-verification fork)</span><span>folio engine</span><span>EARS 章立て + 非終端 照会 + 機械層 <span class="term" data-term="fold" data-tooltip="details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。">fold</span></span></div>
 </div></footer>
 <!-- folio:chrome-bottom -->
+<p class="doc-locator">この文書の所属: design-intent / spec — <a href="./README.html">spec 一覧へ</a></p>
 <nav class="prevnext" aria-label="前後の文書">
   <a class="prevnext__prev" href="verification.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio verification — sandbox verification framework spec</span></a>
 </nav>
@@ -811,32 +798,6 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
     for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
     openedForPrint = [];
   });
-  if (!document.querySelector('[data-audience]')) return;
-  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
-     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
-  document.body.classList.add('audience-human');
-  var bar = document.createElement('nav');
-  bar.className = 'audience-toggle';
-  bar.setAttribute('aria-label', '表示対象の切替');
-  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
-  for (var s = 0; s < states.length; s++) {
-    (function (mode, label) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = label;
-      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
-      b.addEventListener('click', function () {
-        document.body.classList.remove('audience-human', 'audience-machine');
-        if (mode !== 'both') document.body.classList.add('audience-' + mode);
-        var bs = bar.querySelectorAll('button');
-        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
-      });
-      bar.appendChild(b);
-    })(states[s][0], states[s][1]);
-  }
-  var bc = document.querySelector('nav.breadcrumb');
-  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
-  else { document.body.insertBefore(bar, document.body.firstChild); }
 })();
 </script>
 <!-- /folio:chrome-bottom -->

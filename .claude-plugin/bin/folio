@@ -2722,7 +2722,19 @@ folio_cmd_validate() {
   # marker 無し page = 未注入 = keystone skip (生成 index/glossary と同じ位置づけ)。 remediate は folio build
   # (§2.9 分業: 表示層 regen は build 所有)。 render 不能 file は scan 対象の前提崩れだが validate では
   # skip (build 側が fail-closed で捕捉)。
-  local chv_base chv_rel chv_tmp
+  # ★chrome-scope (ADR-0054 §2.1) を同じ walk に twin で乗せる: chrome-drift は「render 出力 == file」
+  #   の *自己整合* 検査ゆえ、 render 側が生成 spec の抑制を失っても (build 後は file が追随して) 恒真
+  #   PASS になる。 本 arm は committed bytes を render 非依存に読み、 二方向に assert する:
+  #     陰性 (生成 spec)  = nav.toc / breadcrumb / audience-toggle 生成 JS が 0、
+  #                        かつ skip-link / print handler / 所属 locator / (chain 上なら) prev-next が存続。
+  #     陽性 (非生成 page) = breadcrumb / audience-toggle / print handler が在り、 emitter と同一述語で
+  #                        条件付けた skip-link / nav.toc / cluster-nav / prev-next も在る = 誤剥離の非回帰
+  #                        (陰性と対称に問う — 片側だけ薄いと抑制の scope leak が build に masking される)。
+  #   さらに constitution (@type FolioConstitution) は generator meta とは *別 signal* で chrome 保持を
+  #   要求する anchor を置く — 述語自体が壊れて全 page を「生成」と誤判定する mutation は、 分類に
+  #   従属する assert だけでは両方向とも素通りする (分類依存 assert の vacuous 化) ため。
+  #   self-root corpus では両 cohort の非空も要求する (述語が常時 true/false に潰れる形の検出)。
+  local chv_base chv_rel chv_tmp chv_reg chv_gen chv_strip chv_ngen=0 chv_nnon=0
   chv_base=$(folio_chrome_base_url "$root_abs")
   while IFS= read -r chv_rel; do
     [[ -z "$chv_rel" ]] && continue
@@ -2736,7 +2748,122 @@ folio_cmd_validate() {
       fi
     fi
     rm -f "$chv_tmp"
+
+    # --- chrome-scope: committed bytes の chrome 領域だけを見る (本文の例示 markup を混ぜない) ---
+    chv_reg=$(folio_chrome_regions "${root_abs}/${chv_rel}")
+    chv_strip=$(mktemp); folio_chrome_strip "${root_abs}/${chv_rel}" > "$chv_strip"
+    chv_gen=0; folio_chrome_is_generated_spec "$chv_strip" && chv_gen=1
+    if [[ "$chv_gen" -eq 1 ]]; then
+      chv_ngen=$((chv_ngen + 1))
+      if grep -qF '<nav class="toc"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec に ページ内目次 (nav.toc) が注入されている (提示層は pack が完結所有、 ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+      if grep -qF '<nav class="breadcrumb"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec に breadcrumb が注入されている (所属は下部 locator が担う、 ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+      if grep -qF 'audience-toggle' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec に audience-toggle 生成 JS が注入されている (ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+      grep -qF '<a class="skip-link"' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec の skip-link が失われている (accessibility 温存 = focus 時のみ可視で存続、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      grep -qF 'beforeprint' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec の print 全展開 handler が失われている (toggle 撤去は print handler を巻き込まない、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      grep -qF '<p class="doc-locator"' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec に所属 locator が無い (prev-next 直上に「所属 + 一覧へ」、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      # prev-next は emitter (folio_chrome_bottom_emit) と *同一述語* で問う (単一定義 =
+      # folio_chrome_has_neighbors): chain に属していても単独メンバなら emitter は nav.prevnext を
+      # 出さないため、 素の -n で問うと build しても直らない false violation になる。
+      if folio_chrome_has_neighbors "$chv_rel" "$root_abs" && ! grep -qF '<nav class="prevnext"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec の prev-next が失われている (下部導線は存続、 ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+    else
+      chv_nnon=$((chv_nnon + 1))
+      # ★陽性対照は陰性側と *対称に* 4 要素とも問う: gen フラグは 3 emitter へ手で通されており、
+      #   その分岐が全 page へ漏れる形 (抑制の scope leak) が最も起きやすい退行。 breadcrumb だけを
+      #   見ていると toggle / print handler / prev-next の誤剥離は chrome-drift も含めて全部沈黙する
+      #   (build が file を render に追随させ恒真 PASS = build が masking 経路になる)。
+      grep -qF '<nav class="breadcrumb"' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から breadcrumb が失われている (chrome 抑制は生成 spec のみ = 誤剥離、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      grep -qF 'audience-toggle' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から audience-toggle 生成 JS が失われている (chrome 抑制は生成 spec のみ = 誤剥離、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      grep -qF 'beforeprint' <<< "$chv_reg" || {
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から print 全展開 handler が失われている (chrome 抑制は生成 spec のみ = 誤剥離、 ADR-0054 §2.1)")
+        nav_drift_fail=1; }
+      # skip-link / nav.toc / cluster-nav / prev-next は emitter と *同一述語* で条件付けする
+      # (emitter が出さない形を検査側が要求すると build しても直らない false violation になる)。
+      if [[ -n "$(folio_chrome_skip_target "$chv_strip")" ]] && ! grep -qF '<a class="skip-link"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から skip-link が失われている (accessibility 温存、 ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+      if [[ -n "$(folio_chrome_toc_rows "$chv_strip")" ]] && ! grep -qF '<nav class="toc"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から ページ内目次 (nav.toc) が失われている (目次生成対象 = emitter と同一述語、 ADR-0039 §2.3)")
+        nav_drift_fail=1
+      fi
+      if [[ "${chv_rel##*/}" == "README.html" ]] && [[ -n "$(folio_chrome_clusternav "$chv_rel" "$root_abs")" ]] \
+         && ! grep -qF '<nav class="cluster-nav"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 README から cluster-nav が失われている (chrome 抑制は生成 spec のみ = 誤剥離、 ADR-0039 §2.3)")
+        nav_drift_fail=1
+      fi
+      if folio_chrome_has_neighbors "$chv_rel" "$root_abs" && ! grep -qF '<nav class="prevnext"' <<< "$chv_reg"; then
+        violations+=("${chv_rel}"$'\t'"[chrome-scope] 非生成 page から prev-next が失われている (chrome 抑制は生成 spec のみ = 誤剥離、 ADR-0054 §2.1)")
+        nav_drift_fail=1
+      fi
+    fi
+    # ★誤分類 anchor (述語とは独立の signal): 「生成」と判定した page は pack が emit する構造
+    #   signature (doc-cover-band) を必ず持つ。 generator meta 述語が過剰一致して手書き page
+    #   (constitution / self-spec / ADR) を剥がす mutation は、 分類に従属する上の assert 群では
+    #   両方向とも素通りする (vacuous 化) ため、 別 signal で縛る。 constitution の名指し pin に
+    #   しないのは ADR-0054 §2.4 が constitution の将来 flip を予定するため — ただし flip 後も本
+    #   anchor は無関係のまま残る (constitution の contract は principle-pack ゆえ generator meta が
+    #   "folio principle-pack assembler" になり canonical 述語は非該当 = gen=0 で本 anchor は不発火)。
+    #   名指ししないことの実利は「手書き page 一般の誤剥離」を doc-type 非依存に撃てる点にある。
+    #   band の有無は raw tag anchored (folio_chrome_has_cover_band) で問う — 逐語言及を拾う
+    #   fixed-string grep は、 解説 page の例示 markup で判定が反転する。
+    if [[ "$chv_gen" -eq 1 ]] && ! folio_chrome_has_cover_band "$chv_strip"; then
+      violations+=("${chv_rel}"$'\t'"[chrome-scope] 生成 spec と判定されたが pack 構造 (doc-cover-band) を持たない = 手書き page の誤剥離 (ADR-0054 §2.1)")
+      nav_drift_fail=1
+    fi
+    # ★逆向き anchor (spec-pack 家系 + band ⇒ gen): 上の片方向だけでは述語の *部分的な* 取りこぼし
+    #   (fork を 1 系統だけ拾う等) が素通りする — 落ちた page は build で chrome を再注入され、
+    #   分類に従属する assert 群は「非生成 = breadcrumb 有りが正常」と読むため両方向とも沈黙し、
+    #   chrome-drift も build 後は render==file で恒真 PASS になる (build が masking 経路になる)。
+    #   ★前件は *spec-pack 家系に限定* する: doc-cover-band は共有 lib が 17 assembler 全てに出す
+    #   pack 一般の signature ゆえ、 band 単独を前件にすると ADR-pack / principle-pack / S4 SRS 等の
+    #   産物が chrome 対象 dir に入った瞬間 (folio-c5r の doc-suite 被覆・ADR-0054 §2.4 の constitution
+    #   flip・consumer の生成 SRS = verification.html §3.9) に、 build でも編集でも解消できない
+    #   violation (unremediable wedge) になる。 ADR-0054 は spec-pack 産物以外を chrome-less 化して
+    #   いないため、 他 pack を chrome 有りのまま通すのが正しい (follow-up = folio-31oz 配下で
+    #   per-pack に述語を拡張する)。 家系判定は canonical 述語より粗い独立 signal ゆえ、 fork の
+    #   部分取りこぼしは従来どおり撃てる。
+    if [[ "$chv_gen" -eq 0 ]] && folio_chrome_is_spec_pack_family "$chv_strip" \
+       && folio_chrome_has_cover_band "$chv_strip"; then
+      violations+=("${chv_rel}"$'\t'"[chrome-scope] spec-pack 家系の pack 構造 (doc-cover-band) を持つのに生成 spec と判定されていない = 述語の取りこぼし (ADR-0054 §2.1)")
+      nav_drift_fail=1
+    fi
+    rm -f "$chv_strip"
   done < <(folio_chrome_targets "$root_abs")
+  # cohort 非空 (self-host root のみ): 生成 spec が 0 = 述語が常時 false に潰れた / 非生成が 0 = 常時
+  # true に潰れた形。 どちらも per-page assert は素通りするため、 集合の側から fail-closed に締める。
+  # consumer corpus (constitution が TechArticle / folio init scaffold) では走らない (生成 spec 0 は正常)。
+  if [[ "$chrome_seen" -eq 1 ]] && folio_nav_is_self_root "$root_abs"; then
+    if [[ "$chv_ngen" -eq 0 ]]; then
+      violations+=("spec/"$'\t'"[chrome-scope] self-host corpus に生成 spec が 1 件も検出されない (generator meta 述語の破損疑い、 ADR-0054 §2.1)")
+      nav_drift_fail=1
+    fi
+    if [[ "$chv_nnon" -eq 0 ]]; then
+      violations+=("spec/"$'\t'"[chrome-scope] chrome 注入 page が全て生成 spec と判定された (述語の過剰一致疑い、 ADR-0054 §2.1)")
+      nav_drift_fail=1
+    fi
+  fi
 
   # --- gate (o) cluster-reachability — dead-end README / empty-cluster を検出 (ADR-0035 §2.5、 §1 defect #2/#3)。
   #     これは index 由来でなく *cluster dir + README の dir/graph scan* ゆえ、 生成 index の有無に gate しない
@@ -3804,6 +3931,52 @@ folio_cmd_build() {
 #   生成 index/glossary と同じ位置づけ)。
 # ============================================================================
 
+# 生成 spec ページ判定 (ADR-0054 §2.1) — chrome 部分抑制の唯一の検出述語 (single definition)。
+#   ★新 marker を発明しない: pack assembler が既に emit している <meta name="generator"> を述語に使う
+#   (ADR-0052 の同一述語 doctrine)。 spec-pack fork 4 系統 (spec / relations / verification /
+#   srs-verification) は content 先頭が "folio spec-pack assembler" で一致し、 他 pack (S4 / ADR-pack /
+#   vision-pack 等) と手書き page (constitution / README / ADR) は非該当 (verified)。
+#   該当 page では nav.toc / breadcrumb / audience-toggle 生成 JS を注入せず (提示層は pack が完結所有)、
+#   skip-link (focus 時のみ可視) / prev-next / print handler は存続し所属 locator を下部へ注入する。
+folio_chrome_is_generated_spec() {
+  grep -qE '<meta name="generator" content="folio spec-pack assembler' "$1"
+}
+
+# spec-pack *家系* 判定 (逆向き anchor 専用の広い述語)。 folio_chrome_is_generated_spec より粗く
+# 「generator meta の content に spec-pack を含む」だけを問う — fork を 1 系統だけ拾う形の
+# 部分取りこぼし (canonical 述語が narrow 化する退行) を、 canonical 述語に従属せずに撃つため。
+# ★他 pack (ADR-pack / principle-pack / vision-pack / S4 …) は非該当: doc-cover-band は共有 lib
+#   (generator/lib/common.sh の cover emit) が 17 assembler 全てに出す *pack 一般* の signature で
+#   あり spec-pack 固有ではない。 逆向き anchor を band 単独で張ると、 ADR-pack 産物や
+#   principle-pack で生成された constitution (ADR-0054 §2.4 の将来 flip) が chrome 対象 dir
+#   (spec/ decisions/ research/) へ入った瞬間に build でも編集でも解消できない violation
+#   (unremediable wedge) になる — ADR-0054 は他 doc-type を chrome-less 化していない。
+folio_chrome_is_spec_pack_family() {
+  grep -qE '<meta name="generator" content="[^"]*spec-pack' "$1"
+}
+
+# pack 構造 signature (doc-cover-band) を *実 markup として* 持つか ($1=stripped file)。
+# ★逐語言及を拾わない: 属性文字列 data-component="doc-cover-band" は CSS selector 引用
+#   ([data-component="doc-cover-band"]) や <code> 内の解説として design-system を記述する
+#   手書き page に自然に現れる。 raw な開始 tag に anchor した regex ([^>]* は > を跨げない) で
+#   問い、 引用形・escape 形 (&lt;header …) を除外する (「escaped 言及は raw <tag を要求する
+#   regex に非一致」 idiom と同型)。 fixed-string grep のままだと、 解説 page が 1 語触れただけで
+#   build では直せない false violation になる。
+folio_chrome_has_cover_band() {
+  grep -qE '<[a-zA-Z][a-zA-Z0-9]*[^>]*data-component="doc-cover-band"' "$1"
+}
+
+# chain 上に *実在の* 隣接を持つか ($1=rel $2=root_abs) — emitter (folio_chrome_bottom_emit) が
+# nav.prevnext を出す条件と同一。 folio_chrome_chain_neighbors は単独メンバ (prev/next とも空) でも
+# 区切りのタブ 1 文字を返すため、 検査側が素の -n で問うと build しても直らない false violation
+# (unremediable wedge) になる。 陰性 / 陽性どちらの cohort からも呼ぶので単一定義に畳む
+# (検査述語が emitter から乖離する形を構造的に封じる)。
+folio_chrome_has_neighbors() {
+  local nb
+  nb=$(folio_chrome_chain_neighbors "$1" "$2")
+  [[ -n "${nb%%$'\t'*}" ]] || [[ -n "${nb#*$'\t'}" ]]
+}
+
 # rel ($1) から root への相対 prefix を返す (深さから決定的、 ROOT_REL idiom)。
 # 例: spec/rules.html → "../"、 glossary.html → ""。
 folio_chrome_rootrel() {
@@ -3845,6 +4018,32 @@ folio_chrome_strip() {
     /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{cs=0; next}
     cs==0{print}
   ' "$1"
+}
+
+# folio_chrome_strip の補集合: file ($1) の chrome 領域 (marker 間) の中身だけを stdout。
+# chrome-scope gate (ADR-0054 §2.1) が committed bytes を render 非依存に検査するための抽出器
+# (本文側に現れる例示 markup を検査対象へ混入させない = 領域限定の fail-closed)。
+folio_chrome_regions() {
+  awk '
+    /<!--[[:space:]]*folio:chrome-(top|toc|bottom)[[:space:]]*-->/{cs=1; next}
+    /<!--[[:space:]]*\/folio:chrome-(top|toc|bottom)[[:space:]]*-->/{cs=0; next}
+    cs==1{print}
+  ' "$1"
+}
+
+# 所属 locator (ADR-0054 §2.1: 上部 breadcrumb を撤去する代わりに「所属 + 一覧への導線」を下部
+# prev-next 直上へ移設)。 $1=rel $2=root_abs。 cluster README が実在するときだけ link を張る
+# (dead link を作らない = nav-dead-link / link-rot 安全、 cluster-nav と同 idiom)。
+folio_chrome_locator() {
+  local rel="$1" root_abs="$2" cl
+  [[ "$rel" == */* ]] || return 0
+  cl="${rel%%/*}"
+  if [[ -f "${root_abs}/${cl}/README.html" ]]; then
+    printf '<p class="doc-locator">この文書の所属: design-intent / %s — <a href="./README.html">%s 一覧へ</a></p>\n' \
+      "$(folio_build_htesc "$cl")" "$(folio_build_htesc "$cl")"
+  else
+    printf '<p class="doc-locator">この文書の所属: design-intent / %s</p>\n' "$(folio_build_htesc "$cl")"
+  fi
 }
 
 # stripped file ($1) から on-this-page 目次行 "level\ttarget-id\tlabel" を文書順に emit。
@@ -3996,18 +4195,24 @@ folio_chrome_chain_neighbors() {
   printf '%s\t%s' "$prev" "$next"
 }
 
-# chrome-top 領域の中身 (skip-link + breadcrumb) を emit。 $1=stripped file $2=rel $3=base_url。
+# chrome-top 領域の中身 (skip-link + breadcrumb) を emit。 $1=stripped file $2=rel $3=base_url
+# $4=generated (1 = 生成 spec: breadcrumb を注入しない、 ADR-0054 §2.1。 skip-link は
+# accessibility ゆえ存続 = common.css で focus 時のみ可視)。
 folio_chrome_top_emit() {
-  local stripped="$1" rel="$2" base="$3" target
+  local stripped="$1" rel="$2" base="$3" gen="${4:-0}" target
   target=$(folio_chrome_skip_target "$stripped")
   [[ -n "$target" ]] && printf '<a class="skip-link" href="#%s">本文へスキップ</a>\n' "$(folio_build_attresc "$target")"
+  [[ "$gen" -eq 1 ]] && return 0
   folio_chrome_breadcrumb "$rel" "$base"
 }
 
 # chrome-toc 領域の中身 (cluster-nav [README のみ、 兄弟 cluster + vocab 解決時 glossary] + on-this-page 目次) を emit。
-# $1=stripped file $2=rel $3=root_abs。 目次 0 行 (glossary 等) なら目次 nav 自体を省略。
+# $1=stripped file $2=rel $3=root_abs $4=generated。 目次 0 行 (glossary 等) なら目次 nav 自体を省略。
+# generated=1 (生成 spec) は領域ごと空にする — ページ内目次は pack の章 deck-band と機能重複し、
+# 提示層は pack が完結所有する (ADR-0054 §2.1)。 marker 領域自体は残す (3 領域構造は不変)。
 folio_chrome_toc_emit() {
-  local stripped="$1" rel="$2" root_abs="$3" rows lvl tgt lab cls
+  local stripped="$1" rel="$2" root_abs="$3" gen="${4:-0}" rows lvl tgt lab cls
+  [[ "$gen" -eq 1 ]] && return 0
   [[ "${rel##*/}" == "README.html" ]] && folio_chrome_clusternav "$rel" "$root_abs"
   rows=$(folio_chrome_toc_rows "$stripped")
   [[ -z "$rows" ]] && return 0
@@ -4021,9 +4226,13 @@ folio_chrome_toc_emit() {
   printf '</ol>\n</nav>\n'
 }
 
-# chrome-bottom 領域の中身 (prev-next) を emit。 $1=rel $2=root_abs。 chain 外は無出力。
+# chrome-bottom 領域の中身 (所属 locator [生成 spec のみ] + prev-next + inline script) を emit。
+# $1=rel $2=root_abs $3=generated。 chain 外は prev-next 無出力。
+# generated=1 では (a) prev-next 直上に所属 locator を置き (b) inline script から audience-toggle
+# 生成部を出さない (print 全展開 handler は温存) — ADR-0054 §2.1。
 folio_chrome_bottom_emit() {
-  local rel="$1" root_abs="$2" nb prev next t
+  local rel="$1" root_abs="$2" gen="${3:-0}" nb prev next t
+  [[ "$gen" -eq 1 ]] && folio_chrome_locator "$rel" "$root_abs"
   nb=$(folio_chrome_chain_neighbors "$rel" "$root_abs")
   if [[ -n "$nb" ]]; then
     prev="${nb%%$'\t'*}"; next="${nb#*$'\t'}"
@@ -4047,7 +4256,9 @@ folio_chrome_bottom_emit() {
   # toggle UI は [data-audience] を持つ page でのみ JS が生成 (no-JS では UI 自体出ない)。
   # body class 切替のみ・永続なし (煩わしさが実機 walk で実証されたら localStorage 昇格 = ADR-0039 §2.5 片道)。
   # beforeprint は閉じた details を一時 open し afterprint で復元 (印刷時全展開、 rules §11.3)。
-  cat <<'CHROME_JS'
+  # ★heredoc を 3 分割する (print 部 / toggle 部 / 閉じ) — 生成 spec では toggle 部だけを落とし、
+  #   非生成 page では 3 つの連結が従来と byte 完全一致する (print handler の二重定義を作らない)。
+  cat <<'CHROME_JS_PRINT'
 <script>
 (function () {
   var openedForPrint = [];
@@ -4060,6 +4271,9 @@ folio_chrome_bottom_emit() {
     for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
     openedForPrint = [];
   });
+CHROME_JS_PRINT
+  if [[ "$gen" -eq 0 ]]; then
+  cat <<'CHROME_JS_TOGGLE'
   if (!document.querySelector('[data-audience]')) return;
   /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
      no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
@@ -4086,9 +4300,12 @@ folio_chrome_bottom_emit() {
   var bc = document.querySelector('nav.breadcrumb');
   if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
   else { document.body.insertBefore(bar, document.body.firstChild); }
+CHROME_JS_TOGGLE
+  fi
+  cat <<'CHROME_JS_CLOSE'
 })();
 </script>
-CHROME_JS
+CHROME_JS_CLOSE
 }
 
 # page の期待 content (chrome 注入済全文) を stdout。 $1=file $2=rel $3=root_abs $4=base_url。
@@ -4099,16 +4316,19 @@ CHROME_JS
 # <body> / </body> が無い file は render 不能 = return 1 (caller skip、 fail-closed)。
 folio_chrome_render_doc() {
   local file="$1" rel="$2" root_abs="$3" base="$4"
-  local stripped body_ln head_ln close_ln top toc bottom
+  local stripped body_ln head_ln close_ln top toc bottom gen=0
   stripped=$(mktemp) || return 1
   folio_chrome_strip "$file" > "$stripped"
+  # 生成 spec 判定は chrome を剥いだ本文側 (head の generator meta) から取る — 述語は単一定義
+  # (folio_chrome_is_generated_spec)、 判定入力は chrome-free ゆえ冪等 (ADR-0054 §2.1)。
+  folio_chrome_is_generated_spec "$stripped" && gen=1
   body_ln=$(grep -n '<body[ >]' "$stripped" | head -1 | cut -d: -f1)
   close_ln=$(grep -n '</body>' "$stripped" | tail -1 | cut -d: -f1)
   if [[ -z "$body_ln" || -z "$close_ln" ]]; then rm -f "$stripped"; return 1; fi
   head_ln=$(awk -v b="$body_ln" 'NR>b && /<\/header>/{print NR; exit}' "$stripped")
-  top=$(folio_chrome_top_emit "$stripped" "$rel" "$base")
-  toc=$(folio_chrome_toc_emit "$stripped" "$rel" "$root_abs")
-  bottom=$(folio_chrome_bottom_emit "$rel" "$root_abs")
+  top=$(folio_chrome_top_emit "$stripped" "$rel" "$base" "$gen")
+  toc=$(folio_chrome_toc_emit "$stripped" "$rel" "$root_abs" "$gen")
+  bottom=$(folio_chrome_bottom_emit "$rel" "$root_abs" "$gen")
   CHROME_TOP="$top" CHROME_TOC="$toc" CHROME_BOTTOM="$bottom" \
   awk -v body_ln="$body_ln" -v head_ln="${head_ln:-0}" -v close_ln="$close_ln" '
     NR==close_ln {

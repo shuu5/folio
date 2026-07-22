@@ -641,11 +641,6 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <body>
 <!-- folio:chrome-top -->
 <a class="skip-link" href="#s0-reader-guide">本文へスキップ</a>
-<nav class="breadcrumb" aria-label="パンくず"><ol>
-  <li><a href="../index.html">design-intent</a></li>
-  <li><a href="./README.html">spec</a></li>
-  <li aria-current="page">verification</li>
-</ol></nav>
 <!-- /folio:chrome-top -->
 <div class="page" data-component="requirement-type-color-tokens">
 <header data-component="doc-cover-band">
@@ -661,36 +656,6 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <div class="reader-chip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3a2c05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 想定読者: Developer, AI Agent, External Reviewer — folio を consume する開発者・AI Agent・外部レビュアー</div>
 </header>
 <!-- folio:chrome-toc -->
-<nav class="toc" aria-label="ページ内目次">
-<ol>
-  <li><a href="#s0-reader-guide">§0. Reader's Guide</a></li>
-  <li><a href="#s1-contract">§1. Verification Contract Definition</a></li>
-  <li class="toc--sub"><a href="#s1-1-concepts">§1.1 3 concept</a></li>
-  <li class="toc--sub"><a href="#s1-2-scope-boundary">§1.2 本 framework の scope</a></li>
-  <li><a href="#s2-scope">§2. Verification Scope</a></li>
-  <li class="toc--sub"><a href="#s2-1-targets">§2.1 verification 対象</a></li>
-  <li class="toc--sub"><a href="#s2-2-out-of-scope">§2.2 scope 外</a></li>
-  <li><a href="#s3-ears">§3. EARS Requirements (REQ-VER-001〜)</a></li>
-  <li class="toc--sub"><a href="#s3-1-scenario-format">§3.1 scenario format (YAML、 1 REQ = 1 scenario)</a></li>
-  <li class="toc--sub"><a href="#s3-2-yaml-schema">§3.2 YAML schema</a></li>
-  <li class="toc--sub"><a href="#s3-3-assertion">§3.3 assertion 戦略 = exit code 中心</a></li>
-  <li class="toc--sub"><a href="#s3-4-baseline">§3.4 golden baseline 管理</a></li>
-  <li class="toc--sub"><a href="#s3-5-ears-mapping">§3.5 EARS → Gherkin 1:1 mapping</a></li>
-  <li class="toc--sub"><a href="#s3-6-verification-specific">§3.6 verification-specific scenario REQ (REQ-VER-007〜)</a></li>
-  <li class="toc--sub"><a href="#s3-7-coverage-rtm">§3.7 Coverage RTM (requirement traceability)</a></li>
-  <li class="toc--sub"><a href="#s3-8-nav-req">§3.8 walkable-nav / chrome scenario REQ (REQ-NAV-001〜007)</a></li>
-  <li class="toc--sub"><a href="#s3-9-srs-done-condition">§3.9 生成 SRS の done-condition gate → srs-verification.html へ分離</a></li>
-  <li class="toc--sub"><a href="#s3-10-flip-fidelity">§3.10 flip 済 spec の fidelity done-condition (REQ-VER-031)</a></li>
-  <li><a href="#s4-implementation">§4. Implementation Phase</a></li>
-  <li class="toc--sub"><a href="#s4-1-3step">§4.1 3-Step approach</a></li>
-  <li class="toc--sub"><a href="#s4-2-completion-vs-prototype">§4.2 完成形 verification vs 試作段階 verification</a></li>
-  <li><a href="#s5-open-questions">§5. Open Questions / ADR Cross-references</a></li>
-  <li class="toc--sub"><a href="#s5-1-gaps">§5.1 Open Questions (Gap、 sandbox-verification-research §10.1 参照)</a></li>
-  <li class="toc--sub"><a href="#s5-2-pending-adrs">§5.2 起票保留 ADR (SHOULD ランク)</a></li>
-  <li class="toc--sub"><a href="#s5-3-related-adrs">§5.3 関連 ADR (acceptance 済)</a></li>
-  <li><a href="#s6-references">§6. References</a></li>
-</ol>
-</nav>
 <!-- /folio:chrome-toc -->
 <div data-component="ears-legend"><span class="el-cap">EARS 5 型 (規範要件の種類)</span><span class="el-item"><span data-component="ears-legend-item" class="always">無条件不変条件</span><span class="el-when">常に守る</span></span><span class="el-item"><span data-component="ears-legend-item" class="trigger">event 応答</span><span class="el-when">きっかけがある時</span></span><span class="el-item"><span data-component="ears-legend-item" class="state">状態継続中</span><span class="el-when">状態が続く間</span></span><span class="el-item"><span data-component="ears-legend-item" class="option">機能オプション</span><span class="el-when">機能を使う時</span></span><span class="el-item"><span data-component="ears-legend-item" class="forbid">異常応答</span><span class="el-when">異常が起きた時</span></span></div>
 <details data-component="spec-machine-fold" class="machine-fold">
@@ -1196,6 +1161,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <!-- folio:chrome-bottom -->
+<p class="doc-locator">この文書の所属: design-intent / spec — <a href="./README.html">spec 一覧へ</a></p>
 <nav class="prevnext" aria-label="前後の文書">
   <a class="prevnext__prev" href="relations.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">folio relations — spec 間の関係性表現規約</span></a>
   <a class="prevnext__next" href="srs-verification.html"><span class="prevnext__dir">次 &rarr;</span><span class="prevnext__title">folio SRS verification spec</span></a>
@@ -1212,32 +1178,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
     openedForPrint = [];
   });
-  if (!document.querySelector('[data-audience]')) return;
-  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
-     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
-  document.body.classList.add('audience-human');
-  var bar = document.createElement('nav');
-  bar.className = 'audience-toggle';
-  bar.setAttribute('aria-label', '表示対象の切替');
-  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
-  for (var s = 0; s < states.length; s++) {
-    (function (mode, label) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.textContent = label;
-      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
-      b.addEventListener('click', function () {
-        document.body.classList.remove('audience-human', 'audience-machine');
-        if (mode !== 'both') document.body.classList.add('audience-' + mode);
-        var bs = bar.querySelectorAll('button');
-        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
-      });
-      bar.appendChild(b);
-    })(states[s][0], states[s][1]);
-  }
-  var bc = document.querySelector('nav.breadcrumb');
-  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
-  else { document.body.insertBefore(bar, document.body.firstChild); }
 })();
 </script>
 <!-- /folio:chrome-bottom -->

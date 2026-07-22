@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="spec">
+<meta name="folio-layer" content="project">
+<meta name="folio-version" content="0.1.0-draft">
+<meta name="folio-status" content="draft">
+<meta name="folio-stakeholders" content="Developer">
+<title>handwritten spec</title>
+<link rel="stylesheet" href="../../common.css">
+<script type="application/ld+json">
+{
+  "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" },
+  "@id": "./handwritten.html",
+  "@type": "schema:TechArticle",
+  "dc:isPartOf": [
+    { "@id": "./README.html" }
+  ],
+  "dc:title": "handwritten spec",
+  "folio:version": "0.1.0-draft"
+}
+</script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<!-- /folio:chrome-top -->
+<header class="doc-header"><h1>handwritten spec</h1><div class="meta">v0.1.0-draft &middot; status: draft</div></header>
+<!-- folio:chrome-toc -->
+<!-- /folio:chrome-toc -->
+<section id="s1-overview" class="informative">
+<h2 id="s1-h2-own">§1. Overview</h2>
+<p>generator meta を持たない手書き page (chrome-scope の陽性対照)。 chrome は従来どおり全て注入される — skip-link + breadcrumb + ページ内目次 + prev-next。 chain 先頭 (prev 無し・next=generated)。</p>
+<h3>§1.1 Sub-detail</h3>
+<p>id 無し h3 — section id (s1-overview) へ fallback する (目次 2 段 fallback の pin)。</p>
+</section>
+<!-- folio:chrome-bottom -->
+<!-- /folio:chrome-bottom -->
+</body>
+</html>
