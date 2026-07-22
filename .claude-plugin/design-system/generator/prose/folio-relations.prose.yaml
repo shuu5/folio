@@ -8,11 +8,25 @@
 #   - cover-summary は doc 全体 (section/要件/照会) に接地する。
 #     ★self-host pack (機械層 dual-audience) では機械層を fold に逐語保持する (原本↔生成物 round-trip を floor が enforce) ため、
 #     「機械向けの詳細は元の *.html を参照」型の文言は禁止 (読者誤誘導 = gate J finding・folio-sm8)。 fold を開けば読めると案内する (README ③)。
+#     ★fold のラベル名を本文中で案内する場合は ★生成物に実在するラベル逐語 でなければならない (ADR-0054 §2.2 の
+#       平易化で mf-kicker =「機械向けの詳細（原文そのまま）」/ rq-norm summary =「正確な条文（機械向けの厳密な書き方）」
+#       へ改名済)。 旧ラベル (『機械層』/『normative (machine)』) の案内は ★存在しない fold 名への誘導 = 読者誤誘導。
 #   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
-#   - band 順: 01=§0 / 02=§1 / 03=§2 / 04=§3 / 05=§4 / 06=§5 / 07=§6 / 08=照会 (前方) / 09=用語集。
+#   - band 順: 01=§0 / 02=§1 / 03=§2 / 04=§3 / 05=§4 / 06=§5 / 07=§6 / 08=§7 照会 (前方) / 09=§8 用語集。
+#     ★slot-id は ★連番 (01..09) のまま = 章帯の巨大番号 (§0..§8 = ADR-0054 §2.2 の節番号一致) とは別体系。
+#   - ★plain-<要件 anchor> = 「やさしく言うと」の平易行 (ADR-0054 §2.2)。 接地は当該要件の essence / statement のみ
+#     (SSoT に無い義務を新造しない・正確さは essence と normative fold が持ち、 本行は読みの足場)。
+#   - ★prio-<要件 anchor> = RFC-2119 優先度バッジの可視ラベル。 ★contract requirements[].priority (must|should) ごとの
+#     ★closed allowlist に ★逐値 で属すること (verify-relations.sh の PRIO_LABEL_OK が逐値突合し FAIL させる):
+#       must   → 「必須」 / 「必須・将来」
+#       should → 「推奨・現在」
+#     ★前方一致ではない (語幹で始まれば何でもよい、 ではない)。 否定・限定の接尾 (例「必須ではない」) は level と
+#       意味が反転するため ★禁止 — allowlist 逐値突合がこれを FAIL させる (ehar クラス = 負の主張ラベルへの束縛)。
+#     ★語彙を増やすときは prose (本 file) / verify-relations.sh / assemble-relations.sh の PRIO_LABEL_OK を三点同時更新する。
+#   ★以下 plain 4 / prio 語 は user 実機 walk 批准 (mockup Variant A v2・2026-07-22) の ★逐語 — 再発明しない。
 
 slots:
-  cover-summary: "folio の各 spec ファイルどうしの関係 (置き換え・参照・依存・拡張など) を、 機械が読める形で表現するための規約集です。 W3C の標準語彙 (dcterms / schema.org / PROV-O)・head の JSON-LD ブロック・全 spec を集約する inventory・双方向参照の 4 本立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の relations.html を機械 SSoT から dual-audience で再生成したもので、 機械層の fold — 章ごとの『機械層』fold (地の文) と各要件の『normative (machine)』fold (EARS 規範文) — を開くと精密な記述を確認できます。"
+  cover-summary: "folio の各 spec ファイルどうしの関係 (置き換え・参照・依存・拡張など) を、 機械が読める形で表現するための規約集です。 W3C の標準語彙 (dcterms / schema.org / PROV-O)・head の JSON-LD ブロック・全 spec を集約する inventory・双方向参照の 4 本立てで定め、 上位の原則 (constitution) や決定記録 (ADR) へ前方照会します。 本ページは元の relations.html を機械 SSoT から dual-audience で再生成したもので、 折りたたみ — 章ごとの『機械向けの詳細（原文そのまま）』(地の文) と各要件の『正確な条文（機械向けの厳密な書き方）』(EARS 規範文) — を開くと精密な記述を確認できます。"
 
   chapter-lead-01: "まず読み方から。 この規約は folio を導入した各プロジェクトと folio 自身の双方に適用され、 各 spec が head の JSON-LD で宣言した関係を build 時に inventory へ集めます。 標準語彙 (§1) → 独自語彙 (§2) → markup (§3) → inventory (§4) → 双方向 (§5) の順に読みます。"
   chapter-lead-02: "関係の表し方は、 まず W3C の既存標準語彙 (dcterms / schema.org / PROV-O) を最優先で使います。 標準で表せない関係だけを、 次の §2 で folio 独自の語彙として定義します。"
@@ -23,3 +37,13 @@ slots:
   chapter-lead-07: "この規約が依拠する文書の一覧です。 上位の原則 (constitution) や rules・調査レポートと、 拠り所にした W3C の標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を挙げます。"
   chapter-lead-08: "この規約が前方照会する主要な文書を挙げます。 上位の原則 (P-x) と決定記録 (ADR) への前方照会で、 relations は照会の終わりではありません — より上位の文書へ繋がっていきます。"
   chapter-lead-09: "本文に出てくる専門語を、 やさしい言葉で説明します。 読んでいて分からない言葉が出てきたら、 ここに戻れます。"
+
+  prio-req-rel-001: "必須"
+  prio-req-rel-002: "必須・将来"
+  prio-req-rel-003: "推奨・現在"
+  prio-req-rel-004: "必須・将来"
+
+  plain-req-rel-001: "別の文書と関係がある spec は、その関係をページ先頭の機械が読む場所 (head の JSON-LD) に自分で宣言します。"
+  plain-req-rel-002: "将来ツールが入ったら、宣言の逆向きリンクは相手ページへ自動で書き込まれます。"
+  plain-req-rel-003: "いまは自動化の前なので、逆向きリンクは人が手で書きます。"
+  plain-req-rel-004: "行きのリンクに対応する帰りのリンクが無いと、検査ツールが「壊れた逆リンク」として報告します。"

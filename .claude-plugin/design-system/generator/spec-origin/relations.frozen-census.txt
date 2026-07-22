@@ -50,6 +50,9 @@
 #   golden を ★同一 land で lockstep 更新すること (裸の bump は census-guard.sh relations が弾く)。
 #
 # provenance:
+#   ★ADR-0054 land (folio-q7l7) で contract が成長したため provenance sha を現 contract へ re-freeze した
+#     (census-guard (1) の要求)。 ★scalar 値と ID_SET は ★全て不変 — 提示層のみを動かす cell ゆえ census を 1 つも
+#     bump しない (内部コード名の平易注釈は用語集でなく人間層 note へ置き FZ_GROW=20 を保った)。
 #   canonical(pre-flip) = design-intent/spec/relations.html @ base 4c6a3a5b
 #     (51924 byte・sha256 a578ca7a68e62f53331978979fb86e78e24f13825cb5818efdebb61c3fc56ed1)
 #   subject(bootstrap 実測元) = 上記 base の contract から full-repo staging で再生成した fresh 生成物
@@ -59,7 +62,7 @@
 #     生成 provenance = spec-origin/relations.origin.heal.py に ★逐語 記録 (再実行可能・T1 属性付与 20 (p16+ul4) /
 #     T2 容器正規化 ol→ul 2 / T3 h4 由来 prose 純追加 3 / T4 aside 属性付与 4 = 計 29 変換 (6vox errata 後)・
 #     ★本文テキストは 1 byte も不変)
-#   provenance_contract_sha256 = f16309789f0156934249ad0c8f10748306225b683ab7fa7bd787dc19cec2d0ce
+#   provenance_contract_sha256 = fba871cd7fc8790c3033c62100a817ee1b74fe1dbdc05644d70ea70d73d46dfa
 #     (folio-relations.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★relations が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (pre-flip 期の稼働状態): 本 census を消費する verify-relations.sh §10b arm と、 それを CI で

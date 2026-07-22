@@ -207,6 +207,13 @@ sections:
           - "</script>"
       - { type: subhead, anchor: "s3-3-id-resolution", heading: "§3.3 @id Resolution Rules", essence: "@id と参照値の記述規則 (自己 / 同一 dir / 上位 dir / section anchor の相対 path、 design-intent/ 配下は絶対 URL 禁止)。" }
       - { type: subhead, anchor: "s3-4-conformance", heading: "§3.4 Conformance Level (Phase 1)", essence: "試作段階の遵守レベル: JSON-LD ブロックと標準語彙優先は MUST、 @id 自己参照と関係性宣言は次 Phase で MUST へ昇格する。" }
+      # ★内部コード名の平易注釈 (ADR-0054 §2.2「内部コード名 (Phase X2/X3 等) には平易注釈を付す」・pw-spec MINOR-2)。
+      #   直後の表と §5 の要件で literal 出現する 2 つの内部コード名を、 初出位置の人間層で 1 度だけ注釈する。
+      #   ★用語集 (glossary) には収録しない — 用語集の語数は凍結 census FZ_GROW が pin しており、 本 cell の契約
+      #   【機械層不変条件】が「FZ census scalar 全て不変」を要求するため。 人間層 note は census 非対象ゆえ
+      #   同じ読者価値を ★機械層不変のまま 与えられる (提示層だけを動かす = ADR-0054 §2.3 と整合)。
+      - type: note
+        text: "Phase X2 / Phase X3+ は folio の内部コード名です。 Phase X2 = いまの運用期 (関係を自動で検査したり書き足したりする道具がまだ無く、 逆向きのリンクは人が手で書く段階)。 Phase X3+ = これから先の期 (道具が入り、 逆向きリンクの自動書き込みや「壊れた逆リンク」の検査が動き出す段階)。"
       - type: table
         caption: ""
         headers: ["項目", "Phase X2 (現在)", "Phase X3 以降"]
@@ -300,8 +307,12 @@ sections:
           - ["CI build 開始時", "inventory.json の stale 状態を 検出し CI failure とする MUST (検出 mechanism は folio-self-spec.html §7.5 系に集約予定)", "X3"]
           - ["scratch 段階 (現在 X2)", "inventory.json は 生成しない。 必要なら手動の specs/README.html 内 file inventory 表が代替", "X2 (現在)"]
       - { type: subhead, anchor: "s4-4-input-output", heading: "§4.4 Input / Output Behavior", essence: "folio inventory CLI の WHAT (走査対象 dir・出力先・失敗モード) を規定し、 実装 HOW は folio-self-spec §9 に隔離する。" }
-      - { type: subsubhead, anchor: "s4-4-1-scan", heading: "§4.4.1 Scan target directories" }
-      - { type: subsubhead, anchor: "s4-4-2-output", heading: "§4.4.2 Output path" }
+      # ★essence = 既定 (人間層) 表示で本文ゼロの見出しを作らないための 1 行要約 (ADR-0054 §2.2・rw MAJOR-1)。
+      #   §4.4.1/§4.4.2 は人間層 block を持たず (中身は章 machine fold の list) 見出しだけが残っていた。 §4.4.3 は
+      #   直後に失敗種別の表 (人間層) を持つため essence を付けない (= 空 subsection でない)。 essence は optional で、
+      #   持たない subsubhead は従来どおり見出しのみ emit する (contract 由来値ゆえ verify が順序逐値突合)。
+      - { type: subsubhead, anchor: "s4-4-1-scan", heading: "§4.4.1 Scan target directories", essence: "走査対象は design-intent/ 配下の spec・decisions・research の 3 ディレクトリです。" }
+      - { type: subsubhead, anchor: "s4-4-2-output", heading: "§4.4.2 Output path", essence: "出力先はリポジトリ直下の inventory.json 1 ファイルです。" }
       - { type: subsubhead, anchor: "s4-4-3-failure", heading: "§4.4.3 Failure mode" }
       - type: table
         caption: ""
@@ -379,7 +390,18 @@ sections:
     kicker: "§6 / 参照"
     heading: "§6. References"
     essence: "本 spec が依拠する constitution / rules / 調査レポートと、 W3C 標準語彙 (DCMI / schema.org / PROV-O / JSON-LD) の一次参照を列挙する。"
-    blocks: []
+    # ★ref-primary = 一次参照 (外部 URL) の人間層可視リスト (ADR-0054 §2.2「References の一次参照 (W3C 等の外部 URL) は
+    #   人間層に可視で出す」・rw finding 3)。 従来 §6 の実リストは全て機械層 fold の中にあり、 既定表示は essence 1 行のみだった。
+    #   ★機械層 fold の 8 項は ★不変 (逐語 round-trip 対象) — 本 block は人間層への ★純追加 で、 fold から移設しない。
+    #   ★href / label / note を別 field に持つ構造化 block (人間層 list の esc() では <a> を書けないため専用 emitter を持つ)。
+    #   a に class="xref" は付けない (a.xref census は原本由来 8 件で不変)。
+    blocks:
+      - type: ref-primary
+        items:
+          - { href: "https://www.dublincore.org/specifications/dublin-core/dcmi-terms/", label: "DCMI Metadata Terms", note: "dc: 語彙の一次定義" }
+          - { href: "https://www.w3.org/TR/json-ld11/", label: "W3C JSON-LD 1.1", note: "head 埋め込みの記法標準" }
+          - { href: "https://www.w3.org/TR/prov-o/", label: "W3C PROV-O", note: "来歴 (provenance) 語彙" }
+          - { href: "https://schema.org/TechArticle", label: "schema.org TechArticle", note: "文書型の基底語彙" }
     machine_blocks:
       - type: list
         items:
@@ -392,43 +414,63 @@ sections:
         - <a href="https://www.w3.org/TR/json-ld11/">JSON-LD 1.1</a> — W3C 標準
         - <a href="https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills">Anthropic Agent Skills</a> — Progressive Disclosure 3-tier model 原典
 
+# ★priority = RFC-2119 優先度 (ADR-0054 §2.2「RFC-2119 優先度の平易バッジ (必須 / 推奨)」)。 closed allowlist must|should で、
+#   statement の SHALL/MUST → must / SHOULD → should を宣言する (statement 文字列の parse でなく contract 宣言 = 決定的)。
+#   ★EARS pattern (いつ守るか) と RFC-2119 優先度 (どれくらい強いか) は ★別軸 — 従来 essence に「(SHOULD)」が生混入していた
+#   2 軸未分離 (pw-spec MINOR-1) を、 badge を分けることで解消する。 バッジの可視ラベルは prose slot (人間層 edit-SSoT) 側が持ち、
+#   floor が「must の行の可視ラベルは 必須 で始まる / should の行は 推奨 で始まる」を突合して label↔level の乖離を封鎖する。
+#   ★all-or-none: 全要件が持つか 1 件も持たないかの 2 択 (部分欠落は fail-closed abort)。 持たない contract でも assemble でき、
+#   その場合 rq-prio は emit されず契約非依存 census floor (rq-prio == |requirements|) が 0/0 恒真 PASS を封鎖する。
 requirements:
   - id: "REQ-REL-001"
     anchor: "req-rel-001"
+    priority: "must"
     ears_pattern: "ubiquitous"
     essence: "各 spec は該当する forward relation (dc:replaces / dc:references / folio:depends-on 等) を <head> JSON-LD に宣言する (関係が存在する場合)。"
     statement: "REQ-REL-001: Each spec SHALL declare applicable forward relations (e.g., dc:replaces, dc:references, folio:depends-on) in its <head> JSON-LD block when such relations exist."
   - id: "REQ-REL-002"
     anchor: "req-rel-002"
+    priority: "must"
     ears_pattern: "event-driven"
     essence: "Phase X3+ tooling が active で forward relation が宣言されると、 対応する reverse relation (dc:isReplacedBy 等) を target spec に auto-materialize する。"
     statement: "REQ-REL-002: WHEN Phase X3+ tooling is active and a forward relation is declared in any spec, the system SHALL auto-materialize the corresponding reverse relation (e.g., dc:isReplacedBy) on the target spec."
   - id: "REQ-REL-003"
     anchor: "req-rel-003"
+    priority: "should"
     ears_pattern: "ubiquitous"
     essence: "Phase X2 (現在) では reverse relation は X3 tooling 着地まで手動で記述する (SHOULD)。"
     statement: "REQ-REL-003: In Phase X2 (current), reverse relations SHOULD be written manually until X3 tooling lands."
   - id: "REQ-REL-004"
     anchor: "req-rel-004"
+    priority: "must"
     ears_pattern: "event-driven"
     essence: "forward relation が対応 reverse を欠くと、 link-check tooling が broken-reverse violation を報告する (Phase X3+)。"
     statement: "REQ-REL-004: WHEN a forward relation lacks its corresponding reverse relation in Phase X3+, the link-check tooling SHALL report a broken-reverse violation (具体的な CLI 構文・実装機構は folio-self-spec.html §7 系 に集約)。"
 
 # 非終端 照会 (前方・他文書へ)。 constitution P-x (role=implementation) / ADR (rationale) / verification REQ-VER (verification)。
+# ★title = 照会先の一行タイトル (ADR-0054 §2.2「前方照会チップは裸 ID を出さない — 照会先の一行タイトルを併記」)。
+#   ★canonical は ★user が実機 walk で批准した mockup A v2 の ★表示形 逐語 (spec-demo/build-mockup.py の TITLES dict)
+#   = admin 裁定 round-1 (bd folio-q7l7 notes【admin gate findings round-1 2026-07-23】が SSOT)。
+#   .31oz-mockup-sources.md (= P-x は constitution.html の原則見出し / ADR-* は decisions/README.html の短形タイトル) は
+#   ★素材 pointer であり、 批准表示形が優先する。 素材の生形は専門語が濃くチップの存在理由 (pw-spec MAJOR-2 =
+#   非エンジニアが中身を推測できること) を満たさないため、 平易化された批准版を canonical とする。
+#   chip の rf-gloss が本 field を ★逐語 echo する (verify-relations.sh の chip 厳密 regex が突合)。
+#   ★title 無し contract (extractor 再抽出物 等) も assemble できる (all-or-none = 部分欠落のみ fail-closed)。
+#   その場合 rf-gloss は emit されず、 契約非依存 census floor (rf-gloss == 13) が 0/0 恒真 PASS を封鎖する。
 references:
-  - { token: "P-10", doc: "constitution.html", role: "implementation" }
-  - { token: "P-1", doc: "constitution.html", role: "implementation" }
-  - { token: "P-13", doc: "constitution.html", role: "implementation" }
-  - { token: "P-14", doc: "constitution.html", role: "implementation" }
-  - { token: "P-11", doc: "constitution.html", role: "implementation" }
-  - { token: "P-2", doc: "constitution.html", role: "implementation" }
-  - { token: "P-7", doc: "constitution.html", role: "implementation" }
-  - { token: "ADR-0021", doc: "decisions/", role: "rationale" }
-  - { token: "ADR-0023", doc: "decisions/", role: "rationale" }
-  - { token: "ADR-0024", doc: "decisions/", role: "rationale" }
-  - { token: "ADR-0035", doc: "decisions/", role: "rationale" }
-  - { token: "ADR-0036", doc: "decisions/", role: "rationale" }
-  - { token: "ADR-0039", doc: "decisions/", role: "rationale" }
+  - { token: "P-10", doc: "constitution.html", role: "implementation", title: "constitution の改訂は user 承認必須" }
+  - { token: "P-1", doc: "constitution.html", role: "implementation", title: "spec は未来理想の anchor である" }
+  - { token: "P-13", doc: "constitution.html", role: "implementation", title: "検証と追跡可能性 (Verification & Traceability)" }
+  - { token: "P-14", doc: "constitution.html", role: "implementation", title: "人間可読性 (Human Readability)" }
+  - { token: "P-11", doc: "constitution.html", role: "implementation", title: "design-intent 文書に HOW を書かない" }
+  - { token: "P-2", doc: "constitution.html", role: "implementation", title: "format は HTML + common.css のみ" }
+  - { token: "P-7", doc: "constitution.html", role: "implementation", title: "内容の 3 領域排他 (WHAT / WHY / 探索)" }
+  - { token: "ADR-0021", doc: "decisions/", role: "rationale", title: "constitution X4 改正 — 3 domain 構造と P-13 の新設" }
+  - { token: "ADR-0023", doc: "decisions/", role: "rationale", title: "canonical layout への物理移植" }
+  - { token: "ADR-0024", doc: "decisions/", role: "rationale", title: "folio init が作る consumer の雛形の範囲" }
+  - { token: "ADR-0035", doc: "decisions/", role: "rationale", title: "index と目次ページを関係グラフから生成する決定" }
+  - { token: "ADR-0036", doc: "decisions/", role: "rationale", title: "用語集の derive と hover 表示の決定" }
+  - { token: "ADR-0039", doc: "decisions/", role: "rationale", title: "human-first な提示層 (chrome 注入) の決定" }
 
 # 用語集 (core 共用 glossary-term-table)。 term = 表示語 / en = canonical (data-term) / def = data-tooltip 由来定義。
 glossary:
