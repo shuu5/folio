@@ -73,9 +73,9 @@ sections:
           - "flowchart TB"
           - "  accTitle: in-band relation から AI 消費までの data pipeline"
           - "  accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。"
-          - "  HEAD[\"各 spec の head JSON-LDin-band relation (§3)\"]"
-          - "  HEAD -->|\"folio inventoryが design-intent/ を scan\"| INV[\"inventory.json3-tier index (§4)\"]"
-          - "  INV -->|\"folio prime\"| DIG[\"Tier 1 digest(per-spec entry、§4.2)\"]"
+          - "  HEAD[\"各 spec の head JSON-LD\\nin-band relation (§3)\"]"
+          - "  HEAD -->|\"folio inventory\\nが design-intent/ を scan\"| INV[\"inventory.json\\n3-tier index (§4)\"]"
+          - "  INV -->|\"folio prime\"| DIG[\"Tier 1 digest\\n(per-spec entry、§4.2)\"]"
           - "  DIG -->|\"SessionStart hook 注入\"| AI([\"AI agent の初期 context\"])"
     machine_blocks:
       - { type: note, html: "<p>本 spec は <strong>Layer 1 consumer project</strong> および <strong>folio Layer 0 自身</strong> の双方に適用する。 各 spec file が <code>&lt;head&gt;</code> JSON-LD で関係性を宣言し、 build 時に inventory が auto-generate される設計を前提とする。</p> <p>読む順序: §1 (W3C 標準語彙) → §2 (folio 独自語彙) → §3 (JSON-LD markup) → §4 (inventory) → §5 (Bidirectional)。 規範要件 (MUST) は §1〜§4、 §5 は SHOULD レベルの informative ガイダンス。</p>" }
@@ -356,13 +356,13 @@ sections:
           - "flowchart TB"
           - "  accTitle: 双方向 relation の detect-remediate lifecycle"
           - "  accDescr: spec A が forward relation (dc:references → spec B) を head JSON-LD に宣言する。 Phase X3+ tooling 着地後は、 folio fix が target spec B に対応 reverse relation を auto-materialize し、 folio validate の broken-reverse gate が欠落 reverse を violation として報告する。 結果として relation graph は双方向に保たれる。"
-          - "  DECL[\"spec A: forward 宣言dc:references → spec B(REQ-REL-001)\"]"
-          - "  DECL --> GATE{\"folio validatebroken-reverse gate(REQ-REL-004、 Phase X3+)\"}"
-          - "  GATE -->|\"reverse 欠落\"| VIO[\"broken-reverseviolation 報告\"]"
-          - "  VIO --> FIX[\"folio fix(REQ-REL-002、 Phase X3+)\"]"
+          - "  DECL[\"spec A: forward 宣言\\ndc:references → spec B\\n(REQ-REL-001)\"]"
+          - "  DECL --> GATE{\"folio validate\\nbroken-reverse gate\\n(REQ-REL-004、 Phase X3+)\"}"
+          - "  GATE -->|\"reverse 欠落\"| VIO[\"broken-reverse\\nviolation 報告\"]"
+          - "  VIO --> FIX[\"folio fix\\n(REQ-REL-002、 Phase X3+)\"]"
           - "  GATE -->|\"reverse 有り\"| OK[\"clean\"]"
-          - "  FIX --> MAT[\"spec B に dc:isReferencedBy → spec Aを materialize\"]"
-          - "  MAT --> BIDI([\"relation graph 双方向(bidirectional)\"])"
+          - "  FIX --> MAT[\"spec B に dc:isReferencedBy → spec A\\nを materialize\"]"
+          - "  MAT --> BIDI([\"relation graph 双方向\\n(bidirectional)\"])"
           - "  OK --> BIDI"
       - { type: subhead, anchor: "s5-2-precedent", heading: "§5.2 Precedent (log4brains pattern)", essence: "双方向 auto-materialize の precedent は log4brains の supersedeBy() で、 folio も同設計を Phase X3+ で採用予定。" }
       - { type: subhead, anchor: "s5-3-ears", heading: "§5.3 EARS 規範要件", essence: "forward 宣言・reverse auto-materialize・X2 手動・broken-reverse 報告の 4 件を EARS 要件として規定する。" }

@@ -1145,11 +1145,11 @@ review_model: &quot;opus&quot;                   # optional、 Phase F specialis
   accTitle: §11.4 readability 検査の三層
   accDescr: 「読める」の検査は三層で行う。 下層は機械 (deterministic) で readability floor (REQ-VER-023) と render-gate ceiling (REQ-VER-022) が幾何を検査する。 幾何が clean でも読みにくい page はあるため、 その上層に readability review lens (常設 MUST、 LLM persona review) を置き、 最上層に user 実機 walk (MUST、 人間の目視) を最終検査器として置く。 上層 2 手続きは presentation 変更時の必須 step。
   subgraph L1[&quot;下層 = 機械 (deterministic、 CI gate)&quot;]
-    floor[&quot;readability floorREQ-VER-023&quot;]
-    ceiling[&quot;render-gate ceilingREQ-VER-022 (幾何 detector)&quot;]
+    floor[&quot;readability floor\nREQ-VER-023&quot;]
+    ceiling[&quot;render-gate ceiling\nREQ-VER-022 (幾何 detector)&quot;]
   end
-  L1 --&gt; lens[&quot;readability review lens(常設 MUST・LLM persona review)&quot;]
-  lens --&gt; walk[&quot;user 実機 walk(MUST・最終検査器 = 人間)&quot;]</pre><figcaption>図 §11.4: 「読める」の三層検査 (機械 → readability lens → user 実機 walk)。</figcaption></figure>
+  L1 --&gt; lens[&quot;readability review lens\n(常設 MUST・LLM persona review)&quot;]
+  lens --&gt; walk[&quot;user 実機 walk\n(MUST・最終検査器 = 人間)&quot;]</pre><figcaption>図 §11.4: 「読める」の三層検査 (機械 → readability lens → user 実機 walk)。</figcaption></figure>
 <div data-component="spec-subhead"><h3 id="s11-5-compression">§11.5 人間層プレゼン圧縮 (ADR-0040 — 圧縮基準の SSoT)</h3><p class="sub-se">人間層 = 制限時間付きプレゼン / 機械層 = 無制限の原稿。 各章に章要旨 MUST・地の文は machine へ降格 (削除しない MUST)・可視 prose は約 12,000 字を time-box 上限とする。 生成 SRS プレゼンの圧縮は §12 が改訂・置換する。</p></div>
 <details data-component="spec-machine-fold" class="machine-fold">
 <summary><span class="mf-kicker">機械層 (machine-readable)</span> <span class="mf-label">§11. Human-First Presentation (P-14) の地の文・運用説明・rationale</span> <span class="mf-count">10 件</span></summary>

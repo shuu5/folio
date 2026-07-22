@@ -11,7 +11,7 @@
 # provenance:
 #   canonical = design-intent/spec/verification.html @ base 2f53388b (srpz land 済)
 #   snapshot(bootstrap) = spec-origin/verification.origin.html @ 83e07b6 (lwhz land)
-#   provenance_contract_sha256 = ab9dc41ca07813aaa4adfe20db5b78414ccdb920bc06e4914feb55f670e2ea47
+#   provenance_contract_sha256 = de65d0ad192219cb4715d414d836a9a2d77cc5e302e0a43c300d8d1591cedd3e
 #     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
 # ============================================================================

@@ -59,7 +59,7 @@
 #     生成 provenance = spec-origin/relations.origin.heal.py に ★逐語 記録 (再実行可能・T1 属性付与 20 (p16+ul4) /
 #     T2 容器正規化 ol→ul 2 / T3 h4 由来 prose 純追加 3 / T4 aside 属性付与 4 = 計 29 変換 (6vox errata 後)・
 #     ★本文テキストは 1 byte も不変)
-#   provenance_contract_sha256 = 004c56803c50d4a9e5b78113be2c92a62aa0038ae8fe08a522f4d059d78a9686
+#   provenance_contract_sha256 = f16309789f0156934249ad0c8f10748306225b683ab7fa7bd787dc19cec2d0ce
 #     (folio-relations.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★relations が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (pre-flip 期の稼働状態): 本 census を消費する verify-relations.sh §10b arm と、 それを CI で

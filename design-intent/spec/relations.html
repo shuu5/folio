@@ -597,9 +597,9 @@ ul[data-component="spec-machine-list"] .mli::before{content:"\2014";position:abs
 flowchart TB
   accTitle: in-band relation から AI 消費までの data pipeline
   accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。
-  HEAD[&quot;各 spec の head JSON-LDin-band relation (§3)&quot;]
-  HEAD --&gt;|&quot;folio inventoryが design-intent/ を scan&quot;| INV[&quot;inventory.json3-tier index (§4)&quot;]
-  INV --&gt;|&quot;folio prime&quot;| DIG[&quot;Tier 1 digest(per-spec entry、§4.2)&quot;]
+  HEAD[&quot;各 spec の head JSON-LD\nin-band relation (§3)&quot;]
+  HEAD --&gt;|&quot;folio inventory\nが design-intent/ を scan&quot;| INV[&quot;inventory.json\n3-tier index (§4)&quot;]
+  INV --&gt;|&quot;folio prime&quot;| DIG[&quot;Tier 1 digest\n(per-spec entry、§4.2)&quot;]
   DIG --&gt;|&quot;SessionStart hook 注入&quot;| AI([&quot;AI agent の初期 context&quot;])</pre><figcaption>各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。</figcaption></figure>
 <details data-component="spec-machine-fold" class="machine-fold">
 <summary><span class="mf-kicker">機械層 (machine-readable)</span> <span class="mf-label">§0. Reader's Guide の地の文・運用説明・rationale</span> <span class="mf-count">2 件</span></summary>
@@ -854,13 +854,13 @@ flowchart TB
 flowchart TB
   accTitle: 双方向 relation の detect-remediate lifecycle
   accDescr: spec A が forward relation (dc:references → spec B) を head JSON-LD に宣言する。 Phase X3+ tooling 着地後は、 folio fix が target spec B に対応 reverse relation を auto-materialize し、 folio validate の broken-reverse gate が欠落 reverse を violation として報告する。 結果として relation graph は双方向に保たれる。
-  DECL[&quot;spec A: forward 宣言dc:references → spec B(REQ-REL-001)&quot;]
-  DECL --&gt; GATE{&quot;folio validatebroken-reverse gate(REQ-REL-004、 Phase X3+)&quot;}
-  GATE --&gt;|&quot;reverse 欠落&quot;| VIO[&quot;broken-reverseviolation 報告&quot;]
-  VIO --&gt; FIX[&quot;folio fix(REQ-REL-002、 Phase X3+)&quot;]
+  DECL[&quot;spec A: forward 宣言\ndc:references → spec B\n(REQ-REL-001)&quot;]
+  DECL --&gt; GATE{&quot;folio validate\nbroken-reverse gate\n(REQ-REL-004、 Phase X3+)&quot;}
+  GATE --&gt;|&quot;reverse 欠落&quot;| VIO[&quot;broken-reverse\nviolation 報告&quot;]
+  VIO --&gt; FIX[&quot;folio fix\n(REQ-REL-002、 Phase X3+)&quot;]
   GATE --&gt;|&quot;reverse 有り&quot;| OK[&quot;clean&quot;]
-  FIX --&gt; MAT[&quot;spec B に dc:isReferencedBy → spec Aを materialize&quot;]
-  MAT --&gt; BIDI([&quot;relation graph 双方向(bidirectional)&quot;])
+  FIX --&gt; MAT[&quot;spec B に dc:isReferencedBy → spec A\nを materialize&quot;]
+  MAT --&gt; BIDI([&quot;relation graph 双方向\n(bidirectional)&quot;])
   OK --&gt; BIDI</pre><figcaption>spec A が forward relation (dc:references → spec B) を head JSON-LD に宣言する。 Phase X3+ tooling 着地後は、 folio fix が target spec B に対応 reverse relation を auto-materialize し、 folio validate の broken-reverse gate が欠落 reverse を violation として報告する。 結果として relation graph は双方向に保たれる。</figcaption></figure>
 <div data-component="spec-subhead"><h3 id="s5-2-precedent">§5.2 Precedent (log4brains pattern)</h3><p class="sub-se">双方向 auto-materialize の precedent は log4brains の supersedeBy() で、 folio も同設計を Phase X3+ で採用予定。</p></div>
 <div data-component="spec-subhead"><h3 id="s5-3-ears">§5.3 EARS 規範要件</h3><p class="sub-se">forward 宣言・reverse auto-materialize・X2 手動・broken-reverse 報告の 4 件を EARS 要件として規定する。</p></div>

@@ -757,13 +757,13 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 flowchart TB
   accTitle: folio verification model
   accDescr: scenario YAML を runner が読み、 hook mock payload (kind:hook) または CLI golden (kind:cli-golden) で実行し、 exit_code / file-state / golden-diff のいずれかで assert する流れ。
-  SC[&quot;scenario YAMLtests/scenarios/&quot;]
+  SC[&quot;scenario YAML\ntests/scenarios/&quot;]
   RUN[&quot;runner.sh&quot;]
-  HK[&quot;hook mockkind: hook&quot;]
-  CL[&quot;CLI goldenkind: cli-golden&quot;]
-  EX[&quot;assertexit_code&quot;]
-  FS[&quot;assertfile-state (e2e)&quot;]
-  GD[&quot;assertgolden diff&quot;]
+  HK[&quot;hook mock\nkind: hook&quot;]
+  CL[&quot;CLI golden\nkind: cli-golden&quot;]
+  EX[&quot;assert\nexit_code&quot;]
+  FS[&quot;assert\nfile-state (e2e)&quot;]
+  GD[&quot;assert\ngolden diff&quot;]
   SC --&gt; RUN
   RUN --&gt; HK
   RUN --&gt; CL

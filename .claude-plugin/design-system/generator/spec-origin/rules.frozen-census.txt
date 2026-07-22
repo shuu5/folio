@@ -25,7 +25,7 @@
 #   canonical  = design-intent/spec/rules.html @ base a50e1bc (folio-d7bq flip land 済 = 生成物)
 #   snapshot(bootstrap) = spec-origin/rules.origin.html (pre-flip canonical・git show 1744d9f から決定的再構成
 #     = flip commit a86ec1f の親・150524 byte・sha256 ca58363a577c2cdb416616b66463a935982e0d8bf6cbc285cac3603b2c601390)
-#   provenance_contract_sha256 = fd3beb923bd579942deaf0258086e167536c3bb7277cfe2777ee7283ddafdf5a
+#   provenance_contract_sha256 = c33fc420aa4e50aada7479f7e44002674fae4cff5ee3ad738e4e4623a93a53da
 #     (folio-rules.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★rules が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (folio-7wbn 2〜3 巡目 ceiling): 政策A の恒久防御は ★rules では 3 点とも CI 未配線 = shipped 状態で
