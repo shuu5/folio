@@ -25,7 +25,18 @@
 #   canonical  = design-intent/spec/rules.html @ base a50e1bc (folio-d7bq flip land 済 = 生成物)
 #   snapshot(bootstrap) = spec-origin/rules.origin.html (pre-flip canonical・git show 1744d9f から決定的再構成
 #     = flip commit a86ec1f の親・150524 byte・sha256 ca58363a577c2cdb416616b66463a935982e0d8bf6cbc285cac3603b2c601390)
-#   provenance_contract_sha256 = c33fc420aa4e50aada7479f7e44002674fae4cff5ee3ad738e4e4623a93a53da
+#   ★ADR-0054 land (folio-8q7l / Cell U) で contract が成長したため provenance sha を現 contract へ re-freeze した
+#     (census-guard (1) の要求)。 ★scalar 値と ID_SET は ★全て不変 — 提示層のみを動かす cell ゆえ census を 1 つも
+#     bump しない (実測で確認: id 58 / a.xref 26 / span.term 18 / delta 1 / esc 1 / code 0/0/9/9 / span 7/0 / esc-code 0 /
+#     esc-span 19)。 提示層 wrapper の新 id 2 本 (forward-refs / glossary-terms) は verify-spec.sh の ★肯定形
+#     allowlist 除外で FZ_ID_COUNT=58 / ID_SET を不変に保つ (admin 裁定 C2・default-block 維持)。
+#     ★Leg4 (§11 chrome MUST の ADR-0054 整合改訂) は機械層 prose の ★逐語変更を含むが、 追記は plain text +
+#     <strong> / <code> のみで class="xref" / span.term を新たに生やさないため rich census も不変 (U補正3)。
+#     ★spec-origin/rules.origin.html (pre-flip snapshot) は ★不改変 — 政策 A で ORIG は census / round-trip を
+#     【消費しない】(存在 pin のみ) 一方、 その sha256 は本 header の宣言値と SNAPPIN-1 が突合する bootstrap 記録
+#     ゆえ、 現行 contract 文言へ「同一文言化」すると記録が壊れ pin が破れる (fence 補正 7 の当該 step は本 arm の
+#     政策 A 転換後には適用対象を持たない = 意図的に実施しない旨をここに開示する)。
+#   provenance_contract_sha256 = a346738366e7fe6e243fc08d6c030f518d46b7f05988c779be552cfcf64f5cfd
 #     (folio-rules.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★rules が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (folio-7wbn 2〜3 巡目 ceiling): 政策A の恒久防御は ★rules では 3 点とも CI 未配線 = shipped 状態で

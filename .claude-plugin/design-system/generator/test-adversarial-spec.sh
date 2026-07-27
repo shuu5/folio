@@ -193,7 +193,8 @@ expect_vfilled_fail "F8 ★reference token 改竄を SET で捕捉" "$TMP/f8.htm
 # F9. ★reference 可視 <b> のみ改竄 (attr 正) → (token,doc,role) vis FAIL
 cp "$TMP/base-filled.html" "$TMP/f9.html"
 perl -0777 -i -pe 's#(data-ref-token="P-1"[^>]*><span class="rf-token"><b>)P-1(</b>)#${1}P-FAKE${2}#' "$TMP/f9.html"
-expect_vfilled_fail "F9 ★reference 可視 <b> のみ改竄 (attr 正) を vis 整合で捕捉" "$TMP/f9.html" "references: (token,doc,role)"
+# ★ADR-0054 lockstep: chip 突合の label が (token,doc,role) → (token,doc,role,title) へ拡張されたため reason substring を再同期。
+expect_vfilled_fail "F9 ★reference 可視 <b> のみ改竄 (attr 正) を vis 整合で捕捉" "$TMP/f9.html" "references: (token,doc,role,title)"
 
 # F10. ★reference role を allowlist 内別 role へ改竄 → (token,doc,role) FAIL
 cp "$TMP/base-filled.html" "$TMP/f10.html"
@@ -350,7 +351,9 @@ perl -0777 -i -pe 'our $n; $n += s{(<section id="s2-directory".*?<p class="sec-s
 expect_vfilled_fail "RX8 ★essence per-section 位置固定: §2 sec-se 内 P-13 前への inline 挿入 (census 維持) を位置固定 arm が捕捉" "$TMP/rx8.html" "位置固定"
 # --- esc 既定の非回帰 (raw は per-field opt-in・raw 未宣言 field は esc 経路のまま) ---
 # RX9. ★raw 未宣言 field (heading) に HTML 注入 → 生成物で生 <b> でなく &lt;b&gt; に esc される (raw 経路が heading へ漏れない)。
-cp "$BASE" "$TMP/rx9.yaml"; yq -i '(.sections[] | select(.id=="s2")).heading = "H <b>raw</b>"' "$TMP/rx9.yaml"
+#   ★§N prefix は残す: PR24 で入れた heading_secnum / band_num の fail-closed guard (§N 形でない heading は abort) が
+#   先に発火すると本 MK が「esc 検査」でなく「abort 検査」に化けて空撃ちになるため、 検査したい注入だけを heading 末尾へ足す。
+cp "$BASE" "$TMP/rx9.yaml"; yq -i '(.sections[] | select(.id=="s2")).heading = "§2. H <b>raw</b>"' "$TMP/rx9.yaml"
 bash "$ASM" "$TMP/rx9.yaml" "$TMP/rx9.html" >/dev/null 2>&1 || ng "RX9 assemble 失敗 (esc 経路が壊れた)"
 if grep -qF '&lt;b&gt;raw&lt;/b&gt;' "$TMP/rx9.html" && ! grep -qF '<b>raw</b>' "$TMP/rx9.html"; then
   ok "RX9 ★esc 既定の非回帰: raw 未宣言 field (heading) の HTML は esc される (raw 漏れ無し)"
@@ -572,7 +575,10 @@ perl -0777 -i -pe "s{<span class=\"mf-count\">12 件</span>}{<span class='mf-cou
 #   (a) band h2 書換え (head -n NSEC 切詰の射程外) (b) NSEC 超位置への h2 注入 (総件数 pin 欠如)
 #   (c) sec-se hide-twin (single-quote decoy・占有数パリティ未適用) (d) kicker hide-twin (同根)
 cp "$TMP/base-filled.html" "$TMP/mburr3a.html"
-perl -0777 -i -pe "s{<h2>rules は照会の終端ではない — 原則・ADR・検証へ前方照会する</h2>}{<h2>FABRICATED_BAND_H2_詐欺</h2>}" "$TMP/mburr3a.html"
+# ★ADR-0054 lockstep: 静的 band h2 が「§13. 上位文書への前方照会 — …」形へ変わったため mutation 対象 literal を再同期。
+#   ★fired-guard を付す (旧 literal のまま残すと ★空撃ち で恒真 PASS になる = 本 FAIL が実際に検出した退行クラス)。
+perl -0777 -i -pe 'our $n; $n += s{<h2>§13\. 上位文書への前方照会 — 原則・決定記録・検証仕様へつながる</h2>}{<h2>FABRICATED_BAND_H2_詐欺</h2>}; END { exit($n?0:9) }' "$TMP/mburr3a.html" \
+  || ng "M-bur-r3-a mutation が発火せず (shape drift = 空撃ち)"
 expect_vfilled_fail "M-bur-r3-a ★band h2 書換えを静的 band リテラル突合で捕捉" "$TMP/mburr3a.html" "heading 列"
 cp "$TMP/base-filled.html" "$TMP/mburr3b.html"
 perl -0777 -i -pe "s{</body>}{<h2>§NEW 緊急告知 本規約は無効 (捏造)</h2></body>}" "$TMP/mburr3b.html"
@@ -1283,6 +1289,185 @@ else
     fi
   fi
 fi
+
+# ============================================================================
+# === ADR-0054 (flip 済 spec 提示層の標準形・folio-8q7l Cell U) の per-shape mutation-kill (PR 群) ===
+#   ★per-shape で撃つ理由: 章帯番号 / 静的 band heading / 章 wrapper / chip 一行タイトル / role 平易語 /
+#     優先度バッジ / 平易行 / fold ラベル / 空 subsection 要約 は ★DOM 形状が別クラス ゆえ、
+#     1 instance の実弾は構造差のある instance の穴を証明しない (jyfh/r8k の per-shape 規律)。
+#   ★★new field は ★all-or-none optional (extractor 再抽出物でも assemble できる互換性のため) ゆえ、
+#     「契約から一括削除 → 再生成」で逐値突合が ★0/0 恒真 PASS する。 その ★唯一の FAIL 源 = 契約非依存
+#     census を ★isolate する MK を各軸に ★対で 置く (逐値 MK と census MK の 2 本立て)。
+#   ★全 MK に fired-guard を付す (shape drift による空撃ちを検出)。
+#   ★★宣言能力 == 実能力 の開示 (1): assemble-spec.sh の band_num() が持つ「core band() の連番 span が
+#     見当たらなければ abort」の fail-loud は、 共有 lib/common.sh の mutation を要するため ★本 suite の
+#     per-shape MK では撃っていない (verify 側 PR1 = .num 列突合が同クラスの結果を捕捉する)。
+#   ★★宣言能力 == 実能力 の開示 (2): rules は ★ref-primary (References の一次参照を人間層へ可視化) を
+#     ★実装していない — rules には References 章が無く、 外部 URL (WCAG / mermaid docs 等) は normative 本文内の
+#     付随引用で「一次参照 set」を成さない (admin 裁定 U補正4(a) = surface 件数は worker 設計判断・0 件も許容)。
+#     ゆえに Cell R の PR17/18/19/23/28/29/30 に相当する ★一次参照 MK 群は ★存在しない (空撃ち MK を作らない)。
+# ============================================================================
+# PR1. ★章帯番号を連番 (01) へ戻す退行 → band .num 列 FAIL (§番号一致 = ADR-0054 §2.2)。
+cp "$TMP/base-filled.html" "$TMP/pr1.html"
+perl -0777 -i -pe 'our $n; $n += s#<span class="num">0</span>#<span class="num">01</span>#; END { exit($n?0:9) }' "$TMP/pr1.html" \
+  || ng "PR1 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR1 ★章帯番号の連番戻し (§番号 → 01) を band .num 列が捕捉" "$TMP/pr1.html" "band .num 列"
+# PR2. ★静的 band heading を旧 over-promise 文言へ戻す → heading 列 FAIL。
+#   ★旧 heading は「原則・ADR・検証へ前方照会する」と §番号を持たない形で、 §番号一致と heading 逐値の両方を破る。
+cp "$TMP/base-filled.html" "$TMP/pr2.html"
+perl -0777 -i -pe 'our $n; $n += s#<h2>§13\. 上位文書への前方照会 — 原則・決定記録・検証仕様へつながる</h2>#<h2>rules は照会の終端ではない — 原則・ADR・検証へ前方照会する</h2>#; END { exit($n?0:9) }' "$TMP/pr2.html" \
+  || ng "PR2 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR2 ★静的 band heading の旧 over-promise 復活 (§13) を heading 列が捕捉" "$TMP/pr2.html" "section 可視 heading 列"
+# PR3. ★前方照会章の wrapper section 剥奪 (章化の喪失 = 目次から辿れない旧状態への退行) → section anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr3.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">\n##; END { exit($n?0:9) }' "$TMP/pr3.html" \
+  || ng "PR3 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3 ★前方照会章の wrapper 剥奪 (章化喪失) を section anchor 列が捕捉" "$TMP/pr3.html" "section anchor 列"
+# PR4. ★wrapper への class 侵食 (normative/informative census 11/1 を汚す) → wrapper 陽性 assert + census FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr4.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">#<section id="forward-refs" class="normative">#; END { exit($n?0:9) }' "$TMP/pr4.html" \
+  || ng "PR4 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4 ★提示層 wrapper への class 侵食を陽性 assert が捕捉 (census 汚染の封鎖)" "$TMP/pr4.html" "class 無しで実在"
+# PR5. ★census id allowlist の default-block 維持 (admin 裁定 C2): wrapper 2 literal ★以外 の新 id は従来どおり FAIL する。
+cp "$TMP/base-filled.html" "$TMP/pr5.html"
+perl -0777 -i -pe 'our $n; $n += s#</h1>#</h1><span id="zz-new-anchor"></span>#; END { exit($n?0:9) }' "$TMP/pr5.html" \
+  || ng "PR5 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR5 ★wrapper 以外の新 id は id census が従来どおり FAIL (肯定形 allowlist の default-block)" "$TMP/pr5.html" "census navigable id"
+# PR6. ★chip 一行タイトル (rf-gloss) の値改竄 → chip タプル FAIL (contract title の逐語 echo が破れる)。
+cp "$TMP/base-filled.html" "$TMP/pr6.html"
+perl -0777 -i -pe 'our $n; $n += s#(<span class="rf-gloss">)spec は未来理想の anchor である#${1}捏造された一行タイトル#; END { exit($n?0:9) }' "$TMP/pr6.html" \
+  || ng "PR6 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR6 ★chip 一行タイトル (rf-gloss) 改竄を chip タプルが捕捉" "$TMP/pr6.html" "references: (token,doc,role,title)"
+# PR7. ★契約 references[].title 一括削除 → 再生成 → 逐値 chip タプルは 0/0 恒真 PASS し、 契約非依存 census が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr7.yaml"; yq -i 'del(.references[].title)' "$TMP/pr7.yaml"
+bash "$ASM" "$TMP/pr7.yaml" "$TMP/pr7.html" >/dev/null 2>&1 || ng "PR7 assemble 失敗 (title 無し contract の後方互換経路が壊れた)"
+pr7_out="$(bash "$VER" "$TMP/pr7.yaml" "$TMP/pr7.html" 2>&1)"; pr7_rc=$?
+if printf '%s\n' "$pr7_out" | grep -F 'references: (token,doc,role,title)' | grep -qF '[OK]'; then
+  ok "PR7 補助 ★chip 逐値タプルは mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)"
+else ng "PR7 補助 ★chip 逐値タプルが自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr7_rc -ne 0 ]] && printf '%s\n' "$pr7_out" | grep -F 'census: rf-gloss' | grep -qF '[FAIL]'; then
+  ok "PR7 ★契約 title 一括削除を契約非依存 census (rf-gloss == 36) が捕捉 (0/0 恒真封鎖)"
+else ng "PR7 ★census が title 一括削除を捕捉できず (rc=$pr7_rc = 0/0 恒真 PASS の再開通)"; fi
+# PR8. ★role 可視ラベルの英語生表示への退行 (attr は不変) → chip タプル FAIL (平易語 map の逐値突合)。
+cp "$TMP/base-filled.html" "$TMP/pr8.html"
+perl -0777 -i -pe 'our $n; $n += s#(<span class="rf-role">)この規約が実装する原則#${1}implementation#g; END { exit($n?0:9) }' "$TMP/pr8.html" \
+  || ng "PR8 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR8 ★role 可視ラベルの英語生表示への退行を chip タプルが捕捉 (attr は機械 token 保持)" "$TMP/pr8.html" "references: (token,doc,role,title)"
+# PR9. ★優先度バッジの label↔level 詐称 (must の行に「推奨・現在」) → label↔level 束縛 FAIL。 ★ラベルは prose slot ゆえ
+#   contract と直接突合できない — closed allowlist の逐値束縛が唯一の teeth (件数だけ数える検査では素通る形)。
+cp "$TMP/base-filled.html" "$TMP/pr9.html"
+perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="prio-req-da-struct-1">)必須(</span>)#${1}推奨・現在${2}#; END { exit($n?0:9) }' "$TMP/pr9.html" \
+  || ng "PR9 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR9 ★優先度バッジの label↔level 詐称 (must 行に「推奨・現在」) を allowlist 逐値束縛が捕捉" "$TMP/pr9.html" "label↔level 逐値束縛"
+# PR10. ★per-row 束縛 (relocation クラス): 別 row の slot-id を持ってくる (件数保存) → 要件タプル FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr10.html"
+perl -0777 -i -pe 'our $n; $n += s#data-slot-id="prio-req-da-struct-1"#data-slot-id="prio-req-da-struct-2"#; END { exit($n?0:9) }' "$TMP/pr10.html" \
+  || ng "PR10 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR10 ★優先度バッジ slot の per-row 束縛 (別 row の slot-id・件数保存) を要件タプルが捕捉" "$TMP/pr10.html" "要件タプル"
+# PR11. ★平易行 (rq-plain) を 1 row 分削除 → 契約非依存 census + 要件タプル FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr11.html"
+perl -0777 -i -pe 'our $n; $n += s#<p class="rq-plain"><span class="rq-plain-k">やさしく言うと</span><span data-prose-slot="plain" data-slot-id="plain-req-da-struct-1">[^<]*</span></p>\n##; END { exit($n?0:9) }' "$TMP/pr11.html" \
+  || ng "PR11 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR11 ★平易行 1 row 削除を契約非依存 census (rq-plain == 26) が捕捉" "$TMP/pr11.html" "census: rq-plain"
+# PR12. ★契約 requirements[].priority 一括削除 → 再生成 → 逐値タプルは自己整合 (0/0 恒真) し census が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr12.yaml"; yq -i 'del(.requirements[].priority)' "$TMP/pr12.yaml"
+bash "$ASM" "$TMP/pr12.yaml" "$TMP/pr12.html" >/dev/null 2>&1 || ng "PR12 assemble 失敗 (priority 無し contract の後方互換経路が壊れた)"
+pr12_out="$(bash "$VER" "$TMP/pr12.yaml" "$TMP/pr12.html" 2>&1)"; pr12_rc=$?
+if printf '%s\n' "$pr12_out" | grep -F '要件タプル (id/pattern/class/label/essence/statement) 順序突合' | grep -qF '[OK]'; then
+  ok "PR12 補助 ★要件タプルは mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)"
+else ng "PR12 補助 ★要件タプルが自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr12_rc -ne 0 ]] && printf '%s\n' "$pr12_out" | grep -F 'census: rq-prio' | grep -qF '[FAIL]'; then
+  ok "PR12 ★契約 priority 一括削除を契約非依存 census (rq-prio == 26) が捕捉 (0/0 恒真封鎖)"
+else ng "PR12 ★census が priority 一括削除を捕捉できず (rc=$pr12_rc = 0/0 恒真 PASS の再開通)"; fi
+# PR13. ★要件 normative fold の summary を旧英語ラベルへ戻す → summary 平易ラベル pin FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr13.html"
+perl -0777 -i -pe 'our $n; $n += s#<summary>正確な条文（機械向けの厳密な書き方）</summary>#<summary>normative (machine)</summary>#g; END { exit($n?0:9) }' "$TMP/pr13.html" \
+  || ng "PR13 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR13 ★rq-norm summary の英語ラベル退行を平易ラベル pin が捕捉" "$TMP/pr13.html" "summary 平易ラベル"
+# PR14. ★machine fold の mf-kicker を旧英語ラベルへ戻す → mf-kicker pin FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr14.html"
+perl -0777 -i -pe 'our $n; $n += s#<span class="mf-kicker">機械向けの詳細（原文そのまま）</span>#<span class="mf-kicker">機械層 (machine-readable)</span>#g; END { exit($n?0:9) }' "$TMP/pr14.html" \
+  || ng "PR14 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR14 ★mf-kicker の英語ラベル退行を平易ラベル pin が捕捉" "$TMP/pr14.html" "mf-kicker 平易ラベル"
+# PR15. ★空 subsection の人間層 1 行要約を 1 件削除 → subhead essence 列 + census FAIL (見出しだけの節が復活する退行)。
+cp "$TMP/base-filled.html" "$TMP/pr15.html"
+perl -0777 -i -pe 'our $n; $n += s#(<h3 id="s10-2">§10\.2 CI Gate Compliance</h3>)<p class="sub-se">[^<]*</p>#${1}<p class="sub-se"></p>#; END { exit($n?0:9) }' "$TMP/pr15.html" \
+  || ng "PR15 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR15 ★空 subsection への退行 (1 行要約の空化) を subhead essence 列が捕捉" "$TMP/pr15.html" "subhead essence 列"
+# PR15b. ★同じ退行を ★契約非依存 census が単独で撃てること (HTML 側だけを見る backstop の isolation)。
+#   ★逐値突合と census の 2 本が同時に落ちる形ゆえ isolation は「census 側にも [FAIL] が立つ」で示す。
+pr15b_out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/pr15.html" 2>&1)"
+if printf '%s\n' "$pr15b_out" | grep -F 'census: 非空の subhead 1 行要約' | grep -qF '[FAIL]'; then
+  ok "PR15b ★1 行要約の空化を契約非依存 census (非空 sub-se == 23) も独立に捕捉"
+else ng "PR15b ★census が空 subsection 退行を捕捉できず (0/0 恒真 PASS の再開通)"; fi
+# PR16. ★契約 subhead essence 一括空化 → 再生成 → 逐値 essence 列は「空 == 空」で自己整合し、 契約非依存 census が
+#   唯一の FAIL 源 (空 subsection = 本文ゼロの見出しへの全面退行を独立 anchor が撃つ)。
+#   ★assembler 側の hard abort は ★採らない: extractor が pre-flip 原本から再抽出する contract は本 cell 以前の
+#   essence 状態を持ち、 その genuine 再生成が COLLAPSE 群の前提だから (assemble-spec.sh の同注記と対)。
+cp "$BASE" "$TMP/pr16.yaml"; yq -i '(.sections[].blocks[]? | select(.type=="subhead")).essence = ""' "$TMP/pr16.yaml"
+bash "$ASM" "$TMP/pr16.yaml" "$TMP/pr16.html" >/dev/null 2>&1 || ng "PR16 assemble 失敗 (essence 空 subhead の後方互換経路が壊れた)"
+pr16_out="$(bash "$VER" "$TMP/pr16.yaml" "$TMP/pr16.html" 2>&1)"; pr16_rc=$?
+if printf '%s\n' "$pr16_out" | grep -F 'subhead essence 列' | grep -qF '[OK]'; then
+  ok "PR16 補助 ★subhead essence 逐値は mutated 契約と自己整合 (census が唯一の FAIL 源)"
+else ng "PR16 補助 ★subhead essence 逐値が自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr16_rc -ne 0 ]] && printf '%s\n' "$pr16_out" | grep -F 'census: 非空の subhead 1 行要約' | grep -qF '[FAIL]'; then
+  ok "PR16 ★契約 essence 一括空化を契約非依存 census (非空 sub-se == 23) が捕捉"
+else ng "PR16 ★census が essence 一括空化を捕捉できず (rc=$pr16_rc)"; fi
+# PR17. ★priority allowlist 外 → assemble fail-closed abort。
+cp "$BASE" "$TMP/pr17.yaml"; yq -i '.requirements[0].priority = "maybe"' "$TMP/pr17.yaml"
+expect_abort "PR17 ★未知の priority を abort (must|should の closed allowlist)" "$TMP/pr17.yaml" "未知の priority"
+# PR18. ★priority の部分欠落 (all-or-none 違反) → assemble abort (半端形 = badge が有ったり無かったりを封鎖)。
+cp "$BASE" "$TMP/pr18.yaml"; yq -i 'del(.requirements[0].priority)' "$TMP/pr18.yaml"
+expect_abort "PR18 ★priority の部分欠落を abort (all-or-none)" "$TMP/pr18.yaml" "priority の部分欠落"
+# PR19. ★references[].title の部分欠落 (all-or-none 違反) → assemble abort。
+cp "$BASE" "$TMP/pr19.yaml"; yq -i 'del(.references[0].title)' "$TMP/pr19.yaml"
+expect_abort "PR19 ★references[].title の部分欠落を abort (all-or-none)" "$TMP/pr19.yaml" "title の部分欠落"
+# PR20. ★priority の word-split bypass ("must should") → 逐値判定で abort (A14/A15/A16 と対称)。
+cp "$BASE" "$TMP/pr20.yaml"; yq -i '.requirements[0].priority = "must should"' "$TMP/pr20.yaml"
+expect_abort "PR20 ★priority 空白 split bypass を逐値判定で abort" "$TMP/pr20.yaml" "未知の priority"
+# PR21. ★level↔statement 束縛 (契約内不変条件) の build 時 arm: 契約の priority だけを反転 (statement は SHALL のまま) → abort。
+cp "$BASE" "$TMP/pr21.yaml"; yq -i '.requirements[0].priority = "should"' "$TMP/pr21.yaml"
+expect_abort "PR21 ★priority↔statement の矛盾 (SHALL 要件に should) を build 時 abort" "$TMP/pr21.yaml" "modal verb が矛盾"
+# PR22. ★同束縛の ★verify 側 単独 isolation: 生成物・契約・prose を ★全て自己整合 に保ったまま statement の modal verb
+#   だけを反転する (contract の SHALL → SHOULD + 生成物の同一 statement 文字列を同期)。 assembler は今や abort するため
+#   ★健全 contract で先に生成してから contract/HTML を対で改竄する (★契約 basename は footer 機械 SSoT と一致必須ゆえ
+#   生成にも同名 copy を使う)。 要件タプル・label↔level・census は ★全て自己整合 で PASS = 新 chk が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr22.yaml"
+bash "$ASM" "$TMP/pr22.yaml" "$TMP/pr22.pre.html" >/dev/null 2>&1 || ng "PR22 assemble 失敗 (MK 前提崩れ)"
+bash "$INJ" "$BASE_PROSE" "$TMP/pr22.pre.html" "$TMP/pr22.html" >/dev/null 2>&1 || ng "PR22 inject 失敗 (MK 前提崩れ)"
+yq -i '(.requirements[] | select(.id=="REQ-DA-STRUCT-3")).statement = ((.requirements[] | select(.id=="REQ-DA-STRUCT-3")).statement | sub("SHALL be one of"; "SHOULD be one of"))' "$TMP/pr22.yaml"
+perl -0777 -i -pe 'our $n; $n += s#every data-audience value SHALL be one of#every data-audience value SHOULD be one of#; END { exit($n?0:9) }' "$TMP/pr22.html" \
+  || ng "PR22 mutation が発火せず (shape drift = 空撃ち)"
+pr22_out="$(bash "$VER" --filled "$BASE_PROSE" "$TMP/pr22.yaml" "$TMP/pr22.html" 2>&1)"; pr22_rc=$?
+if printf '%s\n' "$pr22_out" | grep -F '要件タプル' | grep -qF '[OK]'; then
+  ok "PR22 補助 ★要件タプルは mutated 契約と自己整合 (契約内不変 chk が唯一の FAIL 源 = isolation)"
+else ng "PR22 補助 ★要件タプルが自己整合せず (単独 isolation の前提崩れ)"; fi
+if [[ $pr22_rc -ne 0 ]] && printf '%s\n' "$pr22_out" | grep -F '[FAIL]' | grep -qF '契約内不変: priority == statement'; then
+  ok "PR22 ★statement の modal verb 反転 (must 宣言 × SHOULD 条文) を契約内不変 chk が捕捉"
+else ng "PR22 ★契約内不変 chk が level↔statement 矛盾を捕捉できず (rc=$pr22_rc = contract 全盲の再開通)"; fi
+# PR23. ★first-modal-wins の ★危険方向 (SHOULD が先・MUST が後 = 弱い宣言で強い条文を包む) が AMBIGUOUS-BOTH で
+#   abort すること。 ★rules で Cell R の「両方あれば即 AMBIGUOUS」から first-modal-wins へ精密化した際、 緩めた方向が
+#   ★主節 MUST + 従属節 SHOULD に限られる (= 詐称に使えない) ことの実弾。
+cp "$BASE" "$TMP/pr23.yaml"
+yq -i '(.requirements[] | select(.id=="REQ-DA-STRUCT-3")).statement = "REQ-DA-STRUCT-3: A spec SHOULD normalize its values, and every data-audience value MUST be one of machine or human only."' "$TMP/pr23.yaml"
+expect_abort "PR23 ★SHOULD 先行 + MUST 後続 を AMBIGUOUS-BOTH として abort (first-modal-wins の危険方向は fail-closed)" "$TMP/pr23.yaml" "modal verb が矛盾"
+# PR24. ★heading_secnum の fail-closed abort の ★実弾 (宣言能力 == 実能力 の pin)。 §N 形でない heading を持つ契約 →
+#   assemble abort。 ★退行の実態: emit_section が band_num "$(heading_secnum …)" と ★引数位置のコマンド置換 で呼ぶと、
+#   bash は set -euo pipefail 下でも置換の失敗を親コマンドの成否に反映しないため exit 1 が subshell で飲まれ、
+#   空 num のまま <span class="num"></span> を rc=0 で書き出す (verify 側 backstop 頼みの fail-open)。
+#   ★被覆の正確な宣言 (re-cert 実測 2026-07-27): abort assert (PR24) 単独が殺せるのは「両層が消えた合流状態」のみ
+#   (期待 substring『節番号を導出できない』は第 1 層 (emit_section 代入形) と第 2 層 (band_num 数値 guard) の
+#   メッセージに共通するため)。第 1 層 ★単独 の退行は PR24b の負 assert (『band_num に非数値』が stderr に
+#   ★不在 = 第 1 層が band_num 到達前に abort した証拠) が弁別する。第 2 層の単独実効は第 1 層存命中は経路上
+#   撃てない — mutant 実測 (代入形だけ退行 → guard が rc=1 で停止) で確認済み (bd folio-8q7l notes)。
+cp "$BASE" "$TMP/pr24.yaml"; yq -i '.sections[2].heading = "NO SECTION NUMBER"' "$TMP/pr24.yaml"
+pr24_out="$(bash "$ASM" "$TMP/pr24.yaml" "$TMP/o.html" 2>&1)"; pr24_rc=$?
+if [[ $pr24_rc -ne 0 && "$pr24_out" == *"節番号を導出できない"* ]]; then
+  ok "PR24 ★§N 形でない heading を abort (節番号導出不能を silent に空 .num へ落とさない)"
+else ng "PR24 ★§N 形でない heading を abort (abort されず生成された・または理由が想定外。 rc=$pr24_rc / 末尾: $(printf '%s' "$pr24_out" | tail -1))"; fi
+if [[ $pr24_rc -ne 0 && "$pr24_out" == *"heading が §N 形でない"* && "$pr24_out" != *"band_num に非数値"* ]]; then
+  ok "PR24b ★第 1 層 (emit_section 代入形) が band_num 到達前に abort (第 1 層メッセージ実在 + 第 2 層メッセージ不在 = 層独立の pin・空撃ちでは緑にならない)"
+else ng "PR24b ★第 1 層の退行か空撃ち (rc=$pr24_rc / 第 2 層メッセージへ到達 or 第 1 層メッセージ不在)"; fi
 
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
