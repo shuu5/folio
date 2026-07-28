@@ -54,4 +54,21 @@
 # - linear.api_key  → use LINEAR_API_KEY env var instead
 # - github.token    → use GITHUB_TOKEN env var instead
 
+# 台帳 remote はコード repo と分離する（fleet 標準 D2・orch-ryg3 / bd folio-nrw5・先例 = scribe/.beads/config.yaml）。
+#
+# なぜ: bd の既定は台帳（refs/dolt/data）をコード repo と同じ remote へ push する。本リポは PUBLIC ゆえ
+# 台帳本文が公開読み取り可能な面に出ていた。露出 ref は 2026-07-28 に削除済み
+# （復元点 SHA = d2cbcdbd367c7454628e36ec5c24e986b6d05c4d・記録 = bd folio-nrw5）。
+#
+# 不変条件（変更するときはこの 2 本を必ず再確認する）:
+#   1. git ls-remote <このコード repo> 'refs/dolt/*' が 0 件であること
+#   2. sync.remote が当該コード repo を指さないこと
+#
+# 台帳 1 つにつき private repo 1 つが必要（dolt の push 先 ref 名は refs/dolt/data 固定で、
+# 複数台帳を 1 repo に集約すると ref が衝突するため）。
+#
+# ★最重要の落とし穴（scribe で 2026-07-27 に実際に踏んだ）: **このファイルを編集しても push 先は切り替わらない**。
+#   dolt エンジンは自前の remote レジストリを持ち、切替には `bd dolt remote remove/add` が要る。
+#   config だけ書き換えて push すると**旧 remote（＝コード repo）へ出て露出が復活する**。
+#   ゆえに push の前に必ず `bd dolt remote list` で実際の push 先を実測し、private 先を指していなければ push しない。
 sync.remote: "git+https://github.com/shuu5/folio-beads.git"
