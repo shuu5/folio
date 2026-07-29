@@ -61,8 +61,12 @@
 # （復元点 SHA = d2cbcdbd367c7454628e36ec5c24e986b6d05c4d・記録 = bd folio-nrw5）。
 #
 # 不変条件（変更するときはこの 2 本を必ず再確認する）:
-#   1. git ls-remote <このコード repo> 'refs/dolt/*' が 0 件であること
+#   1. git ls-remote <このコード repo> で refs/dolt/* と refs/heads/__dolt_remote_info__ の
+#      ★2 系統とも 0 件であること（orch-ryg3 errata 2026-07-29: refs/dolt/* だけの確認は
+#      false-clean になる — __dolt_remote_info__ が残存した実測あり）
 #   2. sync.remote が当該コード repo を指さないこと
+#      （★bd auto-wiring 注意: sync.remote と dolt remote origin は bd が git remote の存在を
+#        入力に自動再生成しうる — 変更後は bd dolt remote list の実測で push 先を必ず確認）
 #
 # 台帳 1 つにつき private repo 1 つが必要（dolt の push 先 ref 名は refs/dolt/data 固定で、
 # 複数台帳を 1 repo に集約すると ref が衝突するため）。
