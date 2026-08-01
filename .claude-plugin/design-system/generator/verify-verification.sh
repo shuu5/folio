@@ -46,6 +46,47 @@ declare -A EARS_CLASS=( [ubiquitous]=always [event-driven]=trigger [state-driven
 declare -A EARS_LABEL=( [ubiquitous]=無条件不変条件 [event-driven]="event 応答" [state-driven]=状態継続中 [unwanted]=異常応答 [optional]=機能オプション )
 # EARS 凡例の「いつ守るか」平易説明 (folio-2jr persona-walk major-1・assemble-spec と二重保守=parity)。
 declare -A EARS_WHEN=( [ubiquitous]=常に守る [event-driven]=きっかけがある時 [state-driven]=状態が続く間 [unwanted]=異常が起きた時 [optional]=機能を使う時 )
+# ============================================================================
+# ★ADR-0054 (提示層標準形) lockstep 定数群 — assemble-verification.sh と ★二重保守 (detect↔remediate parity)。
+#   assembler が emit する平易ラベル / 静的見出し / wrapper id を verify 側でも宣言し、 ★逐値で突合する
+#   (片側だけ変えると FAIL する = 提示層の drift を lockstep で封鎖する)。
+# ============================================================================
+# ★role の平易語 map。 attr (data-ref-role) は機械 token を保持し、 ★可視ラベルのみ map 適用 (chip 突合は
+#   attr=token / visible=平易語 の ★非対称 を literal に要求する = 可視の英語生表示への退行を捕捉)。
+declare -A ROLE_PLAIN=(
+  [implementation]="この規約が実装する原則" [rationale]="そう決めた理由の記録" [claim]="この文書が満たすと主張する要件"
+  [exploration]="探索の記録" [principle]="拠って立つ原則" [verification]="どう確かめるかの仕様"
+)
+# ★RFC-2119 優先度 (must|should) → 可視ラベルの ★closed allowlist ('|' 区切りの逐値集合)。 バッジの可視文字列は
+#   prose slot が持つため、 floor は「level ごとに許される可視ラベルの ★有限集合」に属するかを逐値突合する。
+# ★前方一致 (語幹で始まる) は使わない (ehar クラス): 「必須ではない」のような ★否定接尾 が語幹で始まるため
+#   prefix 判定を素通りし、 level と意味が反転したまま全 gate を通る。
+# ★集合の拡張には prose manifest / 本 allowlist / assemble-verification.sh の同名配列の ★三点同時更新 が必要 (fail-closed)。
+declare -A PRIO_LABEL_OK=( [must]="必須|必須・将来" [should]="推奨・現在" )
+# ★静的 band (前方照会 / 用語集) の heading ★本文 (§番号を ★除いた 部分)。 ★§番号は literal 固定せず contract の
+#   最終 section 見出しから ★導出 する (下記 STATIC_HEADINGS 組み立て)。 assemble-verification.sh と二重保守。
+#   ★verification の照会種別は 原則 (P-x) / 決定記録 (ADR) の 2 種 (REQ-VER 系 cross-ref は 0 件 = over-promise 禁止)。
+STATIC_HEADING_TAILS=("上位文書への前方照会 — 原則と決定記録へつながる" "本文に出てくる専門語のやさしい説明")
+# ★提示層 wrapper section の id (admin 裁定 C2 = 番号なし canonical token 2 つに固定)。
+PRESENTATION_WRAPPER_IDS=("forward-refs" "glossary-terms")
+# ★各 wrapper が包む章帯の tint (assemble-verification.sh build() の band_num 実引数 violet / brand と ★二重保守)。
+#   containment の「開口隣接 literal pin」で band の ★同一性 (どの章の帯か) まで逐値要求するために持つ
+#   (tint を持たないと「隣に *何らかの* band が在る」しか言えず、 別章 band の付け替えが素通る)。
+PRESENTATION_WRAPPER_BAND_TINTS=("violet" "brand")
+# ★機械層 fold / 要件 normative fold の平易ラベル (ADR-0054 §2.2・wave 恒常 2)。
+RQ_NORM_SUMMARY="正確な条文（機械向けの厳密な書き方）"
+MF_KICKER="機械向けの詳細（原文そのまま）"
+# ★契約非依存 census floor の期待値 (★verification 固有・0/0 恒真封鎖・wave 恒常 3)。 新 field (references[].title /
+#   requirements[].priority) と subhead essence は ★all-or-none / optional ゆえ、 契約から一括削除すると
+#   「契約側も生成物側も空」で逐値突合が ★0/0 恒真 PASS する。 生成物の占有数を ★数値 hardcode で pin して封鎖する。
+# ★★relations (verify-relations.sh:78-86) / rules (verify-spec.sh:72-75) の literal 流用は ★禁止 — 本値は
+#   verification contract の実測から導出したもの (arm 名も spec ごとに異なりうる: relations は subsub / 本 pack は subhead)。
+FZC_RF_GLOSS=30      # 前方照会チップの一行タイトル = |references|
+FZC_RQ_PRIO=31       # RFC-2119 優先度バッジ = |requirements|
+FZC_RQ_PLAIN=31      # 「やさしく言うと」平易行 = |requirements|
+FZC_SUBHEAD_SE=19    # 人間層 1 行要約 (.sub-se) を ★非空 で持つ subhead 数 = |subhead blocks| (空 subsection 0)
+# ★§6 ref-primary (References の一次参照可視化) は ★relations 固有 arm ゆえ verification では実装しない (0 件)。
+#   ★0/0 恒真 pin を ★置かない (0 == 0 の恒真 chk は teeth を持たず「検査している」と誤読させるため・V確定5b)。
 
 fail=0
 make_body "$HTML"
@@ -57,6 +98,23 @@ echo "  contract: $CONTRACT"
 
 NSEC="$(q '.sections | length')"
 NREQ="$(q '.requirements | length')"
+
+# ★節番号 (§N) を contract sections[].heading から ★導出 する (ADR-0054 §2.2 の band .num 突合の trust anchor)。
+#   band の巨大番号 (.num) 期待列を hardcode で作ると assembler 側の導出と ★両側が同じ仮定に合意しているだけ になり、
+#   実際の見出し (h2 の「§N.」) と .num が食い違っても検出できない。 見出し自身を trust anchor にして構造束縛する。
+# ★fail-closed: §N を持たない heading が 1 本でもあれば abort (0 件マッチの恒真化を防ぐ)。
+# ★-Mutf8 必須: -CSD は入力を decode するが ★program source の literal は decode しない — 「§」を素の byte のまま
+#   書くと decode 済み入力と一致せず ★常に 0 match = 全 heading が NO-SECTION-NUMBER となり誤 abort する。
+SEC_NUMS="$(q '.sections[].heading' | perl -CSD -Mutf8 -ne 'chomp; if (/^§(\d+)\./) { print "$1\n" } else { print "NO-SECTION-NUMBER\n" }')"
+if [[ -z "$SEC_NUMS" ]] || printf '%s\n' "$SEC_NUMS" | grep -q 'NO-SECTION-NUMBER'; then
+  echo "verify-verification: ★contract sections[].heading に §N 形でない見出しがある (番号導出不能・fail-closed)" >&2
+  echo "  headings: $(q '.sections[].heading' | tr '\n' '|')" >&2
+  exit 2
+fi
+SEC_LAST_NUM="$(printf '%s\n' "$SEC_NUMS" | tail -n 1)"
+# 静的 2 band (前方照会 / 用語集) は最終 section の §番号の ★次 / ★次々。
+STATIC_NUMS=("$((SEC_LAST_NUM + 1))" "$((SEC_LAST_NUM + 2))")
+STATIC_HEADINGS=("§${STATIC_NUMS[0]}. ${STATIC_HEADING_TAILS[0]}" "§${STATIC_NUMS[1]}. ${STATIC_HEADING_TAILS[1]}")
 
 # 1. 行数 (data-component / class 行マーカーで table-scoped、 id 命名非依存)。
 #    chapter-deck-band = section 数 + 2 (references band + glossary band)。
@@ -127,10 +185,23 @@ chk_empty "要件 id 一意"     "$(q '.requirements[].id' | sort | uniq -d | tr
 chk_empty "section id 一意"  "$(q '.sections[].id' | sort | uniq -d | tr '\n' ' ')"
 chk "doc_type == spec"       "spec" "$(q '.meta.doc_type')"
 
-# 3. section fidelity: 可視 heading 列 (先頭 NSEC 個の h2) == sections[].heading (順序) / essence 列 == sections[].essence (順序)。
-exp_sh="$(q '.sections[].heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
-act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#' | head -n "$NSEC")"
-chk "section 可視 heading 列 == sections[].heading (順序)" "$exp_sh" "$act_sh"
+# 3. section fidelity: 可視 heading 列 == sections[].heading + 静的 band 2 件 (順序) / essence 列 == sections[].essence (順序)。
+# ★ADR-0054 lockstep: 旧版は head -n NSEC で ★先頭 NSEC 個しか見ておらず、 末尾 2 band の h2 (references / glossary band)
+#   を取りこぼし・総 h2 件数 pin も無かったため、 band h2 の任意書換え + NSEC 超位置への新規 h2 無制限注入が素通った。
+#   静的 band h2 は「§N. <本文>」形になり §N は ★contract 見出しから導出する (旧 literal
+#   「verification は照会の終端ではない — 原則 (constitution) や決定記録 (ADR) へ前方照会する」は §番号を持たない旧形)。
+STATIC_BAND_H2=("${STATIC_HEADINGS[@]}")
+exp_sh="$( { q '.sections[].heading'; printf '%s\n' "${STATIC_BAND_H2[@]}"; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
+act_sh="$(grep -oE '<h2>[^<]*</h2>' "$BODY" | sed -E 's#<h2>([^<]*)</h2>#\1#')"
+chk "section 可視 heading 列 == sections[].heading + 静的 band 2 件 (順序)" "$exp_sh" "$act_sh"
+chk "h2 総数 == NSEC+2 (band h2 切詰・大文字注入の盲点是正)" "$((NSEC+2))" "$(grep -oiE '<h2\b' "$BODY" | wc -l | tr -d ' ')"
+# ★章帯の巨大番号 == 見出しの節番号 (ADR-0054 §2.2)。 core band() は連番 (01..09) を emit するが、 pack-local
+#   wrapper が §番号へ書き換える。 旧版は .num を ★一切 pin していなかったため番号体系の drift が全 gate を素通った。
+# ★期待列は hardcode の連番でなく ★見出し自身から導出 した SEC_NUMS + STATIC_NUMS。 これにより「.num と h2 の §N が
+#   食い違う」不整合が ★両側 hardcode の同意 に依らず構造的に落ちる。
+chk "band .num 列 == 見出しの節番号 (heading 由来・連番でない・ADR-0054 §2.2)" \
+  "$(printf '%s\n' "$SEC_NUMS"; printf '%s\n' "${STATIC_NUMS[@]}")" \
+  "$(grep -oE '<span class="num">[^<]*</span>' "$BODY" | sed -E 's#<span class="num">([^<]*)</span>#\1#')"
 # ★rich 契約値 (folio-aduv): essence は inline HTML (a.xref / span.term / <code> …) を逐語で持ち assembler が RAW emit する。
 #   ゆえ期待側は esc せず *契約値そのもの*、 実測側は ([^<]*) でなく (.*?) + 固有終端で取る。
 #   ★検出力は落ちない: 期待 == 実測の逐字一致は不変で、 escape 由来の化け・脱落・改竄はそのまま diff に出る
@@ -158,9 +229,421 @@ chk "section kicker 列 == sections[].kicker + 静的 band 2 件 (順序)" "$exp
 #   sibling 形からの追随)。 span 形は bin/folio の folio_chrome_toc_rows から ★不可視で章 TOC を全喪失させたため
 #   canonical と同形の <section> 包みへ是正した (assemble-verification.sh emit_section の注記に機序と実測)。
 #   band が開く <section data-component="chapter-deck-band"> は id を持たないので本 selector には掛からない。
-chk "section anchor 列 == sections[].anchor (順序)" \
-  "$(q '.sections[].anchor' | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
+# ★ADR-0054 lockstep: 前方照会 / 用語集を section id 付きの章で包む決定 (admin 裁定 C2) により、 生成物の
+#   <section id> 列は「contract sections[].anchor + ★末尾固定 2 wrapper」になる。 wrapper id は番号なし canonical token。
+# ★selector は ★厳格形 `<section id="…">` (属性追加を許さない) で固定する — 範型 verify-relations.sh:197 /
+#   verify-spec.sh:212 は `[^>]*` 緩和形だが、 両者は直後に「section の class 値列 == contract sections[].class」の
+#   ★対の arm を必ず持ち (relations/rules の canonical は実際に class="normative|informative" を持つ)、 緩和は
+#   その対 arm が属性中身を pin することで補償されている。 verification contract は section class key を持たず
+#   対の arm が存在しない ため、 緩和だけを写すと ★補償無しの teeth 削除 になる (実弾で確認: contract 章へ
+#   `class="normative"` / `data-audience="machine" hidden` を注入しても全 gate 緑 = 1 章まるごと人間層から
+#   消す content-suppression が素通る)。 assemble-verification.sh は emit_section / wrapper とも属性無しの
+#   `<section id="…">` しか emit しない ので厳格形で無改竄 canonical は PASS する (:238 の wrapper 陽性 assert が
+#   既に同じ厳格形を要求している = 二重保守の平仄)。 per-shape MK は test-adversarial-verification.sh PR3c。
+chk "section anchor 列 == sections[].anchor + 提示層 wrapper 2 件 (順序)" \
+  "$( { q '.sections[].anchor'; printf '%s\n' "${PRESENTATION_WRAPPER_IDS[@]}"; } | while IFS= read -r v; do esc "$v"; printf '\n'; done)" \
   "$(perl -CSD -0777 -ne 'while (/<section id="([^"]*)">/g){ print "$1\n"; }' "$BODY")"
+# ★提示層 wrapper (ADR-0054 §2.2 の章化) の陽性 assert 2 本 — (a) 実在すること (章化が落ちれば section anchor 列も
+#   FAIL するが、 census の id allowlist 除外が ★空振りしていない ことをここでも独立に固定する)、 (b) class を
+#   ★持たないこと (verification contract は section class key を持たないため normative/informative census 自体が
+#   無いが、 class 付与は census/構造の別クラス退行ゆえ ★形として封鎖する)。 assemble-verification.sh と二重保守。
+for _w in "${PRESENTATION_WRAPPER_IDS[@]}"; do
+  chk "提示層 wrapper <section id=\"$_w\"> が class 無しで実在 (章化 + census 非侵食)" "1" \
+    "$(grep -oE "<section id=\"$_w\">" "$BODY" | wc -l | tr -d ' ')"
+done
+# ★★章 (契約章 + 提示層 wrapper) の ★containment (章化の ★実質) — 上の陽性 assert (a)(b) と section anchor 列は
+#   ★開きタグの実在 しか見ない。 ゆえに <section id="forward-refs"></section> と即閉じ、 band / chapbody /
+#   ref-grid を章の ★外 へ押し出す ★hollow section 改竄が ★タグ均衡を保ったまま 全 gate を素通る
+#   (実弾再現: 開きタグ即閉じ + 対応閉じタグ削除で rc=0 / 0 FAIL)。 章化 (ADR-0054 §2.2) が約束するのは
+#   「id を持つ section が在ること」ではなく「その章の中身が ★その章に属すること」ゆえ、 帰属を ★入れ子 で pin する。
+#   (i) ★開口隣接 pin — 章の開きタグの ★直後 (間に ★異物なし) が「その章の band」(§番号 逐値 + wrapper は tint 逐値)。
+#   (ii) ★region 占有 pin — 章の対応閉じタグまでの region で band == 1 / chapbody == 1 (欠落・重複・他章の紛れ込み)。
+#   (iii) ★1 段内側の再帰 — wrapper では さらに chapbody 開口直後が payload container (ref-grid /
+#         glossary-term-table) であること、 container が chapbody 内に 1 個、 payload (chip / .grow) の
+#         ★全数 が ★container の中 に在ること。 (i)(ii) だけだと「chapbody を空で閉じ payload を sibling へ出す」
+#         「container を即閉じし payload を外へ出す」 hollow 化が 1 段 / 2 段 内側で ★そのまま再演する
+#         (B3 の defect 原理「開きタグが在る は 中身がそこに属する を意味しない」は ★階層ごとに 撃つ必要がある)。
+#   ★期待値は contract 由来 (|references| / |glossary| / sections[].anchor / 見出し由来 §番号) ゆえ、 生成物実測への
+#   after-the-fact 合わせ (恒真化) にならない。 ★契約章 7 本にも同じ (i)(ii) を課す (2 id の手書き列挙に留めると
+#   同一 DOM shape を持つ残り 7 章が無防備 = partial-enumeration trap。 駆動は contract の section census)。
+# ★per-shape mutation-kill (test-adversarial-verification.sh・★全 arm が 1 つ以上の実弾で anchor される):
+#   PR3d hollow wrapper / PR3e chapbody だけの押し出し (band 隣接は保持 = 開口隣接 pin は PASS のまま region 側だけ
+#   発火) / PR3f 用語集 wrapper の hollow 化 (payload 別構造クラス) / PR3g band tint の逐値付け替え (開口隣接 pin の
+#   ★識別成分 = tint を単独で撃つ) / PR3h 開口への異物挿入 (同 pin の ★位置成分) / PR3i over-containment (wrapper の
+#   入れ子化 = region 占有の ★上限側) / PR3j 契約章の hollow 化 (2 id 列挙では届かない残り 7 章) / PR3k chapbody 空化 +
+#   payload を sibling へ (1 段内側の帰属) / PR3l chapbody 開口への異物挿入 / PR3m hollow ref-grid / PR3n hollow
+#   glossary-term-table (payload 2 クラスを ★別実弾 で撃つ) / PR3t bogus comment / PR3u escapable RAWTEXT /
+#   PR3v ハイフン要素名 / PR3w 契約章 band tint 付け替え / PR3x payload container の重複 / PR3o コメント密輸 /
+#   PR3p script 密輸 / PR3q 属性値内 生 `>` 密輸 / PR3y comment end bang (`--!>`) / PR3z abrupt-closing comment
+#   (`<!-->`) / PR4a RAWTEXT 終了タグの要素名境界 (`</textareax>`) / PR4b foreign content (svg subtree) /
+#   PR4c 契約章の chapbody 空化 + 章本文 sibling 押し出し / PR4d 章要旨を残した章本文の relocation
+#   (★block 粒度・章直下 2 子の構造 pin) / PR4e `<!--->` (comment 終端分岐 2 の単独 teeth) /
+#   PR4f 章本文の ★band subtree への退避 (kids を 2 に保つ向き) / PR4g 章本文の ★別章 chapbody への移送 /
+#   PR4h 章本文の ★machine-fold 内への退避 (後 2 者は ★document 順を保ち 他の probe 値を一切動かさない形) /
+#   PR11c 優先度バッジの空化 / PR11d 大文字 <H2> の注入
+#   — parser-differential 系は ★合計 7 vector で、 ★いずれも 封鎖 ★前 は rc=0 / 0 FAIL で素通った 実測 shape。
+# ★★「全 arm が実弾で anchor される」の ★射程 (宣言 == 実能力): 上の主張が掛かるのは ★生成物 (artifact) の
+#   改竄で落ちる arm だけ である。 ★検査機構そのものの健全性 arm — 「駆動表が全章を覆う」「probe が全章分の
+#   実測を出力」 — は artifact をどう改竄しても落ちず (script 改変でしか落ちない)、 敵対 suite の構造上
+#   per-shape MK を持てない。 これらは test-adversarial-verification.sh の ★MECHPIN 節 (tracked 静的 pin・
+#   MINFORM / SETCDATA と同型) が arm の実在と期待値の導出形を押さえる = ★MK 対象外だが担保はリポに残る。
+#   (worker の self-test は untracked ゆえ land 後に残らない — 担保先を ★committed 側 に置くのが要件。)
+#
+# ★★実態開示 (scope・c5r.2 回避表記封鎖の規律): 本 containment pin は ★verification arm 限定 である。 同一の
+#   提示層 wrapper shape を持つ ★sibling floor = verify-spec.sh (rules) / verify-relations.sh (relations) は
+#   wrapper assert が「<section id="forward-refs"> が class 無しで実在」の 1 本だけ で containment を持たず、
+#   両者とも CI 配線済 (ci.yml) ながら ★同クラスの hollow wrapper 改竄に対し現状 fail-open のままである。
+#   本 cell の scope fence (他 pack の verify-*/assemble-* 不触) ゆえ ★横展開は follow-up (別 issue) で行う
+#   — 「ADR-0054 章化は 3 arm 全てで守られている」と読んではならない (宣言能力 == 実能力)。
+#   ★trace 先を持たない「後でやる」で終わらせない (片 arm ドリフトの実発クラス = folio-7st6 → folio-gt4s と同型)。
+#   ★受け皿 = folio-3zr4 (admin 起票済) — rules / relations への横展開 (提示層 wrapper containment +
+#   本 cell で確立した ★3 レベル完全子数束縛 kids / bkids / cbkids) は当該 issue が担う。
+#   ★本 cell の worker は bd create 権限を持たない (scribe protocol §3 = graph は admin 所有) ため、 起票自体は
+#   admin が行った (worker からの申送りの durable な所在 = bd folio-9m1h notes の DONE 報告)。
+#
+# ★★parser-differential 封鎖 (r8k / folio-wq4 の再発クラス): region 切り出しを $BODY の ★生テキストへの
+#   素朴な /<(\/?)section\b[^>]*>/ 走査で行ってはならない。 make_body は ★コメント本文と <script> 中身を
+#   verbatim 保持する (lib/verify-common.sh) ため、 コメント内 / script 内に書いた `<section>` 文字列が
+#   ★実要素として深さに加算され、 region が対応閉じタグを越えて ★over-slice する。 また `[^>]*` は引用符を
+#   認識しないため、 属性値内の生 `>` (`<p title="x><section>y">`) でも同じ over-slice が起きる。
+#   ★いずれも実弾で「章本文を章の外へ出したまま rc=0 / 0 FAIL」を再現した shape ゆえ、 走査は ★HTML5 の
+#   tokenizer 規則に ★寄せた 走査で行う: コメント終端は HTML5 comment state と同型 (abrupt close / `<!--->` /
+#   `-->` と `--!>` の早い方)、 bogus comment / markup declaration は `>` まで無視、 RAWTEXT と escapable
+#   RAWTEXT (10 要素) の中身は ★タグとして数えず 終了タグは ★要素名境界 を課す、 foreign content (svg / math)
+#   の subtree は ★丸ごと読み飛ばす (中は HTML 名前空間でない)、 タグ境界は ★引用符を認識して 決定し、
+#   要素名は ★ハイフン込みで 1 語 として取る。 占有数も 生テキスト grep でなく ★tokenize 済タグの属性 逐値一致
+#   で数える (属性値に marker 文字列を紛れ込ませた計数水増しを構成的に封じる)。
+#   ★★宣言の射程 (== 実能力): これは「HTML5 parser の ★完全実装」ではない — 本 tokenizer が同型化しているのは
+#   ★region 切り出しに効く状態 (上記) に限られ、 挿入位置補正 (in-body insertion mode の implied end tag /
+#   foster parenting 等) や文字参照の解決は ★モデルしていない。 それらに依存する差分が将来見つかりうる前提で、
+#   genuine assembler が emit しない shape (未閉じ / div・section の自己閉じ構文) は ★err で拒否する
+#   fail-closed を併用する (arms race を全面 parser 実装へ広げず、 ★穴が開いたら loud に落ちる 側へ倒す)。
+#   ★到達不能な残差の開示: foreign subtree の走査 (`<(/?)svg…>` の正規表現) は ★引用符を認識しない が、
+#   属性値内に生 `<` を置く shape は ★上流の make_body が fail-closed で拒否する (raw-lt-in-tag) ため
+#   本走査には到達しない (独立 verifier 実測)。 ここは「認識しているから安全」ではなく「上流で落ちるから
+#   到達しない」であり、 make_body の当該 guard を緩めると ★本走査の前提が崩れる (依存の所在を明示する)。
+# ★★lockstep 相手の開示 (二重保守の所在): 本 pin が依存する DOM marker のうち
+#   `data-component="chapter-deck-band"` / `<span class="num">` / `<div class="chapbody">` は ★共有 CORE
+#   lib/common.sh の band() / band_end() が emit する形であり、 pack-local な assemble-verification.sh ではない。
+#   ★CORE 側でこれらの marker 名が変わると本 pin は (tokenizer が属性一致で数えるため) ★静かに 0 件になり得る
+#   — その退行は「駆動表が全章を覆う」「probe が全章分を出力」の 2 arm では捕まらず、 章ごとの adj/band/cb が
+#   同時に 0 へ落ちる形で ★loud に FAIL する (16 pack 共有ゆえ CORE 改変は本 cell scope 外 = 検出できれば足りる)。
+#   属性値そのもの (tint-<値> / §番号) の lockstep 源は contract (sections[].tint / 見出し §N) と
+#   PRESENTATION_WRAPPER_BAND_TINTS。
+# ---- containment probe: $BODY を 1 度だけ tokenize し、 章ごとの containment 実測値を KV で返す ----
+#   入力 PROBE_SPEC = 1 行 1 章の TSV: id \t §num \t tint(空=不問) \t container 属性 \t 値 \t payload 属性 \t 値
+#   出力 = "<id>|<key>=<値>" 行 (found/adj/band/cb/cbadj/cont/pay) + "*|err=<tokenizer 診断>"。
+#   ★fail-closed: tokenizer が非 genuine 構造 (未閉じタグ / 未閉じコメント / 未閉じ RAWTEXT / div・section の
+#   自己閉じ構文) を見たら token 列を捨てる → 全章 found=0 となり下の chk が総崩れ FAIL する (診断は err arm が出す)。
+containment_probe() { # stdin なし・env PROBE_SPEC / 引数なし
+  perl -CSD -0777 -ne '
+    my $b = $_; my $n = length($b); my $i = 0; my $err = ""; my @t = ();
+    # ★RAWTEXT / escapable RAWTEXT (HTML5): これらの中身は ★テキスト であり、 中の <section> 等は要素にならない。
+    #   script / style だけを知っていると title / textarea 等へ入れた擬似タグが ★実タグとして深さに乗り (parser-
+    #   differential)、 region が over-slice して containment pin が fail-open する。 実測: genuine BODY に在るのは
+    #   script 4 / style 1 / title 1 のみ (textarea・xmp・iframe・noembed・noframes・noscript・plaintext は 0 件)
+    #   ★宣言の射程: plaintext は HTML5 では「以降すべてテキスト」で ★終了タグを持たない 特殊要素であり、
+    #   本実装の「`</name>` まで読み飛ばす」処理とは厳密には別である (終端が来なければ err = fail-closed 側へ
+    #   倒れる)。 「全 RAWTEXT 系で差が構成的に生じない」とは言えないため、 ここに ★実態を開示して 装わない。
+    #   ゆえ、 現れない要素も ★実 parser と同じ挙動 (中身をテキストとして読み飛ばす) で扱えば、 攻撃者がそれらを
+    #   注入しても tokenizer と実 DOM の差が ★構成的に生じない (「現れないから拒否」より広く閉じる)。
+    my %RAWTEXT = map { $_ => 1 } qw(script style title textarea xmp iframe noembed noframes noscript plaintext);
+    while ($i < $n) {
+      my $lt = index($b, "<", $i); last if $lt < 0;
+      # ★comment の終端は HTML5 の comment state と ★同型 に取る (`-->` 一本終端は非同型)。 実 parser が
+      #   ★早く 終端する形を知らないと、 攻撃者は「実 DOM では章の外に在る閉じタグ」を tokenizer にだけ
+      #   comment の中身として隠せる (実弾 verified: `<!--x--!></section><!--y-->` / `<!--></section><!--y-->`
+      #   で用語集本文を章の外へ出したまま rc=0 / 0 FAIL)。 3 分岐:
+      #   (1) `<!-->` = abrupt-closing (直後が `>`) (2) `<!--->` = 直後が `->` (3) 以降は `-->` と `--!>`
+      #   (comment end bang) の ★早い方。 未終端は err (fail-closed・現行どおり)。
+      if (substr($b, $lt, 4) eq "<!--") {
+        my $p = $lt + 4;
+        if (substr($b, $p, 1) eq ">") { $i = $p + 1; next }
+        if (substr($b, $p, 2) eq "->") { $i = $p + 2; next }
+        my $e1 = index($b, "-->", $p);
+        my $e2 = index($b, "--!>", $p);
+        if ($e1 < 0 && $e2 < 0) { $err = "unclosed-comment"; last }
+        if ($e1 < 0 || ($e2 >= 0 && $e2 < $e1)) { $i = $e2 + 4; next }
+        $i = $e1 + 3; next;
+      }
+      my $win = substr($b, $lt, 64);   # 要素名の切り落とし余裕 (最長の HTML 要素名でも十分)
+      # ★bogus comment / markup declaration (`<!DOCTYPE …>` / `<!foo>` / `<?xml …>` / `</ >`) — 実 HTML parser は
+      #   これらを ★comment として `>` まで捨てる。 素朴に 1 文字進めると中身に書いた `<section>` が ★実タグとして
+      #   深さに乗り region が over-slice する (実弾で verified: `<! <section> >` + `<! </section> >` の 2 本で
+      #   用語集本文を章の外へ出したまま rc=0 / 0 FAIL = B3 がそのまま再現した)。 genuine BODY にも `<!DOCTYPE html>`
+      #   が 1 件実在するため ★err で拒否せず 実 parser と同じ「`>` まで無視」へ寄せる (拒否だと genuine が総崩れする)。
+      #   ★未終端 (`>` が来ない) は literal 残置でなく err = fail-closed (下の全 chk が総崩れ FAIL する)。
+      if ($win !~ m{^<(?:/?)[a-zA-Z]} && ($win =~ m{^<[!?]} || $win =~ m{^</})) {
+        my $e = index($b, ">", $lt + 1);
+        if ($e < 0) { $err = "unclosed-bogus-comment"; last }
+        $i = $e + 1; next;
+      }
+      # ★要素名は HTML5 のカスタム要素 (ハイフン入り) を ★1 語として取る。 `[a-zA-Z0-9]*` で切ると `<section-foo>` の
+      #   要素名を "section" と誤認し、 実 DOM では別要素のものを ★章の深さに数える (over-slice の 3 本目の vector)。
+      if ($win =~ m{^<(/?)([a-zA-Z][a-zA-Z0-9-]*)}) {
+        my $cl = $1; my $nm = lc $2;
+        my $j = $lt + 1 + length($cl) + length($2); my $qc = ""; my $gt = -1;
+        while ($j < $n) {
+          my $c = substr($b, $j, 1);
+          if ($qc ne "") { $qc = "" if $c eq $qc }
+          elsif ($c eq q{"} || $c eq "\x27") { $qc = $c }
+          elsif ($c eq ">") { $gt = $j; last }
+          $j++;
+        }
+        if ($gt < 0) { $err = "unclosed-tag-$nm"; last }
+        # ★$raw は ★この位置で宣言する — 下の foreign content 分岐 (:自己閉じ高速路) と self-closing 拒否の
+        #   ★両方が読む。 旧版は宣言が foreign 分岐より ★後 にあり、 分岐側は未定義の package 変数を読んで
+        #   恒偽 = 死コード だった (実挙動は 自己閉じ svg → unclosed-foreign err の fail-closed 側へ落ちており
+        #   genuine には 0 件ゆえ穴ではなかったが、 ★コメントの主張と実挙動が食い違う 状態だった)。
+        my $raw = substr($b, $lt, $gt + 1 - $lt);
+        # ★foreign content (svg / math): 中の要素は ★HTML 名前空間の要素ではない ので章の深さに数えてはならない。
+        #   genuine 生成物には svg アイコンが多数実在するため、 subtree を ★実 parser と同型に 読み飛ばす
+        #   (実弾 verified: `<svg><section></svg>` で region を伸ばし章本文を章の外へ出したまま rc=0 / 0 FAIL)。
+        #   ★foreign content では `/>` の自己閉じが ★効く (HTML 名前空間と逆) ので、 自己閉じは深さに加算しない。
+        #   subtree が閉じない場合は err (fail-closed)。
+        if (!$cl && ($nm eq "svg" || $nm eq "math")) {
+          if ($raw =~ m{/>$}) { $i = $gt + 1; next }
+          my $d2 = 1; my $rest2 = substr($b, $gt + 1); my $off = -1;
+          while ($rest2 =~ m{<(/?)\Q$nm\E(?=[\t\n\f\r />])[^>]*>}gi) {
+            my $hit = $&;
+            if ($1 eq "/") { $d2-- } elsif ($hit !~ m{/>$}) { $d2++ }
+            if ($d2 == 0) { $off = pos($rest2); last }
+          }
+          if ($off < 0) { $err = "unclosed-foreign-$nm"; last }
+          $i = $gt + 1 + $off; next;
+        }
+        # ★RAWTEXT の終了タグは ★要素名の境界 を課す (実 parser の appropriate end tag 判定と同型)。
+        #   `</\Q$nm\E[^>]*>` は `</textareax>` にも一致して ★早期終了 し、 以降の擬似タグを実タグとして
+        #   数えてしまう (実弾 verified: `<textarea></textareax><section><textarea></textarea>` で region を
+        #   伸ばし章本文を章の外へ出したまま rc=0 / 0 FAIL)。 名前の直後は空白 / `/` / `>` のみ許す。
+        if (!$cl && $RAWTEXT{$nm}) {
+          my $rest = substr($b, $gt + 1);
+          if ($rest =~ m{</\Q$nm\E(?=[\t\n\f\r />])[^>]*>}i) { $i = $gt + 1 + $+[0]; next }
+          $err = "unclosed-rawtext-$nm"; last;
+        }
+        # ★fail-closed: region 切り出しに使う div / section の ★自己閉じ 構文を拒否する。 HTML では非 foreign 要素の
+        #   `/>` は無視される (= 開きタグ) が、 svg / math の ★foreign content 内では自己閉じが効くため、 深さ計数と
+        #   実 DOM の差 (parser-differential) を作れる。 genuine な assembler は `<div/>` / `<section/>` を emit しない。
+        if (!$cl && ($nm eq "div" || $nm eq "section") && $raw =~ m{/>$}) { $err = "self-closing-$nm"; last }
+        push @t, { nm => $nm, cl => ($cl ? 1 : 0), s => $lt, e => $gt + 1, raw => $raw };
+        $i = $gt + 1; next;
+      }
+      $i = $lt + 1;
+    }
+    @t = () if $err ne "";
+    my $attr = sub {   # tokenize 済タグ raw から属性値 (最初の 1 個・HTML5 の duplicate 規則) を引く
+      my ($raw, $k) = @_;
+      my $s = $raw; $s =~ s{^</?[a-zA-Z][a-zA-Z0-9]*}{}; $s =~ s{/?>$}{};
+      while ($s =~ /([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|\x27([^\x27]*)\x27|([^\s"\x27=<>`]+))/g) {
+        my $ak = lc $1; my $av = defined $2 ? $2 : (defined $3 ? $3 : $4);
+        return $av if $ak eq $k;
+      }
+      return undef;
+    };
+    my $match = sub {  # 開きタグ かつ 要素名一致 かつ (属性 k の値 == v)
+      my ($x, $nm, $k, $v) = @_;
+      return 0 if $x < 0 || $x > $#t || $t[$x]{cl} || $t[$x]{nm} ne $nm;
+      return 1 if !defined $k || $k eq "";
+      my $a = $attr->($t[$x]{raw}, $k);
+      return (defined $a && $a eq $v) ? 1 : 0;
+    };
+    my $region = sub {  # 開きタグ index → (内側 first, 内側 last)。 同名要素の ★深さ で対応閉じタグを決める
+      my ($k) = @_; my $nm = $t[$k]{nm}; my $d = 1;
+      for (my $x = $k + 1; $x <= $#t; $x++) {
+        next unless $t[$x]{nm} eq $nm;
+        $d += $t[$x]{cl} ? -1 : 1;
+        return ($k + 1, $x - 1) if $d == 0;
+      }
+      return (-1, -1);
+    };
+    my $count = sub { my ($lo, $hi, $nm, $k, $v) = @_; my $c = 0; return 0 if $lo < 0;
+      for (my $x = $lo; $x <= $hi; $x++) { $c++ if $match->($x, $nm, $k, $v) } return $c; };
+    my $first = sub { my ($lo, $hi, $nm, $k, $v) = @_; return -1 if $lo < 0;
+      for (my $x = $lo; $x <= $hi; $x++) { return $x if $match->($x, $nm, $k, $v) } return -1; };
+    my $gap_ws = sub { my ($a, $x) = @_; return substr($b, $t[$a]{e}, $t[$x]{s} - $t[$a]{e}) =~ /^\s*$/ ? 1 : 0 };
+    for my $line (split /\n/, ($ENV{PROBE_SPEC} // "")) {
+      next unless length $line;
+      my @f = split /\t/, $line, -1;
+      my $id = $f[0]; my $num = $f[1] // ""; my $tint = $f[2] // "";
+      my $ca = $f[3] // ""; my $cv = $f[4] // ""; my $pa = $f[5] // ""; my $pv = $f[6] // "";
+      my $found = 0; my $wk = -1;
+      for (my $x = 0; $x <= $#t; $x++) { if ($match->($x, "section", "id", $id)) { $found++; $wk = $x if $found == 1 } }
+      my ($adj, $band, $cb, $cbadj, $cont, $pay, $kids, $bkids, $cbkids) = (0, 0, 0, 0, 0, 0, 0, 0, 0);
+      if ($found == 1) {
+        my ($r0, $r1) = $region->($wk);
+        if ($r0 >= 0 && $r0 <= $r1) {
+          $band = $count->($r0, $r1, "section", "data-component", "chapter-deck-band");
+          $cb   = $count->($r0, $r1, "div", "class", "chapbody");
+          # ★kids = 章 region 内の ★深さ 1 の子要素数。 assembler の構造規約では章の直下は
+          #   「章帯 band」+「chapbody」の ★2 子だけ ゆえ、 章本文 (subhead / 地の文 / details / table …) を
+          #   ★一部でも全部でも chapbody の外 (章直下の sibling) へ出すと 3 子以上になる = その向きは捕捉できる
+          #   (★band subtree への退避は bkids・★別章移送 / fold 退避は cbkids の担当 — ★3 レベルで 1 組)
+          #   (件数 pin を部品種別ごとに置く形は 0 件の章で 0/0 恒真になり、 かつ地の文のように marker を
+          #   持たない本文を覆えない)。 対応閉じが region 内に無ければそこで打ち切る (fail-closed 方向)。
+          my $count_kids = sub {   # region (lo..hi) の ★深さ 1 の子要素数
+            my ($lo, $hi) = @_; my $c = 0; return 0 if $lo < 0;
+            my $x = $lo;
+            while ($x >= 0 && $x <= $hi) {
+              if ($t[$x]{cl}) { $x++; next }
+              $c++;
+              my $nm2 = $t[$x]{nm}; my $d3 = 1; my $y = $x + 1;
+              while ($y <= $hi && $d3 > 0) { if ($t[$y]{nm} eq $nm2) { $d3 += $t[$y]{cl} ? -1 : 1 } $y++ }
+              $x = ($d3 == 0) ? $y : $hi + 1;
+            }
+            return $c;
+          };
+          $kids = $count_kids->($r0, $r1);
+          # ★bkids = ★章帯 (band) region 内の深さ 1 の子要素数。 kids pin だけでは relocation クラスが
+          #   ★片方向 にしか閉じない — 押し出し先を sibling でなく ★band の中 にすると章直下は
+          #   band + chapbody のままで kids=2 を保ち素通る (実弾 verified: rc=0 / 0 FAIL)。
+          #   共有 CORE lib/common.sh の band() は span.num / span.kicker / h2 / p.lead の ★4 子固定 ゆえ、
+          #   band 内へ何かを退避すれば 5 子以上になる (期待値は clean 9 章すべてで実測 4)。
+          my $bk = $first->($r0, $r1, "section", "data-component", "chapter-deck-band");
+          if ($bk >= 0) { my ($b0, $b1) = $region->($bk); $bkids = $count_kids->($b0, $b1) }
+          # ★cbkids = ★chapbody region 内の深さ 1 の子要素数。 章直下 (kids) と band 直下 (bkids) を固定しても
+          #   ★document 順を保つ relocation は残る — 章本文を (β) ★別章の chapbody へ移送 する / (γ) ★同章の
+          #   machine-fold (details) の中へ退避 する と、 両者とも probe の他の値を ★一切動かさず に素通った
+          #   (実弾 verified: rc=0 / 0 FAIL)。 chapbody の ★直下の子数 を contract 由来の完全数で束縛すると、
+          #   β は donor 側の減少で・γ は fold へ吸い込まれた分の減少で捕まる (受け側の増加も対で捕捉)。
+          my $cbk2 = $first->($r0, $r1, "div", "class", "chapbody");
+          if ($cbk2 >= 0) { my ($q0, $q1) = $region->($cbk2); $cbkids = $count_kids->($q0, $q1) }
+          # (i) 開口隣接: 直後 token が この章の band (tint 逐値・間の text は空白のみ) で、 その中の
+          #     <span class="num">§番号</span> が contract 由来の期待値と 逐値一致 すること。
+          if ($match->($r0, "section", "data-component", "chapter-deck-band") && $gap_ws->($wk, $r0)
+              && ($tint eq "" || do { my $c = $attr->($t[$r0]{raw}, "class"); defined $c && $c eq "tint-" . $tint })
+              && $match->($r0 + 1, "span", "class", "num")
+              && $r0 + 2 <= $r1 && $t[$r0 + 2]{cl} && $t[$r0 + 2]{nm} eq "span") {
+            $adj = 1 if substr($b, $t[$r0 + 1]{e}, $t[$r0 + 2]{s} - $t[$r0 + 1]{e}) eq $num;
+          }
+          # (iii) 1 段内側: chapbody region 内の container 個数 / container 開口隣接 / container region 内の payload 全数。
+          my $cbk = $first->($r0, $r1, "div", "class", "chapbody");
+          if ($cbk >= 0 && $ca ne "") {
+            my ($c0, $c1) = $region->($cbk);
+            if ($c0 >= 0 && $c0 <= $c1) {
+              $cont = $count->($c0, $c1, "div", $ca, $cv);
+              my $ck = $first->($c0, $c1, "div", $ca, $cv);
+              if ($ck >= 0) {
+                $cbadj = 1 if $ck == $c0 && $gap_ws->($cbk, $ck);
+                my ($p0, $p1) = $region->($ck);
+                $pay = $count->($p0, $p1, "div", $pa, $pv) if $p0 >= 0 && $p0 <= $p1;
+              }
+            }
+          }
+        }
+      }
+      # ★docct = payload container の ★文書全体 の個数。 「chapbody 内に 1 個」だけでは器の ★重複 を許し、
+      #   2 個目の器 (章の外・別章の中) が payload の ★逃げ場 として使える (中身を失った空の器が正規の位置に
+      #   残るため上の per-章 arm は全て PASS のまま)。 文書総数と対で押さえて漏出先そのものを消す。
+      my $docct = ($ca ne "") ? $count->(0, $#t, "div", $ca, $cv) : 0;
+      print "$id|found=$found\n$id|adj=$adj\n$id|band=$band\n$id|cb=$cb\n$id|cbadj=$cbadj\n$id|cont=$cont\n$id|pay=$pay\n$id|docct=$docct\n$id|kids=$kids\n$id|bkids=$bkids\n$id|cbkids=$cbkids\n";
+    }
+    print "*|err=$err\n";
+  ' "$BODY"
+}
+# ★章 census (契約章 7 + 提示層 wrapper 2) を ★1 本の駆動表 にまとめる。 tint 逐値は ★全 9 章に課す —
+#   契約章の tint 源は ★contract の sections[].tint (実測: info/brand/violet/info/warn/ok/brand が 7/7 実在し
+#   band の class="tint-<値>" と 1:1 対応)、 提示層 wrapper の 2 章は assembler literal と二重保守の
+#   PRESENTATION_WRAPPER_BAND_TINTS。 ★旧注記の「contract は section tint の key を持たない」は ★事実に反しており
+#   (実測で反証)、 その誤認により契約章 7 本の band tint 付け替えが rc=0 / 0 FAIL で素通っていた — 持てる逐値を
+#   放棄しない (per-shape MK = PR3w)。 1 段内側 (iii) は ★全 9 章が持つ — wrapper 2 章は payload container
+#   (ref-grid / glossary-term-table) と payload 全数、 契約章 7 本は ★章要旨 callout (assembler が chapbody 開口
+#   直後に必ず emit する部品) を器に取る。
+# ★★chk は ★arm ごとに 1 行 (章ごとに別行へ展開しない): mutation-kill は「その chk 行を消すと敵対 suite が
+#   赤くなるか」で測るので、 同じ検査を章別に複製すると per-shape MK が章の数だけ必要になり実効被覆が落ちる。
+mapfile -t _SEC_ANCHORS < <(q '.sections[].anchor')
+mapfile -t _SEC_NUMLIST < <(printf '%s\n' "$SEC_NUMS")
+mapfile -t _SEC_TINTS < <(q '.sections[].tint')
+# ★fail-closed: contract の tint が 1 つでも欠けたら「tint 不問」へ ★暗黙に degrade させない (欠落を静かに
+#   許すと契約側の tint 削除で本 arm が恒真化する = 0/0 恒真 pin と同じ vacuous-green クラス)。
+[[ "${#_SEC_TINTS[@]}" -eq "${#_SEC_ANCHORS[@]}" ]] || { echo "verify-verification: ★contract sections[].tint の件数が anchor と不一致 (${#_SEC_TINTS[@]} != ${#_SEC_ANCHORS[@]}・tint 逐値 pin の trust anchor 欠落・fail-closed)" >&2; exit 1; }
+_CT_ID=(); _CT_NUM=(); _CT_TINT=(); _CT_CA=(); _CT_CV=(); _CT_PA=(); _CT_PV=(); _CT_CLBL=(); _CT_PLBL=(); _CT_PEXP=(); _CT_CEXP=(); _CT_CBEXP=()
+# ★契約章 7 本の 1 段内側 (iii) は ★章要旨 callout を器に取る。 assemble-verification.sh の emit_section が
+#   chapbody 開口の ★直後に必ず 1 個 emit する部品ゆえ、 期待値 (隣接 1 / chapbody 内 1 個 / 文書総数 == NSEC) は
+#   ★assembler と contract から決定的に導ける。 これが無いと契約章は「chapbody を空にして章本文を sibling へ
+#   押し出す」改竄が 0 FAIL で素通り、 既存 arm の label「章本文の帰属・押し出し封鎖」が ★過大宣言 になる。
+for _k in "${!_SEC_ANCHORS[@]}"; do
+  [[ -n "${_SEC_TINTS[$_k]}" && "${_SEC_TINTS[$_k]}" != "null" ]] || { echo "verify-verification: ★contract sections[$_k].tint が空 (tint 逐値 pin の trust anchor 欠落・fail-closed)" >&2; exit 1; }
+  _CT_ID+=("$(esc "${_SEC_ANCHORS[$_k]}")"); _CT_NUM+=("${_SEC_NUMLIST[$_k]}"); _CT_TINT+=("${_SEC_TINTS[$_k]}")
+  _CT_CA+=("data-component"); _CT_CV+=("section-essence-callout"); _CT_PA+=(""); _CT_PV+=("")
+  _CT_CLBL+=("章要旨 callout"); _CT_PLBL+=(""); _CT_PEXP+=(""); _CT_CEXP+=("$NSEC")
+  # ★chapbody 直下の ★完全子数 を contract から決定的に導く: 章要旨 callout 1 + blocks 各 1 +
+  #   machine_blocks があれば fold 1。 ★marker を持たない地の文も contract 上は 1 block ゆえ 1 要素で数えられる。
+  #   最小でも 2 (callout + fold) になり ★0/0 恒真にならない (実測 s0=2 / s1=5 / s2=4 / s3=21 / s4=7 / s5=7 / s6=2)。
+  _nb="$(q ".sections[$_k].blocks // [] | length")"; _nm="$(q ".sections[$_k].machine_blocks // [] | length")"
+  [[ "$_nb" =~ ^[0-9]+$ && "$_nm" =~ ^[0-9]+$ ]] || { echo "verify-verification: ★sections[$_k] の blocks / machine_blocks 件数を導出できない (cbkids 期待値の trust anchor 欠落・fail-closed)" >&2; exit 1; }
+  _CT_CBEXP+=("$(( 1 + _nb + ( _nm > 0 ? 1 : 0 ) ))")
+done
+_CT_ID+=("$(esc "${PRESENTATION_WRAPPER_IDS[0]}")"); _CT_NUM+=("${STATIC_NUMS[0]}"); _CT_TINT+=("${PRESENTATION_WRAPPER_BAND_TINTS[0]}")
+_CT_CA+=("class"); _CT_CV+=("ref-grid"); _CT_PA+=("data-component"); _CT_PV+=("cross-doc-ref-chip")
+_CT_CLBL+=("ref-grid"); _CT_PLBL+=("前方照会 chip"); _CT_PEXP+=("$(q '.references | length')"); _CT_CEXP+=("1"); _CT_CBEXP+=("1")
+_CT_ID+=("$(esc "${PRESENTATION_WRAPPER_IDS[1]}")"); _CT_NUM+=("${STATIC_NUMS[1]}"); _CT_TINT+=("${PRESENTATION_WRAPPER_BAND_TINTS[1]}")
+_CT_CA+=("data-component"); _CT_CV+=("glossary-term-table"); _CT_PA+=("class"); _CT_PV+=("grow")
+_CT_CLBL+=("glossary-term-table"); _CT_PLBL+=("用語集 行 (.grow)"); _CT_PEXP+=("$(q '.glossary | length')"); _CT_CEXP+=("1"); _CT_CBEXP+=("1")
+_PROBE_SPEC=""
+for _k in "${!_CT_ID[@]}"; do
+  _PROBE_SPEC+="${_CT_ID[$_k]}"$'\t'"${_CT_NUM[$_k]}"$'\t'"${_CT_TINT[$_k]}"$'\t'"${_CT_CA[$_k]}"$'\t'"${_CT_CV[$_k]}"$'\t'"${_CT_PA[$_k]}"$'\t'"${_CT_PV[$_k]}"$'\n'
+done
+_CPROBE="$(PROBE_SPEC="$_PROBE_SPEC" containment_probe)"
+_cp() { printf '%s\n' "$_CPROBE" | awk -F'|' -v i="$1" -v k="$2" '$1==i { p=index($2,"="); if (substr($2,1,p-1)==k) { print substr($2,p+1); exit } }'; }
+# ★★駆動表の完全性 (partial-enumeration の封鎖): 章 census が ★全章 (contract sections + 提示層 wrapper) を
+#   覆っていること・wrapper の id 配列と tint 配列が ★同じ長さ であることを ★機械で 固定する。 添字 [0]/[1] で
+#   組み立てているため、 wrapper を 1 本増やして駆動表への追記を忘れると その章だけ containment が ★silent に
+#   未検査 になる (「検査している」と読めるのに実際は素通り = vacuous-green クラス)。
+[[ "${#PRESENTATION_WRAPPER_IDS[@]}" -eq "${#PRESENTATION_WRAPPER_BAND_TINTS[@]}" ]] \
+  || { echo "verify-verification: ★PRESENTATION_WRAPPER_IDS と PRESENTATION_WRAPPER_BAND_TINTS の長さ不一致 (lockstep 破れ・fail-closed)" >&2; exit 1; }
+chk "containment 駆動表が全章を覆う (contract sections + 提示層 wrapper・被覆漏れ封鎖)" \
+  "$((NSEC + ${#PRESENTATION_WRAPPER_IDS[@]}))" "${#_CT_ID[@]}"
+# ★tokenizer の fail-closed 診断 (空でなければ 生成物が genuine な HTML 構造を破っている = 下の全 chk も総崩れする)。
+#   per-shape MK は PR3r (div の自己閉じ構文)。
+# ★★負の主張には ★存在 anchor を対で置く (ehar クラス): 本 arm は「err が空であること」を主張するが、 probe が
+#   ★何も出力しない (関数改名 / 実行失敗 / PROBE_SPEC 空) 場合も空になり ★恒真 PASS する。 probe の出力行数を
+#   ★章数から導出した期待値 で pin し、 「検査が走っていない」を「異常なし」と読まない。
+chk "containment probe が全章分の実測を出力 (probe 無出力での vacuous PASS 封鎖)" \
+  "$(( ${#_CT_ID[@]} * 11 + 1 ))" "$(printf '%s\n' "$_CPROBE" | grep -c .)"
+chk "containment tokenizer の構造診断 (未閉じ / 自己閉じ div,section = 非 genuine shape)" "" "$(_cp '*' err)"
+for _k in "${!_CT_ID[@]}"; do
+  _s="${_CT_ID[$_k]}"; _tn=""; [[ -z "${_CT_TINT[$_k]}" ]] || _tn=" (tint-${_CT_TINT[$_k]})"
+  chk "章 '$_s' の開口直後に §${_CT_NUM[$_k]} 章帯$_tn が隣接 (hollow section 封鎖・開口隣接 pin)" "1" "$(_cp "$_s" adj)"
+  chk "章 '$_s' region 内の章帯 == 1 (欠落 / 他章 band の紛れ込み封鎖)" "1" "$(_cp "$_s" band)"
+  chk "章 '$_s' region 内の chapbody == 1 (章本文の ★器 の帰属・欠落 / 重複封鎖)" "1" "$(_cp "$_s" cb)"
+  # ★★3 レベルの ★完全子数束縛 (章直下 == 2 / band 直下 == 4 / chapbody 直下 == 契約由来の完全数) が
+  #   封鎖するのは ★人間層 (chapbody 直下) の block 粒度 relocation クラス である — 人間層 block を
+  #   どこへ動かしても (sibling へ / band の中へ / 別章の chapbody へ / 同章の fold の中へ) いずれかの
+  #   レベルの子数が必ず変わるため。 ★この範囲では クラス閉塞が成立する (3 レベル pin + 既存の順序 arm の
+  #   合わせ技として独立 verifier が論理列挙 + 実測で確認済)。
+  # ★★射程外 1 — ★機械層 (machine_blocks) の cross-fold 移動: machine_blocks を ★document 順を保ったまま
+  #   ★別 section の machine-body へ移す形 (単一 block / 連続塊 とも) は ★未検査 である。 3 レベル pin は
+  #   ★fold の内側へ届かず (chapbody 直下から見れば fold は 1 要素のまま)、 §11 round-trip も順序変化しか
+  #   見ないため、 いずれも発火しない (pre-existing・独立 verifier が実測)。 ★受け皿 = folio-e706
+  #   (machine-body 直下の子数 pin = ★4 レベル目 + fold summary 件数突合) — 新レベルの設計ゆえ本 cell では
+  #   行わず follow-up へ移譲した (gt4s-census 先例)。
+  # ★★射程外 2 — ★sub-block 粒度 (block の ★内部 のテキスト・要素の移動) も別クラス:
+  #   機械層は §11 の逐語 round-trip、 人間層は prose slot 充填 + fidelity ceiling の領分である。
+  #   「あらゆる relocation を閉じた」とは書かない (宣言 == 実能力)。
+  # ★章本文そのものの帰属 (block 粒度 relocation の第 1 レベル): 章の直下は 章帯 + chapbody の ★2 子だけ ゆえ、 chapbody を
+  #   残したまま本文 (subhead / 地の文 / details / table …) を ★章直下の sibling へ 出せば 3 子以上になる。
+  #   ★部品種別ごとの件数 pin では覆えない — 0 件の章で 0/0 恒真になり、 かつ地の文のように marker を持たない
+  #   本文を数えられないため (1 instance でなく shape クラスを閉じるにはこの構造規約が要る)。 per-shape MK = PR4d。
+  chk "章 '$_s' の直下は 章帯 + chapbody の 2 子だけ (章本文の sibling への relocation 封鎖)" "2" "$(_cp "$_s" kids)"
+  # ★3 レベル束縛の ★第 2 レベル: 押し出し先を sibling でなく ★章帯 (band) の中 にすると章直下は
+  #   band + chapbody のままで kids=2 を保ち素通る (実弾 verified: rc=0 / 0 FAIL — 1 ブロック退避でも
+  #   章本文まるごと退避でも probe 実測値が clean と区別不能だった)。 kids (第 1) / bkids (第 2) /
+  #   cbkids (第 3) の ★3 レベルが揃って 初めて ★人間層 block の relocation クラスが閉じる
+  #   (2 レベルでは別章移送・fold 退避が残る = R5-1 で実証)。 期待値 4 の源は ★共有 CORE lib/common.sh の band()
+  #   = span.num / span.kicker / h2 / p.lead の 4 子固定 (clean 9 章すべてで実測 4)。 per-shape MK = PR4f。
+  chk "章 '$_s' の章帯の直下は num/kicker/h2/lead の 4 子だけ (band subtree への退避封鎖)" "4" "$(_cp "$_s" bkids)"
+  # ★3 レベル目 (document 順を ★保つ relocation の封鎖): 章直下 / band 直下 を固定しても、 章本文を
+  #   ★別章の chapbody へ移送 (β) / ★同章の machine-fold の中へ退避 (γ) すると他の probe 値は一切動かない
+  #   (実弾 verified: 2 形とも rc=0 / 0 FAIL)。 chapbody 直下の ★完全子数 を contract 由来で束縛して閉じる。
+  #   per-shape MK = PR4g (β = 別章へ移送) / PR4h (γ = machine-fold へ退避)。
+  chk "章 '$_s' の chapbody 直下は 契約由来の完全子数 ${_CT_CBEXP[$_k]} (別章移送 / fold 退避の封鎖)" "${_CT_CBEXP[$_k]}" "$(_cp "$_s" cbkids)"
+  [[ -n "${_CT_CA[$_k]}" ]] || continue
+  chk "章 '$_s' の chapbody 開口直後に ${_CT_CLBL[$_k]} が隣接 (1 段内側の開口隣接 pin)" "1" "$(_cp "$_s" cbadj)"
+  chk "${_CT_CLBL[$_k]} が章 '$_s' の chapbody 内に 1 個 (器の外への押し出し封鎖)" "1" "$(_cp "$_s" cont)"
+  chk "${_CT_CLBL[$_k]} が ★文書全体で ${_CT_CEXP[$_k]} 個 (器の重複 = payload / 章本文の逃げ場を消す)" "${_CT_CEXP[$_k]}" "$(_cp "$_s" docct)"
+  [[ -n "${_CT_PA[$_k]}" ]] || continue
+  chk "${_CT_PLBL[$_k]} の ★全数 が章 '$_s' の ${_CT_CLBL[$_k]} 内 (hollow container 封鎖・漏出 0)" "${_CT_PEXP[$_k]}" "$(_cp "$_s" pay)"
+done
 
 # 4. 要件 fidelity: data-req-id 集合一致 + emission 順タプル (id, pattern, class, label, essence, statement) 突合。
 exp_rid="$(q '.requirements[].id' | sort -u)"
@@ -180,19 +663,39 @@ while IFS= read -r id; do
   # ★contract 由来 pattern が allowlist 外なら expected タプルを :-unknown で組まず fail-closed (assemble validate と parity)。
   # silent な class="unknown" 同士の偽一致 (双辺で同じ fallback を引いて tuple PASS する fail-open) を封鎖。
   if ! [[ -v EARS_CLASS[$pat] ]]; then echo "verify-spec: ★contract 要件 $id の EARS pattern が allowlist 外: $pat (fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; fi
+  # ★ADR-0054 lockstep: RFC-2119 優先度バッジ class (rq-prio-<level>) + prio/plain の ★per-row slot-id を tuple へ同梱する。
+  #   slot-id は要件 anchor から決定的に導く (prio-<anchor> / plain-<anchor>) ため、 ★別 row のバッジ / 平易行を
+  #   持ってくる relocation クラス (件数保存) が tuple 突合で FAIL する = per-row 完全束縛。
+  #   priority を持たない contract (all-or-none の「無い」側) では badge 自体が emit されないため期待も空にする。
+  prio="$(q '.requirements[] | select(.id=="'"$id"'") | .priority // ""')"
+  if [[ -n "$prio" && "$prio" != "null" ]]; then
+    if ! [[ -v PRIO_LABEL_OK[$prio] ]]; then echo "verify-verification: ★contract 要件 $id の priority が allowlist 外: $prio (fail-closed)" >&2; rm -f "$EXPF" "$ACTF"; exit 1; fi
+    prio_cell="rq-prio rq-prio-$prio\tprio-$(esc "$anc")"
+  else
+    prio_cell="-\t-"
+  fi
   # ★essence / statement は rich 契約値ゆえ esc しない (assembler の RAW emit と対称)。 id/pat/label は esc 経路のまま。
-  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(esc "$anc")" "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$ess" "$stmt"
+  printf '%s\t%s\t%s\t%s\t%s\t%b\t%s\t%s\t%s\n' "$(esc "$anc")" "$(esc "$id")" "$(esc "$pat")" "${EARS_CLASS[$pat]}" "$(esc "${EARS_LABEL[$pat]}")" "$prio_cell" "$ess" "plain-$(esc "$anc")" "$stmt"
 done < <(q '.sections[].blocks[]? | select(.type=="requirements") | .ids[]') > "$EXPF"
-perl -CSD -0777 -ne '
+RQNS="$RQ_NORM_SUMMARY" RQPK="やさしく言うと" perl -CSD -0777 -ne '
+  # ★perl -CSD は ★入力ストリームだけ を UTF-8 decode し %ENV / program text は ★byte のまま。 非 ASCII literal を
+  #   regex へ直書きすると decode 済 subject と噛み合わず ★恒常 0-match (= tuple 実体が空 → 常時 FAIL) になる。
+  #   env 経由で渡し decode_utf8 してから quotemeta する。
+  use Encode qw(decode_utf8);
   # ★canonical dual-audience form (w1f cell-2): row opener に data-audience="human"、 rq-norm に data-audience="machine" を
   #   literal で要求し structured-regex に組み込む (= REQ-DA-STRUCT-1/-4 の構造 anchor を tuple 突合に同梱・属性 drop は row 脱落→件数 FAIL)。
   # ★folio-aduv: row opener に id="<小文字 navigable id>" を literal 要求 (anchor 脱落 = row 脱落 → 件数 FAIL = fail-closed)。
   #   essence / statement は rich raw ゆえ ([^<]*) から (.*?) + 固有終端へ (改行は跨がせない = inner_norm 単一行の暗黙 assert)。
-  while (/<div data-component="ears-requirement-row" id="([^"]*)" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span><span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">(.*?)<\/p>\s*<details class="rq-norm" data-audience="machine"><summary>[^<]*<\/summary><p class="rq-stmt">(.*?)<\/p><\/details>/g) {
-    my ($anc,$rid,$pat,$vrid,$cls,$lab,$ess,$stmt)=($1,$2,$3,$4,$5,$6,$7,$8);
+  # ★ADR-0054: rq-prio バッジ (optional = priority 無し contract では不在) と rq-plain 行 (常在) を ★構造 anchor として
+  #   regex へ組み込む。 平易行の ★中身 は prose slot ゆえ tuple では突合せず (mode 依存)、 ★slot-id の per-row 束縛のみ pin する。
+  # ★rq-norm の summary は平易ラベルを literal 要求 (旧版は [^<]* の wildcard で ★無警備 だった)。
+  my $S=quotemeta(decode_utf8($ENV{RQNS})); my $K=quotemeta(decode_utf8($ENV{RQPK}));
+  while (/<div data-component="ears-requirement-row" id="([^"]*)" data-req-id="([^"]*)" data-ears-pattern="([^"]*)" data-audience="human">\s*<div class="rq-head"><span class="rid">([^<]*)<\/span>(?:<span class="([^"]*)" data-prose-slot="priority" data-slot-id="([^"]*)">[^<]*<\/span>)?<span data-component="ears-badge" class="([^"]*)">([^<]*)<\/span><\/div>\s*<p class="rq-essence">(.*?)<\/p>\s*<p class="rq-plain"><span class="rq-plain-k">$K<\/span><span data-prose-slot="plain" data-slot-id="([^"]*)">[^<]*<\/span><\/p>\s*<details class="rq-norm" data-audience="machine"><summary>$S<\/summary><p class="rq-stmt">(.*?)<\/p><\/details>/g) {
+    my ($anc,$rid,$pat,$vrid,$pcls,$pslot,$cls,$lab,$ess,$plslot,$stmt)=($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11);
+    $pcls = defined($pcls) ? $pcls : "-"; $pslot = defined($pslot) ? $pslot : "-";
     # 可視 rid == data-req-id (attr-vs-visible)
     if ($rid ne $vrid) { print "VIS-MISMATCH:$rid\xe2\x89\xa0$vrid\n"; next; }
-    print "$anc\t$rid\t$pat\t$cls\t$lab\t$ess\t$stmt\n";
+    print "$anc\t$rid\t$pat\t$cls\t$lab\t$pcls\t$pslot\t$ess\t$plslot\t$stmt\n";
   }
 ' "$BODY" > "$ACTF"
 if diff -q "$EXPF" "$ACTF" >/dev/null 2>&1; then
@@ -204,6 +707,72 @@ else
   fail=1
 fi
 rm -f "$EXPF" "$ACTF"
+
+# 4b. ★ADR-0054 §2.2: RFC-2119 優先度バッジ / 「やさしく言うと」平易行 の per-row 束縛と契約非依存 census。
+#   ★3 層で撃つ:
+#     (i) 契約非依存 census — 生成物の占有数を ★数値 hardcode で pin。 新 field は all-or-none optional ゆえ
+#         契約から一括削除すると tuple の期待/実体が同時に空になり ★0/0 恒真 PASS する。 その唯一の FAIL 源。
+#     (ii) label↔level 束縛 — バッジの ★可視ラベルは prose slot (人間層 edit-SSoT) が持つため floor は内容を
+#         contract と直接突合できない。 代わりに level ごとの ★closed allowlist (PRIO_LABEL_OK) で ★逐値突合 し、
+#         level と label が乖離した詐称 (must の行に「推奨」/ must の行に「必須ではない」) を封鎖する。
+#     (iii) ★level↔statement 束縛 (契約内不変条件) — (i)(ii) は ★contract の priority を ★根 として突合するため、
+#         contract 自身が statement と矛盾する level を宣言していると ★全 gate を素通る。 drift gate は contract から
+#         再生成する byte 比較ゆえ contract 側の誤りには ★全盲。 contract は「statement の最初の規範キーワードが
+#         level を決める」を ★決定的な導出規則 として明文化しているので機械層で閉じる (宣言能力 == 実能力)。
+chk "census: rq-prio バッジ占有 == $FZC_RQ_PRIO (契約非依存 floor・0/0 恒真封鎖)" "$FZC_RQ_PRIO" \
+  "$(grep -oE '<span class="rq-prio rq-prio-[a-z]+" data-prose-slot="priority" data-slot-id="[^"]*">' "$BODY" | wc -l | tr -d ' ')"
+chk "census: rq-plain 平易行占有 == $FZC_RQ_PLAIN (契約非依存 floor・0/0 恒真封鎖)" "$FZC_RQ_PLAIN" \
+  "$(grep -oE '<p class="rq-plain"><span class="rq-plain-k">やさしく言うと</span>' "$BODY" | wc -l | tr -d ' ')"
+# (iii) priority (宣言) vs statement 由来 level (導出) の逐行突合。 ★mode 非依存 (contract だけを読む) ゆえ
+#   ARTIFACT/FILLED guard の ★外 に置く。 assemble-verification.sh validate() にも同判定を置き build 時 fail-closed にしている。
+# ★導出規則 (assemble-verification.sh と逐語同一・first-modal-wins・wave 恒常 1): statement 中で ★最初に 現れる
+#   規範キーワードが level を決める。 SHALL|MUST が先 → must / SHOULD のみ → should / SHOULD が先で SHALL|MUST が
+#   後 → AMBIGUOUS-BOTH (fail-closed) / 皆無 → NO-MODAL (fail-closed)。 ★非対称にする理由 = 封鎖したい詐称
+#   (実体 MUST を should と宣言) は必ず先頭の SHALL|MUST から must が導出されて不一致 FAIL になるため。
+ps_exp=""; ps_act=""
+while IFS= read -r ps_id; do
+  [[ -n "$ps_id" ]] || continue
+  ps_p="$(q '.requirements[] | select(.id=="'"$ps_id"'") | .priority // ""')"
+  [[ -n "$ps_p" && "$ps_p" != "null" ]] || continue
+  ps_d="$(q '.requirements[] | select(.id=="'"$ps_id"'") | .statement' | perl -0777 -ne '
+      my $m = /\b(?:SHALL|MUST)\b/ ? $-[0] : -1; my $s = /\bSHOULD\b/ ? $-[0] : -1;
+      print $m < 0 && $s < 0 ? "NO-MODAL"
+          : ($m >= 0 && $s < 0 ? "must"
+          : ($s >= 0 && $m < 0 ? "should"
+          : ($m < $s ? "must" : "AMBIGUOUS-BOTH")));')"
+  ps_exp+="$ps_id"$'\t'"$ps_p"$'\n'
+  ps_act+="$ps_id"$'\t'"$ps_d"$'\n'
+done < <(q '.requirements[].id')
+chk "契約内不変: priority == statement の RFC-2119 modal verb 由来 level" "$ps_exp" "$ps_act"
+# (ii) level ごとの期待列 (contract 順) vs 生成物の (class, 可視ラベル) 列。 pre-fill mode (slot 空) では
+#      ラベルが空ゆえ ★束縛は適用しない (空 slot は §9 の「全て空」検査が担う)。 filled/artifact のみで撃つ。
+if [[ -n "$ARTIFACT" || -n "$FILLED_MANIFEST" ]]; then
+  exp_prio="$(while IFS= read -r id; do
+      [[ -n "$id" ]] || continue
+      p="$(q '.requirements[] | select(.id=="'"$id"'") | .priority // ""')"
+      [[ -n "$p" && "$p" != "null" ]] || continue
+      printf '%s\tIN-ALLOWLIST\n' "$p"
+    done < <(q '.sections[].blocks[]? | select(.type=="requirements") | .ids[]'))"
+  # 生成物側: class 末尾の level と可視ラベルを取り出し、 level ごとの ★closed allowlist に ★逐値 で属するかを判定する。
+  act_prio="$(P_MUST="${PRIO_LABEL_OK[must]}" P_SHOULD="${PRIO_LABEL_OK[should]}" perl -CSD -0777 -ne '
+      # ★-CSD は %ENV を decode しない — allowlist は decode してから比較する。
+      use Encode qw(decode_utf8);
+      my %ok;
+      $ok{must}   = { map { $_ => 1 } split /\|/, decode_utf8($ENV{P_MUST}) };
+      $ok{should} = { map { $_ => 1 } split /\|/, decode_utf8($ENV{P_SHOULD}) };
+      while (/<span class="rq-prio rq-prio-([a-z]+)" data-prose-slot="priority" data-slot-id="[^"]*">([^<]*)<\/span>/g) {
+        my ($lv,$lab)=($1,$2);
+        my $good = (exists $ok{$lv} && $ok{$lv}{$lab}) ? 1 : 0;
+        print "$lv\t" . ($good ? "IN-ALLOWLIST" : "NOT-IN-ALLOWLIST:$lab") . "\n";
+      }' "$BODY")"
+  chk "rq-prio: (level, 可視ラベル∈allowlist) 列 == contract priority (順序・label↔level 逐値束縛)" "$exp_prio" "$act_prio"
+  # 平易行の ★per-row 非空 (fence: per-row 非空 floor assert)。 §9 の slot 検査は文書全体の集計ゆえ、 どの row の
+  #   どの slot が空かを特定しない — row ごとに rq-plain slot の中身が非空であることを直接数える。
+  chk "rq-plain: 全 row で平易行が非空 (per-row 非空 floor)" "$NREQ" \
+    "$(perl -CSD -0777 -ne 'my $n=0; while (/<span data-prose-slot="plain" data-slot-id="[^"]*">([^<]*)<\/span>/g){ my $t=$1; $t=~s/\s+//g; $n++ if length($t); } print $n;' "$BODY")"
+  chk "rq-prio: 全 row で優先度ラベルが非空 (per-row 非空 floor)" "$FZC_RQ_PRIO" \
+    "$(perl -CSD -0777 -ne 'my $n=0; while (/<span class="rq-prio rq-prio-[a-z]+" data-prose-slot="priority" data-slot-id="[^"]*">([^<]*)<\/span>/g){ my $t=$1; $t=~s/\s+//g; $n++ if length($t); } print $n;' "$BODY")"
+fi
 
 # 5. block 内容 fidelity (順序突合・silent drop / 値改竄を捕捉)。 全 leaf は esc 済ゆえ [^<]* / perl で安全。
 # prose
@@ -231,6 +800,12 @@ chk "subhead heading 列 == subhead blocks.heading (順序)" \
 chk "subhead essence 列 == subhead blocks.essence (順序・rich raw)" \
   "$(q '.sections[].blocks[]? | select(.type=="subhead") | .essence')" \
   "$(SR="$SUBHEAD_RE" perl -CSD -0777 -ne 'my $re=$ENV{SR}; while (/$re/g){ print "$3\n"; }' "$BODY")"
+# ★ADR-0054 §2.2「既定 (人間層) 表示で本文ゼロの見出しを作らない」の契約非依存 census (0/0 恒真封鎖)。
+#   ★上の逐値突合は contract から essence を一括削除すると「空 == 空」で恒真 PASS する — 生成物側で
+#   ★非空 の .sub-se を持つ subhead 数を数値 hardcode で pin し、 空 subsection への退行を単独で捕捉する。
+#   ★verification の subhead は essence 空 0 件 (実測 19/19 非空) ゆえ期待値 = |subhead blocks|。
+chk "census: 非空の subhead 1 行要約 == $FZC_SUBHEAD_SE (空 subsection 封鎖・契約非依存 floor)" "$FZC_SUBHEAD_SE" \
+  "$(perl -CSD -0777 -ne 'my $n=0; while (/<div data-component="spec-subhead"><h3 id="[^"]*">[^<]*<\/h3><p class="sub-se">(.*?)<\/p><\/div>/gs){ my $t=$1; $t=~s/\s+//g; $n++ if length($t); } print $n;' "$BODY")"
 # table caption / header / cell (全 spec-table 横断・順序)
 # ★folio-aduv: caption / th / td は rich 契約値 (原本 table は a.xref 13 / <code> 41 / <strong> 11 を内包) ゆえ
 #   期待は esc せず契約値そのもの、 実測は (.*?) + 固有終端。 grep -oE の行内 [^<]* 抽出では tag 入りセルを取り落とす
@@ -268,17 +843,31 @@ set_eq "references: token SET (contract == HTML)" \
 # role allowlist
 badrole="$(grep -oE 'data-ref-role="[^"]+"' "$BODY" | sed 's/.*data-ref-role="//; s/"$//' | sort -u | grep -vxE "$CROSS_DOC_ROLE_ALLOWLIST" | tr '\n' ' ')"
 chk_empty "references: role が抽象 allowlist 内" "$badrole"
-# (token, doc, role) タプル順序突合 (可視 doc / role / attr 全部) + 可視 <b>token</b> == attr。
-chk "references: (token,doc,role) 順序突合 + 可視 <b>==attr" \
-  "$(q '.references[] | [.token, .doc, .role] | @tsv' | while IFS=$'\t' read -r t d r; do printf '%s\t%s\t%s\n' "$(esc "$t")" "$(esc "$d")" "$(esc "$r")"; done)" \
+# (token, doc, role, title) タプル順序突合 (可視 doc / role 平易語 / rf-gloss / attr 全部) + 可視 <b>token</b> == attr。
+# ★ADR-0054 §2.2 lockstep 2 点:
+#   (a) role の可視ラベルは ★平易語 (ROLE_PLAIN) で、 attr data-ref-role は ★機械 token を保持する = ★非対称 を literal 要求する。
+#       旧版は「attr == 可視」の対称を要求していた (英語生表示の pin) ため、 平易化は gate 改修を同伴する。
+#       ★可視を突合から外す (「件数だけ数える」等) と平易語の詐称が無警備になるため、 期待側で map を引いて ★逐値突合する。
+#   (b) rf-gloss = contract references[].title の ★逐語 echo。 title を持たない contract (all-or-none の「無い」側) では
+#       chip に gloss span が無い形を許し (optional group)、 その 0/0 恒真は直後の契約非依存 census が封鎖する。
+chk "references: (token,doc,role,title) 順序突合 + 可視 <b>==attr + role 平易語 + rf-gloss 逐語 echo" \
+  "$(q '.references[] | [.token, .doc, .role, (.title // "")] | @tsv' | while IFS= read -r line; do
+       [[ -n "$line" ]] || continue   # ★yq の 0 件 match は空行 1 本
+       t="${line%%$'\t'*}"; rest="${line#*$'\t'}"; d="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"; r="${rest%%$'\t'*}"; ti="${rest#*$'\t'}"
+       printf '%s\t%s\t%s\t%s\t%s\n' "$(esc "$t")" "$(esc "$d")" "$(esc "$r")" "$(esc "${ROLE_PLAIN[$r]:-★role 平易語 map 外:$r}")" "$(esc "$ti")"
+     done)" \
   "$(perl -CSD -0777 -ne '
-    while (/<div data-component="cross-doc-ref-chip" data-ref-token="([^"]*)" data-ref-role="([^"]*)"><span class="rf-token"><b>([^<]*)<\/b><\/span><span class="rf-arrow">[^<]*<\/span><span class="rf-doc">([^<]*)<\/span><span class="rf-role">([^<]*)<\/span><\/div>/g) {
-      my ($tok,$role,$vtok,$doc,$vrole)=($1,$2,$3,$4,$5);
+    while (/<div data-component="cross-doc-ref-chip" data-ref-token="([^"]*)" data-ref-role="([^"]*)"><span class="rf-token"><b>([^<]*)<\/b><\/span><span class="rf-arrow">[^<]*<\/span><span class="rf-doc">([^<]*)<\/span><span class="rf-role">([^<]*)<\/span>(?:<span class="rf-gloss">([^<]*)<\/span>)?<\/div>/g) {
+      my ($tok,$role,$vtok,$doc,$vrole,$gloss)=($1,$2,$3,$4,$5,$6);
+      $gloss = defined($gloss) ? $gloss : "";
       if ($tok ne $vtok) { print "TOKEN-VIS:$tok\xe2\x89\xa0$vtok\n"; next; }
-      if ($role ne $vrole) { print "ROLE-VIS:$role\xe2\x89\xa0$vrole\n"; next; }
-      print "$tok\t$doc\t$role\n";
+      print "$tok\t$doc\t$role\t$vrole\t$gloss\n";
     }
   ' "$BODY")"
+# ★契約非依存 census (0/0 恒真封鎖): references[].title を contract から一括削除すると上記突合は「両側 title 空」で
+#   恒真 PASS する。 chip の一行タイトル占有を数値 hardcode で pin する (verification 固有値・他 fork へ流用禁止)。
+chk "census: rf-gloss (照会先の一行タイトル) 占有 == $FZC_RF_GLOSS (契約非依存 floor・0/0 恒真封鎖)" "$FZC_RF_GLOSS" \
+  "$(grep -oE '<span class="rf-gloss">' "$BODY" | wc -l | tr -d ' ')"
 
 # 7. cover-meta 4 KV 再導出突合。
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
@@ -344,6 +933,14 @@ chk "machine li (mli) == Σ machine list items" "$MB_LI"  "$(grep -c 'class="mli
 chk "spec-machine-demoted == Σ machine demoted" "$MB_DEMOTED" "$(grep -c 'data-component="spec-machine-demoted"' "$BODY")"
 chk "spec-machine-dl == Σ machine dl"          "$MB_DL"      "$(grep -c 'data-component="spec-machine-dl"' "$BODY")"
 chk "spec-machine-fold == sections(mb) + preamble" "$EXP_FOLD" "$(grep -c 'data-component="spec-machine-fold"' "$BODY")"
+# ★ADR-0054 §2.2 lockstep: machine fold の kicker は ★平易語 (旧「機械層 (machine-readable)」= 非エンジニアに不読)。
+#   全 fold が同一 literal を持つ (件数 == fold 数) ことを撃つ = 一部だけ旧ラベルへ戻る drift も捕捉する。
+chk "machine fold の mf-kicker 平易ラベル == 全 fold ($EXP_FOLD 件・ADR-0054 §2.2)" "$EXP_FOLD" \
+  "$(grep -oF "<span class=\"mf-kicker\">$(esc "$MF_KICKER")</span>" "$BODY" | wc -l | tr -d ' ')"
+# ★同上: 要件 normative fold の summary 平易ラベル。 §4 tuple regex も literal 要求しているが、 tuple は
+#   ★contract 由来 row のみを見る — ここでは文書全体の占有数で撃ち、 二重に固定する。
+chk "要件 normative fold の summary 平易ラベル == |requirements| (ADR-0054 §2.2)" "$NREQ" \
+  "$(grep -oF "<summary>$(esc "$RQ_NORM_SUMMARY")</summary>" "$BODY" | wc -l | tr -d ' ')"
 
 echo
 echo "--- census-count (blocking arm・folio-jmmk): 容器 block / machine 部品の source DOM 静的件数 == contract 期待件数 ---"
@@ -393,6 +990,14 @@ chk "raw-emit: 機械層に live <span class=\"term\" 生存" "$([[ "$(printf '%
 #       - 順序保存: 機械層 block の document 順を enforce → 同型 block の入替を捕捉。
 #       - section 帰属: machine_blocks[] は section ごとに連続して emit される (build()/emit_section) ため、
 #         ある block を別 section の fold へ移すと document 順が contract 順とずれる → cross-section 誤帰属も検出。
+#         ★射程の開示 (admin gate round-5/6・pre-existing・独立 verifier の実測): 本 arm が検出するのは
+#         ★document 順が変わる 移動 ★だけ である — ★単一 block でも 順序が保たれる移動なら ★素通る
+#         (round-5 の「単一 block なら検出」は不正確だったので実測へ訂正する)。
+#         ★人間層 (chapbody 直下) の順保存移動は containment の ★cbkids (chapbody 直下の契約由来 完全子数) が
+#         捕らえるため、 本 arm と cbkids の ★対で 閉じる。 一方 ★機械層 (machine_blocks) を別 section の
+#         machine-body へ ★順を保ったまま 移す形は ★どちらでも閉じない (cbkids は fold の内側へ届かない) —
+#         機械層 fold 間の帰属検査は ★folio-e706 (machine-body 直下子数 pin + fold summary 件数突合) へ移譲。
+#         本 cell は round-trip 側の実装を ★不触 とし、 ここに実態を開示するに留める。
 #     ★本 arm が守るのは assembler バグ (生成物が contract から乖離): silent drop / 順序入替 / cross-section 誤帰属 /
 #       二重 escape。 ★両側 contract 由来ゆえ ★両側同時退行 (extractor collapse) では vacuous PASS しうる →
 #       §10b 凍結 census + extractor-collapse 敵対 test が塞ぐ (mandate: (a)(b) は両側 contract 由来ゆえ (c) で塞ぐ)。
@@ -807,20 +1412,33 @@ cen()  { grep -m1 "^$1=" "$CEN_DUMP" | sed "s/^$1=//"; }
 cen_ids()  { sed -n '/^#IDS$/,/^#DIDS$/p' "$CEN_DUMP" | grep -v '^#' | LC_ALL=C sort -u; }
 cen_dids() { sed -n '/^#DIDS$/,$p'        "$CEN_DUMP" | grep -v '^#' | LC_ALL=C sort -u; }
 # navigable id census (count + rename SET・deliverable 5)。
-g_ids="$(mktemp)"; cen_ids > "$g_ids"
+g_ids_all="$(mktemp)"; cen_ids > "$g_ids_all"
 # D-* (delta 印) は navigable id へ混入禁止 (fail-closed・生成物側で撃つ)。
-chk "census navigable id: 生成物の D-* id == 0 (delta 印 anchor 混入を fail-closed に)" "0" "$(grep -c '^D-' "$g_ids" || true)"
-# ★count census (frozen literal・subject=生成物)。
-chk "census navigable id: 総数 == 凍結 $(fz FZ_ID_COUNT)" "$(fz FZ_ID_COUNT)" "$(grep -c . "$g_ids")"
+chk "census navigable id: 生成物の D-* id == 0 (delta 印 anchor 混入を fail-closed に)" "0" "$(grep -c '^D-' "$g_ids_all" || true)"
+# ★★提示層 wrapper id の census 除外 (admin 裁定 C2・ADR-0054 §2.2)。 前方照会 / 用語集を section id 付きの章に
+#   する決定は navigable id を +2 するが、 これは ★提示層 chrome の追加 であって原本由来 anchor ではない。 凍結
+#   census (FZ_ID_COUNT / ID_SET) は原本 anchor の防壁として ★不変に保ち、 この 2 literal ★だけ を肯定形
+#   allowlist で除外する (★default-block 維持 = 他の新 id は従来どおり count / SET 双方で FAIL する)。
+#   ★期待側を ID_TOTAL-2 のような算術へ書き換える緩和は禁止 (別軸の teeth を殺す)。
+#   ★空振り封鎖: 除外した id が生成物に ★実在すること を陽性 assert する (実在しない id を除外し続けて
+#   allowlist が形骸化する / 章化が落ちても除外だけ残る、 の両方を封鎖)。 §3 の section anchor 列とも二重。
+for _w in "${PRESENTATION_WRAPPER_IDS[@]}"; do
+  chk "census: 除外対象の提示層 wrapper id '$_w' が生成物に実在 (allowlist 空振り封鎖)" "1" "$(grep -cxF "$_w" "$g_ids_all")"
+done
+g_ids="$(mktemp)"; grep -vxF -f <(printf '%s\n' "${PRESENTATION_WRAPPER_IDS[@]}") "$g_ids_all" > "$g_ids"
+# ★count census (frozen literal・subject=生成物・提示層 wrapper 除外後)。
+chk "census navigable id: 総数 (提示層 wrapper 除く) == 凍結 $(fz FZ_ID_COUNT)" "$(fz FZ_ID_COUNT)" "$(grep -c . "$g_ids")"
 # ★重複 0 の構造的不変条件 (folio-7wbn 3 巡目 ceiling major fix の port・folio-7st6)。 count / SET census は共に dedup 後の
 #   unique 集合を見るため ★既存 id の複製注入 (unique 57 保存) を原理的に検出できない。 文書順 first-match の fragment
 #   解決ゆえ複製は anchor hijack を起こす。 凍結 literal でなく「unique == 総出現」で撃つ (census file 無改訂)。
-chk "census navigable id: 重複 0 (unique == 総出現・anchor hijack 封鎖)" "$(cen ID_TOTAL)" "$(grep -c . "$g_ids")"
+#   ★除外前の全 id 集合で撃つ (提示層 wrapper id の複製注入も同じ hijack を起こすため allowlist の外に置かない)。
+chk "census navigable id: 重複 0 (unique == 総出現・anchor hijack 封鎖)" "$(cen ID_TOTAL)" "$(grep -c . "$g_ids_all")"
 # ★id-rename SET census (deliverable 5): count 保存 substitution (55==55) を見逃さないよう凍結 SET と comm。
 FZ_IDS="$(mktemp)"; fz_set ID_SET | LC_ALL=C sort -u > "$FZ_IDS"
 chk_empty "census id-rename SET: 生成物にあり凍結 SET に無い余剰 0 (rename / 捏造)" "$(LC_ALL=C comm -13 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
 chk_empty "census id-rename SET: 凍結 SET にあり生成物に無い欠落 0 (rename / 脱落)" "$(LC_ALL=C comm -23 "$FZ_IDS" "$g_ids" | tr '\n' ' ')"
-rm -f "$g_ids" "$FZ_IDS"
+# ★D-* 混入 0 chk は上で g_ids_all に対して撃っている (allowlist 除外の前 = wrapper 経路での混入も被覆)。
+rm -f "$g_ids" "$g_ids_all" "$FZ_IDS"
 # ★rich 資産 occurrence (frozen literal・subject=生成物)。
 chk "census rich: a.xref occurrence == 凍結 $(fz FZ_XREF)"        "$(fz FZ_XREF)"  "$(cen C_XREF)"
 chk "census rich: span.term occurrence == 凍結 $(fz FZ_TERM)"     "$(fz FZ_TERM)"  "$(cen C_TERM)"

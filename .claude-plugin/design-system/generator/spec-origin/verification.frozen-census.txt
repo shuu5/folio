@@ -11,7 +11,21 @@
 # provenance:
 #   canonical = design-intent/spec/verification.html @ base 2f53388b (srpz land 済)
 #   snapshot(bootstrap) = spec-origin/verification.origin.html @ 83e07b6 (lwhz land)
-#   provenance_contract_sha256 = de65d0ad192219cb4715d414d836a9a2d77cc5e302e0a43c300d8d1591cedd3e
+#   ★ADR-0054 land (folio-9m1h / Cell V) で contract が成長したため provenance sha を現 contract へ re-freeze した
+#     (census-guard (1) の要求)。 ★scalar 値と ID_SET は ★全て不変 — 提示層のみを動かす cell ゆえ census を 1 つも
+#     bump しない (実測で確認: id 57 / a.xref 31 / span.term 27 / delta 5 / esc-xref 3 / code 43/2/79/124 /
+#     span 60/1 / esc-code 0 / esc-span 2 / jq-S 2/2 / stakeholders LD 不変)。 contract の成長は ★表層 data field
+#     2 種のみ (references[].title 30 / requirements[].priority 31) で、 machine_preamble / machine_blocks /
+#     statement / essence の ★逐語は 1 byte も触れていない (Leg4 なし)。
+#     ★提示層 wrapper の新 id 2 本 (forward-refs / glossary-terms) は verify-verification.sh の ★肯定形
+#     allowlist 除外で FZ_ID_COUNT=57 / ID_SET を不変に保つ (admin 裁定 C2・default-block 維持)。
+#     ★平易行 (rq-plain) / 優先度バッジ (rq-prio) / chip 一行タイトル (rf-gloss) の新設自由文は ★plain text のみで
+#     著述し span.term / 人間層 <code> / a.xref を新たに生やさないため rich census も不変 (V確定3)。
+#     ★spec-origin/verification.origin.html (pre-flip snapshot) は ★不改変 — 政策 A で ORIG は census / round-trip を
+#     【消費しない】(存在 pin のみ) 一方、 test-adversarial-verification.sh の COLLAPSE 群は pre-flip 再抽出元として
+#     ★内容を消費する ため、 再 freeze すると前提が壊れ、 かつ本 header の provenance (canonical @2f53388b /
+#     snapshot(bootstrap) @83e07b6) が虚偽化する (V確定1b / wave 恒常 4 = 意図的に実施しない旨をここに開示する)。
+#   provenance_contract_sha256 = 925afedb70b0b48f1586bb7c8f708163bb69cbcb8114e2ca9be75e9f00b4be95
 #     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
 # ============================================================================

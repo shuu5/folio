@@ -199,7 +199,8 @@ expect_vfilled_fail "F8 ★reference token 改竄を SET で捕捉" "$TMP/f8.htm
 # F9. ★reference 可視 <b> のみ改竄 (attr 正) → (token,doc,role) vis FAIL
 cp "$TMP/base-filled.html" "$TMP/f9.html"
 perl -0777 -i -pe 's#(data-ref-token="P-13"[^>]*><span class="rf-token"><b>)P-13(</b>)#${1}P-FAKE${2}#' "$TMP/f9.html"
-expect_vfilled_fail "F9 ★reference 可視 <b> のみ改竄 (attr 正) を vis 整合で捕捉" "$TMP/f9.html" "references: (token,doc,role)"
+# ★ADR-0054 lockstep: chip 突合の label が (token,doc,role) → (token,doc,role,title) へ拡張されたため reason substring を再同期。
+expect_vfilled_fail "F9 ★reference 可視 <b> のみ改竄 (attr 正) を vis 整合で捕捉" "$TMP/f9.html" "references: (token,doc,role,title)"
 
 # F10. ★reference role を allowlist 内別 role へ改竄 → (token,doc,role) FAIL (P-13 implementation→verification)
 cp "$TMP/base-filled.html" "$TMP/f10.html"
@@ -1273,6 +1274,474 @@ cp "$TMP/base-filled.html" "$TMP/m16.html"
 perl -0777 -i -pe 's#<div data-component="spec-machine-demoted" data-audience="machine">.*?</div>\n##s' "$TMP/m16.html"
 expect_vfilled_fail "M16 ★機械層 demoted block 脱落を件数+round-trip が捕捉" "$TMP/m16.html" "spec-machine-demoted"
 
+# ============================================================================
+# === ADR-0054 (flip 済 spec 提示層の標準形・folio-9m1h Cell V) の per-shape mutation-kill (PR 群) ===
+#   ★per-shape で撃つ理由: 章帯番号 / 静的 band heading / 章 wrapper / chip 一行タイトル / role 平易語 /
+#     優先度バッジ / 平易行 / fold ラベル / 空 subsection 要約 は ★DOM 形状が別クラス ゆえ、
+#     1 instance の実弾は構造差のある instance の穴を証明しない (jyfh/r8k の per-shape 規律)。
+#   ★★new field は ★all-or-none optional (extractor 再抽出物でも assemble できる互換性のため) ゆえ、
+#     「契約から一括削除 → 再生成」で逐値突合が ★0/0 恒真 PASS する。 その ★唯一の FAIL 源 = 契約非依存
+#     census を ★isolate する MK を各軸に ★対で 置く (逐値 MK と census MK の 2 本立て)。
+#   ★全 MK に fired-guard を付す (shape drift による空撃ちを検出)。
+#   ★★宣言能力 == 実能力 の開示 (1): assemble-verification.sh の band_num() が持つ「core band() の連番 span が
+#     見当たらなければ abort」の fail-loud は、 共有 lib/common.sh の mutation を要するため ★本 suite の
+#     per-shape MK では撃っていない (verify 側 PR1 = .num 列突合が同クラスの結果を捕捉する)。
+#   ★★宣言能力 == 実能力 の開示 (2): verification は ★ref-primary (References の一次参照を人間層へ可視化) を
+#     ★実装していない (relations 固有 arm・V確定5b で 0 件許容)。 ゆえに Cell R の一次参照 MK 群に相当する
+#     case は ★存在しない (空撃ち MK も 0/0 恒真 pin も作らない)。
+# ============================================================================
+# PR1. ★章帯番号を連番 (01) へ戻す退行 → band .num 列 FAIL (§番号一致 = ADR-0054 §2.2)。
+cp "$TMP/base-filled.html" "$TMP/pr1.html"
+perl -0777 -i -pe 'our $n; $n += s#<span class="num">0</span>#<span class="num">01</span>#; END { exit($n?0:9) }' "$TMP/pr1.html" \
+  || ng "PR1 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR1 ★章帯番号の連番戻し (§番号 → 01) を band .num 列が捕捉" "$TMP/pr1.html" "band .num 列"
+# PR2. ★静的 band heading を旧 over-promise 文言へ戻す → heading 列 FAIL。
+#   ★旧 heading は §番号を持たない形で、 §番号一致と heading 逐値の両方を破る。
+cp "$TMP/base-filled.html" "$TMP/pr2.html"
+perl -0777 -i -pe 'our $n; $n += s#<h2>§7\. 上位文書への前方照会 — 原則と決定記録へつながる</h2>#<h2>verification は照会の終端ではない — 原則 (constitution) や決定記録 (ADR) へ前方照会する</h2>#; END { exit($n?0:9) }' "$TMP/pr2.html" \
+  || ng "PR2 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR2 ★静的 band heading の旧 over-promise 復活 (§7) を heading 列が捕捉" "$TMP/pr2.html" "section 可視 heading 列"
+# PR2b. ★NSEC 超位置への h2 無制限注入 (旧 head -n NSEC 切詰の射程外だった盲点) → h2 総数 pin が捕捉。
+cp "$TMP/base-filled.html" "$TMP/pr2b.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<h2>§NEW 緊急告知 本仕様は無効 (捏造)</h2></body>#; END { exit($n?0:9) }' "$TMP/pr2b.html" \
+  || ng "PR2b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR2b ★NSEC 超位置への h2 注入を h2 総数 pin が捕捉" "$TMP/pr2b.html" "h2 総数"
+# PR3. ★前方照会章の wrapper section 剥奪 (章化の喪失 = 目次から辿れない旧状態への退行) → section anchor 列 FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr3.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">\n##; END { exit($n?0:9) }' "$TMP/pr3.html" \
+  || ng "PR3 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3 ★前方照会章の wrapper 剥奪 (章化喪失) を section anchor 列が捕捉" "$TMP/pr3.html" "section anchor 列"
+# PR3b. ★contract 由来 section への class 注入 → section anchor 列 FAIL (厳格 selector の teeth を pin)。
+#   PR4 は ★提示層 wrapper 限定 の陽性 assert を撃つが、 contract 由来 7 section は wrapper assert の射程外で
+#   section anchor 列だけが守る。 selector を範型の `[^>]*` 緩和形へ写すと ここが素通る (補償 arm 不在) ため
+#   per-shape で別途 pin する (wrapper shape != contract section shape)。
+cp "$TMP/base-filled.html" "$TMP/pr3b.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="s2-scope">#<section id="s2-scope" class="normative">#; END { exit($n?0:9) }' "$TMP/pr3b.html" \
+  || ng "PR3b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3b ★contract section への class 注入を section anchor 列が捕捉 (緩和 selector 封鎖)" "$TMP/pr3b.html" "section anchor 列"
+# PR3c. ★contract 由来 section への data-audience="machine" 注入 = ★1 章まるごと人間層から消す content-suppression。
+#   class 注入 (PR3b) と別 shape で撃つ: 属性名が異なると緩和 selector の穴も別経路で開くため (per-shape 規律)。
+#   census (rf-gloss/rq-prio/rq-plain/sub-se)・h2 総数 pin・band .num 列・要件タプル・id census はいずれも発火しない
+#   (s2-scope は <code> を持たないので generic census の巻き添えも無い) = section anchor 列が唯一の防壁。
+cp "$TMP/base-filled.html" "$TMP/pr3c.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="s2-scope">#<section id="s2-scope" data-audience="machine" hidden>#; END { exit($n?0:9) }' "$TMP/pr3c.html" \
+  || ng "PR3c mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3c ★contract section の人間層抑止 (data-audience 注入) を section anchor 列が捕捉" "$TMP/pr3c.html" "section anchor 列"
+# PR3d. ★hollow wrapper — wrapper 開きタグを ★即閉じ し、 章帯 / chapbody / ref-grid を wrapper の ★外 へ押し出す。
+#   ★タグ均衡は保たれる (対応閉じタグも同時に除去する) ため、 tag balance 系・件数 census・section anchor 列・
+#   wrapper 陽性 assert (実在 + class 無し) は ★全て素通る。 「id を持つ section が在る」ことだけを見る assert 群は
+#   章化の ★実質 (中身がその章に属すること) を守れない、 というのが本 shape の主張 (cell-quality round-2 blocking B3)。
+#   ★fired-guard は ★2 置換 とも要求する (対応閉じタグ除去が空振りすると単なるタグ不均衡 HTML になり、 別 arm の
+#   巻き添え FAIL で ★理由の異なる false-pass を作るため)。 捕捉は containment の ★開口隣接 pin。
+cp "$TMP/base-filled.html" "$TMP/pr3d.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">\n#<section id="forward-refs"></section>\n#; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3d.html" \
+  || ng "PR3d mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3d ★hollow wrapper (章帯ごと外へ押し出し) を containment 開口隣接 pin が捕捉" "$TMP/pr3d.html" "'forward-refs' の開口直後に"
+# PR3e. ★chapbody だけの押し出し — 章帯は wrapper 内に ★残したまま 本文 (chapbody / ref-grid / chip 30) を外へ出す。
+#   PR3d と ★別 shape: 開口隣接 pin は band が隣接したままなので ★PASS し、 region 占有 pin ★だけ が発火する
+#   (= 2 段の pin が互いの巻き添えでなく ★独立に teeth を持つ ことの per-shape 実証。 実弾で確認済)。
+cp "$TMP/base-filled.html" "$TMP/pr3e.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}</section>\n<div class="chapbody">#; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3e.html" \
+  || ng "PR3e mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3e ★章本文 (chapbody) だけの押し出しを containment region 占有 pin が捕捉 (band 隣接は保持)" "$TMP/pr3e.html" "章 'forward-refs' region 内の chapbody == 1"
+# PR3f. ★用語集 wrapper の hollow 化 — forward-refs (PR3d) と ★別 shape で撃つ: 包む payload が ref-grid でなく
+#   glossary-term-table / .grow 27 行であり、 region 占有 pin の対象 marker が構造として別クラス。
+#   1 wrapper での実弾は他方の wrapper の穴を証明しない (per-shape mutation-kill 規律)。
+cp "$TMP/base-filled.html" "$TMP/pr3f.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="glossary-terms">\n#<section id="glossary-terms"></section>\n#; $n += s#</section>\n</div>\n#</div>\n#; END { exit($n==2?0:9) }' "$TMP/pr3f.html" \
+  || ng "PR3f mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3f ★用語集 wrapper の hollow 化を containment が捕捉 (別 payload shape)" "$TMP/pr3f.html" "'glossary-terms' の開口直後に"
+# ============================================================================
+# ★PR3g〜PR3s — containment の ★arm ごと per-shape mutation-kill (cell-quality round-3)。
+#   PR3d/e/f だけでは 開口隣接 pin と region chapbody pin しか ★理由文字列で anchor されず、 他 arm は
+#   ★削除しても suite が緑のまま だった (= 実効被覆の欠落)。 以下は containment の ★各 arm に対し
+#   「その arm が [FAIL] 理由を担う」実弾を 1 本以上 与える。 ★全て fired-guard 付き (空撃ち禁止)。
+#   ★expect_vfilled_fail の理由照合は fixed-string の [FAIL] 行 anchor ゆえ、 巻き添え FAIL があっても
+#   「その arm が消えたら赤くなる」性質 (= mutation-kill) は保たれる。
+# ============================================================================
+# PR3g. ★band tint の逐値付け替え — 開口隣接 pin の ★識別成分 (どの章の帯か) だけ を崩す。 band は隣接したまま・
+#   件数も不変ゆえ、 tint 逐値を pin していなければ ★全 gate 緑 (PRESENTATION_WRAPPER_BAND_TINTS の存在理由の実証)。
+cp "$TMP/base-filled.html" "$TMP/pr3g.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band" class="tint-)violet(">)#${1}ok${2}#; END { exit($n==1?0:9) }' "$TMP/pr3g.html" \
+  || ng "PR3g mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3g ★別章 band への付け替え (tint 逐値) を開口隣接 pin が単独で捕捉" "$TMP/pr3g.html" "'forward-refs' の開口直後に"
+# PR3h. ★開口への異物挿入 — band は残り tint も §番号も正しいが、 wrapper 開口と band の ★間 に別要素が入る。
+#   PR3g (属性の同一性) と別成分 = ★位置 (直後性) を撃つ。
+cp "$TMP/base-filled.html" "$TMP/pr3h.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n)#${1}<p class="decoy">x</p>\n#; END { exit($n==1?0:9) }' "$TMP/pr3h.html" \
+  || ng "PR3h mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3h ★開口と章帯の間への異物挿入を開口隣接 pin が単独で捕捉 (位置成分)" "$TMP/pr3h.html" "'forward-refs' の開口直後に"
+# PR3s. ★band §番号の逐値書換 — 開口隣接 pin の ★第 3 成分 (どの節の帯か)。 tint (PR3g) / 位置 (PR3h) と別成分ゆえ
+#   別実弾で撃つ (band .num 列 arm も巻き添えで発火するが、 理由 anchor は containment 側に取る)。
+cp "$TMP/base-filled.html" "$TMP/pr3s.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band" class="tint-violet"><span class="num">)7#${1}9#; END { exit($n==1?0:9) }' "$TMP/pr3s.html" \
+  || ng "PR3s mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3s ★band §番号の逐値書換を開口隣接 pin が捕捉 (節同一性成分)" "$TMP/pr3s.html" "'forward-refs' の開口直後に"
+# PR3i. ★over-containment — forward-refs の閉じタグを外し glossary-terms を ★入れ子 にする (assembler の
+#   printf </section> 1 行脱落と同 shape)。 押し出しの ★逆向き ゆえ region 占有の ★上限側 (== 1) だけ が発火する。
+cp "$TMP/base-filled.html" "$TMP/pr3i.html"
+perl -0777 -i -pe 'our $n; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; $n += s#</section>\n</div>\n<footer#</section>\n</section>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/pr3i.html" \
+  || ng "PR3i mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3i ★wrapper の入れ子化 (over-containment) を region 占有の上限側が捕捉" "$TMP/pr3i.html" "章 'forward-refs' region 内の章帯 == 1"
+# PR3j. ★契約章の hollow 化 — 同一 DOM shape (band 1 + chapbody 1) を持つのは提示層 wrapper 2 本だけではない。
+#   containment を 2 id の手書き列挙に留めると残り 7 章が無防備 (partial-enumeration trap) ゆえ、 契約章側にも実弾を置く。
+cp "$TMP/base-filled.html" "$TMP/pr3j.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="s2-scope">\n#<section id="s2-scope"></section>\n#; $n += s#</section>\n<section id="s3-ears">#<section id="s3-ears">#; END { exit($n==2?0:9) }' "$TMP/pr3j.html" \
+  || ng "PR3j mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3j ★契約章 (s2-scope) の hollow 化を containment が捕捉 (2 id 列挙では届かない残り 7 章)" "$TMP/pr3j.html" "'s2-scope' の開口直後に"
+# PR3k. ★1 段内側の hollow 化 (chapbody) — chapbody を空で閉じ payload を chapbody の ★sibling (章の中・器の外) へ出す。
+#   B3 の defect 原理は ★階層ごとに 再演するので、 wrapper 階層の pin だけでは素通る shape。
+cp "$TMP/base-filled.html" "$TMP/pr3k.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="chapbody">\n<div class="ref-grid">#<div class="chapbody"></div>\n<div class="ref-grid">#; $n += s#</div>\n</div>\n</section>\n<section id="glossary-terms">#</div>\n</section>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3k.html" \
+  || ng "PR3k mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3k ★chapbody 空化 + payload を器の外へ (1 段内側の hollow 化) を containment が捕捉" "$TMP/pr3k.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# PR3l. ★chapbody 開口への異物挿入 — 1 段内側の ★開口隣接 pin (位置成分) を単独で撃つ。
+cp "$TMP/base-filled.html" "$TMP/pr3l.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div class="chapbody">\n)(<div class="ref-grid">)#${1}<p class="decoy">x</p>\n${2}#; END { exit($n==1?0:9) }' "$TMP/pr3l.html" \
+  || ng "PR3l mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3l ★chapbody 開口と payload container の間への異物挿入を 1 段内側の開口隣接 pin が捕捉" "$TMP/pr3l.html" "の chapbody 開口直後に ref-grid が隣接"
+# PR3m. ★hollow container (ref-grid) — container を即閉じし chip 30 を container の ★外 (chapbody 直下) へ出す。
+#   「container の開きタグが在る」は「chip がその中に在る」を意味しない (B3 の原理の 2 段内側)。
+cp "$TMP/base-filled.html" "$TMP/pr3m.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">\n#<div class="ref-grid"></div>\n#; $n += s#</div>\n</div>\n</section>\n<section id="glossary-terms">#</div>\n</section>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3m.html" \
+  || ng "PR3m mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3m ★hollow ref-grid (chip 30 を器の外へ) を payload 占有 pin が単独で捕捉" "$TMP/pr3m.html" "前方照会 chip の ★全数"
+# PR3n. ★hollow container (glossary-term-table) — PR3m と ★別構造クラス (payload が chip でなく .grow 27 行)。
+#   1 container での実弾は他方の container の穴を証明しない (per-shape mutation-kill 規律)。
+cp "$TMP/base-filled.html" "$TMP/pr3n.html"
+perl -0777 -i -pe 'our $n; $n += s#<div data-component="glossary-term-table">\n#<div data-component="glossary-term-table"></div>\n#; $n += s#</div>\n</div>\n</section>\n</div>\n<footer#</div>\n</section>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/pr3n.html" \
+  || ng "PR3n mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3n ★hollow glossary-term-table (.grow 27 を器の外へ) を payload 占有 pin が単独で捕捉" "$TMP/pr3n.html" "用語集 行 (.grow) の ★全数"
+# ---- PR3o/PR3p/PR3q: ★parser-differential (r8k / folio-wq4 再発クラス) の 3 vector ----
+#   いずれも 「本物の </section> を band 直後へ入れて章本文を章の ★外 へ出し、 元の閉じタグを ★偽タグ で置換して
+#   ★素朴な深さ計数 の帳尻だけ合わせる」 shape。 make_body はコメント / RAWTEXT の中身を verbatim 保持し、
+#   属性値内の生 `>` も (raw `<` と違い) fail-closed しないため、 生テキストへの /<\/?section\b[^>]*>/ 走査は
+#   region を ★over-slice して containment を丸ごと素通す。 ★fix 前の実測: 3 本とも rc=0 / 0 FAIL (0 件検出)。
+#   ★独立 HTML parser (python html.parser) で 3 本とも ref-grid の section 祖先が ★空 = 章の外 を確認済。
+#   ★3 vector を別実弾で撃つ: マスク対象が コメント / RAWTEXT / 属性値 の ★3 クラス あり、 1 本の実弾は他 2 つの穴を証明しない。
+cp "$TMP/base-filled.html" "$TMP/pr3o.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<!--<section>-->\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<!--</section>-->\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3o.html" \
+  || ng "PR3o mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3o ★コメント密輸による region over-slice (parser-differential) を containment が捕捉" "$TMP/pr3o.html" "章 'forward-refs' region 内の chapbody == 1"
+cp "$TMP/base-filled.html" "$TMP/pr3p.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<script>var s = "<section>";</script>\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<script>var e = "</section>";</script>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3p.html" \
+  || ng "PR3p mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3p ★script (RAWTEXT) 密輸による region over-slice を containment が捕捉" "$TMP/pr3p.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# ★PR3q の ★閉じ側 だけ コメント vector を使うのは、 属性値内の生 `<` が make_body で ★既に fail-closed される ため
+#   (raw-lt-in-tag)。 属性値 vector は ★開き側 にしか存在しない = 装わずに書く。
+cp "$TMP/base-filled.html" "$TMP/pr3q.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<p class="decoy" title="x><section>y"></p>\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<!--</section>-->\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/pr3q.html" \
+  || ng "PR3q mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3q ★属性値内の生 '>' 密輸による region over-slice を containment が捕捉" "$TMP/pr3q.html" "前方照会 chip の ★全数"
+# PR3r. ★非 genuine shape の fail-closed — div / section の ★自己閉じ構文。 HTML の非 foreign content では `/>` は
+#   無視される (= 開きタグ) が、 svg / math の ★foreign content 内では自己閉じが効くため、 深さ計数と実 DOM の差を
+#   作る入口になる。 rendering を完全にモデルする arms race へ戻らず、 ★genuine な assembler が emit しない shape を
+#   ★拒否する (make_body と同じ規律)。 捕捉は containment tokenizer の構造診断 arm。
+cp "$TMP/base-filled.html" "$TMP/pr3r.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">\n#<div class="ref-grid"/>\n#; END { exit($n==1?0:9) }' "$TMP/pr3r.html" \
+  || ng "PR3r mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3r ★div の自己閉じ構文 (foreign content 差の入口) を tokenizer が fail-closed" "$TMP/pr3r.html" "containment tokenizer の構造診断"
+# ★parser-differential の ★残り 3 vector (PR3o/p/q が塞いだ コメント / script / 属性値 の ★外側 に在ったもの)。
+#   いずれも ★fix 前は rc=0 / 0 FAIL で素通った実測 shape で、 実 HTML parser では章本文が ★章の外 に居る:
+#   PR3t bogus comment (`<! … >`) — 実 parser は `<!--` でない markup declaration も comment として `>` まで捨てるが、
+#        素朴実装は 1 文字進めるだけなので中の `<section>` が ★実タグとして深さに乗る。 genuine BODY にも
+#        `<!DOCTYPE html>` が実在するため fix は「拒否」でなく ★実 parser と同じ読み飛ばし (拒否だと genuine が総崩れ)。
+#   PR3u escapable RAWTEXT (`<textarea>`) — 中身はテキストゆえ `<section>` は要素にならない。 旧実装は script / style
+#        しか知らず title / textarea 等が素通しだった。
+#   PR3v ハイフン入り要素名 (`<section-x>`) — 実 DOM では section と ★別要素。 要素名を `[a-zA-Z0-9]*` で切ると
+#        "section" と誤認して章の深さに数える。
+#   ★3 本を別実弾で撃つ (マスク経路が別クラス = 1 本の実弾は他 2 つの穴を証明しない)。 reason anchor は ★章名込み
+#   の label へ当てる (章非特定の語だと別章の巻き添え FAIL でも満たされ per-shape の主張が pin されない)。
+cp "$TMP/base-filled.html" "$TMP/pr3t.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<! <section> >\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n#<! </section> >\n</div>\n#; END { exit($n==2?0:9) }' "$TMP/pr3t.html" \
+  || ng "PR3t mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3t ★bogus comment (<! … >) 密輸による region 付け替えを containment が捕捉" "$TMP/pr3t.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/pr3u.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<textarea><section></textarea>\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n#<textarea></section></textarea>\n</div>\n#; END { exit($n==2?0:9) }' "$TMP/pr3u.html" \
+  || ng "PR3u mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3u ★escapable RAWTEXT (textarea) 密輸による region 付け替えを containment が捕捉" "$TMP/pr3u.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/pr3v.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<section-x>\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n#</section-x>\n</div>\n#; END { exit($n==2?0:9) }' "$TMP/pr3v.html" \
+  || ng "PR3v mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3v ★ハイフン入り要素名 (<section-x>) 密輸による region 付け替えを containment が捕捉" "$TMP/pr3v.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# PR3w. ★契約章の band tint 付け替え — 契約章 7 本の tint 逐値 pin (源 = contract sections[].tint) を ★単独で 撃つ。
+#   旧実装は「contract は section tint の key を持たない」という ★事実に反する 根拠で契約章を tint 不問にしており、
+#   本 shape が rc=0 / 0 FAIL で素通った (実測で反証: tint は 7/7 実在し band の class="tint-<値>" と 1:1)。
+#   §番号は変えないので §番号成分では落ちない = tint 成分 ★単独 の teeth を isolate する。
+cp "$TMP/base-filled.html" "$TMP/pr3w.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-scope">\n<section data-component="chapter-deck-band" class="tint-)violet(")#${1}ok${2}#; END { exit($n==1?0:9) }' "$TMP/pr3w.html" \
+  || ng "PR3w mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3w ★契約章 (s2-scope) の band tint 付け替えを tint 逐値 pin が単独で捕捉" "$TMP/pr3w.html" "'s2-scope' の開口直後に"
+# PR3x. ★器の重複 — 正規の ref-grid は ★中身ごと 正しい位置に残したまま、 文書の別位置に ★2 個目の ref-grid を
+#   足す。 per-章 arm (chapbody 内に 1 個 / chip 全数が器の中) は ★全て PASS のままで、 2 個目の器は以後の改竄で
+#   payload の ★逃げ場 として使える (漏出先の先置き)。 捕捉は ★文書総数 pin ★単独。
+cp "$TMP/base-filled.html" "$TMP/pr3x.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<div class="ref-grid"></div>\n</body>#; END { exit($n==1?0:9) }' "$TMP/pr3x.html" \
+  || ng "PR3x mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3x ★payload container の重複 (漏出先の先置き) を文書総数 pin が単独で捕捉" "$TMP/pr3x.html" "ref-grid が ★文書全体で 1 個"
+# ★comment 終端の HTML5 非同型 (admin ceiling round-2 A・実弾 verified)。 `-->` 一本終端の実装は、 実 parser が
+#   ★早く 終端する形 (comment end bang / abrupt close) を知らないため、 攻撃者は「実 DOM では章の外に在る
+#   閉じタグ」を tokenizer にだけ comment の中身として ★隠せる。 2 vector を別実弾で撃つ (終端規則が別分岐)。
+cp "$TMP/base-filled.html" "$TMP/pr3y.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!--x--!></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/pr3y.html" \
+  || ng "PR3y mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3y ★comment end bang (--!>) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/pr3y.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/pr3z.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!--></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/pr3z.html" \
+  || ng "PR3z mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR3z ★abrupt-closing comment (<!-->) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/pr3z.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# ★RAWTEXT 終了タグの ★要素名境界 (同 C)。 `</name[^>]*>` は `</textareax>` にも一致して早期終了し、 以降の
+#   擬似タグを実タグとして数える。 ★region を ★伸ばす 向き (開きタグ密輸) で撃つ = over-slice の実害形。
+cp "$TMP/base-filled.html" "$TMP/pr4a.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<textarea></textareax><section><textarea></textarea>\n</section>\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/pr4a.html" \
+  || ng "PR4a mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4a ★RAWTEXT 終了タグの要素名境界 (</textareax>) を突く region 伸長を containment が捕捉" "$TMP/pr4a.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# ★foreign content (同 D)。 svg / math subtree 内の要素は HTML 名前空間ではないので章の深さに数えてはならない。
+#   ★genuine 生成物に svg アイコンが多数実在する ため「現れないから拒否」では閉じられず subtree 追跡が要る。
+cp "$TMP/base-filled.html" "$TMP/pr4b.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<svg><section></svg>\n</section>\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/pr4b.html" \
+  || ng "PR4b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4b ★foreign content (svg subtree) 内の擬似タグによる region 伸長を containment が捕捉" "$TMP/pr4b.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# ★契約章の 1 段内側 (同 B)。 契約章 7 本は chapbody を空にして章本文を sibling へ押し出す改竄が 0 FAIL で
+#   素通っていた (wrapper 2 章にしか (iii) が無かった)。 ★wrapper 側 (PR3k) と ★別実弾 で撃つ = 器の種類が
+#   別クラス (章要旨 callout vs ref-grid) であり、 1 本の実弾は他方の穴を証明しない。
+cp "$TMP/base-filled.html" "$TMP/pr4c.html"
+#   ★タグ均衡を保つため 2 置換 (開口直後で閉じる + 元の chapbody 閉じを除去) を fired-guard で ★両方要求する。
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-scope">\n<section data-component="chapter-deck-band"[^\n]*</section>\n<div class="chapbody">)\n(<div data-component="section-essence-callout">)#${1}</div>\n${2}#; $n += s#</div>\n</section>\n<section id="s3-ears">#</section>\n<section id="s3-ears">#; END { exit($n==2?0:9) }' "$TMP/pr4c.html" \
+  || ng "PR4c mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4c ★契約章 (s2-scope) の chapbody 空化 + 章本文 sibling 押し出しを 1 段内側 pin が捕捉" "$TMP/pr4c.html" "章要旨 callout が章 's2-scope' の chapbody 内に 1 個"
+# PR4d. ★章本文の relocation ★クラス — PR4c (chapbody 完全空化) は ★1 instance にすぎない。 章要旨 callout は
+#   chapbody 内に ★残したまま、 それ以降の章本文 (subhead / 地の文 / details / table) だけを chapbody の外へ
+#   押し出す shape は、 callout 由来の 1 段内側 pin (cbadj / cont / docct) を ★全て PASS させたまま素通った
+#   (実弾 verified: rc=0 / 0 FAIL)。 捕捉は「章の直下は 章帯 + chapbody の 2 子だけ」の構造 pin ★単独。
+cp "$TMP/base-filled.html" "$TMP/pr4d.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-scope">.*?<div class="chapbody">\n<div data-component="section-essence-callout">.*?</div>\n)#${1}</div>\n#s; $n += s#</div>\n</section>\n<section id="s3-ears">#</section>\n<section id="s3-ears">#; END { exit($n==2?0:9) }' "$TMP/pr4d.html" \
+  || ng "PR4d mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4d ★章要旨を残した章本文の relocation (block 粒度) を章直下 2 子の構造 pin が捕捉" "$TMP/pr4d.html" "章 's2-scope' の直下は 章帯 + chapbody の 2 子だけ"
+# PR4e. ★comment 終端分岐 (2) `<!--->` の ★単独 teeth。 PR3y (`--!>`) / PR3z (`<!-->`) は別分岐を撃つため、
+#   この分岐を削っても 2 本は緑のまま = 弱化が silent になる (admin gate round-3 R3-4)。
+cp "$TMP/base-filled.html" "$TMP/pr4e.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!---></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/pr4e.html" \
+  || ng "PR4e mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4e ★<!---> (comment 終端分岐 2) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/pr4e.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# PR4f. ★relocation クラスの ★もう一方の向き — 章本文の押し出し先を ★章直下の sibling でなく ★章帯 (band) の
+#   ★中 にする。 章直下は band + chapbody のままなので kids pin (PR4d) は ★2 を保ったまま PASS し、 1 段内側
+#   pin も callout が chapbody 内に残るため全て PASS する (実弾 verified: rc=0 / 0 FAIL で probe 実測値が
+#   clean と区別不能だった)。 捕捉は band の直下 4 子固定 (共有 CORE lib/common.sh band() = num/kicker/h2/lead) ★単独。
+cp "$TMP/base-filled.html" "$TMP/pr4f.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-scope">\n<section data-component="chapter-deck-band"[^\n]*?)(</section>\n)(<div class="chapbody">\n<div data-component="section-essence-callout">.*?</div>\n)(.*?)(</div>\n</section>\n<section id="s3-ears">)#${1}${4}${2}${3}${5}#s; END { exit($n==1?0:9) }' "$TMP/pr4f.html" \
+  || ng "PR4f mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4f ★章本文の band subtree への退避 (kids を 2 に保つ向き) を band 4 子固定が捕捉" "$TMP/pr4f.html" "章 's2-scope' の章帯の直下は num/kicker/h2/lead の 4 子だけ"
+# PR4g / PR4h. ★document 順を ★保つ relocation 2 形 — 章直下 (kids) / band 直下 (bkids) を固定しても、
+#   ★他の probe 値を一切動かさずに 素通る (実弾 verified: 2 形とも rc=0 / 0 FAIL・pre-existing で本 cell が
+#   作った穴ではないが、 「両方向で閉じる」の宣言がこれを閉じたと読めるため封鎖する)。
+#   PR4g (β) = 章本文を ★別章の chapbody へ移送 (donor 章が空章化し中身が受け側の下に付く)。
+#   PR4h (γ) = 章本文を ★同章の machine-fold (details) の中へ退避。
+#   捕捉は chapbody 直下の ★契約由来 完全子数 ★単独 (β は donor 減少 + 受け側増加・γ は吸い込み分の減少)。
+cp "$TMP/base-filled.html" "$TMP/pr4g.html"
+perl -0777 -i -pe 'our $n;
+if (s#(<section id="s2-scope">.*?<div class="chapbody">\n<div data-component="section-essence-callout">[^\n]*\n)((?:.(?!</div>\n</section>\n<section id="s3-ears">))*.)(\n</div>\n</section>\n<section id="s3-ears">)#${1}${3}#s) {
+  our $moved = $2; $n++;
+  $n++ if s#(<section id="s3-ears">.*?<div class="chapbody">\n<div data-component="section-essence-callout">[^\n]*\n)#${1}$moved\n#s;
+}
+END { exit($n==2?0:9) }' "$TMP/pr4g.html" \
+  || ng "PR4g mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4g ★章本文の別章 chapbody への移送 (document 順保存) を契約由来 完全子数が捕捉" "$TMP/pr4g.html" "章 's2-scope' の chapbody 直下は 契約由来の完全子数 4"
+cp "$TMP/base-filled.html" "$TMP/pr4h.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-scope">.*?<div class="chapbody">\n<div data-component="section-essence-callout">[^\n]*\n)((?:<div data-component="spec-subhead">[^\n]*\n)+)(<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1}${3}${2}#s; END { exit($n==1?0:9) }' "$TMP/pr4h.html" \
+  || ng "PR4h mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4h ★章本文の machine-fold 内への退避 (document 順保存) を契約由来 完全子数が捕捉" "$TMP/pr4h.html" "章 's2-scope' の chapbody 直下は 契約由来の完全子数 4"
+# PR4. ★wrapper への class 侵食 → wrapper 陽性 assert が捕捉 (census 汚染の封鎖)。
+cp "$TMP/base-filled.html" "$TMP/pr4.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">#<section id="forward-refs" class="normative">#; END { exit($n?0:9) }' "$TMP/pr4.html" \
+  || ng "PR4 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR4 ★提示層 wrapper への class 侵食を陽性 assert が捕捉 (census 汚染の封鎖)" "$TMP/pr4.html" "class 無しで実在"
+# PR5. ★census id allowlist の default-block 維持 (admin 裁定 C2): wrapper 2 literal ★以外 の新 id は従来どおり FAIL する。
+cp "$TMP/base-filled.html" "$TMP/pr5.html"
+perl -0777 -i -pe 'our $n; $n += s#</h1>#</h1><span id="zz-new-anchor"></span>#; END { exit($n?0:9) }' "$TMP/pr5.html" \
+  || ng "PR5 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR5 ★wrapper 以外の新 id は id census が従来どおり FAIL (肯定形 allowlist の default-block)" "$TMP/pr5.html" "census navigable id"
+# PR5b. ★allowlist 空振り封鎖: 除外対象 wrapper id が生成物から消えたら陽性 assert が独立に FAIL する
+#   (章化が落ちても除外だけ残る = allowlist の形骸化を封鎖)。 ★id 属性のみ剥がし section 要素は残す
+#   (PR3 の「wrapper ごと剥奪」とは別 shape = 除外 allowlist 単独の teeth を isolate する)。
+cp "$TMP/base-filled.html" "$TMP/pr5b.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="glossary-terms">#<section>#; END { exit($n?0:9) }' "$TMP/pr5b.html" \
+  || ng "PR5b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR5b ★除外対象 wrapper id の消失を census 空振り封鎖 assert が捕捉" "$TMP/pr5b.html" "allowlist 空振り封鎖"
+# PR6. ★chip 一行タイトル (rf-gloss) の値改竄 → chip タプル FAIL (contract title の逐語 echo が破れる)。
+cp "$TMP/base-filled.html" "$TMP/pr6.html"
+perl -0777 -i -pe 'our $n; $n += s#(<span class="rf-gloss">)隔離環境 \(sandbox\) で実機検証する枠組みの新設#${1}捏造された一行タイトル#; END { exit($n?0:9) }' "$TMP/pr6.html" \
+  || ng "PR6 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR6 ★chip 一行タイトル (rf-gloss) 改竄を chip タプルが捕捉" "$TMP/pr6.html" "references: (token,doc,role,title)"
+# PR7. ★契約 references[].title 一括削除 → 再生成 → 逐値 chip タプルは 0/0 恒真 PASS し、 契約非依存 census が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr7.yaml"; yq -i 'del(.references[].title)' "$TMP/pr7.yaml"
+bash "$ASM" "$TMP/pr7.yaml" "$TMP/pr7.html" >/dev/null 2>&1 || ng "PR7 assemble 失敗 (title 無し contract の後方互換経路が壊れた)"
+pr7_out="$(bash "$VER" "$TMP/pr7.yaml" "$TMP/pr7.html" 2>&1)"; pr7_rc=$?
+if printf '%s\n' "$pr7_out" | grep -F 'references: (token,doc,role,title)' | grep -qF '[OK]'; then
+  ok "PR7 補助 ★chip 逐値タプルは mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)"
+else ng "PR7 補助 ★chip 逐値タプルが自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr7_rc -ne 0 ]] && printf '%s\n' "$pr7_out" | grep -F 'census: rf-gloss' | grep -qF '[FAIL]'; then
+  ok "PR7 ★契約 title 一括削除を契約非依存 census (rf-gloss == 30) が捕捉 (0/0 恒真封鎖)"
+else ng "PR7 ★census が title 一括削除を捕捉できず (rc=$pr7_rc = 0/0 恒真 PASS の再開通)"; fi
+# PR8. ★role 可視ラベルの英語生表示への退行 (attr は不変) → chip タプル FAIL (平易語 map の逐値突合)。
+cp "$TMP/base-filled.html" "$TMP/pr8.html"
+perl -0777 -i -pe 'our $n; $n += s#(<span class="rf-role">)この規約が実装する原則#${1}implementation#g; END { exit($n?0:9) }' "$TMP/pr8.html" \
+  || ng "PR8 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR8 ★role 可視ラベルの英語生表示への退行を chip タプルが捕捉 (attr は機械 token 保持)" "$TMP/pr8.html" "references: (token,doc,role,title)"
+# PR9. ★優先度バッジの label↔level 詐称 (must の行に「推奨・現在」) → label↔level 束縛 FAIL。 ★ラベルは prose slot ゆえ
+#   contract と直接突合できない — closed allowlist の逐値束縛が唯一の teeth (件数だけ数える検査では素通る形)。
+cp "$TMP/base-filled.html" "$TMP/pr9.html"
+perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="prio-req-ver-001">)必須(</span>)#${1}推奨・現在${2}#; END { exit($n?0:9) }' "$TMP/pr9.html" \
+  || ng "PR9 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR9 ★優先度バッジの label↔level 詐称 (must 行に「推奨・現在」) を allowlist 逐値束縛が捕捉" "$TMP/pr9.html" "label↔level 逐値束縛"
+# PR9b. ★負の主張ラベル (ehar クラス): 語幹で始まる ★否定接尾 は前方一致を素通るが逐値集合には属さない。
+cp "$TMP/base-filled.html" "$TMP/pr9b.html"
+perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="prio-req-ver-002">)必須(</span>)#${1}必須ではない${2}#; END { exit($n?0:9) }' "$TMP/pr9b.html" \
+  || ng "PR9b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR9b ★否定接尾ラベル「必須ではない」を closed allowlist の逐値突合が捕捉 (前方一致では素通る形)" "$TMP/pr9b.html" "label↔level 逐値束縛"
+# PR10. ★per-row 束縛 (relocation クラス): 別 row の slot-id を持ってくる (件数保存) → 要件タプル FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr10.html"
+perl -0777 -i -pe 'our $n; $n += s#data-slot-id="prio-req-ver-001"#data-slot-id="prio-req-ver-002"#; END { exit($n?0:9) }' "$TMP/pr10.html" \
+  || ng "PR10 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR10 ★優先度バッジ slot の per-row 束縛 (別 row の slot-id・件数保存) を要件タプルが捕捉" "$TMP/pr10.html" "要件タプル"
+# PR10b. ★同じ relocation を平易行 slot でも撃つ (別 DOM 形状 = per-shape 規律)。
+cp "$TMP/base-filled.html" "$TMP/pr10b.html"
+perl -0777 -i -pe 'our $n; $n += s#data-slot-id="plain-req-ver-001"#data-slot-id="plain-req-ver-002"#; END { exit($n?0:9) }' "$TMP/pr10b.html" \
+  || ng "PR10b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR10b ★平易行 slot の per-row 束縛 (別 row の slot-id・件数保存) を要件タプルが捕捉" "$TMP/pr10b.html" "要件タプル"
+# PR11. ★平易行 (rq-plain) を 1 row 分削除 → 契約非依存 census + 要件タプル FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr11.html"
+perl -0777 -i -pe 'our $n; $n += s#<p class="rq-plain"><span class="rq-plain-k">やさしく言うと</span><span data-prose-slot="plain" data-slot-id="plain-req-ver-001">[^<]*</span></p>\n##; END { exit($n?0:9) }' "$TMP/pr11.html" \
+  || ng "PR11 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR11 ★平易行 1 row 削除を契約非依存 census (rq-plain == 31) が捕捉" "$TMP/pr11.html" "census: rq-plain"
+# PR11b. ★平易行の ★空化 (件数保存・per-row 非空 floor の isolation)。 census (占有数) は緑のまま = 非空 arm が唯一の teeth。
+cp "$TMP/base-filled.html" "$TMP/pr11b.html"
+perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="plain-req-ver-003">)[^<]+(</span>)#${1}${2}#; END { exit($n?0:9) }' "$TMP/pr11b.html" \
+  || ng "PR11b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR11b ★平易行の空化 (件数保存) を per-row 非空 floor が捕捉" "$TMP/pr11b.html" "rq-plain: 全 row で平易行が非空"
+# PR11c. ★優先度バッジの ★空化 (PR11b の ★対称形)。 rq-plain 側だけに実弾があり rq-prio 側に無いのは
+#   ★非対称な被覆漏れ (同じ per-row 非空 floor なのに片側の弱化だけが silent になる)。 占有数 census は
+#   件数保存ゆえ緑のまま = 非空 arm が唯一の teeth。
+cp "$TMP/base-filled.html" "$TMP/pr11c.html"
+perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="prio-req-ver-003">)[^<]+(</span>)#${1}${2}#; END { exit($n?0:9) }' "$TMP/pr11c.html" \
+  || ng "PR11c mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR11c ★優先度バッジの空化 (件数保存) を per-row 非空 floor が捕捉" "$TMP/pr11c.html" "rq-prio: 全 row で優先度ラベルが非空"
+# PR11d. ★h2 総数 pin の ★大文字成分。 arm は `grep -oiE '<h2\b'` と ★大小無視 で数えており、 コメントも
+#   「大文字注入の盲点是正」と主張する。 その成分を ★単独で 撃つ実弾が無いと、 -i を落とす弱化が silent になる
+#   (小文字 h2 の注入は PR2b が既に撃っているので ★大文字 shape を別実弾で撃つ = per-shape 規律)。
+cp "$TMP/base-filled.html" "$TMP/pr11d.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<H2>§NEW 大文字見出しの捏造</H2></body>#; END { exit($n==1?0:9) }' "$TMP/pr11d.html" \
+  || ng "PR11d mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR11d ★大文字 <H2> の注入を h2 総数 pin (大小無視) が捕捉" "$TMP/pr11d.html" "h2 総数"
+# PR12. ★契約 requirements[].priority 一括削除 → 再生成 → 逐値タプルは自己整合 (0/0 恒真) し census が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr12.yaml"; yq -i 'del(.requirements[].priority)' "$TMP/pr12.yaml"
+bash "$ASM" "$TMP/pr12.yaml" "$TMP/pr12.html" >/dev/null 2>&1 || ng "PR12 assemble 失敗 (priority 無し contract の後方互換経路が壊れた)"
+pr12_out="$(bash "$VER" "$TMP/pr12.yaml" "$TMP/pr12.html" 2>&1)"; pr12_rc=$?
+if printf '%s\n' "$pr12_out" | grep -F '要件タプル (id/pattern/class/label/essence/statement) 順序突合' | grep -qF '[OK]'; then
+  ok "PR12 補助 ★要件タプルは mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)"
+else ng "PR12 補助 ★要件タプルが自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr12_rc -ne 0 ]] && printf '%s\n' "$pr12_out" | grep -F 'census: rq-prio' | grep -qF '[FAIL]'; then
+  ok "PR12 ★契約 priority 一括削除を契約非依存 census (rq-prio == 31) が捕捉 (0/0 恒真封鎖)"
+else ng "PR12 ★census が priority 一括削除を捕捉できず (rc=$pr12_rc = 0/0 恒真 PASS の再開通)"; fi
+# PR13. ★要件 normative fold の summary を旧英語ラベルへ戻す → summary 平易ラベル pin FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr13.html"
+perl -0777 -i -pe 'our $n; $n += s#<summary>正確な条文（機械向けの厳密な書き方）</summary>#<summary>normative (machine)</summary>#g; END { exit($n?0:9) }' "$TMP/pr13.html" \
+  || ng "PR13 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR13 ★rq-norm summary の英語ラベル退行を平易ラベル pin が捕捉" "$TMP/pr13.html" "summary 平易ラベル"
+# PR14. ★machine fold の mf-kicker を旧英語ラベルへ戻す → mf-kicker pin FAIL。
+cp "$TMP/base-filled.html" "$TMP/pr14.html"
+perl -0777 -i -pe 'our $n; $n += s#<span class="mf-kicker">機械向けの詳細（原文そのまま）</span>#<span class="mf-kicker">機械層 (machine-readable)</span>#g; END { exit($n?0:9) }' "$TMP/pr14.html" \
+  || ng "PR14 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR14 ★mf-kicker の英語ラベル退行を平易ラベル pin が捕捉" "$TMP/pr14.html" "mf-kicker 平易ラベル"
+# PR14b. ★一部 fold だけ旧ラベルへ戻す部分退行 (件数 pin の teeth = 全 fold 同一 literal の要求)。
+cp "$TMP/base-filled.html" "$TMP/pr14b.html"
+perl -0777 -i -pe 'our $n; $n += s#<span class="mf-kicker">機械向けの詳細（原文そのまま）</span>#<span class="mf-kicker">機械層 (machine-readable)</span>#; END { exit($n?0:9) }' "$TMP/pr14b.html" \
+  || ng "PR14b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR14b ★mf-kicker の ★部分 退行 (1 fold のみ) も件数 pin が捕捉" "$TMP/pr14b.html" "mf-kicker 平易ラベル"
+# PR15. ★空 subsection の人間層 1 行要約を 1 件空化 → subhead essence 列 FAIL (見出しだけの節が復活する退行)。
+cp "$TMP/base-filled.html" "$TMP/pr15.html"
+perl -0777 -i -pe 'our $n; $n += s#(<h3 id="s1-1-concepts">§1\.1 3 concept</h3>)<p class="sub-se">[^<]*</p>#${1}<p class="sub-se"></p>#; END { exit($n?0:9) }' "$TMP/pr15.html" \
+  || ng "PR15 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "PR15 ★空 subsection への退行 (1 行要約の空化) を subhead essence 列が捕捉" "$TMP/pr15.html" "subhead essence 列"
+# PR15b. ★同じ退行を ★契約非依存 census が単独で撃てること (HTML 側だけを見る backstop の isolation)。
+#   ★逐値突合と census の 2 本が同時に落ちる形ゆえ isolation は「census 側にも [FAIL] が立つ」で示す。
+pr15b_out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/pr15.html" 2>&1)"
+if printf '%s\n' "$pr15b_out" | grep -F 'census: 非空の subhead 1 行要約' | grep -qF '[FAIL]'; then
+  ok "PR15b ★1 行要約の空化を契約非依存 census (非空 sub-se == 19) も独立に捕捉"
+else ng "PR15b ★census が空 subsection 退行を捕捉できず (0/0 恒真 PASS の再開通)"; fi
+# PR16. ★契約 subhead essence 一括空化 → 再生成 → 逐値 essence 列は「空 == 空」で自己整合し、 契約非依存 census が
+#   唯一の FAIL 源 (空 subsection = 本文ゼロの見出しへの全面退行を独立 anchor が撃つ)。
+#   ★assembler 側の hard abort は ★採らない: extractor が pre-flip 原本から再抽出する contract は本 cell 以前の
+#   essence 状態を持ちうり、 その genuine 再生成が COLLAPSE 群の前提だから (Cell U の同注記と対)。
+cp "$BASE" "$TMP/pr16.yaml"; yq -i '(.sections[].blocks[]? | select(.type=="subhead")).essence = ""' "$TMP/pr16.yaml"
+bash "$ASM" "$TMP/pr16.yaml" "$TMP/pr16.html" >/dev/null 2>&1 || ng "PR16 assemble 失敗 (essence 空 subhead の後方互換経路が壊れた)"
+pr16_out="$(bash "$VER" "$TMP/pr16.yaml" "$TMP/pr16.html" 2>&1)"; pr16_rc=$?
+if printf '%s\n' "$pr16_out" | grep -F 'subhead essence 列' | grep -qF '[OK]'; then
+  ok "PR16 補助 ★subhead essence 逐値は mutated 契約と自己整合 (census が唯一の FAIL 源)"
+else ng "PR16 補助 ★subhead essence 逐値が自己整合せず (census 単独 isolation の前提崩れ)"; fi
+if [[ $pr16_rc -ne 0 ]] && printf '%s\n' "$pr16_out" | grep -F 'census: 非空の subhead 1 行要約' | grep -qF '[FAIL]'; then
+  ok "PR16 ★契約 essence 一括空化を契約非依存 census (非空 sub-se == 19) が捕捉"
+else ng "PR16 ★census が essence 一括空化を捕捉できず (rc=$pr16_rc)"; fi
+# PR17. ★priority allowlist 外 → assemble fail-closed abort。
+cp "$BASE" "$TMP/pr17.yaml"; yq -i '.requirements[0].priority = "maybe"' "$TMP/pr17.yaml"
+expect_abort "PR17 ★未知の priority を abort (must|should の closed allowlist)" "$TMP/pr17.yaml" "未知の priority"
+# PR18. ★priority の部分欠落 (all-or-none 違反) → assemble abort (半端形 = badge が有ったり無かったりを封鎖)。
+cp "$BASE" "$TMP/pr18.yaml"; yq -i 'del(.requirements[0].priority)' "$TMP/pr18.yaml"
+expect_abort "PR18 ★priority の部分欠落を abort (all-or-none)" "$TMP/pr18.yaml" "priority の部分欠落"
+# PR19. ★references[].title の部分欠落 (all-or-none 違反) → assemble abort。
+cp "$BASE" "$TMP/pr19.yaml"; yq -i 'del(.references[0].title)' "$TMP/pr19.yaml"
+expect_abort "PR19 ★references[].title の部分欠落を abort (all-or-none)" "$TMP/pr19.yaml" "title の部分欠落"
+# PR20. ★priority の word-split bypass ("must should") → 逐値判定で abort (A14/A15/A16 と対称)。
+cp "$BASE" "$TMP/pr20.yaml"; yq -i '.requirements[0].priority = "must should"' "$TMP/pr20.yaml"
+expect_abort "PR20 ★priority 空白 split bypass を逐値判定で abort" "$TMP/pr20.yaml" "未知の priority"
+# PR21. ★level↔statement 束縛 (契約内不変条件) の build 時 arm: 契約の priority だけを反転 (statement は SHALL のまま) → abort。
+cp "$BASE" "$TMP/pr21.yaml"; yq -i '.requirements[0].priority = "should"' "$TMP/pr21.yaml"
+expect_abort "PR21 ★priority↔statement の矛盾 (SHALL 要件に should) を build 時 abort" "$TMP/pr21.yaml" "modal verb が矛盾"
+# PR22. ★同束縛の ★verify 側 単独 isolation: 生成物・契約・prose を ★全て自己整合 に保ったまま statement の modal verb
+#   だけを反転する (contract の SHALL → SHOULD + 生成物の同一 statement 文字列を同期)。 assembler は今や abort するため
+#   ★健全 contract で先に生成してから contract/HTML を対で改竄する (★契約 basename は footer 機械 SSoT と一致必須ゆえ
+#   生成にも同名 copy を使う)。 要件タプル・label↔level・census は ★全て自己整合 で PASS = 新 chk が唯一の FAIL 源。
+cp "$BASE" "$TMP/pr22.yaml"
+bash "$ASM" "$TMP/pr22.yaml" "$TMP/pr22.pre.html" >/dev/null 2>&1 || ng "PR22 assemble 失敗 (MK 前提崩れ)"
+bash "$INJ" "$BASE_PROSE" "$TMP/pr22.pre.html" "$TMP/pr22.html" >/dev/null 2>&1 || ng "PR22 inject 失敗 (MK 前提崩れ)"
+yq -i '(.requirements[] | select(.id=="REQ-VER-003")).statement = ((.requirements[] | select(.id=="REQ-VER-003")).statement | sub("SHALL</span> specify"; "SHOULD</span> specify"))' "$TMP/pr22.yaml"
+perl -0777 -i -pe 'our $n; $n += s#SHALL</span> specify <code>exit_code</code>#SHOULD</span> specify <code>exit_code</code>#; END { exit($n?0:9) }' "$TMP/pr22.html" \
+  || ng "PR22 mutation が発火せず (shape drift = 空撃ち)"
+pr22_out="$(bash "$VER" --filled "$BASE_PROSE" "$TMP/pr22.yaml" "$TMP/pr22.html" 2>&1)"; pr22_rc=$?
+if printf '%s\n' "$pr22_out" | grep -F '要件タプル' | grep -qF '[OK]'; then
+  ok "PR22 補助 ★要件タプルは mutated 契約と自己整合 (契約内不変 chk が唯一の FAIL 源 = isolation)"
+else ng "PR22 補助 ★要件タプルが自己整合せず (単独 isolation の前提崩れ)"; fi
+if [[ $pr22_rc -ne 0 ]] && printf '%s\n' "$pr22_out" | grep -F '[FAIL]' | grep -qF '契約内不変: priority == statement'; then
+  ok "PR22 ★statement の modal verb 反転 (must 宣言 × SHOULD 条文) を契約内不変 chk が捕捉"
+else ng "PR22 ★契約内不変 chk が level↔statement 矛盾を捕捉できず (rc=$pr22_rc = contract 全盲の再開通)"; fi
+# PR23. ★first-modal-wins の ★危険方向 (SHOULD が先・MUST が後 = 弱い宣言で強い条文を包む) が AMBIGUOUS-BOTH で
+#   abort すること。 ★wave 恒常 1 が Cell R 版「両方あれば即 AMBIGUOUS」を禁じ Cell U 版 first-modal-wins を wave
+#   標準にした際、 緩めた方向が ★主節 MUST + 従属節 SHOULD に限られる (= 詐称に使えない) ことの実弾。
+cp "$BASE" "$TMP/pr23.yaml"
+yq -i '(.requirements[] | select(.id=="REQ-VER-003")).statement = "REQ-VER-003: Each scenario expect block SHOULD be normalized, and it MUST specify exit_code as the primary assertion."' "$TMP/pr23.yaml"
+expect_abort "PR23 ★SHOULD 先行 + MUST 後続 を AMBIGUOUS-BOTH として abort (first-modal-wins の危険方向は fail-closed)" "$TMP/pr23.yaml" "modal verb が矛盾"
+# PR23b. ★正当形の非回帰 (緩和の射程 pin): MUST 先行 + SHOULD 後続 (REQ-VER-005 の実在形) は ★abort しない。
+#   ★Cell R 版規則を写すと本 case が abort し cell が構造的に完了不能になる (wave 恒常 1 の明文) — その非回帰実弾。
+if bash "$ASM" "$BASE" "$TMP/pr23b.html" >/dev/null 2>&1; then
+  ok "PR23b ★MUST 先行 + SHOULD 後続 (REQ-VER-005) は first-modal-wins で must と導出され build 可能 (Cell R 版なら abort)"
+else ng "PR23b ★健全 contract が abort した (first-modal-wins が Cell R 版へ退行した疑い)"; fi
+# PR24. ★heading_secnum の fail-closed abort の ★実弾 (宣言能力 == 実能力 の pin)。 §N 形でない heading を持つ契約 →
+#   assemble abort。 ★退行の実態: emit_section が band_num "$(heading_secnum …)" と ★引数位置のコマンド置換 で呼ぶと、
+#   bash は set -euo pipefail 下でも置換の失敗を親コマンドの成否に反映しないため exit 1 が subshell で飲まれ、
+#   空 num のまま <span class="num"></span> を rc=0 で書き出す (verify 側 backstop 頼みの fail-open)。
+#   ★被覆の正確な宣言: abort assert (PR24) 単独が殺せるのは「両層が消えた合流状態」のみ (期待 substring
+#   『節番号を導出できない』は第 1 層 (emit_section 代入形) と第 2 層 (band_num 数値 guard) のメッセージに共通)。
+#   第 1 層 ★単独 の退行は PR24b の負 assert (『band_num に非数値』が stderr に ★不在 = 第 1 層が band_num 到達前に
+#   abort した証拠) が弁別する。
+cp "$BASE" "$TMP/pr24.yaml"; yq -i '.sections[2].heading = "NO SECTION NUMBER"' "$TMP/pr24.yaml"
+pr24_out="$(bash "$ASM" "$TMP/pr24.yaml" "$TMP/o.html" 2>&1)"; pr24_rc=$?
+if [[ $pr24_rc -ne 0 && "$pr24_out" == *"節番号を導出できない"* ]]; then
+  ok "PR24 ★§N 形でない heading を abort (節番号導出不能を silent に空 .num へ落とさない)"
+else ng "PR24 ★§N 形でない heading を abort (abort されず生成された・または理由が想定外。 rc=$pr24_rc / 末尾: $(printf '%s' "$pr24_out" | tail -1))"; fi
+if [[ $pr24_rc -ne 0 && "$pr24_out" == *"heading が §N 形でない"* && "$pr24_out" != *"band_num に非数値"* ]]; then
+  ok "PR24b ★第 1 層 (emit_section 代入形) が band_num 到達前に abort (第 1 層メッセージ実在 + 第 2 層メッセージ不在 = 層独立の pin・空撃ちでは緑にならない)"
+else ng "PR24b ★第 1 層の退行か空撃ち (rc=$pr24_rc / 第 2 層メッセージへ到達 or 第 1 層メッセージ不在)"; fi
+
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
 expect_vfilled_pass  "P2 健全 baseline は --filled verify PASS" "$TMP/base-filled.html"
@@ -1371,6 +1840,37 @@ for scf in verify-spec.sh verify-verification.sh; do
     fi
   done
 done
+
+# === MECHPIN. ★containment 検査機構の健全性 arm の ★tracked 静的 pin (MINFORM / SETCDATA と同型) ===
+#   「駆動表が全章を覆う」「probe が全章分の実測を出力」の 2 arm は ★artifact をどう改竄しても落ちない
+#   (script 改変でしか落ちない) ため、 敵対 suite の構造上 per-shape MK を持てない。 その担保を worker の
+#   ★untracked な self-test に置くと land 後にリポへ ★残らない ので、 tracked な本 suite で
+#   ★arm の実在 と ★期待値が導出形であること を静的に pin する (admin gate round-3 R3-2)。
+#   ★恒真化封鎖 (MINFORM 同型・admin gate round-4 R4-3): file 全体の grep (-ge 1 / -q) では、 将来
+#   ★コメント等に同じ文字列が 1 つ増えるだけで 成立してしまう (arm 本体が消えても緑)。 ゆえに
+#   (a) ★chk 行だけを awk で scope 切り出し (b) ★label と期待値の導出形を ★同一行 に要求 (c) ★==1 の逐値
+#   の 3 点で締める (「どこかに文字列が在る」でなく「その arm が導出形の期待値で 1 本だけ在る」)。
+#   ★chk は label と期待値が ★行継続 (`\`) で分かれることがあるため、 継続行を ★論理行へ連結してから 抽出する
+#   (1 行 awk だと label 行しか取れず「同一行に導出形を要求」が構造的に成立しない = 恒偽になる)。
+mech_chk="$(awk '{ cur = $0; if (buf != "") cur = buf cur; if (cur ~ /\\$/) { sub(/\\$/, "", cur); buf = cur; next } buf = ""; print cur }' "$VER" | grep '^chk "')"
+mech_cov="$(printf '%s\n' "$mech_chk" | grep -F 'containment 駆動表が全章を覆う' | grep -cF 'NSEC + ${#PRESENTATION_WRAPPER_IDS[@]}')"
+mech_prb="$(printf '%s\n' "$mech_chk" | grep -F 'containment probe が全章分の実測を出力' | grep -cE '\$\{#_CT_ID\[@\]\} \* [0-9]+ \+ 1')"
+if [[ "$mech_cov" -eq 1 ]]; then
+  ok "MECHPIN ★駆動表 被覆 arm が chk 行に 1 本・期待値は contract 由来の導出形 (literal 直書きでない)"
+else
+  ng "MECHPIN ★駆動表 被覆 arm が chk 行で導出形として 1 本存在しない (実測 $mech_cov 期待 1 — arm 消失 / literal 直書きへの退行 / 複製)"
+fi
+if [[ "$mech_prb" -eq 1 ]]; then
+  ok "MECHPIN ★probe 出力行数 arm が chk 行に 1 本・期待値は章数からの導出形"
+else
+  ng "MECHPIN ★probe 出力行数 arm が chk 行で導出形として 1 本存在しない (実測 $mech_prb 期待 1)"
+fi
+# ★producer 存在 assert (負の主張だけにしない): 上の 2 arm は chk 行の集合から数えているので、 その集合が
+#   ★空でない ことを別途固定する (awk の抽出パターンが腐れば両 arm とも 0 になり ng へ倒れるが、 抽出自体の
+#   健全性を独立に見ておく)。
+mech_n="$(printf '%s\n' "$mech_chk" | grep -c .)"
+if [[ "$mech_n" -ge 50 ]]; then ok "MECHPIN ★chk 行の抽出が健全 ($mech_n 行・scope 切り出しの producer 存在 assert)"
+else ng "MECHPIN ★chk 行の抽出が壊れている ($mech_n 行 — awk パターンの腐りで上の 2 arm が恒偽化する)"; fi
 
 # === CASEPIN. ★宣言済 CEN-* case が ★全て実行されたか の突合 (errata-1 MUST-2・silent skip の fail-closed 検出) ===
 #   実害の前例: CEN-head3/head4 は label 内の ★未 escape backtick を bash がコマンド置換と解釈したため
