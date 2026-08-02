@@ -50,6 +50,46 @@ declare -A EARS_LABEL=( [ubiquitous]=無条件不変条件 [event-driven]="event
 declare -A EARS_WHEN=( [ubiquitous]=常に守る [event-driven]=きっかけがある時 [state-driven]=状態が続く間 [unwanted]=異常が起きた時 [optional]=機能を使う時 )
 # 抽象ロール (B0 论点2 照会 graph)。 references (前方照会) の role allowlist。 verify-common.sh の CROSS_DOC_ROLE_ALLOWLIST と一致。
 declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [verification]=1 [implementation]=1 )
+# ============================================================================
+# ★ADR-0054 (flip 済 spec 提示層の標準形) lockstep 定数群 — verify-srs-verification.sh と ★二重保守 (detect↔remediate parity)。
+#   範型 = Cell V (assemble-verification.sh @ 02790d1) / 副範型 = Cell U (assemble-spec.sh @ 5ed89f3)。
+#   srs-verification の §番号は §0..§4 の ★連番 だが、 帯番号は Cell U/V と同じく ★見出しから導出 する (下記 heading_secnum) —
+#   連番算術に依らず「.num == 見出しの §N」を ★見出し自身を trust anchor として構造束縛するため (両側 hardcode の同意に依らない)。
+# ============================================================================
+# ★role の平易語 map (ADR-0054 §2.2「role ラベルは平易語で表示する」)。 ★attr (data-ref-role) は ★機械 token を保持し、
+#   可視ラベルのみ map を適用する。 map に無い role は emit 時 hard error (silent 英語生表示を封鎖)。
+#   ★Cell R/U/V と ★逐語同一 (4 spec 横断で 1 entity = 1 canonical name・再発明禁止)。
+declare -A ROLE_PLAIN=(
+  [implementation]="この規約が実装する原則" [rationale]="そう決めた理由の記録" [claim]="この文書が満たすと主張する要件"
+  [exploration]="探索の記録" [principle]="拠って立つ原則" [verification]="どう確かめるかの仕様"
+)
+# ★RFC-2119 優先度 (ADR-0054 §2.2「RFC-2119 優先度の平易バッジ (必須 / 推奨)」)。 contract requirements[].priority の
+#   closed allowlist → 表示 class / 平易語の canonical 語幹。 verify-srs-verification.sh と二重保守 = detect↔remediate parity。
+#   ★badge の可視ラベルは prose slot (人間層 edit-SSoT) が持つが、 その値は本 allowlist の ★有限集合 に属さねば
+#   ならない (verify が label↔level を ★逐値突合 = must の行に「推奨…」や「必須ではない」と書く label 詐称を封鎖)。
+#   ★前方一致でなく逐値集合である理由: 否定接尾 (「必須ではない」) は語幹で始まるため prefix 判定を素通りする
+#   (Cell R self-review major-3 / ehar クラス = 負の主張ラベルへの束縛漏れ)。
+#   ★should entry を削除しない: srs-verification の contract は現状 must のみ (実測 5/5) だが、 allowlist を実データに
+#   合わせて縮小すると将来 contract が should を持ったとき ★fail-closed が壊れる (Cell U 先例・wave 恒常)。
+#   ★集合の拡張には prose manifest / 本 allowlist / verify-srs-verification.sh の同名配列の三点同時更新が必要 (fail-closed)。
+declare -A PRIO_OK=( [must]=1 [should]=1 )
+declare -A PRIO_LABEL_OK=( [must]="必須|必須・将来" [should]="推奨・現在" )
+# ★静的 band (前方照会 / 用語集) の heading ★本文 (§番号を ★除いた 部分)。 verify-srs-verification.sh の STATIC_HEADING_TAILS と
+#   二重保守。 ★見出しは ★実在する照会種別のみを約束する (ADR-0054 §2.2 over-promise 禁止)。 srs-verification の references は
+#   原則 (P-x) / 決定記録 (ADR) / 検証仕様 (REQ-VER → verification.html) の ★3 種 が実在する (実測: role=implementation 1
+#   (constitution P-13) + role=verification 2 (REQ-VER-001 / REQ-VER-022) + role=rationale 7 (decisions/) = 10)。
+#   ★結果として Cell U (rules = 同じ 3 種) と ★同一 逐語になる (偶然でなく照会種別集合が一致するため)。 Cell R/V の
+#   2 種版 (「原則と決定記録へつながる」) を写すと ★実在する照会 2 件 (role=verification) を落とす虚偽見出しになる。
+# ★§番号は literal 固定せず contract の最終 section 見出しから ★導出 する (derive_static_band_headings)。
+STATIC_BAND_HEADING_TAILS=("上位文書への前方照会 — 原則・決定記録・検証仕様へつながる" "本文に出てくる専門語のやさしい説明")
+STATIC_BAND_HEADINGS=()
+STATIC_BAND_NUMS=()
+# ★提示層 wrapper section の id (admin 裁定 C2 = 番号なし canonical token に固定・4 spec 横断で同一)。
+#   ★class は付けない (normative/informative census を不変に保つ)。 verify-srs-verification.sh の同名配列と二重保守。
+PRESENTATION_WRAPPER_IDS=("forward-refs" "glossary-terms")
+# ★機械層 fold / 要件 normative fold の平易ラベル (ADR-0054 §2.2・wave 恒常 2)。 verify-srs-verification.sh と二重保守。
+RQ_NORM_SUMMARY="正確な条文（機械向けの厳密な書き方）"
+MF_KICKER="機械向けの詳細（原文そのまま）"
 # CSS tint allowlist (section.tint / band)。
 declare -A TINT_OK=( [brand]=1 [violet]=1 [warn]=1 [info]=1 [ok]=1 [bad]=1 )
 # 対応 block type (これ以外 = silent drop の疑い → fail-closed abort)。
@@ -529,10 +569,52 @@ validate() {
   #  IFS split で個々の allowlist token へ分かれて素通りする fail-open を封鎖。 値そのものを 1 件ずつ照合する。
   while IFS= read -r p; do [[ -z "$p" ]] && continue; [[ -v ROLE_OK[$p] ]] || { echo "assemble-spec: 未知の reference role: $p (claim|rationale|exploration|principle|verification|implementation)" >&2; errs=1; }; done < <(q '.references[]?.role')
   if [[ "$(q 'has("references")')" == "true" ]]; then
-    local n_ref n_refne
+    local n_ref n_refne n_title
     n_ref="$(q '.references | length')"; n_refne="$(q '[.references[] | select((.token // "") != "")] | length')"
     [[ "$n_ref" == "$n_refne" ]] || { echo "assemble-spec: ★references に空 token ($n_refne/$n_ref 件・空照会 token は壊れた前方照会ゆえ禁止)" >&2; errs=1; }
+    # ★references[].title (ADR-0054 §2.2 一行タイトル併記) は ★all-or-none。 全件が非空 title を持つか 1 件も持たないかの
+    #   2 択で、 ★部分欠落は fail-closed (chip ごとに gloss が有ったり無かったりする silent 半端形を禁止)。
+    #   title 皆無の contract (extractor 再抽出物 等) は rf-gloss を emit しない旧形として通す — その 0/0 恒真 PASS は
+    #   verify-srs-verification.sh の契約非依存 census floor (rf-gloss == 10) が封鎖する。
+    n_title="$(q '[.references[] | select((.title // "") != "")] | length')"
+    [[ "$n_title" -eq 0 || "$n_title" -eq "$n_ref" ]] \
+      || { echo "assemble-spec: ★references[].title の部分欠落 ($n_title/$n_ref 件・all-or-none 必須: 全件に一行タイトルを付すか 1 件も付さないか)" >&2; errs=1; }
   fi
+  # ★requirements[].priority (RFC-2119 優先度バッジ) — references[].title と同型の all-or-none + closed allowlist。
+  local n_req n_prio
+  n_req="$(q '.requirements | length')"; n_prio="$(q '[.requirements[] | select((.priority // "") != "")] | length')"
+  [[ "$n_prio" -eq 0 || "$n_prio" -eq "$n_req" ]] \
+    || { echo "assemble-spec: ★requirements[].priority の部分欠落 ($n_prio/$n_req 件・all-or-none 必須)" >&2; errs=1; }
+  # ★逐値判定 (EARS/tint/role と対称): 空白区切りの allowlist token 並びが IFS split で素通る fail-open を封鎖。
+  while IFS= read -r p; do [[ -z "$p" ]] && continue; [[ -v PRIO_OK[$p] ]] || { echo "assemble-spec: 未知の priority: $p (must|should)" >&2; errs=1; }; done < <(q '.requirements[].priority // ""')
+  # ★契約内不変条件: priority (宣言) == statement の RFC-2119 modal verb 由来 level (導出)。 Cell R self-review major-1。
+  #   ★これが無いと contract 自身が statement と矛盾する level を宣言でき、 生成物・floor・drift の ★全 gate を素通る
+  #   (priority を根とする突合は contract に対して ★自己整合 / drift は contract から再生成する byte 比較ゆえ ★全盲)。
+  #   verify-srs-verification.sh の (iii) と ★二重保守 = detect↔remediate parity。
+  # ★導出規則 (RFC-2119 は ★大文字 のみ規範キーワード) — ★wave 恒常 1 (folio-n57u) が定める Cell U 版 first-modal-wins:
+  #     statement 中で ★最初に 現れる規範キーワードが当該要件の level を決める。
+  #     - SHALL|MUST が SHOULD より ★先 → must (後続の SHOULD は ★従属節 = 委譲先の助言・付随注記)。
+  #     - SHOULD のみ → should。 SHALL|MUST のみ → must。
+  #     - SHOULD が ★先 で SHALL|MUST が後 → AMBIGUOUS-BOTH (fail-closed)。 皆無 → NO-MODAL (fail-closed)。
+  #   ★Cell R 版 (assemble-relations.sh の「両方あれば即 AMBIGUOUS」) を写してはならない (wave 恒常 1 の明文)。
+  #     ★srs-verification は SHOULD 出現 0 (実測) ゆえ R 版を誤写しても build は落ちない = ★loud にならない —
+  #     だからこそ本規則の逐語同型が要る (静かな規則差は将来 contract が SHOULD を得た瞬間に構造的 build 不能を招く)。
+  #   ★非対称にする理由: 封鎖したい詐称は「実体が MUST の要件を should と宣言する」方向で、 その形は
+  #     ★必ず先頭の SHALL|MUST から must が導出されて宣言 should と不一致になり FAIL する (緩めていない)。
+  local rq_id rq_prio rq_der
+  while IFS= read -r rq_id; do
+    [[ -n "$rq_id" ]] || continue
+    rq_prio="$(q '.requirements[] | select(.id=="'"$rq_id"'") | .priority // ""')"
+    [[ -n "$rq_prio" && "$rq_prio" != "null" ]] || continue
+    rq_der="$(q '.requirements[] | select(.id=="'"$rq_id"'") | .statement' | perl -0777 -ne '
+        my $m = /\b(?:SHALL|MUST)\b/ ? $-[0] : -1; my $s = /\bSHOULD\b/ ? $-[0] : -1;
+        print $m < 0 && $s < 0 ? "NO-MODAL"
+            : ($m >= 0 && $s < 0 ? "must"
+            : ($s >= 0 && $m < 0 ? "should"
+            : ($m < $s ? "must" : "AMBIGUOUS-BOTH")));')"
+    [[ "$rq_prio" == "$rq_der" ]] \
+      || { echo "assemble-spec: ★priority と statement の RFC-2119 modal verb が矛盾: $rq_id (宣言 $rq_prio / statement 由来 $rq_der)" >&2; errs=1; }
+  done < <(q '.requirements[].id')
   # ★graph.principle_edge (rules→constitution 終端 edge・非終端 照会の graph 接続)。
   if [[ "$(q '.graph | has("principle_edge")')" == "true" ]]; then
     p="$(q '.graph.principle_edge.role')"; [[ -v ROLE_OK[$p] ]] || { echo "assemble-spec: graph.principle_edge.role が allowlist 外: $p" >&2; errs=1; }
@@ -541,7 +623,58 @@ validate() {
   [[ "$errs" -eq 0 ]] || { echo "assemble-spec: contract validation FAILED (fail-closed)" >&2; exit 1; }
 }
 
+# ---- ★節番号 (§N) の導出 (ADR-0054 §2.2 / 章帯の巨大番号を節番号へ一致させる前段) ----
+# ★srs-verification の §番号は §0..§4 の連番だが、 節番号は ★見出し自身 (contract sections[].heading の「§N.」) を
+#   trust anchor にして 1 本ずつ導出する (Cell U/V と同型)。 連番算術 (num = CHAPN - 1) にしないのは、 見出しと
+#   帯番号が食い違っても算術側は気づけない (両側が同じ仮定に合意しているだけになる) ため。
+# ★fail-closed: §N 形でない heading があれば abort (番号導出不能を silent に連番へ落とさない)。
+# ★-Mutf8 必須: -CSD は入力を decode するが ★program source の literal は decode しない — 「§」を素の byte のまま
+#   書くと decode 済み入力と一致せず ★常に 0 match (= fail-closed 側へ倒れて全 build が落ちる) になる。
+heading_secnum() { # $1 = heading
+  local n
+  n="$(printf '%s' "$1" | perl -CSD -Mutf8 -ne 'print "$1" if /^§(\d+)\./')"
+  [[ -n "$n" ]] || { echo "assemble-srs-verification: ★heading が §N 形でない (節番号を導出できない・fail-closed): $1" >&2; exit 1; }
+  printf '%s' "$n"
+}
+# ---- ★静的 2 band (前方照会 / 用語集) の見出し・番号を contract から導出する ----
+# 最終 section 見出しの §N の ★次 / ★次々 を静的 band の §番号とする (literal 固定だと contract に section を
+# 1 本足したとき帯番号と見出し文字列が ★無言でずれる)。 ★srs-verification の実測解 = §5 / §6 (最終 section = §4. References)。
+derive_static_band_headings() {
+  local last_h last_n
+  last_h="$(q '.sections[].heading' | tail -n 1)"
+  last_n="$(heading_secnum "$last_h")"
+  STATIC_BAND_NUMS=("$((last_n + 1))" "$((last_n + 2))")
+  STATIC_BAND_HEADINGS=(
+    "§${STATIC_BAND_NUMS[0]}. ${STATIC_BAND_HEADING_TAILS[0]}"
+    "§${STATIC_BAND_NUMS[1]}. ${STATIC_BAND_HEADING_TAILS[1]}"
+  )
+}
+
 # band / band_end (chapter-deck-band) は lib/common.sh (core) を使う。
+# ---- ★章帯の巨大番号を節番号へ一致させる pack-local wrapper (ADR-0054 §2.2) ----
+# core band() は文書内 ★連番 (.num = 01, 02, …) を emit する。 ★共有 lib/common.sh の band() 本体は ★触らない
+#   (16 pack 共有ゆえ改変は doc-pack golden + gate F を巻き添える・運用条項 追補 1)。
+#   pack-local に「core が emit した .num の値だけ」を §番号へ書き換える (帯の markup 生成は core が唯一の SSoT のまま)。
+# ★data-slot-id="chapter-lead-NN" (prose manifest の key) は ★連番のまま = 書き換えない (slot 契約不変)。
+# ★subshell 禁止: band() は core の CHAPN を進めるため $(band …) で捕まえると連番が進まない (slot-id が全て 01 になる)。
+#   リダイレクトは subshell を作らないので tmp file 経由で捕まえる。
+# ★fail-loud: core band() が emit するはずの連番 span が ★見つからなければ abort (shape drift の silent 温存を封鎖)。
+#   ★「置換が no-op か」で判定してはならない: 節番号が連番の 2 桁表記と一致する章では正当な置換が byte 同一になり
+#   no-op 判定が ★偽 abort を起こす (Cell U が rules §10 で踏んだ罠)。
+band_num() { # num tint kicker heading icon_inner
+  local num="$1" seq t
+  # ★二重化 (呼出側の代入形 guard と対): 非数値・空の節番号が渡ったら band_num 自身が abort する。
+  #   band_num は main shell で動くため exit が確実に効く (呼出経路の形に依存しない最終防波堤)。
+  [[ "$num" =~ ^[0-9]+$ ]] || { echo "assemble-srs-verification: ★band_num に非数値の節番号 ('$num') が渡された (節番号を導出できない・fail-closed)" >&2; exit 1; }
+  shift
+  t="$(mktemp)"
+  band "$1" "$2" "$3" "$4" > "$t"
+  printf -v seq '%02d' "$CHAPN"      # 直前の band() が emit した連番 (core が進めた値)
+  grep -qF "<span class=\"num\">$seq</span>" "$t" \
+    || { rm -f "$t"; echo "assemble-srs-verification: ★band の連番 .num ($seq) が emit に見当たらない (core band() の shape drift・fail-closed)" >&2; exit 1; }
+  sed "s|<span class=\"num\">$seq</span>|<span class=\"num\">$num</span>|" "$t"
+  rm -f "$t"
+}
 
 # ---- spec-pack 固有 CSS (srs.css token を流用。 dark は token 経由で自動追従) ----
 emit_spec_css() {
@@ -584,6 +717,15 @@ figure[data-component="spec-diagram"] figcaption{padding:7px 15px;font-size:11.5
 [data-component="ears-legend"] .el-item{display:inline-flex;align-items:center;gap:6px}
 [data-component="ears-legend"] .el-when{font-size:11.5px;color:var(--ink-soft)}
 [data-component="ears-requirement-row"] .rq-essence{margin:0 0 7px;font-size:13.5px;line-height:1.7;color:var(--ink)}
+/* ★「やさしく言うと」平易行 + RFC-2119 優先度バッジ (ADR-0054 §2.2)。 色 token は srs.css 準拠 (Cell R/U/V と同形)。 */
+[data-component="ears-requirement-row"] .rq-plain{margin:6px 0 8px;padding:8px 12px;background:var(--paper-2);border-left:3px solid var(--violet);border-radius:8px;font-size:12.5px;line-height:1.7;color:var(--ink)}
+/* ★キーは既存 badge と同じ tint 系 (色 = var(--violet) / 地 = var(--violet-tint)) にする。 mockup の
+   「濃紫地に白抜き」を token 化すると dark theme (--violet が明るい藤色) で白文字が contrast 2.2 まで落ち
+   gate F の low-contrast になる — ears-badge .state と同じ組で両テーマ AA を確保する。 */
+[data-component="ears-requirement-row"] .rq-plain-k{display:inline-block;color:var(--violet);background:var(--violet-tint);border:1px solid var(--violet-line);border-radius:6px;padding:1px 9px;margin-right:8px;font-size:11px;font-weight:800;white-space:nowrap}
+[data-component="ears-requirement-row"] .rq-prio{border-radius:6px;padding:1px 9px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid transparent}
+[data-component="ears-requirement-row"] .rq-prio-must{color:var(--bad);background:var(--bad-tint);border-color:var(--bad-line)}
+[data-component="ears-requirement-row"] .rq-prio-should{color:var(--warn);background:var(--warn-tint);border-color:var(--warn-line)}
 [data-component="ears-requirement-row"] .rq-norm{font-size:12px;border-top:1px dashed var(--line);padding-top:6px}
 [data-component="ears-requirement-row"] .rq-norm summary{cursor:pointer;font-size:10.5px;font-weight:800;letter-spacing:.04em;color:var(--ink-faint);text-transform:uppercase}
 [data-component="ears-requirement-row"] .rq-stmt{margin:6px 0 0;font-size:12.5px;line-height:1.7;color:var(--ink-soft)}
@@ -593,6 +735,14 @@ figure[data-component="spec-diagram"] figcaption{padding:7px 15px;font-size:11.5
 [data-component="cross-doc-ref-chip"] .rf-arrow{color:var(--violet);font-weight:800}
 [data-component="cross-doc-ref-chip"] .rf-doc{font-weight:700;color:var(--ink)}
 [data-component="cross-doc-ref-chip"] .rf-role{margin-left:auto;font-size:11px;font-weight:700;color:var(--brand);background:var(--brand-tint);border:1px solid var(--line);border-radius:999px;padding:1px 10px;white-space:nowrap}
+/* ★照会先の一行タイトル (ADR-0054 §2.2「裸 ID を出さない」)。 flex-basis 100% で token 行の下へ回り込ませる。 */
+[data-component="cross-doc-ref-chip"] .rf-gloss{flex:0 0 100%;font-size:12px;line-height:1.6;color:var(--ink-soft)}
+/* ★chrome-less 化 (ADR-0054 §2.1・Cell 0 = bin/folio が注入する部品) の見た目を pack 側で所有する。
+   生成 spec は common.css を読まない (pack inline style が提示層 SSoT) ため、 skip-link の hidden-until-focus と
+   下部 locator の体裁はここで与える (Cell 0 開示 #2・Cell R/U/V と同一 declaration)。 */
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.skip-link:focus{position:fixed;left:12px;top:12px;width:auto;height:auto;z-index:100;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;box-shadow:var(--shadow)}
+.doc-locator{margin:28px 0 6px;font-size:12.5px;color:var(--ink-faint);border-top:1px solid var(--line);padding-top:10px}
 /* ===== 機械層 (machine free-prose) — w1f cell-2 / ADR-0045 =====
    data-audience="machine" の自由文を native <details> fold で *既定非表示* (collapsed) + *トグル表示* (native disclosure)。
    no-JS で動作 (§12 自己完結) し rules.html §11.3/§11.5 の機械層挙動 (機械層=無制限の原稿・既定で畳む) に整合する。
@@ -807,7 +957,7 @@ emit_subhead() {
 }
 # 1 要件 row を emit ($1 = 要件 id)。
 emit_requirement_row() {
-  local id="$1" pat essence stmt class label anchor
+  local id="$1" pat essence stmt class label anchor prio prio_badge
   pat="$(q '.requirements[] | select(.id=="'"$id"'") | .ears_pattern')"
   essence="$(q '.requirements[] | select(.id=="'"$id"'") | .essence')"
   stmt="$(q '.requirements[] | select(.id=="'"$id"'") | .statement')"
@@ -827,13 +977,27 @@ emit_requirement_row() {
   #   要件 container を <(section|details) data-audience="human"> で key するため、 本 row は <div> ゆえ未被覆
   #   (生成物は /tmp 生成で folio validate 非対象)。 canonical container form (section/details) への寄せ・
   #   validate-gate 被覆は follow-up (folio-tr0 置換/drift gate) 領分。
+  # ★RFC-2119 優先度バッジ (ADR-0054 §2.2)。 class は contract の closed allowlist 値から決定的に導く。 可視ラベルは
+  #   prose slot (空で emit → inject-prose が manifest から充填) ゆえ ここでは ★空要素 を置く。 priority を持たない
+  #   contract では バッジごと emit しない (all-or-none は validate 済・0/0 恒真は verify の census floor が封鎖)。
+  prio="$(q '.requirements[] | select(.id=="'"$id"'") | .priority // ""')"
+  prio_badge=""
+  if [[ -n "$prio" && "$prio" != "null" ]]; then
+    [[ -v PRIO_OK[$prio] ]] || { echo "assemble-srs-verification: ★到達不能: emit 時に未知 priority '$prio' (validate を擦り抜けた・fail-closed)" >&2; exit 1; }
+    prio_badge="$(printf '<span class="rq-prio rq-prio-%s" data-prose-slot="priority" data-slot-id="prio-%s"></span>' "$prio" "$(esc "$anchor")")"
+  fi
   printf '<div data-component="ears-requirement-row" id="%s" data-req-id="%s" data-ears-pattern="%s" data-audience="human">\n' "$(esc "$anchor")" "$(esc "$id")" "$(esc "$pat")"
-  printf '<div class="rq-head"><span class="rid">%s</span><span data-component="ears-badge" class="%s">%s</span></div>\n' "$(esc "$id")" "$class" "$(esc "$label")"
+  printf '<div class="rq-head"><span class="rid">%s</span>%s<span data-component="ears-badge" class="%s">%s</span></div>\n' "$(esc "$id")" "$prio_badge" "$class" "$(esc "$label")"
   # ★essence / statement は ★RAW emit (rich 契約値・esc 厳禁)。 esc すると原本の a.xref / span.term / ins|del.delta /
   #   <code> が literal escape へ化ける。 特に statement の <code>jq -S</code> が剥がれると 裸の jq -S が可視 prose に落ち
   #   folio_prose_only の code mask を外れて [how-outside] P-11 primitive を踏む (0-e = PRESERVE + mask をこの raw 経路で担保)。
   printf '<p class="rq-essence">%s</p>\n' "$essence"
-  printf '<details class="rq-norm" data-audience="machine"><summary>normative (machine)</summary><p class="rq-stmt">%s</p></details>\n' "$stmt"
+  # ★「やさしく言うと」平易行 (ADR-0054 §2.2)。 本文は prose slot (人間層 edit-SSoT = prose manifest・ADR-0052 §2.4) で、
+  #   assembler は ★空要素だけ を決定的に置く (要件 essence/normative は contract SSoT のまま不変 = 平易行は ★純追加)。
+  #   ★著述規律 (V確定3): 平易行は plain text + <a> (class=xref 無し) のみ = span.term / 人間層 <code> を新規に
+  #   生やさない。 本規律は prose manifest 側の著述で守る (assembler は空要素のみ置く)。
+  printf '<p class="rq-plain"><span class="rq-plain-k">やさしく言うと</span><span data-prose-slot="plain" data-slot-id="plain-%s"></span></p>\n' "$(esc "$anchor")"
+  printf '<details class="rq-norm" data-audience="machine"><summary>%s</summary><p class="rq-stmt">%s</p></details>\n' "$(esc "$RQ_NORM_SUMMARY")" "$stmt"
   printf '</div>\n'
 }
 emit_requirements() {
@@ -873,7 +1037,7 @@ emit_machine_fold() {
   n="$(q "$arr // [] | length")"
   [[ "$n" -gt 0 ]] || return 0
   printf '<details data-component="spec-machine-fold" class="machine-fold">\n'
-  printf '<summary><span class="mf-kicker">機械層 (machine-readable)</span> <span class="mf-label">%s</span> <span class="mf-count">%s 件</span></summary>\n' "$(esc "$summary")" "$n"
+  printf '<summary><span class="mf-kicker">%s</span> <span class="mf-label">%s</span> <span class="mf-count">%s 件</span></summary>\n' "$(esc "$MF_KICKER")" "$(esc "$summary")" "$n"
   printf '<div class="machine-body">\n'
   for ((i=0; i<n; i++)); do emit_machine_block "$arr[$i]"; done
   printf '</div>\n</details>\n'
@@ -928,7 +1092,13 @@ emit_section() {
   anchor="$(q ".sections[$si].anchor // \"\"")"
   [[ -n "$anchor" && "$anchor" != "null" ]] || { echo "assemble-srs-verification: ★section[$si] の anchor (navigable id) が空 (corpus inbound の解決先を失う・fail-closed)" >&2; exit 1; }
   printf '<section id="%s">\n' "$(esc "$anchor")"
-  band "$tint" "$kicker" "$heading" "$icon"
+  # ★ADR-0054 §2.2: 章帯の巨大番号を ★見出しの節番号 と一致させる (core band() の連番でない)。
+  # ★★引数位置のコマンド置換にしない: bash は set -euo pipefail 下でも「引数中の $( ) の失敗」を親コマンドの
+  #   成否へ反映しないため、 heading_secnum の exit 1 は置換用 subshell で飲まれ、 空 num が band_num へ渡って
+  #   <span class="num"></span> の defective artifact が rc=0 で出る (= 宣言 fail-closed の空文化)。
+  #   ★代入形なら set -e が効く。 意図を残すため || exit 1 も明示する。
+  local secnum; secnum="$(heading_secnum "$heading")" || exit 1
+  band_num "$secnum" "$tint" "$kicker" "$heading" "$icon"
   # ★essence は ★RAW emit (rich 契約値・esc 厳禁)。
   printf '<div data-component="section-essence-callout"><p class="sec-se">%s</p></div>\n' "$essence"
   emit_blocks "$si"
@@ -942,10 +1112,21 @@ emit_section() {
 # references = 非終端 照会 (前方・他文書へ)。 token/doc/role を固定属性で刻む (verify-spec が echo 厳密一致で突合)。
 emit_references() {
   printf '<div class="ref-grid">\n'
-  q '.references[] | [.token, .doc, .role] | @tsv' | while IFS=$'\t' read -r token doc role; do
+  # ★IFS= read で 1 行受け手動 tab split: 空 title (title 無し contract) が IFS-whitespace の tab 畳みで列を
+  #   潰すのを防ぐ (@tsv は常に 4 列 = 3 tab)。
+  q '.references[] | [.token, .doc, .role, (.title // "")] | @tsv' | while IFS= read -r line; do
+    token="${line%%$'\t'*}"; rest="${line#*$'\t'}"
+    doc="${rest%%$'\t'*}"; rest="${rest#*$'\t'}"
+    role="${rest%%$'\t'*}"; title="${rest#*$'\t'}"
     [[ -n "$token" ]] || continue
-    printf '<div data-component="cross-doc-ref-chip" data-ref-token="%s" data-ref-role="%s"><span class="rf-token"><b>%s</b></span><span class="rf-arrow">\xe2\x86\x92</span><span class="rf-doc">%s</span><span class="rf-role">%s</span></div>\n' \
-      "$(esc "$token")" "$(esc "$role")" "$(esc "$token")" "$(esc "$doc")" "$(esc "$role")"
+    # ★role の可視ラベルだけ平易語 map を適用 (attr data-ref-role は ★機械 token を保持)。 map 外 role は hard error
+    #   (validate の ROLE_OK と同一 key 集合ゆえ到達不能であるべき・silent な英語生表示 fallback を封鎖)。
+    [[ -v ROLE_PLAIN[$role] ]] || { echo "assemble-srs-verification: ★到達不能: emit 時に平易語 map 外の role '$role' (validate を擦り抜けた・fail-closed)" >&2; exit 1; }
+    # ★rf-gloss = 照会先の一行タイトル (contract references[].title の ★逐語 echo)。 title 無し contract では emit しない。
+    gloss=""
+    [[ -n "$title" ]] && gloss="$(printf '<span class="rf-gloss">%s</span>' "$(esc "$title")")"
+    printf '<div data-component="cross-doc-ref-chip" data-ref-token="%s" data-ref-role="%s"><span class="rf-token"><b>%s</b></span><span class="rf-arrow">\xe2\x86\x92</span><span class="rf-doc">%s</span><span class="rf-role">%s</span>%s</div>\n' \
+      "$(esc "$token")" "$(esc "$role")" "$(esc "$token")" "$(esc "$doc")" "$(esc "${ROLE_PLAIN[$role]}")" "$gloss"
   done
   printf '</div>\n'
 }
@@ -1017,15 +1198,24 @@ build() {
   # ★機械層 文書前文 (w1f cell-2): section 外の data-audience="machine" 前文を fold で既定非表示・cover/legend の後・§1 の前に置く。
   emit_machine_fold ".machine_preamble" "文書前文 (この規約集の位置づけ)"
   nsec="$(q '.sections | length')"
+  derive_static_band_headings
   for ((si=0; si<nsec; si++)); do emit_section "$si"; done
-  # 非終端 照会 (前方 references) band。
-  band violet "この仕様が参照する文書 / 照会 (前方)" "srs-verification は照会の終端ではない — 原則 (constitution) や決定記録 (ADR) へ前方照会する" "$ICO_ARROW"
+  # ★前方照会 / 用語集の ★章化 (ADR-0054 §2.2 + admin 裁定 C2)。 従来この 2 band は section で包まれず bare band() だった
+  #   ため「章としての到達可能性」を持たなかった。 section id 付きの章として包む。
+  #   ★id は番号なし canonical token (PRESENTATION_WRAPPER_IDS)・★class は付けない (census 不変)。
+  # 非終端 照会 (前方 references) band。 ★heading は実在する照会種別のみを約束する (srs-verification は P-x / ADR /
+  #   REQ-VER の 3 種 = 実測導出。 2 種版を写すと role=verification の 2 件を落とす虚偽見出しになる)。
+  printf '<section id="%s">\n' "$(esc "${PRESENTATION_WRAPPER_IDS[0]}")"
+  band_num "${STATIC_BAND_NUMS[0]}" violet "この仕様が参照する文書 / 照会 (前方)" "${STATIC_BAND_HEADINGS[0]}" "$ICO_ARROW"
   emit_references
   band_end
+  printf '</section>\n'
   # 用語集 band (core glossary)。
-  band brand "用語集 / この文書で使う専門語" "本文に出てくる専門語のやさしい説明" "$ICO_TAG"
+  printf '<section id="%s">\n' "$(esc "${PRESENTATION_WRAPPER_IDS[1]}")"
+  band_num "${STATIC_BAND_NUMS[1]}" brand "用語集 / この文書で使う専門語" "${STATIC_BAND_HEADINGS[1]}" "$ICO_TAG"
   emit_glossary
   band_end
+  printf '</section>\n'
   printf '</div>\n'
   emit_footer
   emit_mermaid_script
