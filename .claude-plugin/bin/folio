@@ -304,17 +304,56 @@ folio_prime_emit_digest() {
   local xr_nodes xr_edges xr_top
   xr_nodes=$(jq '(.objectGraph.nodes // []) | length' "$inv")
   xr_edges=$(jq '(.objectGraph.edges // []) | length' "$inv")
-  xr_top=$(jq -r '
+  xr_top=$(folio_prime_xr_top "$inv")
+  printf '\n'
+  printf '# 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)\n'
+  printf '# %s nodes · %s 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。\n' "$xr_nodes" "$xr_edges"
+  printf '# 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。\n'
+  [[ -n "$xr_top" ]] && printf '%s\n' "$xr_top"
+}
+
+# 照会 graph digest の被参照 top 10 導出 (inventory.json = $1)。 Tier 0 / Tier 1 の両 digest が
+# ★単一定義を共有する — 「top 10 の導出 query と行形式は両 tier で同一」(ADR-0055 §2.1) を
+# 逐語複製でなく構造 (共有 helper) で保証する (片側だけの変更が silent に invariant を壊す経路の封鎖)。
+folio_prime_xr_top() {
+  jq -r '
     ((.objectGraph.nodes // []) | map({(.id): .class}) | add // {}) as $cls
     | (.objectGraph.edges // [])
     | group_by(.to) | map({to: .[0].to, n: length})
     | sort_by(-.n, .to) | .[0:10][]
     | "- \(.to) [\($cls[.to] // "external")] ← \(.n) refs"
-  ' "$inv")
+  ' "$1"
+}
+
+# inventory.json ($1) から Tier 0 pointer digest を stdout に出力 (ADR-0055)。 SessionStart hook の
+# boot 注入予算 (harness は 10,000 UTF-16 code unit 超で file 退避 = context に届かない) に適合するため、
+# per-spec 一覧 (Tier 1) は注入せず「総数 + rollup + tier pointer + 照会 graph digest」のみを出す。
+# rollup と top 10 は corpus が成長しても行数一定 (spec 数に対し O(1))。 Tier 1 は `folio prime` の
+# on-demand 実行で取得する (REQ-VER-012 の既定 emit は不変)。 順序は jq group_by/sort_by で決定的
+# (byte-exact golden 安定、 scenarios/prime-boot.yaml)。
+folio_prime_emit_boot_digest() {
+  local inv="$1" count fver dir_rollup dt_rollup st_rollup
+  count=$(jq '.specs | length' "$inv")
+  fver=$(jq -r '.folioVersion // "unknown"' "$inv")
+  dir_rollup=$(jq -r '[.specs[]."@id" | split("/")[0]] | group_by(.) | map("\(.[0]) \(length)") | join(" / ")' "$inv")
+  dt_rollup=$(jq -r '[.specs[]."doc-type"] | group_by(.) | map({k: .[0], n: length}) | sort_by(-.n, .k) | map("\(.k) \(.n)") | join(" · ")' "$inv")
+  st_rollup=$(jq -r '[.specs[].status] | group_by(.) | map({k: .[0], n: length}) | sort_by(-.n, .k) | map("\(.k) \(.n)") | join(" · ")' "$inv")
+
+  printf '# folio inventory digest — Tier 0 pointer digest (boot 予算適合、 ADR-0055)\n'
+  printf '# %s specs · folio %s · %s\n' "$count" "$fver" "$dir_rollup"
+  printf '# doc-type: %s\n' "$dt_rollup"
+  printf '# status: %s\n' "$st_rollup"
+  printf '#\n'
+  printf '# Tier 1 (per-spec @id/title/doc-type/status/summary + object-graph index) = `folio prime` を on-demand 実行\n'
+  printf '# Tier 2 (各 spec の head + 冒頭段落) / Tier 3 (本文全体) = 該当 spec を on-demand Read・関係詳細 (objectGraph 全 node/edge) = inventory.json を Read\n'
+
+  # 照会 graph digest — Tier 1 末尾と同形を維持 (ADR-0055 §2.1、 導出は共有 helper folio_prime_xr_top = 単一定義)。
+  local xr_nodes xr_edges xr_top
+  xr_nodes=$(jq '(.objectGraph.nodes // []) | length' "$inv")
+  xr_edges=$(jq '(.objectGraph.edges // []) | length' "$inv")
+  xr_top=$(folio_prime_xr_top "$inv")
   printf '\n'
-  printf '# 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)\n'
-  printf '# %s nodes · %s 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。\n' "$xr_nodes" "$xr_edges"
-  printf '# 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。\n'
+  printf '# 照会 graph digest — %s nodes · %s 照会 edges (doc→canonical object xref)。 被参照数 top 10:\n' "$xr_nodes" "$xr_edges"
   [[ -n "$xr_top" ]] && printf '%s\n' "$xr_top"
 }
 
@@ -324,13 +363,14 @@ folio_prime_emit_digest() {
 folio_cmd_prime() {
   command -v jq >/dev/null 2>&1 || { echo "folio prime: jq not found in PATH (required, fail-closed)" >&2; exit 2; }
 
-  # --- arg parse: --root <dir> (default design-intent、 validate/fix/inventory と対称) ---
-  local root="design-intent"
+  # --- arg parse: --root <dir> (default design-intent、 validate/fix/inventory と対称) + --boot (ADR-0055) ---
+  local root="design-intent" boot=0
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --root) [[ $# -ge 2 ]] || { echo "folio prime: --root requires a directory argument" >&2; exit 2; }; root="$2"; shift 2 ;;
       --root=*) root="${1#--root=}"; shift ;;
-      *) echo "folio prime: unknown argument '$1' (usage: folio prime [--root <dir>])" >&2; exit 2 ;;
+      --boot) boot=1; shift ;;
+      *) echo "folio prime: unknown argument '$1' (usage: folio prime [--root <dir>] [--boot])" >&2; exit 2 ;;
     esac
   done
 
@@ -351,7 +391,12 @@ folio_cmd_prime() {
   fi
   [[ -f "$inv" ]] || { echo "folio prime: inventory.json unavailable after regen attempt" >&2; exit 1; }
 
-  folio_prime_emit_digest "$inv"
+  # --boot = Tier 0 pointer digest (SessionStart hook 経路、 ADR-0055)。 既定 = Tier 1 (REQ-VER-012)。
+  if [[ "$boot" == "1" ]]; then
+    folio_prime_emit_boot_digest "$inv"
+  else
+    folio_prime_emit_digest "$inv"
+  fi
 }
 
 # ============================================================================
@@ -4737,7 +4782,9 @@ Subcommands:
   inventory [--root <dir>] inventory.json 生成 (relations.html §4、 default cwd/design-intent、
                            --root で scan/output root を override = validate/fix と対称)
   prime [--root <dir>]     Tier 1 inventory digest を stdout 出力 (ADR-0007、 不在/stale 時 auto-regen、
-                           --root で scan/inventory.json 場所を override = inventory と対称)
+        [--boot]           --root で scan/inventory.json 場所を override = inventory と対称。
+                           --boot は Tier 0 pointer digest (総数 + rollup + tier pointer + 照会 graph
+                           digest のみ、 SessionStart hook の boot 注入予算に適合、 ADR-0055)
   validate [--root <dir>]  spec 集合の 18-gate 検査 (link-integrity / jsonld / broken-reverse / vocabulary /
                            delta-marker / dual-audience / xref ×4 / glossary / nav ×3 / ears-coverage /
                            render-safety / readability-floor / how-outside (floor-2=block ADR-0047 / floor-1=warn)、 ADR-0020/0025/0028/0033/0034/0035/0039、

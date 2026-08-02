@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="folio-doc-type" content="adr">
+  <meta name="folio-layer" content="scratch">
+  <meta name="folio-version" content="1.2.0">
+  <meta name="folio-status" content="accepted">
+  <meta name="folio-stakeholders" content="Developer, AI Agent, External Reviewer">
+  <meta name="folio-adr-id" content="0055">
+  <meta name="folio-adr-date" content="2026-08-02">
+  <title>ADR-0055 — SessionStart 注入の boot 予算適合 (Tier 0 pointer digest)</title>
+  <link rel="stylesheet" href="../../common.css">
+  <script type="application/ld+json">
+{
+  "@context": {
+    "dc": "http://purl.org/dc/terms/",
+    "schema": "https://schema.org/",
+    "folio": "https://folio.dev/spec/v1/"
+  },
+  "@id": "./ADR-0055-boot-tier-context-injection.html",
+  "@type": "schema:TechArticle",
+  "dc:title": "ADR-0055 — SessionStart 注入の boot 予算適合 (Tier 0 pointer digest・ADR-0007 §2.2 partial supersede)",
+  "folio:version": "1.2.0",
+  "folio:status": "accepted",
+  "folio:stakeholders": ["Developer", "AI Agent", "External Reviewer"],
+  "dc:references": [
+    { "@id": "./ADR-0007-context-injection.html" },
+    { "@id": "./ADR-0003-plugin-architecture.html" },
+    { "@id": "./ADR-0043-reference-graph-terminal-how-outside-enforcement.html" },
+    { "@id": "../spec/relations.html#s4-2-tier" },
+    { "@id": "../spec/verification.html#req-ver-012" }
+  ]
+}
+  </script>
+</head>
+<body>
+<!-- folio:chrome-top -->
+<a class="skip-link" href="#s1-context">本文へスキップ</a>
+<nav class="breadcrumb" aria-label="パンくず"><ol>
+  <li><a href="../index.html">design-intent</a></li>
+  <li><a href="./README.html">decisions</a></li>
+  <li aria-current="page">ADR-0055</li>
+</ol></nav>
+<!-- /folio:chrome-top -->
+
+<header class="doc-header">
+  <h1>ADR-0055 — SessionStart 注入の boot 予算適合 (Tier 0 pointer digest)</h1>
+  <div class="meta">Status: accepted &middot; Date: 2026-08-02 &middot; folio v1.2.0 &middot; SessionStart hook が boot 時に注入する内容を Tier 1 inventory digest から Tier 0 pointer digest (総数・rollup・tier pointer・照会 graph digest のみ) へ変更する。 folio prime (既定) の Tier 1 emit は不変で on-demand 開示の実行経路として存続し、 ADR-0007 §2.2 の「注入内容 = Tier 1」は本 ADR が supersede する。 動機は corpus 成長後の Tier 1 出力が boot 注入予算 (10,000 UTF-16 code unit 超で file 退避) を超え boot context に全文が届かなくなったこと (2026-08-02 実測 29,970 UTF-16 code unit、 詳細 §1)。 Three-Tier Progressive Disclosure Model 自体は不変で、 Tier 0 は boot 予算適合のための Tier 1 への pointer 形。 conformance は prime-boot golden と REQ-VER-012 整合が持つ。</div>
+</header>
+<!-- folio:chrome-toc -->
+<nav class="toc" aria-label="ページ内目次">
+<ol>
+  <li><a href="#s1-context">§1. Context</a></li>
+  <li><a href="#s2-decision">§2. Decision</a></li>
+  <li class="toc--sub"><a href="#s2-1-boot-tier0">§2.1 boot 注入 = Tier 0 pointer digest</a></li>
+  <li class="toc--sub"><a href="#s2-2-prime-invariant">§2.2 folio prime (既定) は Tier 1 のまま不変</a></li>
+  <li class="toc--sub"><a href="#s2-3-supersede">§2.3 ADR-0007 との関係 (partial supersede)</a></li>
+  <li class="toc--sub"><a href="#s2-4-tier-model">§2.4 Three-Tier Progressive Disclosure Model は不変</a></li>
+  <li class="toc--sub"><a href="#s2-5-conformance">§2.5 Conformance</a></li>
+  <li><a href="#s3-consequences">§3. Consequences</a></li>
+  <li><a href="#s4-alternatives">§4. Alternatives Considered</a></li>
+  <li><a href="#s5-trace">§5. Trace</a></li>
+</ol>
+</nav>
+<!-- /folio:chrome-toc -->
+
+<section id="s1-context">
+  <h2>§1. Context</h2>
+  <p><a href="ADR-0007-context-injection.html">ADR-0007</a> (2026-05-25) は SessionStart hook → <code>folio prime</code> stdout の context 注入を設計し、 §2.2 で注入内容を Tier 1 inventory digest (compact text、 当時想定 ~1-2k tokens) と定めた。 本 ADR で <strong>boot</strong> = SessionStart hook が発火する fresh session の起動時点を指す。 数量の単位は byte ではなく <strong>UTF-16 code unit</strong> である (以下 unit と略す)。</p>
+  <p>その後 corpus は 62 spec へ成長し、 <code>folio prime</code> 出力は実測 <strong>29,970 unit</strong> (2026-08-02 admin 実測。 scriptorium 横断監査 orch-gg24 の実測 23,902〜29,970 と整合) に達した。 超過の内訳は per-spec 一覧が約 2/3、 <a href="ADR-0034-object-term-xref-system.html">ADR-0034</a> で追加された object-graph index (126 canonical objects) が約 1/4 で、 後者は spec 数でなく canonical object 数で増える。 <a href="../spec/relations.html#s4-2-tier">relations.html §4.2</a> の Tier 1 目安 (30-50 tokens per spec) は per-spec 実測でも総量でも超過した。</p>
+  <p>Claude Code harness (2026-08-02 時点の挙動) は SessionStart 注入が <strong>10,000 unit</strong> を超えると本文を file へ退避し preview (約 2,000 unit 相当) のみを context に注入する — 以下この境界を <strong>boot 注入予算</strong> と呼ぶ。 本決定前の boot は「Tier 1 の注入 cost を払いながら、 実際には冒頭 preview しか届かない」状態だった = ADR-0007 が意図した「fresh session が inventory を即座に持つ」効果は失われていた。</p>
+  <p>Tier 0 形のプロトタイプ実測 (2026-08-02) は <strong>848 unit</strong> — boot 注入予算 10,000 に対し 1 桁小さく、 §2.1 の構造規定 (行数一定) の実証点である。</p>
+</section>
+
+<section id="s2-decision">
+  <h2>§2. Decision</h2>
+
+  <section id="s2-1-boot-tier0">
+    <h3>§2.1 boot 注入 = Tier 0 pointer digest</h3>
+    <p>SessionStart hook (<code>inject-inventory.sh</code>) は <code>folio prime --boot</code> の stdout = <strong>Tier 0 pointer digest</strong> を注入する。 構成要素 (WHAT の normative は <a href="../spec/verification.html#req-ver-012">REQ-VER-012</a> が持ち、 本節は決定の記録):</p>
+    <ul>
+      <li><strong>header 行</strong> — spec 総数・folio version・dir 内訳 (spec / decisions / research)。 先頭行は canonical 名「Tier 0 pointer digest」を名乗る (逐語の SSoT は prime-boot golden)</li>
+      <li><strong>rollup</strong> — doc-type 内訳 1 行 + status 内訳 1 行</li>
+      <li><strong>tier pointer</strong> — Tier 1 (per-spec 一覧 + object-graph index) は <code>folio prime</code> を on-demand 実行、 Tier 2 (各 spec の <code>&lt;head&gt;</code> + 冒頭段落)・Tier 3 (spec 本文全体) は該当 spec を on-demand Read、 関係の詳細 (objectGraph の全 node/edge) は <code>inventory.json</code> を Read、 の誘導 2 行</li>
+      <li><strong>照会 graph digest</strong> — nodes/edges 数 + 被参照数 top 10。 top 10 の導出 query と行形式は Tier 1 digest 末尾と同一 (header 行のみ 1 行へ圧縮)。 <a href="ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043</a> §2.3 tier1 (照会 graph digest の常時 baked) の要件を Tier 0 でも満たすための保持であり、 将来 Tier 0 を削る編集はこの要件を破らないこと</li>
+    </ul>
+    <p>Tier 0 の出力量は構成上 spec 数に依存しない — rollup と top 10 は corpus が成長しても行数一定 (実質 O(1)) で、 boot 注入予算を下回り続ける (実測は §1)。</p>
+  </section>
+
+  <section id="s2-2-prime-invariant">
+    <h3>§2.2 folio prime (既定) は Tier 1 のまま不変</h3>
+    <p><code>folio prime</code> (引数なし既定) は従来どおり Tier 1 inventory digest を emit する。 <a href="../spec/verification.html#req-ver-012">REQ-VER-012</a> の SHALL (CLI SHALL emit a Tier 1 inventory digest) は維持され、 <code>prime-digest.yaml</code> の scenario・比較方式も不変 (corpus 追加に伴う golden 再生成は従来どおり各 land に同梱する)。 Tier 0 の pointer が指す on-demand 開示の実行経路そのものであり、 boot 注入予算の制約は hook 経路にのみ存在する (手動実行の stdout は予算対象外)。</p>
+  </section>
+
+  <section id="s2-3-supersede">
+    <h3>§2.3 ADR-0007 との関係 (partial supersede)</h3>
+    <p>ADR-0007 §2.2 「注入内容 = Tier 1 inventory digest」 は本 ADR §2.1 が supersede する。 ADR-0007 の他の決定は不変: §2.1 mechanism (SessionStart hook → prime stdout、 matcher 省略 = 全 source 発火)、 §2.3 (CLI は手動 entry point でもある)、 §2.4 (staleness auto-regen — <code>--boot</code> も同一の regen 判定・再生成経路を共有する)。 変わるのは hook が prime へ渡す mode 引数 (<code>--boot</code>) のみで、 CLI の既定動作は §2.2 のとおり Tier 1 のまま mode が加わる。 部分 supersede は <a href="ADR-0026-test-placement-model.html">ADR-0026</a> 先例に従い <code>dc:replaces</code> でなく <code>dc:references</code> + 本節/§5 の trace で記す (frozen ADR-0007 本文は P-6 のもと不触・逆リンクのみ)。</p>
+  </section>
+
+  <section id="s2-4-tier-model">
+    <h3>§2.4 Three-Tier Progressive Disclosure Model は不変</h3>
+    <p><a href="../spec/relations.html#s4-2-tier">relations.html §4.2</a> の Three-Tier Progressive Disclosure Model は不変。 Tier 0 は spec 内容の新しい開示粒度ではなく、 boot 注入予算に適合するための「Tier 1 (index) への pointer 形」 であり、 spec 内容の開示は従来どおり Tier 1 → 2 → 3 で行う。</p>
+  </section>
+
+  <section id="s2-5-conformance">
+    <h3>§2.5 Conformance</h3>
+    <p>本決定の整合面は次のとおり (いずれも決定後の世界の不変条件として述べる):</p>
+    <ul>
+      <li>Tier 0 出力は <code>tests/scenarios/prime-boot.yaml</code> (kind: cli-golden、 capture: stdout、 compare: text) の golden と byte-exact 一致する — header 逐語の SSoT はこの golden。</li>
+      <li><a href="../spec/verification.html#req-ver-012">REQ-VER-012</a> は statement (<code>--boot</code> の SHALL 条項) と人間層 (essence・平易行) の両層で本決定に整合する (contract 経由で保持。 harness 固有の予算定数は spec 側に literal で置かず本 ADR §1 を照会する)。</li>
+      <li><a href="../spec/relations.html#s0-reader-guide">relations.html §0</a> の data-pipeline 図は本決定に整合する (contract 経由。 Tier 0 注入を主線、 Tier 1 を on-demand 分岐として描く)。</li>
+      <li>e2e S-F (<code>tests/e2e/runbook.md</code> と <code>tests/e2e/README.html</code> の S-F 行) の期待観察は Tier 0 pointer digest の header を先頭に受領すること。 <code>observations-sessionstart.json</code> は 2026-05-25 時点の観察記録として据置き、 Tier 0 の実注入 record は次回 S-F walk で追加する。</li>
+      <li><a href="../spec/folio-self-spec.html">folio-self-spec.html</a> §3.1 の注入記述は本決定に整合する。</li>
+      <li>glossary の <code>prime</code> 定義 (contract 経由・ADR-0052) の整合改訂は follow-up として trace する (§5)。</li>
+    </ul>
+  </section>
+</section>
+
+<section id="s3-consequences">
+  <h2>§3. Consequences</h2>
+  <ul>
+    <li>(+) boot 注入は常に boot 注入予算内 — file 退避されず、 preview 断片でなく digest <strong>全文</strong>が context に届く。</li>
+    <li>(+) prime stdout の生成量は Tier 1 全量比で 1 桁以上小さい (2026-08-02 実測 848 / 29,970 unit)。</li>
+    <li>(+) corpus が成長しても Tier 0 は行数一定 (rollup + top 10) で、 本問題は再発しない。</li>
+    <li>(−) fresh session は per-spec 一覧を自動では持たない — Tier 0 の pointer が <code>folio prime</code> の on-demand 実行 (1 コマンド) を明示誘導する。</li>
+    <li>(−) <code>bin/folio</code> と <code>inject-inventory.sh</code> は plugin 部品のため、 land 後に plugin cache sync が必要。</li>
+  </ul>
+</section>
+
+<section id="s4-alternatives">
+  <h2>§4. Alternatives Considered</h2>
+  <ul>
+    <li><strong>(a) 現状維持</strong> — boot 注入予算の超過で preview しか届かず、 注入 cost だけを払い続ける。 却下。</li>
+    <li><strong>(b) hook 側 truncation</strong> — 予算内に頭から切り詰める。 どの spec が届くかが列挙順依存で非原理的。 却下。</li>
+    <li><strong>(c) Tier 1 の項目削減</strong> — per-spec の title/summary を落とす。 REQ-VER-012 の項目列挙を破壊し、 かつ object-graph index を含む残量だけで概算 15k UTF-16 code unit となり予算超過が続く。 却下。</li>
+    <li><strong>(d) 分割注入</strong> — 複数 hook へ分けて届く量を増やす。 総 token は増える方向で予算問題の解にならない (orch-gg24 の指摘どおり第一選択でない)。 却下。</li>
+  </ul>
+</section>
+
+<section id="s5-trace">
+  <h2>§5. Trace</h2>
+  <p>derives-from: <a href="ADR-0007-context-injection.html">ADR-0007</a> (mechanism・supersede 対象 §2.2) / <a href="ADR-0003-plugin-architecture.html">ADR-0003 §2.1</a> (SessionStart hook minimal scope) / <a href="ADR-0043-reference-graph-terminal-how-outside-enforcement.html">ADR-0043 §2.3</a> (tier1 = 照会 graph digest の常時 baked 要件)。 外部実測 = scriptorium orch-gg24 (2026-08-01 injection 横断監査)。 作業 bead = folio-h4nm (orch-gg24 triage + user 骨子承認 2026-08-02)。 実装 = <code>bin/folio</code> prime <code>--boot</code> mode + <code>.claude-plugin/scripts/inject-inventory.sh</code> + <code>tests/scenarios/prime-boot.yaml</code>。 glossary <code>prime</code> 定義の整合改訂 (contract 経由・rules.html tooltip の lockstep 込み) = bd folio-rpiy。</p>
+</section>
+
+<!-- folio:chrome-bottom -->
+<nav class="prevnext" aria-label="前後の文書">
+  <a class="prevnext__prev" href="ADR-0054-flipped-spec-presentation-standard.html"><span class="prevnext__dir">&larr; 前</span><span class="prevnext__title">ADR-0054 — flip 済 spec の提示層を pack 生成文書の標準形へ統一</span></a>
+</nav>
+<script>
+(function () {
+  var openedForPrint = [];
+  window.addEventListener('beforeprint', function () {
+    openedForPrint = [];
+    var ds = document.querySelectorAll('details:not([open])');
+    for (var i = 0; i < ds.length; i++) { ds[i].setAttribute('open', ''); openedForPrint.push(ds[i]); }
+  });
+  window.addEventListener('afterprint', function () {
+    for (var i = 0; i < openedForPrint.length; i++) openedForPrint[i].removeAttribute('open');
+    openedForPrint = [];
+  });
+  if (!document.querySelector('[data-audience]')) return;
+  /* 既定 = 人間プレゼン型 (ADR-0040 / rules §11.3): script 経由で初期 class を付与するため
+     no-JS では付かず全文可視に graceful degrade する。 static DOM は全文を保持 (AI/検索/印刷は不変)。 */
+  document.body.classList.add('audience-human');
+  var bar = document.createElement('nav');
+  bar.className = 'audience-toggle';
+  bar.setAttribute('aria-label', '表示対象の切替');
+  var states = [['both', '両方'], ['human', '人間向け'], ['machine', '機械向け']];
+  for (var s = 0; s < states.length; s++) {
+    (function (mode, label) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-pressed', mode === 'human' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        document.body.classList.remove('audience-human', 'audience-machine');
+        if (mode !== 'both') document.body.classList.add('audience-' + mode);
+        var bs = bar.querySelectorAll('button');
+        for (var j = 0; j < bs.length; j++) bs[j].setAttribute('aria-pressed', bs[j] === b ? 'true' : 'false');
+      });
+      bar.appendChild(b);
+    })(states[s][0], states[s][1]);
+  }
+  var bc = document.querySelector('nav.breadcrumb');
+  if (bc && bc.parentNode) { bc.parentNode.insertBefore(bar, bc.nextSibling); }
+  else { document.body.insertBefore(bar, document.body.firstChild); }
+})();
+</script>
+<!-- /folio:chrome-bottom -->
+</body>
+</html>

@@ -1,0 +1,20 @@
+schema_version: "0.1"
+req_id: "REQ-VER-012"
+ears_pattern: "event-driven"
+kind: "cli-golden"
+description: |
+  folio prime --boot が inventory.json から Tier 0 pointer digest (総数・dir/doc-type/status rollup・
+  tier pointer 誘導・照会 graph digest) を stdout 出力する (ADR-0055)。 SessionStart hook
+  (inject-inventory.sh) の注入経路はこの --boot mode を用いる — harness の boot 注入予算
+  (10,000 UTF-16 code unit 超で file 退避) に適合し、 Tier 1 (per-spec 一覧) は agent が folio prime を
+  on-demand 実行して取得する。 inventory.json が stale/不在なら auto-regen してから出力。
+  digest を golden と byte-exact 比較 (capture:stdout, compare:text) で検証。
+
+# --- cli-golden scenario (stdout capture 版、 prime-digest.yaml と同経路・ADR-0055) ---
+command: ["prime", "--boot"]                           # bin/folio に渡す引数列
+capture: "stdout"                                      # command の stdout を捕捉
+compare: "text"                                        # plain text byte-exact 比較
+golden: "baselines/reference/prime-boot.golden.txt"    # 期待値 (VCS 管理、 §3.4 REQ-VER-004)
+
+expect:
+  exit_code: 0

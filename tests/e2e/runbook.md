@@ -153,9 +153,9 @@ jsonld-lint は通知しない (valid object)。
 
 ---
 
-## S-F — SessionStart context injection (★Track 2: 道具が architect に文脈を渡すか / REQ-VER-012 / ADR-0007)
+## S-F — SessionStart context injection (★Track 2: 道具が architect に文脈を渡すか / REQ-VER-012 / ADR-0007 / ADR-0055)
 
-**目的**: folio の signature 機能 — fresh session 起動時に SessionStart hook が Tier 1 inventory digest を
+**目的**: folio の signature 機能 — fresh session 起動時に SessionStart hook が Tier 0 pointer digest を
 context に注入するか実観察する。S-A〜S-E (Edit/Write 操作) とは別 method = **fresh session 起動の観察**。
 
 **前提**: folio plugin が load される環境 (`~/.claude/plugins/folio` symlink + cld auto discovery)。
@@ -166,9 +166,14 @@ SessionStart hook は session 起動時にのみ発火するため既存 session
 2. spawn の prompt で「起動時 context に folio inventory digest が注入されているか、編集せず観察のみ報告せよ」と指示。
 3. spawn の応答を capture。
 
-**期待観察**: spawn が初期 context に Tier 1 digest を受領 = 先頭 `# folio inventory digest — Tier 1` +
-spec 件数 + 各エントリ (`## <@id-path>` / title / doc-type·status / summary) を引用できる。
-= SessionStart hook → inject-inventory.sh → folio prime stdout → context 注入の full chain が動作。
+**期待観察**: spawn が初期 context に Tier 0 pointer digest を受領 = 先頭行が「Tier 0 pointer digest」を名乗る
+header (逐語の SSoT = `baselines/reference/prime-boot.golden.txt`) + spec 総数・folio version・dir 内訳 +
+doc-type/status rollup + tier pointer 誘導 + 照会 graph digest (被参照 top 10) を引用できる。
+= SessionStart hook → inject-inventory.sh → folio prime --boot stdout → context 注入の full chain が動作。
+(ADR-0055 以前の期待観察 = Tier 1 digest 全文。boot 注入予算適合のため Tier 0 へ変更 — Tier 1 は
+`folio prime` の on-demand 実行で取得し、その CLI 出力自体は S-J / prime-digest.yaml が検証する。
+`observations-sessionstart.json` の既存 record は 2026-05-25 時点 (Tier 1) の観察として据置き、
+Tier 0 の実注入 record は次回 S-F walk で追加する。)
 
 **注**: SessionStart は matcher 省略で startup/resume/clear/compact 全 source 発火。本 S-F は **startup source** を検証。
 compact source (post-compaction 再注入) は 2026-05-25 の実 /compact で **検証済** (S-F-compact、observations-sessionstart.json、ADR-0007 §2.1 を e2e-verified に格上げ、ADR-0017 §2.4)。

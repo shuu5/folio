@@ -25,21 +25,26 @@
 #     【消費しない】(存在 pin のみ) 一方、 test-adversarial-verification.sh の COLLAPSE 群は pre-flip 再抽出元として
 #     ★内容を消費する ため、 再 freeze すると前提が壊れ、 かつ本 header の provenance (canonical @2f53388b /
 #     snapshot(bootstrap) @83e07b6) が虚偽化する (V確定1b / wave 恒常 4 = 意図的に実施しない旨をここに開示する)。
-#   provenance_contract_sha256 = 925afedb70b0b48f1586bb7c8f708163bb69cbcb8114e2ca9be75e9f00b4be95
+#   ★ADR-0055 land (folio-h4nm) で REQ-VER-012 statement を改訂 (--boot = Tier 0 pointer digest の SHALL 条項追加 =
+#     機械層逐語の正当変更・Leg4 型) したため provenance sha を現 contract へ re-freeze し、scalar 3 値を機械再導出で bump した
+#     (2026-08-03 verify-verification.sh census arm 実測): FZ_XREF 31→32 (statement 内 ADR-0055 明示 a.xref +1) /
+#     FZ_CODE_TABLE_CELL 43→44 (§3.7 RTM scenario cell の <code>prime-boot.yaml</code> +1) / FZ_CODE_REST 79→80・FZ_CODE_TOTAL 124→126 (RTM cell +1 と、apply-verifier BG-1 是正 = essence へ <code>--boot</code> 条項追加の +1)。
+#     statement 内の新規 <code> (--boot ×3 等) は機械層ゆえ人間層 census の対象外 (counts 不変を実測で確認)。他 scalar / ID_SET 不変。
+#   provenance_contract_sha256 = 17ab20e47baf45d97041411837bb7a3e64770a898878cc9182d8c4aeb39453d3
 #     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
 # ============================================================================
 
 # ---- scalars (frozen literal・subject = 生成物 HTML) ----
 FZ_ID_COUNT=57
-FZ_XREF=31
+FZ_XREF=32
 FZ_TERM=27
 FZ_DELTA=5
 FZ_ESC_XREF=3
-FZ_CODE_TABLE_CELL=43
+FZ_CODE_TABLE_CELL=44
 FZ_CODE_CAPTION=2
-FZ_CODE_REST=79
-FZ_CODE_TOTAL=124
+FZ_CODE_REST=80
+FZ_CODE_TOTAL=126
 FZ_SPAN_TABLE_CELL=60
 FZ_SPAN_CAPTION=1
 FZ_ESC_CODE=0

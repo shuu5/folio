@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 62 specs · folio 1.2.0
+# 63 specs · folio 1.2.0
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
@@ -257,6 +257,11 @@
 - doc-type: adr · status: accepted
 - summary: 正本 (edit-SSoT) = contract YAML から生成される canonical spec の提示層を、 folio が他 project 向けに pack pipeline で生成する文書 (以下「pack 生成文書」) と同じ「chrome なしの人間ファースト (human-first) 形」に統一する。 生成 spec ページでは folio build は chrome のうちページ内目次 (nav.toc) と breadcrumb を注入せず、 script 注入の audience-toggle も行わない (skip-link は focus 時のみ可視で温存・prev-next は下部導線として存続)。 提示層は pack assembler が完結所有し、 rules.html §11 の「全ページ chrome」MUST は生成 spec について本 ADR が supersede する (spec 本文の整合改訂は contract 経由)。 機械層 (data-audience=machine の逐語 normative・head JSON-LD・census / round-trip / drift gate) は不変。 標準形の normative は本文 §2.2 の構成要素列挙が持ち、 mockup Variant A v2 (2026-07-22 user 実機 walk 批准) は時点付き参考実装。 実装は assembler + chrome 注入判定 + gate lockstep の改修として行う。
 
+## decisions/ADR-0055-boot-tier-context-injection.html
+- title: ADR-0055 — SessionStart 注入の boot 予算適合 (Tier 0 pointer digest・ADR-0007 §2.2 partial supersede)
+- doc-type: adr · status: accepted
+- summary: SessionStart hook が boot 時に注入する内容を Tier 1 inventory digest から Tier 0 pointer digest (総数・rollup・tier pointer・照会 graph digest のみ) へ変更する。 folio prime (既定) の Tier 1 emit は不変で on-demand 開示の実行経路として存続し、 ADR-0007 §2.2 の「注入内容 = Tier 1」は本 ADR が supersede する。 動機は corpus 成長後の Tier 1 出力が boot 注入予算 (10,000 UTF-16 code unit 超で file 退避) を超え boot context に全文が届かなくなったこと (2026-08-02 実測 29,970 UTF-16 code unit、 詳細 §1)。 Three-Tier Progressive Disclosure Model 自体は不変で、 Tier 0 は boot 予算適合のための Tier 1 への pointer 形。 conformance は prime-boot golden と REQ-VER-012 整合が持つ。
+
 ## decisions/README.html
 - title: folio decisions index
 - doc-type: cluster-readme · status: active
@@ -312,7 +317,7 @@
 - doc-type: planning · status: superseded
 - summary: X4 = 試作卒業フェーズの分解 (実装前の計画、 自由形式 scratch memo)
 
-# object-graph index — 126 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
+# object-graph index — 127 canonical objects (ADR-0034、 principle / requirement / decision、 xref SSoT)
 # <id> [<class>] <ssot-location>. tooltip essence は inventory.json objectGraph.nodes[].essence。
 ADR-0001 [decision] decisions/ADR-0001-architecture-rules-split.html
 ADR-0002 [decision] decisions/ADR-0002-scratch-layout.html
@@ -360,6 +365,7 @@ ADR-0051 [decision] decisions/ADR-0051-what-ssot-layer-interpretation.html
 ADR-0052 [decision] decisions/ADR-0052-glossary-ssot-reassignment.html
 ADR-0053 [decision] decisions/ADR-0053-snapshot-oracle-evolution-policy.html
 ADR-0054 [decision] decisions/ADR-0054-flipped-spec-presentation-standard.html
+ADR-0055 [decision] decisions/ADR-0055-boot-tier-context-injection.html
 P-1 [principle] spec/constitution.html#p-1
 P-10 [principle] spec/constitution.html#p-10
 P-11 [principle] spec/constitution.html#p-11
@@ -442,7 +448,7 @@ REQ-XREF-003 [requirement] spec/rules.html#req-xref-003
 REQ-XREF-004 [requirement] spec/rules.html#req-xref-004
 
 # 照会 graph digest — Tier 1 (cross-doc reference graph、 progressive disclosure、 ADR-0034 / engine §10 論点⑥)
-# 126 nodes · 103 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
+# 127 nodes · 104 照会 edges (doc→canonical object xref)。 最重要 = 被参照数 top 10。
 # 全 node/edge は inventory.json objectGraph.{nodes,edges} で Tier 2/3 参照。
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs

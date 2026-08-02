@@ -514,6 +514,7 @@ ul[data-component="spec-machine-list"] .mli::before{content:"\2014";position:abs
     { "@id": "../decisions/ADR-0034-object-term-xref-system.html" },
     { "@id": "../decisions/ADR-0035-walkable-architecture-nav-derive.html" },
     { "@id": "../decisions/ADR-0036-folio-vocabulary-glossary-derive.html" },
+    { "@id": "../decisions/ADR-0055-boot-tier-context-injection.html" },
     { "@id": "../research/constitution-x4-amendment-proposal.html" },
     { "@id": "../research/plugin-sandbox-verification-research.html" },
     { "@id": "./folio-self-spec.html" },
@@ -588,11 +589,12 @@ ul[data-component="spec-machine-list"] .mli::before{content:"\2014";position:abs
 <figure data-component="spec-diagram" class="diagram"><pre class="mermaid">%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%
 flowchart TB
   accTitle: in-band relation から AI 消費までの data pipeline
-  accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。
+  accDescr: 各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime --boot が Tier 0 pointer digest に縮約して SessionStart hook が AI agent の初期 context へ注入する (boot 予算適合、 ADR-0055)。 Tier 1 digest (per-spec entry、 §4.2) は folio prime の on-demand 実行で得る。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。
   HEAD[&quot;各 spec の head JSON-LD\nin-band relation (§3)&quot;]
   HEAD --&gt;|&quot;folio inventory\nが design-intent/ を scan&quot;| INV[&quot;inventory.json\n3-tier index (§4)&quot;]
-  INV --&gt;|&quot;folio prime&quot;| DIG[&quot;Tier 1 digest\n(per-spec entry、§4.2)&quot;]
-  DIG --&gt;|&quot;SessionStart hook 注入&quot;| AI([&quot;AI agent の初期 context&quot;])</pre><figcaption>各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime が Tier 1 digest に縮約し、 SessionStart hook が AI agent の初期 context へ注入する。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。</figcaption></figure>
+  INV --&gt;|&quot;folio prime --boot&quot;| BOOT[&quot;Tier 0 pointer digest\n(boot 予算適合、ADR-0055)&quot;]
+  BOOT --&gt;|&quot;SessionStart hook 注入&quot;| AI([&quot;AI agent の初期 context&quot;])
+  INV --&gt;|&quot;folio prime (on-demand)&quot;| DIG[&quot;Tier 1 digest\n(per-spec entry、§4.2)&quot;]</pre><figcaption>各 spec の head JSON-LD に in-band 宣言された relation を folio inventory が scan して inventory.json に集約し、 folio prime --boot が Tier 0 pointer digest に縮約して SessionStart hook が AI agent の初期 context へ注入する (boot 予算適合、 ADR-0055)。 Tier 1 digest (per-spec entry、 §4.2) は folio prime の on-demand 実行で得る。 §3 markup から §4 inventory を経て consumer に届く流れ (上から下へ)。</figcaption></figure>
 <details data-component="spec-machine-fold" class="machine-fold">
 <summary><span class="mf-kicker">機械向けの詳細（原文そのまま）</span> <span class="mf-label">§0. Reader's Guide の地の文・運用説明・rationale</span> <span class="mf-count">2 件</span></summary>
 <div class="machine-body">
@@ -970,7 +972,7 @@ flowchart TB
 </div>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-relations.spec.yaml</b> &middot; 生成: <b>2026-07-22 21:53</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-relations.spec.yaml</b> &middot; 生成: <b>2026-08-02 15:22</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>spec-pack (relations fork)</span><span>folio engine tr0 (folio-hd0)</span><span>EARS 章立て + 非終端 照会</span></div>
 </div></footer>
 <script>
