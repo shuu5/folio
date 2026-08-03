@@ -200,7 +200,7 @@ terms:
     en: "prime"
     slug: "prime"
     domain: "folio-closed"
-    formal_def: "inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。"
+    formal_def: "inventory から digest を生成する subcommand。 既定は Tier 1 inventory digest、 --boot は Tier 0 pointer digest を emit し SessionStart 注入に使う (REQ-VER-012 / ADR-0055)。"
     plain_slot: "plain-prime"
     cross_refs:
       - "REQ-VER-012"

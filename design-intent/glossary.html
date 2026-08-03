@@ -524,7 +524,7 @@ tr[data-component="ears-requirement-row"] td.resp .why:empty::after{content:"⚠
     </section>
     <section class="term-entry" id="term-prime" data-audience="human" data-term="prime">
       <h4 class="term-name">prime</h4>
-      <p class="term-plain" data-slot-id="plain-prime" data-prose-slot="plain-prime">目録から要点だけを抜き出した短い要約を作る機能です。 AI に「今これだけ知っておいて」と最小限の情報を渡すために使います。</p>
+      <p class="term-plain" data-slot-id="plain-prime" data-prose-slot="plain-prime">目録から要点だけを抜き出した短い要約を作る機能です。 そのまま実行すると各文書の要点を並べた一覧を出し、 --boot を付けるとセッション開始時に自動で流し込むための短い案内板 (全体の数字と、 一覧の呼び出し方だけ) を出します。</p>
       <p class="term-usage" data-audience="human" data-usage-for="prime">使われる文書: 検証要件 REQ-VER-012</p>
       <details class="term-machine" data-audience="machine">
         <summary>機械層 — 構造化 term レコード</summary>
@@ -532,7 +532,7 @@ tr[data-component="ears-requirement-row"] td.resp .why:empty::after{content:"⚠
           <dt>canonical (en)</dt><dd data-term-en="prime">prime</dd>
           <dt>slug / anchor</dt><dd data-term-slug="prime">#term-prime</dd>
           <dt>domain</dt><dd data-term-domain="folio-closed">folio-closed</dd>
-          <dt>正式定義</dt><dd class="term-formal">inventory から progressive disclosure 用の Tier 1 digest を生成する subcommand。 AI への context 注入に使う (REQ-VER-012)。</dd>
+          <dt>正式定義</dt><dd class="term-formal">inventory から digest を生成する subcommand。 既定は Tier 1 inventory digest、 --boot は Tier 0 pointer digest を emit し SessionStart 注入に使う (REQ-VER-012 / ADR-0055)。</dd>
         </dl>
         <script type="application/ld+json">{"@context":"https://schema.org/","@type":"DefinedTerm","@id":"folio:term/prime","name":"prime","inDefinedTermSet":"./glossary.html"}</script>
         <ul class="term-xrefs">
@@ -1054,7 +1054,7 @@ tr[data-component="ears-requirement-row"] td.resp .why:empty::after{content:"⚠
 </section>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-glossary.glossary.yaml</b> &middot; 生成: <b>2026-07-16 15:29</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-glossary.glossary.yaml</b> &middot; 生成: <b>2026-08-03 06:15</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>glossary-pack</span><span>folio self-host (instance#1)</span><span>canonical-name SSoT + dual-audience term</span></div>
 </div></footer>
 <p class="gen-meta">folio design-system generator — glossary-pack (instance #1 / folio self-host)</p>
