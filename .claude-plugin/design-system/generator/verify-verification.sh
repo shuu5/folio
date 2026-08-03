@@ -82,8 +82,8 @@ MF_KICKER="機械向けの詳細（原文そのまま）"
 # ★★relations (verify-relations.sh:78-86) / rules (verify-spec.sh:72-75) の literal 流用は ★禁止 — 本値は
 #   verification contract の実測から導出したもの (arm 名も spec ごとに異なりうる: relations は subsub / 本 pack は subhead)。
 FZC_RF_GLOSS=30      # 前方照会チップの一行タイトル = |references|
-FZC_RQ_PRIO=31       # RFC-2119 優先度バッジ = |requirements|
-FZC_RQ_PLAIN=31      # 「やさしく言うと」平易行 = |requirements|
+FZC_RQ_PRIO=32       # RFC-2119 優先度バッジ = |requirements|
+FZC_RQ_PLAIN=32      # 「やさしく言うと」平易行 = |requirements|
 FZC_SUBHEAD_SE=19    # 人間層 1 行要約 (.sub-se) を ★非空 で持つ subhead 数 = |subhead blocks| (空 subsection 0)
 # ★§6 ref-primary (References の一次参照可視化) は ★relations 固有 arm ゆえ verification では実装しない (0 件)。
 #   ★0/0 恒真 pin を ★置かない (0 == 0 の恒真 chk は teeth を持たず「検査している」と誤読させるため・V確定5b)。

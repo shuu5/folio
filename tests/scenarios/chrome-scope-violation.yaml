@@ -1,5 +1,5 @@
 schema_version: "0.1"
-req_id: "REQ-NAV-007"
+req_id: "REQ-NAV-008"
 ears_pattern: "unwanted"
 kind: "cli-golden"
 description: |

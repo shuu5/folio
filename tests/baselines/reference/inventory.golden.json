@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-08-02T16:54:21Z",
+  "generatedAt": "2026-08-03T01:23:17Z",
   "folioVersion": "1.2.0",
   "specs": [
     {
@@ -2310,6 +2310,12 @@
         "essence": "chrome marker (folio:chrome-top/toc/bottom) を持つ page の chrome 領域は render 再計算と byte 一致を保つ — drift は [chrome-drift] (nav-regen-drift gate 内包) で block、 marker 無し page は keystone skip。 remediate は folio build。"
       },
       {
+        "id": "REQ-NAV-008",
+        "class": "requirement",
+        "ssot": "spec/verification.html#req-nav-008",
+        "essence": "chrome marker 持ち page を単一の分類述語 (spec-pack assembler の generator meta・emitter と同一定義) で pack 生成 spec / 非生成に二分類し、 committed bytes の chrome 領域だけを見て、 pack 生成 spec は chrome-less (ページ内目次・breadcrumb・audience-toggle 非注入 / skip-link・print 全展開 handler・所属 locator は存続、 prev-next は chain 隣接時のみ)、 非生成 page は chrome 存続 (breadcrumb・audience-toggle・print 全展開 handler は無条件、 他は emitter 述語非空時のみ) を強制する — 違反は [chrome-scope] (nav-regen-drift gate 内包・exit 1)。 誤分類 anchor と (self-host corpus では) cohort 非空 assert が分類述語の破損を fail-closed に捕捉する (ADR-0054 §2.1)。"
+      },
+      {
         "id": "REQ-REL-001",
         "class": "requirement",
         "ssot": "spec/relations.html#req-rel-001",
@@ -2343,7 +2349,7 @@
         "id": "REQ-VER-002",
         "class": "requirement",
         "ssot": "spec/verification.html#req-ver-002",
-        "essence": "各 scenario は canonical な req_id を 1 つ参照する (rules §10 / relations §5.3、 または verification 固有の REQ-VER-*)。"
+        "essence": "各 scenario は canonical な req_id を 1 つ参照する (rules §10 / relations §5.3、 または verification 固有の REQ-VER-* / REQ-NAV-*)。"
       },
       {
         "id": "REQ-VER-003",

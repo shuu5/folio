@@ -1613,7 +1613,7 @@ expect_vfilled_fail "PR10b ★平易行 slot の per-row 束縛 (別 row の slo
 cp "$TMP/base-filled.html" "$TMP/pr11.html"
 perl -0777 -i -pe 'our $n; $n += s#<p class="rq-plain"><span class="rq-plain-k">やさしく言うと</span><span data-prose-slot="plain" data-slot-id="plain-req-ver-001">[^<]*</span></p>\n##; END { exit($n?0:9) }' "$TMP/pr11.html" \
   || ng "PR11 mutation が発火せず (shape drift = 空撃ち)"
-expect_vfilled_fail "PR11 ★平易行 1 row 削除を契約非依存 census (rq-plain == 31) が捕捉" "$TMP/pr11.html" "census: rq-plain"
+expect_vfilled_fail "PR11 ★平易行 1 row 削除を契約非依存 census (rq-plain == 32) が捕捉" "$TMP/pr11.html" "census: rq-plain"
 # PR11b. ★平易行の ★空化 (件数保存・per-row 非空 floor の isolation)。 census (占有数) は緑のまま = 非空 arm が唯一の teeth。
 cp "$TMP/base-filled.html" "$TMP/pr11b.html"
 perl -0777 -i -pe 'our $n; $n += s#(data-slot-id="plain-req-ver-003">)[^<]+(</span>)#${1}${2}#; END { exit($n?0:9) }' "$TMP/pr11b.html" \
@@ -1641,7 +1641,7 @@ if printf '%s\n' "$pr12_out" | grep -F '要件タプル (id/pattern/class/label/
   ok "PR12 補助 ★要件タプルは mutated 契約と自己整合 (0/0 恒真・census が唯一の FAIL 源)"
 else ng "PR12 補助 ★要件タプルが自己整合せず (census 単独 isolation の前提崩れ)"; fi
 if [[ $pr12_rc -ne 0 ]] && printf '%s\n' "$pr12_out" | grep -F 'census: rq-prio' | grep -qF '[FAIL]'; then
-  ok "PR12 ★契約 priority 一括削除を契約非依存 census (rq-prio == 31) が捕捉 (0/0 恒真封鎖)"
+  ok "PR12 ★契約 priority 一括削除を契約非依存 census (rq-prio == 32) が捕捉 (0/0 恒真封鎖)"
 else ng "PR12 ★census が priority 一括削除を捕捉できず (rc=$pr12_rc = 0/0 恒真 PASS の再開通)"; fi
 # PR13. ★要件 normative fold の summary を旧英語ラベルへ戻す → summary 平易ラベル pin FAIL。
 cp "$TMP/base-filled.html" "$TMP/pr13.html"

@@ -30,22 +30,33 @@
 #     (2026-08-03 verify-verification.sh census arm 実測): FZ_XREF 31→32 (statement 内 ADR-0055 明示 a.xref +1) /
 #     FZ_CODE_TABLE_CELL 43→44 (§3.7 RTM scenario cell の <code>prime-boot.yaml</code> +1) / FZ_CODE_REST 79→80・FZ_CODE_TOTAL 124→126 (RTM cell +1 と、apply-verifier BG-1 是正 = essence へ <code>--boot</code> 条項追加の +1)。
 #     statement 内の新規 <code> (--boot ×3 等) は機械層ゆえ人間層 census の対象外 (counts 不変を実測で確認)。他 scalar / ID_SET 不変。
-#   provenance_contract_sha256 = 17ab20e47baf45d97041411837bb7a3e64770a898878cc9182d8c4aeb39453d3
+#   ★REQ-NAV-008 新設 (chrome-scope arm の REQ 正式化・ADR-0054 §2.1 由来・folio-4vfb) で contract requirements が 31→32 件へ
+#     成長したため provenance sha を現 contract へ re-freeze し、scalar 5 値 + ID_SET を機械再導出で bump した
+#     (2026-08-03 verify-verification.sh census arm 実測): FZ_ID_COUNT 57→58 (+req-nav-008) / FZ_CODE_TABLE_CELL 44→46
+#     (§3.7 RTM 新行 scenario cell の <code>chrome-scope-clean</code> + <code>-violation.yaml</code> の +2) / FZ_CODE_REST 80→81
+#     (essence の <code>[chrome-scope]</code> +1)・FZ_CODE_TOTAL 126→129 / FZ_SPAN_TABLE_CELL 60→62 (RTM 新行の badge span +
+#     ears span の +2)。★FZ_XREF は 32 不変 — statement / essence の ADR-0054 言及は全て plain <a href> (class 無し) で書き、
+#     essence 側の裸 token は fix Pass3 bare-token auto-wrap が xref 昇格させるため freeze 前に anchor 内へ統一した
+#     (anchor 内は wrap mask 対象 = 不動点)。FZ_TERM / DELTA / ESC / JQS / stakeholders は不変。
+#     ★同 land 内の Phase F ceiling errata (5-lens findings 統合) で REQ-NAV-008 essence/statement・REQ-VER-002 statement・
+#     §3.8 導入 prose・§3.9 subhead・RTM derives-from・REQ-NAV-007 逆参照を改訂 (機械層逐語 + 人間層 essence の同時改訂)。
+#     scalar は全て不変 (essence の <code> 数 1 個のまま・新規リンクは全て plain <a href>)・provenance sha のみ再 freeze。
+#   provenance_contract_sha256 = fcb649c040407d3ad393d87262b1cd98ad0f7ca8d0b722bc30e21d7f6d11c995
 #     (folio-verification.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する。deliverable 7)
 # ============================================================================
 
 # ---- scalars (frozen literal・subject = 生成物 HTML) ----
-FZ_ID_COUNT=57
+FZ_ID_COUNT=58
 FZ_XREF=32
 FZ_TERM=27
 FZ_DELTA=5
 FZ_ESC_XREF=3
-FZ_CODE_TABLE_CELL=44
+FZ_CODE_TABLE_CELL=46
 FZ_CODE_CAPTION=2
-FZ_CODE_REST=80
-FZ_CODE_TOTAL=126
-FZ_SPAN_TABLE_CELL=60
+FZ_CODE_REST=81
+FZ_CODE_TOTAL=129
+FZ_SPAN_TABLE_CELL=62
 FZ_SPAN_CAPTION=1
 FZ_ESC_CODE=0
 FZ_ESC_SPAN=2
@@ -62,6 +73,7 @@ req-nav-004
 req-nav-005
 req-nav-006
 req-nav-007
+req-nav-008
 req-ver-001
 req-ver-002
 req-ver-003

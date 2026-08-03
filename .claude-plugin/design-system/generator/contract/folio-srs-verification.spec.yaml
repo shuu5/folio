@@ -57,7 +57,7 @@ sections:
     essence: "この spec は、 folio の generator が機械 SSoT (contract + prose YAML) から生成する <strong>SRS プレゼン HTML</strong> が「完成した (GREEN)」と言える条件を定める。 決定的で blocking な <strong><span class=\"term\" data-term=\"floor\" data-tooltip=\"deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。\">floor</span></strong> と LLM の <strong><span class=\"term\" data-term=\"ceiling\" data-tooltip=\"LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。\">ceiling</span></strong> の二層で、 <strong>floor 単独では GREEN を宣言しない</strong>のが要。"
     blocks: []
     machine_blocks:
-      - { type: note, html: "<p>読み方: §1 が<strong>機械/LLM 検証境界</strong> (何を決定的 floor が裁き、 何を LLM ceiling が裁くか) を宣言し、 §2 がその境界に沿って done-condition を REQ-VER-024〜030 で形式化する。 §3 が検証被覆 (RTM)、 §4 が参照。 REQ-VER-001〜023 / REQ-NAV-001〜007 (folio 自身の verification) は姉妹 spec <a href=\"verification.html\">verification.html</a> にある。</p>" }
+      - { type: note, html: "<p>読み方: §1 が<strong>機械/LLM 検証境界</strong> (何を決定的 floor が裁き、 何を LLM ceiling が裁くか) を宣言し、 §2 がその境界に沿って done-condition を REQ-VER-024〜030 で形式化する。 §3 が検証被覆 (RTM)、 §4 が参照。 REQ-VER-001〜023 / REQ-NAV-001〜008 (folio 自身の verification) は姉妹 spec <a href=\"verification.html\">verification.html</a> にある。</p>" }
   - id: "s1"
     anchor: "s1-boundary-model"
     tint: "brand"
@@ -104,7 +104,7 @@ sections:
     machine_blocks:
       - type: list
         items:
-          - "<a href=\"verification.html\">verification.html</a> — folio 自身の sandbox verification (姉妹 spec、 REQ-VER-001〜023 / REQ-NAV-001〜007。 本 spec は §3.9 からの分離)"
+          - "<a href=\"verification.html\">verification.html</a> — folio 自身の sandbox verification (姉妹 spec、 REQ-VER-001〜023 / REQ-NAV-001〜008。 本 spec は §3.9 からの分離)"
           - "<a href=\"rules.html\">rules.html</a> — Layer 1 universal rules (<a href=\"rules.html#s12-srs-design-system\">§12 SRS design system</a> = fabrication-free-by-construction の WHAT SSoT、 §6 EARS Notation)"
           - "<a href=\"constitution.html\">constitution.html</a> — 不変原則 (<a href=\"constitution.html#p-13\">P-13</a> Verification &amp; Traceability の floor 実装)"
           - "<a href=\"../research/srs-component-taxonomy.html\">srs-component-taxonomy.html</a> — SRS 部品 taxonomy (<a href=\"../research/srs-component-taxonomy.html#s5-done-condition\">§5 done-condition</a> = 二層判定式の設計 SSoT)"

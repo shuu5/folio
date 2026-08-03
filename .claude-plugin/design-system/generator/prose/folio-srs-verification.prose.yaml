@@ -31,7 +31,7 @@
 slots:
   cover-summary: "folio の generator が機械 SSoT (contract + prose の YAML) から生成する『SRS プレゼン HTML』が、 いつ『完成した (GREEN)』と言えるかの完成判定を定める仕様です。 判定は二層で、 件数・構造・見た目の崩れ・再組立の byte 一致など算術的に自明なものを決定的で blocking な floor が裁き、 自由文の捏造・可読性・意味カバレッジは LLM の ceiling が裁きます。 中心は 5 つの規範要件 (EARS 記法の REQ-VER-024〜030・027/028 は欠番) で、 検証被覆の一覧 (RTM) を添え、 上位の原則 (constitution)・決定記録 (ADR)・姉妹の検証仕様 (verification) へ前方照会します。 本ページは元の srs-verification.html を機械 SSoT から dual-audience で再生成したもので、 折りたたみ — 章に置かれた『機械向けの詳細（原文そのまま）』(地の文) と各要件の『正確な条文（機械向けの厳密な書き方）』(EARS 規範文) — を開くと精密な記述を確認できます。"
 
-  chapter-lead-01: "まず読み方から。 §1 が機械と LLM のどちらが何を裁くかの検証境界と完成判定モデルを宣言し、 §2 がその境界に沿って完成判定を 5 つの要件 (REQ-VER-024〜030) で形式化します。 §3 が検証被覆の一覧 (RTM)、 §4 が参照です。 folio 自身の検証 (REQ-VER-001〜023 / REQ-NAV-001〜007) は姉妹 spec の verification.html にあります。"
+  chapter-lead-01: "まず読み方から。 §1 が機械と LLM のどちらが何を裁くかの検証境界と完成判定モデルを宣言し、 §2 がその境界に沿って完成判定を 5 つの要件 (REQ-VER-024〜030) で形式化します。 §3 が検証被覆の一覧 (RTM)、 §4 が参照です。 folio 自身の検証 (REQ-VER-001〜023 / REQ-NAV-001〜008) は姉妹 spec の verification.html にあります。"
   chapter-lead-02: "機械 SSoT から生成した SRS プレゼン HTML の完成判定を、 決定的で blocking な floor と LLM の ceiling の二層で定義します。 件数・構造・render・再組立の一致など算術的に自明なものだけを floor が blocking で裁き、 自由文の捏造・可読性・意味カバレッジは LLM の ceiling が裁く、 という境界の線引きがこの章の要です。 構造の捏造はそもそも構成上できない (fabrication-free-by-construction) ため、 静的な禁止群は blocking でない warn 級の補助に留め、 floor 単独では GREEN を宣言しません。"
   chapter-lead-03: "生成 SRS の完成判定を、 5 つの規範要件 (REQ-VER-024〜030・027 と 028 は欠番) で形式化します。 各要件が §1 の境界のどこ (blocking な floor / warn 級の補助 / LLM の ceiling) に属すかを、 やさしい要約と機械層の両方に明記します。"
   chapter-lead-04: "5 つの完成判定要件 (024〜030) が、 それぞれどの検証で確かめられているかを一覧します。 検証の列が空いていれば、 それは『まだ検証されていない』gap の可視化です (030 は検証 scenario の spawn 待ち)。"

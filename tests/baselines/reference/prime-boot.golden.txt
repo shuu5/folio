@@ -6,7 +6,7 @@
 # Tier 1 (per-spec @id/title/doc-type/status/summary + object-graph index) = `folio prime` を on-demand 実行
 # Tier 2 (各 spec の head + 冒頭段落) / Tier 3 (本文全体) = 該当 spec を on-demand Read・関係詳細 (objectGraph 全 node/edge) = inventory.json を Read
 
-# 照会 graph digest — 127 nodes · 104 照会 edges (doc→canonical object xref)。 被参照数 top 10:
+# 照会 graph digest — 128 nodes · 104 照会 edges (doc→canonical object xref)。 被参照数 top 10:
 - P-11 [principle] ← 6 refs
 - P-7 [principle] ← 4 refs
 - ADR-0003 [decision] ← 3 refs

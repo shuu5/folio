@@ -175,13 +175,13 @@ RICH_HREF_ALLOW_DESC='#fragment / 相対 *.html(#frag) / 相対 *.md(#frag) / ht
 # ★instance 固有値の扱い (汎化 fence): 本 file は verification 専用 fork (validate() の doc_type==spec 束縛を参照)
 #   ゆえ、 本定数は ★その fork の実測値。 同型を d7bq/bxpm へ波及させる際は ★機構 (被覆量 assert) をそのまま持ち、
 #   値だけ各 pack の実測へ差し替えること (機構を落として値だけ移すと恒真 PASS が復活する)。
-RICH_FIELD_MIN=345
+RICH_FIELD_MIN=352
 # ★型別の実測下限 (folio-eccf S5・RICH_FIELD_MIN の count-only 残余の解消)。 "min:::label:::query" の 3 つ組。
 # ★なぜ総数下限だけでは足りないか (総数は ★型間の相殺を見逃す):
 #   RICH_FIELD_MIN は「総数が減ったら FAIL」しか言えない。 契約が正当に育って table-rows が 220→230 になった後に
 #   sect-essence (7 値) の query が drift すると 総数は 343 ≥ 337 ゆえ ★緑のまま 7 値が無検査になる。
 #   すなわち ★被覆の喪失が契約の成長に紛れて隠れる。 ゆえ ★型ごとに下限を持ち、 型単位の減少を個別に撃つ。
-# ★実測 (現契約): 7 + 19 + 7 + 24 + 225 + 1 + 31 + 31 = 345 = RICH_FIELD_MIN (総数と内訳は同じ集合の別表現)。
+# ★実測 (現契約): 7 + 19 + 7 + 24 + 230 + 1 + 32 + 32 = 352 = RICH_FIELD_MIN (総数と内訳は同じ集合の別表現)。
 # ★二重保守の封鎖 (この表と rich_field_values は同じ集合を ★別記法で列挙する = drift しうる):
 #   ゆえ validate_rich_inline で ★sum(型別) == rich_field_values の総行数 を ★恒等式として課す。
 #   drift すれば恒等式が破れて abort する = 表と本体の一致を ★機械が保証する (人間の規律に依存しない)。
@@ -193,10 +193,10 @@ RICH_FIELD_TYPE_MINS=(
   '19:::subhead-essence:::[.sections[].blocks[]? | select(.type=="subhead") | .essence] | .[]'
   '7:::table-caption:::[.sections[].blocks[]? | select(.type=="table") | (.caption // "")] | .[]'
   '24:::table-headers:::[.sections[].blocks[]? | select(.type=="table") | .headers[]] | .[]'
-  '225:::table-rows:::[.sections[].blocks[]? | select(.type=="table") | .rows[][]] | .[]'
+  '230:::table-rows:::[.sections[].blocks[]? | select(.type=="table") | .rows[][]] | .[]'
   '1:::mermaid-caption:::[.sections[].blocks[]? | select(.type=="mermaid") | (.caption // "")] | .[]'
-  '31:::req-essence:::.requirements[].essence'
-  '31:::req-statement:::.requirements[].statement'
+  '32:::req-essence:::.requirements[].essence'
+  '32:::req-statement:::.requirements[].statement'
 )
 # ★人間層の絶対 URL scheme allowlist (perl regex 片・下の $href_ok へ env 経由で埋まる)。
 #   ★https のみ (http:// は不可) = 改修前の literal と同値。 実測: 人間層 rich field の href 140 件は
@@ -228,7 +228,7 @@ MACHINE_ATTR_ALLOW="$RICH_ATTR_ALLOW"
 #   列挙に依らず一律に落ちる (否定列挙をしていないので http 追加が他 scheme を開くことはない)。
 MACHINE_HREF_SCHEME='https?'
 MACHINE_HREF_ALLOW_DESC='#fragment / 相対 *.html(#frag) / 相対 *.md(#frag) / http(s)://'
-# ★機械層 field の実測下限 (現契約 = 34 値)。 人間層 RICH_FIELD_MIN=345 とは ★別物・★merge 禁止
+# ★機械層 field の実測下限 (現契約 = 34 値)。 人間層 RICH_FIELD_MIN=352 とは ★別物・★merge 禁止
 #   (合算すると 345 の pin が壊れ、 かつ層別 allowlist の適用先が混ざる)。 意味論は RICH_FIELD_MIN と同じ「下限」で、
 #   ★減少方向 (被覆の喪失) だけを塞ぐ。
 MACHINE_FIELD_MIN=34

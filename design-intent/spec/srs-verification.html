@@ -662,13 +662,13 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 </div>
 </details>
 <section id="s0-reader-guide">
-<section data-component="chapter-deck-band" class="tint-info"><span class="num">0</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> §0 / 読み方</span><h2>§0. Reader's Guide</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-01">まず読み方から。 §1 が機械と LLM のどちらが何を裁くかの検証境界と完成判定モデルを宣言し、 §2 がその境界に沿って完成判定を 5 つの要件 (REQ-VER-024〜030) で形式化します。 §3 が検証被覆の一覧 (RTM)、 §4 が参照です。 folio 自身の検証 (REQ-VER-001〜023 / REQ-NAV-001〜007) は姉妹 spec の verification.html にあります。</p></section>
+<section data-component="chapter-deck-band" class="tint-info"><span class="num">0</span><span class="kicker"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> §0 / 読み方</span><h2>§0. Reader's Guide</h2><p class="lead" data-prose-slot="chapter-lead" data-slot-id="chapter-lead-01">まず読み方から。 §1 が機械と LLM のどちらが何を裁くかの検証境界と完成判定モデルを宣言し、 §2 がその境界に沿って完成判定を 5 つの要件 (REQ-VER-024〜030) で形式化します。 §3 が検証被覆の一覧 (RTM)、 §4 が参照です。 folio 自身の検証 (REQ-VER-001〜023 / REQ-NAV-001〜008) は姉妹 spec の verification.html にあります。</p></section>
 <div class="chapbody">
 <div data-component="section-essence-callout"><p class="sec-se">この spec は、 folio の generator が機械 SSoT (contract + prose YAML) から生成する <strong>SRS プレゼン HTML</strong> が「完成した (GREEN)」と言える条件を定める。 決定的で blocking な <strong><span class="term" data-term="floor" data-tooltip="deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。">floor</span></strong> と LLM の <strong><span class="term" data-term="ceiling" data-tooltip="LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。">ceiling</span></strong> の二層で、 <strong>floor 単独では GREEN を宣言しない</strong>のが要。</p></div>
 <details data-component="spec-machine-fold" class="machine-fold">
 <summary><span class="mf-kicker">機械向けの詳細（原文そのまま）</span> <span class="mf-label">§0. Reader's Guide の地の文・運用説明・rationale</span> <span class="mf-count">1 件</span></summary>
 <div class="machine-body">
-<aside data-component="spec-machine-note" data-audience="machine"><p>読み方: §1 が<strong>機械/LLM 検証境界</strong> (何を決定的 floor が裁き、 何を LLM ceiling が裁くか) を宣言し、 §2 がその境界に沿って done-condition を REQ-VER-024〜030 で形式化する。 §3 が検証被覆 (RTM)、 §4 が参照。 REQ-VER-001〜023 / REQ-NAV-001〜007 (folio 自身の verification) は姉妹 spec <a href="verification.html">verification.html</a> にある。</p></aside>
+<aside data-component="spec-machine-note" data-audience="machine"><p>読み方: §1 が<strong>機械/LLM 検証境界</strong> (何を決定的 floor が裁き、 何を LLM ceiling が裁くか) を宣言し、 §2 がその境界に沿って done-condition を REQ-VER-024〜030 で形式化する。 §3 が検証被覆 (RTM)、 §4 が参照。 REQ-VER-001〜023 / REQ-NAV-001〜008 (folio 自身の verification) は姉妹 spec <a href="verification.html">verification.html</a> にある。</p></aside>
 </div>
 </details>
 </div>
@@ -750,7 +750,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 <summary><span class="mf-kicker">機械向けの詳細（原文そのまま）</span> <span class="mf-label">§4. References の地の文・運用説明・rationale</span> <span class="mf-count">1 件</span></summary>
 <div class="machine-body">
 <ul data-component="spec-machine-list" data-audience="machine">
-<li class="mli"><a href="verification.html">verification.html</a> — folio 自身の sandbox verification (姉妹 spec、 REQ-VER-001〜023 / REQ-NAV-001〜007。 本 spec は §3.9 からの分離)</li>
+<li class="mli"><a href="verification.html">verification.html</a> — folio 自身の sandbox verification (姉妹 spec、 REQ-VER-001〜023 / REQ-NAV-001〜008。 本 spec は §3.9 からの分離)</li>
 <li class="mli"><a href="rules.html">rules.html</a> — Layer 1 universal rules (<a href="rules.html#s12-srs-design-system">§12 SRS design system</a> = fabrication-free-by-construction の WHAT SSoT、 §6 EARS Notation)</li>
 <li class="mli"><a href="constitution.html">constitution.html</a> — 不変原則 (<a href="constitution.html#p-13">P-13</a> Verification &amp; Traceability の floor 実装)</li>
 <li class="mli"><a href="../research/srs-component-taxonomy.html">srs-component-taxonomy.html</a> — SRS 部品 taxonomy (<a href="../research/srs-component-taxonomy.html#s5-done-condition">§5 done-condition</a> = 二層判定式の設計 SSoT)</li>
@@ -804,7 +804,7 @@ a.cov-req:hover .badge--req,a.cov-req:focus-visible .badge--req{outline:2px soli
 </div>
 <footer class="foot" data-component="fidelity-sync-meta"><div class="ft-grid">
 <div class="ft-plain">このページは、大もとの機械データ (正本) から自動で組み立てられています。構造は機械が自動で検査し、内容が元データに忠実かは独立のレビューで確かめます。</div>
-<div data-audience="machine">機械SSoT: <b>folio-srs-verification.spec.yaml</b> &middot; 生成: <b>2026-08-01 22:06</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
+<div data-audience="machine">機械SSoT: <b>folio-srs-verification.spec.yaml</b> &middot; 生成: <b>2026-08-03 01:18</b> &middot; 検証状態: <b>structure ✓ fabrication-free / prose ✓ 充填済 (fidelity ceiling → S5 対象)</b></div>
 <div class="tags" data-audience="machine"><span>folio design system</span><span>spec-pack (srs-verification fork)</span><span>folio engine</span><span>EARS 章立て + 非終端 照会 + 機械層 <span class="term" data-term="fold" data-tooltip="details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。">fold</span></span></div>
 </div></footer>
 <!-- folio:chrome-bottom -->
