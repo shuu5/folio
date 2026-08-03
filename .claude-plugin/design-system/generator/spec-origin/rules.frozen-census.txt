@@ -36,7 +36,19 @@
 #     【消費しない】(存在 pin のみ) 一方、 その sha256 は本 header の宣言値と SNAPPIN-1 が突合する bootstrap 記録
 #     ゆえ、 現行 contract 文言へ「同一文言化」すると記録が壊れ pin が破れる (fence 補正 7 の当該 step は本 arm の
 #     政策 A 転換後には適用対象を持たない = 意図的に実施しない旨をここに開示する)。
-#   provenance_contract_sha256 = a346738366e7fe6e243fc08d6c030f518d46b7f05988c779be552cfcf64f5cfd
+#   ★folio-qiql (31oz follow-up・chrome 語彙/要素集合の整合改訂) で contract が再度成長したため provenance sha を
+#     現 contract へ re-freeze した (census-guard (1) の要求)。 ★scalar 値と ID_SET は ★全て不変 = bump 0 —
+#     改訂は §11.2 機械層への chrome 要素完全集合 (9 種 × 非生成/生成 spec × 出力条件) の追記 + §11.3 機械層への
+#     print 全展開 handler 帰属 1 文 + 表記統一 (audience toggle → audience-toggle 3 箇所 / 所属表示 → 所属 locator
+#     2 箇所) + §11.2 sub-essence への chrome-less 例外 1 文 のみで、 ★提示層の意味づけだけを動かす。
+#     実測 (canonical design-intent/spec/rules.html・verify-spec.sh --artifact 126 OK / 0 FAIL で確認):
+#       id 58 / a.xref 26 / span.term 18 / delta 1 / esc-xref 1 / code 0/0/9/9 (table-cell/caption/rest/総数) /
+#       span 7/0 (table-cell/caption) / esc-code 0 / esc-span 19 — 凍結 13 scalar と ID_SET が全て一致。
+#     ★追記 idiom は先例 5ed89f3 (Cell U) を踏襲: plain text + <strong> / <code> / 素の <a href> のみ を用い、
+#     class="xref" と span.term を新たに 1 個も生やさない (rich census 不変)。 人間層への追記は §11.2 sub-essence
+#     1 文と表 cell の逐値置換に限り、 人間層 <code> / <span> を 1 個も増やさない (generic census 不変)。
+#     ★spec-origin/rules.origin.html (pre-flip snapshot) は本 cell でも ★不改変 (上記と同じ理由)。
+#   provenance_contract_sha256 = 3a0030f4fd937bb15a60de21453cacaae04519317e23a29ac4a4c561bd6011c7
 #     (folio-rules.spec.yaml の freeze 時 sha256。数字上書き防壁 = census-guard.sh ★rules が
 #      base..HEAD で「census 値変更 ⟺ contract 変更」の連動 + 本 sha 整合を検査する)
 #   ★実態開示 (folio-7wbn 2〜3 巡目 ceiling): 政策A の恒久防御は ★rules では 3 点とも CI 未配線 = shipped 状態で
