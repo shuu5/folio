@@ -1,0 +1,40 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-008"
+ears_pattern: "state-driven"
+kind: "cli-golden"
+description: |
+  chrome 述語の allowlist が 2 本 (spec-pack / principle-pack) へ拡張された後 (ADR-0054 §2.4・
+  folio-qojv 決定 9 = 案 P) の chrome 部分抑制を、 principle-pack 産物を含む corpus で clean 側
+  (exit 0) から pin する (chrome-scope-principle-violation.yaml = 違反側の対)。 既存
+  chrome-scope-{clean,violation} は spec-pack 側の pin で、 本 scenario は additive な 2 本目の pack
+  を独立 fixture で pin する (既存 fixture は 1 byte も改変していない)。
+  fixture は ../.claude-plugin/bin/folio build --root fixtures/chrome-scope-principle で生成済で、
+  committed bytes が二方向の期待形そのものを担う:
+    - spec/principle.html (生成 cohort = generator meta "folio principle-pack assembler" 持ち・
+      述語が gen=1 と判定し chrome-less が期待形): nav.toc / breadcrumb / audience-toggle 生成 JS が
+      **無く**、 skip-link・print 全展開 handler (beforeprint/afterprint)・所属 locator
+      (p.doc-locator)・prev-next は **在る**。
+    - spec/handwritten.html + spec/README.html + spec/constitution.html + research/README.html
+      (非生成 cohort = generator meta 無し・gen=0 で chrome 存続が期待形): breadcrumb・
+      audience-toggle 生成 JS・print 全展開 handler が従来どおり在り、 emitter と同一述語で条件付く
+      skip-link / nav.toc / cluster-nav / prev-next も在る。 ★兄弟 cluster research/ を置いてあるのは
+      cluster-nav (emitter が「兄弟 cluster README が実在するときだけ」出す chrome) を非空にするため。
+  ★本 scenario が撃つ退行 (mutation-kill・実測 2026-08-03): bin/folio の allowlist table
+  (folio_chrome_pack_alt) から principle-pack を削ると spec/principle.html が非生成 cohort へ落ち、
+  「非生成 page から breadcrumb / audience-toggle / ページ内目次 が失われている」+ cohort 非空
+  (本 corpus に spec-pack 産物は無いので生成 cohort が 0 件になる) が鳴って exit 1 = KILLED。
+  canonical 述語だけを旧 literal へ narrowing すると (家系は table 由来のまま) 逆向き anchor
+  「述語の取りこぼし」が鳴って exit 1 = KILLED。
+  spec/constitution.html は @type FolioConstitution を持ち self-root 判定を発火させるので、 cohort
+  非空 assert (生成 cohort ≥1 かつ 非生成 cohort ≥1) も同時に走る (述語が常時 true / 常時 false へ
+  潰れる形の検出)。 なお本 corpus の生成 cohort は principle.html の 1 件だけであり、
+  spec-pack 産物は 1 件も置いていない — allowlist から principle-pack が落ちた瞬間に生成 cohort が
+  空になる = cohort assert が MK-A の第 2 の kill 経路として効く構成である。
+
+command: ["validate", "--root", "tests/fixtures/chrome-scope-principle"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-scope-principle-clean.golden.txt"
+
+expect:
+  exit_code: 0

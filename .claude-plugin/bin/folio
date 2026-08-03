@@ -2775,9 +2775,11 @@ folio_cmd_validate() {
   #     陽性 (非生成 page) = breadcrumb / audience-toggle / print handler が在り、 emitter と同一述語で
   #                        条件付けた skip-link / nav.toc / cluster-nav / prev-next も在る = 誤剥離の非回帰
   #                        (陰性と対称に問う — 片側だけ薄いと抑制の scope leak が build に masking される)。
-  #   さらに constitution (@type FolioConstitution) は generator meta とは *別 signal* で chrome 保持を
-  #   要求する anchor を置く — 述語自体が壊れて全 page を「生成」と誤判定する mutation は、 分類に
-  #   従属する assert だけでは両方向とも素通りする (分類依存 assert の vacuous 化) ため。
+  #   さらに *分類そのもの* を generator meta 述語とは独立の signal (pack 構造 = doc-cover-band) で
+  #   二方向に縛る (下記「誤分類 anchor」「逆向き anchor」) — 述語自体が壊れて全 page を「生成」/
+  #   「非生成」へ誤判定する mutation は、 分類に従属する assert だけでは両方向とも素通りする
+  #   (分類依存 assert の vacuous 化) ため。 doc-type の名指し pin (@type FolioConstitution 等) は
+  #   置かない: band 型 anchor の方が「手書き page 一般の誤剥離」を doc-type 非依存に撃てて広い。
   #   self-root corpus では両 cohort の非空も要求する (述語が常時 true/false に潰れる形の検出)。
   local chv_base chv_rel chv_tmp chv_reg chv_gen chv_strip chv_ngen=0 chv_nnon=0
   chv_base=$(folio_chrome_base_url "$root_abs")
@@ -2867,9 +2869,10 @@ folio_cmd_validate() {
     #   signature (doc-cover-band) を必ず持つ。 generator meta 述語が過剰一致して手書き page
     #   (constitution / self-spec / ADR) を剥がす mutation は、 分類に従属する上の assert 群では
     #   両方向とも素通りする (vacuous 化) ため、 別 signal で縛る。 constitution の名指し pin に
-    #   しないのは ADR-0054 §2.4 が constitution の将来 flip を予定するため — ただし flip 後も本
-    #   anchor は無関係のまま残る (constitution の contract は principle-pack ゆえ generator meta が
-    #   "folio principle-pack assembler" になり canonical 述語は非該当 = gen=0 で本 anchor は不発火)。
+    #   しないのは ADR-0054 §2.4 が constitution の将来 flip を予定するため — flip 後は principle-pack
+    #   が allowlist (folio_chrome_pack_alt) に載っているので generator meta "folio principle-pack
+    #   assembler …" が canonical 述語に *一致* し gen=1 になり、 本 anchor は principle-pack 産物にも
+    #   doc-cover-band を要求する側として発火する (allowlist 拡張前は gen=0 で不発火だった)。
     #   名指ししないことの実利は「手書き page 一般の誤剥離」を doc-type 非依存に撃てる点にある。
     #   band の有無は raw tag anchored (folio_chrome_has_cover_band) で問う — 逐語言及を拾う
     #   fixed-string grep は、 解説 page の例示 markup で判定が反転する。
@@ -2881,14 +2884,15 @@ folio_cmd_validate() {
     #   (fork を 1 系統だけ拾う等) が素通りする — 落ちた page は build で chrome を再注入され、
     #   分類に従属する assert 群は「非生成 = breadcrumb 有りが正常」と読むため両方向とも沈黙し、
     #   chrome-drift も build 後は render==file で恒真 PASS になる (build が masking 経路になる)。
-    #   ★前件は *spec-pack 家系に限定* する: doc-cover-band は共有 lib が 17 assembler 全てに出す
-    #   pack 一般の signature ゆえ、 band 単独を前件にすると ADR-pack / principle-pack / S4 SRS 等の
-    #   産物が chrome 対象 dir に入った瞬間 (folio-c5r の doc-suite 被覆・ADR-0054 §2.4 の constitution
-    #   flip・consumer の生成 SRS = verification.html §3.9) に、 build でも編集でも解消できない
-    #   violation (unremediable wedge) になる。 ADR-0054 は spec-pack 産物以外を chrome-less 化して
-    #   いないため、 他 pack を chrome 有りのまま通すのが正しい (follow-up = folio-31oz 配下で
-    #   per-pack に述語を拡張する)。 家系判定は canonical 述語より粗い独立 signal ゆえ、 fork の
-    #   部分取りこぼしは従来どおり撃てる。
+    #   ★前件は *chrome-less pack 家系に限定* する (allowlist = folio_chrome_pack_alt 由来):
+    #   doc-cover-band は共有 lib が 17 assembler 全てに出す pack 一般の signature ゆえ、 band 単独を
+    #   前件にすると ADR-pack / S4 SRS 等 *table 外* の産物が chrome 対象 dir に入った瞬間 (folio-c5r
+    #   の doc-suite 被覆・consumer の生成 SRS = verification.html §3.9) に、 build でも編集でも解消
+    #   できない violation (unremediable wedge) になる。 ADR-0054 は allowlist 外の pack 産物を
+    #   chrome-less 化していないため、 それらを chrome 有りのまま通すのが正しい。 per-pack への述語
+    #   拡張 (旧 follow-up = folio-31oz 配下の folio-ni9i) は folio-qojv 決定 9 (案 P) により
+    #   spec-pack + principle-pack の 2 本 allowlist として完了済 — 以後の追加は table の 1 行で行う。
+    #   家系判定は canonical 述語より粗い独立 signal ゆえ、 fork の部分取りこぼしは従来どおり撃てる。
     if [[ "$chv_gen" -eq 0 ]] && folio_chrome_is_spec_pack_family "$chv_strip" \
        && folio_chrome_has_cover_band "$chv_strip"; then
       violations+=("${chv_rel}"$'\t'"[chrome-scope] spec-pack 家系の pack 構造 (doc-cover-band) を持つのに生成 spec と判定されていない = 述語の取りこぼし (ADR-0054 §2.1)")
@@ -3976,28 +3980,60 @@ folio_cmd_build() {
 #   生成 index/glossary と同じ位置づけ)。
 # ============================================================================
 
-# 生成 spec ページ判定 (ADR-0054 §2.1) — chrome 部分抑制の唯一の検出述語 (single definition)。
+# chrome-less 対象 pack の *単一 table* (ADR-0054 §2.1/§2.4・folio-qojv 決定 9 = 案 P)。
+#   下の 2 述語 — canonical (folio_chrome_is_generated_spec) と家系 (folio_chrome_is_spec_pack_family)
+#   — は *どちらもこの table だけ* を SSoT に導出する。 片方だけを広げる形の退行を、 pack 集合の
+#   分岐を持たせないことで構造的に封じるため: canonical だけ広げると新 pack について「述語が
+#   narrow 化した」ことを撃つ逆向き anchor が消えて silent fail-open になり、 家系だけ広げると
+#   chrome 保持が正しい pack が build でも編集でも解消できない violation (unremediable wedge) になる。
+#   ★載せるのは 2 本限定。 意図的に載せない pack (追加禁止の理由付き pin):
+#     - vision-pack: design-intent/vision.html は chrome 走査 dir (spec/decisions/research maxdepth 1)
+#       の外・head JSON-LD 0 件・chrome marker 0 件の三重で対象外ゆえ今載せても no-op だが、 将来
+#       vision doc が spec/ へ入った瞬間に *無審査で* chrome を剥がす休眠 fail-open を作る。
+#     - arch-pack: folio-8kuf が実弾で不適合を確定済 (self-spec vehicle 候補外)。
+#   追加は「その pack の産物が提示層を完結所有する」ことを ADR で確定してから、 この table の 1 行
+#   だけで行う。 content の前置きを parse して pack 名を取り出す refactor 型は不採用 — 既存 meta は
+#   em-dash 変種 2 種を跨ぐため前置き parse は fork 差で壊れる (allowlist 追加型に留める)。
+folio_chrome_pack_alt() {
+  local packs=(spec-pack principle-pack)
+  local IFS='|'
+  printf '%s' "${packs[*]}"
+}
+
+# 生成 spec ページ判定 (ADR-0054 §2.1/§2.4) — chrome 部分抑制の唯一の検出述語 (single definition)。
 #   ★新 marker を発明しない: pack assembler が既に emit している <meta name="generator"> を述語に使う
-#   (ADR-0052 の同一述語 doctrine)。 spec-pack fork 4 系統 (spec / relations / verification /
-#   srs-verification) は content 先頭が "folio spec-pack assembler" で一致し、 他 pack (S4 / ADR-pack /
-#   vision-pack 等) と手書き page (constitution / README / ADR) は非該当 (verified)。
+#   (ADR-0052 の同一述語 doctrine)。 allowlist (folio_chrome_pack_alt) の pack 名を content 属性値の
+#   *直後に anchor* した前方一致で問う: spec-pack fork 4 系統 (spec / relations / verification /
+#   srs-verification) は content 先頭が "folio spec-pack assembler"、 principle-pack 産物は
+#   "folio principle-pack assembler" で一致し、 table 外 pack (S4 / ADR-pack / vision-pack 等) と
+#   手書き page (constitution / README / ADR) は非該当 (verified)。
+#   ★anchor を外した部分一致にしない (家系述語との anchoring 非対称は意図的設計):
+#   tests/fixtures/chrome-scope-violation/spec/constitution.html の罠 meta
+#   ("folio srs-spec-pack assembler …") が canonical 一致へ転び、 逆向き anchor (述語の取りこぼし)
+#   が発火しなくなる = violation golden の検出力が 1 行分落ちる (exit は 1 のままゆえ golden diff
+#   だけが唯一の検出面になる)。 新 pack の罠も同型 (chrome-scope-principle-violation)。
 #   該当 page では nav.toc / breadcrumb / audience-toggle 生成 JS を注入せず (提示層は pack が完結所有)、
 #   skip-link (focus 時のみ可視) / prev-next / print handler は存続し所属 locator を下部へ注入する。
 folio_chrome_is_generated_spec() {
-  grep -qE '<meta name="generator" content="folio spec-pack assembler' "$1"
+  local alt; alt=$(folio_chrome_pack_alt)
+  grep -qE '<meta name="generator" content="folio ('"$alt"') assembler' "$1"
 }
 
-# spec-pack *家系* 判定 (逆向き anchor 専用の広い述語)。 folio_chrome_is_generated_spec より粗く
-# 「generator meta の content に spec-pack を含む」だけを問う — fork を 1 系統だけ拾う形の
-# 部分取りこぼし (canonical 述語が narrow 化する退行) を、 canonical 述語に従属せずに撃つため。
-# ★他 pack (ADR-pack / principle-pack / vision-pack / S4 …) は非該当: doc-cover-band は共有 lib
+# chrome-less pack *家系* 判定 (逆向き anchor 専用の広い述語)。 canonical と同じ table
+# (folio_chrome_pack_alt) から導出しつつ anchoring だけを緩め、 「generator meta の content が
+# allowlist の pack 名を *含む*」だけを問う — fork を 1 系統だけ拾う形の部分取りこぼし
+# (canonical 述語が narrow 化する退行) を、 canonical 述語に従属せずに撃つため。
+# 関数名は spec-pack 由来の歴史名だが、 意味は table 由来の「chrome-less pack 家系」である
+# (rename は REQ-NAV-008 逐語 / golden pin と同時にしか動かせないため据置 = folio-altm 所有)。
+# ★table 外の pack (ADR-pack / vision-pack / S4 …) は非該当: doc-cover-band は共有 lib
 #   (generator/lib/common.sh の cover emit) が 17 assembler 全てに出す *pack 一般* の signature で
-#   あり spec-pack 固有ではない。 逆向き anchor を band 単独で張ると、 ADR-pack 産物や
-#   principle-pack で生成された constitution (ADR-0054 §2.4 の将来 flip) が chrome 対象 dir
-#   (spec/ decisions/ research/) へ入った瞬間に build でも編集でも解消できない violation
-#   (unremediable wedge) になる — ADR-0054 は他 doc-type を chrome-less 化していない。
+#   あり chrome-less pack 固有ではない。 逆向き anchor を band 単独で張ると、 ADR-pack 産物や
+#   consumer の生成 SRS (verification.html §3.9) が chrome 対象 dir (spec/ decisions/ research/)
+#   へ入った瞬間に build でも編集でも解消できない violation (unremediable wedge) になる —
+#   ADR-0054 は allowlist 外の doc-type を chrome-less 化していない。
 folio_chrome_is_spec_pack_family() {
-  grep -qE '<meta name="generator" content="[^"]*spec-pack' "$1"
+  local alt; alt=$(folio_chrome_pack_alt)
+  grep -qE '<meta name="generator" content="[^"]*('"$alt"')' "$1"
 }
 
 # pack 構造 signature (doc-cover-band) を *実 markup として* 持つか ($1=stripped file)。

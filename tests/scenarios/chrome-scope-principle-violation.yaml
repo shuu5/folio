@@ -1,0 +1,42 @@
+schema_version: "0.1"
+req_id: "REQ-NAV-008"
+ears_pattern: "unwanted"
+kind: "cli-golden"
+description: |
+  ★本 scenario の存在理由 = 「無音枝」の loud 化 (folio-ni9i 事実訂正 1 (b) / folio-qojv 決定 9)。
+  allowlist 拡張前は、 principle contract に head_graph が入って principle-pack 産物が chrome 走査
+  対象 dir へ現れた瞬間、 folio build が gen=0 と判定して breadcrumb / nav.toc / audience-toggle を
+  **無条件に再注入**し、 chrome-scope arm は当該 page を非生成 cohort と読むため「chrome 有りが正常」
+  として沈黙し、 chrome-drift も build 後は render==file で恒真 PASS になる — つまり ADR-0054 §2.4
+  違反が全 gate 緑のまま silent に land する枝が在った。 本 fixture の spec/principle.html は
+  **その枝が実際に生む bytes そのもの** (allowlist を spec-pack 1 本へ戻した bin/folio で
+  build --root して焼いた committed bytes) であり、 本 scenario はそれを exit 1 で block する。
+  実測 (2026-08-03・同一 bytes に対する 2 述語の対比): 旧述語 (spec-pack 1 本) では
+  spec/principle.html に対する chrome-scope violation は **0 行** (当該 page について完全に無音)。
+  新述語 (spec-pack + principle-pack) では chrome-drift 1 行 + chrome-scope 4 行 = **5 行**が発火する。
+  この 0→5 が「無音枝を loud にした」ことの committed な証跡である。
+  (注記・過大主張の回避: 本 fixture corpus には spec-pack 産物を 1 件も置いていないため、 旧述語で
+  validate すると corpus 全体の cohort 非空 assert「生成 spec が 1 件も検出されない」1 行だけは
+  鳴る = 旧述語下でも exit 0 ではない。 これは 6 file 構成の fixture 側の性質であり、 spec-pack 産物
+  4 本が実在する self-host corpus では旧述語でも cohort assert は鳴らず、 枝は文字どおり無音だった。)
+  焼いた退行 (静的 bytes ゆえ build 不要・1 箇所の改変が 1 violation 行に対応):
+    - spec/principle.html (生成 cohort): breadcrumb + ページ内目次 (nav.toc) + audience-toggle 生成 JS
+      が再注入され、 所属 locator (p.doc-locator) が失われている = 旧 build 出力形そのもの。
+      chrome-drift (render との byte 不一致) も同じ page に同時に当たる — 新述語下では render 側が
+      chrome-less を出すため「build で直る drift」と「抑制判定そのものの誤り」が並んで鳴る。
+    - spec/constitution.html (逆向き anchor): chrome-less pack *家系* の generator meta
+      ("folio srs-principle-pack assembler (fixture fork)" = content 属性値の直後に anchor した
+      canonical 述語には非該当・[^"]* 前置の家系述語には該当) + doc-cover-band を持たせた罠。
+      既存 chrome-scope-violation fixture の "folio srs-spec-pack assembler" 罠と同型で、 家系述語だけ
+      を旧 literal (spec-pack のみ) へ narrowing する mutation を撃つ = その場合この 1 行が消えるが
+      exit は 1 のままなので、 **golden diff だけが唯一の検出面**になる (行が減る改変は必ず diff に出る)。
+      canonical 述語を非 anchored な部分一致にすると本罠が canonical 一致へ転んで同じ 1 行が消えるため、
+      canonical と家系の anchoring 非対称は意図的設計である。
+
+command: ["validate", "--root", "tests/fixtures/chrome-scope-principle-violation"]
+capture: "stdout"
+compare: "text"
+golden: "baselines/reference/chrome-scope-principle-violation.golden.txt"
+
+expect:
+  exit_code: 1
