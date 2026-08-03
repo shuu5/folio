@@ -60,9 +60,11 @@ echo "== recapture parity gate 敵対回帰 =="
 #   lineage: 2026-07-19 (folio-d7bq rules flip) = 件数不変 (rules 26 は id-value 保存)。 shape 移動のみ:
 #   rules.html は details.spec-row → div.ears-requirement-row (独立再導出: rules ears-row grep 26 == yq 26・
 #   details.spec-row 残は relations 4 のみ)。
+#   lineage: 2026-08-03 (folio-4vfb REQ-NAV-008 新設・9300fb1) = 4 contract / 67 id (verification 31→32)。
+#   chrome-scope arm の REQ 正式化 (独立再導出: verify-recapture-parity 実走「contract 4 本 / id 67 件」+ PASS)。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 66 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 66 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 67 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 67 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---
