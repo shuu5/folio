@@ -47,7 +47,13 @@ expect_abort() { # label contract expected_stderr_substring
 expect_vfilled_fail() { # label html [reason]
   local out rc; out="$(bash "$VER" --filled "$BASE_PROSE" "$BASE" "$2" 2>&1)"; rc=$?
   if [[ $rc -eq 0 ]]; then ng "$1 (--filled verify が PASS した)"; return; fi
-  if [[ -n "${3:-}" && "$out" != *"$3"* ]]; then ng "$1 (FAIL したが理由が想定外。 期待 '$3')"; return; fi
+  # ★reason 照合は [FAIL] 行 anchor (範型 test-adversarial-verification.sh errata-1 must-1 と同型)。 chk ラベルは
+  #   ★PASS 時も [OK] 行に出力される ため、 単純 substring 一致だと「別 arm の巻き添え FAIL」でも期待 reason が
+  #   [OK] 行で満たされ ★guard が inert になる (per-shape MK の主張が pin されない)。 reason は括弧/ドット等の
+  #   regex metachar を含みうるため -E でなく fixed-string 2 段 (該当 reason を含む行のうち [FAIL] 行が在るか) で anchor する。
+  if [[ -n "${3:-}" ]] && ! printf '%s\n' "$out" | grep -F -- "$3" | grep -qF -- '[FAIL]'; then
+    ng "$1 (FAIL したが理由が [FAIL] 行に無い。 期待 '$3' を [FAIL] 行で)"; return
+  fi
   ok "$1"
 }
 expect_vprefill_fail() { # label contract html [reason]
@@ -385,9 +391,24 @@ perl -0777 -i -pe 'our $n; $n += s{(<section id="s4-format".*?<p class="sub-se">
 expect_vfilled_fail "RX13 ★sub-se position: §4.5 sub-se 内 P-8 前への inline 挿入を §4 位置固定 arm が捕捉 (sub-se 側独立 kill)" "$TMP/rx13.html" "位置固定"
 
 # F14. ★mermaid source 行改竄 → mermaid source FAIL
+# ★errata (folio-3zr4.2・expect_vfilled_fail の [FAIL] 行 anchor 化で ★露出した false record の是正):
+#   旧 F14 の mutation は ★非 global の `s#flowchart TB#…#` で、 文書内で最初に一致するのは 人間層の
+#   <pre class="mermaid"> ではなく ★機械層 aside (data-component="spec-machine-note" / data-audience="machine")
+#   の中の <code>flowchart TB</code> だった (実測)。 ゆえに 実際に落ちていた arm は ★機械層 round-trip
+#   (「contract↔生成物 機械層 不一致」) で、 本 case が主張する「mermaid source 行列」arm は ★[OK] のまま
+#   だった — 旧 guard は ★[OK] 行の substring で満たされ ★inert (人間層 arm に mutation-kill が無かった)。
+#   ★是正は additive: F14 を ★人間層 mermaid を狙う形へ向け直し (fired-guard 付き)、 旧形が ★実際に 提供して
+#   いた機械層 round-trip の teeth は F14b として ★別 case で残す (teeth を 1 本も減らさない)。
 cp "$TMP/base-filled.html" "$TMP/f14.html"
-perl -0777 -i -pe 's#flowchart TB#flowchart CAPTURED#' "$TMP/f14.html"
-expect_vfilled_fail "F14 ★mermaid source 行改竄を捕捉" "$TMP/f14.html" "mermaid source"
+perl -0777 -i -pe 'our $n; $n += s#(<pre class="mermaid">)flowchart TB#${1}flowchart CAPTURED#; END { exit($n==1?0:9) }' "$TMP/f14.html" \
+  || ng "F14 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "F14 ★人間層 mermaid source 行改竄を捕捉 (mermaid source 行列 arm 単独)" "$TMP/f14.html" "mermaid source 行列"
+# F14b. ★機械層 aside 内 <code>flowchart TB</code> の改竄 → ★機械層 round-trip FAIL (旧 F14 が実際に撃っていた向き)。
+#   ★F14 と別 shape: 人間層 mermaid の source_lines 突合ではなく ★機械層 自由文の逐語 round-trip が唯一の検出源。
+cp "$TMP/base-filled.html" "$TMP/f14b.html"
+perl -0777 -i -pe 'our $n; $n += s#(<code>)flowchart TB(</code>)#${1}flowchart CAPTURED${2}#; END { exit($n==1?0:9) }' "$TMP/f14b.html" \
+  || ng "F14b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "F14b ★機械層 aside 内 <code>flowchart TB</code> の改竄を機械層 round-trip が捕捉 (旧 F14 の実 teeth)" "$TMP/f14b.html" "機械層 不一致"
 
 # F15. ★cover-meta 章数捏造 → cover-meta FAIL
 cp "$TMP/base-filled.html" "$TMP/f15.html"
@@ -1468,6 +1489,504 @@ else ng "PR24 ★§N 形でない heading を abort (abort されず生成され
 if [[ $pr24_rc -ne 0 && "$pr24_out" == *"heading が §N 形でない"* && "$pr24_out" != *"band_num に非数値"* ]]; then
   ok "PR24b ★第 1 層 (emit_section 代入形) が band_num 到達前に abort (第 1 層メッセージ実在 + 第 2 層メッセージ不在 = 層独立の pin・空撃ちでは緑にならない)"
 else ng "PR24b ★第 1 層の退行か空撃ち (rc=$pr24_rc / 第 2 層メッセージへ到達 or 第 1 層メッセージ不在)"; fi
+# ============================================================================
+# ★CT1〜CT52 — ★containment (章化の実質) の ★arm ごと per-shape mutation-kill。
+#   verify-spec.sh の containment 節 (開口隣接 / region 占有 / 1 段内側 / 3 レベル束縛 / 器中身の占有) は
+#   ★生成物の改竄で落ちる arm ゆえ、 ★各 arm に「その arm が [FAIL] 理由を担う」実弾を 1 本以上 与える
+#   (arm を消すと本 suite が赤くなる = mutation-kill)。 ★全て fired-guard 付き (shape drift による空撃ちを検出)。
+#   ★per-shape 規律 (jyfh / r8k): 1 instance の実弾は ★構造差のある instance の穴を証明しない — wrapper 2 章
+#   (payload = ref-grid / glossary-term-table) と契約章 (payload = 章要旨 callout) は ★別クラス ゆえ別実弾で撃つ。
+#   ★reason anchor は ★章名込み の label へ当てる (章非特定の語だと別章の巻き添え FAIL でも満たされ per-shape の
+#   主張が pin されない)。 ★CT 番号は本 suite 内の独立採番 (Leg B = relations 側の番号への lockstep は無い)。
+# ============================================================================
+# CT1. ★hollow wrapper — wrapper 開きタグを ★即閉じ し、 章帯 / chapbody / ref-grid を wrapper の ★外 へ押し出す。
+#   ★タグ均衡は保たれる (対応閉じタグも同時に除去する) ため、 件数 census・section anchor 列・wrapper 陽性 assert
+#   (実在 + class 無し) は ★全て素通る。 「id を持つ section が在る」ことだけを見る assert 群は章化の ★実質
+#   (中身がその章に属すること) を守れない、 というのが本 shape の主張。 捕捉は containment の ★開口隣接 pin。
+#   ★fired-guard は ★2 置換 とも要求する (対応閉じタグ除去が空振りすると単なるタグ不均衡 HTML になり、 別 arm の
+#   巻き添え FAIL で ★理由の異なる false-pass を作るため)。
+cp "$TMP/base-filled.html" "$TMP/ct1.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="forward-refs">\n#<section id="forward-refs"></section>\n#; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct1.html" \
+  || ng "CT1 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT1 ★hollow wrapper (章帯ごと外へ押し出し) を containment 開口隣接 pin が捕捉" "$TMP/ct1.html" "'forward-refs' の開口直後に"
+# CT2. ★chapbody だけの押し出し — 章帯は wrapper 内に ★残したまま 本文 (chapbody / ref-grid / chip) を外へ出す。
+#   CT1 と ★別 shape: 開口隣接 pin は band が隣接したままなので ★PASS し、 region 占有 pin ★だけ が発火する
+#   (= 2 段の pin が互いの巻き添えでなく ★独立に teeth を持つ ことの per-shape 実証)。
+cp "$TMP/base-filled.html" "$TMP/ct2.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct2.html" \
+  || ng "CT2 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT2 ★chapbody だけを章の外へ (band 隣接は保持) を region 占有 pin が単独で捕捉" "$TMP/ct2.html" "章 'forward-refs' region 内の chapbody == 1"
+# CT3. ★用語集 wrapper の hollow 化 — CT1 と ★別 instance (payload が chip でなく .grow の別構造クラス)。
+cp "$TMP/base-filled.html" "$TMP/ct3.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="glossary-terms">\n#<section id="glossary-terms"></section>\n#; $n += s#</section>\n</div>\n<footer#</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct3.html" \
+  || ng "CT3 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT3 ★用語集 wrapper の hollow 化 (別 payload クラス) を containment 開口隣接 pin が捕捉" "$TMP/ct3.html" "'glossary-terms' の開口直後に"
+# CT4. ★band tint の逐値付け替え — band は隣接したまま ★別章の帯 に差し替える (tint 属性値だけを書換)。
+#   開口隣接 pin の ★識別成分 (どの章の帯か) を ★単独で 撃つ (位置成分 = CT5 / 節同一性成分 = CT6 と別実弾)。
+cp "$TMP/base-filled.html" "$TMP/ct4.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band" class="tint-)violet(">)#${1}ok${2}#; END { exit($n==1?0:9) }' "$TMP/ct4.html" \
+  || ng "CT4 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT4 ★別章 band への付け替え (tint 逐値) を開口隣接 pin が単独で捕捉" "$TMP/ct4.html" "'forward-refs' の開口直後に"
+# CT5. ★開口への異物挿入 — band は残り tint も §番号も正しいが、 wrapper 開口と band の ★間 に別要素が入る。
+#   CT4 (属性の同一性) と別成分 = ★位置 (直後性) を撃つ。
+cp "$TMP/base-filled.html" "$TMP/ct5.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n)#${1}<p class="decoy">x</p>\n#; END { exit($n==1?0:9) }' "$TMP/ct5.html" \
+  || ng "CT5 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT5 ★開口と章帯の間への異物挿入を開口隣接 pin が単独で捕捉 (位置成分)" "$TMP/ct5.html" "'forward-refs' の開口直後に"
+# CT6. ★band §番号の逐値書換 — 開口隣接 pin の ★第 3 成分 (どの節の帯か)。 tint (CT4) / 位置 (CT5) と別成分ゆえ
+#   別実弾で撃つ (band .num 列 arm も巻き添えで発火するが、 理由 anchor は containment 側に取る)。
+#   ★rules は §番号が ★非連番 (§1 欠番 / 静的 band は §13・§14) ゆえ、 本 arm の期待値が ★連番 hardcode でなく
+#   ★contract 見出し由来の導出 であることも同時に pin される (13 → 9 の書換は連番仮定では表せない差)。
+cp "$TMP/base-filled.html" "$TMP/ct6.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band" class="tint-violet"><span class="num">)13#${1}9#; END { exit($n==1?0:9) }' "$TMP/ct6.html" \
+  || ng "CT6 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT6 ★band §番号の逐値書換を開口隣接 pin が捕捉 (節同一性成分・§1 欠番の非連番導出も同時に pin)" "$TMP/ct6.html" "'forward-refs' の開口直後に"
+# CT7. ★over-containment — forward-refs の閉じタグを外し glossary-terms を ★入れ子 にする (assembler の
+#   printf </section> 1 行脱落と同 shape)。 押し出しの ★逆向き ゆえ region 占有の ★上限側 (== 1) だけ が発火する。
+cp "$TMP/base-filled.html" "$TMP/ct7.html"
+perl -0777 -i -pe 'our $n; $n += s#</section>\n<section id="glossary-terms">#<section id="glossary-terms">#; $n += s#</section>\n</div>\n<footer#</section>\n</section>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct7.html" \
+  || ng "CT7 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT7 ★wrapper の入れ子化 (over-containment) を region 占有の上限側が捕捉" "$TMP/ct7.html" "章 'forward-refs' region 内の章帯 == 1"
+# CT8. ★契約章の hollow 化 — 同一 DOM shape (band 1 + chapbody 1) を持つのは提示層 wrapper 2 本だけではない。
+#   containment を 2 id の手書き列挙に留めると残り 12 章が無防備 (partial-enumeration trap) ゆえ、 契約章側にも実弾を置く。
+cp "$TMP/base-filled.html" "$TMP/ct8.html"
+perl -0777 -i -pe 'our $n; $n += s#<section id="s2-directory" class="normative">\n#<section id="s2-directory" class="normative"></section>\n#; $n += s#</section>\n<section id="s3-naming" class="normative">#<section id="s3-naming" class="normative">#; END { exit($n==2?0:9) }' "$TMP/ct8.html" \
+  || ng "CT8 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT8 ★契約章 (s2-directory) の hollow 化を containment が捕捉 (2 id 列挙では届かない残り 12 章)" "$TMP/ct8.html" "'s2-directory' の開口直後に"
+# CT9. ★1 段内側の hollow 化 (chapbody) — chapbody を空で閉じ payload を chapbody の ★sibling (章の中・器の外) へ出す。
+#   hollow 化の defect 原理は ★階層ごとに 再演するので、 wrapper 階層の pin だけでは素通る shape。
+cp "$TMP/base-filled.html" "$TMP/ct9.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="chapbody">\n<div class="ref-grid">#<div class="chapbody"></div>\n<div class="ref-grid">#; $n += s#</div>\n</div>\n</section>\n<section id="glossary-terms">#</div>\n</section>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct9.html" \
+  || ng "CT9 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT9 ★chapbody 空化 + payload を器の外へ (1 段内側の hollow 化) を containment が捕捉" "$TMP/ct9.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# CT10. ★chapbody 開口への異物挿入 — 1 段内側の ★開口隣接 pin (位置成分) を単独で撃つ。
+cp "$TMP/base-filled.html" "$TMP/ct10.html"
+perl -0777 -i -pe 'our $n; $n += s#(<div class="chapbody">\n)(<div class="ref-grid">)#${1}<p class="decoy">x</p>\n${2}#; END { exit($n==1?0:9) }' "$TMP/ct10.html" \
+  || ng "CT10 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT10 ★chapbody 開口と payload container の間への異物挿入を 1 段内側の開口隣接 pin が捕捉" "$TMP/ct10.html" "の chapbody 開口直後に ref-grid が隣接"
+# CT11. ★hollow container (ref-grid) — container を即閉じし chip 全数を container の ★外 (chapbody 直下) へ出す。
+#   「container の開きタグが在る」は「chip がその中に在る」を意味しない (2 段内側の再演)。
+cp "$TMP/base-filled.html" "$TMP/ct11.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">\n#<div class="ref-grid"></div>\n#; $n += s#</div>\n</div>\n</section>\n<section id="glossary-terms">#</div>\n</section>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct11.html" \
+  || ng "CT11 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT11 ★hollow ref-grid (chip 全数を器の外へ) を payload 占有 pin が単独で捕捉" "$TMP/ct11.html" "前方照会 chip の ★全数"
+# CT12. ★hollow container (glossary-term-table) — CT11 と ★別構造クラス (payload が chip でなく .grow 行)。
+cp "$TMP/base-filled.html" "$TMP/ct12.html"
+perl -0777 -i -pe 'our $n; $n += s#<div data-component="glossary-term-table">\n#<div data-component="glossary-term-table"></div>\n#; $n += s#</div>\n</div>\n</section>\n</div>\n<footer#</div>\n</section>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct12.html" \
+  || ng "CT12 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT12 ★hollow glossary-term-table (.grow を器の外へ) を payload 占有 pin が単独で捕捉" "$TMP/ct12.html" "用語集 行 (.grow) の ★全数"
+# ---- CT13/CT14/CT15: ★parser-differential (r8k / folio-wq4 再発クラス) の 3 vector ----
+#   いずれも 「本物の </section> を band 直後へ入れて章本文を章の ★外 へ出し、 元の閉じタグを ★偽タグ で置換して
+#   ★素朴な深さ計数 の帳尻だけ合わせる」 shape。 make_body はコメント / RAWTEXT の中身を verbatim 保持し、
+#   属性値内の生 `>` も (raw `<` と違い) fail-closed しないため、 生テキストへの素朴な section 走査は
+#   region を ★over-slice して containment を丸ごと素通す。
+#   ★3 vector を別実弾で撃つ: マスク対象が コメント / RAWTEXT / 属性値 の ★3 クラス あり、 1 本の実弾は他 2 つの穴を証明しない。
+cp "$TMP/base-filled.html" "$TMP/ct13.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<!--<section>-->\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<!--</section>-->\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct13.html" \
+  || ng "CT13 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT13 ★コメント密輸による region over-slice (parser-differential) を containment が捕捉" "$TMP/ct13.html" "章 'forward-refs' region 内の chapbody == 1"
+cp "$TMP/base-filled.html" "$TMP/ct14.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<script>var s = "<section>";</script>\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<script>var e = "</section>";</script>\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct14.html" \
+  || ng "CT14 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT14 ★script (RAWTEXT) 密輸による region over-slice を containment が捕捉" "$TMP/ct14.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# ★CT15 の ★閉じ側 だけ コメント vector を使うのは、 属性値内の生 `<` が make_body で ★既に fail-closed される ため
+#   (raw-lt-in-tag)。 属性値 vector は ★開き側 にしか存在しない = 装わずに書く。
+cp "$TMP/base-filled.html" "$TMP/ct15.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="forward-refs">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<p class="decoy" title="x><section>y"></p>\n</section>\n#; $n += s#</section>\n<section id="glossary-terms">#<!--</section>-->\n<section id="glossary-terms">#; END { exit($n==2?0:9) }' "$TMP/ct15.html" \
+  || ng "CT15 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT15 ★属性値内の生 '>' 密輸による region over-slice を containment が捕捉" "$TMP/ct15.html" "前方照会 chip の ★全数"
+# CT16. ★非 genuine shape の fail-closed — div / section の ★自己閉じ構文。 HTML の非 foreign content では `/>` は
+#   無視される (= 開きタグ) が、 svg / math の ★foreign content 内では自己閉じが効くため、 深さ計数と実 DOM の差を
+#   作る入口になる。 rendering を完全にモデルする arms race へ戻らず、 ★genuine な assembler が emit しない shape を
+#   ★拒否する (make_body と同じ規律)。 捕捉は containment tokenizer の構造診断 arm。
+cp "$TMP/base-filled.html" "$TMP/ct16.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">\n#<div class="ref-grid"/>\n#; END { exit($n==1?0:9) }' "$TMP/ct16.html" \
+  || ng "CT16 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT16 ★div の自己閉じ構文 (foreign content 差の入口) を tokenizer が fail-closed" "$TMP/ct16.html" "containment tokenizer の構造診断"
+# ★parser-differential の ★残り 3 vector (CT13/14/15 が塞いだ コメント / script / 属性値 の ★外側 に在ったもの):
+#   CT17 bogus comment (`<! … >`) — 実 parser は `<!--` でない markup declaration も comment として `>` まで捨てるが、
+#        素朴実装は 1 文字進めるだけなので中の `<section>` が ★実タグとして深さに乗る。 genuine BODY にも
+#        `<!DOCTYPE html>` が実在するため fix は「拒否」でなく ★実 parser と同じ読み飛ばし (拒否だと genuine が総崩れ)。
+#   CT18 escapable RAWTEXT (`<textarea>`) — 中身はテキストゆえ `<section>` は要素にならない。 script / style
+#        しか知らない実装では title / textarea 等が素通しになる。
+#   CT19 ハイフン入り要素名 (`<section-x>`) — 実 DOM では section と ★別要素。 要素名を `[a-zA-Z0-9]*` で切ると
+#        "section" と誤認して章の深さに数える。
+cp "$TMP/base-filled.html" "$TMP/ct17.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<! <section> >\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n<footer#<! </section> >\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct17.html" \
+  || ng "CT17 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT17 ★bogus comment (<! … >) 密輸による region 付け替えを containment が捕捉" "$TMP/ct17.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/ct18.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<textarea><section></textarea>\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n<footer#<textarea></section></textarea>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct18.html" \
+  || ng "CT18 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT18 ★escapable RAWTEXT (textarea) 密輸による region 付け替えを containment が捕捉" "$TMP/ct18.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/ct19.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<section-x>\n</section>\n<div class="chapbody">#; $n += s#</section>\n</div>\n<footer#</section-x>\n</div>\n<footer#; END { exit($n==2?0:9) }' "$TMP/ct19.html" \
+  || ng "CT19 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT19 ★ハイフン入り要素名 (<section-x>) 密輸による region 付け替えを containment が捕捉" "$TMP/ct19.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# CT20. ★契約章の band tint 付け替え — 契約章 12 本の tint 逐値 pin (源 = contract sections[].tint) を ★単独で 撃つ。
+#   §番号は変えないので §番号成分では落ちない = tint 成分 ★単独 の teeth を isolate する。
+cp "$TMP/base-filled.html" "$TMP/ct20.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-directory" class="normative">\n<section data-component="chapter-deck-band" class="tint-)brand(")#${1}ok${2}#; END { exit($n==1?0:9) }' "$TMP/ct20.html" \
+  || ng "CT20 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT20 ★契約章 (s2-directory) の band tint 付け替えを tint 逐値 pin が単独で捕捉" "$TMP/ct20.html" "'s2-directory' の開口直後に"
+# CT20b. ★rules 固有 tint (s10-mandatory = bad) の付け替え — CT20 と ★別 instance。 tint 期待値が contract の
+#   ★値そのもの を読む (assembler 側 tint 集合の hardcode 列挙でない) ことを、 範型に無い値域で pin する。
+cp "$TMP/base-filled.html" "$TMP/ct20b.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s10-mandatory" class="normative">\n<section data-component="chapter-deck-band" class="tint-)bad(")#${1}ok${2}#; END { exit($n==1?0:9) }' "$TMP/ct20b.html" \
+  || ng "CT20b mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT20b ★rules 固有 tint (s10-mandatory = bad) の付け替えを contract 由来 tint 逐値 pin が捕捉" "$TMP/ct20b.html" "'s10-mandatory' の開口直後に"
+# CT21. ★器の重複 — 正規の ref-grid は ★中身ごと 正しい位置に残したまま、 文書の別位置に ★2 個目の ref-grid を
+#   足す。 per-章 arm (chapbody 内に 1 個 / chip 全数が器の中) は ★全て PASS のままで、 2 個目の器は以後の改竄で
+#   payload の ★逃げ場 として使える (漏出先の先置き)。 捕捉は ★文書総数 pin ★単独。
+cp "$TMP/base-filled.html" "$TMP/ct21.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<div class="ref-grid"></div>\n</body>#; END { exit($n==1?0:9) }' "$TMP/ct21.html" \
+  || ng "CT21 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT21 ★payload container の重複 (漏出先の先置き) を文書総数 pin が単独で捕捉" "$TMP/ct21.html" "ref-grid が ★文書全体で 1 個"
+# ★comment 終端の HTML5 非同型。 `-->` 一本終端の実装は、 実 parser が ★早く 終端する形
+#   (comment end bang / abrupt close) を知らないため、 攻撃者は「実 DOM では章の外に在る閉じタグ」を tokenizer に
+#   だけ comment の中身として ★隠せる。 3 分岐を ★別実弾 で撃つ (CT22 / CT23 / CT24 = 終端規則が別分岐ゆえ
+#   1 本の実弾では他 2 分岐の弱化が silent になる)。
+cp "$TMP/base-filled.html" "$TMP/ct22.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!--x--!></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/ct22.html" \
+  || ng "CT22 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT22 ★comment end bang (--!>) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/ct22.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/ct23.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!--></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/ct23.html" \
+  || ng "CT23 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT23 ★abrupt-closing comment (<!-->) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/ct23.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+cp "$TMP/base-filled.html" "$TMP/ct24.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<!---></section><!--y-->\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/ct24.html" \
+  || ng "CT24 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT24 ★<!---> (comment 終端分岐 2) 密輸による閉じタグ隠蔽を containment が捕捉" "$TMP/ct24.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# ★RAWTEXT 終了タグの ★要素名境界。 `</name[^>]*>` は `</textareax>` にも一致して早期終了し、 以降の
+#   擬似タグを実タグとして数える。 ★region を ★伸ばす 向き (開きタグ密輸) で撃つ = over-slice の実害形。
+cp "$TMP/base-filled.html" "$TMP/ct25.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<textarea></textareax><section><textarea></textarea>\n</section>\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/ct25.html" \
+  || ng "CT25 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT25 ★RAWTEXT 終了タグの要素名境界 (</textareax>) を突く region 伸長を containment が捕捉" "$TMP/ct25.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# ★foreign content。 svg / math subtree 内の要素は HTML 名前空間ではないので章の深さに数えてはならない。
+#   ★genuine 生成物に svg アイコンが多数実在する ため「現れないから拒否」では閉じられず subtree 追跡が要る。
+cp "$TMP/base-filled.html" "$TMP/ct26.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="glossary-terms">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)<div class="chapbody">#${1}<svg><section></svg>\n</section>\n<div class="chapbody">#; END { exit($n==1?0:9) }' "$TMP/ct26.html" \
+  || ng "CT26 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT26 ★foreign content (svg subtree) 内の擬似タグによる region 伸長を containment が捕捉" "$TMP/ct26.html" "glossary-term-table が章 'glossary-terms' の chapbody 内に 1 個"
+# CT27. ★契約章の 1 段内側 — 契約章 12 本は chapbody を空にして章本文を sibling へ押し出す改竄が素通る形。
+#   ★wrapper 側 (CT9) と ★別実弾 で撃つ = 器の種類が別クラス (章要旨 callout vs ref-grid)。
+#   ★タグ均衡を保つため 2 置換 (開口直後で閉じる + 元の chapbody 閉じを除去) を fired-guard で ★両方要求する。
+cp "$TMP/base-filled.html" "$TMP/ct27.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-directory" class="normative">\n<section data-component="chapter-deck-band"[^\n]*</section>\n<div class="chapbody">)\n(<div data-component="section-essence-callout">)#${1}</div>\n${2}#; $n += s#</div>\n</section>\n<section id="s3-naming" class="normative">#</section>\n<section id="s3-naming" class="normative">#; END { exit($n==2?0:9) }' "$TMP/ct27.html" \
+  || ng "CT27 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT27 ★契約章 (s2-directory) の chapbody 空化 + 章本文 sibling 押し出しを 1 段内側 pin が捕捉" "$TMP/ct27.html" "章要旨 callout が章 's2-directory' の chapbody 内に 1 個"
+# CT28. ★章本文の relocation ★クラス — CT27 (chapbody 完全空化) は ★1 instance にすぎない。 章要旨 callout は
+#   chapbody 内に ★残したまま、 それ以降の章本文 (code / details) だけを chapbody の外へ押し出す shape は、
+#   callout 由来の 1 段内側 pin (cbadj / cont / docct) を ★全て PASS させたまま素通る。
+#   捕捉は「章の直下は 章帯 + chapbody の 2 子だけ」の構造 pin ★単独。
+cp "$TMP/base-filled.html" "$TMP/ct28.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-directory" class="normative">.*?<div class="chapbody">\n<div data-component="section-essence-callout">.*?</div>\n)#${1}</div>\n#s; $n += s#</div>\n</section>\n<section id="s3-naming" class="normative">#</section>\n<section id="s3-naming" class="normative">#; END { exit($n==2?0:9) }' "$TMP/ct28.html" \
+  || ng "CT28 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT28 ★章要旨を残した章本文の relocation (block 粒度) を章直下 2 子の構造 pin が捕捉" "$TMP/ct28.html" "章 's2-directory' の直下は 章帯 + chapbody の 2 子だけ"
+# CT29. ★relocation クラスの ★もう一方の向き — 章本文の押し出し先を ★章直下の sibling でなく ★章帯 (band) の
+#   ★中 にする。 章直下は band + chapbody のままなので kids pin (CT28) は ★2 を保ったまま PASS し、 1 段内側
+#   pin も callout が chapbody 内に残るため全て PASS する。 捕捉は band の直下 4 子固定
+#   (共有 CORE lib/common.sh band() = num/kicker/h2/lead) ★単独。
+cp "$TMP/base-filled.html" "$TMP/ct29.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-directory" class="normative">\n<section data-component="chapter-deck-band"[^\n]*?)(</section>\n)(<div class="chapbody">\n<div data-component="section-essence-callout">.*?</div>\n)(.*?)(</div>\n</section>\n<section id="s3-naming" class="normative">)#${1}${4}${2}${3}${5}#s; END { exit($n==1?0:9) }' "$TMP/ct29.html" \
+  || ng "CT29 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT29 ★章本文の band subtree への退避 (kids を 2 に保つ向き) を band 4 子固定が捕捉" "$TMP/ct29.html" "章 's2-directory' の章帯の直下は num/kicker/h2/lead の 4 子だけ"
+# CT30 / CT31. ★document 順を ★保つ relocation 2 形 — 章直下 (kids) / band 直下 (bkids) を固定しても、
+#   ★他の probe 値を一切動かさずに 素通る形が残る。
+#   CT30 (β) = 章本文を ★別章の chapbody へ移送 (donor 章が空章化し中身が受け側の下に付く)。
+#   CT31 (γ) = 章本文を ★同章の machine-fold (details) の中へ退避。
+#   捕捉は chapbody 直下の ★契約由来 完全子列 ★単独 (β は donor の列が縮み・γ は fold へ吸い込まれた分だけ列が縮む)。
+cp "$TMP/base-filled.html" "$TMP/ct30.html"
+perl -0777 -i -pe 'our $n;
+if (s#(<section id="s2-directory" class="normative">.*?<div class="chapbody">\n<div data-component="section-essence-callout">[^\n]*\n)((?:.(?!</div>\n</section>\n<section id="s3-naming" class="normative">))*.)(\n</div>\n</section>\n<section id="s3-naming" class="normative">)#${1}${3}#s) {
+  our $moved = $2; $n++;
+  $n++ if s#(<section id="s3-naming" class="normative">.*?<div class="chapbody">\n<div data-component="section-essence-callout">[^\n]*\n)#${1}$moved\n#s;
+}
+END { exit($n==2?0:9) }' "$TMP/ct30.html" \
+  || ng "CT30 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT30 ★章本文の別章 chapbody への移送 (document 順保存) を契約由来 完全子列が捕捉" "$TMP/ct30.html" "章 's2-directory' の chapbody 直下は 契約由来の完全子列"
+cp "$TMP/base-filled.html" "$TMP/ct31.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s4-format" class="normative">.*?)(<div data-component="spec-subhead"><h3 id="s4-6-a11y">[^\n]*\n)(<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1}${3}${2}#s; END { exit($n==1?0:9) }' "$TMP/ct31.html" \
+  || ng "CT31 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT31 ★章本文の machine-fold 内への退避 (document 順保存) を契約由来 完全子列が捕捉" "$TMP/ct31.html" "章 's4-format' の chapbody 直下は 契約由来の完全子列"
+# CT32. ★void 要素による ★計数マスク。 深さ 1 の計数は ★同名深さ計数 ゆえ、 depth-1 に ★対応閉じタグを持たない
+#   要素 (`<br>` / `<hr>` / `<img>` …) が 1 個現れると その時点で走査が ★打ち切られる。 攻撃者は 「章本文 block を
+#   1 個 chapbody の外 (章直下の sibling) へ出し、 抜けた分の位置に void を 1 個挿す」 だけで kids / cbkids を
+#   ★期待値ちょうどに保てる。 現在は打ち切りを err (`unclosed-child-*`) へ倒す fail-closed で捕捉する。
+#   ★CT16 と ★別 shape: CT16 は 自己閉じ構文 (`<div/>`) の ★拒否 で、 本 shape は ★正当な HTML (void 要素) を
+#   使った ★計数の打ち切り であり、 CT16 を消しても本 shape は err で落ちる関係にない (同じ err arm の ★別 vector)。
+#   ★fired-guard は 3 置換 (block 摘出 / 器の外への再配置 + void / band 直後 void) を要求する。
+cp "$TMP/base-filled.html" "$TMP/ct32.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#<div data-component="spec-subhead"><h3 id="s4-6-a11y">.*?</div>\n##s) { $mv = $&; $n++ }
+$n++ if defined $mv && s#(</details>\n)</div>\n(</section>\n<section id="s5-delta" class="normative">)#${1} . "<br>\n</div>\n" . $mv . ${2}#e;
+$n += s#(<section id="s4-format" class="normative">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<br>\n#;
+END { exit($n==3?0:9) }' "$TMP/ct32.html" \
+  || ng "CT32 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT32 ★void 要素 2 個による深さ 1 計数の打ち切り (章本文 relocation のマスク) を tokenizer が fail-closed" "$TMP/ct32.html" "containment tokenizer の構造診断"
+# ★CT33〜CT37 — ★foreign content (svg / math) と ★属性 tokenize の parser-differential。 ★4 shape を別実弾で撃つ:
+#   (a) foreign root を depth-1 の ★filler に使う計数マスク / (b) foreign 内の ★any-other-end-tag による外側
+#   section の閉鎖 / (c) foreign 内の ★breakout 開始タグによる器の重複 / (d) foreign 包みによる ★人間層 block の
+#   章外 relocation。 いずれも ★別の parser 規則を突く ので 1 本の実弾は他 3 つの穴を証明しない。 加えて
+#   (e) unquoted 属性値の char class 差 = ★幽霊 marker。
+# CT33. ★foreign root を depth-1 の filler にする ★計数マスク — 章本文 block を 1 個 machine-fold へ退避させ
+#   (CT31 と同じ向き)、 抜けた位置へ ★`<svg><path/></svg>` (genuine と同形・breakout タグを含まない) を挿す。
+#   foreign root を ★深さ 1 の子として 1 計上する と cbkids は期待値ちょうどに戻る ため ★完全子数束縛では
+#   原理的に見分けられない。 逆に root を計上しないと CT37 の向き (svg 包みで章外へ出す形) が素通る —
+#   ★両方向を閉じるのは 計上 + depth-1 err の ★対 のみ。
+cp "$TMP/base-filled.html" "$TMP/ct33.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s4-format" class="normative">.*?)(<div data-component="spec-subhead"><h3 id="s4-6-a11y">[^\n]*\n)(<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1}<svg viewBox="0 0 24 24"><path d="M4 4h16"/></svg>\n${3}${2}#s; END { exit($n==1?0:9) }' "$TMP/ct33.html" \
+  || ng "CT33 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT33 ★foreign root (svg) を depth-1 filler にした完全子数マスクを tokenizer が fail-closed" "$TMP/ct33.html" "containment tokenizer の構造診断"
+# CT34. ★any other end tag による foreign からの breakout — `<svg></section></svg>` は 実 HTML5 parser では
+#   stack を遡って ★外側の HTML section を閉じる (HTML5 tree construction "in foreign content" の任意終了タグ規則)
+#   ため、 章本文 ★全部 が章の外へ出る = CT2 / CT9 が捕捉すると主張している relocation クラスそのもの。
+#   subtree を丸ごと読み飛ばす実装では ★不可視 で rc=0 / 0 FAIL になる。
+cp "$TMP/base-filled.html" "$TMP/ct34.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s2-directory" class="normative">\n<section data-component="chapter-deck-band"[^\n]*</section>\n)#${1}<svg></section></svg>\n#; END { exit($n==1?0:9) }' "$TMP/ct34.html" \
+  || ng "CT34 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT34 ★foreign 内の any-other-end-tag (<svg></section></svg>) による外側 section 閉鎖を tokenizer が fail-closed" "$TMP/ct34.html" "containment tokenizer の構造診断"
+# CT35. ★breakout 開始タグ — `<svg><div class="ref-grid"></div></svg>` の div は 実 DOM では foreign を抜けて
+#   ★HTML 名前空間の実要素 になる (器が 2 個 = CT21 が消したはずの ★逃げ場 の再出現)。 ★CT26 と別 shape:
+#   CT26 は擬似タグを svg の ★外 の深さへ効かせる形、 本 shape は svg の ★中 に置いた実要素が外へ出る形。
+cp "$TMP/base-filled.html" "$TMP/ct35.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<svg><div class="ref-grid"></div></svg>\n</body>#; END { exit($n==1?0:9) }' "$TMP/ct35.html" \
+  || ng "CT35 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT35 ★foreign 内の breakout 開始タグ (svg 内 div.ref-grid) による器の重複を tokenizer が fail-closed" "$TMP/ct35.html" "containment tokenizer の構造診断"
+# CT36. ★unquoted 属性値の char class 差による ★幽霊 marker — `<div foo=bar"z"class="ref-grid">` は 実 parser の
+#   attribute-value-unquoted state では `"` を ★値に取り込む ので class 属性は ★存在しない (実 DOM から marker が
+#   消える) が、 `"` で値を切る実装は 以降を別属性として拾い ★実在しない class="ref-grid" を数える。
+#   ★属性逐値一致で数える全 arm (cont / docct / cbadj / pay / band tint …) に効く汎用 primitive ゆえ別実弾で撃つ。
+cp "$TMP/base-filled.html" "$TMP/ct36.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">#<div foo=bar"z"class="ref-grid">#; END { exit($n==1?0:9) }' "$TMP/ct36.html" \
+  || ng "CT36 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT36 ★unquoted 属性値への quote 混入 (幽霊 class marker) を属性 tokenize の同型化が捕捉" "$TMP/ct36.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# CT37. ★foreign 包みによる人間層 block の ★章外 relocation — block を chapbody の外 (章直下) へ出して
+#   `<svg>…</svg>` で包み、 抜けた分の位置へ空 div を filler として挿す。 foreign root を depth-1 の子として
+#   ★計上しない 実装では kids / cbkids が一切動かず rc=0 / 0 FAIL になる。 ★CT35 と別 shape:
+#   CT35 は「器を増やす」向き、 本 shape は「本文を器の外へ出す」向き (捕捉は breakout 開始タグ規則)。
+cp "$TMP/base-filled.html" "$TMP/ct37.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#<div data-component="spec-subhead"><h3 id="s4-6-a11y">.*?</div>\n##s) { $mv = $&; $n++ }
+$n++ if defined $mv && s#(</details>\n)</div>\n(</section>\n<section id="s5-delta" class="normative">)#${1} . "<div></div>\n</div>\n<svg>" . $mv . "</svg>\n" . ${2}#e;
+END { exit($n==2?0:9) }' "$TMP/ct37.html" \
+  || ng "CT37 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT37 ★svg 包みによる人間層 block の章外 relocation (filler で子数を保つ形) を tokenizer が fail-closed" "$TMP/ct37.html" "containment tokenizer の構造診断"
+# ★CT38 / CT39 — ★filler 置換による relocation (「完全子数」束縛が ★数 だけ を束縛し ★identity を束縛しない
+#   fail-open の封鎖)。 CT30 / CT31 は ★filler 無し の 1 instance にすぎず、 抜けた位置へ ★空 <div> を 1 個 挿す
+#   だけで 章直下 (kids) / band 直下 (bkids) / chapbody 直下 (cbkids) の ★どの子数も 動かないまま block 退避が
+#   成立する。 現在は chapbody 直下を ★marker 列 (要素名 + data-component/class の ★逐値・順序) で束縛するので、
+#   filler は無印 (`div:-`) として列に現れ 期待列と割れる。 ★2 shape を別実弾で撃つ: 退避先が (CT38) ★同章の
+#   machine-fold の中 = ★既定非表示の <details> へ人間層見出しが消える形 / (CT39) ★兄弟 block (div.tbl-wrap) の
+#   subtree の中。 ★どちらも 文書全体の component census (spec-subhead == Σ subhead blocks) は ★保たれる
+#   (削除でなく移動) ため census 側では捕まらない = ★列 pin ★単独 の teeth。
+cp "$TMP/base-filled.html" "$TMP/ct38.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s4-format" class="normative">.*?)(<div data-component="spec-subhead"><h3 id="s4-6-a11y">[^\n]*\n)(<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1}<div></div>\n${3}${2}#s; END { exit($n==1?0:9) }' "$TMP/ct38.html" \
+  || ng "CT38 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT38 ★filler 付き machine-fold 退避 (子数を保つ relocation) を契約由来 完全子列が捕捉" "$TMP/ct38.html" "章 's4-format' の chapbody 直下は 契約由来の完全子列"
+cp "$TMP/base-filled.html" "$TMP/ct39.html"
+perl -0777 -i -pe 'our ($n, $mv);
+if (s#(<section id="s4-format" class="normative">.*?)(<div data-component="spec-subhead"><h3 id="s4-6-a11y">[^\n]*\n)(<details data-component="spec-machine-fold")#${1}<div></div>\n${3}#s) { $mv = $2; $n++ }
+$n++ if defined $mv && s#(<section id="s4-format" class="normative">.*?<div class="tbl-wrap">)#${1} . $mv#se;
+END { exit($n==2?0:9) }' "$TMP/ct39.html" \
+  || ng "CT39 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT39 ★filler 付き兄弟 block (tbl-wrap) subtree 退避を契約由来 完全子列が捕捉" "$TMP/ct39.html" "章 's4-format' の chapbody 直下は 契約由来の完全子列"
+# CT40. ★属性値の文字参照 (「解決しないのは常に fail-closed 側」という ★方向分析の誤り の封鎖)。
+#   `class="ref&#45;grid"` は 実 DOM (convert_charrefs) では `.ref-grid` ゆえ 器が ★2 個 になるが、 文字参照を
+#   解決しない probe は これを ★数え落とす。 期待値が「== 1」の ★上限型 arm (docct) では 数え落とし =
+#   ★追加された容器が invisible ゆえ ★silent PASS へ倒れる。 現在は属性値の文字参照を解決して 文書総数 pin が
+#   loud に落とす。 ★CT21 と別 shape: CT21 は marker を ★逐値のまま 増やす形、 本 shape は marker を ★参照で
+#   綴って probe の目から隠す 形 (捕捉する arm は同じでも 突く非同型が別)。
+cp "$TMP/base-filled.html" "$TMP/ct40.html"
+perl -0777 -i -pe 'our $n; $n += s#</body>#<div class="ref&\#45;grid"></div>\n</body>#; END { exit($n==1?0:9) }' "$TMP/ct40.html" \
+  || ng "CT40 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT40 ★文字参照で綴った marker (class=\"ref&#45;grid\") による器の重複を属性値 charref 解決が捕捉" "$TMP/ct40.html" "ref-grid が ★文書全体で 1 個"
+# CT41. ★attribute-name state の parser-differential = ★幽霊 marker の ★第 2 vector (CT36 が塞ぐのは ★値 state
+#   だけ で ★名前 state は別)。 `<div a""class="ref-grid">` の実 DOM 属性は `a""class="ref-grid"` の ★1 本だけ
+#   (HTML5 の attribute-name state は `"` を ★名前文字 として取り込む) ゆえ ★class 属性は存在しない のに、
+#   raw タグ文字列を「どこからでも」属性名 regex で走査する実装は 文字列途中の `class="ref-grid"` を拾って
+#   ★実 DOM に無い marker を数える。 現在は タグ名直後から name/value state を ★順に消費する ので class は
+#   見つからず、 器の実在 arm が loud に落ちる。
+cp "$TMP/base-filled.html" "$TMP/ct41.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">#<div a""class="ref-grid">#; END { exit($n==1?0:9) }' "$TMP/ct41.html" \
+  || ng "CT41 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT41 ★attribute-name state への quote 混入 (幽霊 marker 第 2 vector) を逐次属性 parser が捕捉" "$TMP/ct41.html" "ref-grid が章 'forward-refs' の chapbody 内に 1 個"
+# CT42. ★タグ境界の quote 走査 — CT36 / CT41 が塞ぐのは ★属性値の読み取り ($attr) 側 であって、 ★タグの終端位置
+#   を決める走査は別コード。 実 parser では `=` を伴わない `"` は ★属性名文字 でタグは閉じず、 その後の最初の
+#   `>` が終端する ので、 genuine タグへ ` x=1 "></section>"` を 1 個足すだけで 実 DOM では ★そこで章が閉じ
+#   chapbody / chip が章の外へ出る のに、 state 無し走査は `</section>` を ★quote の中 と見なして region を
+#   元の閉じタグまで伸ばし ★containment 9 arm が全て期待値どおり になる (★1 行 bypass)。 現在はタグ境界を HTML5 の
+#   attribute-name / value state に同型化したので 実 DOM と同じ位置で終端し、 章内に取り残された chapbody が
+#   ★深さ 1 の未閉じ子 (unclosed-child-div) として err に立つ。 ★CT16 / CT32-35 / CT37 と ★別 shape:
+#   それらは 自己閉じ構文 / void / foreign の各規則を突く形で、 本 shape は ★属性 state を突いて ★実在する
+#   閉じタグを隠す 形 (tokenizer の state 機を消すと本 case ★だけ が緑へ戻る = per-shape MK)。
+cp "$TMP/base-filled.html" "$TMP/ct42.html"
+perl -0777 -i -pe 'our $n; $n += s#<div class="ref-grid">#<div class="ref-grid" x=1 "></section>">#; END { exit($n==1?0:9) }' "$TMP/ct42.html" \
+  || ng "CT42 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT42 ★タグ境界 quote 走査の state 非同型による閉じタグ隠蔽 (1 行 bypass) を tokenizer が捕捉" "$TMP/ct42.html" "containment tokenizer の構造診断"
+# ★CT43〜CT45 — ★block wrapper の中身 の帰属。
+#   ★根本原因: chapbody 直下の marker 列 (cbkids) は「器がそこに在る」までしか言わず ★器の中身 を束縛しない。
+#   かつ [table]=div.tbl-wrap / [requirements]=div.rq-list は ★wrapper class 自身の 文書 census を持たない
+#   (census は内側の spec-table / ears-requirement-row を数える) ため、 ★空の器を filler に残して 中身を
+#   machine-fold (既定折り畳み) へ移す形が ★全 arm 素通り する。
+#   ★3 shape を別実弾で撃つ: 器の class (rq-list / tbl-wrap) と 逃がし方 (器ごと / 中身だけ) が別クラスで、
+#   1 本の実弾は他 2 つの穴を証明しない (per-shape 規律 = jyfh / r8k)。
+# CT43. (A) ★rq-list ごと machine-fold へ + 空 rq-list filler — EARS 規範要件が ★既定折り畳みへ silent 退避 する形。
+cp "$TMP/base-filled.html" "$TMP/ct43.html"
+perl -0777 -i -pe 'our $n; $n += s#(<section id="s10-mandatory" class="normative">.*)<div class="rq-list">\n(.*?)\n</div>\n(<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1}<div class="rq-list"></div>\n${3}<div class="rq-list">\n${2}\n</div>\n#s; END { exit($n==1?0:9) }' "$TMP/ct43.html" \
+  || ng "CT43 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT43 ★rq-list ごと machine-fold へ退避 + 空 filler (規範要件の silent 折り畳み) を器中身の占有 pin が捕捉" "$TMP/ct43.html" "EARS 要件 row の ★器ごとの個数列 が章 's10-mandatory' の 要件リストの器 (div.rq-list) 群"
+# CT44. (B) ★tbl-wrap ごと machine-fold へ + 空 tbl-wrap filler — ★器の文書総数 pin が単独で担う向き
+#   (中身は器ごと移るので「器の中の payload」も落ちるが、 ★reason anchor は文書 census 側に取り 器自身の
+#   census 欠落こそが root cause であることを pin する)。
+cp "$TMP/base-filled.html" "$TMP/ct44.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#(<section id="s4-format" class="normative">.*?)(<div class="tbl-wrap">.*?</table></div>\n)#${1}<div class="tbl-wrap"></div>\n#s) { $mv = $2; $n++ }
+$n++ if defined $mv && s#(<section id="s4-format" class="normative">.*?<div class="machine-body">\n)#${1}$mv#s;
+END { exit($n==2?0:9) }' "$TMP/ct44.html" \
+  || ng "CT44 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT44 ★tbl-wrap ごと machine-fold へ退避 + 空 filler を器自身の文書 census が捕捉" "$TMP/ct44.html" "表の器 (div.tbl-wrap) が ★文書全体で"
+# CT45. (C) ★器は据置で 中身の table だけ machine-fold へ (hollow wrapper 残置) — 器の個数も文書総数も
+#   ★一切動かない ので ★器中身の占有 pin ★単独 が唯一の FAIL 源。
+#   ★CT11 / CT12 の hollow container 原理が ★契約章の block wrapper に未適用 だった穴。
+cp "$TMP/base-filled.html" "$TMP/ct45.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#(<section id="s4-format" class="normative">.*?<div class="tbl-wrap">)(<table data-component="spec-table">.*?</table>)(</div>\n)#${1}${3}#s) { $mv = $2; $n++ }
+$n++ if defined $mv && s#(<section id="s4-format" class="normative">.*?<div class="machine-body">\n)#${1}$mv\n#s;
+END { exit($n==2?0:9) }' "$TMP/ct45.html" \
+  || ng "CT45 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT45 ★hollow block wrapper (tbl-wrap 据置で中の table だけ fold へ) を器中身の占有 pin が単独で捕捉" "$TMP/ct45.html" "表 (spec-table) の ★器ごとの個数列 が章 's4-format' の 表の器 (div.tbl-wrap) 群"
+# ★CT46 / CT47 — ★同章内の 器 → 器 payload 再配分 (shape D)。
+#   ★根本原因: 器中身の占有 pin を 章単位の ★合計 (depth-1 全器の加算) で置くと、 同一章に同型の器が ★2 本以上
+#   ある章で「1 本目へ寄せて 2 本目を空の器として残す」再配分が ★合計不変 で素通る。 ★現在は 期待値を
+#   ★器ごとの個数列 (document 順・contract の per-block 導出) にしたので 列の逐値差で落ちる。
+#   ★dispatch fence の前提「rules は同型器 2 本以上の章 = 0 件 = shape D は構成不能」は ★contract 実測と
+#   食い違う (表の器 2 本 = s9-xref / 要件リストの器 2 本 = s9-xref・4 本 = s10-mandatory)。 ゆえ「構造免疫」
+#   と宣言せず ★実弾を 2 本 置く。 ★2 instance は ★payload クラスが別 (table / EARS 要件 row) ゆえ
+#   1 本の実弾は他方の穴を証明しない (器 1 本の章は 合計 == 器単位 で本 shape に構成上 免疫)。
+# CT46. 表の器 2 本の s9-xref — 2 本目の table を 1 本目へ寄せ、 2 本目を ★空の器 として残す (期待 1,1 → 実 2,0)。
+cp "$TMP/base-filled.html" "$TMP/ct46.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#(<section id="s9-xref" class="normative">.*?<div class="tbl-wrap">.*?</tbody></table></div>\n.*?<div class="tbl-wrap">)(<table data-component="spec-table">.*?</tbody></table>)(</div>\n)#${1}${3}#s) { $mv = $2; $n++ }
+$n++ if defined $mv && s#(<section id="s9-xref" class="normative">.*?<div class="tbl-wrap"><table data-component="spec-table">.*?</tbody></table>)(</div>\n)#${1}$mv${2}#s;
+END { exit($n==2?0:9) }' "$TMP/ct46.html" \
+  || ng "CT46 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT46 ★同章内の 器 → 器 payload 再配分 (s9-xref・表の器 2 本) を器ごとの個数列が捕捉" "$TMP/ct46.html" "表 (spec-table) の ★器ごとの個数列 が章 's9-xref' の 表の器 (div.tbl-wrap) 群"
+# CT47. 要件リストの器 4 本の s10-mandatory — 2 本目の EARS 要件 row を 1 本目へ寄せ、 2 本目を ★空の器 として
+#   残す (期待 3,1,7,1 → 実 4,0,7,1)。 ★CT46 と ★payload クラスが別 (table でなく ears-requirement-row)。
+cp "$TMP/base-filled.html" "$TMP/ct47.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#(<div data-component="ears-requirement-row" id="req-ci-001".*?\n</div>\n)(</div>\n<div class="tbl-wrap">)#${2}#s) { $mv = $1; $n++ }
+$n++ if defined $mv && s#(<div data-component="ears-requirement-row" id="req-cm-003".*?\n</div>\n)#${1}$mv#s;
+END { exit($n==2?0:9) }' "$TMP/ct47.html" \
+  || ng "CT47 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT47 ★同章内の 器 → 器 payload 再配分 (s10-mandatory・要件リストの器 4 本) を器ごとの個数列が捕捉" "$TMP/ct47.html" "EARS 要件 row の ★器ごとの個数列 が章 's10-mandatory' の 要件リストの器 (div.rq-list) 群"
+# CT48. ★β-1 クラス (marker 付き filler を ★同一行 に置く relocation) — CENSUS_BACKED_MARK の免除根拠が
+#   ★occurrence 単位 census であることの per-shape MK。 ★CT38 / CT39 と別 shape: あちらの filler は ★無印
+#   (`div:-`) ゆえ chapbody 直下の ★marker 列 が割れて落ちるが、 本 shape の filler は ★同型 marker
+#   (`div:spec-subhead`) を持つので 列は ★1 byte も変わらない。 唯一の依り所は marker の ★文書 census だが、
+#   「1. 行数」節の census は ★grep -c = 行単位 ゆえ filler を ★既存 subhead と同一の物理行 に置くと
+#   ★行数が変わらず 素通る (self-review round-1 blocking の ★実弾 = 旧版は census arm も cbkids も PASS で、
+#   落ちていたのは開示に書かれていない ★内容順序 arm だけ だった = 閉塞主張の帰属が誤り)。 ★現在は
+#   census-count 節が CENSUS_BACKED_MARK 全 member に ★occurrence 単位 census を機械生成するので
+#   spec-subhead の占有が 23 → 24 で loud に落ちる。 ★reason anchor は ★実際に落ちる arm (occurrence census)
+#   に取る — 内容順序 arm へ anchor すると 本 CT が occurrence census の ★担い手を pin しない。
+#   ★fired-guard は 3 置換 (§4.4 subhead 摘出 / §4.3 subhead と同一行への filler 挿入 / machine-fold への退避)。
+cp "$TMP/base-filled.html" "$TMP/ct48.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#<div data-component="spec-subhead"><h3>§4\.4 [^\n]*\n##s) { $mv = $&; $n++ }
+$n++ if defined $mv && s#(<div data-component="spec-subhead"><h3>§4\.3 [^\n]*)\n#${1} . "<div data-component=\"spec-subhead\"></div>\n"#se;
+$n++ if defined $mv && s#(<section id="s4-format" class="normative">.*?<details data-component="spec-machine-fold"[^\n]*\n<summary>[^\n]*\n<div class="machine-body">\n)#${1} . $mv#se;
+END { exit($n==3?0:9) }' "$TMP/ct48.html" \
+  || ng "CT48 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT48 ★同型 marker 付き filler を ★同一行 に置く relocation (行単位 census / 列 pin の同時素通り) を occurrence 単位 census が捕捉" "$TMP/ct48.html" "census-count(occurrence): spec-subhead == |subhead blocks|"
+# CT49. ★★errata-4 (admin gate round-1 blocking B1) — hollow figure (器据置・payload だけ machine-fold へ退避)。
+#   spec-diagram は marker 自身が census を持つが census は ★器の実在しか拘束しない — 旧抽出 (文書横断) では
+#   pre.mermaid + figcaption を fold へ移しても抽出列が不変で ★全 arm 素通り だった (rc=0 / 277 OK 実測 =
+#   「余地を持たない」宣言への過大宣言)。 errata-4 で figcaption / source 抽出を ★figure 内側限定 へ anchored 化
+#   = 本 shape は mermaid source 行列 arm が捕捉する (figure marker 据置ゆえ occurrence census / cbkids は不変 =
+#   ★reason anchor は実際に落ちる内容 arm に取る)。 ★fired-guard は 2 置換 (最初の figure の hollow 化 /
+#   payload の machine-body への退避 = 文書内に payload は実在し続ける)。
+cp "$TMP/base-filled.html" "$TMP/ct49.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#<figure data-component="spec-diagram" class="diagram">(.*?)</figure>#<figure data-component="spec-diagram" class="diagram"></figure>#s) { $mv = $1; $n++ }
+$n++ if defined $mv && s#(<div class="machine-body">\n)#${1} . $mv . "\n"#se;
+END { exit($n==2?0:9) }' "$TMP/ct49.html" \
+  || ng "CT49 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT49 ★hollow figure (器据置・payload を machine-fold へ退避) を figure 内側限定抽出が捕捉 (errata-4)" "$TMP/ct49.html" "mermaid source 行列"
+# CT50. ★A2 (MX5) — contract 件数 0 の census-backed 型へ marker 付き filler を 1 個注入 (cbkids に不可視の
+#   machine-body 内側)。 occurrence census は ★文書の実占有 を数えるゆえ expected 0, got 1 で落ちる =
+#   「0 件型は arm を作らない」向きの将来最適化を tracked 実弾で封鎖 (0/0 恒真でないことの pin・reason anchor は
+#   occurrence census arm に取る)。
+cp "$TMP/base-filled.html" "$TMP/ct50.html"
+perl -0777 -i -pe 'our $n;
+$n++ if s#(<div class="machine-body">\n)#${1} . "<p data-component=\"spec-prose\">occ-census-filler</p>\n"#se;
+END { exit($n==1?0:9) }' "$TMP/ct50.html" \
+  || ng "CT50 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT50 ★0 件 census-backed 型への marker 付き filler 注入を occurrence census が捕捉 (0/0 恒真でない)" "$TMP/ct50.html" "census-count(occurrence): spec-prose"
+# CT51. ★★errata-5 (round-2 blocking B1p) — 同型器間の payload 移送 (figure#1 を hollow に残し中身を figure#2
+#   内へ・payload 総数不変・doc 順保存)。 anchored 化 (errata-4) だけでは「どれかの figure 内側」しか要求せず
+#   平坦連結が byte 不変で ★全 arm 素通り だった (実弾 rc=0/277 OK)。 errata-5 の器序数束縛により、 移送された
+#   payload は器序数 2 を帯び 期待側 (block 序数 1) と割れて落ちる。 ★reason anchor は mermaid source 行列
+#   (器序数束縛)。 fired-guard は 2 置換 (figure#1 hollow 化 / 中身を次の非 hollow figure 先頭へ挿入)。
+cp "$TMP/base-filled.html" "$TMP/ct51.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#<figure data-component="spec-diagram" class="diagram">(.*?)</figure>#<figure data-component="spec-diagram" class="diagram"></figure>#s) { $mv = $1; $n++ }
+$n++ if defined $mv && s#(<figure data-component="spec-diagram" class="diagram">)(?!</figure>)#${1} . $mv#se;
+END { exit($n==2?0:9) }' "$TMP/ct51.html" \
+  || ng "CT51 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT51 ★同型器間 payload 移送 (figure hollow 化 + 隣の figure へ融合) を器序数束縛が捕捉 (errata-5)" "$TMP/ct51.html" "mermaid source 行列"
+# CT52. ★★errata-5 / A-1 — code の同型器間移送 (pre#1 の code 内容を空にし行を pre#2 の code 先頭へ融合)。
+#   旧形の実閉塞は frozen census (corpus 固有 literal) 側で、 宣言担体「code 行列」は行の平坦連結ゆえ素通り
+#   だった (round-2 A-1 帰属誤り)。 器序数束縛により code 行列 arm 自身が捕捉する。 fired-guard は 2 置換。
+cp "$TMP/base-filled.html" "$TMP/ct52.html"
+perl -0777 -i -pe 'our $n; our $mv;
+if (s#(<pre data-component="spec-code"><code>)(.*?)(</code></pre>)#${1} . ${3}#se) { $mv = $2; $n++ }
+$n++ if defined $mv && s#(<pre data-component="spec-code"><code>)(?!</code>)#${1} . $mv . "\n"#se;
+END { exit($n==2?0:9) }' "$TMP/ct52.html" \
+  || ng "CT52 mutation が発火せず (shape drift = 空撃ち)"
+expect_vfilled_fail "CT52 ★code の同型器間移送 (pre hollow 化 + 隣の code へ行融合) を器序数束縛が捕捉 (errata-5 / A-1)" "$TMP/ct52.html" "code 行列"
+
+# === MECHPIN. ★containment 検査機構の健全性 arm の ★tracked 静的 pin ===
+#   「駆動表が全章を覆う」「probe が全章分の実測を出力」の 2 arm は ★artifact をどう改竄しても落ちない
+#   (script 改変でしか落ちない) ため、 敵対 suite の構造上 per-shape MK を持てない。 その担保を worker の
+#   ★untracked な self-test に置くと land 後にリポへ ★残らない ので、 tracked な本 suite で
+#   ★arm の実在 と ★期待値が導出形であること を静的に pin する。
+#   ★恒真化封鎖: file 全体の grep (-ge 1 / -q) では、 将来 ★コメント等に同じ文字列が 1 つ増えるだけで
+#   成立してしまう (arm 本体が消えても緑)。 ゆえに (a) ★chk 行だけを awk で scope 切り出し (b) ★label と
+#   期待値の導出形を ★同一行 に要求 (c) ★==1 の逐値 の 3 点で締める。
+#   ★chk は label と期待値が ★行継続 (`\`) で分かれることがあるため、 継続行を ★論理行へ連結してから 抽出する
+#   (1 行 awk だと label 行しか取れず「同一行に導出形を要求」が構造的に成立しない = 恒偽になる)。
+mech_chk="$(awk '{ cur = $0; if (buf != "") cur = buf cur; if (cur ~ /\\$/) { sub(/\\$/, "", cur); buf = cur; next } buf = ""; print cur }' "$VER" | grep '^chk "')"
+mech_cov="$(printf '%s\n' "$mech_chk" | grep -F 'containment 駆動表が全章を覆う' | grep -cF 'NSEC + ${#PRESENTATION_WRAPPER_IDS[@]}')"
+mech_prb="$(printf '%s\n' "$mech_chk" | grep -F 'containment probe が全章分の実測を出力' | grep -cE '\$\{#_CT_ID\[@\]\} \* [0-9]+ \+ \$\{#_XC_KEY\[@\]\} \* [0-9]+ \+ 1')"
+if [[ "$mech_cov" -eq 1 ]]; then
+  ok "MECHPIN ★駆動表 被覆 arm が chk 行に 1 本・期待値は contract 由来の導出形 (literal 直書きでない)"
+else
+  ng "MECHPIN ★駆動表 被覆 arm が chk 行で導出形として 1 本存在しない (実測 $mech_cov 期待 1 — arm 消失 / literal 直書きへの退行 / 複製)"
+fi
+if [[ "$mech_prb" -eq 1 ]]; then
+  ok "MECHPIN ★probe 出力行数 arm が chk 行に 1 本・期待値は章数からの導出形"
+else
+  ng "MECHPIN ★probe 出力行数 arm が chk 行で導出形として 1 本存在しない (実測 $mech_prb 期待 1)"
+fi
+# ★producer 存在 assert (負の主張だけにしない): 上の 2 arm は chk 行の集合から数えているので、 その集合が
+#   ★空でない ことを別途固定する (awk の抽出パターンが腐れば両 arm とも 0 になり ng へ倒れるが、 抽出自体の
+#   健全性を独立に見ておく)。
+mech_n="$(printf '%s\n' "$mech_chk" | grep -c .)"
+if [[ "$mech_n" -ge 50 ]]; then ok "MECHPIN ★chk 行の抽出が健全 ($mech_n 行・scope 切り出しの producer 存在 assert)"
+else ng "MECHPIN ★chk 行の抽出が壊れている ($mech_n 行 — awk パターンの腐りで上の 2 arm が恒偽化する)"; fi
+# ★containment の ★駆動表被覆と ★器登録 の 2 宣言集合が ★verify script に実在すること の静的 pin
+#   (CHAPBODY_KID_MARK / CENSUS_BACKED_MARK / BLOCK_WRAPPER_SPEC が消えると partial-enum guard が丸ごと
+#   消えるが、 生成物は無改竄のままなので敵対 suite の CT 群では ★捕まらない = MECHPIN の領分)。
+mech_decl=0
+for _d in CHAPBODY_KID_MARK CENSUS_BACKED_MARK BLOCK_WRAPPER_SPEC PRESENTATION_WRAPPER_BAND_TINTS; do
+  grep -qE "^(declare -A )?${_d}=\(" "$VER" && mech_decl=$((mech_decl+1))
+done
+if [[ "$mech_decl" -eq 4 ]]; then ok "MECHPIN ★containment の宣言集合 4 本 (CHAPBODY_KID_MARK / CENSUS_BACKED_MARK / BLOCK_WRAPPER_SPEC / PRESENTATION_WRAPPER_BAND_TINTS) が verify に実在"
+else ng "MECHPIN ★containment の宣言集合が欠落 (実測 $mech_decl / 期待 4 — partial-enum guard の消失は CT 群では捕まらない)"; fi
 
 # === 健全性 (false-positive 防止: baseline は PASS であること) ===
 expect_vprefill_pass "P1 健全 baseline は pre-fill verify PASS" "$BASE" "$TMP/base.html"
