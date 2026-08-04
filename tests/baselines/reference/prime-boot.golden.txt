@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 0 pointer digest (boot 予算適合、 ADR-0055)
-# 63 specs · folio 1.2.0 · decisions 47 / research 10 / spec 6
+# 63 specs · folio 1.2.1 · decisions 47 / research 10 / spec 6
 # doc-type: adr 46 · research 7 · cluster-readme 3 · spec 3 · planning 2 · rules 1 · self-spec 1
 # status: accepted 46 · active 11 · superseded 3 · draft 2 · stable 1
 #

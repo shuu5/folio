@@ -1,5 +1,5 @@
 # folio inventory digest — Tier 1 (progressive disclosure)
-# 63 specs · folio 1.2.0
+# 63 specs · folio 1.2.1
 # Tier 1 = @id + title + doc-type/status + summary. Read Tier 2 (head + lead para) / Tier 3 (full body) on demand.
 
 ## spec/README.html
