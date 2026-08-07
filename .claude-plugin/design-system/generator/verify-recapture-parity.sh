@@ -51,19 +51,23 @@ fail=0
 pfail() { printf '  [FAIL] %s\n' "$1"; fail=1; file_fail=1; }
 
 # ===== RECAPTURE_REGISTRY (批准済み紐付けの SSoT・default-block) =====
-# 書式: <spec contract file>|<原本 spec HTML (SPEC_DIR 相対)>。 行頭 # はコメント。
+# 書式: <spec contract file>|<原本 spec HTML (SPEC_DIR 相対)>[|reqless]。 行頭 # はコメント。
 # 新しい *.spec.yaml は登録 (原本の明示紐付け) なしでは FAIL する。
+# 第 3 field `reqless` = requirements 0 本の明示批准 (folio-f3ty・cuom Leg B 裁定 D-3)。 照合は
+# 「contract 0 本 == 原本 anchor 0 本」の双方向 0 一致に切り替わり、 片側が生えたら FAIL する (批准 rot 防止)。
 RECAPTURE_REGISTRY='
 folio-rules.spec.yaml|rules.html
 folio-verification.spec.yaml|verification.html
 folio-relations.spec.yaml|relations.html
 folio-srs-verification.spec.yaml|srs-verification.html
+folio-self-spec.spec.yaml|folio-self-spec.html|reqless
 '
 
-declare -A R_SRC
-while IFS='|' read -r rf rs; do
+declare -A R_SRC R_REQLESS=()
+while IFS='|' read -r rf rs rfl; do
   [[ -z "$rf" || "$rf" == \#* ]] && continue
   R_SRC[$rf]="$rs"
+  [[ "$rfl" == "reqless" ]] && R_REQLESS[$rf]=1
 done <<< "$RECAPTURE_REGISTRY"
 
 echo "== spec-pack 要件層 recapture parity gate (folio-og3g) =="
@@ -118,6 +122,22 @@ for path in "$CONTRACT_DIR"/*.spec.yaml; do
       next unless $dc eq "ears-requirement-row";
       my ($id) = $a =~ /\bid\s*=\s*"(req-[a-z0-9-]+)"/; print "$id\n" if defined $id;
     }' "$src" | tr '[:lower:]' '[:upper:]' > "$TMP/aids"
+  # ★reqless 批准列 (folio-f3ty): requirements 0 本を明示批准した contract は「contract 0 本 == 原本 anchor 0 本」
+  #   の双方向 0 一致で照合する (zero-anchors の vacuous-green 拒否は非 reqless にのみ適用)。 逆向き検査 =
+  #   批准のまま contract に requirements が生えたら reqless-violation、 原本に anchor が生えたら
+  #   reqless-genbun-anchors で FAIL (どちらも「批准を外して通常照合へ戻す」ことを要求する fail-loud)。
+  if [[ -n "${R_REQLESS[$base]:-}" ]]; then
+    ncr="$(grep -c . "$TMP/cids" || true)"; nar="$(grep -c . "$TMP/aids" || true)"
+    if [[ "$ncr" -gt 0 ]]; then
+      pfail "reqless-violation: reqless 批准済み contract に requirements が $ncr 本 in $base (批准列から外すか requirements を空へ)"; continue
+    fi
+    if [[ "$nar" -gt 0 ]]; then
+      pfail "reqless-genbun-anchors: reqless 批准済みなのに原本に要件 anchor $nar 本 in ${R_SRC[$base]} (recapture 追随漏れ — 批准を外し通常照合へ)"; continue
+    fi
+    n_checked=$((n_checked+1))
+    printf '  [OK]   parity: %s ↔ %s (reqless 批准・contract 0 本 == 原本 anchor 0 本)\n' "$base" "${R_SRC[$base]}"
+    continue
+  fi
   if [[ ! -s "$TMP/aids" ]]; then
     pfail "zero-anchors: 原本に要件 anchor が 0 本 (${R_SRC[$base]}) — selector rot か構造変更 (vacuous green 拒否)"; continue
   fi

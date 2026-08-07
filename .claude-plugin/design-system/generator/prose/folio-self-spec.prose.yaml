@@ -1,0 +1,36 @@
+# folio engine (folio-cuom) — spec-pack prose manifest (③「読みやすさの足場」) — self-spec fork
+#
+# opus 著作物。決定的 assembler が空で出力した data-prose-slot に inject-prose.sh が
+# HTML escape して注入する。slot-id ↔ 散文の 1:1 対応 (集合一致を inject が fail-closed 検査)。
+#
+# 各値は機械 SSoT (contract/folio-self-spec.spec.yaml = folio-self-spec.html から機械抽出) 接地。捏造/歪曲/脱落は
+# fidelity ceiling (機械 SSoT 突合 + persona-walk) の検査対象。値は単一行 (tab/改行禁止)。
+#   - cover-summary は doc 全体 (section / 照会) に接地する。
+#     ★self-host pack (機械層 dual-audience) では機械層を fold に逐語保持する (原本↔生成物 round-trip を floor が enforce) ため、
+#     「機械向けの詳細は元の *.html を参照」型の文言は禁止 (読者誤誘導 = gate J finding・folio-sm8)。 fold を開けば読めると案内する (README ③)。
+#     ★fold のラベル名を本文中で案内する場合は ★生成物に実在するラベル逐語 でなければならない。 本 pack の実 emit は
+#       mf-kicker =「機械向けの詳細（原文そのまま）」の ★1 種のみ — 要件 fold の『正確な条文（機械向けの厳密な書き方）』は
+#       ★要件 0 件ゆえ生成物に ★存在しない ため案内してはならない (存在しない fold 名への誘導 = 読者誤誘導)。
+#     ★★全称を書かない (folio-sm8 ceiling round-1 minor と同型): self-spec の machine_blocks は章ごとに
+#       1 / 3 / ★0 / 6 / 17 / 4 / 2 (§0 / §1 / ★§2 / §3 / §7 / §8 / §9) で、 ★§2 だけが機械層 fold を持たない。
+#       ゆえ「章ごとに (= 全章に) 機械向けの詳細がある」とは書けない。 「多くの章に」と限定する。
+#   - chapter-lead-NN は各章 (band) の heading/essence だけに接地し、 SSoT に無い義務や規約を新造しない。
+#   - band 順: 01=§0 読み方 / 02=§1 2 層構造 / 03=§2 repo Layout / 04=§3 二層提示 / 05=§7 harness 部品 /
+#     06=§8 plugin 統合 / 07=§9 実装への橋渡し / 08=§10 照会 (前方) / 09=§11 用語集。
+#     ★slot-id は ★連番 (01..09) のまま = 章帯の巨大番号 (§0..§3 / §7..§11 = ADR-0054 §2.2 の節番号一致) とは別体系。
+#     ★§4/5/6 は canonical に ★存在しない (欠番) — 章帯の番号が飛ぶのは正常であり、 存在しない章に触れてはならない。
+#   - ★plain-<要件 anchor> / prio-<要件 anchor> は ★本 pack に存在しない — self-spec は EARS 要件を 1 件も持たない
+#     (規範 MUST の SSoT は rules.html §10)。 slot 集合は cover-summary 1 + chapter-lead-01..09 の ★計 10 で閉じる。
+
+slots:
+  cover-summary: "folio という枠組み (Layer 0 META FRAMEWORK) 自身の設計仕様です。 folio 本体と、 それを使う各プロジェクトを別々の git リポジトリに分ける 2 層構造、 folio リポジトリの構成、 人間向けの要約と機械向けの精密な記述を 1 つの HTML に同居させる提示方式、 spec 編集を支える harness 部品群、 Claude Code plugin としての配布、 そして実装手段の隔離先までを章立てで定め、 上位の原則 (constitution) や決定記録 (ADR)・規約要件 (rules)・検証仕様へ前方照会します。 本ページは元の folio-self-spec.html を機械 SSoT から dual-audience で再生成したもので、 多くの章にある折りたたみ『機械向けの詳細（原文そのまま）』を開くと地の文の精密な記述をそのまま読めます。"
+
+  chapter-lead-01: "まず読み方から。 本書が扱うのは folio 自身の設計であり、 folio を使う側が従う規約は rules.html、 動かせない原則は constitution.html にあります。 spec を編集する前の手続きと、 いま自分がどちらの層を編集しているかの確かめ方も、 それぞれ後の章を指し示します。"
+  chapter-lead-02: "folio 本体 (Layer 0) と、 それを使う各プロジェクト (Layer 1) を ★別々の git リポジトリに分ける、 という土台の決定を説明する章です。 表と図で 2 つの層の役割・変更頻度・例を対比し、 使う側が設定ファイルで明示的に folio を取り込む仕組みを述べます。"
+  chapter-lead-03: "folio リポジトリそのもののディレクトリ構成を定めます。 設計意図の空間・テストの置き場・plugin harness・目印となるルートファイルがどう並ぶかを、 ディレクトリツリーと図で示します。 この 2 つが構成の正本です。"
+  chapter-lead-04: "人間向けの要約と、 機械向けの精密な記述を 1 つの HTML に同居させる提示方式を、 folio 自身に当てはめた設計です。 その中核・食い違いを防ぐ二層の検査・JavaScript の扱い・文書どうしの相互参照の 4 つに分けて解説します。"
+  chapter-lead-05: "spec 編集を支える harness の部品群をまとめた、 本書でいちばん厚い章です。 7 段階の編集サイクル・専門 agent 群・編集中であることの目印・取り違えを防ぐ 5 層の防御・マージ前の自動チェック・試作段階での最小構成を、 順に解説します。"
+  chapter-lead-06: "folio を Claude Code の plugin として配布するための取り決めです。 設定ファイルの形・使う側が既定値を上書きする仕組み・配布とバージョン指定の方法を、 実例つきで示します。"
+  chapter-lead-07: "環境変数の具体値や script 名のような、 platform ごとに変わる実装手段を本文から追い出し、 どこに置くかを表で定めます。 これにより §1〜§8 の本文は特定の platform に依存しない記述を保てます。"
+  chapter-lead-08: "本書が上位の文書へ前方照会している先の一覧です。 拠って立つ原則、 そう決めた理由の記録、 満たすと主張する規約要件、 どう確かめるかの検証仕様の 4 種類があり、 根拠をたどりたくなったらここから元の文書へ進めます。"
+  chapter-lead-09: "本文に出てくる専門語を、 やさしい説明つきで一覧します。 本文中の語は同じ説明が hover で出るので、 読みながらでも後からでも引けます。"

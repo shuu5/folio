@@ -234,6 +234,19 @@ jobs:
         run: SKIP_REPRO=1 SKIP_RENDER=1 RELATIONS_ORIGIN_HTML=.claude-plugin/design-system/generator/spec-origin/relations.origin.html .claude-plugin/design-system/generator/verify-relations.sh --artifact .claude-plugin/design-system/generator/contract/folio-relations.spec.yaml design-intent/spec/relations.html
 
       # ======================================================================
+      # self-spec arm (folio-cuom Leg A bootstrap + folio-f3ty cuom Leg B 配線)
+      # ----------------------------------------------------------------------
+      # ★flip 前の additive 配線: 敵対 suite (staging subject = contract からの再 assemble・canonical 独立
+      #   anchor の oracle D7 込み) と census-guard (数字上書き防壁) の 2 step のみを常設する。
+      # ★政策A floor 実走 (verify-self-spec --artifact = landed canonical 直接実走) は ★folio-mkwc (flip cell)
+      #   の領分 — flip 前の landed canonical folio-self-spec.html は手書き原本のままで生成物でないため、
+      #   --artifact 実走は構造 false-drift の恒常 RED になる (bxpm/lwhz flip 配線と同じ順序原則)。
+      - name: self-spec 敵対回帰 (per-shape MK — assembler fail-closed / verify FAIL / 陽性対照 / extractor fail-loud / collapse / oracle D7 MK)
+        run: .claude-plugin/design-system/generator/test-adversarial-self-spec.sh
+      - name: census-guard self-spec (数字上書き防壁・per-spec 呼出し = 案X spec 名引数化)
+        run: .claude-plugin/design-system/generator/census-guard.sh self-spec "${{ github.event.pull_request.base.sha || github.event.before }}"
+
+      # ======================================================================
       # srs-verification 提示層 arm (ADR-0054 §2.2 / folio-o01k = Cell S)
       # ----------------------------------------------------------------------
       # ★配線理由: srs-verification に対する CI 実走 step は本 cell の前まで ★drift gate 2 本のみ (上記 :151/:153) で、

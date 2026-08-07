@@ -22,7 +22,7 @@ bad() { total=$((total+1)); printf '  [FAIL] %s\n' "$1"; }
 fresh() { # $1=変数名 prefix。 CD_<p>/SD_<p> に path を格納
   local d1 d2; d1="$(mktemp -d)"; d2="$(mktemp -d)"
   cp "$SRC_CONTRACT"/*.yaml "$d1"/
-  cp "$SRC_SPEC"/rules.html "$SRC_SPEC"/verification.html "$SRC_SPEC"/relations.html "$SRC_SPEC"/srs-verification.html "$d2"/
+  cp "$SRC_SPEC"/rules.html "$SRC_SPEC"/verification.html "$SRC_SPEC"/relations.html "$SRC_SPEC"/srs-verification.html "$SRC_SPEC"/folio-self-spec.html "$d2"/
   CD="$d1"; SD="$d2"
 }
 run_gate() { "$GATE" --contract-dir "$CD" --spec-dir "$SD" 2>&1; }
@@ -62,9 +62,13 @@ echo "== recapture parity gate 敵対回帰 =="
 #   details.spec-row 残は relations 4 のみ)。
 #   lineage: 2026-08-03 (folio-4vfb REQ-NAV-008 新設・9300fb1) = 4 contract / 67 id (verification 31→32)。
 #   chrome-scope arm の REQ 正式化 (独立再導出: verify-recapture-parity 実走「contract 4 本 / id 67 件」+ PASS)。
+#   lineage: 2026-08-06 (folio-f3ty cuom Leg B・reqless 批准列) = 5 contract / 67 id (+1 contract =
+#   folio-self-spec.spec.yaml ↔ folio-self-spec.html の reqless 批准登録・id +0〔requirements 0 本 == 原本
+#   anchor 0 本の双方向 0 一致〕)。 独立再導出: verify-recapture-parity 実走「contract 5 本 / id 67 件」PASS +
+#   contract yq (.requirements | length) 0 == 原本 2-shape 抽出 0 本。
 out="$("$GATE" 2>&1)"; rc=$?
-if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 4 本 / id 67 件' <<<"$out"; then
-  ok "R0 baseline: clean corpus → exit 0 + 4 contract / 67 id pin"
+if [[ "$rc" -eq 0 ]] && grep -q '照合: contract 5 本 / id 67 件' <<<"$out"; then
+  ok "R0 baseline: clean corpus → exit 0 + 5 contract / 67 id pin"
 else bad "R0 baseline: 期待 pin と不一致 (rc=$rc・corpus 成長なら lineage 手順で pin 更新)"; fi
 
 # --- R1 recapture 追随漏れ: contract から record を 1 本落とす → missing-in-contract ---
@@ -151,6 +155,20 @@ rm -rf "$CD" "$SD"
 fresh
 yq -i '.requirements += ["stray-string"]' "$CD/folio-relations.spec.yaml"
 expect_fail "R8c malformed-requirements: 非 object record → FAIL" "malformed-requirements: id 空 or 非 object record in folio-relations.spec.yaml"
+rm -rf "$CD" "$SD"
+
+# --- R10 reqless-violation: reqless 批准済み contract に requirements が生える → FAIL (folio-f3ty 逆向き検査) ---
+# ★批准 rot 防止の per-shape MK: reqless 分岐は通常照合と別 code path ゆえ、R1-R8c の実弾では
+#   検出力を証明できない (双方向 0 一致の片側ずつを独立 mutant で撃つ)。
+fresh
+yq -i '.requirements += [{"id": "REQ-SELF-099", "ears_pattern": "ubiquitous", "essence": "x", "statement": "y"}]' "$CD/folio-self-spec.spec.yaml"
+expect_fail "R10 reqless-violation: 批准のまま contract に requirements 1 本 → FAIL" "reqless-violation: reqless 批准済み contract に requirements が 1 本 in folio-self-spec.spec.yaml"
+rm -rf "$CD" "$SD"
+
+# --- R10b reqless-genbun-anchors: reqless 批准済みなのに原本に要件 anchor が生える → FAIL (R10 の双子・原本側) ---
+fresh
+printf '<div data-component="ears-requirement-row" id="req-self-001"></div>\n' >> "$SD/folio-self-spec.html"
+expect_fail "R10b reqless-genbun-anchors: 批准のまま原本に anchor 1 本 → FAIL" "reqless-genbun-anchors: reqless 批准済みなのに原本に要件 anchor 1 本 in folio-self-spec.html"
 rm -rf "$CD" "$SD"
 
 # --- R9 起動エラー: 未知引数 → exit 2 ---

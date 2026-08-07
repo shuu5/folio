@@ -1,0 +1,111 @@
+# folio-self-spec frozen census — policy A (ADR-0053) / folio-cuom Leg A bootstrap freeze
+# ============================================================================
+# 政策 A (user 裁定 2026-07-18 = bootstrap 退役): snapshot oracle は「flip 時 1 回の bootstrap
+# 忠実性証明」に縮退し、恒久防御は (a) literal census (本 file) + (b) contract 対 machine-block
+# round-trip + (c) extractor-collapse 敵対 test が代替する。
+#
+# ★本 file の値は以後 canonical / artifact / 生成物から【導出しない】凍結 literal (frozen literal)。
+#   measured 側 (生成物 HTML = verify-self-spec.sh の subject) とのみ突合する。両側 contract 由来の
+#   相対 parity は ★両側同時退行 (extractor collapse) で vacuous PASS するため、本 file が
+#   ★唯一の独立 anchor になる。
+#
+# ★★bootstrap freeze の由来と正当性 (次の cell が「自作自演の anchor では?」と読まないための開示):
+#   本 pack はまだ flip 前 (canonical = 手書き HTML / 生成物 = /tmp) ゆえ、値は ★生成物から 1 回だけ
+#   実測して凍結した (全 pack の census が生まれた手順と同じ)。その生成物が canonical に忠実である
+#   ことは ★本 file とは独立に oracle/self-spec-text-sweep.py (悉皆 text sweep・契約 D7) が
+#   「未分類差分 0 / 承認済み errata ちょうど 1 delta」で示している (freeze は ★その PASS の後に行った)。
+#   以後は本 file が固定 anchor として働く (値を動かすには contract 変更が要る = census-guard.sh)。
+#
+# ★spec-origin/self-spec.origin.html (pre-flip snapshot) は ★本 Leg には存在しない —
+#   snapshot 作成は flip cell (folio-mkwc) の職掌 (folio-cuom 契約 N2 / ■7)。errata 適用 ★前 の
+#   canonical (「完成形 8」のまま) を byte 忠実に取ることを mkwc へ申し送る (契約 E5)。
+#
+# ★census-guard.sh の naked bump 防壁 (provenance sha + git-diff coupling) は ★有効 —
+#   Leg B (folio-f3ty) が KNOWN_SPECS へ self-spec を追加済 (旧記述「dormant」は ★stale だったため
+#   folio-cuom errata-1 で是正した = false record を残さない)。ただし coupling (2) は本 file が base から
+#   ★ADDED (初回 freeze) の間は課されない — MODIFIED になる次サイクル (mkwc の flip) から効く。
+#
+# provenance:
+#   canonical = design-intent/spec/folio-self-spec.html @ base a25eaa3c
+#   生成物    = assemble-self-spec.sh + inject-prose.sh (prose/folio-self-spec.prose.yaml) の出力
+#   provenance_contract_sha256 = f33065175b73fc7faab19033b0017cfffdcc2887e8d6201e476168531e6e15ea
+# ============================================================================
+
+# --- navigable id (提示層 wrapper forward-refs / glossary-terms を除く) ---
+FZ_ID_COUNT=17
+
+# --- rich 資産 occurrence (実 HTML parser walk・live 要素のみ) ---
+FZ_XREF=26
+FZ_TERM=24
+FZ_DELTA=0
+
+# --- escape literal (text node 限定・過剰 linkify / 二重 escape の検出) ---
+FZ_ESC_XREF=0
+FZ_ESC_CODE=0
+FZ_ESC_SPAN=0
+
+# --- 人間層 generic inline (region 別 + 総和。 region 相殺封鎖のため総数も持つ) ---
+FZ_CODE_TABLE_CELL=45
+FZ_CODE_CAPTION=5
+FZ_CODE_REST=46
+FZ_CODE_TOTAL=96
+FZ_SPAN_TABLE_CELL=3
+FZ_SPAN_CAPTION=0
+
+# --- P-11 how-outside: 'jq -S' primitive の露出 (self-spec 本文には 0 件) ---
+FZ_JQS_TOTAL=0
+FZ_JQS_MASKED=0
+
+# --- JSON-LD folio:stakeholders の型+値 (array→string 型退行封鎖・型\t値) ---
+FZ_STAKEHOLDERS_LD=list	["Developer", "AI Agent", "External Reviewer"]
+
+# --- <pre> 内 inline 資産の census (folio-cuom errata-1 M1・独立 ceiling blocking の対) ---
+# ★動機: extractor の preline() は元来 ★全タグを無置換除去 しており、 canonical mermaid が subgraph ラベルに
+#   持つ <b>…</b> ★9 組 (18 tag) が ★警告なしで契約から消えていた (= errata folio-642 とは別の ★未承認 delta。
+#   flip すると canonical 側で恒久喪失する)。 是正後は <b> を ★live タグのまま 生成物へ運ぶ。
+# ★canonical anchor の実測 (抽出 ★入力 側・凍結記録。 extractor の pre_inline guard が閉集合を fail-loud で守る
+#   — 判定粒度は ★出現 literal 単位 で、 下流の preline mask / <br> 変換 / <pre><code> 抽出 と同粒度):
+# ★★下記 2 値は ★記録であって pin ではない (folio-cuom errata-2 M9)。 committed gate は消費せず、
+#   参照するのは 敵対 suite の負の対照 (D6a) が guard の LOG 期待値を組み立てるときだけ。
+#   enforce するのは ★生成物 subject 側 の FZ_PRE_TAGS / FZ_PRE_MERMAID_LINES と、 markup 単位の
+#   canonical anchor arm (oracle/self-spec-text-sweep.py の mermaid_markup_arm) である。
+# ★値行に ★行末コメントを置かない (file 規約): verify-self-spec.sh の fz() は `grep -m1 "^KEY=" | sed "s/^KEY=//"`
+#   ゆえ ★行末コメントごと値として返す (本 file で唯一 2 値だけが規約から外れていた latent trap を是正)。
+# FZ_PRE_CANON_B  = canonical <pre class="mermaid"> 内の <b> tag 総数 (open+close = 9 組)
+FZ_PRE_CANON_B=18
+# FZ_PRE_CANON_BR = 同 <br> 総数 (M2 で ★改行へ変換 される = 生成物側では 0)
+FZ_PRE_CANON_BR=73
+# ★生成物 subject の閉集合 census (verify-self-spec.sh が突合)。 "key=count" を空白区切り・key 名昇順で並べる。
+#   ★★key は ★open / close 別 (errata-2 M8(1))。 旧 "b=18 code=6" の ★合算 形は ★不均衡 (`</b>`→`<b>` の
+#   入替など総数保存の改竄) を素通りさせ、 html5lib DOM 実測で adoption agency により <b> が <pre> の外へ
+#   再構築され figcaption / provenance footer まで bold 化した文書が ★全 gate 緑で出荷された (実弾再現)。
+#   ★閉集合 ゆえ、 未対応 inline 資産が 1 つでも増減すれば FAIL する (「preline が黙って落とす」クラスの
+#   再演を 生成物側から も塞ぐ)。 code_open/close = 3 = <pre><code> wrapper × 3 blocks。
+FZ_PRE_TAGS=b_close=9 b_open=9 code_close=3 code_open=3
+# ★<br> → 改行 変換 (M2) の ★生成物側 pin。 変換を外すと mermaid pre の総行数が ★73 減る (契約非依存の実弾)。
+FZ_PRE_MERMAID_LINES=266
+
+#BEGIN_ID_SET
+s0-reader-guide
+s1-architecture
+s2-folio-layout
+s3-1-core
+s3-2-enforcement
+s3-3-js
+s3-4-xref
+s3-dual-audience
+s7-1-7phase
+s7-2-specialists
+s7-3-caller-marker
+s7-4-defense
+s7-5-ci-gate
+s7-6-phase-x3-minimal
+s7-harness
+s8-plugin
+s9-bindings
+#END_ID_SET
+
+# ★delta 印 (ins|del.class=delta) は self-spec に 0 件 = 空集合。 「0 == 0 の恒真」ではない:
+#   measured 側は生成物ゆえ delta 注入があれば FZ_DELTA / DELTA_SET の双方が FAIL する。
+#BEGIN_DELTA_SET
+#END_DELTA_SET

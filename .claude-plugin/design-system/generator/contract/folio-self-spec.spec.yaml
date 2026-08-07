@@ -1,0 +1,700 @@
+# folio engine (folio-cuom) — spec-pack contract (instance#4 doc-type=spec / folio-self-spec self-host)
+# ★機械抽出 DRAFT (scripts/extract-self-spec-spec.sh が design-intent/spec/folio-self-spec.html から起こした)。 人間レビュー前提。
+# doc_type = spec (folio 自身の self-spec)。 ★要件 0 件 (規範 MUST の SSoT は rules.html §10) + 非終端 照会 (前方 references)。
+# ★抽出範囲 = folio-self-spec.html の人間層 (section essence + subhead + 表 + 図(mermaid source) + 用語 + 照会) + 機械層自由文 (w1f cell-1 / tr0)。
+#   機械層 = data-audience="machine" の <p>/<aside>/<ul>/<div class="demoted"> を machine_preamble (文書前文) + sections[].machine_blocks (section 内) に *逐語* capture。
+#   ★self-spec 実測: demoted / dl は 0 件・人間層 body list (human 祖先の ul/ol/dl) も 0 本。 分岐は fork 元のまま残す (被覆の縮小をしない)。
+#
+# ============================================================================
+# ★lineage (folio-cuom Leg A bootstrap・★extractor の再実行で消える手起こし部を明示する)
+# ============================================================================
+# provenance: design-intent/spec/folio-self-spec.html @ base a25eaa3c (worktree spawn/folio-cuom-083042 の base)
+# 生成手順  : .claude-plugin/scripts/extract-self-spec-spec.sh > 本 file  (★one-shot・M7 で 1 回だけ許可)
+# ★本 file には extractor が起こさない ★手起こし 2 点 + errata 1 点 が入っている。 full-overwrite (extractor 再実行で
+#   上書き) は これらを ★wipe する ため禁止 — やり直しは generator/README.md の surgical transplant に従う (M7)。
+#     手起こし 1/2 = head_graph          (下記 graph: の直後・■1(8))
+#     手起こし 2/2 = references の rules.html#req-* arm (★extractor 側のコード追加ゆえ本 file では自動生成される)
+#     errata      = folio-642 の 1 site  (§7.6 機械層 note の「完成形 8」→「9」・下記 該当行の直前コメント)
+#
+# ★命名の断り (folio-cuom ■6 / 裁定 D-1): 本 file 名は ★folio-self-spec.spec.yaml で確定 (再変更禁止)。
+#   folio validate の gate (s) spec-contract-pairing は spec basename から contract 名を機械 mapping し
+#   「folio-<basename>.spec.yaml」 = ★folio-folio-self-spec.spec.yaml を指す ため、 本採用名は gate (s) の式と
+#   ★一致しない。 それでも緑になるのは、 folio-self-spec.html が spec-grandfather.manifest に登録済で gate が
+#   ★完全行一致で continue するため (= 誤名でも validate は通る = 命名は本 fence だけが拘束する)。
+#   一方 census-guard.sh は contract/folio-$SPEC.spec.yaml (SPEC=self-spec) を指すため ★本採用名と一致する。
+#   ★申送り (mkwc): grandfather から外す判断をするときは、 gate (s) 式との非一致が顕在化するため
+#   ★命名を同時に再検討すること。
+
+meta:
+  doc_id: FOLIO-SELF-SPEC
+  doc_type: spec
+  title: "folio self-spec"
+  eyebrow_left: "仕様 (Spec)"
+  eyebrow_right: "folio — Layer 0 META FRAMEWORK 自身の architecture spec"
+  subtitle: "v1.2.0 · status: stable · folio Layer 0 framework 自身の architecture spec"
+  version: "1.2.0"
+  date: "2026-08-04"
+  status: "stable"
+  reader: "Developer, AI Agent, External Reviewer — folio を consume する開発者・AI Agent・外部レビュアー"
+  layer: "core"
+  glossary_automark: "enabled"
+  xref_completeness: "enabled"
+  stakeholders: ["Developer", "AI Agent", "External Reviewer"]
+
+# 承認記録 (core 共用 approval-block)。 folio-self-spec.html は署名欄を持たないため doc lifecycle を忠実に再提示する (synthesized chrome)。
+approval:
+  - { role: "文書種別", who: "spec (folio self-spec)", when: "v1.2.0", stamp: "stable" }
+  - { role: "生成 (engine spec-pack)", who: "folio design system", when: "2026-08-04 生成", stamp: "生成" }
+
+# ★非終端 照会の graph 接続: folio-self-spec → constitution (FOLIO-CONSTITUTION 終端) の前方 edge (role=implementation)。
+#   self-spec は constitution P-x (P-3 / P-7 / P-11 / P-12 等) を前方照会し実装する (folio:extends constitution)。
+graph:
+  principle_edge: { target_doc_id: FOLIO-CONSTITUTION, role: implementation }
+
+# ============================================================================
+# ★手起こし 1/2 (folio-cuom ■1(8) / 手起こし 2 点のうち contract data 側)  —  head_graph
+# ============================================================================
+# ★extractor は head_graph を起こさない (JSON-LD は逆抽出対象外の head 資産)。 ゆえ本 block は ★手起こし であり、
+#   extractor の再実行 (full-overwrite) で ★wipe される — 以後のやり直しは generator/README.md の surgical
+#   transplant に従うこと (M7)。
+# ★lib/common.sh core_emit_graph_head は has("head_graph") が false なら ★何も emit せず return 0 する
+#   (後方互換の silent skip)。 すなわち本 block を落とすと <meta name="folio-doc-type"> と JSON-LD が ★両方
+#   無言で消える = inventory / relations graph / switchover-harness の head_graph hard-fail が同時に無検査化する。
+#   flip 側 (mkwc) の switchover-harness.sh は in-scan flip target が head_graph を欠くと hard-fail する
+#   (sh_assert_head_graph_hardfail / gate-head-graph) ため、 bootstrap 側で ★必ず載せる のが本 cell の職掌。
+# ★値は canonical folio-self-spec.html の head JSON-LD (:15-56) から ★逐語 で写した:
+#     @id                = "./folio-self-spec.html"
+#     @type              = "schema:TechArticle"   (core の既定と同値だが ★明示する = 既定依存で暗黙化しない)
+#     dc:isPartOf        = ["./README.html"]
+#     folio:extends      = ["./constitution.html"]
+#     dc:references      = ["./rules.html", "./relations.html"]
+#   dc:title / folio:version / folio:stakeholders は core が .meta.{title,version,stakeholders} から導出する
+#   (本 block には持たない = 二重 SSoT の回避)。
+# ★dc:isReferencedBy (canonical head の 18 entry) は ★意図的に持たない — reverse edge は folio fix の
+#   ★導出物 (core も emit しない設計) ゆえ contract に書くと手書き台帳が二重化して drift 源になる (■1(8))。
+# ★depends_on は canonical に対応物が無いため ★key ごと省略 (core は length>0 の関係だけを emit する)。
+head_graph:
+  id: "./folio-self-spec.html"
+  type: "schema:TechArticle"
+  part_of: ["./README.html"]
+  references: ["./rules.html", "./relations.html"]
+  extends: ["./constitution.html"]
+
+machine_preamble:
+  - { type: note, html: "<p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href=\"rules.html\">rules.html</a> を参照。 <span class=\"term\" data-term=\"constitution\" data-tooltip=\"folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。\">constitution</span> の不変原則は <a href=\"./constitution.html\">constitution.html</a> を参照。 規範要件は RFC 2119 / RFC 8174 / BCP 14 に従う。</p> <p><strong>Provisional</strong>: 本書は folio framework 完成後 (Phase X3 以降) に folio 自身の <code>design-intent/spec/</code> 配下に self-application で分解される予定。 詳細は <a href=\"../decisions/ADR-0001-architecture-rules-split.html\">ADR-0001</a>。</p>" }
+
+sections:
+  - id: "s0"
+    anchor: "s0-reader-guide"
+    tint: "info"
+    kicker: "§0 / 読み方"
+    heading: "§0. Reader's Guide"
+    essence: "本書は folio Layer 0 framework 自身の architecture spec である。 Layer 1 consumer 向け rules は <a href=\"rules.html\">rules.html</a>、 不変原則は <a href=\"./constitution.html\">constitution.html</a> を参照する。 spec 編集前に caller marker を set し (<a href=\"#s7-3-caller-marker\">§7.3</a>)、 cwd が Layer 0 編集か consumer (Layer 1) 編集かを <a href=\"#s7-4-defense\">§7.4</a> で確認する。"
+    blocks: []
+    machine_blocks:
+      - { type: note, html: "<p>本文書は folio Layer 0 framework 自身の architecture specification である。 Layer 1 consumer が従う rules (markup / naming / Mandatory Actions) は <a href=\"rules.html\">rules.html</a> を参照。 constitution の不変原則は <a href=\"./constitution.html\">constitution.html</a> を参照。</p> <p><span class=\"term\" data-term=\"spec\" data-tooltip=\"WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。\">spec</span> を編集する前に caller <span class=\"term\" data-term=\"marker\" data-tooltip=\"HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。\">marker</span> 環境変数を set する (<a href=\"rules.html#s10-1\">rules.html §10.1</a> MUST + 本書 <a href=\"#s7-3-caller-marker\">§7.3</a> hook flow)。 env var の具体名・値は <a href=\"#s9-bindings\">§9 Bindings</a> に集約する。 cwd が <code>folio/</code> 配下 (Layer 0 編集) か consumer 配下 (Layer 1 編集) かを <a href=\"#s7-4-defense\">§7.4 5-Layer Defense</a> で確認する。</p>" }
+  - id: "s1"
+    anchor: "s1-architecture"
+    tint: "brand"
+    kicker: "§1 / 2 層構造"
+    heading: "§1. 2-Layer Architecture (物理 repo 分離)"
+    essence: "folio は物理 repo を 2 層に分離する: Layer 0 (本 repo) が rules (constitution + rules.html) と plugin harness を一体配布し (P-12)、 Layer 1 consumer は別 git repo で spec と実装の両方を持つ。 consumer は repo root の <code>folio.config.yaml</code> で明示的に folio を consume し、 folio constitution + rules を継承する (convention-based discovery は不採用、 P-3)。"
+    blocks:
+      - type: table
+        caption: ""
+        headers: ["Layer", "repo 位置", "役割", "変更頻度", "例"]
+        rows:
+          - ["<strong>Layer 0</strong> (META FRAMEWORK)", "<code>folio/</code> repo (本 repo)", "spec を書くための universal rules + constitution + plugin harness (skills + agents + hooks + scripts) の一体配布。 全 Layer 1 が consume する reference framework。", "稀 (constitution 改訂時のみ、 MAJOR/MINOR bump)", "<code>constitution.html</code>、 <code>rules.html</code>、 <code>folio-self-spec.html</code> (本書)、 <code>.claude-plugin/plugin.json</code>"]
+          - ["<strong>Layer 1</strong> (consumer project)", "各 consumer repo (別 git repo)", "folio rules を適用した <code>design-intent/</code> spec と実装本体 (<code>src/</code>、 <code>skills/</code> 等) を同 repo 内に持つ。 spec と実装の両方を含む。", "project 開発中に随時 (Phase 7 G で commit)", "scribe (special wrapper role)、 my-ts-webapp、 my-python-ml"]
+      - type: mermaid
+        caption: "図 1. 2-Layer 詳細構造。 Layer 0 (folio) 内の rules (constitution + rules + folio-self-spec) と plugin harness が一体配布され、 Layer 1 (consumer) が <code>folio.config.yaml</code> で consume する。 Layer 1 同 repo 内に Layer 1 spec (<code>design-intent/</code>) と実装本体が共存。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "graph TB"
+          - "  accTitle: 2-Layer 詳細構造 + plugin harness"
+          - "  accDescr: Layer 0 folio は rules と plugin harness を一体提供する。 Layer 1 consumer projects は folio.config.yaml で folio を consume する"
+          - "  subgraph L0[\"<b>Layer 0 — folio (本 repo)</b>\"]"
+          - "    direction TB"
+          - "    subgraph L0R[\"<b>rules</b>\"]"
+          - "      C[\"constitution.html\"]"
+          - "      R[\"rules.html\"]"
+          - "      FSS[\"folio-self-spec.html (本書)\"]"
+          - "    end"
+          - "    subgraph L0H[\"<b>.claude-plugin/ — harness</b>\"]"
+          - "      PJ[\"plugin.json\"]"
+          - "      SKAH[\"skills + agents + hooks\"]"
+          - "      SCBN[\"scripts + bin\"]"
+          - "    end"
+          - "  end"
+          - "  subgraph L1[\"<b>Layer 1 — consumer project (例)</b>\"]"
+          - "    direction TB"
+          - "    L1CONF[\"folio.config.yaml\"]"
+          - "    L1ARCH[\"design-intent/spec/"
+          - "(Layer 1 spec、 folio rules で書かれた)\"]"
+          - "    L1IMPL[\"実装 dir"
+          - "(src/、 skills/、 等)\"]"
+          - "  end"
+          - "  L0 -->|\"install + consume\"| L1CONF"
+          - "  L1CONF -.->|\"defines\"| L1ARCH"
+          - "  L1ARCH -.->|\"guides\"| L1IMPL"
+          - "  style L0 fill:#2a4d6e,color:#ffffff"
+          - "  style L0R fill:#5ac8b8,color:#08131a"
+          - "  style L0H fill:#5ac8b8,color:#08131a"
+          - "  style L1 fill:#fefbea,color:#08131a"
+    machine_blocks:
+      - { type: prose, html: "folio は 2 layer の物理 repo 分離を採用する。 folio 自身は Layer 0 (META FRAMEWORK) を提供し、 Layer 1 (各 project の architecture spec + 実装) は別 git repo として展開する。 Layer 0 は rules (constitution + rules.html) と plugin <span class=\"term\" data-term=\"harness\" data-tooltip=\"scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。\">harness</span> (<code>.claude-plugin/</code>) を一体配布する (constitution P-12)。" }
+      - { type: prose, html: "<strong>Resolution flow</strong>: Layer 1 consumer が <code>folio.config.yaml</code> で folio plugin (rules + harness) を consume する。 spec は project repo 内 <code>design-intent/spec/</code> に存在し、 folio constitution + rules を継承する。" }
+      - { type: prose, html: "<strong>Discovery mechanism</strong>: explicit (各 project repo root の <code>folio.config.yaml</code> で folio を consume する宣言)。 convention-based discovery は採用しない。 folio repo 自身は下流 consumer を識別しない (constitution P-3)。" }
+  - id: "s2"
+    anchor: "s2-folio-layout"
+    tint: "violet"
+    kicker: "§2 / repo Layout"
+    heading: "§2. folio repo Layout (Layer 0)"
+    essence: "folio repo の canonical layout: <code>design-intent/</code> (design-intent 空間 = spec / decisions / research / assets)、 <code>tests/</code> (HOW-test sibling)、 <code>hooks/</code> + <code>.claude-plugin/</code> (plugin harness)、 root marker file。 folio は自身の rules を self-host し、 consumer と一意の構造を取る (X4-C 物理移植 <a href=\"../decisions/ADR-0022-x4-0-canonical-layout.html\">ADR-0022</a>、 空間 dir 名は X4-G rename で design-intent/ に確定 <a href=\"../decisions/ADR-0048-design-intent-dir-rename.html\">ADR-0048</a>)。 下の tree と図がディレクトリ構成の SSoT。"
+    blocks:
+      - type: code
+        lines:
+          - "folio/"
+          - "├── FOLIO.md                          # root marker (Markdown 例外、 P-2)"
+          - "├── README.md                         # GitHub 表示用 (Markdown 例外、 P-2)"
+          - "├── CLAUDE.md                         # AI-agent instruction (Markdown 例外、 P-2、 P-11 root 例外)"
+          - "├── common.css                        # design tokens"
+          - "├── .gitignore"
+          - "│"
+          - "├── design-intent/                     # folio 自身の design-intent 空間 (self-host、 P-7 3-domain)"
+          - "│   ├── index.html                    # landing + walkable nav (folio build が graph から生成、 hero は curated、 ADR-0035/0039)"
+          - "│   ├── glossary.html                 # 用語集 (self-host: contract→pack pipeline 生成 / consumer: vocabulary.yaml から derive、 ADR-0036/0052)"
+          - "│   ├── spec/                         # design intent (WHAT)。 全ページ chrome は build が marker 領域で維持 (ADR-0039 §2.3)"
+          - "│   │   ├── README.html               # spec entry point (P-6)"
+          - "│   │   ├── constitution.html         # 14 immutable principles (P-1〜P-14)"
+          - "│   │   ├── rules.html                # Layer 1 consumer 向け universal rules"
+          - "│   │   ├── folio-self-spec.html      # 本書 — folio 自身の self-spec"
+          - "│   │   ├── relations.html            # spec 間関係性 (JSON-LD + inventory)"
+          - "│   │   └── verification.html         # verification contract"
+          - "│   ├── decisions/                    # decision (WHY): ADR-NNNN-<slug>.html"
+          - "│   ├── research/                     # exploration (spec 反映前の探索)"
+          - "│   └── assets/                       # mermaid.min.js (support、 domain でない)"
+          - "│"
+          - "├── tests/                     # HOW-test sibling (executable、 P-3/P-11、 ADR-0022)"
+          - "│   ├── scenarios/                    # use case 別 YAML"
+          - "│   ├── fixtures/  baselines/  e2e/   # テストデータ / golden / 統合検証"
+          - "│   └── runner.sh                     # 軽量 runner (bash + yq + jq)"
+          - "│"
+          - "├── hooks/                            # Claude Code 公式仕様: plugin root 直下 MUST"
+          - "│   └── hooks.json                    # hook 宣言 (PreToolUse / PostToolUse / SessionStart)"
+          - "│"
+          - "└── .claude-plugin/                   # plugin harness (P-12 一体配布、 HOW)"
+          - "    ├── plugin.json                   # manifest (name, version, userConfig)"
+          - "    ├── skills/                       # folio-architect 等 (完成形 §7.2)"
+          - "    ├── agents/                       # specialist agents (完成形 §7.2)"
+          - "    ├── scripts/                      # hook script 実装 (CI check)"
+          - "    ├── bin/                          # CLI: folio version / init / inventory / prime / validate / fix / build"
+          - "    ├── refs/                         # skill + agent 共有 reference"
+          - "    └── static/                       # plugin-bundled static assets"
+      - type: mermaid
+        caption: "図 2. folio repo (Layer 0) canonical layout。 folio は自身の rules を self-host し design-intent/{spec,decisions,research} を持つ (consumer と一意)。 tests/ は HOW-test sibling、 hooks/ + .claude-plugin/ は HOW harness。 物理移動は X4-C (<a class=\"xref\" href=\"../decisions/ADR-0022-x4-0-canonical-layout.html\" data-tooltip=\"forward (X4-0、 user 承認済、 spec rework は PARENT / 物理移動は X4-C SPAWN)\">ADR-0022</a>)。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "graph TD"
+          - "  accTitle: folio Repository Layout (Layer 0, canonical self-host)"
+          - "  accDescr: folio repo は design-intent/ (spec/decisions/research/assets の design-intent 空間) と tests/ (HOW-test sibling) と hooks/ + .claude-plugin/ (HOW harness) と root marker file が並ぶ"
+          - "  ROOT[\"folio/\"]"
+          - "  ROOT --> ARCH[\"design-intent/"
+          - "(design-intent 空間)\"]"
+          - "  ROOT --> VER[\"tests/"
+          - "(HOW-test sibling)\"]"
+          - "  ROOT --> HK[\"hooks/"
+          - "(hooks.json)\"]"
+          - "  ROOT --> PLUGIN[\".claude-plugin/"
+          - "(plugin harness, HOW)\"]"
+          - "  ROOT --> MD[\"root marker"
+          - "(FOLIO.md / README.md /"
+          - "CLAUDE.md / common.css)\"]"
+          - "  ARCH --> SPEC[\"spec/ (WHAT)"
+          - "constitution / rules /"
+          - "folio-self-spec /"
+          - "relations / verification\"]"
+          - "  ARCH --> DEC[\"decisions/ (WHY)"
+          - "ADR-NNNN-*\"]"
+          - "  ARCH --> RES[\"research/"
+          - "(exploration)\"]"
+          - "  ARCH --> AST[\"assets/"
+          - "(mermaid, support)\"]"
+          - "  PLUGIN --> BN[\"bin/"
+          - "(validate / fix / build /"
+          - "init / inventory / prime)\"]"
+          - "  PLUGIN --> SCM[\"scripts/ skills/"
+          - "agents/ refs/ static/\"]"
+          - "  style ROOT fill:#2a4d6e,color:#ffffff"
+          - "  style ARCH fill:#5ac8b8,color:#08131a"
+          - "  style VER fill:#fefbea,color:#08131a"
+          - "  style PLUGIN fill:#5ac8b8,color:#08131a"
+  - id: "s3"
+    anchor: "s3-dual-audience"
+    tint: "info"
+    kicker: "§3 / 二層提示"
+    heading: "§3. Dual-Audience Presentation (self-application)"
+    essence: "folio 自身の spec は rules §7 の dual-audience pattern を self-apply し、 <strong>human↔AI hub</strong> として機能する: machine 精密 normative を canonical SSoT、 human essence + 視覚 view を派生 view として 1 DOM に co-author する。 規範の SSoT は <a href=\"rules.html#s7-dual-audience\">rules.html §7</a> / <a href=\"rules.html#s8-js-governance\">§8</a> にあり (P-7 重複禁止)、 本 §3 は folio の self-application 設計を informative に解説する (<a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a>)。"
+    blocks:
+      - { type: subhead, anchor: "s3-1-core", heading: "§3.1 dual-audience core (data-audience + fold + essence)", essence: "core 構成は <code>data-audience</code> taxonomy (machine|human) + <code>&lt;details&gt;</code> 視覚 fold + human essence。 machine 部は DOM 常在 (<code>aria-hidden</code> 不使用) で、 畳まれていても AI / accessibility-tree / find-in-page から可読。 <code>folio prime</code> の Tier 1 digest はこの machine SSoT を抽出源とする。" }
+      - { type: subhead, anchor: "s3-2-enforcement", heading: "§3.2 consistency = 二層 enforcement (機械的導出の代役)", essence: "1-DOM co-author は機械的導出 (view を生成・維持しない) を持たない novelty ゆえ、 human↔machine の consistency を <a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> 二層 enforcement で担保する: deterministic な <strong>floor</strong> (<code>folio validate</code> の REQ-DA-STRUCT 構造検査) と LLM <strong>ceiling</strong> (Phase F <code>spec-review-fidelity</code> の意味検査)。 ceiling は装飾でなく構造の要 (load-bearing)。 下表が両層の機構・判定・捕捉・起動の対比。" }
+      - type: table
+        caption: ""
+        headers: ["", "<span class=\"term\" data-term=\"floor\" data-tooltip=\"deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。\">floor</span> (deterministic)", "ceiling (LLM)"]
+        rows:
+          - ["機構", "<code>folio validate</code> dual-audience <span class=\"term\" data-term=\"gate\" data-tooltip=\"folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。\">gate</span>", "Phase F <code>spec-review-fidelity</code> agent"]
+          - ["判定", "構造的対応 + 機械可読 key 一致 (<a class=\"xref\" href=\"./rules.html#req-da-struct-1\" data-tooltip=\"dual-audience を採用する spec の各 [data-audience=&quot;human&quot;] requirement container は [data-audience=&quot;machine&quot;] 子孫を持つ MUST (孤立 human の排除)。\">REQ-DA-STRUCT-1</a>〜5)", "意味的 fidelity (essence が normative を忠実要約か + pattern semantic)"]
+          - ["捕捉", "孤立 human / id 不一致 / 値域 / aria-hidden / EARS-pattern declared 不一致", "要約の脱落・誇張・矛盾・pattern 取り違え"]
+          - ["起動", "<code>folio validate</code> (CI block)・普遍", "spec 編集時 (folio-architect Phase F)"]
+      - type: mermaid
+        caption: "図 3. dual-audience co-author の二層 enforcement。 machine SSoT と human 派生 view を 1 DOM に co-author し、 floor (<code>folio validate</code> 構造検査) + ceiling (<code>spec-review-fidelity</code> 意味検査) が機械的導出の代役として consistency を担保する。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: dual-audience co-author の二層 enforcement"
+          - "  accDescr: 1 DOM に machine SSoT と human 派生 view を co-author し、 floor (folio validate の REQ-DA-STRUCT 構造検査) と ceiling (spec-review-fidelity agent の意味検査) の 2 層で consistency を担保する"
+          - "  SRC[\"dual-audience spec"
+          - "(1 HTML artifact)\"]"
+          - "  M[\"machine normative"
+          - "(canonical SSoT)\"]"
+          - "  H[\"human essence + graphical"
+          - "(派生 view)\"]"
+          - "  SRC --> M"
+          - "  SRC --> H"
+          - "  FL[\"floor: folio validate"
+          - "REQ-DA-STRUCT-1..5"
+          - "(構造・key 一致)\"]"
+          - "  CE[\"ceiling: spec-review-fidelity"
+          - "(意味的 fidelity)\"]"
+          - "  M -. \"検査\" .-> FL"
+          - "  H -. \"検査\" .-> FL"
+          - "  M -. \"検査\" .-> CE"
+          - "  H -. \"検査\" .-> CE"
+          - "  FL --> OK[\"consistency 担保"
+          - "(導出の代役)\"]"
+          - "  CE --> OK"
+          - "  style SRC fill:#2a4d6e,color:#ffffff"
+          - "  style M fill:#5ac8b8,color:#08131a"
+          - "  style H fill:#fefbea,color:#08131a"
+          - "  style OK fill:#5ac8b8,color:#08131a"
+          - "  style FL fill:#e6f6f2,color:#08131a"
+          - "  style CE fill:#fdf3f3,color:#08131a"
+      - { type: subhead, anchor: "s3-3-js", heading: "§3.3 JavaScript governance", essence: "folio spec の JS は <strong>read-only view enhancement のみ</strong> (content SSoT は static HTML) とする (<a href=\"rules.html#s8-js-governance\">rules.html §8</a>)。 vendored mermaid render は ALLOW、 ES modules + <code>fetch()</code> は file:// 破綻ゆえ PROHIBIT。 現 wave の CSS-only 骨格は本規約と無矛盾。" }
+      - { type: subhead, anchor: "s3-4-xref", heading: "§3.4 Object cross-reference (self-application)", essence: "folio 自身の design-intent 空間は <a href=\"rules.html#s9-xref\">rules.html §9</a> の object cross-reference system を self-apply する (<a href=\"../decisions/ADR-0034-object-term-xref-system.html\">ADR-0034</a>): defined-object (P-N / REQ-* / ADR-NNNN / §) の canonical 定義は各 object の in-band 要素が SSoT で、 そこから完全性 lint + AI-graph を生成する。 human は xref を hover して定義 essence を即見、 AI は <code>href</code> と <code>objectGraph</code> projection を辿る。 維持は <code>folio fix</code> の auto-materialize、 完全性は <code>folio validate</code> の 4 gate が担う (completeness は opt-in で、 folio の全 living spec が dogfood 済 — 詳細は機械層)。" }
+    machine_blocks:
+      - { type: prose, html: "folio 自身の spec は <a href=\"rules.html#s7-dual-audience\">rules.html §7</a> の <span class=\"term\" data-term=\"dual-audience\" data-tooltip=\"1 HTML artifact が machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方を同一 DOM に併せ持つ pattern (ADR-0033)。 artifact 自身が canonical WHAT (提示層) で機械層はその内部にある。 SSoT-first に flip した doc は編集の源が正本 (edit-SSoT) = contract YAML に分かれ、 flip しない doc は提示層が edit-SSoT を兼ねる (ADR-0050 / ADR-0051 §2.3)。\">dual-audience</span> pattern を self-apply し、 <strong>human↔AI hub</strong> として機能する: <strong>machine 精密 normative = canonical <span class=\"term\" data-term=\"SSoT\" data-tooltip=\"Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。\">SSoT</span></strong> を <code>[data-audience=\"machine\"]</code> に、 <strong>human <span class=\"term\" data-term=\"essence\" data-tooltip=\"defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。\">essence</span> + graphical = 派生 view (非規範)</strong> を <code>[data-audience=\"human\"]</code> に 1 DOM で co-author する。 human は cognition-friendly な要約を読み、 AI は machine normative だけを構造的に読む。 規範 (taxonomy / safety <span class=\"term\" data-term=\"invariant\" data-tooltip=\"spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。\">invariant</span> / JS governance) の SSoT は <a href=\"rules.html#s7-dual-audience\">rules.html §7</a>・<a href=\"rules.html#s8-js-governance\">§8</a> にあり (<a href=\"constitution.html#p-7\">P-7</a> 重複禁止)、 本 §3 は folio 自身の self-application 設計を informative に解説する (<a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a>)。" }
+      - { type: prose, html: "core 構成は <strong><span class=\"term\" data-term=\"data-audience\" data-tooltip=\"要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。\">data-audience</span> taxonomy (2 値: machine|human) + <code>&lt;details&gt;</code> 視覚 <span class=\"term\" data-term=\"fold\" data-tooltip=\"details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。\">fold</span> + human essence</strong> (<a href=\"rules.html#s7-1-taxonomy\">rules §7.1</a> / <a href=\"rules.html#s7-2-canonical-pattern\">§7.2</a>)。 machine 部は DOM 常在 (<code>aria-hidden</code> 不使用) で、 視覚的に畳まれていても AI / accessibility-tree / find-in-page から可読。 <code>folio prime</code> の Tier 1 digest (on-demand 開示。 boot 注入は Tier 0 pointer digest = <a href=\"../decisions/ADR-0055-boot-tier-context-injection.html\">ADR-0055</a>) はこの machine SSoT を抽出源とする (<a href=\"#s7-6-phase-x3-minimal\">§7.6</a> growth path、 <a href=\"../decisions/ADR-0007-context-injection.html\">ADR-0007</a>)。 reference 実装 = <a href=\"verification.html#s3-1-scenario-format\">verification.html §3</a> の dual-audience card (<a class=\"xref\" href=\"./verification.html#req-ver-001\" data-tooltip=\"検証 scenario は tests/scenarios/ 配下の YAML ファイル (構造は §3.2 で定義)。\">REQ-VER-001</a>/002/003/007/009)。 全 living spec への core propagation は後続 wave で行う。" }
+      - { type: prose, html: "1-DOM co-author は DITA / literate programming のような<strong>機械的導出 (view は生成・維持しない)</strong> を持たない novelty ゆえ、 human↔machine の consistency を構造でなく <a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> 二層 enforcement で担保する (<a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a> §2.4)。 LLM <span class=\"term\" data-term=\"ceiling\" data-tooltip=\"LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。\">ceiling</span> は装飾でなく<strong>構造の要 (load-bearing)</strong>。" }
+      - { type: prose, html: "folio spec の JS は <strong>read-only view enhancement のみ</strong> (content SSoT は static HTML) とする規約に従う (<a href=\"rules.html#s8-js-governance\">rules.html §8</a>: ALLOW / PROHIBIT / REQUIRE)。 vendored mermaid render は ALLOW、 ES modules + <code>fetch()</code> は file:// 破綻ゆえ PROHIBIT。 現 wave の CSS-only 骨格は本規約と無矛盾。" }
+      - { type: prose, html: "folio 自身の design-intent 空間は <a href=\"rules.html#s9-xref\">rules.html §9</a> の <strong>object cross-reference system</strong> を self-apply する (<a href=\"../decisions/ADR-0034-object-term-xref-system.html\">ADR-0034</a>、 §3 dual-audience hub の object 参照網への拡張)。 <span class=\"term\" data-term=\"defined-object\" data-tooltip=\"一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。\">defined-object</span> (principle <code>P-N</code> / requirement <code>REQ-*</code> / decision <code>ADR-NNNN</code> / rule §) の canonical 定義は各 object の in-band 要素 (その <code>id</code>) が SSoT で、 そこから read-only な projection (完全性 lint + AI-graph) を<strong>生成</strong>する hybrid (DB-as-SSoT 却下)。 <strong>human↔AI hub</strong>: human は <span class=\"term\" data-term=\"xref\" data-tooltip=\"defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。\">xref</span> を hover して定義 essence を即見 (no-JS tooltip)、 AI は <code>href</code> と <code>inventory.json</code> の <code>objectGraph</code> projection を構造的に辿る。 維持は <code>folio fix</code> の auto-materialize (裸 token → xref wrap)、 完全性は <code>folio validate</code> の 4 gate (resolve / uniqueness / tooltip-consistency / completeness) が担う (<a href=\"verification.html#s3-ears\">REQ-VER-017/018</a>)。" }
+      - { type: prose, html: "completeness は <strong>opt-in/conditional-normative</strong> (<a href=\"rules.html#s9-4-requirements\">REQ-XREF-002</a>) — <code>folio-xref-completeness=enabled</code> を宣言した doc のみ orphan-mention を block する。 <strong>folio 自身の全 living spec (verification / rules / relations / folio-self-spec / README) が completeness opt-in を宣言し、 prose 内の裸 canonical token は <code>folio fix</code> で xref へ materialize 済 — folio が xref system を self-host (<span class=\"term\" data-term=\"dogfood\" data-tooltip=\"folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。\">dogfood</span>) する</strong>。 real corpus の <code>folio validate</code> は completeness gate を含め clean。 opt-in 対象は body 改訂可能な living spec に限り、 <code>constitution.html</code> (<a class=\"xref\" href=\"./constitution.html#p-10\" data-tooltip=\"Constitution 自身への変更前 user 確認\">P-10</a> 不可触) と <span class=\"term\" data-term=\"frozen\" data-tooltip=\"accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。\">frozen</span> <span class=\"term\" data-term=\"ADR\" data-tooltip=\"Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。\">ADR</span> は定義 site として read-only に essence を供出するのみ (言及側 living spec の prose だけが wrap される)。 dual-audience の core propagation (§3.1) と同じく、 機構と規範を landable な土台として確立した上で living spec への適用を完了した。" }
+  - id: "s7"
+    anchor: "s7-harness"
+    tint: "warn"
+    kicker: "§7 / harness 部品"
+    heading: "§7. Harness Layer Components"
+    essence: "本 §7 は folio Layer 0 の plugin harness を構成する 5 component を informative に解説する: 7-phase PR cycle (§7.1)・specialist agents (§7.2)・caller marker (§7.3)・5-Layer Defense (§7.4)・CI Gate (§7.5)。 各 component が連携して folio rules を enforce する。 規範 MUST 要件 (caller marker set/unset・CI gate enforcement) の SSoT は <a href=\"rules.html#s10-mandatory\" class=\"normative-ref\">rules.html §10 Mandatory Actions</a> にあり、 本 §7 は設計と enforcement flow を解説する。"
+    blocks:
+      - { type: subhead, anchor: "s7-1-7phase", heading: "§7.1 7-Phase PR Cycle (folio-architect SKILL)", essence: "folio-architect は spec edit の唯一 author で、 7 phase (A Discovery → B Exploration → C Clarifying → D Design → E Implementation → F Quality Review → G Summary) を順次実行する。 Phase C (grilling) と F (review) は MUST NOT SKIP、 B/D は specialist 並列、 F は review agent 並列 (下表・図 4 の「F 7 並列固定」は完成形 vision で、 v1.0 実装は 5 agent — <a href=\"#s7-2-specialists\">§7.2</a>)。 v1.0 scope は <a href=\"../decisions/ADR-0029-phase-f-agent-set.html\">ADR-0029</a> で確定し、 Phase A/B/C の adoption-aware 化は <a href=\"../decisions/ADR-0031-mattpocock-authoring-absorption.html\">ADR-0031</a> による (下表・図・aside で詳説)。" }
+      - type: table
+        caption: ""
+        headers: ["Phase", "name", "agent", "並列", "必須"]
+        rows:
+          - ["A", "Discovery", "(なし、 folio-architect 直接)", "—", "MUST (todo list + folio.config.yaml load + adoption-state 検出 → greenfield onboarding / maintenance 分岐)"]
+          - ["B", "Spec Exploration", "<code>spec-explorer</code>", "2-3 並列", "MUST"]
+          - ["C", "Clarifying / Grilling", "(なし、 user dialog)", "—", "MUST NOT SKIP (gap-driven grilling)"]
+          - ["D", "Spec Design", "<code>spec-architect</code>", "2-3 並列", "optional (structural change 時のみ)"]
+          - ["E", "Implementation", "(folio-architect 直接)", "—", "MUST (caller marker + Edit + 機械検証 + unset)"]
+          - ["F", "Quality Review", "<code>spec-review-{vocabulary,structure,ssot,temporal,ears,stakeholder,fidelity}</code>", "7 並列固定", "MUST NOT SKIP"]
+          - ["G", "Summary", "(folio-architect 直接)", "—", "MUST (delta marker check + changelog 更新)"]
+      - type: mermaid
+        caption: "図 4. 7-phase PR cycle (A 〜 G)。 Phase C/F は MUST NOT SKIP。 Phase B/D は並列 specialist spawn、 Phase F は 7 並列固定 (完成形 vision、 v1.0 は 5 agent)。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: 7-Phase PR Cycle"
+          - "  accDescr: Discovery A から Summary G まで 7 phase を順次実行。 Phase B と D は 2-3 specialist 並列、 Phase F は 7 specialist 並列固定"
+          - "  A[\"A"
+          - "Discovery\"]"
+          - "  B[\"B"
+          - "Exploration"
+          - "(2-3 並列)\"]"
+          - "  C[\"C"
+          - "Clarifying"
+          - "(MUST NOT SKIP)\"]"
+          - "  D[\"D"
+          - "Design"
+          - "(2-3 並列、 optional)\"]"
+          - "  E[\"E"
+          - "Implementation"
+          - "(caller marker)\"]"
+          - "  F[\"F"
+          - "Quality Review"
+          - "(7 並列固定)\"]"
+          - "  G[\"G"
+          - "Summary"
+          - "(delta marker)\"]"
+          - "  A --> B --> C --> D --> E --> F --> G"
+          - "  style A fill:#2a4d6e,color:#ffffff"
+          - "  style C fill:#fefbea,color:#08131a"
+          - "  style F fill:#fdf3f3,color:#08131a"
+          - "  style G fill:#5ac8b8,color:#08131a"
+      - { type: subhead, anchor: "s7-2-specialists", heading: "§7.2 Specialist Agents (9 個)", essence: "完成形 vision の <strong>9 agent</strong> (= Phase B explorer 1 + Phase D architect 1 + Phase F review 7 軸) を下表に列挙する。 v1.0 で実装するのは Phase F の <strong>5 review agent</strong> (ears / vocabulary / ssot / temporal / fidelity)。 <code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut、 explorer / architect / stakeholder は post-1.0 defer (削除でなく将来 opt-in の anchor として table に残す、 <a href=\"../decisions/ADR-0029-phase-f-agent-set.html\">ADR-0029</a>)。" }
+      - type: table
+        caption: ""
+        headers: ["agent", "phase", "focus"]
+        rows:
+          - ["<code>spec-explorer</code>", "B (2-3 並列)", "関連 spec の cross-ref / ADR / EXP listing"]
+          - ["<code>spec-architect</code>", "D (2-3 並列、 optional)", "minimal / clean / pragmatic 3 案設計 (structural change 時)"]
+          - ["<code>spec-review-vocabulary</code>", "F 軸 1", "<a class=\"xref\" href=\"./constitution.html#p-5\" data-tooltip=\"1 entity = 1 canonical name\">P-5</a> <span class=\"term\" data-term=\"canonical name\" data-tooltip=\"1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。\">canonical name</span> 違反、 forbidden synonym detection"]
+          - ["<code>spec-review-structure</code>", "F 軸 2", "directory structure、 file naming、 cross-ref、 heading hierarchy"]
+          - ["<code>spec-review-ssot</code>", "F 軸 3", "<a class=\"xref\" href=\"./constitution.html#p-7\" data-tooltip=\"Content domain exclusivity\">P-7</a> content domain exclusivity、 ADR / changes / research 境界"]
+          - ["<code>spec-review-temporal</code>", "F 軸 4", "<a class=\"xref\" href=\"./constitution.html#p-4\" data-tooltip=\"Declarative form\">P-4</a> declarative form、 wave-specific narrative 検出"]
+          - ["<code>spec-review-ears</code>", "F 軸 5", "EARS 5 pattern 網羅、 REQ-ID uniqueness、 traceability"]
+          - ["<code>spec-review-stakeholder</code>", "F 軸 6", "ISO 42010 Stakeholder Perspectives coverage、 AI Agent first-class"]
+          - ["<code>spec-review-fidelity</code>", "F 軸 7", "dual-audience human essence ↔ machine normative 意味的 fidelity + EARS pattern semantic (<a class=\"xref\" href=\"../decisions/ADR-0033-dual-audience-hub.html\" data-tooltip=\"dual-audience HTML hub — machine SSoT + human 派生 view を data-audience + fold で 1 DOM co-author (Option B)、 consistency は ADR-0028 二層 enforcement で担保。\">ADR-0033</a> ceiling)"]
+      - type: mermaid
+        caption: "図 5. specialist agents 並列 spawn pattern。 Phase B (探索) / Phase D (設計、 optional) / Phase F (品質検証、 7 軸並列固定 vision)。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart LR"
+          - "  accTitle: Specialist Agents 並列 spawn (Phase B / D / F)"
+          - "  accDescr: Phase B では spec-explorer を 2-3 並列、 Phase D では spec-architect を 2-3 並列 (optional)、 Phase F では spec-review 7 個を並列固定で spawn する"
+          - "  subgraph PB[\"<b>Phase B</b> — 2-3 並列\"]"
+          - "    SE1[\"spec-explorer #1\"]"
+          - "    SE2[\"spec-explorer #2\"]"
+          - "    SE3[\"spec-explorer #3\"]"
+          - "  end"
+          - "  subgraph PD[\"<b>Phase D</b> — 2-3 並列 (optional)\"]"
+          - "    SA1[\"spec-architect #1"
+          - "(minimal)\"]"
+          - "    SA2[\"spec-architect #2"
+          - "(clean)\"]"
+          - "    SA3[\"spec-architect #3"
+          - "(pragmatic)\"]"
+          - "  end"
+          - "  subgraph PF[\"<b>Phase F</b> — 7 並列固定\"]"
+          - "    R1[\"review-vocabulary\"]"
+          - "    R2[\"review-structure\"]"
+          - "    R3[\"review-ssot\"]"
+          - "    R4[\"review-temporal\"]"
+          - "    R5[\"review-ears\"]"
+          - "    R6[\"review-stakeholder\"]"
+          - "    R7[\"review-fidelity\"]"
+          - "  end"
+          - "  style PB fill:#e6f6f2,color:#08131a"
+          - "  style PD fill:#fefbea,color:#08131a"
+          - "  style PF fill:#fdf3f3,color:#08131a"
+      - { type: subhead, anchor: "s7-3-caller-marker", heading: "§7.3 Caller Marker", essence: "caller marker は AI agent が現在 spec edit 中であることを宣言する env var で、 <code>.claude-plugin/hooks/</code> の PreToolUse hook が値を check し、 未 set / 異値なら spec_path 配下 file の編集を block する。 set / unset の MUST 要件は <a href=\"rules.html#s10-1\" class=\"normative-ref\">rules.html §10.1</a> (REQ-CM-001〜003)、 本 §7.3 は enforcement flow (下図) を informative に解説する。" }
+      - type: mermaid
+        caption: "図 6. caller marker enforcement flow。 PreToolUse hook が spec_path 配下か + caller marker set かの 2 段階で判定。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TD"
+          - "  accTitle: PreToolUse Hook による caller marker enforcement flow"
+          - "  accDescr: Edit/Write ツール呼び出し時、 PreToolUse hook が caller marker env var 存在と spec_path 配下 file かを check し、 caller marker 未 set の場合 deny する"
+          - "  TE[\"ToolUse attempt"
+          - "(Edit / Write / NotebookEdit)\"]"
+          - "  TE --> HK[\"PreToolUse hook"
+          - "(.claude-plugin/hooks/)\"]"
+          - "  HK --> SP{\"target file"
+          - "spec_path 配下?\"}"
+          - "  SP -- \"No\" --> AL[\"allow"
+          - "(spec 外 edit OK)\"]"
+          - "  SP -- \"Yes\" --> CC{\"caller marker"
+          - "env var set?\"}"
+          - "  CC -- \"No / 異値\" --> DN[\"deny"
+          - "(permissionDecision: deny)\"]"
+          - "  CC -- \"Yes\" --> AL2[\"allow"
+          - "(spec edit OK)\"]"
+          - "  style DN fill:#fdf3f3,color:#08131a"
+          - "  style AL fill:#e6f6f2,color:#08131a"
+          - "  style AL2 fill:#e6f6f2,color:#08131a"
+      - { type: subhead, anchor: "s7-4-defense", heading: "§7.4 5-Layer Context Boundary Defense (3 axis)", essence: "AI agent が混同し得る 3 つの context boundary — (a) folio vs 旧 twill、 (b) folio (Layer 0) vs consumer (Layer 1)、 (c) Layer 1 の spec edit vs 実装 edit — を、 5 層の防御 (物理 git repo 分離 / root marker / HTML meta 宣言 / caller marker env var / directory naming) が pipeline で構造的に防ぐ。 5 層全てを通過した時のみ正しい layer の spec を編集できる (下表・図で詳説)。" }
+      - type: table
+        caption: ""
+        headers: ["層", "機構", "folio (Layer 0)", "consumer (Layer 1)", "旧 twill (reference)"]
+        rows:
+          - ["L1 物理分離", "独立 git repo", "folio repo (standard、 bare 不採用)", "各 consumer repo (standard)", "twill repo (bare、 freeze)"]
+          - ["L2 root marker", "Markdown 例外 file", "<code>FOLIO.md</code> \"META FRAMEWORK\"", "<code>SCRIBE.md</code> 等 \"folio consumer\"", "(なし、 CLAUDE.md のみ)"]
+          - ["L3 meta 宣言", "HTML <code>&lt;meta&gt;</code> tag", "<code>folio-layer=\"core\"</code>", "<code>folio-layer=\"project\"</code> + <code>folio-project</code>", "(なし)"]
+          - ["L4 caller marker", "env var", "folio caller marker (具体値は §9 + <code>.claude-plugin/plugin.json</code> userConfig)", "同 env var (Layer 1 spec 編集時、 <code>folio.config.yaml</code> で override 可能)", "異名 (twill 固有、 folio scope 外、 旧 twill repo を参照)"]
+          - ["L5 directory naming", "folio 固有 dir", "<code>.claude-plugin/</code>", "<code>design-intent/spec/</code>、 <code>howto/</code> 等", "twill 固有命名 (混在)"]
+      - type: mermaid
+        caption: "図 7. 3 axis × 5 層防御 pipeline。 5 層全てを通過した時のみ AI Agent は folio (Layer 0) or consumer (Layer 1) の spec を編集できる (<a class=\"xref\" href=\"./constitution.html#p-12\" data-tooltip=\"Layer 0 = rules + plugin harness 一体配布\">P-12</a> 違反防止)。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: 3 axis × 5 層防御 pipeline"
+          - "  accDescr: 3 軸の混同リスク (folio vs twill、 folio vs consumer、 spec edit vs impl edit) に対し 5 層の防御 (物理分離、 root marker、 meta 宣言、 caller marker、 directory naming) が pipeline で適用される"
+          - "  subgraph AX[\"<b>3 axis 混同リスク</b>\"]"
+          - "    A1[\"(a) folio vs twill\"]"
+          - "    A2[\"(b) folio vs consumer\"]"
+          - "    A3[\"(c) spec edit vs impl edit\"]"
+          - "  end"
+          - "  subgraph DEF[\"<b>5 層防御 pipeline</b>\"]"
+          - "    direction TB"
+          - "    L1[\"L1"
+          - "物理 git repo"
+          - "分離\"]"
+          - "    L2[\"L2"
+          - "root marker"
+          - "file\"]"
+          - "    L3[\"L3"
+          - "HTML meta"
+          - "宣言\"]"
+          - "    L4[\"L4"
+          - "caller marker"
+          - "env var\"]"
+          - "    L5[\"L5"
+          - "directory"
+          - "naming\"]"
+          - "    L1 --> L2 --> L3 --> L4 --> L5"
+          - "  end"
+          - "  AX --> DEF"
+          - "  style AX fill:#fefbea,color:#08131a"
+          - "  style DEF fill:#e6f6f2,color:#08131a"
+      - { type: subhead, anchor: "s7-5-ci-gate", heading: "§7.5 CI Gate Specification", essence: "CI workflow が強制する 7 gate (link-integrity / declarative-form / what-only / vocabulary / EARS coverage / delta-marker / json-ld-validation) の MUST 要件は <a href=\"rules.html#s10-2\" class=\"normative-ref\">rules.html §10.2</a> にある。 <a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> 二層 enforcement で、 機械化可能部は deterministic floor (<code>folio validate</code>)、 意味的残余は LLM ceiling (Phase F agent) に分担する。 EARS coverage のみ warn 扱い (下図・aside で詳説)。" }
+      - type: mermaid
+        caption: "図 8. CI gate pipeline。 7 種 gate を順次通過した場合のみ merge 許可。 EARS coverage のみ warn 扱い (実装段階で fail 化検討)。 G7 (json-ld-validation) は 2026-05-23 追加 (<a class=\"xref\" href=\"./rules.html#req-ci-016\" data-tooltip=\"Layer 1 consumer CI workflow は全 spec file の &lt;head&gt; JSON-LD block が relations §3 schema に適合するか検証する MUST。\">REQ-CI-016</a>、 verification framework と integration)。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: CI Gate Pipeline"
+          - "  accDescr: PR / commit から merge までの 7 gate (link integrity、 declarative form、 what-only、 vocabulary、 EARS coverage、 delta marker consistency、 json-ld-validation) を順次通過した場合のみ merge 許可"
+          - "  PR[\"PR / push\"]"
+          - "  PR --> G1[\"link-integrity"
+          - "(P-6)\"]"
+          - "  G1 --> G2[\"declarative-form"
+          - "(P-4)\"]"
+          - "  G2 --> G3[\"what-only"
+          - "(P-3 / P-11)\"]"
+          - "  G3 --> G4[\"vocabulary"
+          - "(P-5)\"]"
+          - "  G4 --> G5[\"EARS coverage"
+          - "(§6)\"]"
+          - "  G5 --> G6[\"delta marker"
+          - "consistency"
+          - "(§5)\"]"
+          - "  G6 --> G7[\"json-ld-validation"
+          - "(relations §3)\"]"
+          - "  G7 --> OK[\"merge allowed\"]"
+          - "  G1 -. \"fail\" .-> BL[\"merge blocked\"]"
+          - "  G2 -. \"fail\" .-> BL"
+          - "  G3 -. \"fail\" .-> BL"
+          - "  G4 -. \"fail\" .-> BL"
+          - "  G5 -. \"warn\" .-> OK"
+          - "  G6 -. \"fail\" .-> BL"
+          - "  G7 -. \"fail\" .-> BL"
+          - "  style OK fill:#5ac8b8,color:#08131a"
+          - "  style BL fill:#fdf3f3,color:#08131a"
+      - { type: subhead, anchor: "s7-6-phase-x3-minimal", heading: "§7.6 Phase X3 Minimal Implementation", essence: "試作段階 (Phase X3) の plugin minimal scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong> (WHAT enumeration の SSoT は <a href=\"../decisions/ADR-0003-plugin-architecture.html#s2-decision\">ADR-0003 §2</a>)。 段階的成長 path: 1 skill (X3) → 3 review agent (X4) → 5 review agent v1.0 (X5-γ + ADR-0033) → 9 agents 完成形 vision (post-1.0)。 §7.2 完成形は未来 anchor として保持し、 実機検証は <a href=\"verification.html\">verification.html</a> sandbox で行う。" }
+    machine_blocks:
+      - { type: prose, html: "本 §7 は folio Layer 0 の plugin harness を構成する 5 component を規定する。 7-phase PR cycle (§7.1) の各 phase で specialist agents (§7.2)、 caller marker (§7.3)、 5-Layer Defense (§7.4)、 CI Gate (§7.5) が連携し、 folio rules を enforce する。" }
+      - { type: prose, html: "<strong>規範要件と informative design の分離</strong>: §7 全体は informative design intent を記述する。 規範 MUST 要件 (caller marker set/unset MUST、 CI gate enforcement MUST) は <a href=\"rules.html#s10-mandatory\" class=\"normative-ref\">rules.html §10 Mandatory Actions</a> に集約する。 本 §7 では各 component の設計と enforcement flow を informative に解説する。" }
+      - { type: prose, html: "folio-architect は spec edit の唯一 author。 7 phase (A〜G) を順次実行する。" }
+      - { type: note, html: "<p>本 table は完成形の 7-Phase 宣言 (declarative)。 <strong>X5-γ で v1.0 scope 確定 (<a class=\"xref\" href=\"../decisions/ADR-0029-phase-f-agent-set.html\" data-tooltip=\"forward (X5-γ、 user 承認済 (AskUq 方向性 γ)、 実 amend は WS2)\">ADR-0029</a>、 <a href=\"#s7-6-phase-x3-minimal\">§7.6 growth path</a>)</strong>: Phase <strong>B / D</strong> は folio-architect が <strong>inline</strong> 実行する (<code>spec-explorer</code> / <code>spec-architect</code> の agent 化は post-1.0 defer)。 Phase <strong>F</strong> は v1.0 で <strong>5 agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code> / <code>spec-review-temporal</code> / <code>spec-review-fidelity</code>) を並列 spawn する (<code>spec-review-fidelity</code> は <a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a> の dual-audience ceiling)。 <code>spec-review-structure</code> は <code>folio validate</code> (link-integrity + readme-index) が機械被覆ゆえ <strong>cut</strong>、 <code>spec-review-stakeholder</code> は <strong>post-1.0 defer</strong> (table / 図の 7 並列は完成形 vision として保持)。 disposition の詳細は <a href=\"#s7-2-specialists\">§7.2</a> 末尾 aside を参照。</p>" }
+      - { type: note, html: "<p><strong>adoption-aware Discovery + code-cross-reference Exploration + grilling 流 Clarifying (<a href=\"../decisions/ADR-0031-mattpocock-authoring-absorption.html\">ADR-0031</a>)</strong>: Phase A / B / C は consumer の adoption-state と実装現実に適応し、 「実装前に対話で要件を詰める」 普遍的上流活動を folio に内在化する。</p> <ul> <li><strong>Phase A — adoption-state 検出と分岐</strong>: folio-architect は design-intent spec の<em>実体の有無</em>で adoption-state を判定する。 <strong>greenfield</strong> (実体ある spec が未だ無い — constitution 不在 / skeleton README のみ) なら <strong>onboarding grilling</strong> 分岐へ、 <strong>established</strong> (実体 spec あり) なら <strong>maintenance</strong> 分岐へ routing する。 <code>folio.config.yaml</code> の存在は構造 scaffold 済を示すが established を意味しない (<code>folio init</code> は実体に先立ち config を生成する)。 これにより、 greenfield 経路の不在ゆえ人間が init 判断を迫られ空 constitution が \"done\" に残る failure を構造的に解消する。</li> <li><strong>構造は決定論 / 実体は lazy</strong>: <code>folio init</code> CLI は純粋な構造 (dir / <code>folio.config.yaml</code> / <span class=\"term\" data-term=\"cluster\" data-tooltip=\"design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。\">cluster</span> README skeleton) だけを決定論的に生成し、 README index は<strong>実在 file のみ</strong> <code>dc:hasPart</code> 宣言する (各段階で <code>folio validate</code> clean を維持)。 constitution / overview の<strong>本文 (実体) は onboarding grilling が引き出した中身がある時のみ Phase E で materialize</strong> する (<a href=\"../decisions/ADR-0024-folio-init-scope.html\">ADR-0024</a> の seed 挙動を <a href=\"../decisions/ADR-0031-mattpocock-authoring-absorption.html\">ADR-0031</a> が revise)。 空 placeholder を残さない — <a href=\"constitution.html#p-3\">P-3</a> (WHAT-only) の構造 vs 実体の境界を lazy 境界に重ねる。</li> <li><strong>Phase B — code-cross-reference (authoring evidence)</strong>: Phase B (Exploration) は関連 spec / ADR に加え、 established project では <strong>consumer code も読んで</strong> spec の問いを grounding する。 spec の主張と実装現実の<strong>食い違いを Phase C grilling で surface</strong> し spec を研ぐ。 code は spec を<em>研ぐ証拠</em>であって test する gate ではない (出力は良い spec であり pass する test ではない) — <a href=\"../decisions/ADR-0026-test-placement-model.html\">ADR-0026</a> の実装適合性境界を守り、 gate / 新 review agent は作らない (<a href=\"../decisions/ADR-0031-mattpocock-authoring-absorption.html\">ADR-0031</a> §2.6)。</li> <li><strong>Phase C — gap-driven grilling + persist-as-you-go</strong>: Phase C は単発確認でなく、 folio 自前の <strong>grilling protocol</strong> (MIT-attribution、 <code>folio-architect</code> SKILL に同梱、 spec-aware = <span class=\"term\" data-term=\"EARS\" data-tooltip=\"Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。\">EARS</span> / constitution 原則 / <span class=\"term\" data-term=\"vocabulary\" data-tooltip=\"folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。\">vocabulary</span> に質問を紐づける) に沿う 1 問ずつの対話である。 <strong>gap-driven</strong>: 既存 spec / vocabulary / ADR / 会話 context から settled を認識し<strong>未解決論点だけ</strong>を尋ねる (解決済みの再尋問はしない)。 <strong>persist-as-you-go</strong>: grilling 中に決まった軽い anchor (vocabulary.yaml の用語 / ADR — <span class=\"term\" data-term=\"caller-marker\" data-tooltip=\"spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。\">caller-marker</span> 非 gate) を inline 永続化し、 重い spec (design-intent/spec/ HTML) は Phase E で materialize する。 settled を artifact に宿すことで folio-architect は何度でも安全に再起動でき (<code>grill-me</code> 先行・複数回反復が非冗長)、 この repeatability は read-persist ループからの<strong>創発</strong>である (明示的 re-run モードを持たない)。</li> </ul>" }
+      - { type: note, html: "<p><strong>X5-γ v1.0 disposition (<a href=\"../decisions/ADR-0029-phase-f-agent-set.html\">ADR-0029</a> + <a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a>)</strong>: 本 §7.2 の 9-agent table は完成形 vision として保持する。 v1.0 で実装するのは Phase F の <strong>5 review agent</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code> / <code>spec-review-temporal</code> / <code>spec-review-fidelity</code>、 fidelity は ADR-0033 の dual-audience 二層 enforcement ceiling)。</p> <ul> <li><code>spec-review-structure</code> = <strong>cut</strong>: directory / naming / cross-ref / heading は <code>folio validate</code> の link-integrity (<a class=\"xref\" href=\"./rules.html#req-ci-010\" data-tooltip=\"link-integrity gate が broken reference を検出したら CI は merge を block する MUST (P-6)。\">REQ-CI-010</a>) + readme-index hook + naming convention が機械被覆するため、 LLM agent を重ねない (<a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> 二層 enforcement の deterministic floor 側)。</li> <li><code>spec-explorer</code> (Phase B) / <code>spec-architect</code> (Phase D) / <code>spec-review-stakeholder</code> (F軸6) = <strong>post-1.0 defer</strong>: explorer / architect は folio-architect が inline で機能し、 agent 化は実 large-consumer 需要が顕在化した時点。 stakeholder (ISO 42010) は niche。</li> <li>deferred 3 agent は削除でなく将来 opt-in の anchor として §7.2 table に残す。 <code>spec-review-temporal</code> は <a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> §2.3 の <a class=\"xref\" href=\"./rules.html#req-ci-011\" data-tooltip=\"declarative-form gate が非宣言的構文を検出したら CI は merge を block する MUST (P-4)。\">REQ-CI-011</a> declarative-form を担う LLM ceiling。</li> </ul>" }
+      - { type: prose, html: "spec edit を行う AI agent が caller marker を set / unset すべき MUST 要件は <a href=\"rules.html#s10-1\" class=\"normative-ref\">rules.html §10.1</a> (<a class=\"xref\" href=\"./rules.html#req-cm-001\" data-tooltip=\"AI agent が spec_path 配下の file に write を試みる時、 system は caller marker env var が宣言値に set されているか検証する MUST。\">REQ-CM-001</a>〜003) に規定する。 本 §7.3 は PreToolUse hook による enforcement flow chart (下図) を <em>informative</em> に解説する。" }
+      - { type: prose, html: "caller marker は AI agent が現在 spec edit 中であることを宣言する。 <code>.claude-plugin/hooks/</code> の PreToolUse hook が env var を check し、 未 set または異なる値の場合は spec 配下 file の編集を block する。" }
+      - { type: prose, html: "AI agent は以下の 3 つの context boundary を混同し得る。 本 §7.4 はこれを構造的に防ぐ 5 層の boundary mechanism を informative に解説する:" }
+      - type: list
+        items:
+          - "(a) folio (Layer 0) vs 旧 twill plugin (reference のみ)"
+          - "(b) folio (Layer 0、 本 repo) vs consumer projects (Layer 1、 別 repo)"
+          - "(c) Layer 1 spec edit (<code>design-intent/spec/</code>) vs Layer 1 実装 edit (<code>src/</code>、 <code>skills/</code> 等)"
+      - { type: prose, html: "CI workflow が強制すべき 7 gate の MUST 要件は <a href=\"rules.html#s10-2\" class=\"normative-ref\">rules.html §10.2</a> (<a class=\"xref\" href=\"./rules.html#req-ci-001\" data-tooltip=\"Layer 1 consumer CI workflow は merge を許可する前に下記 7 gate すべてを enforce する MUST。\">REQ-CI-001</a> + REQ-CI-010〜016) に規定する。 本 §7.5 は各 gate の script 実装参照 (<code>.claude-plugin/scripts/</code>) を <em>informative</em> に解説する。 具体的 script 実装は <a href=\"#s9-bindings\">§9 Bindings</a> に集約。" }
+      - { type: note, html: "<p><strong>gate enforcement 実体 (X5-γ、 <a href=\"../decisions/ADR-0028-prose-gate-mechanization.html\">ADR-0028</a> 二層 enforcement)</strong>: 7 gate は性質に応じ deterministic floor (<code>folio validate</code>) と LLM ceiling (Phase F review agent) の 2 経路で enforce する。 <strong>gate ごとの floor/ceiling 割当と block/warn disposition の正本は <a href=\"./rules.html#s10-2\">rules §10.2</a> の enforcement aside に一元化</strong>し、 本 spec では再掲しない (<a class=\"xref\" href=\"./rules.html#req-ci-012\" data-tooltip=\"what-only gate が WHAT spec への WHY / HOW content 混入を検出したら CI は merge を block する MUST (P-3 / P-11)。\">REQ-CI-012</a> what-only の二相化 〔構文部分集合 = deterministic floor block、 <a class=\"xref\" href=\"../decisions/ADR-0047-how-outside-floor2-hard-gate.html\" data-tooltip=\"design-intent 本文への明示 HOW primitive 混入を検出する floor-2 (P-11 4-enum 構文検出) を soft-warn から CI hard-block (violation・exit 1・merge block) へ昇格する — staged rollout の完了段 (実測 = 生涯 真陽性 1 件・偽陽性 0)。\">ADR-0047</a>〕 を含む現行割当はそちらを参照 — 並行再掲は正本分岐の drift 源になるため cross-ref に委譲)。 設計原理のみここに記す: 同一原則を二つの重い機構で守らず、 機械化可能部分を floor、 意味的残余を ceiling に分担する。 図 8 の「EARS coverage は実装段階で fail 化検討」は X5-γ で <strong>warn 維持</strong>に確定 (<a class=\"xref\" href=\"./rules.html#req-ci-014\" data-tooltip=\"EARS-coverage gate が well-formed EARS pattern を欠く requirement を検出したら CI は warning を出すが merge は許可する (§6)。\">REQ-CI-014</a> warn 設計)。</p>" }
+      # ★★errata folio-642 の ★意図的 1 site delta (下記 html の「完成形 9 specialist agents」)。
+      #   before (canonical design-intent/spec/folio-self-spec.html:580 / :578 の aside.informative[data-audience="machine"] 内):
+      #     「<a href="#s7-2-specialists">§7.2 (完成形 8 specialist agents)</a>」
+      #   after (本契約):
+      #     「<a href="#s7-2-specialists">§7.2 (完成形 9 specialist agents)</a>」
+      #   ★根拠 (worker 実測・canonical 側 4 site が 9 で一致): :86 TOC「§7.2 Specialist Agents (9 個)」/
+      #     :376 見出し「§7.2 Specialist Agents (9 個)」/ :377 essence「完成形 vision の 9 agent」/
+      #     :588 別 aside「§7.2 完成形 9 agents」(+ :585「9 agents 完成形 vision」)。 「8」は :580 の ★1 site のみ。
+      #   ★批准 = folio-qojv 申送り (iii) + folio-cuom 契約 fence ■5 (裁定 D-2 = 案 A contract-only delta)。
+      #   ★状態 = 既知・意図的・受け皿つき (未実証ではない)。 canonical 側は N1 により本 cell では ★触らない —
+      #     解消は mkwc の flip (canonical 物理置換) 時であり、 それまで contract と canonical に 1 byte 差が残る。
+      #   ★mkwc への申送り: origin snapshot は ★errata 適用前 (「8」のまま) の canonical を byte 忠実に取ること (E5)。
+      #     生成物 vs canonical の差分表では本件を「承認済み delta 1 件」として計上する。
+      #   ★fidelity ceiling への告知: 本差分は ★捏造ではない (canonical 内部の自己矛盾の是正) — 上記 before/after と
+      #     根拠 site を突合すれば「9 が canonical 多数派・8 が孤立誤記」であることが機械的に確認できる。
+      - { type: note, html: "<p>本 §7.6 は試作段階 (Phase X3) における plugin minimal scope を記述する。 <a href=\"#s7-2-specialists\">§7.2 (完成形 9 specialist agents)</a> は未来 anchor として保持し、 現状の試作 scope を本 §7.6 に局所化する。 採用根拠は <a href=\"../decisions/ADR-0003-plugin-architecture.html\">ADR-0003</a>、 実機検証 framework は <a href=\"verification.html\">verification.html</a>。</p>" }
+      - { type: prose, html: "Phase X3 minimal viable plugin scope = <strong>1 skill + 4 hook + 6 script + 1 CLI</strong>。 各 component の詳細 enumeration および役割 (WHAT) は <a href=\"../decisions/ADR-0003-plugin-architecture.html#s2-decision\">ADR-0003 §2 Decision</a> を SSoT として参照する MUST (本 §7.6 は <a class=\"xref\" href=\"../decisions/ADR-0003-plugin-architecture.html\" data-tooltip=\"folio v0.4.2-draft\">ADR-0003</a> への entry point + 段階的成長 path 規定のみを担う、 detailed table の重複定義は禁止)。" }
+      - { type: prose, html: "段階的成長 path: <strong>1 skill (Phase X3) → 7-Phase SKILL + 3 review agent (Phase X4) → 5 review agent v1.0 (Phase X5-γ + ADR-0033) → 9 agents 完成形 vision (post-1.0)</strong> (X4-D で 3 review agent ears/vocabulary/ssot、 <a href=\"../decisions/ADR-0027-x4-d-architect-skill-review-agents.html\">ADR-0027</a>; X5-γ で temporal 追加・<code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut・<code>spec-explorer</code>/<code>spec-architect</code>/<code>spec-review-stakeholder</code> は post-1.0 defer、 <a href=\"../decisions/ADR-0029-phase-f-agent-set.html\">ADR-0029</a>; dual-audience <code>spec-review-fidelity</code> ceiling 追加、 <a href=\"../decisions/ADR-0033-dual-audience-hub.html\">ADR-0033</a>)。 試作で発見した修正点 / 必要追加機能を spec に逐次反映する。 具体的 binding (script 内容 / CLI 構文) は <a href=\"#s9-bindings\">§9 Bindings</a> に隔離。" }
+      - { type: note, html: "<p><strong>X4-D 現状 (<a class=\"xref\" href=\"../decisions/ADR-0027-x4-d-architect-skill-review-agents.html\" data-tooltip=\"forward (X4-D、 user 承認済 (AskUq)、 実装は本 ADR 承認後)\">ADR-0027</a>)</strong>: <a href=\"#s7-1-7phase\">§7.1</a> の 7-Phase orchestration を <code>folio-architect</code> SKILL に実装し、 Phase F に review agent を <strong>3 個</strong> (<code>spec-review-ears</code> / <code>spec-review-vocabulary</code> / <code>spec-review-ssot</code>) 導入した (<code>agents/&lt;name&gt;.md</code>、 scoped name <code>folio:&lt;name&gt;</code>、 read-only)。 Phase B (<code>spec-explorer</code>) / Phase D (<code>spec-architect</code>) は X4 では folio-architect が inline 実行し、 agent 化は <strong>X5+</strong>。 Phase F 残 3 軸 (<code>spec-review-{structure,temporal,stakeholder}</code>) も当時は <strong>X5+</strong> 据置とした。 <a href=\"#s7-2-specialists\">§7.2 完成形 9 agents</a> は未来 anchor として保持する。 検証 contract は <a href=\"verification.html#s3-6-verification-specific\">verification.html REQ-VER-016</a>。 <strong>X5-γ 更新 (<a href=\"../decisions/ADR-0029-phase-f-agent-set.html\">ADR-0029</a>)</strong>: <code>spec-review-temporal</code> を v1.0 の 4 番目 review agent に昇格、 <code>spec-review-structure</code> は <code>folio validate</code> 被覆ゆえ cut、 <code>spec-explorer</code> / <code>spec-architect</code> / <code>spec-review-stakeholder</code> は post-1.0 defer (<a href=\"#s7-2-specialists\">§7.2 末尾 disposition aside</a>)。</p>" }
+      - { type: prose, html: "本 minimal plugin の実機検証は <a href=\"verification.html\">verification.html</a> (<span class=\"term\" data-term=\"sandbox\" data-tooltip=\"tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。\">sandbox</span> verification framework) で実施する。 verification scope の段階的対比 (完成形 §7.2 vs 試作段階 §7.6) は <a href=\"verification.html#s4-2-completion-vs-prototype\">verification.html §4.2</a> に集約 (SSoT)。" }
+  - id: "s8"
+    anchor: "s8-plugin"
+    tint: "ok"
+    kicker: "§8 / plugin 統合"
+    heading: "§8. Plugin Integration (Claude Code plugin としての folio)"
+    essence: "folio は <strong>Claude Code plugin</strong> として配布される (P-12)。 公式 plugin spec に準拠した manifest (<code>plugin.json</code>) + component layout を採用し、 consumer は <code>folio.config.yaml</code> で userConfig default (spec_path / caller_marker 等) を override できる。 配布は Git marketplace + semver pinning。 §8.1〜§8.3 で schema・override 機構・distribution を解説する。"
+    blocks:
+      - { type: subhead, anchor: "", heading: "§8.1 plugin.json schema", essence: "下の <code>plugin.json</code> が manifest schema: <code>name</code> / <code>version</code> / <code>description</code> / <code>homepage</code> + userConfig (<code>spec_path</code>・<code>caller_marker_env</code>・<code>caller_marker_value</code>・<code>review_model</code>) を宣言する。 実 plugin.json は <code>spec_path</code> default を canonical <code>design-intent/spec/</code> とし、 各 userConfig に <code>title</code> field を持つ (claude plugin validate 要件)。" }
+      - type: code
+        lines:
+          - "{"
+          - "  \"name\": \"folio\","
+          - "  \"version\": \"0.5.0-draft\","
+          - "  \"description\": \"folio Layer 0 META FRAMEWORK — universal architecture spec-writing rules + Claude Code plugin harness.\","
+          - "  \"homepage\": \"https://github.com/shuu5/folio\","
+          - "  \"userConfig\": {"
+          - "    \"spec_path\": {"
+          - "      \"type\": \"string\","
+          - "      \"default\": \"design-intent/spec/\","
+          - "      \"description\": \"Relative path (from consumer project root) where folio-managed spec HTML files live.\""
+          - "    },"
+          - "    \"caller_marker_env\": {"
+          - "      \"type\": \"string\","
+          - "      \"default\": \"FOLIO_ARCHITECT_CONTEXT\","
+          - "      \"description\": \"Environment variable name that AI agent must set before editing files under spec_path.\""
+          - "    },"
+          - "    \"caller_marker_value\": {"
+          - "      \"type\": \"string\","
+          - "      \"default\": \"folio-architect\","
+          - "      \"description\": \"Expected value of the caller marker env var.\""
+          - "    },"
+          - "    \"review_model\": {"
+          - "      \"type\": \"string\","
+          - "      \"default\": \"opus\","
+          - "      \"description\": \"LLM model for Phase F specialist review agents.\""
+          - "    }"
+          - "  }"
+          - "}"
+      - { type: subhead, anchor: "", heading: "§8.2 userConfig override mechanism", essence: "各 Layer 1 consumer project は <code>folio.config.yaml</code> で <code>plugin.json</code> userConfig の default を override できる (下の例: <code>spec_path</code> / <code>caller_marker_env</code> / <code>caller_marker_value</code> の上書き)。" }
+      - type: code
+        lines:
+          - "folio_version: \"^0.4\""
+          - "spec_path: \".folio/spec/\"          # default design-intent/spec/ を上書き"
+          - "caller_marker_env: \"MY_PROJECT_CTX\" # default FOLIO_ARCHITECT_CONTEXT を上書き"
+          - "caller_marker_value: \"spec-editor\""
+      - { type: subhead, anchor: "", heading: "§8.3 distribution", essence: "配布は Git marketplace + semver pinning (<code>shuu5/folio#v0.5.0</code>)。 1.0.0 未満は development phase として MAJOR/MINOR/PATCH boundary を緩和する (constitution §5)。 npm / pip 配布は scope 外 (Claude Code plugin protocol 中心)。" }
+      - type: mermaid
+        caption: "図 9. Plugin Integration flow。 consumer の <code>folio.config.yaml</code> 宣言から Claude Code が plugin component を load、 hooks が PreToolUse / PostToolUse 時に caller marker enforce + spec validate を実行する。"
+        source_lines:
+          - "%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff'}}}%%"
+          - "flowchart TB"
+          - "  accTitle: Plugin Integration Flow"
+          - "  accDescr: consumer project が folio.config.yaml で folio plugin を consume すると、 Claude Code が plugin.json から skills + agents + hooks を load し、 PreToolUse hook で caller marker enforce が起動する"
+          - "  CP[\"consumer project"
+          - "folio.config.yaml"
+          - "(folio_version: ^0.4)\"]"
+          - "  CC[\"Claude Code\"]"
+          - "  PJ[\"folio plugin"
+          - "plugin.json\"]"
+          - "  SK[\"skills/"
+          - "load\"]"
+          - "  AG[\"agents/"
+          - "load\"]"
+          - "  HK[\"hooks/"
+          - "register\"]"
+          - "  CP --> CC"
+          - "  CC --> PJ"
+          - "  PJ --> SK"
+          - "  PJ --> AG"
+          - "  PJ --> HK"
+          - "  HK -.-> PRE[\"PreToolUse hook"
+          - "(caller marker enforce、 §7.3)\"]"
+          - "  HK -.-> POST[\"PostToolUse hook"
+          - "(spec validate、 §7.5)\"]"
+          - "  style CP fill:#fefbea,color:#08131a"
+          - "  style PJ fill:#2a4d6e,color:#ffffff"
+          - "  style PRE fill:#5ac8b8,color:#08131a"
+          - "  style POST fill:#5ac8b8,color:#08131a"
+    machine_blocks:
+      - { type: prose, html: "folio は <strong>Claude Code plugin</strong> として配布される (constitution P-12)。 公式 plugin spec (<a href=\"https://code.claude.com/docs/en/plugins.md\">docs.claude.com/en/plugins</a>) に準拠した manifest + component layout を採用する。" }
+      - { type: prose, html: "<strong>注</strong>: 実 <code>plugin.json</code> は <code>spec_path</code> default を canonical <code>design-intent/spec/</code> とする (folio 自身の self-host、 X4-C で <code>scratch/specs/</code> 暫定 override から物理移植済、 <a class=\"xref\" href=\"../decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html\" data-tooltip=\"forward (X4-C、 user 承認済 (AskUq)、 実行は SPAWN + feature-dev)\">ADR-0023</a>)。 また実 plugin.json は各 userConfig に <code>title</code> field を持つ (claude plugin validate 要件)。" }
+      - { type: prose, html: "各 Layer 1 consumer project は <code>folio.config.yaml</code> で <code>plugin.json</code> userConfig の default を override 可能。 例:" }
+      - type: list
+        items:
+          - "Git marketplace + semver pinning: <code>shuu5/folio#v0.5.0</code>"
+          - "1.0.0 未満は development phase として MAJOR/MINOR/PATCH boundary 緩和 (constitution §5)"
+          - "npm / pip 配布は scope 外 (Claude Code plugin protocol 中心)"
+  - id: "s9"
+    anchor: "s9-bindings"
+    tint: "brand"
+    kicker: "§9 / 実装への橋渡し"
+    heading: "§9. Bindings (platform-specific HOW の分離)"
+    essence: "constitution <a class=\"xref\" href=\"./constitution.html#p-3\" data-tooltip=\"WHAT-only\">P-3</a> / <a class=\"xref\" href=\"./constitution.html#p-11\" data-tooltip=\"design-intent 文書に HOW を書かない\">P-11</a> (WHAT-only + HOW 禁止) を守るため、 platform 固有の HOW (env var の具体値・hook script 名・binary path・OS-specific command) は本文でなく binding location (<code>.claude-plugin/plugin.json</code> userConfig / <code>.claude-plugin/scripts/</code> / <code>CLAUDE.md</code>) に分離する (下表が SSoT)。 他 AI platform への移植時は本 §9 の table を拡張し、 §1〜§8 本文は platform 中立を保つ。"
+    blocks:
+      - type: table
+        caption: ""
+        headers: ["HOW 領域", "binding location", "備考"]
+        rows:
+          - ["Claude Code plugin manifest (env var default / spec_path default)", "<code>.claude-plugin/plugin.json</code> userConfig", "plugin install 時に各 consumer の <code>folio.config.yaml</code> で override 可能"]
+          - ["caller marker env var の具体値 (default は <code>.claude-plugin/plugin.json</code> userConfig.caller_marker_env + .caller_marker_value を参照)", "<code>.claude-plugin/plugin.json</code> userConfig + <code>CLAUDE.md</code>", "本書 §7.3 では WHAT のみ規定、 具体値は plugin.json default に隔離 (P-11)"]
+          - ["hook script の実装 (例: caller marker enforcement、 spec validate 等)", "<code>.claude-plugin/scripts/</code>", "本書 §7.3 で flow chart は規定、 script content は <code>.claude-plugin/scripts/</code> 配下"]
+          - ["CI check script (<code>link-integrity.py</code> 等)", "<code>.claude-plugin/scripts/</code>", "本書 §7.5 で gate WHAT のみ規定"]
+          - ["Claude Code 固有 primitives (Skill / Hook / Agent 命名規約)", "<code>CLAUDE.md</code> (folio repo root) + 各 consumer project の <code>CLAUDE.md</code>", "<a class=\"xref\" href=\"./constitution.html#p-2\" data-tooltip=\"format は HTML + common.css のみ\">P-2</a> の Markdown 例外として CLAUDE.md は HOW root 許容 (P-11 例外として明示)"]
+    machine_blocks:
+      - { type: prose, html: "constitution <a class=\"xref\" href=\"./constitution.html#p-3\" data-tooltip=\"WHAT-only\">P-3</a> / <a class=\"xref\" href=\"./constitution.html#p-11\" data-tooltip=\"design-intent 文書に HOW を書かない\">P-11</a> (WHAT-only + HOW 禁止) を遵守するため、 platform 固有の HOW (env var の具体値、 hook script 名、 specific binary path、 OS-specific command 等) は本書 §1〜§8 の本文ではなく、 以下の binding location に分離する:" }
+      - { type: prose, html: "将来、 他 AI platform (Cursor / Continue / Aider 等) に folio framework を移植する場合、 本 §9 の table を拡張して platform-specific binding を追加する (例: <code>core/bindings/cursor/</code>)。 §1〜§8 の本文は platform 中立を維持する。" }
+
+requirements: []
+
+# 非終端 照会 (前方・他文書へ)。 constitution P-x (implementation) / ADR (rationale) / verification REQ-VER (verification)
+#   / ★rules.html REQ-* (claim・self-spec 追加 arm = 規約要件への前方照会)。
+references:
+  - { token: "P-7", doc: "constitution.html", role: "implementation" }
+  - { token: "P-10", doc: "constitution.html", role: "implementation" }
+  - { token: "P-3", doc: "constitution.html", role: "implementation" }
+  - { token: "P-5", doc: "constitution.html", role: "implementation" }
+  - { token: "P-4", doc: "constitution.html", role: "implementation" }
+  - { token: "P-12", doc: "constitution.html", role: "implementation" }
+  - { token: "P-11", doc: "constitution.html", role: "implementation" }
+  - { token: "P-2", doc: "constitution.html", role: "implementation" }
+  - { token: "REQ-VER-001", doc: "verification.html", role: "verification" }
+  - { token: "ADR-0001", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0022", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0048", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0033", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0055", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0007", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0028", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0034", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0029", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0031", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0024", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0026", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0047", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0003", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0027", doc: "decisions/", role: "rationale" }
+  - { token: "ADR-0023", doc: "decisions/", role: "rationale" }
+  - { token: "REQ-DA-STRUCT-1", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-010", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-011", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CM-001", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-001", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-016", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-012", doc: "rules.html", role: "claim" }
+  - { token: "REQ-CI-014", doc: "rules.html", role: "claim" }
+
+# 用語集 (core 共用 glossary-term-table)。 term = 表示語 / en = canonical (data-term) / def = data-tooltip 由来定義。
+glossary:
+  - { term: "constitution", en: "constitution", def: "folio の不変原則 (P-1〜P-14) を定める最上位 spec。 Amendment は user 承認必須・spec graph scan 対象外の特別枠 (P-10)。" }
+  - { term: "spec", en: "spec", def: "WHAT (設計意図) を declarative に記述する design-intent 文書。 実装 HOW・決定 WHY と content domain を分離する (P-3 / P-7)。" }
+  - { term: "marker", en: "marker", def: "HTML comment による所有境界の宣言 (folio:chrome-* / folio:nav-curated / folio:landing-hero 等)。 内側が build 所有か人間所有かは機構ごとに定まる。" }
+  - { term: "harness", en: "harness", def: "scenario を実行し assertion する runner 実装 (tests/runner.sh)。 kind (hook / cli-golden / cli-scaffold 等) ごとの実行経路を持つ (REQ-VER-011)。" }
+  - { term: "dual-audience", en: "dual-audience", def: "1 HTML artifact が machine (精密 normative = canonical SSoT) と human (essence + 視覚 view) の双方を同一 DOM に併せ持つ pattern (ADR-0033)。 artifact 自身が canonical WHAT (提示層) で機械層はその内部にある。 SSoT-first に flip した doc は編集の源が正本 (edit-SSoT) = contract YAML に分かれ、 flip しない doc は提示層が edit-SSoT を兼ねる (ADR-0050 / ADR-0051 §2.3)。" }
+  - { term: "SSoT", en: "SSoT", def: "Single Source of Truth。 ある object / term の唯一の正準定義 site で、 他所はそこへ参照する。 SSoT-first 転換後は層を明示する修飾付き full 形で用いる: canonical SSoT = 提示層 (生成 HTML) 内の機械層 (精密 normative) / edit-SSoT = 正本 = 提示層を produce する編集起点 (contract YAML、 ADR-0051 §2.3)。" }
+  - { term: "essence", en: "essence", def: "defined-object の定義 site の既存内容を再利用した plain-text 要約。 xref tooltip の生成元 (rules §9.2、 新規に書き起こさない = P-7)。" }
+  - { term: "invariant", en: "invariant", def: "spec が常に満たすべき構造的・意味的な不変条件。 EARS 要件と folio validate gate が機械的に保証する。" }
+  - { term: "data-audience", en: "data-audience", def: "要素が machine 向けか human 向けかを示す属性 taxonomy (machine | human の 2 値)。 dual-audience の構造分離に使う。" }
+  - { term: "fold", en: "fold", def: "details/summary による折り畳み表示。 machine 精密部や長大列を既定で畳み、 人間向け要旨を常時可視に保つ (dual-audience の human view 側)。" }
+  - { term: "ceiling", en: "ceiling", def: "LLM review 層 (Phase F spec-review agent)。 floor が機械検査できない意味的品質を補完する上限 (ADR-0028)。" }
+  - { term: "floor", en: "floor", def: "deterministic な機械検査層 (folio validate gate)。 二層 enforcement の下限で、 機械化可能な品質を CI で強制する (ADR-0028)。" }
+  - { term: "gate", en: "gate", def: "folio validate / CI が spec 集合へ課す機械検査の単位。 block (violation = exit 1) と warn (exit code 非影響) の 2 channel を持つ (rules §10.2 / REQ-VER-023)。" }
+  - { term: "defined-object", en: "defined-object", def: "一意 canonical ID を持つ参照可能 object (principle P-N / requirement REQ-* / decision ADR-NNNN / rule §)。 Class A xref の対象。" }
+  - { term: "xref", en: "xref", def: "defined-object への in-band な untyped cross-reference (a class=xref + data-tooltip)。 folio fix が穴を materialize し validate が completeness を機械保証する (ADR-0034)。" }
+  - { term: "dogfood", en: "dogfood", def: "folio 自身を folio の規約・機構で構築し検証する self-application。 規約が実用に耐えるかの検証手段。" }
+  - { term: "frozen", en: "frozen", def: "accepted 後に本文を改訂しない歴史資産 (ADR / constitution)。 実装との乖離は living spec が divergence trace として記録する (P-10)。" }
+  - { term: "ADR", en: "ADR", def: "Architecture Decision Record。 設計の WHY (決定・根拠・trade-off) を 1 決定 = 1 文書で記録する frozen な歴史資産 (ADR-worthiness は rules §10.3)。" }
+  - { term: "cluster", en: "cluster", def: "design-intent/ 内の content domain 別ディレクトリ (spec / decisions / research)。 各 cluster は README.html を index に持つ (P-7 3-domain、 具体 dir 名は folio-self-spec §2)。" }
+  - { term: "EARS", en: "EARS", def: "Easy Approach to Requirements Syntax。 要件を ubiquitous / event / state / optional / unwanted の 5 pattern で記述する記法。" }
+  - { term: "vocabulary", en: "vocabulary", def: "folio-framework 語の canonical 定義を保持する YAML (vocabulary.yaml)。 folio fix の tooltip populate と Layer 1 consumer の glossary.html derive が読む runtime SSoT (P-5)。 SSoT-first に flip した folio 自身では編集の正本 (edit-SSoT) は glossary contract YAML 側にあり、 本 file はそこからの生成 projection (projection stale gate が byte 一致を保証・ADR-0052)。 flip しない Layer 1 consumer では本 file が edit-SSoT を兼ねる (ADR-0051 §2.3)。" }
+  - { term: "caller-marker", en: "caller-marker", def: "spec 編集を gate する hook 機構 (.folio/architect-active marker file or env var)。 folio-architect 経由の編集のみ許可する (ADR-0006)。" }
+  - { term: "canonical name", en: "canonical name", def: "1 entity に対する唯一の正準名 (P-5)。 表記ゆれ・同義語を禁じ、 用語の一貫性を保つ。" }
+  - { term: "sandbox", en: "sandbox", def: "tests/ の決定的 verification framework (scenario YAML + runner + fixtures + golden)。 hook / CLI を mock payload・隔離 root で単体検証する (ADR-0013 / 0017)。" }
