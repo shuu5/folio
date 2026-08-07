@@ -42,7 +42,11 @@ declare -A TIER_CLASS=( [Always]="tier-always" [Ask-first]="tier-askfirst" [Neve
 # 抽象ロール (B0 论点2 照会 graph)。 inbound (受ける照会) の role allowlist。 verify-common.sh の CROSS_DOC_ROLE_ALLOWLIST と一致。
 declare -A ROLE_OK=( [claim]=1 [rationale]=1 [exploration]=1 [principle]=1 [verification]=1 [implementation]=1 )
 # principle に許可するキー (これ以外 = 前方照会の疑い → 終端不変条件 違反で abort)。
-PRINCIPLE_KEY_ALLOW='id|heading|statement|tier|amended_by'
+# ★anchor (folio-lffq) = 生成物の navigable id (canonical <dt id="p-N"> と同形)。 前方照会ではない (自 doc 内の
+#   anchor 名) ゆえ allowlist に載せる。 値の正しさ (非空 + lc(id) 一致) は下の validate が fail-closed で束縛する。
+PRINCIPLE_KEY_ALLOW='id|anchor|heading|statement|tier|amended_by'
+# head_graph に許可しない前方関係キー (principle は照会終端 = 宣言すれば捏造 edge になる・folio-lffq 裁定 1)。
+HEAD_GRAPH_FORWARD_KEYS='part_of references depends_on extends'
 
 # ---- icon SVG (principle-pack 固有。 共用 icon=ICO_FLOW/SHIELD/BOOK/CHECK_BIG/USER + ico() は lib/common.sh) ----
 ICO_ALWAYS='<path d="M12 2v20"/><path d="M2 12h20"/><circle cx="12" cy="12" r="9"/>'
@@ -62,6 +66,43 @@ validate() {
   [[ "$(q '.meta.doc_type')" == "constitution" ]] || { echo "assemble-principle: ★meta.doc_type は constitution 必須 (principle-pack は constitution 専用・doc_type flip で gate bypass 不可)" >&2; errs=1; }
   # id 一意性 (principles)
   d="$(q '.principles[].id' | sort | uniq -d)"; [[ -z "$d" ]] || { echo "assemble-principle: principle id 重複: $d" >&2; errs=1; }
+  # ★anchor (navigable id) fail-closed (folio-lffq 裁定 3): 空 anchor は「id 無しの原則」= inbound #p-N が
+  #   silent に死ぬ (gate (i) は essence 空を無言 skip・gate (h) は anchor 存在しか見ない = 全経路が沈黙する)。
+  #   大小文字は id を tr で小文字化した決定的導出値のみを受け、 contract 側の手書き drift を生成段で塞ぐ。
+  local pid_a anc_a exp_a
+  while IFS= read -r pid_a; do
+    [[ -n "$pid_a" ]] || continue
+    anc_a="$(q '.principles[] | select(.id=="'"$pid_a"'") | .anchor // ""')"
+    exp_a="$(printf '%s' "$pid_a" | tr '[:upper:]' '[:lower:]')"
+    if [[ -z "$anc_a" || "$anc_a" == "null" ]]; then
+      echo "assemble-principle: ★principles[$pid_a].anchor が空 (navigable id 無しは inbound #p-N を無言で殺す・fail-closed)" >&2; errs=1
+    elif [[ "$anc_a" != "$exp_a" ]]; then
+      echo "assemble-principle: ★principles[$pid_a].anchor が id 小文字化と不一致 (期待 '$exp_a' / 実 '$anc_a')" >&2; errs=1
+    fi
+  done < <(q '.principles[].id')
+  # anchor 一意性 (id 一意でも anchor 手書き重複で同一 id 属性が 2 個出る経路を塞ぐ)。
+  d="$(q '.principles[].anchor' | sort | uniq -d)"; [[ -z "$d" ]] || { echo "assemble-principle: principle anchor 重複: $d" >&2; errs=1; }
+  # ★head_graph (spec graph 参加・folio-lffq 裁定 1) — constitution は @type=FolioConstitution で graph scan から
+  #   外れる不変 anchor ゆえ、 宣言の欠落 / @type の flip はどちらも consumer 側 gate の意味を反転させる (flip すれば
+  #   生成物が scan 対象に転じ、 欠落すれば switchover-harness の in-scan hard-fail = SWH-HARDFAIL head_graph-missing)。
+  if [[ "$(q 'has("head_graph")')" != "true" ]]; then
+    echo "assemble-principle: ★head_graph 欠落 (constitution は spec graph の head 参加が必須・fail-closed)" >&2; errs=1
+  else
+    local hgt hgk
+    hgt="$(q '.head_graph.type // ""')"
+    [[ "$hgt" == "FolioConstitution" ]] || { echo "assemble-principle: ★head_graph.type は FolioConstitution 必須 (実際: '${hgt}')。 flip すると生成物が spec graph の scan 対象へ転び inventory/validate/fix の除外と self-root 検出が一斉に反転する" >&2; errs=1; }
+    #   前方関係は 1 本も持たない (照会終端 不変条件の head 面・principle-level の許可外キー check と同根)。
+    for hgk in $HEAD_GRAPH_FORWARD_KEYS; do
+      [[ "$(q "[.head_graph.${hgk} // []] | flatten | length")" == "0" ]] \
+        || { echo "assemble-principle: ★head_graph に前方関係 '$hgk' (principle は照会終端ゆえ禁止・reverse 材化も検証もされない捏造 edge になる)" >&2; errs=1; }
+    done
+  fi
+  # ★meta.stakeholders 型 guard (fail-open 封鎖・assemble-verification.sh:846-851 と同型): scalar を素で join すると
+  #   1 要素扱いで通り、 CORE 側 JSON-LD folio:stakeholders が array→string へ型退行する (jsonld-lint / inventory /
+  #   fedges のいずれも捕捉しない)。 型そのものを契約 gate で pin する。
+  local stake_type; stake_type="$(q '.meta.stakeholders | type')"
+  [[ "$stake_type" == "!!seq" || "$stake_type" == "!!null" ]] \
+    || { echo "assemble-principle: ★meta.stakeholders は array 必須 (実際: $stake_type)。 scalar は CORE の JSON-LD folio:stakeholders を canonical の array から string へ型退行させる" >&2; errs=1; }
   # tier allowlist
   for p in $(q '.principles[].tier'); do [[ -v TIER_OK[$p] ]] || { echo "assemble-principle: 未知の tier: $p (Always|Ask-first|Never)" >&2; errs=1; }; done
   # ★終端強制 (照会終端 不変条件・B0 论点4): principle は前方照会を持たない。
@@ -160,6 +201,10 @@ emit_principle_css() {
 .p-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:5px}
 .p-head .pid{flex:0 0 auto;font-weight:700;font-size:12px;color:var(--brand);background:var(--brand-tint);border:1px solid var(--line);border-radius:6px;padding:2px 9px;letter-spacing:.02em}
 .p-head .ph{font-weight:800;font-size:15.5px;margin:0}
+/* ★folio-lffq: h3.ph の中身は strong 要素 (canonical constitution.html の dt/strong と同形で bin/folio の
+   principle essence 抽出が要求する形)。 UA 既定の strong{font-weight:bolder} は継承値 800 を 900 へ
+   押し上げ、 見出しの weight が row ごとに変わって見える。 inherit で従来の 800 を維持する (可視 weight 不変)。 */
+.p-head .ph strong{font-weight:inherit}
 [data-component="principle-tier-badge"]{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;letter-spacing:.03em;border-radius:999px;padding:2px 11px;white-space:nowrap}
 [data-component="principle-tier-badge"].tier-always{color:var(--ok);background:var(--ok-tint);border:1px solid var(--ok-line)}
 [data-component="principle-tier-badge"].tier-askfirst{color:var(--warn);background:var(--warn-tint);border:1px solid var(--warn-line)}
@@ -191,6 +236,23 @@ emit_principle_css() {
 CSS
 }
 
+# ---- pack 固有 folio-* head meta (folio-lffq・assemble-verification.sh:837-862 と同型) ----
+# ★CORE (lib/common.sh core_emit_graph_head) は doc-type / status / version の 3 本固定で、 16 pack 共有ゆえ編集禁止。
+#   canonical constitution.html:6-10 はさらに folio-layer / folio-stakeholders を持つ (実測 = 計 5 本)。 欠けると
+#   inventory の layer 面と stakeholder 面が生成物で失われる。 ゆえ pack-level で contract.meta 由来 emit する (CORE 不触)。
+#   値が無ければ tag ごと省略 = canonical に無い meta を捏造しない (canonical に無い folio-glossary-automark /
+#   folio-xref-completeness は contract に値を置かない = 本 emitter も出さない)。
+#   ★stakeholders の型 guard (scalar abort) は validate() 側に置いた (生成前 fail-closed で一括判定するため)。
+emit_pack_head_meta() {
+  local layer stake
+  layer="$(q '.meta.layer // ""')"
+  # meta tag の content は canonical 逐語 1 行 ("Developer, AI Agent, External Reviewer") が SSoT ゆえ join して復元する。
+  stake="$(q '(.meta.stakeholders // []) | join(", ")')"
+  [[ -n "$layer" && "$layer" != "null" ]] && printf '<meta name="folio-layer" content="%s">\n' "$(esc "$layer")"
+  [[ -n "$stake" && "$stake" != "null" ]] && printf '<meta name="folio-stakeholders" content="%s">\n' "$(esc "$stake")"
+  return 0
+}
+
 emit_head() {
   printf '<!DOCTYPE html>\n<html lang="ja">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
   printf '<meta name="generator" content="folio principle-pack assembler (folio-igv / instance#4) — deterministic structure, prose slots unfilled">\n'
@@ -198,7 +260,10 @@ emit_head() {
   cat "$CSS"
   emit_principle_css
   printf '\n</style>\n'
+  # 呼出順は core → pack (assemble-verification.sh の emit_head と同型)。 CORE が doc-type/status/version +
+  # @type 付き JSON-LD を、 pack が layer/stakeholders を出す。
   core_emit_graph_head
+  emit_pack_head_meta
   printf '</head>\n<body>\n'
 }
 
@@ -218,15 +283,25 @@ emit_cover() {
 }
 
 # 1 つの principle row を emit ($1 = id)。
+# ★navigable id (folio-lffq 裁定 3 = 案 A): h3.ph に id="p-N" を置き、 同一行に <strong>P-N: heading</strong> を
+#   同居させる (canonical constitution.html:141 の `<dt id="p-1"><strong>P-1: TITLE</strong></dt>` と同形)。
+#   ★strong の同居は必須: bin/folio:1468-1472 の principle essence 抽出は 「id="p-n" を *含む行* の中の strong 要素」
+#   を要求し、 値は先頭 P-N: を剥がした文字列を返す。 strong を欠くと essence は空になり、 gate (i) は essence 空を
+#   無言 skip (fail-open)・gate (h) は anchor 存在しか見ず・prime golden は essence 文字列を持たない = 全経路が沈黙する
+#   (= class=xref の inbound tooltip SSoT が無言で失われる)。
+#   ★id は data-slot-id とは *別属性* として増設する (data-slot-id を id へ rename / 転用すると inject-prose の
+#   prose 充填が silent に壊れる)。 挿入位置は h3 の class 直後 = principle-row の data-component↔class 隣接
+#   (verify-principle.sh) と p-head 内 pid→ph 隣接の双方を保つ。
 emit_principle_row() {
-  local pid="$1" heading statement tier tlabel tclass namend
+  local pid="$1" anchor heading statement tier tlabel tclass namend
+  anchor="$(q '.principles[] | select(.id=="'"$pid"'") | .anchor')"
   heading="$(q '.principles[] | select(.id=="'"$pid"'") | .heading')"
   statement="$(q '.principles[] | select(.id=="'"$pid"'") | .statement')"
   tier="$(q '.principles[] | select(.id=="'"$pid"'") | .tier')"
   tlabel="${TIER_LABEL[$tier]:-$tier}"; tclass="${TIER_CLASS[$tier]:-tier-unknown}"
   printf '<div data-component="principle-row" class="%s">\n' "$tclass"
-  printf '<div class="p-head"><span class="pid">%s</span><h3 class="ph">%s</h3><span data-component="principle-tier-badge" class="%s">%s</span></div>\n' \
-    "$(esc "$pid")" "$(esc "$heading")" "$tclass" "$(esc "$tlabel")"
+  printf '<div class="p-head"><span class="pid">%s</span><h3 class="ph" id="%s"><strong>%s: %s</strong></h3><span data-component="principle-tier-badge" class="%s">%s</span></div>\n' \
+    "$(esc "$pid")" "$(esc "$anchor")" "$(esc "$pid")" "$(esc "$heading")" "$tclass" "$(esc "$tlabel")"
   printf '<p class="pst">%s</p>\n' "$(mark_terms "$statement")"
   printf '<span class="p-plain" data-prose-slot="plain" data-slot-id="plain-%s"></span>\n' "$(esc "$pid")"
   # 改訂来歴 (amended_by を持つ原則のみ・無ければ history ブロック自体を出さない)。

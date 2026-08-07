@@ -28,6 +28,28 @@ meta:
   version: "0.6.0-draft"
   date: "2026-06-11"
   reader: folio を使い始める開発者・外部レビュアー・AI Agent — 14 の不変原則を初めて読む人にも分かる形で (専門語はやさしい言葉を併記)
+  # ★head meta 5 本の SSoT (folio-lffq)。 CORE (lib/common.sh core_emit_graph_head) が doc-type / status / version の
+  #   3 本を、 pack-local emit_pack_head_meta が layer / stakeholders の 2 本を出す (canonical constitution.html:6-10 と
+  #   同じ 5 本・値も逐語一致)。 canonical に無い folio-glossary-automark / folio-xref-completeness は *置かない* (捏造禁止)。
+  status: draft                    # canonical constitution.html:9 と一致 (CORE は値が無いと tag ごと無言省略ゆえ必須)
+  layer: core                      # canonical constitution.html:7 と一致 (pack-local emit)
+  # ★stakeholders は YAML sequence 必須 (scalar は CORE の JSON-LD folio:stakeholders を array→string へ型退行させ
+  #   jsonld-lint / inventory / fedges のいずれも捕捉しない fail-open になる = assemble 段で型 guard が abort する)。
+  #   meta tag の content は join(", ") で canonical 逐語 1 行 "Developer, AI Agent, External Reviewer" を復元する。
+  stakeholders:
+    - Developer
+    - AI Agent
+    - External Reviewer
+
+# ===== spec graph head (folio-lffq / ADR-0004 JSON-LD) =====
+# ★@type: FolioConstitution = 不変 framework anchor schema。 bin/folio の 5 site が本 @type を評価し、 うち 4 site
+#   (inventory folio_build_entry / folio_is_scan_target / fix Pass1 / validate 主 loop) が scan 除外、 1 site
+#   (folio_nav_is_self_root) が self-root の *正の検出* に使う。 doc_type: constitution との対 (assemble 段で束縛)。
+# ★前方関係 (part_of / references / depends_on / extends) は 1 本も宣言しない: principle は照会終端 node であり、
+#   宣言すれば reverse 材化も検証もされない捏造 edge になる (assemble 段の終端不変条件が abort する)。
+head_graph:
+  id: ./constitution.html
+  type: FolioConstitution
 
 # 承認記録 (SRS / ADR / research と同じ approval-block。core 共用)。constitution への変更は P-10 で user 承認 MUST。
 approval:
@@ -49,16 +71,22 @@ approval:
 decisions_dir: ../../../../design-intent/decisions
 
 # ===== 14 不変原則 (表示順 = tier 順: Always → Ask-first → Never) =====
-# id / heading (見出し) / statement (宣言文・frozen constitution.html の <dd> 本文を忠実転記) / tier / amended_by。
+# id / anchor / heading (見出し) / statement (宣言文・frozen constitution.html の <dd> 本文を忠実転記) / tier / amended_by。
+# ★anchor (folio-lffq) = 生成物の navigable id (canonical constitution.html の <dt id="p-N"> と同形)。 値は id を
+#   小文字化した決定的導出値で、 assemble 段が anchor == lc(id) を fail-closed で束縛する (空・不一致は abort)。
+#   ★節 anchor (s0-reader-guide … s7-citations の 11 個) は本 key に混ぜない — folio-lq12 が sections[].anchor を
+#   *別 key* として追加する領分であり、 本 cell は canonical 25 個中 p-1..p-14 の 14 個だけを担う。
 # tier allowlist = {Always, Ask-first, Never}。amended_by = 該当原則の <aside class="ai-rationale" data-adr/...> から
 #   (data-adr 属性を持つ aside のみ = P-2/P-7/P-13/P-14。 P-12 の aside は data-rationale-for ゆえ amended_by でない)。
 principles:
   # ---- Always tier (P-1〜P-7 + P-13/P-14 = 9 原則・不変、 例外なし) ----
   - id: P-1
+    anchor: p-1
     heading: spec は未来理想の anchor である
     statement: spec 配下の全文書は到達すべき設計の最終形を declarative に記述する。 drift の検証は AI dialog accountability (P-8) で行う。
     tier: Always
   - id: P-2
+    anchor: p-2
     heading: format は HTML + common.css のみ
     statement: "全 design-intent 文書 (design intent / decision record / exploration note) は HTML で記述する。 Markdown / YAML 例外は外部 platform 規約に従う file (例: VCS host の README、 AI-agent instruction file、 YAML config) に限り、 確定列挙は folio-self-spec §2 (Layer 0) / rules §3 (Layer 1) に委譲する。"
     tier: Always
@@ -67,22 +95,27 @@ principles:
         date: "2026-05-25"
         approved_by: user-dig-session
   - id: P-3
+    anchor: p-3
     heading: WHAT-only
     statement: "design-intent 文書に platform 固有 HOW を記述しない。 判定基準: 同等の framework を別 AI platform に移植する際に書き直しが必要であれば HOW 漏れである。"
     tier: Always
   - id: P-4
+    anchor: p-4
     heading: Declarative form
     statement: spec 本文は現在形の declarative narrative で記述する。 過去 narration、 未来 narration、 wave-specific note は spec から禁止する。 これらは decision record (ADR)、 exploration note、 version control の review に分離する。
     tier: Always
   - id: P-5
+    anchor: p-5
     heading: 1 entity = 1 canonical name
     statement: 同一概念に複数の名称を使用しない。 canonical name と forbidden synonyms は consumer project の vocabulary file で宣言する。
     tier: Always
   - id: P-6
+    anchor: p-6
     heading: Link integrity
     statement: "spec 配下の全 file は inbound link を 1 以上持つ。 各 cluster の README.html (entry point) のみ例外。 broken link、 orphan、 trace_extra は CI gate で 0 を強制する。"
     tier: Always
   - id: P-7
+    anchor: p-7
     heading: Content domain exclusivity
     statement: "design-intent 空間は 3 領域が内容を排他的に保持する: design intent (WHAT) = 構造・不変条件 / decision (WHY) = frozen rationale / exploration = spec 反映前の探索。 これらは declarative な design-intent 文書であり、 executable な HOW (実装 + verification) は本空間の外に置く (P-13)。 更新提案は専用領域を持たず、 decision record (ADR) + delta marker (trace) + version control の review で表現する。 具体 dir 名は folio-self-spec §2 / rules §2 に委譲する。"
     tier: Always
@@ -91,6 +124,7 @@ principles:
         date: "2026-05-25"
         approved_by: user-dig-session
   - id: P-13
+    anchor: p-13
     heading: Verification & Traceability
     statement: "実装 (HOW) とその executable verification は design-intent 空間の外に置く (P-3 / P-11 と整合)。 WHAT (design-intent 文書中の要件) は安定した requirement ID を介して verification に束縛され、 この ID 束縛が WHAT↔HOW の単一の真実源 (SSoT) link となる。 verification は (a) spec 適合性 (design-intent 文書自身の well-formed 検証、 framework 提供・普遍) と (b) 実装適合性 (HOW が WHAT を満たすかの検証、 project 固有) の 2 層を含む。 requirement ID から spec / verification / 実装への trace は machine-navigable でなければならない。"
     tier: Always
@@ -99,6 +133,7 @@ principles:
         date: "2026-05-25"
         approved_by: user-dig-session
   - id: P-14
+    anchor: p-14
     heading: Human Readability
     statement: folio の design-intent 文書とその生成物は、 機械可読性と同格に人間可読性を保つ。 各ページ種別には主たる人間読者層が定義されていなければならず (具体の定義と割当は rules が規定する)、 ページはその読者が当該ページの仕事を果たせる形で提示される。 人間可読性は検証対象であり、 決定的 floor gate と review ceiling の二層で継続的に検証する。 機械可読性のための構造が人間への提示を損なうこと、 およびその逆を認めない。
     tier: Always
@@ -108,23 +143,28 @@ principles:
         approved_by: user-grill-session
   # ---- Ask-first tier (P-8〜P-10 = 3 原則・user 承認後に変更可) ----
   - id: P-8
+    anchor: p-8
     heading: AI dialog accountability
     statement: AI Agent は spec を読んで実装案を提示する際、 constitution / spec との矛盾・divergence を natural language reasoning で user に提示する責務を負う。 AI の自然言語推論が drift 検出 mechanism として機能する。
     tier: Ask-first
   - id: P-9
+    anchor: p-9
     heading: Layer 1 consumer 固有 config 変更前 user 確認
     statement: consumer project の folio.config.yaml や vocabulary file 変更時は user 承認を取得する。
     tier: Ask-first
   - id: P-10
+    anchor: p-10
     heading: Constitution 自身への変更前 user 確認
     statement: "本 constitution への変更 (原則追加・削除・文言変更・tier 変更) は user 承認 MUST。 SemVer 判定は §5 に従う。"
     tier: Ask-first
   # ---- Never tier (P-11〜P-12 = 2 原則・絶対禁止) ----
   - id: P-11
+    anchor: p-11
     heading: design-intent 文書に HOW を書かない
     statement: "P-3 を絶対禁止 tier に escalate した規律。 platform 固有 primitives (specific tool 名、 binary path、 OS-specific command、 env var の具体値) を本文に直接記述しない。 これらは implementation harness または AI-agent instruction file (P-2 例外) に隔離する。 HOW の正しさ確立と WHAT への束縛は P-13 に従う。"
     tier: Never
   - id: P-12
+    anchor: p-12
     heading: Layer 0 = rules + plugin harness 一体配布
     statement: "folio Layer 0 は rules (constitution + rules + folio-self-spec) と plugin harness (.claude-plugin/) を一体として配布する。 Layer 1 consumer project は別 git repo として展開され、 folio repo 内に同居しない。"
     tier: Never
