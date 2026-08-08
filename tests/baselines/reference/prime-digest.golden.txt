@@ -9,7 +9,7 @@
 
 ## spec/folio-self-spec.html
 - title: folio self-spec
-- doc-type: self-spec · status: stable
+- doc-type: spec · status: stable
 - summary: folio Layer 0 framework 自身の architecture spec
 
 ## spec/relations.html

@@ -1,6 +1,6 @@
 {
   "$schema": "https://folio.dev/inventory/v1.json",
-  "generatedAt": "2026-08-04T03:33:57Z",
+  "generatedAt": "2026-08-08T08:40:59Z",
   "folioVersion": "1.2.1",
   "specs": [
     {
@@ -28,7 +28,7 @@
       "@id": "spec/folio-self-spec.html",
       "title": "folio self-spec",
       "summary": "folio Layer 0 framework 自身の architecture spec",
-      "doc-type": "self-spec",
+      "doc-type": "spec",
       "status": "stable",
       "version": "1.2.0",
       "stakeholders": [
@@ -37,35 +37,35 @@
         "External Reviewer"
       ],
       "relations": {
-        "dc:isPartOf": [
-          "spec/README.html"
-        ],
         "dc:isReferencedBy": [
-          "decisions/ADR-0048-design-intent-dir-rename.html",
-          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
-          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
-          "decisions/ADR-0034-object-term-xref-system.html",
-          "decisions/ADR-0033-dual-audience-hub.html",
-          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
-          "decisions/ADR-0030-v1-stability-criteria.html",
-          "decisions/ADR-0028-prose-gate-mechanization.html",
-          "decisions/ADR-0029-phase-f-agent-set.html",
-          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
           "decisions/ADR-0003-plugin-architecture.html",
           "decisions/ADR-0006-caller-marker-hook.html",
           "decisions/ADR-0022-x4-0-canonical-layout.html",
           "decisions/ADR-0023-x4-c-scratch-to-architecture-migration.html",
+          "decisions/ADR-0027-x4-d-architect-skill-review-agents.html",
+          "decisions/ADR-0028-prose-gate-mechanization.html",
+          "decisions/ADR-0029-phase-f-agent-set.html",
+          "decisions/ADR-0030-v1-stability-criteria.html",
+          "decisions/ADR-0031-mattpocock-authoring-absorption.html",
+          "decisions/ADR-0033-dual-audience-hub.html",
+          "decisions/ADR-0034-object-term-xref-system.html",
+          "decisions/ADR-0035-walkable-architecture-nav-derive.html",
+          "decisions/ADR-0036-folio-vocabulary-glossary-derive.html",
+          "decisions/ADR-0048-design-intent-dir-rename.html",
           "research/constitution-x4-amendment-proposal.html",
           "research/plugin-sandbox-verification-research.html",
           "research/x4-plan.html",
           "spec/verification.html"
         ],
-        "folio:extends": [
-          "spec/constitution.html"
+        "dc:isPartOf": [
+          "spec/README.html"
         ],
         "dc:references": [
           "spec/rules.html",
           "spec/relations.html"
+        ],
+        "folio:extends": [
+          "spec/constitution.html"
         ]
       }
     },

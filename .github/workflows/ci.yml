@@ -246,6 +246,27 @@ jobs:
       - name: census-guard self-spec (数字上書き防壁・per-spec 呼出し = 案X spec 名引数化)
         run: .claude-plugin/design-system/generator/census-guard.sh self-spec "${{ github.event.pull_request.base.sha || github.event.before }}"
 
+      # ----------------------------------------------------------------------
+      # ★folio-mkwc (8dkl flip cell) 追加配線 — flip 後に ★初めて 意味を持つ 3 step。
+      #   flip で design-intent/spec/folio-self-spec.html は生成物になったので、 上の 2 step (contract からの
+      #   再 assemble を subject にする敵対 suite + census-guard) の外側に ★landed 次元 の防壁が要る:
+      #     (i)  drift gate       = landed == fresh 再生成 (byte)。 canonical 手編集 / 再生成し忘れ /
+      #          ★inline CSS (style payload) 改竄 を撃つ唯一の面 (repro-build arm は in-scan flip で
+      #          SKIP_REPRO=1 必須 = 素通る・folio-z7ba)。
+      #     (ii) drift gate の敵対回帰 = 上の gate の ★検出力 を per-shape MK 11 case で pin (指紋 6 clause /
+      #          drift 段 / style payload / 過 strict でない negative control / exit 規約)。 対で入れる。
+      #     (iii) 政策A floor 実走 = landed canonical を verify-self-spec の subject に直接据える
+      #          (peer rules / relations / verification と同型)。 ★SKIP_REPRO=1 は必須 (in-scan flip の
+      #          repro-build:BYTE-DIFF は構造的 domain 不整合で恒常 FAIL・:230-236 と同じ理由・受け皿 folio-z7ba)、
+      #          ★SKIP_RENDER=1 も必須 (verify job に uv/playwright が無く render_gate_f が crash する)。
+      #   ★soft 化 (continue-on-error) / 後追い配線は ★却下 (latent-red-rot = fail-open)。
+      - name: self-spec drift gate (deterministic floor — landed == fresh 再生成 byte 一致)
+        run: .claude-plugin/design-system/generator/verify-self-spec-drift.sh
+      - name: self-spec drift gate 敵対回帰 (per-shape MK 11 case・指紋 6 clause / style payload / gate 自身の検出力 floor-proof)
+        run: .claude-plugin/design-system/generator/test-adversarial-self-spec-drift.sh
+      - name: 政策A floor 実走 — verify-self-spec (landed canonical vs contract + frozen census)
+        run: SKIP_REPRO=1 SKIP_RENDER=1 .claude-plugin/design-system/generator/verify-self-spec.sh --artifact .claude-plugin/design-system/generator/contract/folio-self-spec.spec.yaml design-intent/spec/folio-self-spec.html
+
       # ======================================================================
       # srs-verification 提示層 arm (ADR-0054 §2.2 / folio-o01k = Cell S)
       # ----------------------------------------------------------------------

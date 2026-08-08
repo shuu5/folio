@@ -34,13 +34,22 @@
 #   警告を出して fail-loud にする。 人間層プレゼン (essence + subhead + 表 + 図 + 要件) は従来どおり構造化 field へ抽出する。
 #
 # usage: extract-self-spec-spec.sh [<folio-self-spec.html>] > <draft contract.yaml>   (LOG は stderr)
-#        既定 <folio-self-spec.html> = <repo-root>/design-intent/spec/folio-self-spec.html
+#        既定 = ★origin snapshot (.claude-plugin/design-system/generator/spec-origin/self-spec.origin.html)
+#        env override = SELF_SPEC_ORIGIN_HTML (明示引数 $1 が最優先)
+#
+# ★★folio-mkwc (flip cell) M2(iii): 既定入力を live canonical から ★origin snapshot へ re-home した。
+#   ★理由: flip 後 design-intent/spec/folio-self-spec.html は ★本 extractor 由来 contract の生成物 になる。
+#     既定をそこへ向けたままだと「生成物から contract を起こして生成物と比べる」★自己比較 に退化し、
+#     extractor の silent-collapse (rich→plain 退行・@SECORDER 不一致) を撃つ敵対 arm が ★恒真化 する
+#     (範型 relations の RELATIONS_ORIGIN_HTML と同じ転換・ci.yml の明示注入も同理由)。
+#   ★不在は exit 2 で fail-closed (旧 exit 1 から変更): 「入力が無いから抽出できなかった」を
+#     ★測定系 error として gate 判定 (0/1) から分離する。 skip / 空出力に落とさない。
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-VERIF="${1:-$REPO_ROOT/design-intent/spec/folio-self-spec.html}"
-[[ -f "$VERIF" ]] || { echo "extract-self-spec-spec: folio-self-spec.html not found: $VERIF" >&2; exit 1; }
+VERIF="${1:-${SELF_SPEC_ORIGIN_HTML:-$REPO_ROOT/.claude-plugin/design-system/generator/spec-origin/self-spec.origin.html}}"
+[[ -f "$VERIF" ]] || { echo "extract-self-spec-spec: origin snapshot not found (fail-closed): $VERIF" >&2; exit 2; }
 command -v perl >/dev/null || { echo "extract-self-spec-spec: perl required" >&2; exit 1; }
 
 VERIF="$VERIF" perl -CSD -0777 <<'PERL'

@@ -18,11 +18,15 @@
 #       契約の空 anchor 数 / (c) 契約非依存 census pin の 3 本で「anchor の静かな消失」を封鎖する。
 #   (4) ★doc_id literal guard を入口に持つ (契約 M3・qojv 決定 2 の「verify literal」) — doc_type==spec は
 #       5 契約が共有し識別力ゼロゆえ、 他 pack contract を食わせた誤用を doc_type では 1 つも止められない。
-#   (5) ★ORIG (spec-origin/*.origin.html = 手書き版の正式 archive) は ★本 Leg では存在しない。 snapshot 作成は
-#       flip cell (folio-mkwc) の職掌 (契約 N2 / ■7) ゆえ、 fork 元の「ORIG 存在 fail-closed pin」は ★移植しない。
-#       ★代わりに黙って落とさず本 header と該当箇所で ★不在を明示する (下記 §10b/§11 の注記)。 凍結 census
-#       (spec-origin/self-spec.frozen-census.txt) は ★存置 する — こちらは ORIG に依存せず、 両側 contract 由来の
+#   (5) ★ORIG (spec-origin/self-spec.origin.html = pre-flip 手書き原本の正式 archive) は ★folio-mkwc (flip cell) で
+#       ★作成済 ゆえ、 fork 元の「ORIG 存在 fail-closed pin」を §10b / §11 の 2 箇所で ★復活 させた
+#       (cuom 申送りの履行)。 ★存在 pin だけでは env override による anchor すり替えに恒真ゆえ、 §10b 側に
+#       ★sha256 逐値照合 (S1/S4) を併置する。 ORIG は依然 census / round-trip を ★消費しない (政策 A)。
+#       凍結 census (spec-origin/self-spec.frozen-census.txt) は ★存置 — ORIG に依存せず、 両側 contract 由来の
 #       vacuous PASS (extractor collapse) を塞ぐ ★唯一の独立 anchor ゆえ落とすと被覆が縮む。
+#   (6) ★folio-mkwc 追加 — build 注入 chrome token の ★条件付き昇格 (M10・§0b) / generator meta content の
+#       ★逐値 literal pin (M11 = cuom 申送り A3 の履行・§1c-bis)。 前者は subject が pre-build 生成物か
+#       post-build landed canonical かで required class-token 集合が変わる構造への対応で、 ★両分岐に teeth を残す。
 # 生成 spec (verification) HTML の *構造* が入力 spec contract から完全に導出されたことを機械検証する floor gate。
 # verify-fabrication-free.sh (SRS) / verify-adr.sh / verify-research.sh / verify-principle.sh と同型の規律を
 # spec-pack schema (sections / requirements(EARS) / references(非終端 照会) / glossary) へ適用する:
@@ -163,12 +167,36 @@ STATIC_HEADINGS=("§${STATIC_NUMS[0]}. ${STATIC_HEADING_TAILS[0]}" "§${STATIC_N
 #   allowlist に属することを quote/case/entity 非依存に強制する = ★novel marker の任意注入を一網打尽に封鎖する。
 #   ★56 token は本 pack の生成物 実測 (base pack の literal を複写しない = 空撃ち floor 回避・契約 M6 と同規律)。
 SELFSPEC_CLS="chapbody cover-eyebrow cover-meta cover-sub diagram doc-type en foot ft-grid ft-plain gdef grow gword ic ico k kicker lab lead m machine-body machine-fold mermaid mf-count mf-kicker mf-label mli normative-ref num page reader-chip ref-grid rf-arrow rf-doc rf-role rf-token role sec-se self sign stamp sub-se summary-card tags tbl-wrap term tint-brand tint-info tint-ok tint-violet tint-warn txt v when who xref"
-unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $SELFSPEC_CLS) | tr '\n' ' ' | sed 's/ *$//')"
+# ★★folio-mkwc (flip) M10: ★build 注入 chrome token の ★条件付き昇格。
+#   ★問題: flip 後の landed canonical は `folio build` が chrome を注入した状態ゆえ 7 token
+#     (doc-locator / prevnext / prevnext__{dir,next,prev,title} / skip-link) が増える。 これを
+#     SELFSPEC_CLS へ ★無条件追加 すると、 subject が ★pre-build 生成物 である敵対 suite 全 arm で
+#     上の「空振り封鎖」(宣言 token は全て生成物に実在) が ★全件 FAIL する (実測: base 221 OK / 1 FAIL は
+#     landed subject 側・pre-build subject では逆向きに 7 token が missing になる)。
+#   ★解: subject が ★build 済か を ★chrome token 自身に依らない述語 で判定し (循環回避)、 required 集合へ
+#     ★条件付きで昇格 する。 述語 = `folio build` が置く chrome marker 領域の ★行頭完全一致
+#     (`<!-- folio:chrome-bottom -->`)。 assembler は本 marker を 1 個も emit しない (実測 0) ため
+#     pre-build / post-build を ★構造で 弁別できる。
+#   ★両分岐に teeth を残す (片肺化の封鎖): 昇格した側は「7 token が ★全在」を、 未昇格側は「7 token が
+#     ★1 つも無い」を ★同一 chk で撃つ (期待値だけが分岐する = 恒真 PASS にならない)。 実弾は
+#     test-adversarial-self-spec.sh の M10 群 (pre-build へ chrome token 注入 / built から chrome token 除去 /
+#     述語 marker の rot) が per-shape で撃つ。
+SELFSPEC_CHROME_CLS="doc-locator prevnext prevnext__dir prevnext__next prevnext__prev prevnext__title skip-link"
+CHROME_BUILT=0
+grep -qE '^<!--[[:space:]]*folio:chrome-bottom[[:space:]]*-->$' "$HTML" && CHROME_BUILT=1
+REQ_CLS="$SELFSPEC_CLS"
+[[ "$CHROME_BUILT" -eq 1 ]] && REQ_CLS="$SELFSPEC_CLS $SELFSPEC_CHROME_CLS"
+unknown_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -vxF -f <(printf '%s\n' $REQ_CLS) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token 機械的網羅: 全 token が閉 allowlist (novel marker / 既存 marker 複製の注入封鎖・M5)" "$unknown_cls"
 # ★allowlist 側の空振り封鎖: 宣言した token が ★全て 生成物に実在すること (実在しない token を並べて
 #   allowlist を膨らませ、 実質何も弾かない集合へ痩せる形を塞ぐ)。
-missing_cls="$(printf '%s\n' $SELFSPEC_CLS | sort -u | grep -vxF -f <(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
+missing_cls="$(printf '%s\n' $REQ_CLS | sort -u | grep -vxF -f <(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u) | tr '\n' ' ' | sed 's/ *$//')"
 chk_empty "class-token allowlist の空振り封鎖: 宣言 token は全て生成物に実在 (allowlist 膨張の封鎖)" "$missing_cls"
+# ★条件付き昇格の ★両分岐 pin (M10): build 済 subject では chrome 7 token が ★全在、 未 build subject では ★0。
+#   期待値を述語から導出するため、 どちらの分岐でも ★非恒真 (片側だけ緑にする改竄が必ず落ちる)。
+n_chrome_cls="$(class_tokens < "$BODY" | tr ' ' '\n' | grep . | sort -u | grep -xF -f <(printf '%s\n' $SELFSPEC_CHROME_CLS) | wc -l | tr -d ' ')"
+exp_chrome_cls=0; [[ "$CHROME_BUILT" -eq 1 ]] && exp_chrome_cls=7
+chk "chrome class-token 条件付き昇格: 実在数 == (build 済 ? 7 : 0) [build 済=$CHROME_BUILT・M10]" "$exp_chrome_cls" "$n_chrome_cls"
 # ★(b) consumer 一次 selector の ★negative assert (契約非依存 pin)。 生成 spec は ADR-0054 で chrome-less ゆえ
 #   <div class="meta"> を ★1 個も持たない が正。 (a) の class 閉集合と ★二重化 する (class 側だけだと、
 #   将来 'meta' が正当 token として allowlist へ入った瞬間に この consumer 経路が無防備へ戻る)。
@@ -258,6 +286,24 @@ verify_pack_head_meta() {
     "$(grep -o '<meta name="folio-[^"]*"' "$HTML" | wc -l | tr -d ' ')"
 }
 verify_pack_head_meta
+
+# ★★1c-bis. generator meta content の ★逐値 literal pin (folio-mkwc M11 = cuom 申送り A3 の実施)。
+#   ★塞ぐ穴: <meta name="generator" content="folio spec-pack assembler …"> は consumer 側 chrome 述語
+#     (.claude-plugin/bin/folio の folio_chrome_is_generated_spec / folio_chrome_is_spec_pack_family) の
+#     ★唯一の検出鍵 だが、 本 floor は値を 1 文字も pin していなかった。 drift すると chrome-scope arm と
+#     所属 locator 注入が ★silent に no-op へ落ちる (folio validate は緑のまま = fail-open)。
+#     flip で canonical が生成物になった時点から実害面に入るため、 逐値 literal で束縛する。
+#   ★literal は assemble-self-spec.sh の emit と ★二重保守 (detect↔remediate parity) — 片側だけ変えれば FAIL する。
+#   ★述語 anchor 部分 ("folio spec-pack assembler") を含む ★全体 の逐値等値ゆえ、 述語が当たらなくなる
+#     rename も、 述語は当たるが provenance が化ける改竄も、 どちらも 1 文字差で落ちる。
+GENERATOR_META_LITERAL='folio spec-pack assembler — self-spec fork (folio-cuom / 8dkl Leg A) — deterministic structure, prose slots unfilled'
+chk "generator meta content == 逐値 literal (consumer chrome 述語の唯一の検出鍵・M11/A3)" \
+  "$(esc "$GENERATOR_META_LITERAL")" \
+  "$(perl -CSD -0777 -ne 'while (/<meta name="generator" content="([^"]*)"/g){ print "$1\n"; }' "$HTML")"
+# ★述語 ★実効性 の pin (literal 一致だけでは「consumer が実際に当たるか」を証明しない = 別 shape)。
+#   consumer と ★同じ正規表現 (folio_chrome_pack_alt 由来の canonical 述語形) で 1 hit することを要求する。
+chk "generator meta が consumer chrome 述語 (folio (spec-pack|principle-pack) assembler) に hit == 1 (M11)" "1" \
+  "$(grep -cE '<meta name="generator" content="folio (spec-pack|principle-pack) assembler' "$HTML" | tr -d ' ')"
 
 # 2. id 一意性 + doc_type
 chk_empty "要件 id 一意"     "$(q '.requirements[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -1124,30 +1170,27 @@ NMB_TOTAL="$(q '[.machine_preamble[]?, .sections[].machine_blocks[]?] | length')
 #   存在 fail-closed pin (照合不能 silent skip の回帰 pin・M15) のみが ORIG を参照する (内容不読)。 snapshot の
 #   provenance (folio-lwhz land) = `git show c705c75:design-intent/spec/verification.html | sed 's|<dd>1\.1\.0</dd>|<dd>1.2.0</dd>|g'`。
 #   snapshot は cell 内改変禁止 (selftest が sha256 pin + 非消費 assert で保護・ADR-0053 に去就を記載)。
-# ★★folio-cuom (Leg A): ORIG (spec-origin/<pack>.origin.html = ★手書き版の正式 archive = snapshot) は
-#   ★本 Leg では存在しない。 snapshot 作成は flip cell (folio-mkwc) の職掌であり、 本 cell の契約 N2 が明示的に
-#   禁止している (errata 適用 ★前 の canonical を byte 忠実に取る前提で mkwc へ申し送る = E5)。
-#   ゆえ fork 元が持っていた 2 箇所の「ORIG 存在 fail-closed pin」(§10b / §11) は ★移植しない。
-#   ★黙って落とさず実態を開示する (silent 欠落は「範型踏襲済」の誤報告になる):
-#     - 失うもの = 「SPEC_ORIGIN_HTML を存在しない path へ向けて gate を silent skip する」逃げ道の封鎖。
-#       ★ただし本 fork は ORIG を ★1 箇所も参照しない (census も round-trip も政策 A で contract 由来へ re-home 済
-#       = ORIG 非消費) ため、 ★その pin が守る対象の gate が存在しない。 pin だけを残すと「存在しない snapshot が
-#       無いこと」を毎回 FAIL する ★恒真 FAIL になる。
-#     - 失わないもの = 凍結 census (§10b) と機械層 round-trip (§11)。 どちらも ORIG に依存しない。
-#   ★mkwc への申送り: snapshot を置いたら本 pin を ★復活させる こと (範型 verification の COLLAPSE 群は
-#     pre-flip 再抽出元として ORIG の ★内容を消費する 設計ゆえ、 snapshot 導入時に守備対象が生まれる)。
-# ---- ★mkwc への追加申送り (folio-cuom errata-1 M7・独立 ceiling advisory A1 / A3 の durable 記録) ----
-#   ★A1 landed-canonical arm の SKIP_REPRO=1 ★継承: flip 後に canonical そのものを subject にする arm は
-#     範型から SKIP_REPRO=1 を継承する。 repro-build byte-identity が ★飛ぶ ため、 ★style payload
-#     (inline CSS ブロック) の改変は floor の占有 pin にも census にも当たらず ★素通りする (穴の ★継承 であって
-#     本 Leg の退行ではない)。 ★flip 時に landed-canonical arm を作るなら repro arm を ★ON で回すこと
-#     (本 Leg の G2 = repro_pins が sub-pin (a)-(d) の conformance を既に敷いてある)。
-#   ★A3 <meta name="generator" content="folio spec-pack assembler …"> の ★literal が ★未 pin:
-#     この literal は consumer 側 chrome 述語 (bin/folio の folio_chrome_is_generated_spec /
-#     folio_chrome_pack_alt) の ★唯一の検出鍵 だが、 本 floor は値を pin していない。 drift すると
-#     chrome-scope arm と locator 注入が ★silent に no-op へ落ちる (validate は緑のまま)。
-#     ★flip で canonical が生成物になる時点から実害面へ入るため、 mkwc で literal pin を敷くこと。
-ORIG_ABSENT_BY_CONTRACT=1   # ★Leg A では snapshot 不在が ★正常 (上記注記が SSoT)
+# ★★folio-mkwc (flip cell): ORIG (spec-origin/self-spec.origin.html = ★pre-flip 手書き原本の正式 archive)
+#   は ★本 cell で ★実在するようになった (folio-cuom Leg A では未作成ゆえ 2 箇所の存在 pin を ★移植しない と
+#   していた。 本 cell がその申送りを ★履行 し pin を ★復活 させる)。
+#   ★provenance (逐語記録・M1): `git show 1e28037dd51cf10bf07d9ae5b4c9c7258c0282f1:design-intent/spec/folio-self-spec.html`
+#     (= 本 cell の baseRef 実体 = origin/main merge-base)。 errata folio-642 ★適用前 の「完成形 8」のまま取得。
+#     snapshot は 1 byte も手編集しない (下記 sha256 pin が cell 内改変・差し替えを FAIL にする)。
+#   ★存在 pin ★だけ では不十分 (S4): SELF_SPEC_ORIGIN_HTML=<別の実在 file> へ向ければ「存在する」は ★恒真 に
+#     なり、 anchor を ★別物へ すり替えたまま緑にできる。 ゆえ存在 pin に ★sha256 逐値照合 (S1) を ★併置 する。
+#   ★ORIG は census / round-trip を ★消費しない (政策 A で contract 由来へ re-home 済) — 本 pin が守るのは
+#     「照合不能を silent skip させない」ことと「anchor のすり替えを起こさせない」ことの 2 点。
+#     ★内容を ★消費する 側 (oracle の canonical 側入力 / extractor の既定入力 / 敵対 suite の CANON) は
+#     本 cell で ★全て snapshot へ re-home 済 (M2)。
+ORIG="${SELF_SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/self-spec.origin.html}"
+# ★S1 sha256 = pre-flip canonical (78759 bytes) の逐値 pin。 flip 後 landed とは ★byte 不一致 が期待値 (S3)。
+ORIG_SHA256='ab39272209ba823f5a45dbae55bd1791b89eba9d133b8ed47bd8ca6f3a5bc4c0'
+# ---- ★cuom 申送り A1 の ★処置 (本 cell の裁定・■1(4)): landed-canonical arm の repro arm は ★ON にしない ----
+#   folio-z7ba (P1 OPEN) が repro-build:BYTE-DIFF の恒常 FAIL を構造的原因つきで確定済 (in-scan flip では
+#   SKIP_REPRO=1 が必須・ci.yml 参照)。 ゆえ ★style payload (inline CSS) の改変は floor では素通る —
+#   この面は本 cell が新設する ★drift gate (verify-self-spec-drift.sh) が landed vs fresh の byte 比較で被覆する
+#   (敵対 suite に inline CSS 1 byte 改変の実弾を置いた)。 恒久 fix の所有は folio-z7ba。
+# ---- ★cuom 申送り A3 の ★処置: 上記 §1c-bis で generator meta content の逐値 literal pin を ★実施済 (M11) ----
 
 # ============================================================================
 # 10b. ★literal census arm (folio-7n17 政策 A・snapshot oracle bootstrap 退役後の恒久防御 (a))。
@@ -1537,8 +1580,16 @@ except Exception: sys.exit(0)
 v = d.get("folio:stakeholders")
 print(type(v).__name__ + "\t" + json.dumps(v, ensure_ascii=False, sort_keys=True))'; }
 
-# ★ORACLE 存在 pin は ★本 Leg では持たない (ORIG 不在が正常・冒頭 ORIG_ABSENT_BY_CONTRACT の注記が理由と射程を開示)。
-#   ★[SKIP] 行も出さない: 「対象が在るのに飛ばした」と読めてしまうが実際は ★対象が存在しない (snapshot は mkwc の成果物)。
+# ★ORACLE 存在 pin (bootstrap 記録・fail-closed。 照合不能 silent skip の回帰 pin・M15・非消費)。 ★folio-mkwc で ★復活。
+#   snapshot は census を消費しないが、 SELF_SPEC_ORIGIN_HTML を存在しない path へ向けて gate を silent skip する
+#   逃げ道は塞ぐ。 ★S4: 存在検査 ★だけ は別の実在 file を指せば恒真ゆえ、 sha256 逐値照合を ★併置 する
+#   (anchor すり替えの封鎖)。 内容は依然 ★不読 (census / round-trip は contract 由来のまま)。
+if [[ ! -f "$ORIG" ]]; then
+  printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "ORACLE 存在 pin (bootstrap 記録)" "$ORIG"; fail=1
+else
+  chk "ORACLE 同一性 pin: origin snapshot の sha256 == 凍結 literal (anchor すり替え封鎖・S1/S4)" \
+    "$ORIG_SHA256" "$(sha256sum "$ORIG" | awk '{print $1}')"
+fi
 
 # ★実態開示 (folio-cuom errata-1 M7 / ceiling advisory A2): 本 census は ★live 要素の occurrence を数えるが、
 #   consumer 側 の anchor 述語 (bin/folio の folio_chrome_is_generated_spec 等) は ★substring grep ゆえ、
@@ -1663,7 +1714,11 @@ chk "census pre-inline: mermaid pre の総行数 == 凍結 $(fz FZ_PRE_MERMAID_L
 rm -f "$HTML_LIVE" "$CEN_DUMP"
 
 if [[ "$NMB_TOTAL" -gt 0 ]]; then
-  # ★ORACLE 存在 pin は ★本 Leg では持たない (ORIG 不在が正常・冒頭 ORIG_ABSENT_BY_CONTRACT の注記が理由と射程を開示)。
+  # ★ORACLE 存在 pin (§10b と対称・folio-mkwc で ★復活)。 §11 LEFT は政策 A で contract 由来へ re-home 済ゆえ
+  #   ORIG を消費しないが、 SELF_SPEC_ORIGIN_HTML=/nonexistent による silent skip の逃げ道は塞ぐ (内容不読)。
+  if [[ ! -f "$ORIG" ]]; then
+    printf '  [FAIL] %-'"$CHKW"'s 原本不在: %s (照合不能・fail-closed)\n' "機械層 round-trip 存在 pin" "$ORIG"; fail=1
+  fi
   command -v jq >/dev/null || { echo "verify-self-spec: jq required (§11 contract round-trip)" >&2; exit 2; }
   LF="$(mktemp)"; RF="$(mktemp)"
   # LEFT: ★政策 A (folio-7n17)。 snapshot / live canonical でなく contract.machine_preamble[] +

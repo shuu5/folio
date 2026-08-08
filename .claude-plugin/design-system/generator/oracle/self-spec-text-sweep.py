@@ -1,14 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""folio-cuom Leg A — 受入 oracle: canonical folio-self-spec.html ↔ 生成物の ★悉皆 text sweep 差分。
+"""folio-cuom Leg A — 受入 oracle: ★pre-flip 手書き原本 (origin snapshot) ↔ 生成物の ★悉皆 text sweep 差分。
+
+★★argv[1] の意味 (folio-mkwc flip cell M2(i) で ★re-home 済・読み違え厳禁):
+  argv[1] は ★spec-origin/self-spec.origin.html (= flip 直前の ★手書き canonical を byte 忠実に凍結した
+  ★origin snapshot) である。 flip 前は「live canonical」と同一物だったが、 flip 後の
+  design-intent/spec/folio-self-spec.html は ★本 oracle が検査する contract の生成物 になるため、
+  そこを anchor に据えると ★生成物 vs 生成物 の自己比較へ退化し、 未分類差分 / chrome pin / bucket pin /
+  order / layer / references / mermaid の ★全 arm が恒真 PASS する (= 本 oracle の存在意義が消える)。
+  ★以降、 本 file 中の「canonical」は特記なき限り ★この origin snapshot を指す (live landed ではない)。
+  ★機械 guard: argv[1] が live canonical を指していたら exit 2 で ★fail-closed に落とす (下記 main)。
+  ★landed 次元 (flip 後 canonical が生成物と一致し続けること) は本 oracle の担当ではない —
+  verify-self-spec-drift.sh (drift gate) と 政策A floor 実走 (verify-self-spec.sh --artifact) が被覆する。
+
+★★正当な乖離が生じたとき (folio-mkwc M15・将来の contract 変更への手当て):
+  contract を ★正当に 変更して生成物が origin snapshot から乖離した場合、 snapshot を手編集して
+  値を合わせに行ってはならない (anchor の独立性が消える)。 ★範型 = spec-origin/relations.origin.heal.py と
+  同型の ★heal script (何をどう変換したかを ★provenance 逐語コメント で持つ決定的変換) を新設し、
+  snapshot → heal → 比較 の形で解く。 ★本 cell (flip) では乖離 0 (未分類差分 0 / errata ちょうど 1 delta)
+  ゆえ ★空の heal script は作らない (使われない script は腐る)。
 
 ★何を保証するか (契約 D7):
-  生成物と canonical の ★可視テキスト を漏れなく突き合わせ、 差分を全件分類して
+  生成物と origin snapshot の ★可視テキスト を漏れなく突き合わせ、 差分を全件分類して
   「chrome 由来 / trailing-fold 由来 / errata 1 件 / それ以外 0 件」を機械で示す。
   ★それ以外が 1 件でもあれば exit 1 (DONE 不可)。
   動機 = relations DRAFT が body list 6 本を欠落したまま ★自己整合 PASS した事故の再発封鎖。
   floor (verify-self-spec.sh) は「contract ↔ 生成物」しか見ないため ★両側同時退行に全盲 —
-  本 oracle だけが canonical (contract の外) を独立 anchor にする。
+  本 oracle だけが origin snapshot (contract の外) を独立 anchor にする。
 
 ★分類は「肯定列挙 + ★SSoT 駆動」で行う (散文の hand-list を極力持たない):
   生成物にだけ在ってよい単位は、 その ★出所 (contract の kicker / references / glossary / meta、
@@ -51,10 +69,19 @@
   残りは ★束縛不能 として self-report に列挙する (黙って落とすと「悉皆」の誤報告になる):
     - 束縛する   : version / status / layer / glossary_automark / xref_completeness / stakeholders
     - 既知 delta : doc_type (canonical=self-spec / contract=spec = qojv 決定 2 の意図的 swap・値ごと pin)
-    - ★束縛不能 : eyebrow_left / eyebrow_right / date / reader (canonical head にも doc-header にも対応
-                  anchor が無い)。 reader は canonical folio-stakeholders と ★接頭辞が重なるだけ で
-                  byte 等値にならないため、 接頭辞束縛は使わない (それ自体が本 oracle の塞ぐ fail-open 形)。
-                  これらは flip (folio-mkwc) で canonical 側に anchor が生えるまで ★未束縛 のまま。
+    - ★束縛不能 : eyebrow_left / eyebrow_right / date / reader = ★4 軸 (origin snapshot の head にも
+                  doc-header にも対応 anchor が無い)。 reader は snapshot の folio-stakeholders と
+                  ★接頭辞が重なるだけ で byte 等値にならないため、 接頭辞束縛は使わない
+                  (それ自体が本 oracle の塞ぐ fail-open 形)。
+                  ★folio-mkwc (flip) 後も ★未束縛のまま である (旧注記の「flip で canonical 側に anchor が
+                  生えるまで」は ★実現しない見込みだったので実態へ訂正する): 本 oracle の anchor は flip 後
+                  ★origin snapshot に固定 され、 snapshot は ★pre-flip 手書き原本の byte 凍結 ゆえ
+                  新しい anchor が生えることは ★構造的に起こらない。 landed 生成物側に anchor が生えても
+                  それは ★生成物由来 = contract の自己参照であり、 独立 anchor にならない。
+                  ★4 軸の実害 scope (開示): これらの捏造は本 oracle では捕まらないが、 floor
+                  (verify-self-spec.sh の core-chrome cover-eyebrow / cover-meta / reader-chip 突合) が
+                  ★contract 相対で 撃つため「contract と生成物の乖離」は緑にならない。 塞げないのは
+                  ★contract 側 4 軸そのものの値の正しさ (両側同時退行) — ceiling (fidelity-spec) の領分。
 
 ★生成物にだけ在ってよい単位は ★接頭辞 (startswith) や wildcard で許さない:
   接尾部が無束縛だと「その接頭辞さえ持てば canonical に対応物の無い任意テキスト」が分類済へ落ちる
@@ -66,7 +93,9 @@
   両側ちょうど 1 単位 + 承認済み部分文字列を 1 回置換したら ★byte 等値、 を課す。
   部分文字列一致だけで許すと、 同じ段落内の ★任意の書き換え が承認済み delta に紛れて吸われる。
 
-usage: self-spec-text-sweep.py <canonical.html> <generated.html> <contract.yaml> <prose.yaml>
+usage: self-spec-text-sweep.py <origin-snapshot.html> <generated.html> <contract.yaml> <prose.yaml>
+       ★第 1 引数は spec-origin/self-spec.origin.html (pre-flip 手書き原本)。 live canonical
+         (design-intent/spec/folio-self-spec.html) を渡すと exit 2 (自己比較退化の fail-closed guard)。
 exit : 0 = 未分類差分 0 かつ errata ちょうど 1 delta かつ chrome pin 一致 かつ doc-header identity 一致
            かつ head meta identity 一致 かつ 人間層 order arm 一致 かつ ★層帰属 一致 (M2)
            かつ ★照会 (token, role) 集合一致 (M4) かつ ★分類済 bucket 件数 pin 一致 (M5)
@@ -670,6 +699,17 @@ def main():
         print(__doc__)
         return 2
     canon, gen, contract, prose = sys.argv[1:5]
+    # ★fail-closed guard (folio-mkwc M2(i) / N1): anchor に ★live canonical を据えることを ★構造的に禁じる。
+    #   flip 後 design-intent/spec/folio-self-spec.html は本 oracle が検査する contract の ★生成物 ゆえ、
+    #   そこを anchor にすると全 arm が「生成物 vs 生成物」の自己比較へ退化して ★恒真 PASS する。
+    #   ★path 比較は realpath (symlink / 相対 path / .. 経由の迂回を正規化してから同一性を見る)。
+    import os
+    _root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', '..'))
+    _landed = os.path.realpath(os.path.join(_root, 'design-intent', 'spec', 'folio-self-spec.html'))
+    if os.path.realpath(canon) == _landed:
+        print('self-spec-text-sweep: ★anchor に live canonical (%s) を指定した = 生成物 vs 生成物 の自己比較へ '
+              '退化する (folio-mkwc N1)。 spec-origin/self-spec.origin.html を渡すこと。' % canon, file=sys.stderr)
+        return 2
     meta = read_meta(contract)
     gen_allow = build_gen_allow(contract, prose, meta)
     cun, gun = units(canon), units(gen)

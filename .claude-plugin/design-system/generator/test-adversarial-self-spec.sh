@@ -30,6 +30,13 @@
 #       (F21 token 捏造 / F22 role 付替え / F23 1 本削除・M4) / 既存 marker の複製注入 (F24 class 閉 allowlist /
 #       F24b consumer 一次 selector / F25 bucket 件数 pin・M5)
 #   G 群 conformance pin                  … repro-build arm ON の baseline (G1) + ★sub-pin (a)-(d) 実走 (G2・M3)
+#   ★H 群 (folio-mkwc = flip cell 新設)   … ORIG (origin snapshot) の存在 / 同一性 pin (H1-H3・M5 S1/S3/S4) /
+#       class-token ★条件付き昇格 の ★両分岐 + ★述語自身 の MK (H4-H7・M10) / generator meta 逐値 literal と
+#       consumer chrome 述語 hit の MK (H8/H9・M11) / oracle anchor guard (H10) / extractor 既定 re-home (H11/H12・M2)
+#
+# ★★anchor の意味 (flip cell で変わった・読み違え厳禁): $CANON は ★origin snapshot
+#   (spec-origin/self-spec.origin.html = pre-flip 手書き原本の byte 凍結) を指す。 flip 後の live canonical は
+#   ★本 suite が検査する contract の生成物 ゆえ anchor に使えない (自己比較退化)。 live 側は $LANDED。
 #
 # usage: test-adversarial-self-spec.sh
 set -uo pipefail
@@ -39,7 +46,15 @@ ASM="$SCRIPT_DIR/assemble-self-spec.sh"
 INJ="$SCRIPT_DIR/inject-prose.sh"
 VER="$SCRIPT_DIR/verify-self-spec.sh"
 EXTRACT="$REPO_ROOT/.claude-plugin/scripts/extract-self-spec-spec.sh"
-CANON="$REPO_ROOT/design-intent/spec/folio-self-spec.html"
+# ★★folio-mkwc (flip cell) M2(ii): CANON を ★origin snapshot (pre-flip 手書き原本) へ re-home した。
+#   ★理由: flip 後 design-intent/spec/folio-self-spec.html は ★本 suite が検査する contract の生成物 になる。
+#     CANON をそこへ向けたままだと D 群 (extractor fail-loud) / E 群 (collapse) / F 群 (oracle D7 MK) が
+#     「生成物から起こした contract を生成物と比べる」★自己比較 に退化して恒真化する。
+#   ★live canonical は ★別変数 LANDED として ★drift gate / 政策A floor / F4b (errata 反映の実測) でのみ使う。
+CANON="${SELF_SPEC_ORIGIN_HTML:-$SCRIPT_DIR/spec-origin/self-spec.origin.html}"
+LANDED="$REPO_ROOT/design-intent/spec/folio-self-spec.html"
+[[ -f "$CANON" ]]  || { echo "FATAL: origin snapshot not found (fail-closed): $CANON" >&2; exit 2; }
+[[ -f "$LANDED" ]] || { echo "FATAL: landed canonical not found: $LANDED" >&2; exit 2; }
 BASE="$SCRIPT_DIR/contract/folio-self-spec.spec.yaml"
 BASE_PROSE="$SCRIPT_DIR/prose/folio-self-spec.prose.yaml"
 FOREIGN="$SCRIPT_DIR/contract/folio-verification.spec.yaml"
@@ -279,6 +294,16 @@ else ng "C2 title 付与 contract の assemble が失敗"; fi
 
 # ============================================================================
 echo "--- D 群: extractor の fail-loud / silent-drop 封鎖 (M1 / M2) ---"
+# ★★D0 [folio-mkwc・陰性対照] D1 / D2 の FAIL が ★mutation 由来 であることの前提 pin。
+#   ★塞ぐ穴 (契約 N3): extractor が ★何を食わせても fail-loud する状態 (anchor 切替の失敗・snapshot 破損 等)
+#   だと D1 / D2 は「mutation 無しでも赤い」まま ★PASS 表示 になり、 mutation-kill が空洞化する
+#   (= 赤い arm だけを手当てして D1/D2 を「もともと緑」と放置する形)。 無改竄 anchor で rc=0 かつ
+#   出力が非空 であることを ★先に 撃ってから mutation 群へ入る。
+d0_out="$(bash "$EXTRACT" "$CANON" 2>"$TMP/d0.err")"; d0_rc=$?
+d0_sec="$(printf '%s\n' "$d0_out" | grep -c '^  - id: ' || true)"
+if [[ "$d0_rc" -eq 0 && "$d0_sec" -eq 7 ]]; then
+  ok "D0 無改竄 origin snapshot で extractor rc=0 / section 7 本 (D1・D2 の陰性対照 = mutation 由来の証明)"
+else ng "D0 無改竄でも extractor が異常 (rc=$d0_rc / section=$d0_sec 期待 0/7) — D1/D2 の mutation-kill が空洞化する"; fi
 # ★D1 [M1] @SECORDER を stale 化 (fork 元の欠陥そのもの = 別 doc の id を hardcode したまま当てる形)。
 sed 's/^my @SECORDER = qw(s0-reader-guide s1-architecture/my @SECORDER = qw(s0-reader-guide s1-contract/' \
   "$EXTRACT" > "$TMP/d1.sh"
@@ -486,8 +511,23 @@ else ng "F2 errata literal が消えている [M7/E1]"; fi
 if grep -v '^[[:space:]]*#' "$BASE" | grep -qF '完成形 8 specialist agents'; then
   ng "F3 contract の ★データ行 に errata 適用 ★前 の「完成形 8」が残っている (errata 未適用)"
 else ok "F3 contract のデータ行に「完成形 8」が無い (errata 適用済・コメントの before 記録は検査対象外)"; fi
-if grep -qF '完成形 8 specialist agents' "$CANON"; then ok "F4 canonical は「完成形 8」のまま (N1 = design-intent/ 不触の実測)"
-else ng "F4 canonical が変更されている (N1 違反の疑い)"; fi
+# ★★folio-mkwc M4: 旧 F4 (「canonical は『完成形 8』のまま」= cuom の N1 不触実測) を ★2 分割 する。
+#   flip で canonical は生成物へ置換され errata folio-642 が ★生成の副産物として 反映される (8→9)。
+#   旧 F4 をそのまま残すと flip 後は ★恒真 FAIL、 grep 語を 8→9 へ書き換えるだけだと ★snapshot 側の
+#   凍結性が無検査になる (契約 N4 が禁じる処理)。 ゆえ ★anchor ごとに 別 case を立てる:
+#     F4  = ★origin snapshot に「完成形 8」が ★ちょうど 1 件 (pre-flip 原本の凍結・errata 未適用の証明)。
+#     F4b = ★landed canonical に「完成形 9」が 1 件 ★かつ「完成形 8」が 0 件 (errata の生成物反映の証明)。
+#   ★件数 (== 1 / == 0) で撃つ: 存在 grep だけだと site 増殖 / 併存を見逃す。
+n_c8="$(grep -c '完成形 8 specialist agents' "$CANON" || true)"
+n_c9="$(grep -c '完成形 9 specialist agents' "$CANON" || true)"
+if [[ "$n_c8" -eq 1 && "$n_c9" -eq 0 ]]; then
+  ok "F4 origin snapshot は errata 適用★前 (「完成形 8」×1 / 「完成形 9」×0 = pre-flip 原本の凍結実測)"
+else ng "F4 origin snapshot の errata 状態が想定外 (8=$n_c8 / 9=$n_c9・期待 1/0 = snapshot 改変の疑い)"; fi
+n_l8="$(grep -c '完成形 8 specialist agents' "$LANDED" || true)"
+n_l9="$(grep -c '完成形 9 specialist agents' "$LANDED" || true)"
+if [[ "$n_l9" -eq 1 && "$n_l8" -eq 0 ]]; then
+  ok "F4b landed canonical に errata が反映 (「完成形 9」×1 / 「完成形 8」×0 = flip の副産物・folio-642)"
+else ng "F4b landed canonical の errata 反映が想定外 (8=$n_l8 / 9=$n_l9・期待 0/1)"; fi
 # ★F5 references arm (手起こし 2/2) の存在 pin — rules.html#req-* が 8 件で claim role。
 n_claim="$(yq -r '[.references[] | select(.role=="claim")] | length' "$BASE")"
 if [[ "$n_claim" -eq 8 ]]; then ok "F5 rules.html#req-* 照会 arm が 8 件 (手起こし 2/2 の存在 pin)"
@@ -723,11 +763,105 @@ if repro_pins "$VER" self-spec "$BASE" "$BASE_PROSE" "$ASM" "$INJ" --filled "$BA
 else ng "G2 repro-build conformance (a)-(d) 逸脱 [M3]"; fi
 
 # ============================================================================
+# ★★H 群 (folio-mkwc = flip cell が ★新規に導入した shape の per-shape MK)。
+#   撃つ対象は 3 つ:
+#     (1) ORIG (origin snapshot) の ★存在 + ★同一性 pin — anchor 消失 / anchor すり替えの封鎖 (M5 S1/S4)。
+#     (2) class-token の ★条件付き昇格 (M10) — pre-build / post-build ★両分岐 と ★述語自身 に実弾を撃つ。
+#         1 分岐だけの実弾は「構造差のある分岐の穴」を証明しない (per-shape 原則)。
+#     (3) generator meta content の ★逐値 literal pin (M11) — consumer chrome 述語の唯一の検出鍵。
+#   ★landed subject (post-build) は ★repo の landed canonical をそのまま使う (flip 済ゆえ生成物 + chrome)。
+#     staging 再 build を suite 内で回さないのは、 landed 次元の再生成一致は ★drift gate の職掌だから
+#     (本 suite は floor の ★検出力 を撃つ)。
+echo "--- H 群: flip cell 新設 shape の per-shape MK (ORIG pin / class-token 条件付き昇格 / generator meta) ---"
+
+# --- H1 [S3] origin snapshot と landed canonical が ★byte 不一致 (anchor の独立性の実測) ---
+#   一致してしまう = flip されていない or snapshot が生成物で上書きされた = anchor が自己比較へ退化。
+if ! cmp -s "$CANON" "$LANDED"; then
+  ok "H1 origin snapshot != landed canonical (byte 不一致 = 独立 anchor が成立 [S3])"
+else ng "H1 origin snapshot == landed canonical (自己比較退化・snapshot が生成物で汚染された疑い [S3])"; fi
+
+# --- H2 [M5/S4] ORIG 不在 → verify が ★FAIL (silent skip の逃げ道封鎖) ---
+h2_out="$(SELF_SPEC_ORIGIN_HTML=/nonexistent/self-spec.origin.html bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" 2>&1)"; h2_rc=$?
+if [[ "$h2_rc" -ne 0 ]] && printf '%s\n' "$h2_out" | grep -F -- '原本不在' | grep -qF -- '[FAIL]'; then
+  ok "H2 SELF_SPEC_ORIGIN_HTML=/nonexistent → ORIG 存在 pin が FAIL (照合不能 silent skip の封鎖 [M5])"
+else ng "H2 ORIG 不在が素通り (rc=$h2_rc / '原本不在' の [FAIL] 行なし = 存在 pin が inert)"; fi
+
+# --- H3 [S4] ORIG を ★別の実在 file へすり替え → sha256 同一性 pin が FAIL ---
+#   ★存在 pin ★だけ なら緑になる形 (実在するので) を、 sha 併置が落とすことの実弾。
+h3_out="$(SELF_SPEC_ORIGIN_HTML="$LANDED" bash "$VER" --filled "$BASE_PROSE" "$BASE" "$TMP/base-filled.html" 2>&1)"; h3_rc=$?
+if [[ "$h3_rc" -ne 0 ]] && printf '%s\n' "$h3_out" | grep -F -- 'ORACLE 同一性 pin' | grep -qF -- '[FAIL]'; then
+  ok "H3 ORIG を landed へすり替え → sha256 同一性 pin が FAIL (存在 pin 恒真化の封鎖 [S4])"
+else ng "H3 ORIG すり替えが素通り (rc=$h3_rc = 存在 pin だけで恒真化している)"; fi
+
+# --- H4 [M10] ★pre-build 分岐: 生成物へ build 注入 chrome token を混入 → 閉 allowlist が FAIL ---
+perl -0777 -pe 's{<body>}{<body>\n<a class="skip-link" href="#main">本文へ</a>}' "$TMP/base-filled.html" > "$TMP/h4.html"
+expect_vfail "H4 pre-build 生成物へ chrome token (skip-link) 注入 → class-token 閉 allowlist FAIL [M10]" \
+  "$BASE" "$TMP/h4.html" 'class-token 機械的網羅'
+
+# --- H5 [M10] ★post-build 分岐 baseline: landed canonical (chrome 込み) が ★PASS する (空撃ち封鎖) ---
+#   ★H5 が無いと H6/H7 の FAIL が「landed はそもそも赤い」の巻き添えかどうか区別できない。
+if SKIP_REPRO=1 bash "$VER" --artifact "$BASE" "$LANDED" >/dev/null 2>&1; then
+  ok "H5 landed canonical (build 済 subject) が floor PASS = 条件付き昇格の陽性対照 [M10]"
+else ng "H5 landed canonical が floor FAIL (条件付き昇格の分岐が landed を通せていない) [M10]"; fi
+
+# --- H6 [M10] ★post-build 分岐: landed から chrome token を 1 つ潰す → 空振り封鎖 (missing) が FAIL ---
+perl -0777 -pe 's{class="doc-locator"}{class="doc-locator-rotted"}g' "$LANDED" > "$TMP/h6.html"
+h6_out="$(SKIP_REPRO=1 bash "$VER" --artifact "$BASE" "$TMP/h6.html" 2>&1)"; h6_rc=$?
+if [[ "$h6_rc" -ne 0 ]] && printf '%s\n' "$h6_out" | grep -F -- 'class-token allowlist の空振り封鎖' | grep -qF -- '[FAIL]'; then
+  ok "H6 build 済 subject から chrome token (doc-locator) 除去 → 空振り封鎖が FAIL [M10]"
+else ng "H6 chrome token 除去が素通り (rc=$h6_rc = 昇格側の teeth が無い)"; fi
+
+# --- H7 [M10] ★述語自身の MK: build 済 marker を rot → pre-build 分岐へ落ち chrome token が未知になる ---
+#   述語 (`<!-- folio:chrome-bottom -->` の行頭完全一致) が壊れたら ★緑のまま でなく ★赤くなる ことを pin。
+perl -0777 -pe 's{^<!-- folio:chrome-bottom -->$}{<!-- folio-chrome-bottom-rotted -->}m' "$LANDED" > "$TMP/h7.html"
+h7_out="$(SKIP_REPRO=1 bash "$VER" --artifact "$BASE" "$TMP/h7.html" 2>&1)"; h7_rc=$?
+if [[ "$h7_rc" -ne 0 ]] && printf '%s\n' "$h7_out" | grep -F -- 'chrome class-token 条件付き昇格' | grep -qF -- '[FAIL]'; then
+  ok "H7 build 済 述語 marker の rot → 条件付き昇格が pre-build 分岐へ落ちて FAIL (述語 rot の可視化) [M10]"
+else ng "H7 述語 marker rot が素通り (rc=$h7_rc = 述語の壊れが silent)"; fi
+
+# --- H8 [M11] generator meta content を 1 文字変更 → 逐値 literal pin が FAIL ---
+perl -0777 -pe 's{(<meta name="generator" content="folio spec-pack assembler) }{$1_}' "$TMP/base-filled.html" > "$TMP/h8.html"
+if ! cmp -s "$TMP/base-filled.html" "$TMP/h8.html"; then
+  expect_vfail "H8 generator meta content を 1 文字改竄 → 逐値 literal pin が FAIL [M11]" \
+    "$BASE" "$TMP/h8.html" 'generator meta content == 逐値 literal'
+else ng "H8 mutation が no-op (generator meta の literal が想定形でない = pin の空撃ち)"; fi
+
+# --- H9 [M11] consumer chrome 述語に当たらなくなる rename → 述語 hit pin が FAIL ---
+#   ★H8 (逐値) と ★別 shape: literal を丸ごと別 pack 名へ替えると「literal 不一致」だけでなく
+#   「consumer が生成 spec と認識しなくなる」実害面が立つ。 両方が落ちることを別 case で pin する。
+perl -0777 -pe 's{<meta name="generator" content="folio spec-pack assembler}{<meta name="generator" content="folio srs-spec-pack assembler}' "$TMP/base-filled.html" > "$TMP/h9.html"
+if ! cmp -s "$TMP/base-filled.html" "$TMP/h9.html"; then
+  expect_vfail "H9 generator meta を述語非該当形へ rename → consumer chrome 述語 hit pin が FAIL [M11]" \
+    "$BASE" "$TMP/h9.html" 'consumer chrome 述語'
+else ng "H9 mutation が no-op (述語 anchor 形が想定と違う = pin の空撃ち)"; fi
+
+# --- H10 [M2(i)/N1] oracle の anchor に ★live canonical を渡すと exit 2 (自己比較退化の fail-closed guard) ---
+python3 "$ORACLE" "$LANDED" "$TMP/base-filled.html" "$BASE" "$BASE_PROSE" >/dev/null 2>&1; h10_rc=$?
+if [[ "$h10_rc" -eq 2 ]]; then
+  ok "H10 oracle anchor に live canonical → exit 2 fail-closed (生成物 vs 生成物 の自己比較封鎖) [M2/N1]"
+else ng "H10 oracle が live canonical anchor を受理した (rc=$h10_rc 期待 2 = 恒真 PASS への退化路が開いている)"; fi
+
+# --- H11 [M2(iii)] extractor の ★既定入力 が origin snapshot (live canonical でない) ---
+#   ★出力 byte 等値 で撃つ: 「既定が snapshot と同じ結果を出す」= 既定が snapshot を読んでいる の実測。
+bash "$EXTRACT"          > "$TMP/h11-default.yaml"  2>/dev/null
+bash "$EXTRACT" "$CANON" > "$TMP/h11-snapshot.yaml" 2>/dev/null
+bash "$EXTRACT" "$LANDED" > "$TMP/h11-landed.yaml"  2>/dev/null
+if cmp -s "$TMP/h11-default.yaml" "$TMP/h11-snapshot.yaml" && ! cmp -s "$TMP/h11-default.yaml" "$TMP/h11-landed.yaml"; then
+  ok "H11 extractor 既定入力 == origin snapshot かつ != landed canonical (既定 re-home の実測) [M2]"
+else ng "H11 extractor 既定入力が snapshot でない or landed と区別できない (既定 re-home が効いていない)"; fi
+
+# --- H12 [M2(iii)] extractor 入力不在 → exit 2 fail-closed (skip / 空出力に落ちない) ---
+SELF_SPEC_ORIGIN_HTML=/nonexistent/self-spec.origin.html bash "$EXTRACT" >/dev/null 2>&1; h12_rc=$?
+if [[ "$h12_rc" -eq 2 ]]; then ok "H12 extractor: origin 不在 → exit 2 (測定系 error と gate 判定の分離) [M2]"
+else ng "H12 extractor: origin 不在が exit 2 でない (rc=$h12_rc)"; fi
+
+# ============================================================================
 # ★宣言集合 vs 実行集合 (silent skip 封鎖・範型 CASEPIN と同型)。
 DECLARED=(BASE0 A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 B1 B1b B2 B2b B3 B4 B5 B6 B7 B8 B9 B10 B11
           C1 C1a C1b C1c C1d C1e C1f C1g C2 C2b C3 D1 D2 D3 D4 D5 D6 D6a D6b D6c D6d D6e D7x D7y D7y-pre
           E1 F1 F2 F3 F4 F5 F6 F7 F8 F9 F10
-          F11 F11b F12 F12b F13 F14 F15 F16 F17 F18 F19 F19b F20 F20b F21 F22 F23 F24 F24b F24c F25 G1 G2)
+          F11 F11b F12 F12b F13 F14 F15 F16 F17 F18 F19 F19b F20 F20b F21 F22 F23 F24 F24b F24c F25 G1 G2
+          F4b D0 H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12)
 miss=""
 for d in "${DECLARED[@]}"; do
   hit=0; for s in "${SEEN[@]}"; do [[ "$s" == "$d" ]] && hit=1; done
