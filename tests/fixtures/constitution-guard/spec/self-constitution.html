@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="constitution">
+<title>self-form constitution fixture (FolioConstitution)</title>
+<!--
+  constitution-guard の 名前非依存 陽性対照 fixture (folio-v6tv / folio-qojv 決定 7 (ii))。
+  basename は canonical (constitution.html) と **違う** が @type が FolioConstitution であるため deny。
+  対の陰性対照は同 dir の constitution.html (basename は同じだが @type schema:TechArticle → allow)。
+  この 2 本の対で、 判定が basename でも path でもなく head JSON-LD の @type であることが両方向に固定される。
+  scenario 側で FOLIO_SPEC_PATH を本 dir へ差し替えて path 前提条件を通す。
+-->
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./self-constitution.html", "@type": "FolioConstitution", "dc:title": "self-form constitution fixture" }
+</script>
+</head>
+<body>
+<dl>
+  <dt id="p-1"><strong>P-1: framework 本体の不変原則 (fixture)</strong></dt>
+  <dd>folio 本体の constitution と同じ schema を名乗る file。 名前が違っても tool 層直接編集は deny される。</dd>
+</dl>
+</body>
+</html>

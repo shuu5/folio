@@ -1,0 +1,203 @@
+schema_version: "0.1"
+req_id: "REQ-CM-001"
+ears_pattern: "event-driven"
+description: |
+  constitution guard (folio-qojv 決定 7 (ii) / cell folio-v6tv) — canonical constitution
+  (head JSON-LD の @type == FolioConstitution) への tool 層直接編集 (Edit / Write / NotebookEdit) を
+  PreToolUse hook が deny する。
+
+  req_id 写像根拠 (逐語): 本 gate は新 REQ を新造せず、 既存実在の REQ-CM-001
+  (rules.html §10.1 「WHEN an AI agent attempts to edit a file under spec_path, the PreToolUse hook
+  SHALL verify the caller」) の event-driven verify 経路への **上書き例外** として写像する。 REQ-CM-001 が
+  「spec_path 配下 any file を marker で gate する」 と定める verify 点に、 本 hook は
+  「@type == FolioConstitution の file は marker の有無に関わらず tool 層で deny」 という狭い例外を重ねる。
+  条文 (rules.html) 側の追随は本 cell では行わない (生成 canonical ゆえ contract + 再生成 + drift gate +
+  凍結 census の連鎖を引く。 先例 = content-boundary hook も rules.html 0 hit で land。 受け皿の起票は admin)。
+
+  tier: 本 gate は tier-2 shaping であり guarantee ではない。 bash 経路 (generator pipeline) は
+  PreToolUse に到達せず対象外 = 設計上の既知非対称。 authoritative gate は CI / drift gate。
+
+  FOLIO_SPEC_PATH 差替 arm について: hook は spec_path 配下のみを検査する前提条件を持つ
+  (plugin-lib.sh folio_under_spec_path の 2 branch を使用)。 fixture tree は実 spec_path
+  (design-intent/spec/) の外に在るため、 fixture を使う arm は given.env で FOLIO_SPEC_PATH を
+  fixture の spec dir へ差し替えて前提条件を通し、 判定を @type branch まで到達させる
+  (差し替えないと path 前提条件だけで allow に落ち、 @type 述語を検査しない vacuous な緑になる)。
+
+  Reference: rules.html §10.1 (REQ-CM-001), verification.html §3.3 REQ-VER-003 (exit code 中心 assertion),
+  design-intent/spec/constitution.html (P-10 改正手続き)。
+
+setup:
+  env: {}
+  fixtures: []
+
+scenarios:
+  # --- 本丸: canonical constitution への tool 層直接編集 (marker の有無を問わず deny) ---
+  - name: "marker 有り + canonical constitution → deny (marker allow escape が存在しないこと)"
+    # caller-marker を満たす env を立てても本 gate は素通りしない。 agent が自己発行できる token を
+    # 前提にすると caller-marker より弱い gate になるため、 marker 分岐は意図的に未実装。
+    given:
+      env:
+        FOLIO_ARCHITECT_CONTEXT: "folio-architect"
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+  - name: "marker file 経路 (実在 file) + canonical constitution → deny"
+    # caller-marker の hybrid marker file 経路 (FOLIO_MARKER_FILE 実在 = allow) を実在 file へ差し替えても
+    # 本 gate は deny する。 file marker escape の不在を固定する。
+    given:
+      env:
+        FOLIO_MARKER_FILE: "README.md"
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+  - name: "marker 無し + canonical constitution → deny"
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+  - name: "Write tool + canonical constitution → deny (matcher 3 tool の被覆)"
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+  - name: "NotebookEdit tool + canonical constitution → deny (runner mock payload に対する matcher 分岐の被覆)"
+    # 正直化 (cell-quality wf_8eb4624a-3c6 confirmed minor): 本 arm が被覆するのは hook の matcher case
+    # (Edit|Write|NotebookEdit) 分岐であって、実機 NotebookEdit payload ではない。runner は tool 名に依らず
+    # 一律 tool_input.file_path を注入する mock payload を組む (tests/runner.sh) が、実機 NotebookEdit の
+    # payload key は notebook_path であり、本 hook は file_path のみを読むため実機では allow に落ちる。
+    # 実害は無い (NotebookEdit は .ipynb しか対象にできず constitution.html に到達しない) が、arm 名で
+    # 「実機 3 tool を被覆した」と読ませないためにここへ逐語で記す。runner の payload schema 拡張は
+    # 契約 ■8 の MUST NOT ゆえ scenario 側では塞げない (受け皿の起票は admin)。
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "NotebookEdit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+  # --- deny message の契約必須文言 (■2-5) を逐語 pin する ---
+  # runner の stderr_contains は 1 arm 1 literal ゆえ、同一 given を別 literal で 2 arm に分けて pin する。
+  - name: "deny message は tier-2 / authoritative gate を明記する (■2-5 文言 pin)"
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "authoritative gate は CI / drift gate"
+
+  - name: "deny message は編集起点を contract YAML と示す (■2-5 文言 pin・「folio build で再生成」と断定しない)"
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "編集起点は contract YAML"
+
+  - name: "deny message は flip 前の canonical 上書きを禁じる (errata-1 E1・過渡期ハザード封鎖)"
+    # folio-pa93 の flip が land するまで landed canonical は手書き SSoT であり (実測: pipeline 出力
+    # 88,339 bytes vs landed 22,748 bytes・landed に meta generator 0 hit)、landed 内容を束縛する CI gate も
+    # 未存在。deny hint の「再生成の正規路」だけを読んだ agent が pipeline 出力で canonical を上書きすると
+    # 手書き SSoT を破壊するため、上書き禁止の警告文言が deny message に在ることを逐語 pin する。
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "deny を再生成で回避して canonical を上書きしない"
+
+  # --- 陰性対照: scope-leak させない ---
+  - name: "marker 有り + spec_path 配下の非 constitution (rules.html) → allow (scope-leak 陰性対照)"
+    # 同じ spec_path 配下でも @type が FolioConstitution でなければ本 gate は関与しない
+    # (spec 編集の gate は caller-marker の領分であり、 本 gate が spec 全体へ滲み出さないことを固定)。
+    given:
+      env:
+        FOLIO_ARCHITECT_CONTEXT: "folio-architect"
+      file_path: "design-intent/spec/rules.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "不在 path の constitution.html + marker 無し → allow (greenfield materialize を殺さない)"
+    # on-disk の実 file を読む述語ゆえ、 まだ存在しない file は constitution と判定できず allow。
+    # consumer が folio init 直後に constitution を新規 materialize する経路を塞がない。
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution-not-yet-materialized.html"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "matcher 外 tool (Read) + canonical constitution → allow"
+    given:
+      env: {}
+      file_path: "design-intent/spec/constitution.html"
+    when:
+      tool: "Read"
+    expect:
+      exit_code: 0
+
+  # --- 名前非依存の両方向固定 (fixture 対、 FOLIO_SPEC_PATH 差替で前提条件を通す) ---
+  - name: "consumer 形 fixture (basename 同一・@type schema:TechArticle) + marker 無し → allow"
+    given:
+      env:
+        FOLIO_SPEC_PATH: "tests/fixtures/constitution-guard/spec/"
+      file_path: "tests/fixtures/constitution-guard/spec/constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 0
+
+  - name: "consumer 形 fixture + marker 有り → allow (marker 有無不問)"
+    given:
+      env:
+        FOLIO_SPEC_PATH: "tests/fixtures/constitution-guard/spec/"
+        FOLIO_ARCHITECT_CONTEXT: "folio-architect"
+      file_path: "tests/fixtures/constitution-guard/spec/constitution.html"
+    when:
+      tool: "Write"
+    expect:
+      exit_code: 0
+
+  - name: "自形 fixture (basename 相違・@type FolioConstitution) → deny (path/basename keying でない)"
+    # basename が constitution.html でなくても @type が FolioConstitution なら deny。
+    # 直上の arm (basename 同一だが allow) と対で、 判定が名前でなく @type であることを両方向に固定する。
+    given:
+      env:
+        FOLIO_SPEC_PATH: "tests/fixtures/constitution-guard/spec/"
+      file_path: "tests/fixtures/constitution-guard/spec/self-constitution.html"
+    when:
+      tool: "Edit"
+    expect:
+      exit_code: 2
+      stderr_contains: "folio constitution guard"
+
+teardown:
+  cleanup_files: []

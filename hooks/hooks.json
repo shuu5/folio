@@ -12,6 +12,16 @@
         ]
       },
       {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/.claude-plugin/scripts/check-constitution-guard.sh",
+            "timeout": 5000
+          }
+        ]
+      },
+      {
         "matcher": "Write",
         "hooks": [
           {

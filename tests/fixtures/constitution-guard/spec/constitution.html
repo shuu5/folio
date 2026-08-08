@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="folio-doc-type" content="constitution">
+<title>consumer constitution fixture (schema:TechArticle)</title>
+<!--
+  constitution-guard の 名前非依存 陰性対照 fixture (folio-v6tv / folio-qojv 決定 7 (ii))。
+  basename は canonical と同じ constitution.html。 scenario 側で FOLIO_SPEC_PATH を本 fixture の
+  spec dir へ差し替えるため hook の path 前提条件は通過し、 判定は @type branch に到達する。
+  それでも @type が schema:TechArticle (= consumer の conforming constitution) であるため allow。
+  → 「file 名 / path 単独 keying で deny していない」 ことが vacuous でなく実証される。
+  対の陽性対照は同 dir の self-constitution.html (basename は違うが @type FolioConstitution → deny)。
+-->
+<script type="application/ld+json">
+{ "@context": { "dc": "http://purl.org/dc/terms/", "schema": "https://schema.org/", "folio": "https://folio.dev/spec/v1/" }, "@id": "./constitution.html", "@type": "schema:TechArticle", "dc:title": "consumer constitution fixture" }
+</script>
+</head>
+<body>
+<dl>
+  <dt id="p-1"><strong>P-1: consumer 側の不変原則 (fixture)</strong></dt>
+  <dd>consumer project が folio init 後に自前で書く constitution の形。 folio 本体の FolioConstitution schema とは別 @type。</dd>
+</dl>
+</body>
+</html>
