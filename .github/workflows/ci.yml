@@ -280,7 +280,7 @@ jobs:
       #   frozen census=folio-vhew は本 gate の対象外・verifier 冒頭に実態開示済)。
       - name: 政策A floor 実走 — verify-srs-verification (landed canonical vs ADR-0054 提示層 shape)
         run: .claude-plugin/design-system/generator/verify-srs-verification.sh --artifact .claude-plugin/design-system/generator/contract/folio-srs-verification.spec.yaml design-intent/spec/srs-verification.html
-      - name: srs-verification 提示層 floor 敵対回帰 (per-shape MK + 陽性対照 84 case・hiding (容器 allowlist) / 捏造追加 / should 合成 mutant 込み)
+      - name: srs-verification 提示層 floor 敵対回帰 (per-shape MK + 陽性対照 154 case・hiding (容器 allowlist) / 捏造追加 / should 合成 mutant 込み)
         run: .claude-plugin/design-system/generator/test-adversarial-srs-verification.sh
 
       # ======================================================================
