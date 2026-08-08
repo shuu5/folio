@@ -20,7 +20,12 @@ BASE="$SCRIPT_DIR/contract/folio-constitution.principle.yaml"
 BASE_PROSE="$SCRIPT_DIR/prose/folio-constitution.principle.prose.yaml"
 # 実在 decisions dir の絶対パス (mutated contract を $TMP に置くと相対 decisions_dir が解決しないため絶対化)。
 DEC_ABS="$(cd "$SCRIPT_DIR/contract/$(yq -r '.decisions_dir' "$BASE")" && pwd)"
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+TMP="$(mktemp -d)"
+# ★verify の copy 置き場 (FROZEN_CENSUS の path 差し替え用)。 SCRIPT_DIR 直下でないと source "$SCRIPT_DIR/lib/…"
+#   が解決しないため generator dir に置き、 EXIT trap で必ず消す (untracked を残さない)。
+PIN_VER="$SCRIPT_DIR/.lq12-pin-verify-principle.sh"
+PIN_ASM="$SCRIPT_DIR/.lq12-pin-assemble-principle.sh"
+trap 'rm -rf "$TMP"; rm -f "$PIN_VER" "$PIN_ASM"' EXIT
 pass=0; fail=0
 # repro-build arm (verify_repro_build・folio-3d23) は verify-*.sh 既定 ON。 bulk case は honest skip で 10 分/suite を維持し
 # (arm 未 skip は assemble 再 build で timeout)、 conformance pin (末尾) だけ SKIP_REPRO= 明示解除で arm ON 実走する。
@@ -245,7 +250,21 @@ yq -i '.meta.version = "0.7.0-draft"' "$f"
 yq -i '(.principles[] | select(.id=="P-9")).statement += " 正規手続きで改訂した一文。"' "$f"
 yq -i '(.principles[] | select(.id=="P-9")).amended_by = [{"adr":"ADR-0021","date":"2026-06-20","approved_by":"user"}]' "$f"
 bash "$ASM" "$f" "$TMP/bd7.html" >/dev/null 2>&1 || ng "BD7 setup (asm 失敗)"
-expect_vprefill_pass "BD7 ★正当な改訂 (statement 改竄+版bump+新 実在 amended_by) は baseline-diff PASS" "$f" "$TMP/bd7.html"
+# ★folio-lq12: 版 bump は canonical 由来の凍結 census (VERSION 行) とも整合していなければならない。
+#   constitution は P-10 で frozen ゆえ「正当な改訂」とは canonical 改訂 → census 再凍結 → contract 更新 の
+#   ★3 点セット であり、 contract だけを bump した状態は (正当な改訂ではなく) contract 単独 drift である。
+#   本 case は 3 点が揃った正当改訂を模すため、 census 側も版を上げた copy を用意し FROZEN_CENSUS を
+#   その copy へ差し替えた verify copy で検証する (test-adversarial-relations-census.sh:225 と同じ idiom)。
+sed -E 's/^VERSION\t.*/VERSION\t0.7.0-draft/' "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" > "$TMP/bd7.census.txt"
+sed -E "s#(FROZEN_CENSUS=\")[^\"]*(\")#\1$TMP/bd7.census.txt\2#" "$VER" > "$PIN_VER"
+if diff -q "$VER" "$PIN_VER" >/dev/null; then
+  ng "BD7 setup ★census path 差し替えが空撃ち (FROZEN_CENSUS の記法変化の疑い)"
+elif bash "$PIN_VER" "$f" "$TMP/bd7.html" >/dev/null 2>&1; then
+  ok "BD7 ★正当な改訂 (statement 改竄+版bump+新 実在 amended_by+census 再凍結) は baseline-diff PASS"
+else
+  ng "BD7 ★正当な改訂 (statement 改竄+版bump+新 実在 amended_by) は baseline-diff PASS (verify FAIL)"
+fi
+rm -f "$PIN_VER"
 
 # === ★cell-quality errata 回帰 (confirmed findings の fail-open を封鎖したことを固定) ===
 
@@ -387,7 +406,7 @@ expect_vfilled_fail "F14 ★versioning bump 改竄を fidelity で捕捉" "$TMP/
 
 # F15. amendment step 改竄 → amendment steps fidelity FAIL
 cp "$TMP/base-filled.html" "$TMP/f15.html"
-perl -0777 -i -pe 's#(<li>)user 承認を取得 \(P-10\)#${1}承認は不要#' "$TMP/f15.html"
+perl -0777 -i -pe 's#(<li class="amp-step">)user 承認を取得 \(P-10\)#${1}承認は不要#' "$TMP/f15.html"
 expect_vfilled_fail "F15 ★amendment step 改竄を fidelity で捕捉" "$TMP/f15.html" "amendment: steps"
 
 # F-bur-{a..c} ★folio-bur: inbound 照会元/role + amendment 来歴の可視テキスト捏造 (属性/件数 intact のまま可視のみ改竄)
@@ -545,7 +564,7 @@ cp "$TMP/base.html" "$TMP/anh1.html"
 perl -0777 -i -pe 's#<h3 class="ph" id="p-1">#<h3 class="ph" data-slot-id="p-1">#' "$TMP/anh1.html"
 #        ★errata-1 M3: 帰属 reason を *集合一致 arm 一意* の literal へ (旧 "p-N anchor" は 5 arm 共通 prefix で
 #        arm を一意に選べず帰属が成立していなかった)。
-expect_vprefill_fail_at "AN-H1 ★id→data-slot-id 差し替え (anchor_exists は騙せる) を厳密述語が捕捉" "$BASE" "$TMP/anh1.html" "厳密 id 集合 == lc(principles[].id)"
+expect_vprefill_fail_at "AN-H1 ★id→data-slot-id 差し替え (anchor_exists は騙せる) を厳密述語が捕捉" "$BASE" "$TMP/anh1.html" "厳密 id 集合 == lc(principles.id) ∪ section ∪ subsection"
 
 # AN-H2. ★欠落: p-9 の id を削除 → 集合一致 (欠落 0) が捕捉。 p-9 は design-intent 内 inbound 0 hit ゆえ
 #        「inbound から期待集合を逆算する」設計だと silent に落ちる — 期待は contract 由来で立てている pin。
@@ -563,8 +582,12 @@ expect_vprefill_fail_at "AN-H2 ★p-9 anchor 欠落 (inbound 0 hit ゆえ逆算�
 #        ゆえ本 MK が固定するのは「census arm 群の単独 aliveness」ではなく「余剰 id 0 arm の帰属付き aliveness」
 #        (帰属 reason は arm 一意ゆえ pin としては有効)。 虚偽の被覆表示は本リポの既知 blocking クラス
 #        (6b459e7 で自ら是正した形の再発防止) ゆえ、 arm 数を実体どおりに書く。
+#        ★folio-lq12 追随: 旧 payload は id="s2-principles" だったが、 節骨格の land で s2-principles は
+#        ★契約に実在する正規 anchor になった = 本 case の意味が「捏造 id」から「正規値の重複」へ ★反転する。
+#        削除はせず payload を ★契約外の値 (s9-forged) へ差し替えて「余剰 id 0」arm の aliveness を維持する
+#        (正規値の重複そのものは下の E-2 が別 case として撃つ)。
 cp "$TMP/base.html" "$TMP/anh3.html"
-perl -0777 -i -pe 's#</body>#<div id="s2-principles">節 anchor の捏造 (lq12 の領分)</div></body>#' "$TMP/anh3.html"
+perl -0777 -i -pe 's#</body>#<div id="s9-forged">契約外 anchor の捏造</div></body>#' "$TMP/anh3.html"
 expect_vprefill_fail_at "AN-H3 ★p-N 形でない余剰 id の混入を全 id census arm が捕捉" "$BASE" "$TMP/anh3.html" "余剰 id 0"
 
 # AN-H4. ★single-quote id: folio_anchor_exists は真になるが bin/folio:2308 (objectGraph) は見ない非対称。
@@ -1121,6 +1144,323 @@ u3k_entity_pin "U3K2 ★semicolon-less 16進 entity class (&#x77ho → who) を�
 u3k_entity_pin "U3K3 ★semicolon-less 10進 entity class (&#119ho → who) を占有 vcount who が decode 捕捉" '<span class="&#119ho">x</span>' 'vcount who'
 
 echo
+# ======================================================================================
+# === ★folio-lq12: 節骨格 (sections) + rich 運搬 (raw blob / mermaid / ai-rationale) の per-shape MK ===
+# ★per-shape で撃つ (1 shape の実弾は構造差のある別 shape の穴を証明しない)。 shape = 散文 blob / mermaid /
+#   aside (ai-rationale) / sections 双方向 / 余剰 section id / anchor 重複 / 凍結 census。
+echo "--- ★folio-lq12: 節骨格 + rich 運搬の per-shape MK ---"
+
+# ---- (i) 生成前 fail-closed (assemble validate) ----
+
+# LQ-A1. sections 欠落 → abort (節骨格の無音喪失を封鎖)
+cp "$BASE" "$TMP/lqa1.yaml"; yq -i 'del(.sections)' "$TMP/lqa1.yaml"
+expect_abort "LQ-A1 ★sections 欠落を abort (節骨格の無音喪失)" "$TMP/lqa1.yaml" "sections 欠落"
+
+# LQ-A2. 未知 block type → abort (silent drop 禁止)
+cp "$BASE" "$TMP/lqa2.yaml"; yq -i '.sections[0].blocks[0].type = "html"' "$TMP/lqa2.yaml"
+expect_abort "LQ-A2 ★未知 block type を abort (silent drop 禁止)" "$TMP/lqa2.yaml" "未対応 block type"
+
+# LQ-A3. class allowlist 外 → abort (closed allowlist)
+cp "$BASE" "$TMP/lqa3.yaml"; yq -i '.sections[0].class = "advisory"' "$TMP/lqa3.yaml"
+expect_abort "LQ-A3 ★section class allowlist 外を abort" "$TMP/lqa3.yaml" "未知/空の section class"
+
+# LQ-A4. raw blob へ <script> 注入 → rich tokenizer が abort (RAW emit の防御)
+cp "$BASE" "$TMP/lqa4.yaml"; yq -i '.sections[0].blocks[0].html = "<p>x</p><script>alert(1)</script>"' "$TMP/lqa4.yaml"
+expect_abort "LQ-A4 ★raw blob の <script> を tokenizer が abort" "$TMP/lqa4.yaml" "allowlist 外の markup"
+
+# LQ-A5. raw blob へ on* 属性 → abort (event handler)
+cp "$BASE" "$TMP/lqa5.yaml"; yq -i '.sections[0].blocks[0].html = "<p onclick=\"x()\">x</p>"' "$TMP/lqa5.yaml"
+expect_abort "LQ-A5 ★raw blob の on* 属性を tokenizer が abort" "$TMP/lqa5.yaml" "allowlist 外の markup"
+
+# LQ-A6. raw blob の href が allowlist 外 scheme → abort (URL allowlist)
+cp "$BASE" "$TMP/lqa6.yaml"; yq -i '.sections[0].blocks[0].html = "<p><a href=\"javascript:alert(1)\">x</a></p>"' "$TMP/lqa6.yaml"
+expect_abort "LQ-A6 ★raw blob の許可外 URL scheme を tokenizer が abort" "$TMP/lqa6.yaml" "allowlist 外の markup"
+
+# LQ-A7. section anchor が principle anchor と衝突 → abort (同一 id 属性が 2 個出る経路)
+cp "$BASE" "$TMP/lqa7.yaml"; yq -i '.sections[0].anchor = "p-1"' "$TMP/lqa7.yaml"
+expect_abort "LQ-A7 ★section/principle 間の anchor 衝突を abort" "$TMP/lqa7.yaml" "anchor 重複"
+
+# LQ-A8. principles block 欠落 → abort (14 原則の無音消失)
+cp "$BASE" "$TMP/lqa8.yaml"; yq -i 'del(.sections[2].blocks[2])' "$TMP/lqa8.yaml"
+expect_abort "LQ-A8 ★pack-native block (principles) 欠落を abort (原則の無音消失)" "$TMP/lqa8.yaml" "pack-native block 'principles'"
+
+# LQ-A9. chapter_heading に数字 → abort (検証されない件数主張の封鎖)
+cp "$BASE" "$TMP/lqa9.yaml"; yq -i '.sections[0].chapter_heading = "読み手は 3 種類"' "$TMP/lqa9.yaml"
+expect_abort "LQ-A9 ★chapter_heading の数字 (検証されない件数主張) を abort" "$TMP/lqa9.yaml" "chapter_heading に数字"
+
+# LQ-A10. subsections の tier 集合が principles と不一致 → abort (原則が宿無し tier へ落ちる)
+cp "$BASE" "$TMP/lqa10.yaml"; yq -i '.sections[2].subsections[0].tier = "Never"' "$TMP/lqa10.yaml"
+expect_abort "LQ-A10 ★subsections tier 集合の不一致を abort" "$TMP/lqa10.yaml" "tier 集合"
+
+# LQ-A11. rationale_note.for の帰属捏造 → abort
+cp "$BASE" "$TMP/lqa11.yaml"; yq -i '(.principles[] | select(.id=="P-12")).rationale_note.for = "p-1"' "$TMP/lqa11.yaml"
+expect_abort "LQ-A11 ★rationale_note.for の帰属捏造を abort" "$TMP/lqa11.yaml" "rationale_note.for"
+
+# LQ-A12. amended_by へ未知キー → abort (silent drop 禁止)
+cp "$BASE" "$TMP/lqa12.yaml"; yq -i '(.principles[] | select(.id=="P-2")).amended_by[0].note = "x"' "$TMP/lqa12.yaml"
+expect_abort "LQ-A12 ★amended_by の許可外キーを abort" "$TMP/lqa12.yaml" "amended_by に許可外キー"
+
+# LQ-A13. mermaid source_lines 空 → abort (図の無言消失)
+cp "$BASE" "$TMP/lqa13.yaml"; yq -i '.sections[1].blocks[4].source_lines = []' "$TMP/lqa13.yaml"
+expect_abort "LQ-A13 ★mermaid source_lines 空を abort (図の無言消失)" "$TMP/lqa13.yaml" "source_lines が空"
+
+# LQ-A14. preamble_html 欠落 → abort (section 外の前文の無音喪失)
+cp "$BASE" "$TMP/lqa14.yaml"; yq -i 'del(.preamble_html)' "$TMP/lqa14.yaml"
+expect_abort "LQ-A14 ★preamble_html 欠落を abort" "$TMP/lqa14.yaml" "preamble_html 欠落"
+
+# LQ-A15. ★HAS_MERMAID 述語が 0 を返すのに図 DSL が emit される (= 無言不描画) → finalize が abort。
+#         assembler の copy で述語を 0 に固定して実弾を撃つ (述語と emit の乖離そのものを撃つ per-shape MK)。
+sed -E 's#^  HAS_MERMAID=.*$#  HAS_MERMAID=0#' "$ASM" > "$PIN_ASM"
+if diff -q "$ASM" "$PIN_ASM" >/dev/null; then
+  ng "LQ-A15 setup ★HAS_MERMAID 差し替えが空撃ち (述語の記法変化の疑い)"
+else
+  lqa15_out="$(bash "$PIN_ASM" "$BASE" "$TMP/lqa15.html" 2>&1)"; lqa15_rc=$?
+  if [[ $lqa15_rc -ne 0 ]] && [[ "$lqa15_out" == *"無言不描画"* ]]; then
+    ok "LQ-A15 ★述語 0 なのに図 DSL が出る状態 (無言不描画) を finalize が abort"
+  else
+    ng "LQ-A15 ★無言不描画が fail-closed でない (rc=$lqa15_rc)"
+  fi
+fi
+rm -f "$PIN_ASM"
+
+# LQ-P1. ★陽性対照 (図ゼロ経路の非回帰): mermaid block を全て外すと vendor / init を 1 バイトも出さず、
+#        かつ verify は PASS する (「図ゼロ時に init を出さない条件分岐」の移植が効いていることの正の実証)。
+f="$(bd_canon lqp1)"
+yq -i 'del(.sections[1].blocks[4]) | del(.sections[2].blocks[1])' "$f"
+if bash "$ASM" "$f" "$TMP/lqp1.html" >/dev/null 2>&1; then
+  nv="$(grep -c 'mermaid.min.js' "$TMP/lqp1.html" || true)"; ni="$(grep -c 'mermaid.initialize' "$TMP/lqp1.html" || true)"
+  np="$(grep -c '<pre class="mermaid">' "$TMP/lqp1.html" || true)"
+  # ★verify PASS までは要求しない: 凍結 census は canonical (図 2 枚) 由来の anchor ゆえ、 図を外した
+  #   contract は census 突合で正しく FAIL する (それは本 case が試験している性質ではない = 別 arm の正常動作)。
+  #   本 case が pin するのは ★assemble 側の条件分岐 (図ゼロなら vendor/init を 1 バイトも出さない) のみ。
+  if [[ "$nv" == "0" && "$ni" == "0" && "$np" == "0" ]]; then
+    ok "LQ-P1 ★陽性対照: 図ゼロなら vendor/init を 1 バイトも出さない (条件分岐の非回帰・他 pack 同型)"
+  else
+    ng "LQ-P1 ★図ゼロ経路が壊れている (vendor=$nv init=$ni pre=$np)"
+  fi
+else
+  ng "LQ-P1 setup (図ゼロ contract の assemble 失敗)"
+fi
+
+# ---- (ii) 生成後 fail-closed (verify・HTML 改竄) ----
+
+# LQ-M1. ★散文 blob shape: raw blob の逐語改竄 → 逐語 echo arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm1.html"
+perl -0777 -i -pe 's#folio は Claude Code plugin として配布される#folio は Claude Code plugin として頒布される#' "$TMP/lqm1.html"
+expect_vprefill_fail_at "LQ-M1 ★raw blob の逐語改竄を容器等号 arm が捕捉 (散文 blob shape)" "$BASE" "$TMP/lqm1.html" "rich 容器 inner == contract blocks の連結"
+
+# LQ-M2. ★散文 blob shape (脱落): raw blob を丸ごと削除 → 同 arm が捕捉 (改竄と脱落は別実弾)
+cp "$TMP/base.html" "$TMP/lqm2.html"
+perl -0777 -i -pe 's#<p>folio は Layer 0 \(本 repo\).*?</p>##s' "$TMP/lqm2.html"
+expect_vprefill_fail_at "LQ-M2 ★raw blob の脱落を容器等号 arm が捕捉 (散文 blob shape)" "$BASE" "$TMP/lqm2.html" "rich 容器 inner == contract blocks の連結"
+
+# LQ-M3. ★mermaid shape: DSL 行の改竄 → round-trip arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm3.html"
+perl -0777 -i -pe 's#graph LR#graph TD#' "$TMP/lqm3.html"
+expect_vprefill_fail_at "LQ-M3 ★mermaid DSL 改竄を round-trip arm が捕捉 (mermaid shape)" "$BASE" "$TMP/lqm3.html" "DSL round-trip"
+
+# LQ-M4. ★mermaid shape: figcaption の改竄 → figcaption arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm4.html"
+perl -0777 -i -pe 's#図 2. 14 原則の 3-tier 構造。#図 2. 15 原則の 3-tier 構造。#' "$TMP/lqm4.html"
+expect_vprefill_fail_at "LQ-M4 ★figcaption 改竄を figcaption arm が捕捉 (mermaid shape)" "$BASE" "$TMP/lqm4.html" "figcaption 列"
+
+# LQ-M5. ★mermaid shape: vendor 参照 path を assets/ 形へ書換 → literal pin arm が捕捉。
+#        ★gate F は配信 root 正規化で ../assets/ と assets/ を区別できない = gate F は本改竄に盲。
+cp "$TMP/base.html" "$TMP/lqm5.html"
+perl -0777 -i -pe 's#src="\.\./assets/mermaid\.min\.js"#src="assets/mermaid.min.js"#' "$TMP/lqm5.html"
+expect_vprefill_fail_at "LQ-M5 ★vendor path 書換 (assets/) を literal pin が捕捉 (gate F は盲)" "$BASE" "$TMP/lqm5.html" "vendor script == ../assets/mermaid.min.js"
+
+# LQ-M6. ★mermaid shape: init 呼出の消失 → init arm が捕捉 (無言不描画の生成後面)
+cp "$TMP/base.html" "$TMP/lqm6.html"
+perl -0777 -i -pe 's#mermaid\.initialize\(\{#mermaid.init({#' "$TMP/lqm6.html"
+expect_vprefill_fail_at "LQ-M6 ★mermaid init 消失を init arm が捕捉 (mermaid shape)" "$BASE" "$TMP/lqm6.html" "initialize == 1"
+
+# LQ-M7. ★aside shape: ai-rationale の hidden 剥がし → 既定非表示が壊れる (P-14 面の退行)
+cp "$TMP/base.html" "$TMP/lqm7.html"
+perl -0777 -i -pe 's#class="ai-rationale" hidden data-decision=#class="ai-rationale" data-decision=#' "$TMP/lqm7.html"
+expect_vprefill_fail_at "LQ-M7 ★ai-rationale の hidden 剥がしを hidden 本数 arm が捕捉 (aside shape)" "$BASE" "$TMP/lqm7.html" "hidden 属性 == 件数"
+
+# LQ-M8. ★aside shape: ai-rationale 本文の改竄 → 値列 arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm8.html"
+perl -0777 -i -pe 's#ADR-0038 で新設 \(Always tier\)。#ADR-0038 で撤回 (Always tier)。#' "$TMP/lqm8.html"
+expect_vprefill_fail_at "LQ-M8 ★ai-rationale 本文の改竄を値列 arm が捕捉 (aside shape)" "$BASE" "$TMP/lqm8.html" "改訂来歴形 (adr,date,by,text)"
+
+# LQ-M9. ★aside shape: rationale_note (補足 rationale) の脱落 → 件数 arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm9.html"
+perl -0777 -i -pe 's#<aside data-component="principle-ai-rationale" class="ai-rationale" hidden data-rationale-for=.*?</aside>\n##s' "$TMP/lqm9.html"
+expect_vprefill_fail_at "LQ-M9 ★rationale_note の脱落を件数 arm が捕捉 (aside shape)" "$BASE" "$TMP/lqm9.html" "件数 == Σ(amended_by.rationale)"
+
+# LQ-M10. ★sections 双方向 (a): contract に節があるのに HTML に無い → 節 id 列 arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm10.html"
+perl -0777 -i -pe 's#<section id="s4-folio-plugin" class="informative">#<section class="informative">#' "$TMP/lqm10.html"
+expect_vprefill_fail_at "LQ-M10 ★contract に節があるのに HTML に無い (脱落) を節 id 列 arm が捕捉" "$BASE" "$TMP/lqm10.html" "節 id 列 == contract"
+
+# LQ-M11. ★sections 双方向 (b) / E-1: HTML に契約外の節がある → 節 id 列 arm + 余剰 id arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm11.html"
+perl -0777 -i -pe 's#</body>#<section id="s9-forged" class="informative"></section></body>#' "$TMP/lqm11.html"
+expect_vprefill_fail_at "LQ-M11 ★HTML に契約外の節がある (捏造/E-1) を節 id 列 arm が捕捉" "$BASE" "$TMP/lqm11.html" "節 id 列 == contract"
+
+# LQ-M12. ★E-2: 宣言済 section anchor の重複注入 (同一 id 2 個 = 解決先が非決定) → 件数 arm が捕捉
+cp "$TMP/base.html" "$TMP/lqm12.html"
+perl -0777 -i -pe 's#</body>#<section id="s6-amendment"></section></body>#' "$TMP/lqm12.html"
+expect_vprefill_fail_at "LQ-M12 ★宣言済 section anchor の重複注入 (E-2) を件数 arm が捕捉" "$BASE" "$TMP/lqm12.html" "件数 == |principles|+|sections|+|subsections|"
+
+# LQ-M13. ★捏造 shape (cell-quality round-1 で ★実際に混入していた欠陥の回帰 pin): 自由文 field を yq の
+#         @tsv 経由で取ると、 値に " を含む field が CSV quote される (全体を "…" で括り内部の " を "" へ倍化)。
+#         この形の捏造は「contract 由来の期待 対 生成物」の ★相対突合では両側同時退行で vacuous PASS するため、
+#         凍結 census (canonical 由来の literal) を anchor にした ★外側 oracle だけが捕捉できる。
+#         実弾は生成物側へ CSV quote 形を注入して撃つ (assembler copy への regex 注入は記法変化で空撃ちしやすい)。
+cp "$TMP/base.html" "$TMP/lqm13.html"
+perl -0777 -i -pe '
+  s{(<aside data-component="principle-ai-rationale"[^>]*data-adr="ADR-0021"[^>]*>)(ADR-0021 \(constitution X4[^<]*?)(</aside>)}
+   {my ($o,$t,$c)=($1,$2,$3); $t =~ s/&quot;/&quot;&quot;/g; "$o&quot;$t&quot;$c"}se
+' "$TMP/lqm13.html"
+if diff -q "$TMP/base.html" "$TMP/lqm13.html" >/dev/null; then
+  ng "LQ-M13 setup ★CSV quote 捏造の注入が空撃ち (aside emit の記法変化の疑い)"
+else
+  expect_vprefill_fail_at "LQ-M13 ★@tsv 由来の CSV quote 捏造を凍結 census の外側 oracle が捕捉" "$BASE" "$TMP/lqm13.html" "凍結 census の本文が生成物へ literal 出現"
+fi
+
+# LQ-M14. ★relocation shape (a): raw blob を別の節へ移す → 件数も集合も不変のまま所属だけが壊れる。
+cp "$TMP/base.html" "$TMP/lqm14.html"
+perl -0777 -i -pe '
+  my $b = "<p>folio は Claude Code plugin として配布される";
+  if (m{(\Q$b\E.*?</p>\n)}s) { my $blob=$1; s{\Q$blob\E}{}s; s{(<section id="s7-citations")}{$blob$1}s; }
+' "$TMP/lqm14.html"
+expect_vprefill_fail_at "LQ-M14 ★raw blob の節またぎ relocation を容器等号 arm が捕捉" "$BASE" "$TMP/lqm14.html" "rich 容器 inner == contract blocks の連結"
+
+# LQ-M15. ★relocation shape (b): ai-rationale を別の原則へ移す → 件数・値列は不変のまま帰属だけが壊れる。
+cp "$TMP/base.html" "$TMP/lqm15.html"
+perl -0777 -i -pe '
+  if (m{(<aside data-component="principle-ai-rationale"[^>]*data-adr="ADR-0038"[^>]*>.*?</aside>\n)}s) {
+    my $a=$1; s{\Q$a\E}{}s; s{(<div data-component="principle-row" class="tier-never">)}{$a$1}s;
+  }
+' "$TMP/lqm15.html"
+expect_vprefill_fail_at "LQ-M15 ★ai-rationale の原則またぎ relocation を所属原則 arm が捕捉" "$BASE" "$TMP/lqm15.html" "所属原則 == contract 宣言原則"
+
+# LQ-A16. ★chapters_key の allowlist 外 (数詞 arm が守らないキーを指す = 検証されない件数主張の逃げ道) → abort
+cp "$BASE" "$TMP/lqa16.yaml"
+yq -i '.chapters.forged = "存在しない 99 原則" | (.sections[] | select(.anchor=="s6-amendment")).chapters_key = "forged"' "$TMP/lqa16.yaml"
+expect_abort "LQ-A16 ★chapters_key の allowlist 外 (検証されない件数主張) を abort" "$TMP/lqa16.yaml" "allowlist 外"
+
+# LQ-A17. ★section tint の空文字 (word-split で消えて allowlist を素通りしていた shape) → abort
+cp "$BASE" "$TMP/lqa17.yaml"; yq -i '.sections[0].tint = ""' "$TMP/lqa17.yaml"
+expect_abort "LQ-A17 ★section tint の空文字を abort (word-split 素通りの封鎖)" "$TMP/lqa17.yaml" "未知/空の section tint"
+
+# LQ-A18. ★section class の空文字 → abort (同上・class は属性欠落の生成物を生む)
+cp "$BASE" "$TMP/lqa18.yaml"; yq -i '.sections[0].class = ""' "$TMP/lqa18.yaml"
+expect_abort "LQ-A18 ★section class の空文字を abort" "$TMP/lqa18.yaml" "未知/空の section class"
+
+# ---- (iii) 忠実抽出の機械証明 (凍結 census) の aliveness ----
+# ---- ★admin gate errata-1 E3: section-body の内容占有・順序の実弾 (旧 per-blob echo が素通した 3 形) ----
+
+# LQ-M16. ★契約外の捏造 p を節の rich 容器へ追加 → 容器等号 arm が捕捉 (li だけは本数 arm が塞いでいたが
+#         p / aside / 素テキストは無防備だった = admin 実弾 (a))。
+cp "$TMP/base.html" "$TMP/lqm16.html"
+perl -0777 -i -pe 's{(<p>folio は Claude Code plugin として配布される)}{<p>契約に無い捏造段落。</p>\n$1}s' "$TMP/lqm16.html"
+expect_vprefill_fail_at "LQ-M16 ★契約外 p の捏造追加を容器等号 arm が捕捉 (E3-a)" "$BASE" "$TMP/lqm16.html" "rich 容器 inner == contract blocks の連結"
+
+# LQ-M17. ★preamble を footer 直前へ移設 → 位置 arm が捕捉 (容器数と出現回数は不変 = admin 実弾 (b))。
+cp "$TMP/base.html" "$TMP/lqm17.html"
+perl -0777 -i -pe '
+  if (m{(<div data-component="constitution-preamble">\n.*?</div>\n)}s) {
+    my $pre=$1; s{\Q$pre\E}{}s; s{(<footer)}{$pre$1}s;
+  }' "$TMP/lqm17.html"
+expect_vprefill_fail_at "LQ-M17 ★preamble の位置移設を位置 arm が捕捉 (E3-b)" "$BASE" "$TMP/lqm17.html" "最初の節より前に出現"
+
+# LQ-M18. ★§0 の blocks emit 順を入替 (0,2,1,3) → 容器等号 arm が捕捉 (出現 1 + 所属節では不変 = admin 実弾 (c))。
+cp "$TMP/base.html" "$TMP/lqm18.html"
+perl -0777 -i -pe '
+  if (m{(<aside class="reader-persona" data-persona="Developer">.*?</aside>\n)(<aside class="reader-persona" data-persona="AI Agent">.*?</aside>\n)}s) {
+    my ($d,$a)=($1,$2); s{\Q$d$a\E}{$a$d}s;
+  }' "$TMP/lqm18.html"
+expect_vprefill_fail_at "LQ-M18 ★節内 blocks の順序入替を容器等号 arm が捕捉 (E3-c)" "$BASE" "$TMP/lqm18.html" "rich 容器 inner == contract blocks の連結"
+
+# ---- ★admin gate errata-1 E1(2): 凍結 census の byte 包含 arm を ★型ごと に撃つ per-shape MK ----
+# ★1 shape の実弾は他 shape の穴を証明しない (LQ-C3 は SECTION 型のみを撃っていた)。 残り 6 型を個別に撃つ。
+lq_census_shape() { # $1=label $2=sed 式 (census を型ごとに mutate)
+  local lbl="$1" sedexpr="$2" f="$TMP/census-$3.txt"
+  sed -E "$sedexpr" "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" > "$f"
+  if diff -q "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" "$f" >/dev/null; then
+    ng "$lbl setup ★census mutate が空撃ち"; return
+  fi
+  sed -E "s#(FROZEN_CENSUS=\")[^\"]*(\")#\1$f\2#" "$VER" > "$PIN_VER"
+  local out rc; out="$(bash "$PIN_VER" "$BASE" "$TMP/base.html" 2>&1)"; rc=$?
+  if [[ $rc -ne 0 ]] && printf '%s\n' "$out" | grep -F 'canonical に byte 包含' | grep -qE '^ *\[FAIL\]'; then
+    ok "$lbl"
+  else
+    ng "$lbl ★byte 包含 arm が当該型に空撃ち (rc=$rc)"
+  fi
+  rm -f "$PIN_VER"
+}
+lq_census_shape "LQ-C5 ★BLOB 型の census mutate を byte 包含 arm が捕捉"       's#^(BLOB\t[^\t]*\t[^\t]*\t).*$#\1<p>canonical に無い捏造 blob</p>#'      blob
+lq_census_shape "LQ-C6 ★MERMAID 型の census mutate を byte 包含 arm が捕捉"    's#^(MERMAID\t[^\t]*\t[^\t]*\t01\t).*$#\1graph FORGED#'                    mermaid
+lq_census_shape "LQ-C7 ★MCAPTION 型の census mutate を byte 包含 arm が捕捉"   's#^(MCAPTION\t[^\t]*\t[^\t]*\t).*$#\1図 99. canonical に無い caption#'     mcaption
+lq_census_shape "LQ-C8 ★RATIONALE 型の census mutate を byte 包含 arm が捕捉"  's#^(RATIONALE\t[^\t]*\t).*$#\1canonical に無い rationale 本文#'             rationale
+lq_census_shape "LQ-C9 ★PREAMBLE 型の census mutate を byte 包含 arm が捕捉"   's#^(PREAMBLE\t).*$#\1<aside class="informative"><p>canonical に無い前文</p></aside>#' preamble
+lq_census_shape "LQ-C10 ★SUBSECTION 型の census mutate を byte 包含 arm が捕捉" 's#^(SUBSECTION\t1\t[^\t]*\t).*$#\1§2.1 canonical に無い小節見出し#'        subsection
+
+
+
+# LQ-C1. 凍結 census 不在 → fail-closed (silent skip の封鎖)
+sed -E "s#(FROZEN_CENSUS=\")[^\"]*(\")#\1/nonexistent/constitution.frozen-census.txt\2#" "$VER" > "$PIN_VER"
+if diff -q "$VER" "$PIN_VER" >/dev/null; then
+  ng "LQ-C1 setup ★census path 差し替えが空撃ち"
+else
+  c1_out="$(bash "$PIN_VER" "$BASE" "$TMP/base.html" 2>&1)"; c1_rc=$?
+  if [[ $c1_rc -ne 0 ]] && printf '%s\n' "$c1_out" | grep -F 'frozen census 不在' | grep -qE '^ *\[FAIL\]'; then
+    ok "LQ-C1 ★凍結 census 不在を fail-closed (照合不能を素通さない)"
+  else
+    ng "LQ-C1 ★census 不在が fail-closed でない (rc=$c1_rc)"
+  fi
+fi
+rm -f "$PIN_VER"
+
+# LQ-C2. 凍結 census の値 mutate → contract 導出タプル arm が [FAIL] (census を実消費している証明)
+sed -E 's#^BLOB\ts7-citations#BLOB\ts7-FORGED#' "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" > "$TMP/lqc2.census.txt"
+sed -E "s#(FROZEN_CENSUS=\")[^\"]*(\")#\1$TMP/lqc2.census.txt\2#" "$VER" > "$PIN_VER"
+if diff -q "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" "$TMP/lqc2.census.txt" >/dev/null; then
+  ng "LQ-C2 setup ★census mutate が空撃ち"
+else
+  c2_out="$(bash "$PIN_VER" "$BASE" "$TMP/base.html" 2>&1)"; c2_rc=$?
+  if [[ $c2_rc -ne 0 ]] && printf '%s\n' "$c2_out" | grep -F 'contract 導出タプル == 凍結 literal' | grep -qE '^ *\[FAIL\]'; then
+    ok "LQ-C2 ★凍結 census の値 mutate で contract 突合 arm が [FAIL] (census 実消費の証明)"
+  else
+    ng "LQ-C2 ★census mutate を検出できない (rc=$c2_rc = 空撃ち arm の疑い)"
+  fi
+fi
+rm -f "$PIN_VER"
+
+# LQ-C3. census に canonical へ実在しない値を入れる → byte 包含 arm が [FAIL] (canonical 側 oracle の aliveness)
+sed -E 's#^(SECTION\t1\t[^\t]*\t[^\t]*\t).*$#\1§0. FORGED HEADING#' "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" > "$TMP/lqc3.census.txt"
+sed -E "s#(FROZEN_CENSUS=\")[^\"]*(\")#\1$TMP/lqc3.census.txt\2#" "$VER" > "$PIN_VER"
+if diff -q "$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt" "$TMP/lqc3.census.txt" >/dev/null; then
+  ng "LQ-C3 setup ★census mutate が空撃ち"
+else
+  c3_out="$(bash "$PIN_VER" "$BASE" "$TMP/base.html" 2>&1)"; c3_rc=$?
+  if [[ $c3_rc -ne 0 ]] && printf '%s\n' "$c3_out" | grep -F 'canonical に byte 包含' | grep -qE '^ *\[FAIL\]'; then
+    ok "LQ-C3 ★canonical に無い値を byte 包含 arm が [FAIL] (canonical 側 oracle の aliveness)"
+  else
+    ng "LQ-C3 ★canonical 包含 arm が空撃ち (rc=$c3_rc)"
+  fi
+fi
+rm -f "$PIN_VER"
+
+# LQ-C4. contract 側 rich blob の drift → census 突合 arm が捕捉 (contract 単独 drift の封鎖)
+f="$(bd_canon lqc4)"
+yq -i '.sections[3].blocks[0].html = "<p>folio は Layer 0 と Layer 1 の 2 層を採用する。</p>"' "$f"
+if bash "$ASM" "$f" "$TMP/lqc4.html" >/dev/null 2>&1; then
+  c4_out="$(bash "$VER" "$f" "$TMP/lqc4.html" 2>&1)"; c4_rc=$?
+  if [[ $c4_rc -ne 0 ]] && printf '%s\n' "$c4_out" | grep -F 'contract 導出タプル == 凍結 literal' | grep -qE '^ *\[FAIL\]'; then
+    ok "LQ-C4 ★contract 側 rich blob の drift を凍結 census が捕捉"
+  else
+    ng "LQ-C4 ★contract 単独 drift を検出できない (rc=$c4_rc)"
+  fi
+else
+  ng "LQ-C4 setup (drift contract の assemble 失敗)"
+fi
+
+
 echo "--- repro-build conformance (verify_repro_build・folio-3d23 B3): (a)EOF追記→BYTE-DIFF (b)時刻のみ差→[OK] (c)入力欠落→exit2 (d)非ts footer改竄→BYTE-DIFF ---"
 # ===== census-count blocking arm conformance seed (folio-jmmk): 来歴部品件数の source DOM 静的照合 =====
 # 空 data-component タグ注入で件数 +1 (excess) にし census-count arm が [FAIL] census-count: principle-amendment-history で

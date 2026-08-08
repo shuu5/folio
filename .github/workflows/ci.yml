@@ -276,7 +276,10 @@ jobs:
       #   正当に PASS する (SKIP_REPRO で通すのは false-GREEN)。 SKIP_RENDER=1 は必須 (verify job に uv/playwright が
       #   無く render_gate_f が crash する・render は下記 gate F sweep job が別途被覆する)。
       # ★soft 化 (continue-on-error) / 後追い配線は ★却下 (latent-red-rot = fail-open)。
-      - name: "政策A floor 実走 — verify-principle (contract → assemble → inject → verify: head JSON-LD / head meta / p-N anchor)"
+      # ★folio-lq12 追記: 本 step は ★忠実抽出の機械証明 (S4(B) = spec-origin/constitution.frozen-census.txt の
+      #   凍結 literal 突合 + canonical への byte 包含) の ★CI 配線点でもある。 census arm は verify-principle.sh の
+      #   内部 arm ゆえ本 step の実走がそのまま配線であり、 別 step を足す必要はない (soft 化は不可・下記のとおり)。
+      - name: "政策A floor 実走 — verify-principle (contract → assemble → inject → verify: head JSON-LD / head meta / anchor 3 系 / 節骨格 / 凍結 census)"
         run: |
           gen=.claude-plugin/design-system/generator
           asm="$RUNNER_TEMP/principle-asm.html"; filled="$RUNNER_TEMP/principle-filled.html"
@@ -371,12 +374,13 @@ jobs:
           bash "$gen/inject-prose.sh" "$gen/prose/ec-checkout.prose.yaml"   "$RUNNER_TEMP/srs-asm.html" "$RUNNER_TEMP/srs-filled.html"
           python3 "$gen/render-gate-srs.py" "$RUNNER_TEMP/srs-filled.html"
 
-      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 13 (risk+changelog+roadmap+srs-verification 追加後) / B 段 = folio-jyfh mermaid 6・user 裁定
+      # ---- gate F 全 instance sweep (A 段 = folio-vuf 非 mermaid 12 / B 段 = folio-jyfh mermaid 7・★folio-lq12 で
+      #      principle が A→B へ移動 (節骨格の land で図 2 枚を持つ mermaid instance になったため。 旧注記の 13/6 は実体と不一致だった)・user 裁定
       #      2026-07-08: 全 contract 掃引)。 19 artifact (srs-clinic は上の ec と対で SRS 全 instance を被覆) を
       #      build → render-gate-srs.py (doc-type 非依存 detector) で light/dark × 3 viewport の low-contrast /
       #      horizontal-overflow / component-overlap を blocking 捕捉。 srs.css 共有トークンの contrast 退行
       #      (dark 側の実欠陥 4 点を本 gate 初回実走が検出・land 済) を全 pack 面で再発防止する。
-      #      mermaid instance (arch / datamodel / spec×3 / clinic-vision) は renderer が SVG settle polling
+      #      mermaid instance (arch / datamodel / spec×3 / clinic-vision / ★principle) は renderer が SVG settle polling
       #      (期待図数へ到達するまで最大 15s/session・不足 = mermaid-shortfall FAIL・fail-closed) で非同期
       #      render を待ってから検査する (folio-jyfh B 段)。
       #      撤退条件: 本 step 合計が 300s を超えたら並列化/分割を再検討 (user 裁定の付帯条件)。 ----
@@ -409,7 +413,6 @@ jobs:
           gate srs-clinic      out    srs       clinic-appointment.srs.yaml         clinic-appointment.prose.yaml
           gate adr             out    adr       clinic-double-booking.adr.yaml      clinic-double-booking.adr.prose.yaml
           gate research        out    research  clinic-double-booking.research.yaml clinic-double-booking.research.prose.yaml
-          gate principle       out    principle folio-constitution.principle.yaml   folio-constitution.principle.prose.yaml
           gate testcases       out    testcases clinic-appointment.testcases.yaml   clinic-appointment.testcases.prose.yaml
           gate interface       out    interface clinic-appointment.interface.yaml   clinic-appointment.interface.prose.yaml
           gate glossary-clinic stdout glossary  clinic-appointment.glossary.yaml    clinic-glossary.prose.yaml
@@ -419,7 +422,9 @@ jobs:
           gate changelog       out    changelog clinic-changelog.changelog.yaml     clinic-changelog.changelog.prose.yaml
           gate roadmap         out    roadmap   clinic-roadmap.roadmap.yaml         clinic-roadmap.roadmap.prose.yaml
           gate srs-verification out   srs-verification folio-srs-verification.spec.yaml folio-srs-verification.prose.yaml
-          # ---- B 段: mermaid 6 instance (SVG settle polling は renderer 側・folio-jyfh) ----
+          # ---- B 段: mermaid 7 instance (SVG settle polling は renderer 側・folio-jyfh) ----
+          # ★folio-lq12: principle は canonical の図 2 枚 (§1 図 1 / §2 図 2) を運ぶようになったため A 段から移動。
+          gate principle       out    principle folio-constitution.principle.yaml   folio-constitution.principle.prose.yaml
           gate arch            out    arch         clinic-architecture.arch.yaml     clinic-architecture.arch.prose.yaml
           gate datamodel       out    datamodel    clinic-appointment.datamodel.yaml clinic-appointment.datamodel.prose.yaml
           gate rules           out    spec         folio-rules.spec.yaml             folio-rules.prose.yaml

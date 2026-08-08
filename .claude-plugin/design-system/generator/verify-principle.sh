@@ -48,6 +48,13 @@ declare -A TIER_CLASS=( [Always]="tier-always" [Ask-first]="tier-askfirst" [Neve
 # baseline golden パス (contract basename 由来) と decisions dir (amended_by 実在確認用)。
 BASE_NAME="$(basename "$CONTRACT")"; BASE_NAME="${BASE_NAME%.yaml}"
 BASELINE_FILE="$SCRIPT_DIR/baselines/${BASE_NAME}.golden"
+# ★folio-lq12 S4(B): 忠実抽出の機械証明で使う 凍結 census と canonical (§L / §S4(B) の両方が参照するため冒頭で定義)。
+#   ★env 上書き口を ★意図的に置かない: 既存 pack の SPEC_ORIGIN_HTML / RELATIONS_ORIGIN_HTML は snapshot の
+#   差替えを test が要求するため env 化されているが、 本 arm の canonical は ★P-10 で frozen な唯一の原本 であり、
+#   env で差し替えられる口は「別ファイルを canonical と偽って通す」bypass 経路そのものになる。 test 側は
+#   verify の copy に対する path 差替え (FROZEN_CENSUS の sed 置換・LQ-C1/C2/C3) で必要な実弾を撃てている。
+FROZEN_CENSUS="$SCRIPT_DIR/spec-origin/constitution.frozen-census.txt"
+CANONICAL_SRC="$SCRIPT_DIR/../../../design-intent/spec/constitution.html"
 DECISIONS_ABS=""
 if [[ "$(q 'has("decisions_dir")')" == "true" ]]; then
   _dd="$(q '.decisions_dir')"
@@ -112,7 +119,11 @@ chk "inbound chips == |inbound|"       "$(q '.inbound | length')"     "$(grep -c
 chk "versioning policy table == 1"     "1"                            "$(grep -c 'data-component="versioning-policy-table"' "$BODY")"
 chk "amendment procedure == 1"         "1"                            "$(grep -c 'data-component="amendment-procedure-steps"' "$BODY")"
 chk "versioning rules == |rules|"      "$(q '.versioning.rules | length')" "$(grep -c 'class="vp-bump"' "$BODY")"
-chk "amendment steps == |steps|"       "$(q '.amendment.steps | length')"  "$(grep -oE '<li>' "$BODY" | wc -l | tr -d ' ')"
+# ★folio-lq12: 「body 全体の <li> を数える」旧形は節骨格の導入で ★恒真化した (§1 核心 list 4 + §7 Citations 10 が
+#   同一文書に入り 5 → 19)。 amendment 由来の li を class="amp-step" で識別する ★class-scoped 形へ厳格化する
+#   (緩和ではなく narrowing = 他由来の li が増えても amendment の件数検査が壊れない)。 併せて「amp-step 以外の
+#   li は raw blob 由来ちょうど N 本」を下の raw blob echo arm が占有数で挟む。
+chk "amendment steps == |steps| (class-scoped)" "$(q '.amendment.steps | length')"  "$(grep -oE '<li class="amp-step">' "$BODY" | wc -l | tr -d ' ')"
 chk "glossary == |glossary|"           "$(q '.glossary | length')"    "$(grep -c 'class="grow"' "$BODY")"
 chk "approval == |approval|"           "$(q '.approval | length')"    "$(grep -c 'class="sign"' "$BODY")"
 
@@ -272,17 +283,25 @@ id_attr_lines() {
 #       <style> 433 行の中に id 様トークン 0 / head 内 <strong> 0 (= 生へ広げても余剰は 1 件も入らない)。
 #     ★repro-build は同一 assembler の再生成ゆえ assembler 側の emit 退行 (emit_principle_css = 本 cell の編集面) に
 #       構造的に盲目 (AN-H8 と同一論拠) = 生ファイル走査だけが観測面。
-exp_anchor="$(q '.principles[].id' | tr '[:upper:]' '[:lower:]' | LC_ALL=C sort)"
+# ★folio-lq12: 期待 id 集合は ★contract から決定的に導出する 3 系の和 — lc(principles[].id) 14 +
+#   sections[].anchor 8 + sections[].subsections[].anchor 3 = 25 (canonical constitution の navigable anchor 総数)。
+#   ★literal を verify に焼かない (件数も集合も contract 導出)。 ★「契約に無い id は 1 本も許さない」の強度は
+#   非減少 (集合が 3 系の和へ広がるだけで、 和の外は従来どおり 1 本も許さない = 下の余剰 0 arm が同一集合で撃つ)。
+exp_pn_anchor="$(q '.principles[].id' | tr '[:upper:]' '[:lower:]')"
+exp_sec_anchor="$(q '.sections[].anchor')"
+exp_sub_anchor="$(q '.sections[].subsections[]?.anchor')"
+exp_anchor="$(printf '%s\n%s\n%s\n' "$exp_pn_anchor" "$exp_sec_anchor" "$exp_sub_anchor" | grep . | LC_ALL=C sort)"
+exp_anchor_n="$(( $(q '.principles | length') + $(q '.sections | length') + $(q '[.sections[].subsections[]?] | length') ))"
 act_anchor="$(id_attr_values < "$HTML" | LC_ALL=C sort)"
-set_eq "p-N anchor: 生成物の厳密 id 集合 == lc(principles[].id)" "$exp_anchor" "$act_anchor"
-chk "p-N anchor: 件数 == |principles| (重複 0)" "$(q '.principles | length')" \
+set_eq "anchor: 生成物の厳密 id 集合 == lc(principles.id) ∪ section ∪ subsection" "$exp_anchor" "$act_anchor"
+chk "anchor: 件数 == |principles|+|sections|+|subsections| (重複 0)" "$exp_anchor_n" \
   "$(id_attr_values < "$HTML" | grep -c .)"
 chk "p-N anchor: contract .anchor == lc(.id) (contract 側 drift)" \
   "$(q '.principles[].id' | tr '[:upper:]' '[:lower:]')" "$(q '.principles[].anchor')"
 # ★余剰 0 の最強形: body 中の *全* id 属性 (quote 構文・属性名 case 非依存) が p-N 14 個ちょうどであること。
 #   置換前は data-slot-id への substring 誤一致を lookbehind [\s"] で避けていたが、 その副作用が上記 (a)(b) の
 #   死角だった。 属性名の真の先頭を要求する形なら誤一致も死角も同時に消える。
-chk "p-N anchor: body 中の全 id 属性 == p-N のみ (余剰 id 0)" "$exp_anchor" \
+chk "anchor: body 中の全 id 属性 == 契約 3 系の和のみ (余剰 id 0)" "$exp_anchor" \
   "$(id_attr_values < "$HTML" | LC_ALL=C sort)"
 # ★canonical 形以外の quote / case で書かれた id が 0 本 (consumer 間の非対称を封鎖)。
 #   folio_anchor_exists (bin/folio:1426) は id='..' も真とするが bin/folio:2308 (objectGraph) は double-quote
@@ -326,8 +345,11 @@ id_substr_pN() { # stdin HTML → consumer 可視 literal id="p-N" / id='p-N' �
     }
   '
 }
+# ★folio-lq12: 本 arm の期待値は ★lc(principles[].id) のまま (id_substr_pN は値の形を p-N に限る述語ゆえ、
+#   節 anchor s0-… を含む和集合と突合すると恒真 FAIL になる)。 節 anchor 側の consumer 可視面は下の
+#   「接尾 id 属性 allowlist」arm (値の形に依らず属性名軸で閉じる) と 全 id census が担う。
 chk "p-N anchor: consumer 可視面 (substring) の p-N 多重集合 == lc(principles[].id)" \
-  "$exp_anchor" "$(id_substr_pN < "$HTML" | LC_ALL=C sort)"
+  "$(printf '%s\n' "$exp_pn_anchor" | LC_ALL=C sort)" "$(id_substr_pN < "$HTML" | LC_ALL=C sort)"
 # ★arm-2 (属性名軸): consumer の substring 面に現れる *接尾* id 属性 (= 属性名の真の先頭でない id= 出現) は
 #   genuine では prose slot の data-slot-id ちょうど 24 本だけであり、 それ以外は 1 本も無い (worker 実測 —
 #   base / filled とも接尾 id 属性名は data-slot-id のみ)。 ゆえ「余剰 0」を直接要求できる。
@@ -473,9 +495,314 @@ chk "p-N anchor: <style> テキスト領域中の consumer 可視 id= 出現 0 (
 #     *行内容* filter ゆえ「真の id と data-slot-id が同居する行」を丸ごと落とす (本リポの既知 gotcha)。
 #   ★errata-2 M4: 両辺とも生ファイル基準にする (片辺だけ $BODY にすると make_body が <style> 本文を空化した分だけ
 #     行番号が系統的にずれ、 比較そのものが成立しない)。
-chk "p-N anchor: id 行集合 == canonical h3 形の行集合 (essence source 行粒度)" \
-  "$(grep -nE '<h3 class="ph" id="p-[0-9]+"><strong>' "$HTML" | cut -d: -f1 | LC_ALL=C sort -n)" \
+# ★folio-lq12: id を担う shape が 3 種になった (p-N の h3 / 節の <section id class> / 小節の <section id>)。
+#   ★単一 regex へ潰さず ★per-shape の和 で束縛する (潰すと shape 間の穴 — 例: 節 anchor を h3 形で書けば
+#   通る / 小節 anchor に class を足せば通る — が復活する)。 各 shape の ★件数も contract から個別に pin する。
+pn_lines="$(grep -nE '<h3 class="ph" id="p-[0-9]+"><strong>' "$HTML" | cut -d: -f1)"
+sec_lines="$(grep -nE '<section id="[a-z0-9-]+" class="(normative|informative)">' "$HTML" | cut -d: -f1)"
+sub_lines="$(grep -nE '<section id="[a-z0-9-]+">' "$HTML" | cut -d: -f1)"
+chk "anchor shape: p-N h3 行数 == |principles|"           "$(q '.principles | length')"                  "$(printf '%s\n' "$pn_lines" | grep -c . || true)"
+chk "anchor shape: 節 <section id class> 行数 == |sections|" "$(q '.sections | length')"                    "$(printf '%s\n' "$sec_lines" | grep -c . || true)"
+chk "anchor shape: 小節 <section id> 行数 == |subsections|"  "$(q '[.sections[].subsections[]?] | length')"  "$(printf '%s\n' "$sub_lines" | grep -c . || true)"
+chk "anchor: id 行集合 == 3 shape の行集合の和 (essence source 行粒度)" \
+  "$(printf '%s\n%s\n%s\n' "$pn_lines" "$sec_lines" "$sub_lines" | grep . | LC_ALL=C sort -n)" \
   "$(id_attr_lines < "$HTML" | LC_ALL=C sort -n)"
+
+echo
+echo "--- ★folio-lq12: 節骨格 (sections) + rich 運搬 (raw blob / mermaid / ai-rationale) の floor ---"
+# tier-grouped (= assembler の emit 順 Always→Ask-first→Never) で principles の field を吐く helper。
+# ★folio-lq12: 定義位置を §4 から ★ここへ前倒し した (下の ai-rationale arm が先に使うため)。 定義内容は不変。
+tg_field() { local t; for t in Always Ask-first Never; do q '.principles[] | select(.tier=="'"$t"'") | '"$1"; done; }
+# ★assemble-principle.sh は top-level 未知キーを拒否しない (禁止は cross_doc / outcome の 2 本のみ) ため、
+#   contract に sections を足して ★emit を忘れても 無音で floor PASS しうる。 ゆえ本節は 双方向の等号
+#   (contract→HTML の脱落 / HTML→contract の捏造 を ★両方) で束縛する。 片側包含は恒真化するので使わない。
+
+# L1. 節骨格 — anchor / class / 順序 の双方向等号。
+# ★行頭/行末 anchor を ★置かない: 行末に別要素が続く形 (…"></section></body> 等) の forged section が
+#   shape arm から不可視になり、 「余剰 id census だけが撃つ」非対称を作るため (検出力は単調増加側に取る)。
+act_sec_ids="$(grep -oE '<section id="[a-z0-9-]+" class="(normative|informative)">' "$HTML" | sed -E 's#<section id="([^"]*)".*#\1#')"
+act_sec_cls="$(grep -oE '<section id="[a-z0-9-]+" class="(normative|informative)">' "$HTML" | sed -E 's#.*class="([^"]*)">#\1#')"
+act_sub_ids="$(grep -oE '<section id="[a-z0-9-]+">' "$HTML" | sed -E 's#<section id="([^"]*)">#\1#')"
+chk "sections: 節 id 列 == contract sections[].anchor (順序・双方向)" "$(q '.sections[].anchor')" "$act_sec_ids"
+chk "sections: 節 class 列 == contract sections[].class (順序・双方向)" "$(q '.sections[].class')" "$act_sec_cls"
+chk "sections: 小節 id 列 == contract subsections[].anchor (順序・双方向)" "$(q '.sections[].subsections[]?.anchor')" "$act_sub_ids"
+set_eq "sections: 節 anchor 集合 == contract (脱落 0 / 捏造 0)" \
+  "$(q '.sections[].anchor' | LC_ALL=C sort)" "$(printf '%s\n' "$act_sec_ids" | grep . | LC_ALL=C sort || true)"
+set_eq "sections: 小節 anchor 集合 == contract (脱落 0 / 捏造 0)" \
+  "$(q '.sections[].subsections[]?.anchor' | LC_ALL=C sort)" "$(printf '%s\n' "$act_sub_ids" | grep . | LC_ALL=C sort || true)"
+# ★class は closed allowlist の 2 値のみ (未知 class の節が出れば上の 3 arm が同時に FAIL する形にしてあるが、
+#   「class 属性を落とした節」は正規表現に一致せず 節 id 列が短くなる = 脱落として FAIL に倒れる)。
+chk_empty "sections: contract class allowlist 外 0 (normative|informative)" \
+  "$(q '.sections[].class' | grep -vxE 'normative|informative' | tr '\n' ' ')"
+
+# L2. 文書前文 (preamble_html) の逐語 echo (RAW emit ゆえ byte 一致・容器はちょうど 1 個)。
+chk "preamble: 容器 == 1" "1" "$(grep -c 'data-component="constitution-preamble"' "$BODY")"
+# ★位置 arm (errata-1 E3(b)): 容器数と出現回数だけでは preamble を footer 直前へ ★移設 する改竄が rc=0 で
+#   素通る (canonical では §0 の直前 = 全 section より前 にある前文ゆえ、 位置が意味の一部)。
+chk "preamble: 最初の節より前に出現 (位置・canonical と同じ前文位置)" "before" \
+  "$(perl -0777 -ne 'my $p = index($_, "data-component=\"constitution-preamble\""); my $s = index($_, "<section id=\""); print(($p >= 0 && $s >= 0 && $p < $s) ? "before" : "after-or-missing");' "$BODY")"
+chk "preamble: 逐語 blob の出現 == 1 (RAW echo)" "1" \
+  "$(V="$(q '.preamble_html')" perl -0777 -ne 'BEGIN{$v=$ENV{V}} my $c=0; $c++ while /\Q$v\E/g; print $c;' "$BODY")"
+
+# L3. raw blob の逐語 echo (各 blob が ★ちょうど 1 回・脱落も重複も FAIL)。
+# ★節ごとの ★容器等号 arm (admin gate errata-1 E3・blocking): 旧形は「各 blob が本文のどこかに 1 回出る」
+#   + 「所属節が正しい」だけを見ていたため、 (a) 契約に無い p / aside / 素テキストの ★捏造追加 (b) preamble の
+#   ★位置移設 (c) 節内 blocks の ★順序入替 が いずれも rc=0 で素通った (admin 実弾 3 本で実証)。
+#   ゆえ ★節の rich 容器の inner を「当該節 blocks を contract 順に連結した文字列」と ★byte 等号 で突合する
+#   (器序数束縛 errata-5 型)。 片側包含 (「含まれていれば OK」) は恒真化するので使わない。
+#   ★mermaid は emit 形 (figure/pre/figcaption) を contract から再構成して連結する = 生成物を参照しない。
+n_sec="$(q '.sections | length')"
+# 生成物側: 各 section-body 容器の inner を、 その容器の ★所属節 とともに取り出す。
+act_bodies="$(perl -CSD -0777 -ne '
+  my $t=$_; my $cur="";
+  while ($t =~ m{(<section id="([a-z0-9-]+)"(?: class="[^"]*")?>)|(<div data-component="constitution-section-body">\n(.*?)</div>\n)}gs) {
+    if (defined $2) { $cur=$2 }
+    elsif (defined $4) { my $inner=$4; $inner =~ s/\n/\x01/g; print "$cur\t$inner\n"; }
+  }' "$BODY")"
+sec_body_bad=""
+for ((si_=0; si_<n_sec; si_++)); do
+  anc_="$(q ".sections[$si_].anchor")"; nb_="$(q ".sections[$si_].blocks // [] | length")"
+  exp_body=""
+  for ((bi_=0; bi_<nb_; bi_++)); do
+    case "$(q ".sections[$si_].blocks[$bi_].type")" in
+      raw) exp_body+="$(q ".sections[$si_].blocks[$bi_].html")"$'\n' ;;
+      mermaid)
+        exp_body+='<figure data-component="principle-diagram" class="diagram"><pre class="mermaid">'
+        first_=1
+        while IFS= read -r l_; do [[ "$first_" -eq 1 ]] && first_=0 || exp_body+=$'\n'; exp_body+="$(esc "$l_")"; done \
+          < <(q ".sections[$si_].blocks[$bi_].source_lines[]")
+        exp_body+='</pre><figcaption>'"$(esc "$(q ".sections[$si_].blocks[$bi_].caption")")"'</figcaption></figure>'$'\n' ;;
+    esac
+  done
+  [[ -n "$exp_body" ]] || continue
+  act_body="$(awk -F'\t' -v a="$anc_" '$1==a { print $2 }' <<<"$act_bodies" | tr '\001' '\n')"
+  [[ "$(printf '%s' "$exp_body")" == "$(printf '%s' "$act_body")" ]] || sec_body_bad+=" $anc_"
+done
+chk_empty "raw blob: 各節の rich 容器 inner == contract blocks の連結 (byte 等号・脱落/重複/捏造/順序/relocation を一括終端)" "$sec_body_bad"
+chk "raw blob: 容器 (section-body) == rich を持つ節数" \
+  "$(q '[.sections[] | select([.blocks[] | select(.type=="raw" or .type=="mermaid")] | length > 0)] | length')" \
+  "$(grep -c 'data-component="constitution-section-body"' "$BODY")"
+# ★占有数 pin: amp-step 以外の <li> は ★raw blob 由来ちょうど N 本 (raw blob に含まれる <li> の総数)。
+#   これで「raw blob の外に li を捏造で足す」経路を数で挟む (§1 核心 list / §7 Citations の面)。
+chk "raw blob: 非 amp-step の li 本数 == raw blob 内 li 総数" \
+  "$(q '[.sections[].blocks[]? | select(.type=="raw") | .html] | join("")' | grep -o '<li>' | wc -l | tr -d ' ')" \
+  "$(( $(grep -o '<li' "$BODY" | wc -l | tr -d ' ') - $(grep -o '<li class="amp-step">' "$BODY" | wc -l | tr -d ' ') ))"
+
+# ★ai-rationale の所属原則 束縛 (relocation 封鎖): aside の出現行より前で最も近い p-N h3 が、 その rationale を
+#   宣言した原則であることを要求する (件数・値列は原則をまたぐ入替えに対して不変ゆえ単独では素通る)。
+owner_principle_of_line() { # $1 = 行番号 → その行より前で最も近い p-N h3 の anchor
+  awk -v L="$1" '
+    /<h3 class="ph" id="p-[0-9]+">/ {
+      if (NR < L) { match($0, /id="p-[0-9]+"/); a = substr($0, RSTART+4, RLENGTH-5) }
+    }
+    END { print a }' "$BODY"
+}
+rat_owner_bad=""
+while IFS= read -r _pid; do
+  [[ -n "$_pid" ]] || continue
+  _lc="$(printf '%s' "$_pid" | tr '[:upper:]' '[:lower:]')"
+  _n="$(q '.principles[] | select(.id=="'"$_pid"'") | (.amended_by // []) | length')"
+  for ((_k=0; _k<_n; _k++)); do
+    [[ "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'] | has("rationale")')" == "true" ]] || continue
+    _t="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'].rationale')")"
+    _ln="$(grep -nF -- ">${_t}</aside>" "$BODY" | head -1 | cut -d: -f1)"
+    _own="$(owner_principle_of_line "${_ln:-0}")"
+    [[ "$_own" == "$_lc" ]] || rat_owner_bad+=" ${_pid}→${_own:-<なし>}"
+  done
+  if [[ "$(q '.principles[] | select(.id=="'"$_pid"'") | has("rationale_note")')" == "true" ]]; then
+    _t="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .rationale_note.text')")"
+    _ln="$(grep -nF -- ">${_t}</aside>" "$BODY" | head -1 | cut -d: -f1)"
+    _own="$(owner_principle_of_line "${_ln:-0}")"
+    [[ "$_own" == "$_lc" ]] || rat_owner_bad+=" ${_pid}(note)→${_own:-<なし>}"
+  fi
+done < <(tg_field '.id')
+chk_empty "ai-rationale: 各 aside の所属原則 == contract 宣言原則 (relocation 封鎖)" "$rat_owner_bad"
+
+# L4. mermaid (typed block) — 件数 / DSL round-trip / figcaption / vendor / init。
+n_mer="$(q '[.sections[]?.blocks[]? | select(.type=="mermaid")] | length')"
+chk "mermaid: figure 数 == |mermaid blocks|" "$n_mer" "$(grep -c 'data-component="principle-diagram"' "$BODY")"
+chk "mermaid: pre.mermaid 数 == |mermaid blocks|" "$n_mer" "$(grep -c '<pre class="mermaid">' "$BODY")"
+exp_mer=""; exp_mcap=""
+for ((si_=0; si_<n_sec; si_++)); do
+  nb_="$(q ".sections[$si_].blocks // [] | length")"
+  for ((bi_=0; bi_<nb_; bi_++)); do
+    [[ "$(q ".sections[$si_].blocks[$bi_].type")" == "mermaid" ]] || continue
+    while IFS= read -r l_; do exp_mer+="$(esc "$l_")"$'\n'; done < <(q ".sections[$si_].blocks[$bi_].source_lines[]")
+    exp_mer+='@@@'$'\n'
+    exp_mcap+="$(esc "$(q ".sections[$si_].blocks[$bi_].caption")")"$'\n'
+  done
+done
+# ★両辺とも末尾改行を落として比較する ($( ) は末尾改行を剥がすため、 期待側だけ生の変数を渡すと恒真 FAIL)。
+chk "mermaid: DSL round-trip == esc(source_lines) (図ごと・順序)" "$(printf '%s' "$exp_mer")" \
+  "$(perl -CSD -0777 -ne 'while (m{<pre class="mermaid">(.*?)</pre>}gs){ print "$1\n\@\@\@\n"; }' "$BODY")"
+chk "mermaid: figcaption 列 == esc(caption) (順序)" "$(printf '%s' "$exp_mcap")" \
+  "$(perl -CSD -0777 -ne 'while (m{<figure data-component="principle-diagram" class="diagram">.*?<figcaption>(.*?)</figcaption></figure>}gs){ print "$1\n"; }' "$BODY")"
+# ★vendor 参照 path の literal pin (canonical constitution.html:24 と同形の ../assets/)。
+#   ★gate F は HTML の親 dir を配信 root にするため assets/ と ../assets/ を区別できない = gate F green を
+#     本 path の正しさの根拠に ★引用しない。 ゆえ静的 literal をここで直接 pin する。
+chk "mermaid: vendor script == ../assets/mermaid.min.js (図>0 のとき 1 本)" \
+  "$([[ "$n_mer" -gt 0 ]] && echo 1 || echo 0)" \
+  "$(grep -cF '<script src="../assets/mermaid.min.js" defer></script>' "$HTML")"
+chk "mermaid: vendor script 総数 == 期待 (assets/ 形などの別 path 0 本)" \
+  "$([[ "$n_mer" -gt 0 ]] && echo 1 || echo 0)" \
+  "$(grep -cE '<script src="[^"]*mermaid[^"]*"' "$HTML")"
+chk "mermaid: initialize == 1 (図>0 のとき・図ゼロなら 0)" \
+  "$([[ "$n_mer" -gt 0 ]] && echo 1 || echo 0)" "$(grep -c 'mermaid.initialize({' "$HTML")"
+
+# L5. ai-rationale (canonical の <aside class="ai-rationale" hidden …> 相当) — 件数 / 既定非表示 / 値。
+n_rat="$(( $(q '[.principles[].amended_by[]? | select(has("rationale"))] | length') + $(q '[.principles[] | select(has("rationale_note"))] | length') ))"
+chk "ai-rationale: 件数 == Σ(amended_by.rationale) + |rationale_note|" "$n_rat" \
+  "$(grep -c 'data-component="principle-ai-rationale"' "$BODY")"
+# ★hidden 属性 == 件数 (生成物は common.css を link しないため、 既定非表示は ★hidden 属性の UA 既定に依存する。
+#   hidden を落とすと rationale が全て可視化して人間層の読書体験が壊れる = P-14 面の退行ゆえ本数で pin する)。
+chk "ai-rationale: hidden 属性 == 件数 (既定非表示・可視化退行の封鎖)" "$n_rat" \
+  "$(grep -c 'data-component="principle-ai-rationale" class="ai-rationale" hidden ' "$BODY")"
+# ★期待値を ★@tsv で作らない (cell-quality round-1 confirmed): yq の @tsv は値に " を含む field を CSV quote
+#   する (全体を "…" で括り内部の " を "" へ倍化) ため、 P-2 の rationale が 6 文字の捏造つきで期待値にも
+#   実測値にも同時に入り ★両側同時退行で vacuous PASS していた。 index 指定の単値取得で両側とも素の値を取る。
+exp_rat=""
+while IFS= read -r _pid; do
+  [[ -n "$_pid" ]] || continue
+  _n="$(q '.principles[] | select(.id=="'"$_pid"'") | (.amended_by // []) | length')"
+  for ((_k=0; _k<_n; _k++)); do
+    [[ "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'] | has("rationale")')" == "true" ]] || continue
+    exp_rat+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'].adr')")"$'\t'
+    exp_rat+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'].date')")"$'\t'
+    exp_rat+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'].approved_by')")"$'\t'
+    exp_rat+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .amended_by['"$_k"'].rationale')")"$'\n'
+  done
+done < <(tg_field '.id')
+chk "ai-rationale: 改訂来歴形 (adr,date,by,text) == contract (tier順・@tsv 非経由)" \
+  "$(printf '%s' "$exp_rat")" \
+  "$(perl -CSD -0777 -ne 'while (/<aside data-component="principle-ai-rationale" class="ai-rationale" hidden data-decision="([^"]*)" data-adr="([^"]*)" data-decision-by="([^"]*)">(.*?)<\/aside>/gs){ print "$2\t$1\t$3\t$4\n"; }' "$BODY")"
+exp_rnote=""
+while IFS= read -r _pid; do
+  [[ -n "$_pid" ]] || continue
+  [[ "$(q '.principles[] | select(.id=="'"$_pid"'") | has("rationale_note")')" == "true" ]] || continue
+  exp_rnote+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .rationale_note.for')")"$'\t'
+  exp_rnote+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .rationale_note.decided')")"$'\t'
+  exp_rnote+="$(esc "$(q '.principles[] | select(.id=="'"$_pid"'") | .rationale_note.text')")"$'\n'
+done < <(tg_field '.id')
+chk "ai-rationale: 補足形 (for,decided,text) == contract rationale_note (tier順・@tsv 非経由)" \
+  "$(printf '%s' "$exp_rnote")" \
+  "$(perl -CSD -0777 -ne 'while (/<aside data-component="principle-ai-rationale" class="ai-rationale" hidden data-rationale-for="([^"]*)" data-decided="([^"]*)">(.*?)<\/aside>/gs){ print "$1\t$2\t$3\n"; }' "$BODY")"
+# ★独立 oracle (両側同時退行の封鎖): 上の 2 arm は「contract 由来の期待」対「生成物」の相対突合ゆえ、 抽出経路が
+#   両側で同時に壊れると vacuous PASS しうる (実際 @tsv 経路で起きた)。 ★凍結 census (canonical 由来の literal)
+#   の RATIONALE 行の値が、 生成物の aside 本文へ esc しただけの形で ★literal 出現することを直接要求する。
+if [[ -f "$FROZEN_CENSUS" ]]; then
+  rat_miss=""
+  while IFS=$'\t' read -r _t _rid _rtext; do
+    [[ "$_t" == "RATIONALE" ]] || continue
+    grep -qF ">$(esc "$_rtext")</aside>" "$BODY" || rat_miss+=" $_rid"
+  done < <(grep -P '^RATIONALE\t' "$FROZEN_CENSUS")
+  chk_empty "ai-rationale: 凍結 census の本文が生成物へ literal 出現 (相対突合の外側 oracle)" "$rat_miss"
+fi
+
+echo
+echo "--- ★folio-lq12 S4(B): 忠実抽出の機械証明 (凍結 census × canonical byte 包含) ---"
+# ★oracle ゼロの是正。 constitution 用 extractor は存在せず (extract-* 5 本は他 spec 用・かつ header に
+#   「人間レビュー前提 DRAFT」と明記)、 canonical 突合の byte gate (verify-canonical-drift.sh 等) は flip 後
+#   専用ゆえ本 pack では起動しない。 census-guard.sh も KNOWN_SPECS 固定で principle contract を受けない。
+#   ゆえ admin 裁定で ★(B) frozen census + byte 包含 arm を採る (ADR-0053 policy A・self-spec.frozen-census.txt 先例同型)。
+# ★2 本の独立 oracle:
+#   (1) 凍結 literal (spec-origin/constitution.frozen-census.txt) ⟷ contract 導出タプルの逐語一致
+#       — contract 側の手書き drift を捕捉する。 census は contract からも生成物からも導出しない。
+#   (2) 凍結 literal の各逐語値が ★canonical に byte 包含されること — canonical 側の drift を捕捉する。
+#   ★正規化は 改行と各行の先頭空白の除去のみ (語句正規化を禁止)。
+# (FROZEN_CENSUS / CANONICAL_SRC の定義は本 file 冒頭へ前倒し済 — §L の rationale literal arm が先に使うため。)
+# contract から census と ★同形・同順 のタプル列を導出する (census 側の並びが SSoT)。
+census_from_contract() {
+  local i j nb nsub anc
+  printf 'COUNT\tsection\t%s\n'    "$(q '.sections | length')"
+  printf 'COUNT\tsubsection\t%s\n' "$(q '[.sections[].subsections[]?] | length')"
+  printf 'COUNT\tblob\t%s\n'       "$(q '[.sections[].blocks[]? | select(.type=="raw")] | length')"
+  printf 'COUNT\tmermaid\t%s\n'    "$(q '[.sections[].blocks[]? | select(.type=="mermaid")] | length')"
+  printf 'COUNT\trationale\t%s\n'  "$(( $(q '[.principles[].amended_by[]? | select(has("rationale"))] | length') + $(q '[.principles[] | select(has("rationale_note"))] | length') ))"
+  printf 'VERSION\t%s\n' "$(q '.meta.version')"
+  printf 'STATUS\t%s\n'  "$(q '.meta.status')"
+  printf 'PREAMBLE\t%s\n' "$(q '.preamble_html')"
+  local n; n="$(q '.sections | length')"
+  for ((i=0; i<n; i++)); do
+    printf 'SECTION\t%s\t%s\t%s\t%s\n' "$((i+1))" "$(q ".sections[$i].anchor")" "$(q ".sections[$i].class")" "$(q ".sections[$i].heading")"
+  done
+  local sn=0
+  for ((i=0; i<n; i++)); do
+    nsub="$(q ".sections[$i].subsections // [] | length")"
+    for ((j=0; j<nsub; j++)); do
+      sn=$((sn+1)); printf 'SUBSECTION\t%s\t%s\t%s\n' "$sn" "$(q ".sections[$i].subsections[$j].anchor")" "$(q ".sections[$i].subsections[$j].heading")"
+    done
+  done
+  for ((i=0; i<n; i++)); do
+    anc="$(q ".sections[$i].anchor")"; nb="$(q ".sections[$i].blocks // [] | length")"
+    for ((j=0; j<nb; j++)); do
+      case "$(q ".sections[$i].blocks[$j].type")" in
+        raw) printf 'BLOB\t%s\t%s\t%s\n' "$anc" "$j" "$(q ".sections[$i].blocks[$j].html")" ;;
+        mermaid)
+          printf 'MCAPTION\t%s\t%s\t%s\n' "$anc" "$j" "$(q ".sections[$i].blocks[$j].caption")"
+          local li=0 l
+          while IFS= read -r l; do li=$((li+1)); printf 'MERMAID\t%s\t%s\t%02d\t%s\n' "$anc" "$j" "$li" "$l"; done < <(q ".sections[$i].blocks[$j].source_lines[]")
+          ;;
+      esac
+    done
+  done
+  q '.principles[] | .id as $pid | (.amended_by // [])[] | select(has("rationale")) | "RATIONALE\t" + $pid + "\t" + .rationale'
+  q '.principles[] | select(has("rationale_note")) | "RATIONALE\t" + .id + "\t" + .rationale_note.text'
+}
+if [[ ! -f "$FROZEN_CENSUS" ]]; then
+  printf '  [FAIL] %-'"$CHKW"'s %s\n' "frozen census 不在 (忠実抽出の機械証明が無被覆)" "$FROZEN_CENSUS"; fail=1
+else
+  chk "census: contract 導出タプル == 凍結 literal (contract 側 drift)" \
+    "$(grep -v '^#' "$FROZEN_CENSUS" | grep -v '^[[:space:]]*$')" "$(census_from_contract)"
+  # ★(e) 無主地帯 = doc-header の版 meta は cover が担う。 その値の逐語一致を凍結 literal で束縛する。
+  chk "census: contract .meta.version == 凍結 literal" \
+    "$(grep -P '^VERSION\t' "$FROZEN_CENSUS" | cut -f2)" "$(q '.meta.version')"
+  chk "census: contract .meta.status == 凍結 literal" \
+    "$(grep -P '^STATUS\t' "$FROZEN_CENSUS" | cut -f2)" "$(q '.meta.status')"
+  if [[ ! -f "$CANONICAL_SRC" ]]; then
+    printf '  [FAIL] %-'"$CHKW"'s %s\n' "canonical 不在 (byte 包含 arm が実行不能)" "$CANONICAL_SRC"; fail=1
+  else
+    # ★flip 後 (canonical が本 pack の生成物へ置換された後) は本 arm が両側同時退行しうる = 独立 anchor では
+    #   なくなる。 その事実を ★明示表示 する (黙って弱い arm を [OK] と表示するのは虚偽の被覆表示)。 census 側
+    #   (1) は凍結 literal ゆえ flip 後も独立 anchor として有効。
+    if grep -qF 'content="folio principle-pack assembler' "$CANONICAL_SRC"; then
+      echo "  [NOTE] canonical は本 pack の生成物 (flip 済) — byte 包含 arm は両側同時退行しうるため独立 anchor ではない。凍結 census (1) が単独 anchor。"
+    fi
+    # ★検査本体と件数を ★同一 invocation から取る (admin gate errata-1 E1・blocking):
+    #   旧形は canon_checked を ★別 perl で census file を数え直すだけだったため、 検査本体の dispatch を
+    #   全潰し ({ next }) にしても件数は 59 のまま [OK] に落ちる ★恒真 arm だった (admin 実弾で実証済)。
+    #   ゆえ「実際に index() 比較を実行した回数」を END で emit させ、 それを突合する。 census file を
+    #   ★別 invocation / grep で再カウントする構造は禁止 (再カウントは検査の実施を証明しない)。
+    canon_out="$(CANON="$CANONICAL_SRC" perl -ne '
+      BEGIN { open(my $f,"<",$ENV{CANON}) or die "canon open"; local $/; my $c=<$f>; close $f;
+              $c =~ s/^[ \t]+//mg; $c =~ s/\n//g; our $C=$c; our $n=0; }
+      next if /^#/ || /^[ \t]*$/;
+      chomp; my @f=split(/\t/,$_,-1); my $t=shift @f; my ($v,$k);
+      if    ($t eq "PREAMBLE")   { $v=$f[0]; $k="preamble" }
+      elsif ($t eq "SECTION")    { $v=$f[3]; $k="section:$f[1]" }
+      elsif ($t eq "SUBSECTION") { $v=$f[2]; $k="subsection:$f[1]" }
+      elsif ($t eq "BLOB")       { $v=$f[2]; $k="blob:$f[0]#$f[1]" }
+      elsif ($t eq "MCAPTION")   { $v=$f[2]; $k="mcaption:$f[0]#$f[1]" }
+      elsif ($t eq "MERMAID")    { $v=$f[3]; $k="mermaid:$f[0]#$f[1]L$f[2]" }
+      elsif ($t eq "RATIONALE")  { $v=$f[1]; $k="rationale:$f[0]" }
+      else { next }
+      $v =~ s/^[ \t]+//;
+      $n++;                                   # ★比較を実行した回数 (dispatch を痩せさせると必ず減る)
+      print "MISS\t$k\n" unless index($C,$v) >= 0;
+      END { print "CHECKED\t$n\n" }
+    ' "$FROZEN_CENSUS")"; canon_rc=$?
+    # ★tool error fail-open の封鎖: perl が途中で死ぬと出力が空 (= miss なし) になり chk_empty が無音 PASS する。
+    #   exit status を先に判定し、 非 0 は「照合不能」として FAIL に倒す。
+    if [[ $canon_rc -ne 0 ]]; then
+      printf '  [FAIL] %-'"$CHKW"'s (perl exit %s)\n' "census: byte 包含の照合が異常終了 (照合不能 = fail-closed)" "$canon_rc"; fail=1
+    fi
+    canon_miss="$(sed -n 's/^MISS\t//p' <<<"$canon_out" | tr '\n' ' ')"
+    canon_checked="$(sed -n 's/^CHECKED\t//p' <<<"$canon_out")"
+    chk_empty "census: 全逐語値が canonical に byte 包含 (改行+先頭空白のみ正規化)" "$canon_miss"
+    chk "census: 検査本体が実行した比較回数 == 凍結 census の値行数 (恒真封鎖)" \
+      "$(grep -v '^#' "$FROZEN_CENSUS" | grep -Pc '^(PREAMBLE|SECTION|SUBSECTION|BLOB|MCAPTION|MERMAID|RATIONALE)\t')" \
+      "${canon_checked:-(CHECKED 行なし)}"
+  fi
+fi
 
 # 2. id 一意性 + tier allowlist 再導出
 chk_empty "principle id 一意"  "$(q '.principles[].id' | sort | uniq -d | tr '\n' ' ')"
@@ -487,7 +814,7 @@ chk "終端: HTML に前方照会 chip 無し (leads_to/justifies/resolved_by/cr
 
 # 4. within-doc 可視 id / heading 順序 (assembler の emit 順 = tier-grouped: Always→Ask-first→Never・各 tier 内は contract 配列順)。
 #    ★contract 配列が tier 順でなくても assembler に一致させる (順序検証 robustness)。 tier 改竄は §13 baseline-diff が単独で捕捉。
-tg_field() { local t; for t in Always Ask-first Never; do q '.principles[] | select(.tier=="'"$t"'") | '"$1"; done; }
+# (tg_field の定義は folio-lq12 で §L へ前倒し済 — ここでは使うだけ。)
 exp_pid="$(tg_field '.id')"
 exp_heading="$(tg_field '.heading' | while IFS= read -r v; do esc "$v"; printf '\n'; done)"
 chk "within-doc: 可視 pid 列 == principles(tier順).id" \
@@ -564,14 +891,48 @@ chk "essence: p-head 行あたり strong 出現数 == 1 (前方/後方 decoy の
 #     (instance#4 焼き込み見出しが 2nd instance に偽件数を表示する hardcode の封鎖・c5r.3 footer と同根)。
 #     versioning/inbound/glossary の h2 は pack 不変文言を pin (assembler drift 検出)。
 BAND_H2S="$(grep 'data-component="chapter-deck-band"' "$BODY" | sed -E 's#.*<h2>([^<]*)</h2>.*#\1#')"
-band_h2_at() { sed -n "${1}p" <<<"$BAND_H2S"; }
-chk "band h2[1] == esc(chapters.always)"     "$(esc "$(q '.chapters.always')")"    "$(band_h2_at 1)"
-chk "band h2[2] == esc(chapters.ask_first)"  "$(esc "$(q '.chapters.ask_first')")" "$(band_h2_at 2)"
-chk "band h2[3] == esc(chapters.never)"      "$(esc "$(q '.chapters.never')")"     "$(band_h2_at 3)"
-chk "band h2[4] == versioning (pack 固定)"    "原則をどう変えると版がどう上がるか"   "$(band_h2_at 4)"
-chk "band h2[5] == esc(chapters.amendment)"  "$(esc "$(q '.chapters.amendment')")" "$(band_h2_at 5)"
-chk "band h2[6] == inbound (pack 固定)"       "原則は照会の終端 — 受ける照会だけをここに示す" "$(band_h2_at 6)"
-chk "band h2[7] == glossary (pack 固定)"      "本文に出てくる専門語のやさしい説明"   "$(band_h2_at 7)"
+# 章帯の kicker (= canonical 節見出しを逐語で載せる面)。 ico() の svg を挟むため svg 終端以降を取る。
+BAND_KICKERS="$(perl -CSD -0777 -ne 'while (/<span class="kicker">.*?<\/svg>\s*(.*?)<\/span>/gs){ print "$1\n"; }' "$BODY")"
+# ★folio-lq12: 位置 index の literal 付替 (band_h2_at 1..7 → 1..13) を ★禁止 する (c5r.2 の「instance 固有値を
+#   code に焼かない」と同根)。 期待列そのものを contract から決定的に導出し、 列として突合する。
+#   ★h2 (友好見出し) の出所は 3 系: sections[].chapter_heading / chapters.<chapters_key> / pack 不変文言 2 本。
+#   ★kicker (canonical 節見出し) の出所は 2 系: sections[].heading・subsections[].heading / pack 不変文言 2 本。
+#   ★band の emit 順は build() の構造 (節配列順・§2 の中に tier 小節・末尾に inbound/用語集) と一致する。
+PACK_BAND_H2=("原則は照会の終端 — 受ける照会だけをここに示す" "本文に出てくる専門語のやさしい説明")
+PACK_BAND_KICKER=("この憲法を参照する文書 / inbound" "用語集 / この文書で使う専門語")
+derive_expected_bands() { # $1 = h2|kicker
+  local i n k ck nsub j
+  n="$(q '.sections | length')"
+  for ((i=0; i<n; i++)); do
+    if [[ "$1" == "h2" ]]; then
+      k="$(q ".sections[$i].chapter_heading // \"\"")"
+      [[ -n "$k" && "$k" != "null" ]] || k="$(q ".chapters.$(q ".sections[$i].chapters_key")")"
+    else
+      k="$(q ".sections[$i].heading")"
+    fi
+    esc "$k"; printf '\n'
+    nsub="$(q ".sections[$i].subsections // [] | length")"
+    for ((j=0; j<nsub; j++)); do
+      if [[ "$1" == "h2" ]]; then
+        case "$(q ".sections[$i].subsections[$j].tier")" in
+          Always)    ck=always ;;
+          Ask-first) ck=ask_first ;;
+          *)         ck=never ;;
+        esac
+        k="$(q ".chapters.${ck}")"
+      else
+        k="$(q ".sections[$i].subsections[$j].heading")"
+      fi
+      esc "$k"; printf '\n'
+    done
+  done
+  if [[ "$1" == "h2" ]]; then printf '%s\n' "${PACK_BAND_H2[@]}"; else printf '%s\n' "${PACK_BAND_KICKER[@]}"; fi
+}
+chk "band h2 列 == contract 導出 (章順・literal index なし)"     "$(derive_expected_bands h2)"     "$BAND_H2S"
+chk "band kicker 列 == canonical 節見出し (章順・逐語)"          "$(derive_expected_bands kicker)" "$BAND_KICKERS"
+chk "band 章数 == |sections| + |subsections| + pack 固定 2"      \
+  "$(( $(q '.sections | length') + $(q '[.sections[].subsections[]?] | length') + 2 ))" \
+  "$(printf '%s\n' "$BAND_H2S" | grep -c . || true)"
 # ★数詞 == 派生実件数 (件数は machine floor の領分・verification §3.9)。 HTML h2 == contract は上で一致済ゆえ
 #   contract 側の値で判定する (assemble-principle validate と detect↔remediate parity)。
 #   ★ASCII 半角の「N 原則 / N ステップ」を必須とする肯定形 (c5r.2 ceiling round1): 数詞なし = 不合格に倒す
@@ -651,7 +1012,7 @@ chk "versioning: condition 列 == .versioning.rules[].condition (順序)" "$(qes
 chk "versioning: note == contract" "$(esc "$(q '.versioning.note')")" \
   "$(grep -oE '<p class="vp-note">[^<]*</p>' "$BODY" | sed -E 's#<p class="vp-note">([^<]*)</p>#\1#')"
 chk "amendment: steps 列 == .amendment.steps (順序)" "$(qesc '.amendment.steps[]')" \
-  "$(grep -oE '<li>[^<]*</li>' "$BODY" | sed -E 's#<li>([^<]*)</li>#\1#')"
+  "$(grep -oE '<li class="amp-step">[^<]*</li>' "$BODY" | sed -E 's#<li class="amp-step">([^<]*)</li>#\1#')"
 
 # 9. ★表紙 cover-meta 4 KV の決定的再導出突合 (research の l' と同型)。
 meta_kv="$(perl -CSD -0777 -ne 'while (/<span class="k">([^<]*)<\/span><span class="v">([^<]*)<\/span>/g){ print "$1\t$2\n"; }' "$BODY")"
@@ -800,8 +1161,11 @@ fi
 
 echo
 # ---- gate F: render 健全性 (visual) cross-pack 展開 (folio-vuf A・helper=render_gate_f)。
-#      非 mermaid pack の生成 HTML を light/dark × 3 viewport で render-gate。 mermaid 検出時は honest
-#      SKIP (B 段 folio-vuf B へ defer)。 fail-closed (violation/crash = $fail=1・T7 guard 維持)。 ----
+#      生成 HTML を light/dark × 3 viewport で render-gate。 fail-closed (violation/crash = $fail=1・T7 guard 維持)。
+#      ★folio-lq12 訂正: 旧コメントの「mermaid 検出時は honest SKIP (B 段へ defer)」は ★stale で偽 —
+#        B 段 (folio-jyfh) で実 render へ変更済で、 lib/verify-common.sh:584-587 が mermaid を検出したら
+#        vendor を配信 root へ staging し SVG settle polling 込みで ★実 render する (SKIP しない)。
+#        本 pack は folio-lq12 で図 2 枚を持つようになったため、 この記述の誤りは実害に直結する。 ----
 render_gate_f "$HTML" "PRINCIPLE_SKIP_RENDER"
 
 if [[ "$fail" -eq 0 ]]; then

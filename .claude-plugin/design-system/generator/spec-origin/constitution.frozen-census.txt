@@ -1,0 +1,102 @@
+# folio constitution frozen census — policy A (ADR-0053) / folio-lq12 節骨格 + rich blob の独立 anchor
+# ============================================================================
+# 政策 A (user 裁定 2026-07-18 = bootstrap 退役) を principle-pack へ適用した凍結 literal。
+# folio-lq12 mandate S4 の択一で ★(B) frozen census + byte 包含 arm を採用した (extractor 新設 = (A) は
+# 既存 5 本が「人間レビュー前提 DRAFT」自称で oracle 力不足のため不採用・admin 裁定 2026-08-08)。
+#
+# ★本 file の値は以後 contract からも生成物 (artifact) からも【導出しない】凍結 literal である。
+#   両側 contract 由来の相対 parity は ★両側同時退行で vacuous PASS するため、本 file が唯一の独立 anchor になる。
+#
+# ★由来 (「自作自演の anchor では?」と読まれないための開示):
+#   値は ★canonical 手書き HTML (design-intent/spec/constitution.html・P-10 で frozen) から 1 回だけ機械抽出して
+#   凍結した (contract からではない)。 抽出の正規化は ★改行と各行の先頭空白の除去のみ で、語句正規化 (空白畳み /
+#   全角半角 / 引用符 / タグ整形) は一切行わない。
+#   provenance:
+#     canonical = design-intent/spec/constitution.html @ base 1e28037
+#     sha256    = 1c4044bf09fc017ed56dd656797bcafa95adcaa16c06d1878c0a71558c0a1089
+#
+# ★verify-principle.sh での使われ方 (2 本の独立 oracle):
+#   (1) census ⟷ contract の逐語一致 (SECTION / SUBSECTION / PREAMBLE / BLOB / MERMAID / MCAPTION /
+#       RATIONALE / VERSION / STATUS / COUNT)。 contract 側の手書き drift を凍結 literal が捕捉する。
+#   (2) census の各逐語 blob が ★canonical に byte 包含される こと (正規化は上記のみ)。 canonical 側の drift を
+#       捕捉する。 flip 後 (canonical が生成物へ置換された後) は (2) が両側同時退行しうるため、verify は
+#       canonical が生成物かを generator meta で判定し、その旨を明示表示したうえで (1) を単独 anchor として残す。
+#
+# ★形式: <TYPE>\t<key…>\t<value>  (値に tab は含まない = canonical に tab 無しを抽出時に確認済)
+#   COUNT      <kind> <n>                 — 件数 (脱落/捏造を数で挟む)
+#   VERSION    <value>                    — canonical の版 (meta.version の逐語 anchor)
+#   STATUS     <value>                    — canonical の status (meta.status の逐語 anchor)
+#   PREAMBLE   <html>                     — 文書前文 aside (canonical:58-60)
+#   SECTION    <seq> <anchor> <class> <heading>
+#   SUBSECTION <seq> <anchor> <heading>
+#   BLOB       <section-anchor> <block-index> <html>
+#   MCAPTION   <section-anchor> <block-index> <figcaption>
+#   MERMAID    <section-anchor> <block-index> <line-no> <DSL 行>
+#   RATIONALE  <principle-id> <ai-rationale aside 本文>
+# ============================================================================
+COUNT	section	8
+COUNT	subsection	3
+COUNT	blob	14
+COUNT	mermaid	2
+COUNT	rationale	5
+VERSION	0.6.0-draft
+STATUS	draft
+PREAMBLE	<aside class="informative"><p>本文書は IETF <strong>RFC 2119</strong> および <strong>RFC 8174 / BCP 14</strong> に定義される MUST / SHOULD / MAY / SHALL のキーワード解釈規約に従う。 本文中の大文字キーワードは規範的要件である。</p></aside>
+SECTION	1	s0-reader-guide	informative	§0. Reader's Guide — Stakeholder Perspectives (ISO/IEC/IEEE 42010:2022)
+SECTION	2	s1-purpose	informative	§1. Purpose
+SECTION	3	s2-principles	normative	§2. Fourteen Immutable Principles
+SECTION	4	s3-layer-architecture	informative	§3. Layer Architecture
+SECTION	5	s4-folio-plugin	informative	§4. Folio as a Plugin
+SECTION	6	s5-versioning	normative	§5. Versioning Policy
+SECTION	7	s6-amendment	normative	§6. Amendment Procedure
+SECTION	8	s7-citations	informative	§7. Citations
+SUBSECTION	1	s2-1-always	§2.1 Always Tier (P-1〜P-7 + P-13/P-14)
+SUBSECTION	2	s2-2-askfirst	§2.2 Ask-First Tier (P-8〜P-10)
+SUBSECTION	3	s2-3-never	§2.3 Never Tier (P-11〜P-12)
+BLOB	s0-reader-guide	0	<p>folio は 3 種類の reader を第一級 stakeholder として明示する。 各 spec file の <code>&lt;meta name="folio-stakeholders"&gt;</code> 属性で対象 persona を宣言する。</p>
+BLOB	s0-reader-guide	1	<aside class="reader-persona" data-persona="Developer"><p><strong>Developer</strong>: §2 不変原則を実装前に確認する。 §5 SemVer Policy に従って改訂を提案する。 ADR を起票する。</p></aside>
+BLOB	s0-reader-guide	2	<aside class="reader-persona" data-persona="AI Agent"><p><strong>AI Agent</strong>: spec edit 前に本 constitution + <a href="rules.html">rules</a> + <a href="folio-self-spec.html">folio-self-spec</a> を必読する。 caller context を <a href="rules.html#s10-1">rules.html §10.1</a> (MUST 規範) + <a href="folio-self-spec.html#s7-3-caller-marker">folio-self-spec.html §7.3</a> (hook flow) の定める方法で宣言する。 cwd が folio repo (Layer 0) 配下か consumer project (Layer 1) 配下かを最初に確認する。</p></aside>
+BLOB	s0-reader-guide	3	<aside class="reader-persona" data-persona="External Reviewer"><p><strong>External Reviewer</strong>: §1 Purpose + P-1 (未来理想 anchor) を確認した上で、 「現在挙動 SSoT」 と誤読しない。 spec と実装の divergence は本 framework では想定内である。</p></aside>
+BLOB	s1-purpose	0	<p>folio は architecture specification を書くための framework である。 大規模 project でユーザーもしくは AI が当初の設計要件を見失い、 場当たり的修正が積み重なって設計破綻に至るのを防ぐ。 spec は「常に参照され続ける自然言語の design intent reference」 として機能する。</p>
+BLOB	s1-purpose	1	<p>folio は <strong>Layer 0 META FRAMEWORK</strong> であり、 各 consumer project は <strong>Layer 1</strong> として別 git repo に展開される (P-12)。 Layer 0 は rules (constitution + rules.html) と plugin harness (<code>.claude-plugin/</code>) を一体配布し、 Layer 1 は <code>folio.config.yaml</code> 1 file の宣言で全体を consume する。</p>
+BLOB	s1-purpose	2	<p>folio の核心は <strong>未来理想 anchor (future-ideal anchor)</strong>:</p>
+BLOB	s1-purpose	3	<ul><li>spec は <em>実装の現状を反映する mirror ではなく、 設計の到達目標</em> を declarative に記述する。</li><li>spec → code 方向の drift (実装が追いついていない) は想定内である。</li><li>code → spec 方向の drift (実装制約が想定を変える) は user-AI dialog で spec を更新する。</li><li>spec 不在の場当たり的逸脱を防ぐことが folio の存在意義である。</li></ul>
+MCAPTION	s1-purpose	4	図 1. architecture spec の SSoT 解釈 3 派。 folio は未来理想 anchor (P-1)、 OpenSpec / BDD と分岐する。
+MERMAID	s1-purpose	4	01	%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e', 'primaryTextColor': '#ffffff', 'lineColor': '#2a4d6e', 'secondaryColor': '#5ac8b8', 'tertiaryColor': '#f5f8fa'}}}%%
+MERMAID	s1-purpose	4	02	graph LR
+MERMAID	s1-purpose	4	03	  accTitle: architecture spec の SSoT 解釈 3 派の比較
+MERMAID	s1-purpose	4	04	  accDescr: folio は未来理想 anchor、 OpenSpec は現在挙動 SSoT、 BDD はテスト挙動 SSoT を採用する。 drift の扱いも異なる
+MERMAID	s1-purpose	4	05	  S["architecture spec"]
+MERMAID	s1-purpose	4	06	  F["folio<br/><b>未来理想 anchor</b><br/>drift = 想定内<br/>(P-1)"]
+MERMAID	s1-purpose	4	07	  O["OpenSpec<br/>現在挙動 SSoT<br/>drift = bug"]
+MERMAID	s1-purpose	4	08	  B["BDD<br/>テスト挙動 SSoT<br/>drift = test fail"]
+MERMAID	s1-purpose	4	09	  S --> F
+MERMAID	s1-purpose	4	10	  S --> O
+MERMAID	s1-purpose	4	11	  S --> B
+MERMAID	s1-purpose	4	12	  style F fill:#5ac8b8,color:#08131a
+MERMAID	s1-purpose	4	13	  style O fill:#f5f8fa,color:#08131a
+MERMAID	s1-purpose	4	14	  style B fill:#f5f8fa,color:#08131a
+BLOB	s2-principles	0	<p>folio は 14 の不変原則を <strong>3 tier</strong> に分類する。</p>
+MCAPTION	s2-principles	1	図 2. 14 原則の 3-tier 構造。
+MERMAID	s2-principles	1	01	%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#2a4d6e'}}}%%
+MERMAID	s2-principles	1	02	graph TD
+MERMAID	s2-principles	1	03	  accTitle: 14 原則 3-tier 構造
+MERMAID	s2-principles	1	04	  accDescr: Always tier 9 原則 (P-1 から P-7 + P-13/P-14)、 Ask-first tier 3 原則 (P-8 から P-10)、 Never tier 2 原則 (P-11 から P-12)
+MERMAID	s2-principles	1	05	  A["<b>Always tier</b><br/>P-1〜P-7 + P-13/P-14 (9 原則)<br/><i>不変、 例外なし</i>"]
+MERMAID	s2-principles	1	06	  B["<b>Ask-first tier</b><br/>P-8〜P-10 (3 原則)<br/><i>user 承認後変更可</i>"]
+MERMAID	s2-principles	1	07	  C["<b>Never tier</b><br/>P-11〜P-12 (2 原則)<br/><i>絶対禁止</i>"]
+MERMAID	s2-principles	1	08	  A --> B
+MERMAID	s2-principles	1	09	  B --> C
+MERMAID	s2-principles	1	10	  style A fill:#e6f6f2,color:#08131a
+MERMAID	s2-principles	1	11	  style B fill:#fefbea,color:#08131a
+MERMAID	s2-principles	1	12	  style C fill:#fdf3f3,color:#08131a
+BLOB	s3-layer-architecture	0	<p>folio は Layer 0 (本 repo) + Layer 1 (consumer projects) の 2 層を採用する (P-12)。 詳細 (2-Layer 体系図 + table + Resolution flow) は <a href="folio-self-spec.html#s1-architecture">folio-self-spec.html §1</a>、 consumer project の directory layout は <a href="rules.html#s2-directory">rules.html §2</a> を参照。</p>
+BLOB	s4-folio-plugin	0	<p>folio は Claude Code plugin として配布される (P-12)。 plugin 構造の詳細は <a href="folio-self-spec.html#s7-harness">folio-self-spec.html §7</a> + <a href="folio-self-spec.html#s8-plugin">§8</a>。 folio harness は <strong>skill + hook + CLI (local process)</strong> のみで構成し、 MCP (Model Context Protocol) は採用しない。</p>
+BLOB	s5-versioning	1	<p>変更時は ADR を起票し、 本 constitution 内に delta marker を inline 保存する (<a href="rules.html#s5-delta">rules.html §5</a>)。</p>
+BLOB	s6-amendment	1	<p>各 step の具体的 mechanism は <a href="folio-self-spec.html#s7-1-7phase">folio-self-spec.html §7.1 7-phase PR Cycle</a> に規定する。</p>
+BLOB	s7-citations	0	<ul><li><strong>RFC 2119 / RFC 8174 / BCP 14</strong> — MUST/SHOULD/MAY キーワード解釈。</li><li><strong>arc42</strong> (<a href="https://arc42.org/">arc42.org</a>) — architecture documentation framework。</li><li><strong>Diátaxis</strong> (<a href="https://diataxis.fr/">diataxis.fr</a>) — 4 documentation modes (Tutorial / Reference / How-to / Explanation)。 folio は Reference mode を design-intent (spec) に採用 (他 mode は canonical 非採用、 ADR-0022)。</li><li><strong>ISO/IEC/IEEE 42010:2022</strong> — Architecture Description Stakeholder Perspectives。</li><li><strong>EARS (Easy Approach to Requirements Syntax)</strong> — acceptance criteria notation。</li><li><strong>OpenSpec (Fission-AI)</strong> — changes/ lifecycle pattern (本 framework は P-1 未来理想 anchor のため不採用、 ADR-0021 / §6)。</li><li><strong>AWS Kiro</strong> (<a href="https://kiro.dev/">kiro.dev</a>) — EARS notation の啓発元 (steering/ は canonical 非採用、 ADR-0022)。</li><li><strong>GitHub Spec Kit</strong> — <code>constitution.md</code> パターン。</li><li><strong>ESLint / Stylelint</strong> — rules + plugin engine 一体配布 pattern。</li><li><strong>Anthropic</strong> (2026) — 人間も読む仕様書 HTML 採用の方向性。</li></ul>
+RATIONALE	P-2	ADR-0021 (constitution X4 amendment): 具体ファイル名列挙 "(constitution / rules / folio-self-spec)" + "changes proposal" を category 語「design-intent 文書」へ脱-instance。 file split で PATCH bump を強いられた結合 (旧 aside の ADR-0001 v3 architecture-rules split が好例) を除去し layout 不変化。 確定 file 列挙は self-spec §2 / rules §3 へ委譲。 P-10 承認済 (本 dig session)。
+RATIONALE	P-7	ADR-0021: 4 領域 → 3 領域。 changes/ 廃止 (OpenSpec 由来の staging だが P-1 未来理想 anchor では不要、 git PR + ADR + delta marker が機能を担い経験的に未使用)。 dir 名を本文から除去し binding (self-spec/rules) へ委譲。 HOW/verification を空間外と明示 (P-13)。 MAJOR 級 (semantic 変更)。
+RATIONALE	P-13	ADR-0021 で新設 (Always tier)。 番号は append (renumber せず: P-8〜P-12 の cross-ref + frozen ADR 参照を保護)。 tier 帰属は番号連続でなく分類で定義 (Always = P-1〜P-7 + P-13)。 実装経験で reverse-engineer した WHAT/WHY/HOW + verification + REQ-ID traceability model の明文化。 原則追加 = MAJOR 級。
+RATIONALE	P-14	ADR-0038 で新設 (Always tier)。 番号は append (renumber せず)。 根拠 = criterion-c 徹底討論で特定した価値の非対称 — 機械側の価値 (P-3/P-6) のみ原則化され gate の非対称として実体化し、 validate 全 green のまま人間に読めない生成物を許した。 構造要求型 (読者層定義の存在を要求し、 具体は rules へ委譲) で空殻化 (全委任) と P-10 硬直 (焼き込み) の両方を回避。 原則追加 = MAJOR 級 (0.6.0-draft)。
+RATIONALE	P-12	旧 twill plugin との distinction、 ESLint / Stylelint pattern 採用根拠、 Layer 0.5 等の小数点表記不採用の経緯、 MCP 非採用判断の詳細は将来 ADR (decisions/) に正式記録する予定。 folio-self-spec.html §7.4 に LLM 混同回避の structural guard mechanism を規定。
